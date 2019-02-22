@@ -1,3 +1,5 @@
+#include <iostream>
+#include <vector>
 #include <cstdlib>
 #include <cstring>
 
@@ -14,45 +16,39 @@ namespace Node
 
   enum class Device
   {
-  CUDA, SW, AMD, CPU
-  };
-
-  enum class Where
-  {
-    Host, Device
+    CUDA, SW, AMD, CPU
   };
 
   namespace internal::memory
   {
     // run in host, malloc in device
-    template<Device host, Device device>
-    void malloc(void**, std::size_t);
+    template<Device device>
+    void* malloc(std::size_t);
 
-    template<Device host, Device device>
+    template<Device device>
     void free(void*);
 
-    template<Device host, Device device>
+    template<Device device>
     void memcpy(void*, const void*, std::size_t);
 
     template<>
-    void malloc<Device::CPU, Device::CPU>(void** ptr, std::size_t size)
+    void* malloc<Device::CPU>(std::size_t size)
     {
-      *ptr = std::malloc(size);
+      return std::malloc(size);
     }
 
     template<>
-    void free<Device::CPU, Device::CPU>(void* ptr)
+    void free<Device::CPU>(void* ptr)
     {
       std::free(ptr);
     }
 
     template<>
-    void memcpy<Device::CPU, Device::CPU>(void* dst, const void* src, std::size_t size)
+    void memcpy<Device::CPU>(void* dst, const void* src, std::size_t size)
     {
       std::memcpy(dst, src, size);
     }
   }
-
 
   namespace internal::stream
   {
@@ -66,99 +62,163 @@ namespace Node
       template<>
       class stream_aux<Device::SW>
       {
-        using stream = int;
+        public:
+          using stream = int;
+      };
+
+      template<>
+      class stream_aux<Device::CPU>
+      {
+        public:
+          using stream = int;
       };
     }
 
     template<Device device>
-    using stream = typename internal::stream_aux<device>::stream;
+    using Stream = typename internal::stream_aux<device>::stream;
   }
 
   namespace internal::shuffle
   {
-    void get_plan(Size*& plan, Leg* legs_old, Leg* legs_new);
-  
+    void get_plan(Size rank, std::vector<Size>& plan, const std::vector<Leg>& legs_old, const std::vector<Leg>& legs_new)
+    {
+      for(Size i=0;i<rank;i++)
+      {
+        for(Size j=0;j<rank;j++)
+        {
+          if(legs_new[i]==legs_old[j])
+          {
+            plan.push_back(j);
+            break;
+          }
+        }
+      }
+    }
+
     template<Device device>
-    void shuffle();
+    void shuffle(
+      Base* data_new,
+      Base* data_old,
+      Size rank,
+      const std::vector<Size>& dims,
+      const std::vector<Size>& plan,
+      internal::stream::Stream<device>& stream)
+    {
+
+    }
   }
 
-  // where means where data dims, legs save, data is always saved in device
-  template<Device device, Where where>
+  template<Device _device>
   class Tensor
   {
     public:
-      Size  rank;
-      Size* dims;
-      Leg*  legs;
-      Base* data;
-      Size  size;
-      static const Device data_device = device;
-      static const Device meta_device = (where==Where::Host)?Device::CPU:device;
+      Size              rank;
+      std::vector<Size> dims;
+      std::vector<Leg>  legs;
+      Base*             data;
+      Size              size;
+
+      static const Device device = _device;
+
     private:
-      void malloc(void** ptr, std::size_t size)
+      void* malloc(std::size_t size) const
       {
-        internal::memory::malloc<meta_device, meta_device>(ptr, size);
+        return internal::memory::malloc<device>(size);
       }
-      void malloc_data(void** ptr, std::size_t size)
+
+      Base* new_data(std::size_t size) const
       {
-        internal::memory::malloc<meta_device, device>(ptr, size);
+        return (Base*)malloc(sizeof(Base)*size);
       }
-      void free(void* ptr)
+
+      void free(void* ptr) const
       {
-        internal::memory::free<meta_device, meta_device>(ptr, size);
+        internal::memory::free<device>(ptr);
       }
-      void free_data(void* ptr)
+
+      void memcpy(void* dst, const void* src, std::size_t size) const
       {
-        internal::memory::free<meta_device, device>(ptr, size);
+        internal::memory::memcpy<device>(dst, src, size);
       }
-      void memcpy(void* dst, const void* src, std::size_t size)
+
+      void memcpyAsync(void* dst, const void* src, std::size_t size) const;
+
+      void free_all() const
       {
-        internal::memory::memcpy<meta_device, meta_device>(dst, src, size);
+        if(data) free(data);
       }
-      void memcpy_data(void* dst, const void* src, std::size_t size)
-      {
-        internal::memory::memcpy<meta_device, device>(dst, src, size);
-      }
-      void free_all()
-      {
-        if(dims) free(dims);
-        if(legs) free(legs);
-        if(data) free_data(data);
-      }
+
       void init()
       {
         rank = 0;
-        dims = nullptr;
-        legs = nullptr;
         data = nullptr;
         size = 1;
       }
+
     public:
       void clean()
       {
         free_all();
         init();
       }
+
       Tensor()
       {
         init();
       }
+
+      Tensor(Size _rank, std::vector<Size> _dims, std::vector<Leg> _legs)
+       : rank(_rank), size(1), dims(_dims), legs(_legs)
+      {
+        for(Size i=0;i<rank;i++)
+        {
+          size *= dims[i];
+        }
+        data = new_data(size);
+      }
+
       ~Tensor()
       {
         free_all();
       }
-      void shuffle_to(Tensor<device, where>& tensor, Leg* new_legs, internal::stream::stream<device> stream)
+
+      void shuffle_to(Tensor<device>& tensor, const std::vector<Leg>& new_legs, internal::stream::Stream<device>& stream) const
       {
         tensor.clean();
-        malloc(&tensor.dims, sizeof(Size)*rank);
-        malloc(&tensor.legs, sizeof(Leg)*rank);
-        malloc_data(&tensor.data, sizeof(Base)*size);
         tensor.rank = rank;
+        tensor.data = new_data(size);
         tensor.size = size;
-        Size* plan;
-        malloc(&plan, sizeof(Size)*rank);
-        internal::shuffle::get_plan(plan, legs, new_legs);
-        internal::shuffle::shuffle<device>();
+
+        std::vector<Size> plan;
+        internal::shuffle::get_plan(rank, plan, legs, new_legs);
+        internal::shuffle::shuffle<device>(tensor.data, data, rank, dims, plan, stream);
+
+        for(Size i=0;i<rank;i++)
+        {
+          tensor.dims.push_back(dims[plan[i]]);
+        }
+        tensor.legs = new_legs;
+      }
+
+      void shuffle_from(Tensor<device>& tensor, const std::vector<Leg>& new_legs, internal::stream::Stream<device>& stream)
+      {
+        tensor.shuffle_to(*this, new_legs, stream);
       }
   };
+}
+
+
+int main()
+{
+  int stream = 0;
+  auto s = {2ul,3ul,4ul,5ul};
+  auto l = {Node::Leg::Down, Node::Leg::Up, Node::Leg::Left, Node::Leg::Right};
+  auto m = {Node::Leg::Right, Node::Leg::Left, Node::Leg::Down, Node::Leg::Up};
+  Node::Tensor<Node::Device::CPU> t(4, s, l), r;
+  t.shuffle_to(r, m, stream);
+  for(auto i : r.dims)
+  {
+    std::cout << i << " ";
+  }
+  std::cout << "\n";
 }
