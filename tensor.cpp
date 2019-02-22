@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <map>
 #include <cstdlib>
 #include <cstring>
 
@@ -13,6 +14,30 @@ namespace Node
     CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4)
     #undef CreateLeg
   };
+
+  namespace internal::leg
+  {
+    #define IncEnum(p) {Leg::p, #p}
+    #define IncGroup(x) IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x)
+    static const std::map<Leg, std::string> leg_str = {IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4)};
+    // 如果const的话会报[]没有mark as const的错误
+    #undef IncGroup
+    #undef IncEnum
+  }
+
+  // ostream重载，使用一个static map来完成
+  inline std::ostream& operator<<(std::ostream& out, const Leg& value)
+  {
+    try
+    {
+      return out << internal::leg::leg_str.at(value);
+    }
+    catch(const std::out_of_range& e)
+    {
+      return out;
+    }
+  }
+
 
   enum class Device
   {
@@ -204,6 +229,34 @@ namespace Node
       {
         tensor.shuffle_to(*this, new_legs, stream);
       }
+
+      const Tensor<device>& rename_leg(std::map<Leg, Leg> dict)
+      {
+        for(auto& i : legs)
+        {
+          auto where = dict.find(i);
+          if(where!=dict.end())
+          {
+            i = where->second;
+          }
+        }
+        return *this
+      }
+
+      void contract_from(
+        const Tensor<device>& tensor1,
+        const Tensor<device>& tensor2,
+        const std::vector<Leg>& leg1,
+        const std::vector<Leg>& leg2)
+      {
+        clean();
+      }
+
+      void svd_to();
+
+      void qr_to();
+
+      void multiple_from();
   };
 }
 
@@ -217,6 +270,13 @@ int main()
   Node::Tensor<Node::Device::CPU> t(4, s, l), r;
   t.shuffle_to(r, m, stream);
   for(auto i : r.dims)
+  {
+    std::cout << i << " ";
+  }
+  std::cout << "\n";
+  t.rename_leg({{Node::Leg::Down,Node::Leg::Down1},{Node::Leg::Left,Node::Leg::Right},
+    {Node::Leg::Right,Node::Leg::Left},{Node::Leg::Up,Node::Leg::Up1}});
+  for(auto i : t.legs)
   {
     std::cout << i << " ";
   }
