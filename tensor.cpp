@@ -53,6 +53,27 @@ namespace Node
     }
   }
 
+
+  namespace internal::stream
+  {
+    namespace internal
+    {
+      template<Device device>
+      class stream_aux
+      {
+      };
+
+      template<>
+      class stream_aux<Device::SW>
+      {
+        using stream = int;
+      };
+    }
+
+    template<Device device>
+    using stream = typename internal::stream_aux<device>::stream;
+  }
+
   namespace internal::shuffle
   {
     void get_plan(Size*& plan, Leg* legs_old, Leg* legs_new);
@@ -126,13 +147,13 @@ namespace Node
       {
         free_all();
       }
-      void shuffle_to(Tensor<device, where>& tensor, Leg* new_legs)
+      void shuffle_to(Tensor<device, where>& tensor, Leg* new_legs, internal::stream::stream<device> stream)
       {
         tensor.clean();
         malloc(&tensor.dims, sizeof(Size)*rank);
         malloc(&tensor.legs, sizeof(Leg)*rank);
-        malloc_data(&tenor.data, sizeof(Base)*size);
-        tensor.rank = rank
+        malloc_data(&tensor.data, sizeof(Base)*size);
+        tensor.rank = rank;
         tensor.size = size;
         Size* plan;
         malloc(&plan, sizeof(Size)*rank);
