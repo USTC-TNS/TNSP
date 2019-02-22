@@ -10,16 +10,16 @@ int main()
   Node::Tensor<Node::Device::CPU> t(4, s, l), r;
   t.shuffle_to(r, m, stream);
   for(auto i : r.dims)
-  {
-    std::cout << i << " ";
-  }
+    {
+      std::cout << i << " ";
+    }
   std::cout << "\n";
   t.rename_leg({{Node::Leg::Down,Node::Leg::Down1},{Node::Leg::Left,Node::Leg::Right},
-    {Node::Leg::Right,Node::Leg::Left},{Node::Leg::Up,Node::Leg::Up1}});
+                {Node::Leg::Right,Node::Leg::Left},{Node::Leg::Up,Node::Leg::Up1}});
   for(auto i : t.legs)
-  {
-    std::cout << i << " ";
-  }
+    {
+      std::cout << i << " ";
+    }
   std::cout << "\n";
   Node::Tensor<Node::Device::CPU> ok = t;
   ok = r;
