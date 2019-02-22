@@ -73,10 +73,8 @@ namespace Node
   namespace internal::shuffle
   {
     template<>
-    void shuffle<Device::CPU>(
-                              Data                                   data_new,
+    void shuffle<Device::CPU>(Data                                   data_new,
                               Data                                   data_old,
-                              Size                                   rank,
                               const std::vector<Size>&               dims,
                               const std::vector<Size>&               plan,
                               internal::stream::Stream<Device::CPU>& stream)

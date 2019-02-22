@@ -92,11 +92,32 @@ namespace Node
 
   namespace internal::shuffle
   {
+    inline void make_plan(std::vector<Size>& plan, const Legs& new_legs, const Legs& legs, Size rank)
+    {
+      for(Size i=0;i<rank;i++)
+        {
+          for(Size j=0;j<rank;j++)
+            {
+              if(new_legs[i]==legs[j])
+                {
+                  plan.push_back(j);
+                  break;
+                }
+            }
+        }
+    }
+
+    inline void get_dims(Dims& new_dims, const Dims& dims, const Dims& plan, Size rank)
+    {
+      for(Size i=0;i<rank;i++)
+        {
+          new_dims.push_back(dims[plan[i]]);
+        }
+    }
+
     template<Device device>
-    void shuffle(
-                 Data                              data_new,
+    void shuffle(Data                              data_new,
                  Data                              data_old,
-                 Size                              rank,
                  const std::vector<Size>&          dims,
                  const std::vector<Size>&          plan,
                  internal::stream::Stream<device>& stream);

@@ -85,13 +85,13 @@ namespace Node
         }
     }
 
-  public:
     inline void clean()
     {
       free_all();
       init();
     }
 
+  public:
     Tensor()
     {
       init();
@@ -144,8 +144,7 @@ namespace Node
       return *this;
     }
 
-    inline void shuffle_to(
-                           Tensor<device>& tensor,
+    inline void shuffle_to(Tensor<device>& tensor,
                            const Legs& new_legs,
                            Stream& stream) const
     {
@@ -155,48 +154,33 @@ namespace Node
       tensor.data = new_data(size);
 
       std::vector<Size> plan;
-      for(Size i=0;i<rank;i++)
-        {
-          for(Size j=0;j<rank;j++)
-            {
-              if(new_legs[i]==legs[j])
-                {
-                  plan.push_back(j);
-                  break;
-                }
-            }
-        }
-      internal::shuffle::shuffle<device>(tensor.data, data, rank, dims, plan, stream);
-
-      for(Size i=0;i<rank;i++)
-        {
-          tensor.dims.push_back(dims[plan[i]]);
-        }
+      internal::shuffle::make_plan(plan, new_legs, legs, rank);
+      internal::shuffle::shuffle<device>(tensor.data, data, dims, plan, stream);
+      internal::shuffle::get_dims(tensor.dims, dims, plan, rank);
       tensor.legs = new_legs;
     }
 
-    inline void shuffle_from(
-                             Tensor<device>& tensor,
+    inline void shuffle_from(Tensor<device>& tensor,
                              const Legs& new_legs,
                              Stream& stream)
     {
       tensor.shuffle_to(*this, new_legs, stream);
     }
 
-    void contract_from(
-                       const Tensor<device>& tensor1,
+    void contract_from(const Tensor<device>& tensor1,
                        const Tensor<device>& tensor2,
                        const Legs& leg1,
-                       const Legs& leg2
-                       )
+                       const Legs& leg2,
+                       Stream& stream)
     {
       clean();
       Size contractRank = leg1.size();
       std::vector<Size> dim1, dim2;
-      for(Size i=0;i<contractRank;i++)
-        {
-          dim1;
-        }
+      internal::contract::get_dim(dim1, leg1, tensor1.legs);
+      internal::contract::get_dim(dim2, leg2, tensor2.legs);
+      //shuffle first !!!
+      internal::contract::contract<device>();
+      internal::contract::new_dim(dims, tensor1.dims, dim1, tensor2.dims, dim2);
     }
 
     void svd_to()
