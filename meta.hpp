@@ -13,7 +13,7 @@
 
 namespace Node
 {
-  // 约定, 几乎都用引用, 除了data
+  // 约定, 几乎都用引用, 除了data用指针
   using Size = std::size_t;
   using Base = double;
   using Data = Base*;
@@ -31,7 +31,6 @@ namespace Node
     #define IncEnum(p) {Leg::p, #p}
     #define IncGroup(x) IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x)
     static const std::map<Leg, std::string> leg_str = {IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4)};
-    // 如果const的话会报[]没有mark as const的错误
     #undef IncGroup
     #undef IncEnum
   }
@@ -54,6 +53,18 @@ namespace Node
     CUDA, SW, AMD, CPU
   };
 
+  namespace internal::stream
+  {
+    namespace internal
+    {
+      template<Device device>
+      class stream_aux;
+    }
+
+    template<Device device>
+    using Stream = typename internal::stream_aux<device>::stream;
+  }
+
   namespace internal::memory
   {
     // run in host, malloc in device
@@ -67,18 +78,21 @@ namespace Node
 
     template<Device device>
     void memcpy(void*, const void*, std::size_t);
-  }
-
-  namespace internal::stream
-  {
-    namespace internal
-    {
-      template<Device device>
-      class stream_aux;
-    }
 
     template<Device device>
-    using Stream = typename internal::stream_aux<device>::stream;
+    void memcpyAsync(void*, const void*, std::size_t, internal::stream::Stream<device> stream);
+
+    template<Device device>
+    void memSend(void*, const void*, std::size_t);
+
+    template<Device device>
+    void memSendAsync(void*, const void*, std::size_t, internal::stream::Stream<device> stream);
+
+    template<Device device>
+    void memRecv(void*, const void*, std::size_t);
+
+    template<Device device>
+    void memRecvAsync(void*, const void*, std::size_t, internal::stream::Stream<device> stream);
   }
 
   namespace internal::shuffle
@@ -110,11 +124,10 @@ namespace Node
 
   namespace internal::contract
   {
+    void get_plan();
+
     void dgemm();
   }
-
-  template<Device _device>
-  class Tensor;
 }
 
 #endif

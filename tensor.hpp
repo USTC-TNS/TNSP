@@ -22,17 +22,12 @@ namespace Node
       using Stream = internal::stream::Stream<device>;
 
     private:
-      inline void* malloc(std::size_t size) const
-      {
-        return internal::memory::malloc<device>(size);
-      }
-
       inline Data new_data(std::size_t size) const
       {
-        return Data(malloc(sizeof(Base)*size));
+        return Data(internal::memory::malloc<device>(sizeof(Base)*size));
       }
 
-      inline void free(void* ptr) const
+      inline void delete_data(void* ptr) const
       {
         internal::memory::free<device>(ptr);
       }
@@ -49,7 +44,7 @@ namespace Node
 
       inline void free_all() const
       {
-        if(data) free(data);
+        if(data) delete_data(data);
       }
 
       inline void init()
