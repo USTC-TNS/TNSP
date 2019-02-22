@@ -3,8 +3,11 @@
 #include <map>
 #include <cstdlib>
 #include <cstring>
+#include "eigen-git-mirror/Eigen/Dense"
+#include "eigen-git-mirror/unsupported/Eigen/CXX11/Tensor"
 
 #define PASS
+#define TEST
 
 namespace Node
 {
@@ -112,7 +115,7 @@ namespace Node
 
   namespace internal::shuffle
   {
-    inline void get_plan(Size rank, std::vector<Size>& plan, const std::vector<Leg>& legs_old, const std::vector<Leg>& legs_new)
+    inline void get_plan(Size rank, std::vector<Size>& plan, const Legs& legs_old, const Legs& legs_new)
     {
       for(Size i=0;i<rank;i++)
       {
@@ -134,7 +137,16 @@ namespace Node
       Size                              rank,
       const std::vector<Size>&          dims,
       const std::vector<Size>&          plan,
-      internal::stream::Stream<device>& stream)
+      internal::stream::Stream<device>& stream);
+
+    template<>
+    void shuffle<Device::CPU>(
+      Data                                   data_new,
+      Data                                   data_old,
+      Size                                   rank,
+      const std::vector<Size>&               dims,
+      const std::vector<Size>&               plan,
+      internal::stream::Stream<Device::CPU>& stream)
     {
       PASS;
     }
@@ -159,6 +171,7 @@ namespace Node
       Size size;
 
       static const Device device = _device;
+      using Stream = internal::stream::Stream<device>;
 
     private:
       inline void* malloc(std::size_t size) const
@@ -277,8 +290,8 @@ namespace Node
 
       inline void shuffle_to(
         Tensor<device>& tensor,
-        const std::vector<Leg>& new_legs,
-        internal::stream::Stream<device>& stream) const
+        const Legs& new_legs,
+        Stream& stream) const
       {
         tensor.clean();
         tensor.rank = rank;
@@ -298,8 +311,8 @@ namespace Node
 
       inline void shuffle_from(
         Tensor<device>& tensor,
-        const std::vector<Leg>& new_legs,
-        internal::stream::Stream<device>& stream)
+        const Legs& new_legs,
+        Stream& stream)
       {
         tensor.shuffle_to(*this, new_legs, stream);
       }
@@ -321,7 +334,8 @@ namespace Node
         const Tensor<device>& tensor1,
         const Tensor<device>& tensor2,
         const std::vector<Leg>& leg1,
-        const std::vector<Leg>& leg2)
+        const std::vector<Leg>& leg2
+        )
       {
         clean();
         PASS;
@@ -349,7 +363,7 @@ namespace Node
   };
 }
 
-
+#ifdef TEST
 int main()
 {
   int stream = 0;
@@ -373,3 +387,4 @@ int main()
   Node::Tensor<Node::Device::CPU> ok = t;
   ok = r;
 }
+#endif
