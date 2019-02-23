@@ -85,7 +85,14 @@ namespace Node
 
   namespace internal::contract
   {
-    void dgemm()
+    template<>
+    void gemm<Device::CPU, double>(double*                                data,
+                                   double*                                data1,
+                                   double*                                data2,
+                                   Size                                   a,
+                                   Size                                   b,
+                                   Size                                   c,
+                                   internal::stream::Stream<Device::CPU>& stream)
     {
       PASS;
     }

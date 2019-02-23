@@ -115,8 +115,7 @@ namespace Node
       init();
     }
 
-    template<class DimsType=Dims, class LegsType=Legs>
-    Tensor(Size _rank, DimsType _dims, LegsType _legs)
+    Tensor(Size _rank, Dims _dims, Legs _legs)
       : rank(_rank), dims(_dims), legs(_legs)
     {
       update_size();
@@ -163,7 +162,7 @@ namespace Node
       return *this;
     }
 
-    inline void shuffle_to(Tensor<device>& tensor,
+    void shuffle_to(Tensor<device>& tensor,
                            const Legs& new_legs,
                            Stream& stream) const
     {
@@ -179,7 +178,7 @@ namespace Node
       tensor.legs = new_legs;
     }
 
-    inline void shuffle_from(Tensor<device>& tensor,
+    inline void shuffle_from(const Tensor<device>& tensor,
                              const Legs& new_legs,
                              Stream& stream)
     {
@@ -236,6 +235,20 @@ namespace Node
     // single dimension permute ?
     // scalar ?
   };
+
+  template<Device device>
+  inline std::ostream& operator<<(std::ostream& out, const Tensor<device>& value)
+  {
+    Rank i;
+    out << "Tensor_" << value.rank << "[";
+    for(i=0;i<value.rank-1;i++)
+      {
+        out << "(" << value.dims[i] << "|" << value.legs[i] << "), ";
+      }
+    out << "(" << value.dims[i] << "|" << value.legs[i] << ")]";
+    return out;
+  }
+
 }
 
 
