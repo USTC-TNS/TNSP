@@ -197,7 +197,7 @@ namespace Node
     {
       clean();
       const Size& contractRank = leg1.size();
-      Size a, b, c; // a*b , b*c -> a*c
+      Size a, b, c; // a*b , c*b -> a*c
       Legs tmp_leg1, tmp_leg2;
       internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
                                           tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
@@ -205,7 +205,7 @@ namespace Node
       Tensor<device> tmp_tensor1, tmp_tensor2;
       tmp_tensor1.shuffle_from(tensor1, tmp_leg1, stream);
       tmp_tensor2.shuffle_from(tensor2, tmp_leg2, stream);
-      //internal::contract::gemm(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c);
+      internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c, stream);
     }
 
     void svd_to()
@@ -232,6 +232,9 @@ namespace Node
     {
       PASS;
     }
+
+    // single dimension permute ?
+    // scalar ?
   };
 }
 

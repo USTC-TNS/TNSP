@@ -151,10 +151,78 @@ namespace Node
                                 const Legs&               plan2,
                                 const std::map<Leg, Leg>& map2)
     {
-      
+      const Rank& contractNum = plan1.size();
+      rank = rank1 + rank2 - 2*contractNum;
+      new_legs1 = Legs {rank1};
+      new_legs2 = Legs {rank2};
+      a = 1;
+      b = 1;
+      c = 1;
+      Rank j, k;
+      j = 0;
+      k = rank1 - contractNum;
+      for(Rank i=0;i<rank1;i++)
+        {
+          if(std::find(plan1.begin(), plan1.end(), legs1[i]) == plan1.end())
+            {
+              a            *= dims1[i];
+              size         *= dims1[i];
+              new_legs1[j]  = legs1[i];
+              dims.push_back(dims1[i]);
+              try
+                {
+                  legs.push_back(map1.at(legs1[i]));
+                }
+              catch(const std::out_of_range& e)
+                {
+                  legs.push_back(legs1[i]);
+                }
+              j++;
+            }
+          else
+            {
+              b            *= dims1[i];
+              new_legs1[k]  = legs1[i];
+              k++;
+            }
+        }
+      j = 0;
+      k = rank2 - contractNum;
+      for(Rank i=0;i<rank2;i++)
+        {
+          if(std::find(plan2.begin(), plan2.end(), legs2[i]) == plan2.end())
+            {
+              c            *= dims2[i];
+              size         *= dims2[i];
+              new_legs2[j]  = legs2[i];
+              dims.push_back(dims2[i]);
+              try
+                {
+                  legs.push_back(map2.at(legs2[i]));
+                }
+              catch(const std::out_of_range& e)
+                {
+                  legs.push_back(legs2[i]);
+                }
+              j++;
+            }
+          else
+            {
+              b            *= dims2[i];
+              new_legs2[k]  = legs2[i];
+              k++;
+            }
+        }
     }
-    void gemm();
 
+    template<Device device, class Type=Base>
+    void gemm(Type*                             data,
+              Type*                             data1,
+              Type*                             data2,
+              Size                              a,
+              Size                              b,
+              Size                              c,
+              internal::stream::Stream<device>& stream);
   }
 
   namespace internal::svd
