@@ -10,16 +10,17 @@ namespace Node
 {
   namespace internal::stream
   {
-    namespace internal
-    {
-      template<>
-      class stream_aux<Device::CPU>
-      {
-      public:
-        using stream = int;
-      };
-    }
   }
+
+  template<>
+  class Stream<Device::CPU>
+  {
+  public:
+    void wait() const {}
+    Stream() {}
+    ~Stream() {}
+    Stream& operator=(Stream<Device::CPU>& stream) {return *this;}
+  };
 
   namespace internal::memory
   {
@@ -43,7 +44,7 @@ namespace Node
     }
 
     template<>
-    void memCopyAsync<Device::CPU>(void* dst, const void* src, Size size, internal::stream::Stream<Device::CPU>& stream)
+    void memCopyAsync<Device::CPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
     {
       PASS;
     }
@@ -55,7 +56,7 @@ namespace Node
     }
 
     template<>
-    void memSendAsync<Device::CPU>(void* dst, const void* src, Size size, internal::stream::Stream<Device::CPU>& stream)
+    void memSendAsync<Device::CPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
     {
       PASS;
     }
@@ -67,7 +68,7 @@ namespace Node
     }
 
     template<>
-    void memRecvAsync<Device::CPU>(void* dst, const void* src, Size size, internal::stream::Stream<Device::CPU>& stream)
+    void memRecvAsync<Device::CPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
     {
       PASS;
     }
@@ -81,7 +82,7 @@ namespace Node
                        const Dims&                            dims_new,
                        const Dims&                            dims_old,
                        const Order&                           plan,
-                       internal::stream::Stream<Device::CPU>& stream)
+                       Stream<Device::CPU>& stream)
     {
       Eigen::array<Size, N> arr_new, arr_old;
       Eigen::array<Rank, N> arr_plan;
@@ -109,7 +110,7 @@ namespace Node
                               const Dims&                            dims_new,
                               const Dims&                            dims_old,
                               const Order&                           plan,
-                              internal::stream::Stream<Device::CPU>& stream)
+                              Stream<Device::CPU>& stream)
     {
       shuffle_list[plan.size()](data_new, data_old, dims_new, dims_old, plan, stream);
     }
@@ -124,7 +125,7 @@ namespace Node
                                    Size                                   a,
                                    Size                                   b,
                                    Size                                   c,
-                                   internal::stream::Stream<Device::CPU>& stream)
+                                   Stream<Device::CPU>& stream)
     {
       Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix1(data1, a, b);
       Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix2(data2, b, c);

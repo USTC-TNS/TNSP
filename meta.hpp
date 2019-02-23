@@ -59,16 +59,18 @@ namespace Node
 
   namespace internal::stream
   {
-    namespace internal
-    {
-      template<Device device>
-      class stream_aux;
-    }
-
-    template<Device device>
-    using Stream = typename internal::stream_aux<device>::stream;
     // wait输入的stream handle，并运行自己，返回等待自己的handle
   }
+
+  template<Device device>
+  class Stream
+  {
+  public:
+    Stream();
+    ~Stream();
+    void wait() const;
+    Stream& operator=(Stream<device>&);
+  };
 
   namespace internal::memory
   {
@@ -82,19 +84,19 @@ namespace Node
     void memCopy(void*, const void*, Size);
 
     template<Device device>
-    void memCopyAsync(void*, const void*, Size, internal::stream::Stream<device>&);
+    void memCopyAsync(void*, const void*, Size, Stream<device>&);
 
     template<Device device>
     void memSend(void*, const void*, Size);
 
     template<Device device>
-    void memSendAsync(void*, const void*, Size, internal::stream::Stream<device>&);
+    void memSendAsync(void*, const void*, Size, Stream<device>&);
 
     template<Device device>
     void memRecv(void*, const void*, Size);
 
     template<Device device>
-    void memRecvAsync(void*, const void*, Size, internal::stream::Stream<device>&);
+    void memRecvAsync(void*, const void*, Size, Stream<device>&);
   }
 
   namespace internal::shuffle
@@ -130,7 +132,7 @@ namespace Node
                  const Dims&                       dims_new,
                  const Dims&                       dims_old,
                  const Order&                      plan,
-                 internal::stream::Stream<device>& stream);
+                 Stream<device>& stream);
   }
 
   namespace internal::contract
@@ -226,7 +228,7 @@ namespace Node
               Size                              a,
               Size                              b,
               Size                              c,
-              internal::stream::Stream<device>& stream);
+              Stream<device>& stream);
   }
 
   namespace internal::svd

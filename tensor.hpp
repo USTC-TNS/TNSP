@@ -6,7 +6,7 @@
 
 namespace Node
 {
-  template<Device _device>
+  template<Device device>
   class Tensor
   {
   public:
@@ -16,9 +16,8 @@ namespace Node
     Data data;
     Size size;
 
-    const TensorData<_device> content = this;
-    static const Device device = _device;
-    using Stream = internal::stream::Stream<device>;
+    const TensorData<device> content = this;
+    Stream<device> stream;
 
   private:
     inline Data new_data(Size size) const
@@ -36,7 +35,7 @@ namespace Node
       internal::memory::memCopy<device>(dst, src, size);
     }
 
-    inline void copy_data_async(Data dst, Data src, Size size, Stream& stream) const
+    inline void copy_data_async(Data dst, Data src, Size size, Stream<device>& stream) const
     {
       internal::memory::memCopyAsync<device>(dst, src, size, stream);
     }
@@ -46,7 +45,7 @@ namespace Node
       internal::memory::memSend<device>(dst, src, size);
     }
 
-    inline void send_data_async(Data dst, Data src, Size size, Stream& stream) const
+    inline void send_data_async(Data dst, Data src, Size size, Stream<device>& stream) const
     {
       internal::memory::memSendAsync<device>(dst, src, size, stream);
     }
@@ -56,7 +55,7 @@ namespace Node
       internal::memory::memRecv<device>(dst, src, size);
     }
 
-    inline void recv_data_async(Data dst, Data src, Size size, Stream& stream) const
+    inline void recv_data_async(Data dst, Data src, Size size, Stream<device>& stream) const
     {
       internal::memory::memRecvAsync<device>(dst, src, size, stream);
     }
@@ -180,33 +179,31 @@ namespace Node
     }
 
     void shuffle_to(Tensor<device>& tensor,
-                           const Legs& new_legs,
-                           Stream& stream) const
+                    const Legs& new_legs) const
     {
       tensor.clean();
       tensor.rank = rank;
       tensor.size = size;
       tensor.data = new_data(size);
 
+      tensor.legs = new_legs;
       Order plan;
       internal::shuffle::make_plan(plan, new_legs, legs);
       internal::shuffle::get_dims(tensor.dims, dims, plan);
-      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan, stream);
-      tensor.legs = new_legs;
+      stream.wait();
+      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan, tensor.stream);
     }
 
     inline void shuffle_from(const Tensor<device>& tensor,
-                             const Legs& new_legs,
-                             Stream& stream)
+                             const Legs& new_legs)
     {
-      tensor.shuffle_to(*this, new_legs, stream);
+      tensor.shuffle_to(*this, new_legs);
     }
 
     void contract_from(const Tensor<device>& tensor1,
                        const Tensor<device>& tensor2,
                        const Legs& leg1,
                        const Legs& leg2,
-                       Stream& stream,
                        const std::map<Leg, Leg> map1 = {},
                        const std::map<Leg, Leg> map2 = {})
     {
@@ -217,9 +214,13 @@ namespace Node
                                           tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
                                           tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
       Tensor<device> tmp_tensor1, tmp_tensor2;
-      tmp_tensor1.shuffle_from(tensor1, tmp_leg1, stream);
-      tmp_tensor2.shuffle_from(tensor2, tmp_leg2, stream);
       data = new_data(size);
+      tensor1.stream.wait();
+      tmp_tensor1.shuffle_from(tensor1, tmp_leg1);
+      tensor2.stream.wait();
+      tmp_tensor2.shuffle_from(tensor2, tmp_leg2);
+      tmp_tensor1.stream.wait();
+      tmp_tensor2.stream.wait();
       internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c, stream);
     }
 
@@ -227,7 +228,6 @@ namespace Node
                 Tensor<device>& S,
                 Tensor<device>& V,
                 const Legs&     leg,
-                Stream&         stream,
                 Rank            cut=0)
     {
       PASS;
@@ -270,12 +270,12 @@ namespace Node
     return out;
   }
 
-  template<Device _device>
+  template<Device device>
   class TensorData
   {
   public:
-    Tensor<_device>* tensor;
-    TensorData(Tensor<_device>* _tensor) : tensor(_tensor) {}
+    Tensor<device>* tensor;
+    TensorData(Tensor<device>* _tensor) : tensor(_tensor) {}
   };
 
   template<Device device>
