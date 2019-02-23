@@ -126,7 +126,10 @@ namespace Node
                                    Size                                   c,
                                    internal::stream::Stream<Device::CPU>& stream)
     {
-      PASS;
+      Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix1(data1, a, b);
+      Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix2(data2, b, c);
+      Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix(data, a, c);
+      matrix = matrix1 * matrix2;
     }
   }
 }

@@ -7,26 +7,6 @@
 namespace Node
 {
   template<Device _device>
-  class TensorData
-  {
-  public:
-    Tensor<_device>* tensor;
-    TensorData(Tensor<_device>* _tensor) : tensor(_tensor) {}
-  };
-
-  template<Device device>
-  inline std::ostream& operator<<(std::ostream& out, const TensorData<device>& value)
-  {
-    Size i;
-    for(i=0;i<value.tensor->size-1;i++)
-      {
-        out << value.tensor->data[i] << ", ";
-      }
-    out << value.tensor->data[i];
-    return out;
-  }
-
-  template<Device _device>
   class Tensor
   {
   public:
@@ -178,6 +158,14 @@ namespace Node
         }
     }
 
+    void set_test_zero()
+    {
+      for(Size i=0;i<size;i++)
+        {
+          data[i] = 0;
+        }
+    }
+
     inline Tensor<device>& rename_leg(const std::map<Leg, Leg>& dict)
     {
       for(auto& i : legs)
@@ -282,6 +270,28 @@ namespace Node
     return out;
   }
 
+  template<Device _device>
+  class TensorData
+  {
+  public:
+    Tensor<_device>* tensor;
+    TensorData(Tensor<_device>* _tensor) : tensor(_tensor) {}
+  };
+
+  template<Device device>
+  inline std::ostream& operator<<(std::ostream& out, const TensorData<device>& value);
+
+  template<>
+  inline std::ostream& operator<<<Device::CPU>(std::ostream& out, const TensorData<Device::CPU>& value)
+  {
+    Size i;
+    for(i=0;i<value.tensor->size-1;i++)
+      {
+        out << value.tensor->data[i] << ", ";
+      }
+    out << value.tensor->data[i];
+    return out;
+  }
 }
 
 

@@ -167,7 +167,8 @@ namespace Node
       k = rank1 - contractNum;
       for(Rank i=0;i<rank1;i++)
         {
-          if(std::find(plan1.begin(), plan1.end(), legs1[i]) == plan1.end())
+          auto pos = std::find(plan1.begin(), plan1.end(), legs1[i]);
+          if(pos == plan1.end())
             {
               a            *= dims1[i];
               size         *= dims1[i];
@@ -185,16 +186,16 @@ namespace Node
             }
           else
             {
-              b            *= dims1[i];
-              new_legs1[k]  = legs1[i];
-              k++;
+              auto index          = std::distance(plan1.begin(), pos);
+              new_legs1[index+k]  = legs1[i];
+              b                  *= dims1[i];
             }
         }
       j = contractNum;
-      k = 0;
       for(Rank i=0;i<rank2;i++)
         {
-          if(std::find(plan2.begin(), plan2.end(), legs2[i]) == plan2.end())
+          auto pos = std::find(plan2.begin(), plan2.end(), legs2[i]);
+          if(pos == plan2.end())
             {
               c            *= dims2[i];
               size         *= dims2[i];
@@ -212,9 +213,8 @@ namespace Node
             }
           else
             {
-              b            *= dims2[i];
-              new_legs2[k]  = legs2[i];
-              k++;
+              auto index       = std::distance(plan2.begin(), pos);
+              new_legs2[index] = legs2[i];
             }
         }
     }
@@ -244,6 +244,9 @@ namespace Node
   namespace internal::norm
   {
   }
+
+  template<Device _device>
+  class TensorData;
 
   template<Device _device>
   class Tensor;
