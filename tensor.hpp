@@ -173,8 +173,8 @@ namespace Node
 
       Order plan;
       internal::shuffle::make_plan(plan, new_legs, legs);
-      internal::shuffle::shuffle<device>(tensor.data, data, dims, plan, stream);
       internal::shuffle::get_dims(tensor.dims, dims, plan);
+      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan, stream);
       tensor.legs = new_legs;
     }
 
@@ -195,7 +195,7 @@ namespace Node
     {
       clean();
       const Size& contractRank = leg1.size();
-      Size a, b, c; // a*b , c*b -> a*c
+      Size a, b, c; // a*b , b*c -> a*c
       Legs tmp_leg1, tmp_leg2;
       internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
                                           tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
@@ -207,7 +207,12 @@ namespace Node
       internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c, stream);
     }
 
-    void svd_to()
+    void svd_to(Tensor<device>& U,
+                Tensor<device>& S,
+                Tensor<device>& V,
+                const Legs&     leg,
+                Stream&         stream,
+                Rank            cut=0)
     {
       PASS;
     }

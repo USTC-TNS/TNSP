@@ -4,16 +4,19 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include "eigen-git-mirror/Eigen/Dense"
-#include "eigen-git-mirror/unsupported/Eigen/CXX11/Tensor"
 
 #define PASS
 
 namespace Node
 {
-  using Base = double;
+#ifndef Type
+#define Type double
+#endif
+  using Base = Type;
+#undef Type
   enum class Leg
     {
 #define CreateLeg(x) Left##x, Right##x, Up##x, Down##x, Phy##x
@@ -124,7 +127,8 @@ namespace Node
     template<Device device>
     void shuffle(Data                              data_new,
                  Data                              data_old,
-                 const Dims&                       dims,
+                 const Dims&                       dims_new,
+                 const Dims&                       dims_old,
                  const Order&                      plan,
                  internal::stream::Stream<device>& stream);
   }
@@ -186,8 +190,8 @@ namespace Node
               k++;
             }
         }
-      j = 0;
-      k = rank2 - contractNum;
+      k = 0;
+      j = rank2 - contractNum;
       for(Rank i=0;i<rank2;i++)
         {
           if(std::find(plan2.begin(), plan2.end(), legs2[i]) == plan2.end())

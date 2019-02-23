@@ -3,6 +3,9 @@
 
 #include "meta.hpp"
 
+#include "eigen-git-mirror/Eigen/Dense"
+#include "eigen-git-mirror/unsupported/Eigen/CXX11/Tensor"
+
 namespace Node
 {
   namespace internal::stream
@@ -72,14 +75,30 @@ namespace Node
 
   namespace internal::shuffle
   {
+    template<Rank N>
+    void eigen_shuffle(Data                                   data_new,
+                       Data                                   data_old,
+                       const Dims&                            dims_new,
+                       const Dims&                            dims_old,
+                       const Order&                           plan,
+                       internal::stream::Stream<Device::CPU>& stream)
+    {
+      PASS;
+    }
+
+    using ShuffleType = decltype(eigen_shuffle<0>);
+    static ShuffleType* shuffle_list[] = {eigen_shuffle<0>, eigen_shuffle<1>, eigen_shuffle<2>, eigen_shuffle<3>, eigen_shuffle<4>, eigen_shuffle<5>, eigen_shuffle<6>, eigen_shuffle<7>,
+                                          eigen_shuffle<8>, eigen_shuffle<9>, eigen_shuffle<10>, eigen_shuffle<11>, eigen_shuffle<12>, eigen_shuffle<13>, eigen_shuffle<14>, eigen_shuffle<15>};
+
     template<>
     void shuffle<Device::CPU>(Data                                   data_new,
                               Data                                   data_old,
-                              const Dims&                            dims,
+                              const Dims&                            dims_new,
+                              const Dims&                            dims_old,
                               const Order&                           plan,
                               internal::stream::Stream<Device::CPU>& stream)
     {
-      PASS;
+      shuffle_list[dims_new.size()](data_new, data_old, dims_new, dims_old, plan, stream);
     }
   }
 
