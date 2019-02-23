@@ -83,7 +83,13 @@ namespace Node
                        const Order&                           plan,
                        internal::stream::Stream<Device::CPU>& stream)
     {
-      PASS;
+      using Index = typename Eigen::Tensor<Base, N>::Index;
+      Eigen::array<Index, N> arr_new, arr_old;
+      std::copy(dims_new.begin(), dims_new.end(), arr_new.begin());
+      std::copy(dims_old.begin(), dims_old.end(), arr_old.begin());
+      Eigen::TensorMap<Eigen::Tensor<Base, N>> tensor_new(data_new, arr_new);
+      Eigen::TensorMap<Eigen::Tensor<Base, N>> tensor_old(data_old, arr_old);
+      tensor_new = tensor_old.shuffle(plan);
     }
 
     using ShuffleType = decltype(eigen_shuffle<0>);
