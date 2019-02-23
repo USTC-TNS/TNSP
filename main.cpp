@@ -6,10 +6,26 @@ int main()
 {
   { //test shuffle
     int stream=0;
-    T a(4, {2,3,4,5}, {Down, Up, Left, Right});
-    T b;
-    a.shuffle_to(b, {Left,Down,Right,Up}, stream);
-    std::cout << a << std::endl << b << std::endl;
+    {
+      T a(2, {2,3}, {Down, Up});
+      a.set_test_data();
+      T b;
+      a.shuffle_to(b, {Up,Down}, stream);
+      std::cout << a << std::endl;
+      std::cout << a.content << std::endl;
+      std::cout << b << std::endl;
+      std::cout << b.content << std::endl;
+    }
+    {
+      T a(4, {2,3,4,5}, {Down, Up, Left, Right});
+      a.set_test_data();
+      T b;
+      a.shuffle_to(b, {Left,Down,Right,Up}, stream);
+      std::cout << a << std::endl;
+      std::cout << a.content << std::endl;
+      std::cout << b << std::endl;
+      std::cout << b.content << std::endl;
+    }
   }
   { // test contract
     int stream=0;

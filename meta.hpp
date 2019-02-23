@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 
 #define PASS
 
@@ -245,6 +244,9 @@ namespace Node
   namespace internal::norm
   {
   }
+
+  template<Device _device>
+  class Tensor;
 }
 
 #define DefineLeg(x) static const Node::Leg x = Node::Leg::x

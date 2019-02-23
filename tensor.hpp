@@ -7,6 +7,26 @@
 namespace Node
 {
   template<Device _device>
+  class TensorData
+  {
+  public:
+    Tensor<_device>* tensor;
+    TensorData(Tensor<_device>* _tensor) : tensor(_tensor) {}
+  };
+
+  template<Device device>
+  inline std::ostream& operator<<(std::ostream& out, const TensorData<device>& value)
+  {
+    Size i;
+    for(i=0;i<value.tensor->size-1;i++)
+      {
+        out << value.tensor->data[i] << ", ";
+      }
+    out << value.tensor->data[i];
+    return out;
+  }
+
+  template<Device _device>
   class Tensor
   {
   public:
@@ -16,6 +36,7 @@ namespace Node
     Data data;
     Size size;
 
+    const TensorData<_device> content = this;
     static const Device device = _device;
     using Stream = internal::stream::Stream<device>;
 
@@ -149,6 +170,14 @@ namespace Node
       free_all();
     }
 
+    void set_test_data()
+    {
+      for(Size i=0;i<size;i++)
+        {
+          data[i] = i;
+        }
+    }
+
     inline Tensor<device>& rename_leg(const std::map<Leg, Leg>& dict)
     {
       for(auto& i : legs)
@@ -194,7 +223,6 @@ namespace Node
                        const std::map<Leg, Leg> map2 = {})
     {
       clean();
-      const Size& contractRank = leg1.size();
       Size a, b, c; // a*b , b*c -> a*c
       Legs tmp_leg1, tmp_leg2;
       internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
