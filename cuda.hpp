@@ -1,5 +1,5 @@
-#ifndef TENSOR_GPU_HPP_
-#define TENSOR_GPU_HPP_
+#ifndef TENSOR_CUDA_HPP_
+#define TENSOR_CUDA_HPP_
 
 #include "meta.hpp"
 
@@ -7,64 +7,65 @@ namespace Node
 {
   namespace internal::stream
   {
-    template<>
-    class Stream<Device::GPU>
-    {
-    public:
-      void wait() const {}
-      Stream() {}
-      ~Stream() {}
-      Stream& operator=(Stream<Device::GPU>& stream) {return *this;}
-    };
   }
+
+  template<>
+  class Stream<Device::CUDA>
+  {
+  public:
+    void wait() const {}
+    Stream() {}
+    ~Stream() {}
+    Stream& operator=(Stream<Device::CUDA>& stream) {return *this;}
+  };
 
   namespace internal::memory
   {
-    // GPU
+    // CUDA
     template<>
-    inline void* malloc<Device::GPU>(Size size)
+    inline void* malloc<Device::CUDA>(Size size)
     {
       PASS;//return std::malloc(size);
     }
 
     template<>
-    inline void free<Device::GPU>(void* ptr)
+    inline void free<Device::CUDA>(void* ptr)
     {
       PASS;//std::free(ptr);
     }
 
     template<>
-    inline void memCopy<Device::GPU>(void* dst, const void* src, Size size)
+    inline void memCopy<Device::CUDA>(void* dst, const void* src, Size size)
     {
       PASS;//std::memcpy(dst, src, size);
     }
 
     template<>
-    void memCopyAsync<Device::GPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
+    void memCopyAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
     {
       PASS;
     }
 
     template<>
-    void memSend<Device::GPU>(void*dst, const void* src, Size size)
+    void memSend<Device::CUDA>(void*dst, const void* src, Size size)
     {
       PASS;
     }
 
     template<>
-    void memSendAsync<Device::GPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
+    void memSendAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
     {
       PASS;
     }
 
     template<>
-    void memRecv<Device::GPU>(void* dst, const void* src, Size size)
+    void memRecv<Device::CUDA>(void* dst, const void* src, Size size)
     {
       PASS;
     }
 
     template<>
-    void memRecvAsync<Device::GPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
+    void memRecvAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
     {
       PASS;
     }
@@ -73,12 +74,12 @@ namespace Node
   namespace internal::shuffle
   {
     template<>
-    void shuffle<Device::GPU>(Data                                   data_new,
+    void shuffle<Device::CUDA>(Data                                   data_new,
                               Data                                   data_old,
                               const Dims&                            dims_new,
                               const Dims&                            dims_old,
                               const Order&                           plan,
-                              Stream<Device::GPU>& stream)
+                              Stream<Device::CUDA>& stream)
     {
       PASS;
     }
@@ -87,13 +88,13 @@ namespace Node
   namespace internal::contract
   {
     template<>
-    void gemm<Device::GPU, double>(double*                                data,
+    void gemm<Device::CUDA, double>(double*                                data,
                                    double*                                data1,
                                    double*                                data2,
                                    Size                                   a,
                                    Size                                   b,
                                    Size                                   c,
-                                   Stream<Device::GPU>& stream)
+                                   Stream<Device::CUDA>& stream)
     {
       PASS;
     }

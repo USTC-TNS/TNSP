@@ -3,6 +3,7 @@
 
 #include "meta.hpp"
 #include "cpu.hpp"
+#include "cuda.hpp"
 
 namespace Node
 {
