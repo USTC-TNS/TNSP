@@ -1,8 +1,6 @@
 #ifndef TENSOR_HPP_
 #define TENSOR_HPP_
 
-#define PASS
-
 #include "meta.hpp"
 #include "cpu.hpp"
 
@@ -117,7 +115,8 @@ namespace Node
       init();
     }
 
-    Tensor(Size _rank, Dims _dims, Legs _legs)
+    template<class DimsType=Dims, class LegsType=Legs>
+    Tensor(Size _rank, DimsType _dims, LegsType _legs)
       : rank(_rank), dims(_dims), legs(_legs)
     {
       update_size();
@@ -205,6 +204,7 @@ namespace Node
       Tensor<device> tmp_tensor1, tmp_tensor2;
       tmp_tensor1.shuffle_from(tensor1, tmp_leg1, stream);
       tmp_tensor2.shuffle_from(tensor2, tmp_leg2, stream);
+      data = new_data(size);
       internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c, stream);
     }
 
