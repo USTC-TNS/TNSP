@@ -83,13 +83,20 @@ namespace Node
                        const Order&                           plan,
                        internal::stream::Stream<Device::CPU>& stream)
     {
-      using Index = typename Eigen::Tensor<Base, N>::Index;
-      Eigen::array<Index, N> arr_new, arr_old;
-      std::copy(dims_new.begin(), dims_new.end(), arr_new.begin());
-      std::copy(dims_old.begin(), dims_old.end(), arr_old.begin());
+      Eigen::array<Size, N> arr_new, arr_old;
+      Eigen::array<Rank, N> arr_plan;
+      //std::copy(dims_new.begin(), dims_new.end(), arr_new.begin());
+      //std::copy(dims_old.begin(), dims_old.end(), arr_old.begin());
+      //std::copy(plan.begin(), plan.end(), arr_plan.begin());
+      for(Rank i=0;i<N;i++)
+        {
+          arr_new[i] = dims_new[i];
+          arr_old[i] = dims_old[i];
+          arr_plan[i] = plan[i];
+        }
       Eigen::TensorMap<Eigen::Tensor<Base, N>> tensor_new(data_new, arr_new);
       Eigen::TensorMap<Eigen::Tensor<Base, N>> tensor_old(data_old, arr_old);
-      tensor_new = tensor_old.shuffle(plan);
+      tensor_new = tensor_old.shuffle(arr_plan);
     }
 
     using ShuffleType = decltype(eigen_shuffle<0>);
@@ -104,7 +111,7 @@ namespace Node
                               const Order&                           plan,
                               internal::stream::Stream<Device::CPU>& stream)
     {
-      shuffle_list[dims_new.size()](data_new, data_old, dims_new, dims_old, plan, stream);
+      shuffle_list[plan.size()](data_new, data_old, dims_new, dims_old, plan, stream);
     }
   }
 

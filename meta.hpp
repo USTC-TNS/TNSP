@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <cassert>
 
 #define PASS
 
@@ -190,8 +191,8 @@ namespace Node
               k++;
             }
         }
+      j = contractNum;
       k = 0;
-      j = rank2 - contractNum;
       for(Rank i=0;i<rank2;i++)
         {
           if(std::find(plan2.begin(), plan2.end(), legs2[i]) == plan2.end())
