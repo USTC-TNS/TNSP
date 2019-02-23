@@ -191,16 +191,21 @@ namespace Node
                        const Tensor<device>& tensor2,
                        const Legs& leg1,
                        const Legs& leg2,
-                       Stream& stream)
+                       Stream& stream,
+                       const std::map<Leg, Leg> map1 = {},
+                       const std::map<Leg, Leg> map2 = {})
     {
       clean();
-      Size contractRank = leg1.size();
+      const Size& contractRank = leg1.size();
       Size a, b, c; // a*b , b*c -> a*c
-      std::vector<Size> plan1, plan2;
-      internal::contract::get_shuffle_plan(plan1, a, b, leg1, tensor1.legs, tensor1.dims);
-      //shuffle first !!!
-      //internal::contract::contract<device>();
-      //internal::contract::new_dim(dims, tensor1.dims, dim1, tensor2.dims, dim2);
+      Legs tmp_leg1, tmp_leg2;
+      internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
+                                          tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
+                                          tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
+      Tensor<device> tmp_tensor1, tmp_tensor2;
+      tmp_tensor1.shuffle_from(tensor1, tmp_leg1, stream);
+      tmp_tensor2.shuffle_from(tensor2, tmp_leg2, stream);
+      //internal::contract::gemm(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c);
     }
 
     void svd_to()

@@ -22,7 +22,7 @@ namespace Node
   {
     // CPU
     template<>
-    inline void* malloc<Device::CPU>(std::size_t size)
+    inline void* malloc<Device::CPU>(Size size)
     {
       return std::malloc(size);
     }
@@ -34,37 +34,37 @@ namespace Node
     }
 
     template<>
-    inline void memcpy<Device::CPU>(void* dst, const void* src, std::size_t size)
+    inline void memCopy<Device::CPU>(void* dst, const void* src, Size size)
     {
       std::memcpy(dst, src, size);
     }
 
     template<>
-    void memcpyAsync<Device::CPU>(void*, const void*, std::size_t, internal::stream::Stream<Device::CPU> stream)
+    void memCopyAsync<Device::CPU>(void* dst, const void* src, Size size, internal::stream::Stream<Device::CPU>& stream)
     {
       PASS;
     }
 
     template<>
-    void memSend<Device::CPU>(void*, const void*, std::size_t)
+    void memSend<Device::CPU>(void*dst, const void* src, Size size)
     {
       PASS;
     }
 
     template<>
-    void memSendAsync<Device::CPU>(void*, const void*, std::size_t, internal::stream::Stream<Device::CPU> stream)
+    void memSendAsync<Device::CPU>(void* dst, const void* src, Size size, internal::stream::Stream<Device::CPU>& stream)
     {
       PASS;
     }
 
     template<>
-    void memRecv<Device::CPU>(void*, const void*, std::size_t)
+    void memRecv<Device::CPU>(void* dst, const void* src, Size size)
     {
       PASS;
     }
 
     template<>
-    void memRecvAsync<Device::CPU>(void*, const void*, std::size_t, internal::stream::Stream<Device::CPU> stream)
+    void memRecvAsync<Device::CPU>(void* dst, const void* src, Size size, internal::stream::Stream<Device::CPU>& stream)
     {
       PASS;
     }
@@ -75,8 +75,8 @@ namespace Node
     template<>
     void shuffle<Device::CPU>(Data                                   data_new,
                               Data                                   data_old,
-                              const std::vector<Size>&               dims,
-                              const std::vector<Size>&               plan,
+                              const Dims&                            dims,
+                              const Order&                           plan,
                               internal::stream::Stream<Device::CPU>& stream)
     {
       PASS;

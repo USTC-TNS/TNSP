@@ -79,29 +79,29 @@ namespace Node
     void memCopy(void*, const void*, Size);
 
     template<Device device>
-    void memCopyAsync(void*, const void*, Size, internal::stream::Stream<device>& stream);
+    void memCopyAsync(void*, const void*, Size, internal::stream::Stream<device>&);
 
     template<Device device>
     void memSend(void*, const void*, Size);
 
     template<Device device>
-    void memSendAsync(void*, const void*, Size, internal::stream::Stream<device>& stream);
+    void memSendAsync(void*, const void*, Size, internal::stream::Stream<device>&);
 
     template<Device device>
     void memRecv(void*, const void*, Size);
 
     template<Device device>
-    void memRecvAsync(void*, const void*, Size, internal::stream::Stream<device>& stream);
+    void memRecvAsync(void*, const void*, Size, internal::stream::Stream<device>&);
   }
 
   namespace internal::shuffle
   {
     inline void make_plan(Order& plan, const Legs& new_legs, const Legs& legs)
     {
-      const Size& rank = legs.size();
-      for(Size i=0;i<rank;i++)
+      const Rank& rank = legs.size();
+      for(Rank i=0;i<rank;i++)
         {
-          for(Size j=0;j<rank;j++)
+          for(Rank j=0;j<rank;j++)
             {
               if(new_legs[i]==legs[j])
                 {
@@ -112,10 +112,10 @@ namespace Node
         }
     }
 
-    inline void get_dims(Dims& new_dims, const Dims& dims, const Dims& plan)
+    inline void get_dims(Dims& new_dims, const Dims& dims, const Order& plan)
     {
-      const Size& rank = dims.size();
-      for(Size i=0;i<rank;i++)
+      const Rank& rank = dims.size();
+      for(Rank i=0;i<rank;i++)
         {
           new_dims.push_back(dims[plan[i]]);
         }
@@ -124,15 +124,35 @@ namespace Node
     template<Device device>
     void shuffle(Data                              data_new,
                  Data                              data_old,
-                 const Size&                       dims,
+                 const Dims&                       dims,
                  const Order&                      plan,
                  internal::stream::Stream<device>& stream);
   }
 
   namespace internal::contract
   {
-    void get_shuffle_plan(std::vector<Size>);
-
+    inline void set_dim_and_leg(Rank&                     rank,
+                                Dims&                     dims,
+                                Legs&                     legs,
+                                Size&                     size,
+                                Legs&                     new_legs1,
+                                Legs&                     new_legs2,
+                                Size&                     a,
+                                Size&                     b,
+                                Size&                     c,
+                                const Rank&               rank1,
+                                const Dims&               dims1,
+                                const Legs&               legs1,
+                                const Legs&               plan1,
+                                const std::map<Leg, Leg>& map1,
+                                const Rank&               rank2,
+                                const Dims&               dims2,
+                                const Legs&               legs2,
+                                const Legs&               plan2,
+                                const std::map<Leg, Leg>& map2)
+    {
+      
+    }
     void gemm();
 
   }
