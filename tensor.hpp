@@ -12,7 +12,7 @@ namespace Node
   class Tensor
   {
   public:
-    Size rank;
+    Rank rank;
     Dims dims;
     Legs legs;
     Data data;
@@ -22,24 +22,44 @@ namespace Node
     using Stream = internal::stream::Stream<device>;
 
   private:
-    inline Data new_data(std::size_t size) const
+    inline Data new_data(Size size) const
     {
       return Data(internal::memory::malloc<device>(sizeof(Base)*size));
     }
 
-    inline void delete_data(void* ptr) const
+    inline void delete_data(Data ptr) const
     {
       internal::memory::free<device>(ptr);
     }
 
-    inline void memcpy(void* dst, const void* src, std::size_t size) const
+    inline void copy_data(Data dst, Data src, Size size) const
     {
-      internal::memory::memcpy<device>(dst, src, size);
+      internal::memory::memCopy<device>(dst, src, size);
     }
 
-    inline void memcpyAsync(void* dst, const void* src, std::size_t size) const
+    inline void copy_data_async(Data dst, Data src, Size size, Stream& stream) const
     {
-      PASS;
+      internal::memory::memCopyAsync<device>(dst, src, size, stream);
+    }
+
+    inline void send_data(Data dst, Data src, Size size) const
+    {
+      internal::memory::memSend<device>(dst, src, size);
+    }
+
+    inline void send_data_async(Data dst, Data src, Size size, Stream& stream) const
+    {
+      internal::memory::memSendAsync<device>(dst, src, size, stream);
+    }
+
+    inline void recv_data(Data dst, Data src, Size size) const
+    {
+      internal::memory::memRecv<device>(dst, src, size);
+    }
+
+    inline void recv_data_async(Data dst, Data src, Size size, Stream& stream) const
+    {
+      internal::memory::memRecvAsync<device>(dst, src, size, stream);
     }
 
     inline void free_all() const
@@ -131,7 +151,7 @@ namespace Node
       free_all();
     }
 
-    inline const Tensor<device>& rename_leg(const std::map<Leg, Leg>& dict)
+    inline Tensor<device>& rename_leg(const std::map<Leg, Leg>& dict)
     {
       for(auto& i : legs)
         {
@@ -153,10 +173,10 @@ namespace Node
       tensor.size = size;
       tensor.data = new_data(size);
 
-      std::vector<Size> plan;
-      internal::shuffle::make_plan(plan, new_legs, legs, rank);
+      Order plan;
+      internal::shuffle::make_plan(plan, new_legs, legs);
       internal::shuffle::shuffle<device>(tensor.data, data, dims, plan, stream);
-      internal::shuffle::get_dims(tensor.dims, dims, plan, rank);
+      internal::shuffle::get_dims(tensor.dims, dims, plan);
       tensor.legs = new_legs;
     }
 
@@ -175,12 +195,12 @@ namespace Node
     {
       clean();
       Size contractRank = leg1.size();
-      std::vector<Size> dim1, dim2;
-      internal::contract::get_dim(dim1, leg1, tensor1.legs);
-      internal::contract::get_dim(dim2, leg2, tensor2.legs);
+      Size a, b, c; // a*b , b*c -> a*c
+      std::vector<Size> plan1, plan2;
+      internal::contract::get_shuffle_plan(plan1, a, b, leg1, tensor1.legs, tensor1.dims);
       //shuffle first !!!
-      internal::contract::contract<device>();
-      internal::contract::new_dim(dims, tensor1.dims, dim1, tensor2.dims, dim2);
+      //internal::contract::contract<device>();
+      //internal::contract::new_dim(dims, tensor1.dims, dim1, tensor2.dims, dim2);
     }
 
     void svd_to()
@@ -199,6 +219,11 @@ namespace Node
     }
 
     void norm()
+    {
+      PASS;
+    }
+
+    void max() // abs and max
     {
       PASS;
     }
