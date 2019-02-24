@@ -1,9 +1,12 @@
 #include "tensor.hpp"
 
-using T = Node::Tensor<Node::Device::CPU>;
-
 int main()
 {
+#ifdef USE_CPU
+#ifdef T
+#undef T
+#endif
+#define T Node::Tensor<Node::Device::CPU>
   { //test shuffle
     {
       T a(2, {2,3}, {Down, Up});
@@ -56,4 +59,15 @@ int main()
       std::cout << c.content << std::endl;
     }
   }
+#endif
+
+#ifdef USE_CUDA
+#ifdef T
+#undef T
+#endif
+#define T Node::Tensor<Node::Device::CUDA>
+  {
+    T a(2, {2, 3}, {Left, Right});
+  }
+#endif
 }

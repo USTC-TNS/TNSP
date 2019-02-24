@@ -2,8 +2,12 @@
 #define TENSOR_HPP_
 
 #include "meta.hpp"
+#ifdef USE_CPU
 #include "cpu.hpp"
+#endif
+#ifdef USE_CUDA_
 #include "cuda.hpp"
+#endif
 
 namespace Node
 {
