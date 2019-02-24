@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <utility>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -66,7 +67,7 @@ namespace Node
 
   enum class Device
     {
-     CUDA, SW, AMD, CPU
+     CPU, CUDA, SW, AMD
     };
 
   namespace internal

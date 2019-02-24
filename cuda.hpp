@@ -9,7 +9,7 @@ namespace Node
   {
     namespace stream
     {
-      static std::vector<std::vector<cudaStream_t*, int>> stream_pool;
+      static std::vector<std::pair<cudaStream_t*, int>> stream_pool;
     }
   }
 

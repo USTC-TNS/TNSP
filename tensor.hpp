@@ -5,7 +5,7 @@
 #ifdef USE_CPU
 #include "cpu.hpp"
 #endif
-#ifdef USE_CUDA_
+#ifdef USE_CUDA
 #include "cuda.hpp"
 #endif
 
