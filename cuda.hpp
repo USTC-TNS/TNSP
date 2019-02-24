@@ -97,33 +97,15 @@ namespace Node
       }
 
       template<>
-      void memCopyAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
-      {
-        cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToDevice, stream.stream->stream);
-      }
-
-      template<>
       void memSend<Device::CUDA>(void*dst, const void* src, Size size)
       {
         cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice);
       }
 
       template<>
-      void memSendAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
-      {
-        cudaMemcpyAsync(dst, src, size, cudaMemcpyHostToDevice, stream.stream->stream);
-      }
-
-      template<>
       void memRecv<Device::CUDA>(void* dst, const void* src, Size size)
       {
         cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
-      }
-
-      template<>
-      void memRecvAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
-      {
-        cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, stream.stream->stream);
       }
     }
 
@@ -134,8 +116,7 @@ namespace Node
                                    Data                                   data_old,
                                    const Dims&                            dims_new,
                                    const Dims&                            dims_old,
-                                   const Order&                           plan,
-                                   Stream<Device::CUDA>& stream)
+                                   const Order&                           plan)
       {
         PASS;
       }
@@ -149,8 +130,7 @@ namespace Node
                                       double*                                data2,
                                       Size                                   a,
                                       Size                                   b,
-                                      Size                                   c,
-                                      Stream<Device::CUDA>& stream)
+                                      Size                                   c)
       {
         PASS;
       }

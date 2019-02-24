@@ -13,7 +13,12 @@ namespace Node
 {
   class always_valid : public std::future<void>
   {
-    void wait() {}
+  public:
+    inline void get() const {}
+    inline void wait() const {}
+    inline bool valid() const {return true;}
+    always_valid() {}
+    ~always_valid() {}
   };
 
   template<Device device>
@@ -27,9 +32,20 @@ namespace Node
     Size size;
 
     const TensorData<device> content = this;
-    std::future<void> future;
+    std::future<void> future = always_valid {};
+    using T = Tensor<device>;
 
   private:
+    inline void wait () const
+    {
+      future.wait();
+    }
+
+    inline bool valid() const
+    {
+      return future.valid();
+    }
+
     inline Data new_data(Size size) const
     {
       return Data(internal::memory::malloc<device>(sizeof(Base)*size));
@@ -40,7 +56,7 @@ namespace Node
       internal::memory::free<device>(ptr);
     }
 
-    inline void copy_data(Data dst, Data src, Size size) const
+    inline static void copy_data(Data dst, Data src, Size size)
     {
       internal::memory::memCopy<device>(dst, src, size);
     }
@@ -76,7 +92,7 @@ namespace Node
       legs = tensor.legs;
       size = tensor.size;
       data = new_data(size);
-      copy_data(data, tensor.data, sizeof(Base)*size);
+      future = std::async(&T::copy_data, data, tensor.data, sizeof(Base)*size);
     }
 
     inline void move_from(Tensor<device>&& tensor)
@@ -144,12 +160,12 @@ namespace Node
       free_all();
     }
 
-    void send_data(Data src)
+    void SendData(Data src)
     {
       send_data(data, src, size*sizeof(Base));
     }
 
-    void recv_data(Data dst) const
+    void RecvData(Data dst) const
     {
       recv_data(dst, data, size*sizeof(Base));
     }
@@ -170,7 +186,7 @@ namespace Node
             {
               tmp[i] = i;
             }
-          send_data(tmp);
+          future = std::async(&T::SendData, this, tmp);
           delete[] tmp;
         }
     }
@@ -191,7 +207,7 @@ namespace Node
             {
               tmp[i] = i;
             }
-          send_data(data, tmp, size*sizeof(Base));
+          future = std::async(&T::SendData, this, tmp);
           delete[] tmp;
         }
     }
@@ -310,7 +326,7 @@ namespace Node
     Size i;
     const auto& tensor = *value.tensor;
     Base* data = new Base[tensor.size];
-    tensor.recv_data(data);
+    tensor.RecvData(data);
     for(i=0;i<tensor.size-1;i++)
       {
         out << data[i] << ", ";
