@@ -79,15 +79,16 @@ namespace Node
       size = 1;
     }
 
-    inline void copy_from(const Tensor<device>& tensor)
+    /*inline void copy_from(const Tensor<device>& tensor)
     {
       rank = tensor.rank;
       dims = tensor.dims;
       legs = tensor.legs;
       size = tensor.size;
       data = new_data(size);
-      memcpy(data, tensor.data, sizeof(Base)*size);
+      copy_data_async(data, tensor.data, sizeof(Base)*size, stream);
     }
+    */ // 这个函数有溢出风险, 不能用
 
     inline void move_from(Tensor<device>&& tensor)
     {
@@ -97,6 +98,7 @@ namespace Node
       data = tensor.data;
       size = tensor.size;
       tensor.data = nullptr;
+      stream = tensor.stream;
     }
 
     inline void update_size()
@@ -127,10 +129,11 @@ namespace Node
       data = new_data(size);
     }
 
-    Tensor(const Tensor<device>& tensor)
+    /*Tensor(const Tensor<device>& tensor)
     {
       copy_from(tensor);
     }
+    */
 
     Tensor(Tensor<device>&& tensor)
     {
@@ -220,12 +223,29 @@ namespace Node
     }
 
     void shuffle_to(Tensor<device>& tensor,
-                    const Legs& new_legs) const
+                    const Legs& new_legs) const&
     {
       tensor.clean();
       tensor.rank = rank;
       tensor.size = size;
       tensor.data = new_data(size);
+
+      tensor.legs = new_legs;
+      Order plan;
+      internal::shuffle::make_plan(plan, new_legs, legs);
+      internal::shuffle::get_dims(tensor.dims, dims, plan);
+      stream.wait();
+      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan, tensor.stream);
+    }
+
+    void shuffle_to(Tensor<device>& tensor,
+                    const Legs& new_legs) &&
+    {
+      tensor.clean();
+      tensor.rank = rank;
+      tensor.size = size;
+      tensor.data = new_data(size);
+      tensor.stream = stream;
 
       tensor.legs = new_legs;
       Order plan;
@@ -322,10 +342,11 @@ namespace Node
   template<Device device>
   inline std::ostream& operator<<(std::ostream& out, const TensorData<device>& value)
   {
-    Base* data = new Base[value.tensor->size];
-    value.tensor->recv_data(data);
     Size i;
-    for(i=0;i<value.tensor->size-1;i++)
+    const auto& tensor = *value.tensor;
+    Base* data = new Base[tensor->size];
+    tensor.recv_data(data);
+    for(i=0;i<tensor.size-1;i++)
       {
         out << data[i] << ", ";
       }
@@ -338,11 +359,12 @@ namespace Node
   inline std::ostream& operator<<<Device::CPU>(std::ostream& out, const TensorData<Device::CPU>& value)
   {
     Size i;
-    for(i=0;i<value.tensor->size-1;i++)
+    const auto& tensor = *value.tensor;
+    for(i=0;i<tensor.size-1;i++)
       {
-        out << value.tensor->data[i] << ", ";
+        out << tensor.data[i] << ", ";
       }
-    out << value.tensor->data[i];
+    out << tensor.data[i];
     return out;
   }
 }

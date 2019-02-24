@@ -18,7 +18,7 @@
 #define USE_CPU
 #endif
 
-#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << std::endl;
+#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
 
 namespace Node
 {
@@ -82,10 +82,10 @@ namespace Node
   class Stream
   {
   public:
-    Stream();
-    ~Stream();
+    Stream();// new 一个handle, 设置count=1
+    ~Stream();// 对handle的count-1
     void wait() const;
-    Stream& operator=(Stream<device>&);
+    Stream& operator=(Stream<device>&);// 把自己的handle count-1, 并把新handle count +1
   };
 
   namespace internal
