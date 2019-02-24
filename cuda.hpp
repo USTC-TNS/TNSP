@@ -45,7 +45,7 @@ namespace Node
       template<>
       inline void memCopy<Device::CUDA>(void* dst, const void* src, Size size)
       {
-        PASS;//std::memcpy(dst, src, size);
+        cudaMemcpy(dst, src, size, cudaMemcpyDeviceToDevice);
       }
 
       template<>
@@ -57,7 +57,7 @@ namespace Node
       template<>
       void memSend<Device::CUDA>(void*dst, const void* src, Size size)
       {
-        PASS;
+        cudaMemcpy(dst, src, size, cudaMemcpyHostToDevice);
       }
 
       template<>
@@ -69,7 +69,7 @@ namespace Node
       template<>
       void memRecv<Device::CUDA>(void* dst, const void* src, Size size)
       {
-        PASS;
+        cudaMemcpy(dst, src, size, cudaMemcpyDeviceToHost);
       }
 
       template<>
