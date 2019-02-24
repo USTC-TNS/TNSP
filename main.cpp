@@ -17,6 +17,7 @@ int main()
       a.set_test_data();
       T b;
       a.shuffle_to(b, {Up,Down});
+      b.wait();
       std::cout << a << std::endl;
       std::cout << a.content << std::endl;
       std::cout << b << std::endl;
@@ -27,6 +28,7 @@ int main()
       a.set_test_data();
       T b;
       a.shuffle_to(b, {Left,Down,Right,Up});
+      b.wait();
       std::cout << a << std::endl;
       std::cout << a.content << std::endl;
       std::cout << b << std::endl;
@@ -41,6 +43,7 @@ int main()
       b.set_test_data();
       T c;
       c.contract_from(a,b,{Up},{Up},{},{{Down, Down1}});
+      c.wait();
       std::cout << a << std::endl;
       std::cout << a.content << std::endl;
       std::cout << b << std::endl;
@@ -55,6 +58,7 @@ int main()
       b.set_test_data();
       T c;
       c.contract_from(a,b,{Up, Right},{Up,Down},{},{{Left,Left3}});
+      c.wait();
       std::cout << a << std::endl;
       std::cout << a.content << std::endl;
       std::cout << b << std::endl;

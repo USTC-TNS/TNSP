@@ -33,9 +33,10 @@ namespace Node
 
     const TensorData<device> content = this;
     std::future<void> future = always_valid {};
+
     using T = Tensor<device>;
 
-  private:
+  public: // future相关
     inline void wait () const
     {
       future.wait();
@@ -46,34 +47,68 @@ namespace Node
       return future.valid();
     }
 
-    inline Data new_data(Size size) const
+  private: // device 5个内存的wrapper
+    inline static Data __new_data(Size size)
     {
       return Data(internal::memory::malloc<device>(sizeof(Base)*size));
     }
 
-    inline void delete_data(Data ptr) const
+    inline static void __delete_data(Data ptr)
     {
       internal::memory::free<device>(ptr);
     }
 
-    inline static void copy_data(Data dst, Data src, Size size)
+    inline static void __copy_data(Data dst, Data src, Size size)
     {
       internal::memory::memCopy<device>(dst, src, size);
     }
 
-    inline void send_data(Data dst, Data src, Size size) const
+    inline static void __send_data(Data dst, Data src, Size size)
     {
       internal::memory::memSend<device>(dst, src, size);
     }
 
-    inline void recv_data(Data dst, Data src, Size size) const
+    inline static void __recv_data(Data dst, Data src, Size size)
     {
       internal::memory::memRecv<device>(dst, src, size);
     }
 
-    inline void free_all() const
+  private: //Data 的6个函数, 其中前4个private
+    inline void new_data()
     {
-      if(data) delete_data(data);
+      data = __new_data(sizeof(Base)*size);
+    }
+
+    inline void delete_data()
+    {
+      __delete_data(data);
+    }
+
+    inline void copy_data_to(Data dst)
+    {
+      __copy_data(dst, data, sizeof(Base)*size);
+    }
+
+    inline void copy_data_from(Data src)
+    {
+      __copy_data(data, src, sizeof(Base)*size);
+    }
+
+  public:
+    inline void send_data(Data dst)
+    {
+      __send_data(dst, data, sizeof(Base)*size);
+    }
+
+    inline void recv_data(Data src)
+    {
+      __recv_data(data, src, size);
+    }
+
+  private: // 用于组成构造函数析构函数的辅助函数
+    inline void free_data()
+    {
+      if(data) delete_data();
     }
 
     inline void init()
@@ -91,8 +126,8 @@ namespace Node
       dims = tensor.dims;
       legs = tensor.legs;
       size = tensor.size;
-      data = new_data(size);
-      future = std::async(&T::copy_data, data, tensor.data, sizeof(Base)*size);
+      new_data();
+      future = std::async(&T::copy_data_from, this, tensor.data);
     }
 
     inline void move_from(Tensor<device>&& tensor)
@@ -100,8 +135,8 @@ namespace Node
       rank = tensor.rank;
       dims = std::move(tensor.dims);
       legs = std::move(tensor.legs);
-      data = tensor.data;
       size = tensor.size;
+      data = tensor.data;
       tensor.data = nullptr;
    }
 
@@ -116,7 +151,7 @@ namespace Node
 
     inline void clean()
     {
-      free_all();
+      free_data();
       init();
     }
 
@@ -130,7 +165,7 @@ namespace Node
       : rank(_rank), dims(_dims), legs(_legs)
     {
       update_size();
-      data = new_data(size);
+      new_data();
     }
 
     Tensor(const Tensor<device>& tensor)
@@ -157,19 +192,11 @@ namespace Node
 
     ~Tensor()
     {
-      free_all();
+      free_data();
     }
 
-    void SendData(Data src)
-    {
-      send_data(data, src, size*sizeof(Base));
-    }
-
-    void RecvData(Data dst) const
-    {
-      recv_data(dst, data, size*sizeof(Base));
-    }
-
+    // 这个层次之下,只有阻塞函数,这个层次之上,都再await输入节点后立即返回
+  public: // 测试用的数据设置
     void set_test_data()
     {
       if(device==Device::CPU)
@@ -186,7 +213,8 @@ namespace Node
             {
               tmp[i] = i;
             }
-          future = std::async(&T::SendData, this, tmp);
+          wait();
+          future = std::async([&]{send_data(tmp);});
           delete[] tmp;
         }
     }
@@ -207,7 +235,8 @@ namespace Node
             {
               tmp[i] = i;
             }
-          future = std::async(&T::SendData, this, tmp);
+          wait();
+          future = std::async([&]{send_data(tmp);});
           delete[] tmp;
         }
     }
@@ -225,19 +254,26 @@ namespace Node
       return *this;
     }
 
-    void shuffle_to(Tensor<device>& tensor,
-                    const Legs& new_legs) const
+  public:
+    inline void shuffle_to(Tensor<device>& tensor,
+                      const Legs& new_legs) const
     {
-      tensor.clean();
-      tensor.rank = rank;
-      tensor.size = size;
-      tensor.data = new_data(size);
+      tensor.future = std::async
+        ([&]()
+         {
+           wait();
+           tensor.wait(); // 免得写了数据又被别人覆盖
+           tensor.clean();
+           tensor.rank = rank;
+           tensor.size = size;
+           tensor.new_data();
 
-      tensor.legs = new_legs;
-      Order plan;
-      internal::shuffle::make_plan(plan, new_legs, legs);
-      internal::shuffle::get_dims(tensor.dims, dims, plan);
-      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan);
+           tensor.legs = new_legs;
+           Order plan;
+           internal::shuffle::make_plan(plan, new_legs, legs);
+           internal::shuffle::get_dims(tensor.dims, dims, plan);
+           internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan);
+         });
     }
 
     inline void shuffle_from(const Tensor<device>& tensor,
@@ -246,24 +282,33 @@ namespace Node
       tensor.shuffle_to(*this, new_legs);
     }
 
+  public:
     void contract_from(const Tensor<device>& tensor1,
-                       const Tensor<device>& tensor2,
-                       const Legs& leg1,
-                       const Legs& leg2,
-                       const std::map<Leg, Leg> map1 = {},
-                       const std::map<Leg, Leg> map2 = {})
+                         const Tensor<device>& tensor2,
+                         const Legs& leg1,
+                         const Legs& leg2,
+                         const std::map<Leg, Leg> map1 = {},
+                         const std::map<Leg, Leg> map2 = {})
     {
-      clean();
-      Size a, b, c; // a*b , b*c -> a*c
-      Legs tmp_leg1, tmp_leg2;
-      internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
-                                          tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
-                                          tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
-      Tensor<device> tmp_tensor1, tmp_tensor2;
-      data = new_data(size);
-      tmp_tensor1.shuffle_from(tensor1, tmp_leg1);
-      tmp_tensor2.shuffle_from(tensor2, tmp_leg2);
-      internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c);
+      future = std::async
+        ([&](){
+           wait();
+           clean();
+           Size a, b, c; // a*b , b*c -> a*c
+           Legs tmp_leg1, tmp_leg2;
+           internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
+                                               tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
+                                               tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
+           Tensor<device> tmp_tensor1, tmp_tensor2;
+           new_data();
+           tensor1.wait();
+           tmp_tensor1.shuffle_from(tensor1, tmp_leg1);
+           tensor2.wait();
+           tmp_tensor2.shuffle_from(tensor2, tmp_leg2);
+           tmp_tensor1.wait();
+           tmp_tensor2.wait();
+           internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c);
+         });
     }
 
     void svd_to(Tensor<device>& U,
