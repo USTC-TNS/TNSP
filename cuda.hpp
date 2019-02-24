@@ -9,7 +9,42 @@ namespace Node
   {
     namespace stream
     {
-      static std::vector<std::pair<cudaStream_t*, int>> stream_pool;
+      class stream_pair
+      {
+      public:
+        cudaStream_t stream;
+        unsigned int count;
+        stream_pair()
+        {
+          cudaStreamCreate(&stream);
+          count = 0;
+        }
+      };
+
+      using Stream = stream_pair*;
+
+      static std::vector<Stream> stream_pool;
+
+      Stream get_stream()
+      {
+        for(auto& i : stream_pool)
+          {
+            if(i->count==0)
+              {
+                i->count++;
+                return i;
+              }
+          }
+        auto ptr = new stream_pair;
+        ptr->count++;
+        stream_pool.push_back(ptr);
+        return ptr;
+      }
+
+      void delete_stream(Stream stream)
+      {
+        stream->count--;
+      }
     }
   }
 
@@ -17,10 +52,23 @@ namespace Node
   class Stream<Device::CUDA>
   {
   public:
+    internal::stream::Stream stream;
     void wait() const {}
-    Stream() {}
-    ~Stream() {}
-    Stream& operator=(Stream<Device::CUDA>& stream) {return *this;}
+    Stream()
+    {
+      stream = internal::stream::get_stream();
+    }
+    ~Stream()
+    {
+      internal::stream::delete_stream(stream);
+    }
+    Stream& operator=(Stream<Device::CUDA>& other)
+    {
+      internal::stream::delete_stream(stream);
+      stream = other.stream;
+      stream->count++;
+      return *this;
+    }
   };
 
   namespace internal
