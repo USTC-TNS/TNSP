@@ -99,7 +99,7 @@ namespace Node
       template<>
       void memCopyAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
       {
-        PASS;
+        cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToDevice, stream.stream->stream);
       }
 
       template<>
@@ -111,7 +111,7 @@ namespace Node
       template<>
       void memSendAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
       {
-        PASS;
+        cudaMemcpyAsync(dst, src, size, cudaMemcpyHostToDevice, stream.stream->stream);
       }
 
       template<>
@@ -123,7 +123,7 @@ namespace Node
       template<>
       void memRecvAsync<Device::CUDA>(void* dst, const void* src, Size size, Stream<Device::CUDA>& stream)
       {
-        PASS;
+        cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToHost, stream.stream->stream);
       }
     }
 
