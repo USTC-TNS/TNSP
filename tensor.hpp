@@ -154,19 +154,55 @@ namespace Node
       free_all();
     }
 
+    void send_data(Data src)
+    {
+      send_data(data, src, size*sizeof(Base));
+    }
+
+    void recv_data(Data dst)
+    {
+      send_data(dst, data, size*sizeof(Base));
+    }
+
     void set_test_data()
     {
-      for(Size i=0;i<size;i++)
+      if(device==Device::CPU)
         {
-          data[i] = i;
+          for(Size i=0;i<size;i++)
+            {
+              data[i] = i;
+            }
+        }
+      else
+        {
+          Base* tmp = new Base[size];
+          for(Size i=0;i<size;i++)
+            {
+              tmp[i] = i;
+            }
+          send_data(tmp);
+          delete[] tmp;
         }
     }
 
     void set_test_zero()
     {
-      for(Size i=0;i<size;i++)
+      if(device==Device::CPU)
         {
-          data[i] = 0;
+          for(Size i=0;i<size;i++)
+            {
+              data[i] = i;
+            }
+        }
+      else
+        {
+          Base* tmp = new Base[size];
+          for(Size i=0;i<size;i++)
+            {
+              tmp[i] = i;
+            }
+          send_data(data, tmp, size*sizeof(Base));
+          delete[] tmp;
         }
     }
 
@@ -284,7 +320,19 @@ namespace Node
   };
 
   template<Device device>
-  inline std::ostream& operator<<(std::ostream& out, const TensorData<device>& value);
+  inline std::ostream& operator<<(std::ostream& out, const TensorData<device>& value)
+  {
+    Base* data = new Base[value.tensor->size];
+    value.tensor->recv_data(data);
+    Size i;
+    for(i=0;i<value.tensor->size-1;i++)
+      {
+        out << data[i] << ", ";
+      }
+    out << data[i];
+    delete[] data;
+    return out;
+  }
 
   template<>
   inline std::ostream& operator<<<Device::CPU>(std::ostream& out, const TensorData<Device::CPU>& value)

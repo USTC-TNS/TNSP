@@ -51,31 +51,31 @@ namespace Node
       template<>
       void memCopyAsync<Device::CPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
       {
-        PASS;
+        std::memcpy(dst, src, size);
       }
 
       template<>
       void memSend<Device::CPU>(void*dst, const void* src, Size size)
       {
-        PASS;
+        std::memcpy(dst, src, size);
       }
 
       template<>
       void memSendAsync<Device::CPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
       {
-        PASS;
+        std::memcpy(dst, src, size);
       }
 
       template<>
       void memRecv<Device::CPU>(void* dst, const void* src, Size size)
       {
-        PASS;
+        std::memcpy(dst, src, size);
       }
 
       template<>
       void memRecvAsync<Device::CPU>(void* dst, const void* src, Size size, Stream<Device::CPU>& stream)
       {
-        PASS;
+        std::memcpy(dst, src, size);
       }
     }
 

@@ -3,10 +3,14 @@
 int main()
 {
 #ifdef USE_CPU
+#define T Node::Tensor<Node::Device::CPU>
+#endif
+#ifdef USE_CUDA
 #ifdef T
 #undef T
 #endif
-#define T Node::Tensor<Node::Device::CPU>
+#define T Node::Tensor<Node::Device::CUDA>
+#endif
   { //test shuffle
     {
       T a(2, {2,3}, {Down, Up});
@@ -59,15 +63,4 @@ int main()
       std::cout << c.content << std::endl;
     }
   }
-#endif
-
-#ifdef USE_CUDA
-#ifdef T
-#undef T
-#endif
-#define T Node::Tensor<Node::Device::CUDA>
-  {
-    T a(2, {2, 3}, {Left, Right});
-  }
-#endif
 }

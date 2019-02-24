@@ -31,13 +31,15 @@ namespace Node
       template<>
       inline void* malloc<Device::CUDA>(Size size)
       {
-        PASS;//return std::malloc(size);
+        void* res;
+        cudaMalloc(&res, size);
+        return res;
       }
 
       template<>
       inline void free<Device::CUDA>(void* ptr)
       {
-        PASS;//std::free(ptr);
+        cudaFree(ptr);
       }
 
       template<>

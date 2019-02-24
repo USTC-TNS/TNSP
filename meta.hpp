@@ -18,7 +18,7 @@
 #define USE_CPU
 #endif
 
-#define PASS
+#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__;
 
 namespace Node
 {
