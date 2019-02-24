@@ -162,7 +162,7 @@ namespace Node
       send_data(data, src, size*sizeof(Base));
     }
 
-    void recv_data(Data dst)
+    void recv_data(Data dst) const
     {
       recv_data(dst, data, size*sizeof(Base));
     }
@@ -344,7 +344,7 @@ namespace Node
   {
     Size i;
     const auto& tensor = *value.tensor;
-    Base* data = new Base[tensor->size];
+    Base* data = new Base[tensor.size];
     tensor.recv_data(data);
     for(i=0;i<tensor.size-1;i++)
       {
