@@ -54,17 +54,18 @@ namespace Node
     }
   }
 
-    inline std::ostream& operator<<(std::ostream& out, const Leg& value)
-    {
-      try
-        {
-          return out << internal::leg::leg_str.at(value);
-        }
-      catch(const std::out_of_range& e)
-        {
-          return out;
-        }
-    }
+  // 不知道为什么这里用引用会错误, 好像只是gdb的事
+  inline std::ostream& operator<<(std::ostream& out, const Leg& value)
+  {
+    try
+      {
+        return out << internal::leg::leg_str.at(value);
+      }
+    catch(const std::out_of_range& e)
+      {
+        return out;
+      }
+  }
 
   enum class Device
     {
