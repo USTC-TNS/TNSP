@@ -103,19 +103,10 @@ namespace Node
       void memCopy(void*, const void*, Size);
 
       template<Device device>
-      void memCopyAsync(void*, const void*, Size, Stream<device>&);
-
-      template<Device device>
       void memSend(void*, const void*, Size);
 
       template<Device device>
-      void memSendAsync(void*, const void*, Size, Stream<device>&);
-
-      template<Device device>
       void memRecv(void*, const void*, Size);
-
-      template<Device device>
-      void memRecvAsync(void*, const void*, Size, Stream<device>&);
     }
 
     namespace shuffle
@@ -146,12 +137,11 @@ namespace Node
       }
 
       template<Device device>
-      void shuffle(Data                              data_new,
-                   Data                              data_old,
-                   const Dims&                       dims_new,
-                   const Dims&                       dims_old,
-                   const Order&                      plan,
-                   Stream<device>& stream);
+      void shuffle(Data         data_new,
+                   Data         data_old,
+                   const Dims&  dims_new,
+                   const Dims&  dims_old,
+                   const Order& plan);
     }
 
     namespace contract
@@ -241,13 +231,12 @@ namespace Node
       }
 
       template<Device device, class Type=Base>
-      void gemm(Type*                             data,
-                Type*                             data1,
-                Type*                             data2,
-                Size                              a,
-                Size                              b,
-                Size                              c,
-                Stream<device>& stream);
+      void gemm(Type* data,
+                Type* data1,
+                Type* data2,
+                Size  a,
+                Size  b,
+                Size  c);
     }
 
     namespace svd

@@ -11,6 +11,11 @@
 
 namespace Node
 {
+  class always_valid : public std::future<void>
+  {
+    void wait() {}
+  };
+
   template<Device device>
   class Tensor
   {
@@ -22,7 +27,7 @@ namespace Node
     Size size;
 
     const TensorData<device> content = this;
-    Stream<device> stream;
+    std::future<void> future;
 
   private:
     inline Data new_data(Size size) const
@@ -40,29 +45,14 @@ namespace Node
       internal::memory::memCopy<device>(dst, src, size);
     }
 
-    inline void copy_data_async(Data dst, Data src, Size size, Stream<device>& stream) const
-    {
-      internal::memory::memCopyAsync<device>(dst, src, size, stream);
-    }
-
     inline void send_data(Data dst, Data src, Size size) const
     {
       internal::memory::memSend<device>(dst, src, size);
     }
 
-    inline void send_data_async(Data dst, Data src, Size size, Stream<device>& stream) const
-    {
-      internal::memory::memSendAsync<device>(dst, src, size, stream);
-    }
-
     inline void recv_data(Data dst, Data src, Size size) const
     {
       internal::memory::memRecv<device>(dst, src, size);
-    }
-
-    inline void recv_data_async(Data dst, Data src, Size size, Stream<device>& stream) const
-    {
-      internal::memory::memRecvAsync<device>(dst, src, size, stream);
     }
 
     inline void free_all() const
@@ -79,16 +69,15 @@ namespace Node
       size = 1;
     }
 
-    /*inline void copy_from(const Tensor<device>& tensor)
+    inline void copy_from(const Tensor<device>& tensor)
     {
       rank = tensor.rank;
       dims = tensor.dims;
       legs = tensor.legs;
       size = tensor.size;
       data = new_data(size);
-      copy_data_async(data, tensor.data, sizeof(Base)*size, stream);
+      copy_data(data, tensor.data, sizeof(Base)*size);
     }
-    */ // 这个函数有溢出风险, 不能用
 
     inline void move_from(Tensor<device>&& tensor)
     {
@@ -98,8 +87,7 @@ namespace Node
       data = tensor.data;
       size = tensor.size;
       tensor.data = nullptr;
-      stream = tensor.stream;
-    }
+   }
 
     inline void update_size()
     {
@@ -129,11 +117,10 @@ namespace Node
       data = new_data(size);
     }
 
-    /*Tensor(const Tensor<device>& tensor)
+    Tensor(const Tensor<device>& tensor)
     {
       copy_from(tensor);
     }
-    */
 
     Tensor(Tensor<device>&& tensor)
     {
@@ -223,7 +210,7 @@ namespace Node
     }
 
     void shuffle_to(Tensor<device>& tensor,
-                    const Legs& new_legs) const&
+                    const Legs& new_legs) const
     {
       tensor.clean();
       tensor.rank = rank;
@@ -234,25 +221,7 @@ namespace Node
       Order plan;
       internal::shuffle::make_plan(plan, new_legs, legs);
       internal::shuffle::get_dims(tensor.dims, dims, plan);
-      stream.wait();
-      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan, tensor.stream);
-    }
-
-    void shuffle_to(Tensor<device>& tensor,
-                    const Legs& new_legs) &&
-    {
-      tensor.clean();
-      tensor.rank = rank;
-      tensor.size = size;
-      tensor.data = new_data(size);
-      tensor.stream = stream;
-
-      tensor.legs = new_legs;
-      Order plan;
-      internal::shuffle::make_plan(plan, new_legs, legs);
-      internal::shuffle::get_dims(tensor.dims, dims, plan);
-      stream.wait();
-      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan, tensor.stream);
+      internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan);
     }
 
     inline void shuffle_from(const Tensor<device>& tensor,
@@ -276,13 +245,9 @@ namespace Node
                                           tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
       Tensor<device> tmp_tensor1, tmp_tensor2;
       data = new_data(size);
-      tensor1.stream.wait();
       tmp_tensor1.shuffle_from(tensor1, tmp_leg1);
-      tensor2.stream.wait();
       tmp_tensor2.shuffle_from(tensor2, tmp_leg2);
-      tmp_tensor1.stream.wait();
-      tmp_tensor2.stream.wait();
-      internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c, stream);
+      internal::contract::gemm<device>(data, tmp_tensor1.data, tmp_tensor2.data, a, b, c);
     }
 
     void svd_to(Tensor<device>& U,
