@@ -161,7 +161,7 @@ namespace Node
 
     void recv_data(Data dst)
     {
-      send_data(dst, data, size*sizeof(Base));
+      recv_data(dst, data, size*sizeof(Base));
     }
 
     void set_test_data()
