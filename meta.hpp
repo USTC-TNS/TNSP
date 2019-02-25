@@ -213,10 +213,6 @@ namespace Node
                 Size  c);
     }
   }
-
-  class TensorData;
-
-  class Tensor;
 }
 
 #define DefineLeg(x) static const Node::Leg x = Node::Leg::x
