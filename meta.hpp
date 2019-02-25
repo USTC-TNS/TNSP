@@ -121,24 +121,24 @@ namespace Node
     namespace contract
     {
       void set_dim_and_leg(Rank&                     rank,
-                                  Dims&                     dims,
-                                  Legs&                     legs,
-                                  Size&                     size,
-                                  Legs&                     new_legs1,
-                                  Legs&                     new_legs2,
-                                  Size&                     a,
-                                  Size&                     b,
-                                  Size&                     c,
-                                  const Rank&               rank1,
-                                  const Dims&               dims1,
-                                  const Legs&               legs1,
-                                  const Legs&               plan1,
-                                  const std::map<Leg, Leg>& map1,
-                                  const Rank&               rank2,
-                                  const Dims&               dims2,
-                                  const Legs&               legs2,
-                                  const Legs&               plan2,
-                                  const std::map<Leg, Leg>& map2)
+                           Dims&                     dims,
+                           Legs&                     legs,
+                           Size&                     size,
+                           Legs&                     new_legs1,
+                           Legs&                     new_legs2,
+                           Size&                     a,
+                           Size&                     b,
+                           Size&                     c,
+                           const Rank&               rank1,
+                           const Dims&               dims1,
+                           const Legs&               legs1,
+                           const Legs&               plan1,
+                           const std::map<Leg, Leg>& map1,
+                           const Rank&               rank2,
+                           const Dims&               dims2,
+                           const Legs&               legs2,
+                           const Legs&               plan2,
+                           const std::map<Leg, Leg>& map2)
       {
         const Rank& contractNum = plan1.size();
         rank = rank1 + rank2 - 2*contractNum;
