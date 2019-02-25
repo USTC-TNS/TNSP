@@ -13,6 +13,7 @@ namespace Node
 {
   class Tensor
   {
+  public:
     using HostData = std::unique_ptr<Base[]>;
     using DeviceData = std::unique_ptr<Base[], internal::memory::deleter>;
     using Data = std::shared_future<DeviceData>;
@@ -33,18 +34,17 @@ namespace Node
       {
         Tensor& tensor = *value.tensor;
         Size i;
-        auto data = tensor.get();
+        auto host_data = tensor.get();
         for(i=0;i<tensor.size-1;i++)
           {
-            out << data[i] << ", ";
+            out << host_data[i] << ", ";
           }
-        out << data[i];
+        out << host_data[i];
         return out;
       }
     };
 
-  public:
-    TensorData content = this;
+    const TensorData content = this;
 
     friend std::ostream& operator<<(std::ostream& out, const Tensor& value)
     {
@@ -109,6 +109,18 @@ namespace Node
          });
     }
 
+    inline void set_data(HostData src)
+    {
+      data = std::async
+        (std::launch::async,
+         [size(size),
+          tmp(src.get())]{
+           DeviceData data = internal::memory::newer(size);
+           internal::memory::memSend(data.get(), tmp, size*sizeof(Base));
+           return data;
+         });
+    }
+
     inline HostData get() const
     {
       HostData res = HostData(new Base[size]);
@@ -116,7 +128,7 @@ namespace Node
       return res;
     }
 
-    // Tensor本身copy起来问题不打, 但是不推荐, 因为有小的数据copy
+    // Tensor本身copy起来问题不大, 会顺带copy data futuree, 但是不推荐, 因为有小的数据copy
     // Tensor.data可以随便copy, 反正是shared_future, 也用它来维护存储时间
     // Tensor.data.get() 不能动, 他是unique_ptr
     // Tensor.data.get().get() 作为指针传递给下面
@@ -231,12 +243,5 @@ namespace Node
     // scalar ?
   };
 }
-
-// std::shared_future<std::unique_ptr<const Tensor>> new_tensor =
-// shuffle(tensor, leg)
-
-// a = f(b)
-// print await a
-// async f(){await b ... return ...}
 
 #endif
