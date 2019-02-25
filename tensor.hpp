@@ -75,10 +75,11 @@ namespace Node
         }
     }
 
-    void set_test_data()
+    inline void set_test_data()
     {
       data = std::async
-        ([size(size)]{
+        (std::launch::async,
+         [size(size)]{
            PlainData tmp = new Base[size];
            for(Size i=0;i<size;i++)
              {
@@ -91,14 +92,36 @@ namespace Node
          });
     }
 
-    HostData get() const
+    inline void set_zero_data()
+    {
+      data = std::async
+        (std::launch::async,
+         [size(size)]{
+           PlainData tmp = new Base[size];
+           for(Size i=0;i<size;i++)
+             {
+               tmp[i] = 0;
+             }
+           DeviceData data = internal::memory::newer(size);
+           internal::memory::memSend(data.get(), tmp, size*sizeof(Base));
+           delete[] tmp;
+           return data;
+         });
+    }
+
+    inline HostData get() const
     {
       HostData res = HostData(new Base[size]);
       internal::memory::memRecv(res.get(), data.get().get(), size*sizeof(Base));
       return res;
     }
 
-    static Tensor shuffle(const Tensor& tensor, const Legs& new_legs)
+    // Tensor本身copy起来问题不打, 但是不推荐, 因为有小的数据copy
+    // Tensor.data可以随便copy, 反正是shared_future, 也用它来维护存储时间
+    // Tensor.data.get() 不能动, 他是unique_ptr
+    // Tensor.data.get().get() 作为指针传递给下面
+
+    static inline Tensor shuffle(const Tensor& tensor, const Legs& new_legs)
     {
       Order plan;
       Dims dims;
@@ -107,7 +130,11 @@ namespace Node
       Tensor res = Tensor(tensor.rank, dims, new_legs);
       res.data = std::async
         (std::launch::async,
-         [src(tensor.data), old_dims(tensor.dims), plan(plan), dims(dims), size(res.size)]{
+         [src(tensor.data),
+          dims(std::move(dims)),
+          old_dims(tensor.dims),
+          plan(std::move(plan)),
+          size(res.size)]{
            DeviceData data = internal::memory::newer(size);
            internal::shuffle::shuffle(data.get(), src.get().get(), dims, old_dims, plan);
            return data;
@@ -115,12 +142,12 @@ namespace Node
       return res;
     }
 
-    static Tensor contract(const Tensor& tensor1,
-                           const Tensor& tensor2,
-                           const Legs& leg1,
-                           const Legs& leg2,
-                           const std::map<Leg, Leg>& map1 = {},
-                           const std::map<Leg, Leg>& map2 = {})
+    static inline Tensor contract(const Tensor& tensor1,
+                                  const Tensor& tensor2,
+                                  const Legs& leg1,
+                                  const Legs& leg2,
+                                  const std::map<Leg, Leg>& map1 = {},
+                                  const std::map<Leg, Leg>& map2 = {})
     {
       Size a, b, c; // a*b , b*c -> a*c
       Legs tmp_leg1, tmp_leg2;
@@ -131,49 +158,70 @@ namespace Node
       internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
                                           tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
                                           tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
+      Order plan1;
+      Dims dims1;
+      internal::shuffle::make_plan(plan1, tmp_leg1, tensor1.legs);
+      internal::shuffle::get_dims(dims1, tensor1.dims, plan1);
+      Order plan2;
+      Dims dims2;
+      internal::shuffle::make_plan(plan2, tmp_leg2, tensor2.legs);
+      internal::shuffle::get_dims(dims2, tensor2.dims, plan2);
 
       Tensor res = Tensor(rank, dims, legs);
       res.data = std::async
         (std::launch::async,
-         [=, size(res.size)]{
+         [size(res.size),
+          size1(tensor1.size),
+          size2(tensor2.size),
+          src1(tensor1.data),
+          src2(tensor2.data),
+          dims1(std::move(dims1)),
+          dims2(std::move(dims2)),
+          old_dims1(tensor1.dims),
+          old_dims2(tensor2.dims),
+          plan1(std::move(plan1)),
+          plan2(std::move(plan2)),
+          a, b, c]{
+           DeviceData data1 = internal::memory::newer(size1);
+           DeviceData data2 = internal::memory::newer(size2);
            DeviceData data = internal::memory::newer(size);
-           Tensor tmp_tensor1 = shuffle(tensor1, tmp_leg1);
-           Tensor tmp_tensor2 = shuffle(tensor2, tmp_leg2);
-           internal::contract::gemm<Base>(data.get(), tmp_tensor1.data.get().get(), tmp_tensor2.data.get().get(), a, b, c);
+           internal::shuffle::shuffle(data1.get(), src1.get().get(), dims1, old_dims1, plan1);
+           internal::shuffle::shuffle(data2.get(), src2.get().get(), dims2, old_dims2, plan2);
+           internal::contract::gemm<Base>(data.get(), data1.get(), data2.get(), a, b, c);
            return data;
          });
       return res;
     }
 
-    void svd_to(Tensor<device>& U,
-                Tensor<device>& S,
-                Tensor<device>& V,
-                const Legs&     leg,
-                Rank            cut=0)
+    static void svd(Tensor& U,
+                    Tensor& S,
+                    Tensor& V,
+                    const Legs&     leg,
+                    Rank            cut=0)
     {
       PASS;
 
     }
 
-    void qr_to()
+    static void qr()
     {
       PASS;
 
     }
 
-    void multiple_from()
+    static void multiple()
     {
       PASS;
 
     }
 
-    void norm()
+    static void norm()
     {
       PASS;
 
     }
 
-    void max() // abs and max
+    static void max() // abs and max
     {
       PASS;
 
