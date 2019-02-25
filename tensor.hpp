@@ -167,7 +167,7 @@ namespace Node
       internal::shuffle::make_plan(plan2, tmp_leg2, tensor2.legs);
       internal::shuffle::get_dims(dims2, tensor2.dims, plan2);
 
-      Tensor res = Tensor(rank, dims, legs);
+      Tensor res = Tensor(rank, std::move(dims), std::move(legs));
       res.data = std::async
         (std::launch::async,
          [size(res.size),
