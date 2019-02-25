@@ -11,63 +11,95 @@
 
 namespace Node
 {
-  template<Device device>
   class Tensor
   {
-    using Dptr = std::unique_ptr<Base[], internal::memory::deleter<device>>;
+    using HostData = std::unique_ptr<Base[]>;
+    using DeviceData = std::unique_ptr<Base[], internal::memory::deleter>;
+    using Data = std::shared_future<DeviceData>;
 
     Rank rank;
     Dims dims;
     Legs legs;
-    Dptr data;
+    Data data;
     Size size;
 
   public:
-    Tensor(Size _rank, Dims _dims, Legs _legs)
-      : rank(_rank), dims(_dims), legs(_legs)
+    friend std::ostream& operator<<(std::ostream& out, const Tensor& value)
+    {
+      Rank i;
+      out << "Tensor_" << value.rank << "[";
+      if(value.rank!=0)
+        {
+          for(i=0;i<value.rank-1;i++)
+            {
+              out << "(" << value.dims[i] << "|" << value.legs[i] << "), ";
+            }
+          out << "(" << value.dims[i] << "|" << value.legs[i] << ")]";
+        }
+      else
+        {
+          out << "]";
+        }
+      return out;
+    }
+
+    Tensor(const Size& _rank, const Dims& _dims, const Legs& _legs)
+      : rank(_rank), dims(_dims), legs(_legs), data()
     {
       size = 1;
       for(Size i=0;i<rank;i++)
         {
           size *= dims[i];
         }
-      update_size();
-      data = newer(size);
     }
 
-    std::unique_ptr<Data> get(Data dst) const
+    void set_test_data()
     {
-      memSend(data.get(), src, size*sizeof(Base));
+      data = std::async
+        ([size(size)]{
+           PlainData tmp = new Base[size];
+           for(Size i=0;i<size;i++)
+             {
+               tmp[i] = i;
+             }
+           DeviceData data = internal::memory::newer(size);
+           internal::memory::memSend(data.get(), tmp, size*sizeof(Base));
+           delete[] tmp;
+           return data;
+         });
+    }
+
+    HostData get() const
+    {
+      HostData res = HostData(new Base[size]);
+      internal::memory::memRecv(res.get(), data.get().get(), size*sizeof(Base));
+      return res;
+    }
+
+    static Tensor shuffle(const Tensor& tensor, const Legs& new_legs)
+    {
+      Order plan;
+      Dims dims;
+      internal::shuffle::make_plan(plan, new_legs, tensor.legs);
+      internal::shuffle::get_dims(dims, tensor.dims, plan);
+      Tensor res = Tensor(tensor.rank, dims, new_legs);
+      res.data = std::async
+        ([=, src(tensor.data), old_dims(tensor.dims), plan(plan), dims(dims), size(res.size)]{
+           DeviceData data = internal::memory::newer(size);
+           internal::shuffle::shuffle(data.get(), src.get().get(), dims, old_dims, plan);
+           return data;
+         });
+      return res;
     }
   };
 
-  template<Device device>
-  using NodeSync = std::unique_ptr<const Tensor<device>>;
-
-  template<Device device>
-  using Node = std::shared_future<std::unique_ptr<const Tensor<device>>>;
-
-  template<Device device>
-  Node<device> shuffle(Node<device> tensor, Legs new_legs)
-  {
-    Dims dims
-    Order plan;
-    internal::shuffle::make_plan(plan, new_legs, legs);
-    internal::shuffle::get_dims(tensor.dims, dims, plan);
-
-    std::shared_ptr<Tensor<device>> res = new Tensor<device> (tensor.rank, dims, newlegs);
-
-         wait();
-         //tensor.wait(); // 免得写了数据又被别人覆盖
-         tensor.free_data();
-         tensor.new_data();
-         internal::shuffle::shuffle<device>(tensor.data, data, tensor.dims, dims, plan);
-       });
-  }
 }
 
 // std::shared_future<std::unique_ptr<const Tensor>> new_tensor =
 // shuffle(tensor, leg)
 
+// a = f(b)
+// print await a
+// async f(){await b ... return ...}
 
 #endif

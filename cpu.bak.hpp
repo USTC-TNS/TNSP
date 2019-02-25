@@ -76,6 +76,25 @@ namespace Node
         shuffle_list[plan.size()](data_new, data_old, dims_new, dims_old, plan);
       }
     }
+
+    /*
+      namespace contract
+      {
+      template<>
+      void gemm<double>(double*                                data,
+      double*                                data1,
+      double*                                data2,
+      Size                                   a,
+      Size                                   b,
+      Size                                   c)
+      {
+      Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix1(data1, a, b);
+      Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix2(data2, b, c);
+      Eigen::Map<Eigen::Matrix<Base, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>> matrix(data, a, c);
+      matrix = matrix1 * matrix2;
+      }
+      }
+    */
   }
 }
 
