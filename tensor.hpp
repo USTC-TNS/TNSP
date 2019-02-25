@@ -65,7 +65,7 @@ namespace Node
       return out;
     }
 
-    inline void update_size()
+    void update_size()
     {
       size = 1;
       for(Size i=0;i<rank;i++)
@@ -86,7 +86,7 @@ namespace Node
     Tensor(const Size& _rank, Dims&& _dims, Legs&& _legs)
       : rank(_rank), dims(std::move(_dims)), legs(std::move(_legs)), data() {update_size();}
 
-    inline void set_test_data()
+    void set_test_data()
     {
       data = std::async
         (std::launch::async,
@@ -103,7 +103,7 @@ namespace Node
          });
     }
 
-    inline void set_zero_data()
+    void set_zero_data()
     {
       data = std::async
         (std::launch::async,
@@ -120,7 +120,7 @@ namespace Node
          });
     }
 
-    inline HostData get() const
+    HostData get() const
     {
       HostData res = HostData(new Base[size]);
       internal::memory::memRecv(res.get(), data.get().get(), size*sizeof(Base));
@@ -132,7 +132,7 @@ namespace Node
     // Tensor.data.get() 不能动, 他是unique_ptr
     // Tensor.data.get().get() 作为指针传递给下面
 
-    static inline Tensor shuffle(const Tensor& tensor, const Legs& new_legs)
+    static Tensor shuffle(const Tensor& tensor, const Legs& new_legs)
     {
       Order plan;
       Dims dims;
@@ -153,12 +153,12 @@ namespace Node
       return res;
     }
 
-    static inline Tensor contract(const Tensor& tensor1,
-                                  const Tensor& tensor2,
-                                  const Legs& leg1,
-                                  const Legs& leg2,
-                                  const std::map<Leg, Leg>& map1 = {},
-                                  const std::map<Leg, Leg>& map2 = {})
+    static Tensor contract(const Tensor& tensor1,
+                           const Tensor& tensor2,
+                           const Legs& leg1,
+                           const Legs& leg2,
+                           const std::map<Leg, Leg>& map1 = {},
+                           const std::map<Leg, Leg>& map2 = {})
     {
       Size a, b, c; // a*b , b*c -> a*c
       Legs tmp_leg1, tmp_leg2;

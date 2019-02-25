@@ -12,7 +12,7 @@ namespace Node
   {
     namespace memory
     {
-      inline void deleter::operator()(Base* ptr) const
+      void deleter::operator()(Base* ptr) const
       {
         delete[] ptr;
       }
@@ -22,17 +22,17 @@ namespace Node
         return std::unique_ptr<Base[], deleter>(new Base[size]);
       }
 
-      inline void memCopy(void* dst, const void* src, Size size)
+      void memCopy(void* dst, const void* src, Size size)
       {
         std::memcpy(dst, src, size);
       }
 
-      inline void memSend(void*dst, const void* src, Size size)
+      void memSend(void*dst, const void* src, Size size)
       {
         std::memcpy(dst, src, size);
       }
 
-      inline void memRecv(void* dst, const void* src, Size size)
+      void memRecv(void* dst, const void* src, Size size)
       {
         std::memcpy(dst, src, size);
       }

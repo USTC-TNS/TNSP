@@ -53,7 +53,7 @@ namespace Node
   }
 
   // 不知道为什么这里用引用会错误, 好像只是gdb的事
-  inline std::ostream& operator<<(std::ostream& out, const Leg& value)
+  std::ostream& operator<<(std::ostream& out, const Leg& value)
   {
     try
       {
@@ -72,7 +72,7 @@ namespace Node
       class deleter
       {
       public:
-        inline void operator()(Base*) const;
+        void operator()(Base*) const;
       };
 
       std::unique_ptr<Base[], deleter> newer(Size);// size是元素个数,需要乘上sizeof(Base)才是需要malloc的大小
@@ -86,7 +86,7 @@ namespace Node
 
     namespace shuffle
     {
-      inline void make_plan(Order& plan, const Legs& new_legs, const Legs& legs)
+      void make_plan(Order& plan, const Legs& new_legs, const Legs& legs)
       {
         const Rank& rank = legs.size();
         for(Rank i=0;i<rank;i++)
@@ -102,7 +102,7 @@ namespace Node
           }
       }
 
-      inline void get_dims(Dims& new_dims, const Dims& dims, const Order& plan)
+      void get_dims(Dims& new_dims, const Dims& dims, const Order& plan)
       {
         const Rank& rank = dims.size();
         for(Rank i=0;i<rank;i++)
@@ -120,7 +120,7 @@ namespace Node
 
     namespace contract
     {
-      inline void set_dim_and_leg(Rank&                     rank,
+      void set_dim_and_leg(Rank&                     rank,
                                   Dims&                     dims,
                                   Legs&                     legs,
                                   Size&                     size,
