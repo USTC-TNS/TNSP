@@ -9,18 +9,18 @@ int main()
       a.set_test_data();
       T b = T::shuffle(a, {Up,Down});
       std::cout << a << std::endl;
-      //std::cout << a.content << std::endl;
+      std::cout << a.content << std::endl;
       std::cout << b << std::endl;
-      //std::cout << b.content << std::endl;
+      std::cout << b.content << std::endl;
     }
     {
       T a(4, {2,3,4,5}, {Down, Up, Left, Right});
       a.set_test_data();
       T b = T::shuffle(a, {Left,Down,Right,Up});
       std::cout << a << std::endl;
-      //std::cout << a.content << std::endl;
+      std::cout << a.content << std::endl;
       std::cout << b << std::endl;
-      //std::cout << b.content << std::endl;
+      std::cout << b.content << std::endl;
     }
   }
   /*

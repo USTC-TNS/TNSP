@@ -23,7 +23,29 @@ namespace Node
     Data data;
     Size size;
 
+    class TensorData
+    {
+    public:
+      Tensor* tensor;
+      TensorData(Tensor* _tensor) : tensor(_tensor) {}
+
+      friend std::ostream& operator<<(std::ostream& out, const TensorData& value)
+      {
+        Tensor& tensor = *value.tensor;
+        Size i;
+        auto data = tensor.get();
+        for(i=0;i<tensor.size-1;i++)
+          {
+            out << data[i] << ", ";
+          }
+        out << data[i];
+        return out;
+      }
+    };
+
   public:
+    TensorData content = this;
+
     friend std::ostream& operator<<(std::ostream& out, const Tensor& value)
     {
       Rank i;
@@ -92,7 +114,6 @@ namespace Node
       return res;
     }
   };
-
 }
 
 // std::shared_future<std::unique_ptr<const Tensor>> new_tensor =
