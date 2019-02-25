@@ -7,6 +7,7 @@
 #include <utility>
 #include <algorithm>
 #include <future>
+#include <memory>
 #include <cstdlib>
 #include <cstring>
 
@@ -37,10 +38,10 @@ namespace Node
 
   using Rank  = unsigned int;
   using Size  = std::size_t;
-  using Data  = Base*;
   using Dims  = std::vector<Size>;
   using Legs  = std::vector<Leg>;
   using Order = std::vector<Rank>;
+  using Data  = Base*;
 
   namespace internal
   {
@@ -74,31 +75,17 @@ namespace Node
 
   namespace internal
   {
-    namespace stream
-    {
-      // wait输入的stream handle，并运行自己，返回等待自己的handle
-    }
-  }
-
-  template<Device device>
-  class Stream
-  {
-  public:
-    Stream();// new 一个handle, 设置count=1
-    ~Stream();// 对handle的count-1
-    void wait() const;
-    Stream& operator=(Stream<device>&);// 把自己的handle count-1, 并把新handle count +1
-  };
-
-  namespace internal
-  {
     namespace memory
     {
       template<Device device>
-      void* malloc(Size);
+      class deleter
+      {
+      public:
+        inline void operator()(Base*) const;
+      };
 
       template<Device device>
-      void free(void*);
+      std::unique_ptr<Base[], deleter<device>> newer(Size);
 
       template<Device device>
       void memCopy(void*, const void*, Size);

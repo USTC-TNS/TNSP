@@ -10,36 +10,23 @@ namespace Node
 {
   namespace internal
   {
-    namespace stream
-    {
-    }
-  }
-
-  template<>
-  class Stream<Device::CPU>
-  {
-  public:
-    void wait() const {}
-    Stream() {}
-    ~Stream() {}
-    Stream& operator=(Stream<Device::CPU>& stream) {return *this;}
-  };
-
-  namespace internal
-  {
     namespace memory
     {
       // CPU
       template<>
-      inline void* malloc<Device::CPU>(Size size)
+      class deleter<Device::CPU>
       {
-        return std::malloc(size);
-      }
+      public:
+        inline void operator()(Base* ptr) const
+        {
+          delete[] ptr;
+        }
+      };
 
-      template<>
-      inline void free<Device::CPU>(void* ptr)
+      template<Device device>
+      std::unique_ptr<Base[], deleter<device>> newer(Size size)
       {
-        std::free(ptr);
+        return new Base[size];
       }
 
       template<>
