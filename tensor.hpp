@@ -65,8 +65,7 @@ namespace Node
       return out;
     }
 
-    Tensor(const Size& _rank, const Dims& _dims, const Legs& _legs)
-      : rank(_rank), dims(_dims), legs(_legs), data()
+    inline void update_size()
     {
       size = 1;
       for(Size i=0;i<rank;i++)
@@ -74,6 +73,18 @@ namespace Node
           size *= dims[i];
         }
     }
+
+    Tensor(const Size& _rank, const Dims& _dims, const Legs& _legs)
+      : rank(_rank), dims(_dims), legs(_legs), data() {update_size();}
+
+    Tensor(const Size& _rank, Dims&& _dims, const Legs& _legs)
+      : rank(_rank), dims(std::move(_dims)), legs(_legs), data() {update_size();}
+
+    Tensor(const Size& _rank, const Dims& _dims, Legs&& _legs)
+      : rank(_rank), dims(_dims), legs(std::move(_legs)), data() {update_size();}
+
+    Tensor(const Size& _rank, Dims&& _dims, Legs&& _legs)
+      : rank(_rank), dims(std::move(_dims)), legs(std::move(_legs)), data() {update_size();}
 
     inline void set_test_data()
     {
