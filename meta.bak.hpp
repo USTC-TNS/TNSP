@@ -118,7 +118,6 @@ namespace Node
                    const Order& plan);
     }
 
-    /*
       namespace contract
       {
       inline void set_dim_and_leg(Rank&                     rank,

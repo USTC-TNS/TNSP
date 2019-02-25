@@ -106,9 +106,40 @@ namespace Node
       internal::shuffle::get_dims(dims, tensor.dims, plan);
       Tensor res = Tensor(tensor.rank, dims, new_legs);
       res.data = std::async
-        ([=, src(tensor.data), old_dims(tensor.dims), plan(plan), dims(dims), size(res.size)]{
+        (std::launch::async,
+         [src(tensor.data), old_dims(tensor.dims), plan(plan), dims(dims), size(res.size)]{
            DeviceData data = internal::memory::newer(size);
            internal::shuffle::shuffle(data.get(), src.get().get(), dims, old_dims, plan);
+           return data;
+         });
+      return res;
+    }
+
+    static Tensor contract(const Tensor& tensor1,
+                           const Tensor& tensor2,
+                           const Legs& leg1,
+                           const Legs& leg2,
+                           const std::map<Leg, Leg>& map1 = {},
+                           const std::map<Leg, Leg>& map2 = {})
+    {
+      Size a, b, c; // a*b , b*c -> a*c
+      Legs tmp_leg1, tmp_leg2;
+      Rank rank;
+      Dims dims;
+      Legs legs;
+      Size size;
+      internal::contract::set_dim_and_leg(rank, dims, legs, size, tmp_leg1, tmp_leg2, a, b, c,
+                                          tensor1.rank, tensor1.dims, tensor1.legs, leg1, map1,
+                                          tensor2.rank, tensor2.dims, tensor2.legs, leg2, map2);
+
+      Tensor res = Tensor(rank, dims, legs);
+      res.data = std::async
+        (std::launch::async,
+         [=, size(res.size)]{
+           DeviceData data = internal::memory::newer(size);
+           Tensor tmp_tensor1 = shuffle(tensor1, tmp_leg1);
+           Tensor tmp_tensor2 = shuffle(tensor2, tmp_leg2);
+           internal::contract::gemm<Base>(data.get(), tmp_tensor1.data.get().get(), tmp_tensor2.data.get().get(), a, b, c);
            return data;
          });
       return res;
