@@ -144,6 +144,43 @@ namespace Node
          });
       return res;
     }
+
+    void svd_to(Tensor<device>& U,
+                Tensor<device>& S,
+                Tensor<device>& V,
+                const Legs&     leg,
+                Rank            cut=0)
+    {
+      PASS;
+
+    }
+
+    void qr_to()
+    {
+      PASS;
+
+    }
+
+    void multiple_from()
+    {
+      PASS;
+
+    }
+
+    void norm()
+    {
+      PASS;
+
+    }
+
+    void max() // abs and max
+    {
+      PASS;
+
+    }
+
+    // single dimension permute ?
+    // scalar ?
   };
 }
 
