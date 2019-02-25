@@ -109,18 +109,6 @@ namespace Node
          });
     }
 
-    inline void set_data(HostData src)
-    {
-      data = std::async
-        (std::launch::async,
-         [size(size),
-          tmp(src.get())]{
-           DeviceData data = internal::memory::newer(size);
-           internal::memory::memSend(data.get(), tmp, size*sizeof(Base));
-           return data;
-         });
-    }
-
     inline HostData get() const
     {
       HostData res = HostData(new Base[size]);
