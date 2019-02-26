@@ -131,6 +131,21 @@ namespace Node
         cublasDgemm(stream->handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
         internal::cuda::delete_stream(stream);
       }
+
+      template<>
+      void gemm<float>(float* data,
+                       float* data1,
+                       float* data2,
+                       Size    a,
+                       Size    b,
+                       Size    c)
+      {
+        float alpha = 1;
+        float beta  = 0;
+        internal::cuda::Stream* stream = internal::cuda::get_stream();
+        cublasSgemm(stream->handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
+        internal::cuda::delete_stream(stream);
+      }
     }
   }
 }
