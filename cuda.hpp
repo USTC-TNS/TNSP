@@ -45,7 +45,7 @@ namespace Node
           }
         auto res = new Stream;
         res->count++;
-        stream_pool.push_back(std::unique<Stream>(res));
+        stream_pool.push_back(std::unique_ptr<Stream>(res));
         return res;
       }
 
