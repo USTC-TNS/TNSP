@@ -146,6 +146,7 @@ namespace Node
           old_dims(tensor.dims),
           plan(std::move(plan)),
           size(res.size)]{
+           src.wait();
            DeviceData data = internal::memory::newer(size);
            internal::shuffle::shuffle(data.get(), src.get().get(), dims, old_dims, plan);
            return data;
@@ -193,13 +194,25 @@ namespace Node
           plan1(std::move(plan1)),
           plan2(std::move(plan2)),
           a, b, c]{
-           DeviceData data1 = internal::memory::newer(size1);
-           DeviceData data2 = internal::memory::newer(size2);
-           DeviceData data = internal::memory::newer(size);
-           auto f1 = std::async([&]{internal::shuffle::shuffle(data1.get(), src1.get().get(), dims1, old_dims1, plan1);});
-           auto f2 = std::async([&]{internal::shuffle::shuffle(data2.get(), src2.get().get(), dims2, old_dims2, plan2);});
+           DeviceData data1;
+           DeviceData data2;
+           auto f1 = std::async
+           (std::launch::async,
+            [&]{
+            src1.wait();
+            data1 = internal::memory::newer(size1);
+            internal::shuffle::shuffle(data1.get(), src1.get().get(), dims1, old_dims1, plan1);
+            });
+           auto f2 = std::async
+               (std::launch::async,
+                [&]{
+                src2.wait();
+                data2 = internal::memory::newer(size2);
+                internal::shuffle::shuffle(data2.get(), src2.get().get(), dims2, old_dims2, plan2);
+                });
            f1.wait();
            f2.wait();
+           DeviceData data = internal::memory::newer(size);
            internal::contract::gemm<Base>(data.get(), data1.get(), data2.get(), a, b, c);
            return data;
          });
