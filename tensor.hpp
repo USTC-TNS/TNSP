@@ -89,7 +89,7 @@ namespace Node
     void set_test_data()
     {
       data = std::async
-        (std::launch::async,
+        (//std::launch::async,
          [size(size)]{
            PlainData tmp = new Base[size];
            for(Size i=0;i<size;i++)
@@ -106,7 +106,7 @@ namespace Node
     void set_zero_data()
     {
       data = std::async
-        (std::launch::async,
+        (//std::launch::async,
          [size(size)]{
            PlainData tmp = new Base[size];
            for(Size i=0;i<size;i++)
@@ -140,7 +140,7 @@ namespace Node
       internal::shuffle::get_dims(dims, tensor.dims, plan);
       Tensor res = Tensor(tensor.rank, dims, new_legs);
       res.data = std::async
-        (std::launch::async,
+        (//std::launch::async,
          [src(tensor.data),
           dims(std::move(dims)),
           old_dims(tensor.dims),
@@ -181,7 +181,7 @@ namespace Node
 
       Tensor res = Tensor(rank, std::move(dims), std::move(legs));
       res.data = std::async
-        (std::launch::async,
+        (//std::launch::async,
          [size(res.size),
           size1(tensor1.size),
           size2(tensor2.size),
@@ -197,14 +197,14 @@ namespace Node
            DeviceData data1;
            DeviceData data2;
            auto f1 = std::async
-             (std::launch::async,
+             (//std::launch::async,
               [&]{
                 src1.wait();
                 data1 = internal::memory::newer(size1);
                 internal::shuffle::shuffle(data1.get(), src1.get().get(), dims1, old_dims1, plan1);
               });
            auto f2 = std::async
-             (std::launch::async,
+             (//std::launch::async,
               [&]{
                 src2.wait();
                 data2 = internal::memory::newer(size2);
