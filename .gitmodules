@@ -3,4 +3,4 @@
 	url = https://github.com/springer13/hptt.git
 [submodule "cutt"]
 	path = cutt
-	url = https://github.com/pchong90/cutt.git
+	url = https://github.com/ap-hynninen/cutt.git

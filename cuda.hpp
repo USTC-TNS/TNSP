@@ -2,6 +2,7 @@
 #define TENSOR_CUDA_HPP_
 
 #include "meta.hpp"
+#include <cutt.h>
 
 namespace Node
 {
@@ -112,7 +113,20 @@ namespace Node
                    const Dims&  dims_old,
                    const Order& plan)
       {
-        PASS;
+        //Stream !!!
+        const Size& size = plan.size();
+        std::vector<int> int_plan(size, 0);//(plan.begin(), plan.end());
+        std::vector<int> int_dims(size, 0);//(dims_old.begin(), dims_old.end());
+        for(Size i=0;i<size;i++)
+          {
+            int_plan[i] = size - plan[size-i-1] -1;
+            int_dims[i] = dims_old[size-i-1];
+            //std::cout << plan[i] << "\t" << int_plan[i] << "\t" << dims_old[i] << "\t" << int_dims[i] << "\n";
+          }
+        //std::cout << "\n\n\n";
+        cuttHandle handle;
+        cuttPlan(&handle, size, int_dims.data(), int_plan.data(), sizeof(double), 0);
+        cuttExecute(handle, data_old, data_new);
       }
     }
 
