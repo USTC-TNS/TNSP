@@ -2,6 +2,7 @@
 #define TENSOR_CUDA_HPP_
 
 #include "meta.hpp"
+#include <cublas_v2.h>
 #include <cutt.h>
 
 namespace Node
@@ -120,7 +121,12 @@ namespace Node
                         Size    b,
                         Size    c)
       {
-        PASS;
+        double alpha = 1;
+        double beta  = 0;
+        cublasHandle_t handle;
+        cublasCreate(&handle);
+        cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
+        cublasDestroy(handle);
       }
     }
   }
