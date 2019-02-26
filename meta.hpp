@@ -28,7 +28,8 @@ namespace Node
   enum class Leg
     {
 #define CreateLeg(x) Left##x, Right##x, Up##x, Down##x, Phy##x
-     CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4)
+     CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4),
+     CreateLeg(5), CreateLeg(6), CreateLeg(7), CreateLeg(8), CreateLeg(9)
 #undef CreateLeg
     };
 
@@ -45,7 +46,8 @@ namespace Node
     {
 #define IncEnum(p) {Leg::p, #p}
 #define IncGroup(x) IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x)
-      static const std::map<Leg, std::string> leg_str = {IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4)};
+      static const std::map<Leg, std::string> leg_str = {IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
+                                                         IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)};
 #undef IncGroup
 #undef IncEnum
     }
