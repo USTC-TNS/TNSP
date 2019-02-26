@@ -7,7 +7,7 @@ extern "C"
 {
 #include <cblas.h>
 }
-#include "hptt/include/hptt.h"
+#include <hptt.h>
 
 namespace Node
 {

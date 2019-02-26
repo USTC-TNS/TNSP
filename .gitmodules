@@ -1,3 +1,6 @@
 [submodule "hptt"]
 	path = hptt
 	url = https://github.com/springer13/hptt.git
+[submodule "cutt"]
+	path = cutt
+	url = https://github.com/ap-hynninen/cutt.git
