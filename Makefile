@@ -1,5 +1,11 @@
+CXX = clang++
+NVCC = nvcc
+CXXFLAGS += -g -O3
+CPUFLAGS = -lpthread -lgomp -lcblas hppt/lib/libhptt.a -Ihptt/include
+CUDAFLAGS = -lcublas cutt/lib/libcutt.a -Icutt/include -gencode arch=compute_50,code=sm_50
+
 cpu:
-	clang++ main.cpp -lpthread -lgomp -lcblas hptt/lib/libhptt.a -Ihptt/include
+	$(CXX) main.cpp $(CXXFLAGS) $(CPUFLAGS)
 
 cuda:
-	nvcc main.cu -lcublas cutt/lib/libcutt.a -Icutt/include -gencode arch=compute_50,code=sm_50
+	$(NVCC) main.cu $(CXXFLAGS) $(CUDAFLAGS)
