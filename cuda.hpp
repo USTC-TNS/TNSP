@@ -15,14 +15,18 @@ namespace Node
       {
       public:
         cudaStream_t stream;
+        cublasHandle_t handle;
         unsigned int count;
         Stream()
         {
           cudaStreamCreate(&stream);
+          cublasCreate(&handle);
+          cublasSetStream(handle, stream);
           count = 0;
         }
         ~Stream()
         {
+          cublasDestroy(handle);
           cudaStreamDestroy(stream);
         }
       };
@@ -123,10 +127,9 @@ namespace Node
       {
         double alpha = 1;
         double beta  = 0;
-        cublasHandle_t handle;
-        cublasCreate(&handle);
-        cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
-        cublasDestroy(handle);
+        internal::cuda::Stream* stream = internal::cuda::get_stream();
+        cublasDgemm(stream->handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
+        internal::cuda::delete_stream(stream);
       }
     }
   }
