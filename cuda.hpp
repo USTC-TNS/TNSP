@@ -31,7 +31,7 @@ namespace Node
         }
       };
 
-      static std::vector<Stream*> stream_pool;
+      static std::vector<std:: unique_ptr<Stream>> stream_pool;
 
       Stream* get_stream()
       {
@@ -40,13 +40,13 @@ namespace Node
             if(i->count==0)
               {
                 i->count++;
-                return i;
+                return i.get();
               }
           }
-        auto ptr = new Stream;
-        ptr->count++;
-        stream_pool.push_back(ptr);
-        return ptr;
+        auto res = new Stream;
+        res->count++;
+        stream_pool.push_back(std::unique<Stream>(res));
+        return res;
       }
 
       void delete_stream(Stream* stream)
