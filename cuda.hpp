@@ -6,28 +6,29 @@
 
 namespace Node
 {
-  /*
   namespace internal
   {
-    namespace stream
+    namespace cuda
     {
-      class stream_pair
+      class Stream
       {
       public:
         cudaStream_t stream;
         unsigned int count;
-        stream_pair()
+        Stream()
         {
           cudaStreamCreate(&stream);
           count = 0;
         }
+        ~Stream()
+        {
+          cudaStreamDestroy(stream);
+        }
       };
 
-      using Stream = stream_pair*;
+      static std::vector<Stream*> stream_pool;
 
-      static std::vector<Stream> stream_pool;
-
-      Stream get_stream()
+      Stream* get_stream()
       {
         for(auto& i : stream_pool)
           {
@@ -37,41 +38,18 @@ namespace Node
                 return i;
               }
           }
-        auto ptr = new stream_pair;
+        auto ptr = new Stream;
         ptr->count++;
         stream_pool.push_back(ptr);
         return ptr;
       }
 
-      void delete_stream(Stream stream)
+      void delete_stream(Stream* stream)
       {
         stream->count--;
       }
     }
   }
-
-  class Stream
-  {
-  public:
-    internal::stream::Stream stream;
-    void wait() const {}
-    Stream()
-    {
-      stream = internal::stream::get_stream();
-    }
-    ~Stream()
-    {
-      internal::stream::delete_stream(stream);
-    }
-    Stream& operator=(Stream& other)
-    {
-      internal::stream::delete_stream(stream);
-      stream = other.stream;
-      stream->count++;
-      return *this;
-    }
-  };
-    */
 
   namespace internal
   {
@@ -125,8 +103,10 @@ namespace Node
           }
         //std::cout << "\n\n\n";
         cuttHandle handle;
-        cuttPlan(&handle, size, int_dims.data(), int_plan.data(), sizeof(double), 0);
+        internal::cuda::Stream* stream = internal::cuda::get_stream();
+        cuttPlan(&handle, size, int_dims.data(), int_plan.data(), sizeof(Base), stream->stream);
         cuttExecute(handle, data_old, data_new);
+        internal::cuda::delete_stream(stream);
       }
     }
 
