@@ -197,19 +197,19 @@ namespace Node
            DeviceData data1;
            DeviceData data2;
            auto f1 = std::async
-           (std::launch::async,
-            [&]{
-            src1.wait();
-            data1 = internal::memory::newer(size1);
-            internal::shuffle::shuffle(data1.get(), src1.get().get(), dims1, old_dims1, plan1);
-            });
+             (std::launch::async,
+              [&]{
+                src1.wait();
+                data1 = internal::memory::newer(size1);
+                internal::shuffle::shuffle(data1.get(), src1.get().get(), dims1, old_dims1, plan1);
+              });
            auto f2 = std::async
-               (std::launch::async,
-                [&]{
+             (std::launch::async,
+              [&]{
                 src2.wait();
                 data2 = internal::memory::newer(size2);
                 internal::shuffle::shuffle(data2.get(), src2.get().get(), dims2, old_dims2, plan2);
-                });
+              });
            f1.wait();
            f2.wait();
            DeviceData data = internal::memory::newer(size);

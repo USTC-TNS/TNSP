@@ -52,12 +52,14 @@ namespace Node
         std::copy(dims_new.begin(), dims_new.end(), arr_new.begin());
         std::copy(dims_old.begin(), dims_old.end(), arr_old.begin());
         //std::copy(plan.begin(), plan.end(), arr_plan.begin());
-        /*for(Rank i=0;i<N;i++)
+        /*
+          for(Rank i=0;i<N;i++)
           {
           arr_new[i] = dims_new[i];
           arr_old[i] = dims_old[i];
           //arr_plan[i] = plan[i];
-          }*/
+          }
+        */
         Eigen::TensorMap<Eigen::Tensor<Base, N, Eigen::RowMajor>> tensor_new(data_new, arr_new);
         Eigen::TensorMap<Eigen::Tensor<Base, N, Eigen::RowMajor>> tensor_old(data_old, arr_old);
         tensor_new = tensor_old.shuffle(plan);
