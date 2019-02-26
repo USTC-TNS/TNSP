@@ -219,6 +219,7 @@ namespace Node
 #define DefineLeg(x) static const Node::Leg x = Node::Leg::x
 #define DefineLegs(n) DefineLeg(Left##n); DefineLeg(Right##n); DefineLeg(Up##n); DefineLeg(Down##n); DefineLeg(Phy##n)
 DefineLegs(); DefineLegs(1); DefineLegs(2); DefineLegs(3); DefineLegs(4);
+DefineLegs(5); DefineLegs(6); DefineLegs(7); DefineLegs(8); DefineLegs(9);
 #undef DefineLegs
 #undef DefineLeg
 
