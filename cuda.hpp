@@ -97,10 +97,10 @@ namespace Node
                    const Order& plan)
       {
         //Stream !!!
-        const Size& size = plan.size();
+        const Rank& size = plan.size();
         std::vector<int> int_plan(size, 0);//(plan.begin(), plan.end());
         std::vector<int> int_dims(size, 0);//(dims_old.begin(), dims_old.end());
-        for(Size i=0;i<size;i++)
+        for(Rank i=0;i<size;i++)
           {
             int_plan[i] = size - plan[size-i-1] -1;
             int_dims[i] = dims_old[size-i-1];
