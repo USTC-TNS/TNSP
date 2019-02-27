@@ -109,10 +109,7 @@ namespace Node
         (//std::launch::async,
          [size(size)]{
            PlainData tmp = new Base[size];
-           for(Size i=0;i<size;i++)
-             {
-               tmp[i] = 0;
-             }
+           std::memset(tmp, 0, size*sizeof(Base));
            DeviceData data = internal::memory::newer(size);
            internal::memory::memSend(data.get(), tmp, size*sizeof(Base));
            delete[] tmp;

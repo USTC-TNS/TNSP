@@ -19,7 +19,7 @@ namespace Node
         unsigned int count;
         Stream()
         {
-          cudaStreamCreate(&stream);
+          cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
           cublasCreate(&handle);
           cublasSetStream(handle, stream);
           count = 0;
@@ -111,6 +111,7 @@ namespace Node
         internal::cuda::Stream* stream = internal::cuda::get_stream();
         cuttPlan(&handle, size, int_dims.data(), int_plan.data(), sizeof(Base), stream->stream);
         cuttExecute(handle, data_old, data_new);
+        cudaStreamSynchronize(stream->stream);
         internal::cuda::delete_stream(stream);
       }
     }
@@ -129,6 +130,7 @@ namespace Node
         double beta  = 0;
         internal::cuda::Stream* stream = internal::cuda::get_stream();
         cublasDgemm(stream->handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
+        cudaStreamSynchronize(stream->stream);
         internal::cuda::delete_stream(stream);
       }
 
@@ -144,6 +146,7 @@ namespace Node
         float beta  = 0;
         internal::cuda::Stream* stream = internal::cuda::get_stream();
         cublasSgemm(stream->handle, CUBLAS_OP_N, CUBLAS_OP_N, c, a, b, &alpha, data2, c, data1, b, &beta, data, c);
+        cudaStreamSynchronize(stream->stream);
         internal::cuda::delete_stream(stream);
       }
     }
