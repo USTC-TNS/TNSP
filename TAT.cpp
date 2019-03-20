@@ -1,13 +1,12 @@
 #include <iostream>
 #include <vector>
 #include <map>
-#include <algorithm>
-#include <future>
 #include <memory>
-#include <cstdlib>
 #include <cstring>
+#include <cassert>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
+#define ENABLE_IF(...) typename std::enable_if<__VA_ARGS__::value>::type* = nullptr
 
 enum class Device {CPU, CUDA, DCU, SW};
 
@@ -20,18 +19,21 @@ namespace legs{
 #undef CreateLeg
     };
 
+  inline namespace io{}
+  namespace io{
 #define IncEnum(p) {Legs::p, #p}
 #define IncGroup(x) IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x)
-  static const std::map<Legs, std::string> legs_str = {IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
-                                                       IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)};
+    static const std::map<Legs, std::string> legs_str = {IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
+                                                         IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)};
 #undef IncGroup
 #undef IncEnum
 
-  std::ostream& operator<<(std::ostream& out, const Legs& value){
-    try{
+    std::ostream& operator<<(std::ostream& out, const Legs& value){
+      try{
         return out << legs_str.at(value);
-    } catch(const std::out_of_range& e) {
+      } catch(const std::out_of_range& e) {
         return out;
+      }
     }
   }
 }
@@ -49,7 +51,7 @@ using Size = std::size_t;
 using Rank = unsigned int;
 
 namespace data{
-  template<Device device, class Base>
+  template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
   class Data;
 
   template<class Base>
@@ -73,22 +75,188 @@ namespace data{
       new (this) Data(other);
     }
 
-    void generate_test(){
+    void set_test(){
       for(Size i=0;i<size;i++){
         base[i] = i;
       }
     }
+    void set_zero(){
+      for(Size i=0;i<size;i++){
+        base[i] = 0;
+      }
+    }
   };
 
-  template<Device device, class Base>
-  std::ostream& operator<<(std::ostream& out, const Data<device, Base>& value){
-    for(Size i=0;i<value.size-1;i++){
-      out << value.base[i] << " ";
+  inline namespace scalar{}
+  namespace scalar{
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base>& operator*=(Data<Device::CPU, Base>& a, B b){
+      Base bb = b;
+      for(Size i=0;i<a.size;i++){
+        a.base[i] *= bb;
+      }
+      return a;
     }
-    if(value.size!=0){
-      out << value.base[value.size-1];
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator*(const Data<Device::CPU, Base>& a, B b){
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] * bb;
+      }
+      return res;
     }
-    return out;
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator*(B b, const Data<Device::CPU, Base>& a){
+      return a * b;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base>& operator/=(Data<Device::CPU, Base>& a, B b){
+      Base bb = b;
+      for(Size i=0;i<a.size;i++){
+        a.base[i] /= bb;
+      }
+      return a;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator/(const Data<Device::CPU, Base>& a, B b){
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] / bb;
+      }
+      return res;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator/(B b, const Data<Device::CPU, Base>& a){
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = bb / a.base[i];
+      }
+      return res;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base>& operator+(Data<Device::CPU, Base>& a){
+      return a;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, B b){
+      Base bb = b;
+      for(Size i=0;i<a.size;i++){
+        a.base[i] += bb;
+      }
+      return a;
+    }
+
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, B b){
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] + bb;
+      }
+      return res;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator+(B b, const Data<Device::CPU, Base>& a){
+      return a + b;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a){
+      Data<Device::CPU, Base> res(a.size);
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = - a.base[i];
+      }
+      return res;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, B b){
+      Base bb = b;
+      for(Size i=0;i<a.size;i++){
+        a.base[i] -= bb;
+      }
+      return a;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, B b){
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] - bb;
+      }
+      return res;
+    }
+
+    template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Data<Device::CPU, Base> operator-(B b, const Data<Device::CPU, Base>& a){
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = bb - a.base[i];
+      }
+      return res;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+      for(Size i=0;i<a.size;i++){
+        a.base[i] += b.base[i];
+      }
+      return a;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+      Data<Device::CPU, Base> res(a.size);
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] + b.base[i];
+      }
+      return res;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+      for(Size i=0;i<a.size;i++){
+        a.base[i] -= b.base[i];
+      }
+      return a;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+      Data<Device::CPU, Base> res(a.size);
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] - b.base[i];
+      }
+      return res;
+    }
+  }
+
+  inline namespace io{}
+  namespace io{
+    template<Device device, class Base>
+    std::ostream& operator<<(std::ostream& out, const Data<device, Base>& value){
+      for(Size i=0;i<value.size-1;i++){
+        out << value.base[i] << " ";
+      }
+      if(value.size!=0){
+        out << value.base[value.size-1];
+      }
+      return out;
+    }
   }
 }
 using data::Data;
@@ -118,24 +286,30 @@ namespace node{
       dims = std::forward<T>(_dims);
     }
 
-    void generate_test(){
-      data.generate_test();
+    void set_test(){
+      data.set_test();
+    }
+    void set_zero(){
+      data.set_zero();
     }
   };
 
-  std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value){
-    for(Rank i=0;i<value.size()-1;i++){
-      out << value[i] << " ";
+  inline namespace io{}
+  namespace io{
+    std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value){
+      for(Rank i=0;i<value.size()-1;i++){
+        out << value[i] << " ";
+      }
+      if(value.size()!=0){
+        out << value[value.size()-1];
+      }
+      return out;
     }
-    if(value.size()!=0){
-      out << value[value.size()-1];
-    }
-    return out;
-  }
 
-  template<Device device, class Base>
-  std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value){
-    return out << "[dims(" << value.dims << ") data(" << value.data << ")]";
+    template<Device device, class Base>
+    std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value){
+      return out << "[dims(" << value.dims << ") data(" << value.data << ")]";
+    }
   }
 }
 using node::Node;
@@ -154,25 +328,34 @@ namespace tensor{
     Tensor<device, Base>& operator=(Tensor<device, Base>&& other) = default;
     Tensor<device, Base>& operator=(const Tensor<device, Base>& other) = default;
     template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-    Tensor(T1&& _dims, T2&& _legs) : node(std::forward<T1>(_dims)), legs(std::forward<T2>(_legs)){}
-    void generate_test(){
-      node.generate_test();
+    Tensor(T1&& _dims, T2&& _legs) : node(std::forward<T1>(_dims)), legs(std::forward<T2>(_legs)){
+      assert(legs.size()==node.dims.size());
+    }
+
+    void set_test(){
+      node.set_test();
+    }
+    void set_zero(){
+      node.set_zero();
     }
   };
 
-  std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value){
-    for(Rank i=0;i<value.size()-1;i++){
-      out << value[i] << " ";
+  inline namespace io{}
+  namespace io{
+    std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value){
+      for(Rank i=0;i<value.size()-1;i++){
+        out << value[i] << " ";
+      }
+      if(value.size()!=0){
+        out << value[value.size()-1];
+      }
+      return out;
     }
-    if(value.size()!=0){
-      out << value[value.size()-1];
-    }
-    return out;
-  }
 
-  template<Device device, class Base>
-  std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value){
-    return out << "[legs(" << value.legs << ") node(" << value.node << ")]";
+    template<Device device, class Base>
+    std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value){
+      return out << "[legs(" << value.legs << ") node(" << value.node << ")]";
+    }
   }
 }
 using tensor::Tensor;
@@ -180,8 +363,11 @@ using tensor::Tensor;
 int main(){
   Tensor<> t1({2,3},{Up, Down});
   std::cout << t1 << "\n";
-  t1.generate_test();
+  t1.set_test();
   std::cout << t1 << "\n";
-  t1.generate_test();
+  t1.node.data *= 2;
+  std::cout << t1 << "\n";
+  t1.node.data = 2/t1.node.data;
+  std::cout << t1 << "\n";
   return 0;
 }
