@@ -4,6 +4,7 @@
 #include <memory>
 #include <cstring>
 #include <cassert>
+#include <type_traits>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
 #define ENABLE_IF(...) typename std::enable_if<__VA_ARGS__::value>::type* = nullptr
@@ -210,34 +211,38 @@ namespace data{
       return res;
     }
 
-    template<class Base>
-    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+    template<class Base1, class Base2>
+    Data<Device::CPU, Base1>& operator+=(Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+      assert(a.size==b.size);
       for(Size i=0;i<a.size;i++){
         a.base[i] += b.base[i];
       }
       return a;
     }
 
-    template<class Base>
-    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
-      Data<Device::CPU, Base> res(a.size);
+    template<class Base1, class Base2>
+    Data<Device::CPU, typename std::result_of<std::plus<>(Base1, Base2)>::type> operator+(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+      assert(a.size==b.size);
+      Data<Device::CPU, typename std::result_of<std::plus<>(Base1, Base2)>::type> res(a.size);
       for(Size i=0;i<res.size;i++){
         res.base[i] = a.base[i] + b.base[i];
       }
       return res;
     }
 
-    template<class Base>
-    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+    template<class Base1, class Base2>
+    Data<Device::CPU, Base1>& operator-=(Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+      assert(a.size==b.size);
       for(Size i=0;i<a.size;i++){
         a.base[i] -= b.base[i];
       }
       return a;
     }
 
-    template<class Base>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
-      Data<Device::CPU, Base> res(a.size);
+    template<class Base1, class Base2>
+    Data<Device::CPU, typename std::result_of<std::minus<>(Base1, Base2)>::type> operator-(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+      assert(a.size==b.size);
+      Data<Device::CPU, typename std::result_of<std::plus<>(Base1, Base2)>::type> res(a.size);
       for(Size i=0;i<res.size;i++){
         res.base[i] = a.base[i] - b.base[i];
       }
@@ -293,6 +298,10 @@ namespace node{
       data.set_zero();
     }
   };
+
+  inline namespace scalar{}
+  namespace scalar{
+  }
 
   inline namespace io{}
   namespace io{
