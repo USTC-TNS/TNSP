@@ -10,6 +10,13 @@
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
 #define ENABLE_IF(...) typename = typename std::enable_if<__VA_ARGS__::value>::type
 #define TAT_USE_CPU
+#define TAT_TEST
+
+#ifdef TAT_USE_CPU
+#include <hptt.h>
+#endif
+
+namespace TAT{
 
 enum class Device {CPU, CUDA, DCU, SW};
 
@@ -108,6 +115,17 @@ namespace data{
       for(Size i=0;i<size;i++){
         base[i] = 0;
       }
+    }
+
+    Data<Device::CPU, Base> transpose(std::vector<Size> dims, std::vector<Rank> plan, std::vector<Size> new_dims){
+      Data<Device::CPU, Base> res(size);
+      std::vector<int> int_plan(plan.begin(), plan.end());
+      std::vector<int> int_dims(dims.begin(), dims.end());
+      hptt::create_plan(int_plan.data(), int_plan.size(),
+                        1, base.get(), int_dims.data(), NULL,
+                        0, res.base.get(), NULL,
+                        hptt::ESTIMATE, 1, NULL, 1)->execute();
+      return res;
     }
   };
 
@@ -290,6 +308,17 @@ namespace data{
 } // namespace data
 
 namespace node{
+  namespace transpose{
+    void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan)
+    {
+      const Rank& rank = dims.size();
+      for(Rank i=0;i<rank;i++)
+        {
+          new_dims.push_back(dims[plan[i]]);
+        }
+    }
+  }
+
   template<Device device, class Base>
   class Node{
     Node() = default;
@@ -324,6 +353,13 @@ namespace node{
     }
     void set_zero(){
       data.set_zero();
+    }
+
+    Node<device, Base> transpose(std::vector<Rank> plan){
+      Node<device, Base> res;
+      transpose::plan(res.dims, dims, plan);
+      res.data = data.transpose(dims, plan, res.dims);
+      return res;
     }
   };
 
@@ -498,6 +534,24 @@ namespace node{
 }
 
 namespace tensor{
+  namespace transpose{
+    void plan(std::vector<Rank>& plan, const std::vector<Legs>& new_legs, const std::vector<Legs>& legs)
+    {
+      const Rank& rank = legs.size();
+      for(Rank i=0;i<rank;i++)
+        {
+          for(Rank j=0;j<rank;j++)
+            {
+              if(new_legs[i]==legs[j])
+                {
+                  plan.push_back(j);
+                  break;
+                }
+            }
+        }
+    }
+  }
+
   template<Device device, class Base>
   class Tensor{
     Tensor() = default;
@@ -524,6 +578,16 @@ namespace tensor{
     }
     void set_zero(){
       node.set_zero();
+    }
+
+    template<class T=std::vector<Legs>>
+    Tensor<device, Base> transpose(T&& new_legs){
+      Tensor<device, Base> res;
+      res.legs = new_legs;
+      std::vector<Rank> plan;
+      transpose::plan(plan, res.legs, legs);
+      res.node = node.transpose(plan);
+      return res;
     }
   };
 
@@ -696,8 +760,12 @@ namespace tensor{
     }
   }
 }
+} // namespace TAT
 
+#ifdef TAT_TEST
+using namespace TAT;
 int main(){
+  std::cout << "scalar\n";
   { // scalar
     {
       Tensor<> t1({2,3},{Up, Down});
@@ -772,5 +840,13 @@ int main(){
       t1.set_test();
       std::cout << -(2.4*(t1/1.2)) << "\n";
     }
-  }
+  } // scalar
+  std::cout << "transpose\n";
+  { // transpose
+    Tensor<> t1({2,3},{Left,Right});
+    t1.set_test();
+    auto t2 = t1.transpose({Right,Left});
+    std::cout << t1 << "\n" << t2 << "\n";
+  } // transpose
 }
+#endif // TAT_TEST
