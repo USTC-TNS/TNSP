@@ -493,6 +493,154 @@ namespace tensor{
     }
   };
 
+  inline namespace scalar{}
+  namespace scalar{
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base>& operator*=(Tensor<device, Base>& a, B b){
+      a.node *= b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator*(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = a.node * b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator*(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = b * a.node;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base>& operator/=(Tensor<device, Base>& a, B b){
+      a.node /= b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator/(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = a.node / b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator/(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = b / a.node;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base>& operator+(Tensor<device, Base>& a){
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base>& operator+=(Tensor<device, Base>& a, B b){
+      a.node += b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator+(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = a.node + b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator+(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = a.node + b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator-(const Tensor<device, Base>& a){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = - a.node;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base>& operator-=(Tensor<device, Base>& a, B b){
+      a.node -= b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator-(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = a.node - b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Tensor<device, Base> operator-(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> res;
+      res.legs = a.legs;
+      res.node = b - a.node;
+      return res;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Tensor<device, Base1>& operator+=(Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      assert(a.legs==b.legs);
+      a.node += b.node;
+      return a;
+    }
+
+    bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b){
+      if(a.size()!=b.size()){
+        return false;
+      }
+      for(Rank i=0;i<a.size();i++){
+        if(a[i]!=b[i]){
+          return false;
+        }
+      }
+      return true;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Tensor<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> operator+(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      assert(a.legs==b.legs);
+      Tensor<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      res.legs = a.legs;
+      res.node = a.node + b.node;
+      return res;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Tensor<device, Base1>& operator-=(Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      assert(a.legs==b.legs);
+      a.node -= b.node;
+      return a;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Tensor<device, typename std::result_of<std::minus<>(Base1, Base2)>::type> operator-(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      assert(a.legs==b.legs);
+      Tensor<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      res.legs = a.legs;
+      res.node = a.node - b.node;
+      return res;
+    }
+  }
+
   inline namespace io{}
   namespace io{
     std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value){
