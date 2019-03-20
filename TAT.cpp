@@ -770,6 +770,10 @@ namespace tensor{
       contract::plan(res.legs, new_legs1, new_legs2, tensor1.legs, tensor2.legs, legs1, legs2, map1, map2);
       transpose::plan(plan1, new_legs1, tensor1.legs);
       transpose::plan(plan2, new_legs2, tensor1.legs);
+      assert(new_legs1.size()==tensor1.legs.size());
+      assert(plan1.size()==tensor1.legs.size());
+      assert(new_legs2.size()==tensor2.legs.size());
+      assert(plan2.size()==tensor2.legs.size());
       res.node = Node<device, Base>::contract(tensor1.node, tensor2.node, plan1, plan2, contract_num);
       return res;
     }
@@ -1024,6 +1028,12 @@ int main(){
       t1.set_test();
       std::cout << -(2.4*(t1/1.2)) << "\n";
     }
+    {
+      //Tensor<> t1({2},{});
+    }
+    {
+      //Tensor<> t1({2,3},{Down,Down});
+    }
   } // scalar
   std::cout << "transpose\n";
   { // transpose
@@ -1038,6 +1048,18 @@ int main(){
       t1.set_test();
       auto t2 = t1.transpose({Left,Down,Right,Up});
       std::cout << t1 << "\n" << t2 << "\n";
+    }
+    {
+      //Tensor<> t1({2,3},{Left,Right});
+      //auto t2 = t1.transpose({Right,Down});
+    }
+    {
+      //Tensor<> t1({2,3},{Left,Right});
+      //auto t2 = t1.transpose({Right,Left,Left});
+    }
+    {
+      //Tensor<> t1({2,3},{Left,Right});
+      //auto t2 = t1.transpose({Right,Right});
     }
   } // transpose
   std::cout << "to\n";
@@ -1064,6 +1086,21 @@ int main(){
       t1.set_test();
       t2.set_test();
       std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up, Right},{Up,Down},{},{{Left,Left3}}) << "\n";
+    }
+    {
+      //Tensor<> t1({2,3}, {Down, Up});
+      //Tensor<> t2({2,3}, {Down, Up});
+      //Tensor<>::contract(t1, t2, {Up}, {Left}, {}, {{Down, Down1}});
+    }
+    {
+      //Tensor<> t1({2,3}, {Down, Up});
+      //Tensor<> t2({2,3}, {Down, Up});
+      //Tensor<>::contract(t1, t2, {Up}, {Down}, {}, {{Up, Down1}});
+    }
+    {
+      //Tensor<> t1({2,3}, {Down, Up});
+      //Tensor<> t2({2,3}, {Down, Up});
+      //Tensor<>::contract(t1, t2, {Up,Down}, {Up, Up}, {}, {{Up, Down1}});
     }
   } // contract
 }
