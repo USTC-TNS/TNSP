@@ -86,14 +86,6 @@ namespace data{
         base[i] = 0;
       }
     }
-
-    Base& operator[](Size b){
-      return base[b];
-    }
-
-    const Base& operator[](Size b) const {
-      return base[b];
-    }
   };
 
   inline namespace scalar{}
@@ -109,8 +101,12 @@ namespace data{
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator*(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a);
-      return res *= b;
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] * bb;
+      }
+      return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -129,8 +125,12 @@ namespace data{
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator/(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a);
-      return res /= b;
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] / bb;
+      }
+      return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -141,6 +141,11 @@ namespace data{
         res.base[i] = bb / a.base[i];
       }
       return res;
+    }
+
+    template<class Base>
+    Data<Device::CPU, Base>& operator+(Data<Device::CPU, Base>& a){
+      return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -155,8 +160,12 @@ namespace data{
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a);
-      return res += b;
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] + bb;
+      }
+      return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -165,8 +174,12 @@ namespace data{
     }
 
     template<class Base>
-    Data<Device::CPU, Base>& operator+(Data<Device::CPU, Base>& a){
-      return a;
+    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a){
+      Data<Device::CPU, Base> res(a.size);
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = - a.base[i];
+      }
+      return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -180,8 +193,12 @@ namespace data{
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a);
-      return res -= b;
+      Data<Device::CPU, Base> res(a.size);
+      Base bb = b;
+      for(Size i=0;i<res.size;i++){
+        res.base[i] = a.base[i] - bb;
+      }
+      return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -192,11 +209,6 @@ namespace data{
         res.base[i] = bb - a.base[i];
       }
       return res;
-    }
-
-    template<class Base>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a){
-      return 0 - a;
     }
 
     template<class Base1, class Base2>
@@ -289,66 +301,6 @@ namespace node{
 
   inline namespace scalar{}
   namespace scalar{
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Node<device, Base>& operator*=(Node<device, Base>& a, B b){
-      a.data *= b;
-      return a;
-    }
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Node<device, Base> operator*(const Node<device, Base>& a, B b){
-      Node<device, Base> res(a);
-      return res *= b;
-    }
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator*(B b, const Data<Device::CPU, Base>& a){
-      return a * b;
-    }
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator/=(Data<Device::CPU, Base>& a, B b){
-      a.data /= b;
-      return a;
-    }
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator/(const Data<Device::CPU, Base>& a, B b){
-      Node<device, Base> res(a);
-      return res /= b;
-    }
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator/(B b, const Data<Device::CPU, Base>& a){
-      PASS;
-    }
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator+(Data<Device::CPU, Base>& a){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, B b){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, B b){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator+(B b, const Data<Device::CPU, Base>& a){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, B b){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, B b){}
-
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator-(B b, const Data<Device::CPU, Base>& a){}
-    /*
-    Data<Device::CPU, Base1>& operator+=(Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){}
-    */
   }
 
   inline namespace io{}
