@@ -1051,11 +1051,20 @@ int main(){
   } // to
   std::cout << "contract\n";
   { // contract
-    Tensor<> t1({2,3}, {Down, Up});
-    Tensor<> t2({2,3}, {Down, Up});
-    t1.set_test();
-    t2.set_test();
-    std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << "\n";
+    {
+      Tensor<> t1({2,3}, {Down, Up});
+      Tensor<> t2({2,3}, {Down, Up});
+      t1.set_test();
+      t2.set_test();
+      std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << "\n";
+    }
+    {
+      Tensor<> t1({2,3,4,5,6}, {Down, Up, Left, Right,Phy});
+      Tensor<> t2({5,3,7}, {Down, Up, Left});
+      t1.set_test();
+      t2.set_test();
+      std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up, Right},{Up,Down},{},{{Left,Left3}}) << "\n";
+    }
   } // contract
 }
 #endif // TAT_TEST
