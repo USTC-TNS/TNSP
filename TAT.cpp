@@ -56,12 +56,32 @@ using Rank = unsigned int;
 namespace data{
   template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
   class Data;
+}
+using data::Data;
 
+namespace node{
+  template<Device device, class Base>
+  class Node;
+}
+using node::Node;
+
+namespace tensor{
+  template<Device device=Device::CPU, class Base=double>
+  class Tensor;
+}
+using tensor::Tensor;
+
+namespace data{
 #ifdef TAT_USE_CPU
   template<class Base>
   class Data<Device::CPU, Base>{
     Data() = default;
+    friend class Node<Device::CPU, Base>;
   public:
+    static Data<Device::CPU, Base> get_empty_data(){
+      return Data();
+    }
+
     Size size;
     std::unique_ptr<Base[]> base;
 
@@ -268,13 +288,17 @@ namespace data{
   } // namespace io
 #endif // TAT_USE_CPU
 } // namespace data
-using data::Data;
 
 namespace node{
   template<Device device, class Base>
   class Node{
     Node() = default;
+    friend class Tensor<device, Base>;
   public:
+    static Node<device, Base> get_empty_node(){
+      return Node();
+    }
+
     std::vector<Size> dims;
     Data<device, Base> data;
 
@@ -313,7 +337,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator*(const Node<device, Base>& a, B b){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data * b;
       return res;
@@ -321,7 +345,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator*(B b, const Node<device, Base>& a){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = b * a.data;
       return res;
@@ -335,7 +359,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator/(const Node<device, Base>& a, B b){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data / b;
       return res;
@@ -343,7 +367,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator/(B b, const Node<device, Base>& a){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = b / a.data;
       return res;
@@ -362,7 +386,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator+(const Node<device, Base>& a, B b){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data + b;
       return res;
@@ -370,7 +394,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator+(B b, const Node<device, Base>& a){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data + b;
       return res;
@@ -378,7 +402,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator-(const Node<device, Base>& a){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = - a.data;
       return res;
@@ -392,7 +416,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator-(const Node<device, Base>& a, B b){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data - b;
       return res;
@@ -400,7 +424,7 @@ namespace node{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Node<device, Base> operator-(B b, const Node<device, Base>& a){
-      Node<device, Base> res;
+      auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
       res.data = b - a.data;
       return res;
@@ -428,7 +452,7 @@ namespace node{
     template<Device device, class Base1, class Base2>
     Node<device, decltype(Base1()+Base2())> operator+(const Node<device, Base1>& a, const Node<device, Base2>& b){
       assert(a.dims==b.dims);
-      Node<device, decltype(Base1()+Base2())> res;
+      auto res = Node<device, decltype(Base1()+Base2())>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data + b.data;
       return res;
@@ -444,7 +468,7 @@ namespace node{
     template<Device device, class Base1, class Base2>
     Node<device, decltype(Base1()-Base2())> operator-(const Node<device, Base1>& a, const Node<device, Base2>& b){
       assert(a.dims==b.dims);
-      Node<device, decltype(Base1()+Base2())> res;
+      auto res = Node<device, decltype(Base1()-Base2())>::get_empty_node();
       res.dims = a.dims;
       res.data = a.data - b.data;
       return res;
@@ -469,13 +493,16 @@ namespace node{
     }
   }
 }
-using node::Node;
 
 namespace tensor{
-  template<Device device=Device::CPU, class Base=double>
+  template<Device device, class Base>
   class Tensor{
     Tensor() = default;
   public:
+    static Tensor<device, Base> get_empty_tensor(){
+      return Tensor<device, Base>();
+    }
+
     std::vector<Legs> legs;
     Node<device, Base> node;
 
@@ -507,7 +534,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator*(const Tensor<device, Base>& a, B b){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node * b;
       return res;
@@ -515,7 +542,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator*(B b, const Tensor<device, Base>& a){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = b * a.node;
       return res;
@@ -529,7 +556,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator/(const Tensor<device, Base>& a, B b){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node / b;
       return res;
@@ -537,7 +564,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator/(B b, const Tensor<device, Base>& a){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = b / a.node;
       return res;
@@ -556,7 +583,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator+(const Tensor<device, Base>& a, B b){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node + b;
       return res;
@@ -564,7 +591,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator+(B b, const Tensor<device, Base>& a){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node + b;
       return res;
@@ -572,7 +599,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator-(const Tensor<device, Base>& a){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = - a.node;
       return res;
@@ -586,7 +613,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator-(const Tensor<device, Base>& a, B b){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node - b;
       return res;
@@ -594,7 +621,7 @@ namespace tensor{
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Tensor<device, Base> operator-(B b, const Tensor<device, Base>& a){
-      Tensor<device, Base> res;
+      auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
       res.node = b - a.node;
       return res;
@@ -622,7 +649,7 @@ namespace tensor{
     template<Device device, class Base1, class Base2>
     Tensor<device, decltype(Base1()+Base2())> operator+(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
       assert(a.legs==b.legs);
-      Tensor<device, decltype(Base1()+Base2())> res;
+      auto res = Tensor<device, decltype(Base1()+Base2())>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node + b.node;
       return res;
@@ -638,7 +665,7 @@ namespace tensor{
     template<Device device, class Base1, class Base2>
     Tensor<device, decltype(Base1()-Base2())> operator-(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
       assert(a.legs==b.legs);
-      Tensor<device, decltype(Base1()-Base2())> res;
+      auto res = Tensor<device, decltype(Base1()-Base2())>::get_empty_tensor();
       res.legs = a.legs;
       res.node = a.node - b.node;
       return res;
@@ -663,16 +690,19 @@ namespace tensor{
     }
   }
 }
-using tensor::Tensor;
 
 int main(){
   Tensor<> t1({2,3},{Up, Down});
   std::cout << t1 << "\n";
   t1.set_test();
   std::cout << t1 << "\n";
-  t1.node.data *= 2;
+  t1 *= 2;
   std::cout << t1 << "\n";
-  t1.node.data = 2/t1.node.data;
+  t1 = 2/(1+t1);
   std::cout << t1 << "\n";
+  Tensor<> t2({2,3},{Up, Down});
+  std::cout << t2 << "\n";
+  t2.set_test();
+  std::cout << t1+t2 << "\n";
   return 0;
 }
