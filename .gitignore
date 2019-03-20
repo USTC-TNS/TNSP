@@ -1,5 +1,8 @@
 .project
 .vscode
+coverage.info
+*.gcda
+*.gcno
 *.out
 *.gch
 *.o

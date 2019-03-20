@@ -167,8 +167,8 @@ namespace data{
     }
 
     template<class Base>
-    Data<Device::CPU, Base>& operator+(Data<Device::CPU, Base>& a){
-      return a;
+    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a){
+      return Data<Device::CPU, Base>(a);
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -373,9 +373,12 @@ namespace node{
       return res;
     }
 
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Node<device, Base>& operator+(Node<device, Base>& a){
-      return a;
+    template<Device device, class Base>
+    Node<device, Base> operator+(const Node<device, Base>& a){
+      auto res = Node<device, Base>::get_empty_node();
+      res.dims = a.dims;
+      res.data = + a.data;
+      return res;
     }
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -396,11 +399,11 @@ namespace node{
     Node<device, Base> operator+(B b, const Node<device, Base>& a){
       auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
-      res.data = a.data + b;
+      res.data = b + a.data;
       return res;
     }
 
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    template<Device device, class Base>
     Node<device, Base> operator-(const Node<device, Base>& a){
       auto res = Node<device, Base>::get_empty_node();
       res.dims = a.dims;
@@ -430,13 +433,6 @@ namespace node{
       return res;
     }
 
-    template<Device device, class Base1, class Base2>
-    Node<device, Base1>& operator+=(Node<device, Base1>& a, const Node<device, Base2>& b){
-      assert(a.dims==b.dims);
-      a.data += b.data;
-      return a;
-    }
-
     bool operator==(const std::vector<Size>& a, const std::vector<Size>& b){
       if(a.size()!=b.size()){
         return false;
@@ -447,6 +443,13 @@ namespace node{
         }
       }
       return true;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Node<device, Base1>& operator+=(Node<device, Base1>& a, const Node<device, Base2>& b){
+      assert(a.dims==b.dims);
+      a.data += b.data;
+      return a;
     }
 
     template<Device device, class Base1, class Base2>
@@ -570,9 +573,12 @@ namespace tensor{
       return res;
     }
 
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Tensor<device, Base>& operator+(Tensor<device, Base>& a){
-      return a;
+    template<Device device, class Base>
+    Tensor<device, Base> operator+(const Tensor<device, Base>& a){
+      auto res = Tensor<device, Base>::get_empty_tensor();
+      res.legs = a.legs;
+      res.node = + a.node;
+      return res;
     }
 
     template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
@@ -593,11 +599,11 @@ namespace tensor{
     Tensor<device, Base> operator+(B b, const Tensor<device, Base>& a){
       auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
-      res.node = a.node + b;
+      res.node = b + a.node;
       return res;
     }
 
-    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    template<Device device, class Base>
     Tensor<device, Base> operator-(const Tensor<device, Base>& a){
       auto res = Tensor<device, Base>::get_empty_tensor();
       res.legs = a.legs;
@@ -627,13 +633,6 @@ namespace tensor{
       return res;
     }
 
-    template<Device device, class Base1, class Base2>
-    Tensor<device, Base1>& operator+=(Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
-      assert(a.legs==b.legs);
-      a.node += b.node;
-      return a;
-    }
-
     bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b){
       if(a.size()!=b.size()){
         return false;
@@ -644,6 +643,13 @@ namespace tensor{
         }
       }
       return true;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Tensor<device, Base1>& operator+=(Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      assert(a.legs==b.legs);
+      a.node += b.node;
+      return a;
     }
 
     template<Device device, class Base1, class Base2>
@@ -692,17 +698,79 @@ namespace tensor{
 }
 
 int main(){
-  Tensor<> t1({2,3},{Up, Down});
-  std::cout << t1 << "\n";
-  t1.set_test();
-  std::cout << t1 << "\n";
-  t1 *= 2;
-  std::cout << t1 << "\n";
-  t1 = 2/(1+t1);
-  std::cout << t1 << "\n";
-  Tensor<> t2({2,3},{Up, Down});
-  std::cout << t2 << "\n";
-  t2.set_test();
-  std::cout << t1+t2 << "\n";
-  return 0;
+  { // scalar
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      std::cout << t1 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      std::cout << t1 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      t1 += 1.2;
+      std::cout << t1 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      t1 -= 1.2;
+      std::cout << t1 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      t1 *= 1.2;
+      std::cout << t1 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      t1 /= 1.2;
+      std::cout << t1 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      Tensor<> t2({2,3},{Up, Down});
+      t1.set_test();
+      t2.set_test();
+      t1 += t2;
+      std::cout << t1*2.3 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      Tensor<> t2({2,3},{Up, Down});
+      t1.set_zero();
+      t2.set_test();
+      t1 -= t2;
+      std::cout << 1-t1/3.4 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      Tensor<> t2({2,3},{Up, Down});
+      t1.set_test();
+      t2.set_test();
+      std::cout << 1+3/(t1+1)+t2 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      Tensor<> t2({2,3},{Up, Down});
+      t1.set_test();
+      t2.set_test();
+      std::cout << +(t1-1.2)-t2 << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      std::cout << 3+1.2/(t1*1.2) << "\n";
+    }
+    {
+      Tensor<> t1({2,3},{Up, Down});
+      t1.set_test();
+      std::cout << -(2.4*(t1/1.2)) << "\n";
+    }
+  }
 }
