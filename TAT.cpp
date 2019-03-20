@@ -12,6 +12,8 @@
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 #define TAT_USE_CPU
 #define TAT_TEST
+//#define TAT_USE_TRUNCATE_SVD
+//#define TAT_USE_DGESDD
 
 #ifdef TAT_USE_CPU
 extern "C"
@@ -19,7 +21,7 @@ extern "C"
 #include <mkl.h>
 }
 #include <hptt.h>
-#endif
+#endif // TAT_USE_CPU
 
 namespace TAT{
 
@@ -56,7 +58,7 @@ using legs::Legs;
 
 #define DefineLeg(x) static const Legs x = Legs::x
 #define DefineLegs(n) DefineLeg(Left##n); DefineLeg(Right##n); DefineLeg(Up##n); DefineLeg(Down##n); DefineLeg(Phy##n)
-DefineLegs(); DefineLegs(1); DefineLegs(2); DefineLegs(3); DefineLegs(4);
+  DefineLegs(); DefineLegs(1); DefineLegs(2); DefineLegs(3); DefineLegs(4);
 DefineLegs(5); DefineLegs(6); DefineLegs(7); DefineLegs(8); DefineLegs(9);
 #undef DefineLegs
 #undef DefineLeg
@@ -85,24 +87,26 @@ using tensor::Tensor;
 
 namespace data{
 #ifdef TAT_USE_CPU
+  static const Device device = Device::CPU;
+
   namespace transpose {}
 
   namespace contract {
     template<class Base>
-    void gemm(Base* data,
-              const Base* data1,
-              const Base* data2,
-              Size m,
-              Size n,
-              Size k);
+    void run(Base* data,
+             const Base* data1,
+             const Base* data2,
+             Size m,
+             Size n,
+             Size k);
 
     template<>
-    void gemm<float>(float* data,
-                     const float* data1,
-                     const float* data2,
-                     Size m,
-                     Size n,
-                     Size k)
+    void run<float>(float* data,
+                    const float* data1,
+                    const float* data2,
+                    Size m,
+                    Size n,
+                    Size k)
     {
       cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                   m, n, k,
@@ -111,12 +115,12 @@ namespace data{
     }
 
     template<>
-    void gemm<double>(double* data,
-                      const double* data1,
-                      const double* data2,
-                      Size m,
-                      Size n,
-                      Size k)
+    void run<double>(double* data,
+                     const double* data1,
+                     const double* data2,
+                     Size m,
+                     Size n,
+                     Size k)
     {
       cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                   m, n, k,
@@ -138,14 +142,29 @@ namespace data{
       }
     }
   }
+
+  namespace svd{
+    template<class Base>
+    void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, Base*s, Base*vt);
+
+    template<>
+    void run<double>(const Size& m, const Size& n, const Size& min, double* a, double* u, double*s, double*vt){
+#ifdef TAT_USE_DGESDD
+      PASS;
+#else
+      LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, nullptr);
+#endif // TAT_USE_DGESDD
+    }
+  }
+
   template<class Base>
-  class Data<Device::CPU, Base>{
+  class Data<device, Base>{
     Data() = default;
-    friend class Node<Device::CPU, Base>;
+    friend class Node<device, Base>;
     template<Device device2, class Base2, class>
     friend class Data;
   public:
-    static Data<Device::CPU, Base> get_empty_data(){
+    static Data<device, Base> get_empty_data(){
       return Data();
     }
 
@@ -153,16 +172,16 @@ namespace data{
     std::unique_ptr<Base[]> base;
 
     ~Data() = default;
-    Data(Data<Device::CPU, Base>&& other) = default;
-    Data<Device::CPU, Base>& operator=(Data<Device::CPU, Base>&& other) = default;
+    Data(Data<device, Base>&& other) = default;
+    Data<device, Base>& operator=(Data<device, Base>&& other) = default;
     Data(Size _size) : size(_size) {
       base = std::unique_ptr<Base[]>(new Base[size]);
     }
-    Data(const Data<Device::CPU, Base>& other){
+    Data(const Data<device, Base>& other){
       new (this) Data(other.size);
       std::memcpy(base.get(), other.base.get(), size*sizeof(Base));
     }
-    Data<Device::CPU, Base>& operator=(const Data<Device::CPU, Base>& other){
+    Data<device, Base>& operator=(const Data<device, Base>& other){
       new (this) Data(other);
     }
 
@@ -178,8 +197,8 @@ namespace data{
     }
 
     template<class Base2>
-    Data<Device::CPU, Base2> to() const {
-      Data<Device::CPU, Base2> res;
+    Data<device, Base2> to() const {
+      Data<device, Base2> res;
       res.size = size;
       res.base = std::unique_ptr<Base2[]>(new Base2[size]);
       for(Size i=0;i<size;i++){
@@ -188,10 +207,10 @@ namespace data{
       return res;
     }
 
-    Data<Device::CPU, Base> transpose(const std::vector<Size>& dims,
+    Data<device, Base> transpose(const std::vector<Size>& dims,
                                       const std::vector<Rank>& plan,
                                       const std::vector<Size>& new_dims) const {
-      Data<Device::CPU, Base> res(size);
+      Data<device, Base> res(size);
       std::vector<int> int_plan(plan.begin(), plan.end());
       std::vector<int> int_dims(dims.begin(), dims.end());
       hptt::create_plan(int_plan.data(), int_plan.size(),
@@ -201,8 +220,8 @@ namespace data{
       return res;
     }
 
-    static Data<Device::CPU, Base> contract(const Data<Device::CPU, Base>& data1,
-                                            const Data<Device::CPU, Base>& data2,
+    static Data<device, Base> contract(const Data<device, Base>& data1,
+                                            const Data<device, Base>& data2,
                                             const std::vector<Size>& dims1,
                                             const std::vector<Size>& dims2,
                                             const std::vector<Rank>& plan1,
@@ -210,18 +229,43 @@ namespace data{
                                             const std::vector<Size>& new_dims1,
                                             const std::vector<Size>& new_dims2,
                                             const Size& m, const Size& k, const Size&n){
-      Data<Device::CPU, Base> a = data1.transpose(dims1, plan1, new_dims1);
-      Data<Device::CPU, Base> b = data1.transpose(dims2, plan2, new_dims2);
-      Data<Device::CPU, Base> res(m*n);
-      contract::gemm<Base>(res.base.get(), a.base.get(), b.base.get(), m, n, k);
+      Data<device, Base> a = data1.transpose(dims1, plan1, new_dims1);
+      Data<device, Base> b = data1.transpose(dims2, plan2, new_dims2);
+      Data<device, Base> res(m*n);
+      contract::run<Base>(res.base.get(), a.base.get(), b.base.get(), m, n, k);
       return res;
     }
 
-    Data<Device::CPU, Base> multiple(const Data<Device::CPU, Base>& other, const Size& a, const Size& b, const Size& c){
-      Data<Device::CPU, Base> res(size);
+    Data<device, Base> multiple(const Data<device, Base>& other, const Size& a, const Size& b, const Size& c){
+      Data<device, Base> res(size);
       assert(b==other.size);
       assert(a*b*c==size);
       multiple::run<Base>(res.base.get(), base.get(), other.base.get(), a, b, c);
+      return res;
+    }
+
+    friend class svd_res;
+    class svd_res{
+    public:
+      Data<device, Base> U;
+      Data<device, Base> S;
+      Data<device, Base> V;
+    };
+
+    svd_res svd(const std::vector<Size>& dims,
+                const std::vector<Rank>& plan,
+                const std::vector<Size>& tmp_dims,
+                const Size& u_size,
+                const Size& cut){
+      svd_res res;
+      Data<device, Base> tmp = transpose(dims, plan, tmp_dims);
+      Size v_size = size/u_size;
+      Size before_cut = (u_size<v_size)?u_size:v_size;
+#ifdef TAT_USE_TRUNCATE_SVD
+      PASS;
+#else
+      svd::run(u_size, v_size, before_cut, tmp.base.get(), res.U.base.get(), res.S.base.get(), res.V.base.get());
+#endif // TAT_USE_TRUNCATE_SVD
       return res;
     }
   };
@@ -269,120 +313,120 @@ namespace data{
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator*=(Data<Device::CPU, Base>& a, B b){
+    Data<device, Base>& operator*=(Data<device, Base>& a, B b){
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, a.base.get());
       return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator*(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator*(const Data<device, Base>& a, B b){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator*(B b, const Data<Device::CPU, Base>& a){
+    Data<device, Base> operator*(B b, const Data<device, Base>& a){
       return a * b;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator/=(Data<Device::CPU, Base>& a, B b){
+    Data<device, Base>& operator/=(Data<device, Base>& a, B b){
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, 0, 0, b, a.base.get());
       return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator/(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator/(const Data<device, Base>& a, B b){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, 0, 0, b, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator/(B b, const Data<Device::CPU, Base>& a){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator/(B b, const Data<device, Base>& a){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 0, b, 1, 0, res.base.get());
       return res;
     }
 
     template<class Base>
-    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a){
-      return Data<Device::CPU, Base>(a);
+    Data<device, Base> operator+(const Data<device, Base>& a){
+      return Data<device, Base>(a);
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, B b){
+    Data<device, Base>& operator+=(Data<device, Base>& a, B b){
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, b, 0, 1, a.base.get());
       return a;
     }
 
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator+(const Data<device, Base>& a, B b){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, b, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator+(B b, const Data<Device::CPU, Base>& a){
+    Data<device, Base> operator+(B b, const Data<device, Base>& a){
       return a + b;
     }
 
     template<class Base>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator-(const Data<device, Base>& a){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), -1, 0, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, B b){
+    Data<device, Base>& operator-=(Data<device, Base>& a, B b){
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, -b, 0, 1, a.base.get());
       return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, B b){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator-(const Data<device, Base>& a, B b){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, -b, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-    Data<Device::CPU, Base> operator-(B b, const Data<Device::CPU, Base>& a){
-      Data<Device::CPU, Base> res(a.size);
+    Data<device, Base> operator-(B b, const Data<device, Base>& a){
+      Data<device, Base> res(a.size);
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), -1, b, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base>
-    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+    Data<device, Base>& operator+=(Data<device, Base>& a, const Data<device, Base>& b){
       assert(a.size==b.size);
       vAdd<Base>(a.size, a.base.get(), b.base.get(), a.base.get());
       return a;
     }
 
     template<class Base>
-    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+    Data<device, Base> operator+(const Data<device, Base>& a, const Data<device, Base>& b){
       assert(a.size==b.size);
-      Data<Device::CPU, Base> res(a.size);
+      Data<device, Base> res(a.size);
       vAdd<Base>(a.size, a.base.get(), b.base.get(), res.base.get());
       return res;
     }
 
     template<class Base>
-    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+    Data<device, Base>& operator-=(Data<device, Base>& a, const Data<device, Base>& b){
       assert(a.size==b.size);
       vSub<Base>(a.size, a.base.get(), b.base.get(), a.base.get());
       return a;
     }
 
     template<class Base>
-    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
+    Data<device, Base> operator-(const Data<device, Base>& a, const Data<device, Base>& b){
       assert(a.size==b.size);
-      Data<Device::CPU, Base> res(a.size);
+      Data<device, Base> res(a.size);
       vSub<Base>(a.size, a.base.get(), b.base.get(), res.base.get());
       return res;
     }
@@ -442,6 +486,14 @@ namespace node{
       i++;
       for(;i<dims.size();i++){
         c *= dims[i];
+      }
+    }
+  }
+
+  namespace svd{
+    void plan(Size& u_size, const Rank& u_rank, const std::vector<Size>& tmp_dims){
+      for(Rank i=0;i<u_rank;i++){
+        u_size *= tmp_dims[i];
       }
     }
   }
@@ -522,6 +574,27 @@ namespace node{
       multiple::plan(a, b, c, dims, index);
       assert(b==other.dims[0]);
       res.data = data.multiple(other.data, a, b, c);
+      return res;
+    }
+
+    friend class svd_res;
+    class svd_res{
+    public:
+      Node<device, Base> U;
+      Node<device, Base> S;
+      Node<device, Base> V;
+    };
+
+    svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, Size cut){
+      svd_res res;
+      std::vector<Size> tmp_dims;
+      Size u_size=1;
+      transpose::plan(tmp_dims, dims, plan);
+      svd::plan(u_size, u_rank, tmp_dims);
+      auto data_res = data.svd(dims, plan, tmp_dims, u_size, cut);
+      res.U.data = std::move(data_res.U);
+      res.S.data = std::move(data_res.S);
+      res.V.data = std::move(data_res.V);
       return res;
     }
   };
@@ -753,6 +826,31 @@ namespace tensor{
 
   namespace multiple{}
 
+  namespace svd{
+    void plan(std::vector<Legs>& U_legs,
+              std::vector<Legs>& V_legs,
+              std::vector<Legs>& tmp_legs,
+              Rank& u_rank,
+              const std::vector<Legs>& total_legs,
+              const std::vector<Legs>& u_legs,
+              const Legs& new_u_legs,
+              const Legs& new_v_legs){
+      u_rank = u_legs.size();
+      V_legs.push_back(new_v_legs);
+      for(auto i : total_legs){
+        auto pos = std::find(total_legs.begin(), total_legs.end(), i);
+        if(pos==total_legs.end()){ // to V
+          V_legs.push_back(i);
+        }else{ // to U
+          U_legs.push_back(i);
+        }
+      }
+      U_legs.push_back(new_u_legs);
+      tmp_legs.insert(tmp_legs.end(), U_legs.begin(), U_legs.end()-1);
+      tmp_legs.insert(tmp_legs.end(), V_legs.begin()+1, V_legs.end());
+    }
+  }
+
   template<Device device, class Base>
   class Tensor{
     Tensor() = default;
@@ -833,6 +931,29 @@ namespace tensor{
       auto pos = std::find(legs.begin(), legs.end(), position);
       Rank index = std::distance(legs.begin(), pos);
       res.node = node.multiple(other.node, index);
+      return res;
+    }
+
+    friend class svd_res;
+    class svd_res{
+    public:
+      Tensor<device, Base> U;
+      Tensor<device, Base> S;
+      Tensor<device, Base> V;
+    };
+
+    svd_res svd(const std::vector<Legs>& u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut=-1){
+      svd_res res;
+      std::vector<Legs> tmp_legs;
+      std::vector<Rank> plan;
+      Rank u_rank;
+      svd::plan(res.U.legs, res.V.legs, tmp_legs, u_rank, legs, u_legs, new_u_legs, new_v_legs);
+      transpose::plan(plan, tmp_legs, legs);
+      res.S.legs = {new_u_legs};// new_u_legs or new_v_legs
+      auto node_res = node.svd(plan, u_rank, cut);
+      res.U.node = std::move(node_res.U);
+      res.S.node = std::move(node_res.S);
+      res.V.node = std::move(node_res.V);
       return res;
     }
   };
@@ -1188,5 +1309,13 @@ int main(){
       //std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
     }
   } // multiple
+  std::cout << "svd\n";
+  { //  svd
+    {
+      Tensor<> t1({4,5},{Left,Right});
+      auto res = t1.svd({Left}, Right, Down, 3);
+      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+    }
+  } // svd
 }
 #endif // TAT_TEST
