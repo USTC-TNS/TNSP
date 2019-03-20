@@ -8,7 +8,7 @@
 #include <functional>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
-#define ENABLE_IF(...) typename std::enable_if<__VA_ARGS__::value>::type* = nullptr
+#define ENABLE_IF(...) typename = typename std::enable_if<__VA_ARGS__::value>::type
 #define TAT_USE_CPU
 
 enum class Device {CPU, CUDA, DCU, SW};
@@ -485,7 +485,7 @@ namespace tensor{
     Tensor<device, Base>& operator=(Tensor<device, Base>&& other) = default;
     Tensor<device, Base>& operator=(const Tensor<device, Base>& other) = default;
     template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-    Tensor(T1&& _dims, T2&& _legs) : node(std::forward<T1>(_dims)), legs(std::forward<T2>(_legs)){
+    Tensor(T1&& _dims, T2&& _legs) : legs(std::forward<T2>(_legs)), node(std::forward<T1>(_dims)) { 
       assert(legs.size()==node.dims.size());
     }
 
