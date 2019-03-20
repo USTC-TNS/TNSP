@@ -843,10 +843,18 @@ int main(){
   } // scalar
   std::cout << "transpose\n";
   { // transpose
-    Tensor<> t1({2,3},{Left,Right});
-    t1.set_test();
-    auto t2 = t1.transpose({Right,Left});
-    std::cout << t1 << "\n" << t2 << "\n";
+    {
+      Tensor<> t1({2,3},{Left,Right});
+      t1.set_test();
+      auto t2 = t1.transpose({Right,Left});
+      std::cout << t1 << "\n" << t2 << "\n";
+    }
+    {
+      Tensor<> t1({2,3,4,5},{Down,Up,Left,Right});
+      t1.set_test();
+      auto t2 = t1.transpose({Left,Down,Right,Up});
+      std::cout << t1 << "\n" << t2 << "\n";
+    }
   } // transpose
 }
 #endif // TAT_TEST
