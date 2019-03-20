@@ -16,7 +16,7 @@
 #ifdef TAT_USE_CPU
 extern "C"
 {
-#include <cblas.h>
+#include <mkl.h>
 }
 #include <hptt.h>
 #endif
@@ -97,20 +97,6 @@ namespace data{
               Size k);
 
     template<>
-    void gemm<double>(double* data,
-                      const double* data1,
-                      const double* data2,
-                      Size m,
-                      Size n,
-                      Size k)
-    {
-      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-                  m, n, k,
-                  1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
-                  0, data, n);
-    }
-
-    template<>
     void gemm<float>(float* data,
                      const float* data1,
                      const float* data2,
@@ -121,6 +107,20 @@ namespace data{
       cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                   m, n, k,
                   1, const_cast<float*>(data1), k, const_cast<float*>(data2), n,
+                  0, data, n);
+    }
+
+    template<>
+    void gemm<double>(double* data,
+                      const double* data1,
+                      const double* data2,
+                      Size m,
+                      Size n,
+                      Size k)
+    {
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                  m, n, k,
+                  1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
                   0, data, n);
     }
   }
@@ -202,26 +202,40 @@ namespace data{
       contract::gemm<Base>(res.base.get(), a.base.get(), b.base.get(), m, n, k);
       return res;
     }
+
+    Data<Device::CPU, Base> multiple(const Data<Device::CPU, Base>& other, const Size& a, const Size& b, const Size& c){
+      Data<Device::CPU, Base> res(size);
+      PASS;
+      return res;
+    }
   };
 
   inline namespace scalar{}
   namespace scalar{
+    template<class Base>
+    void vLinearFrac(Size n, Base* a, Base* b, Base sa, Base oa, Base sb, Base ob, Base* y);
+    // y = (a*sa + oa)/(b*sb + ob)
+
+    template<>
+    void vLinearFrac<float>(Size n, float* a, float* b, float sa, float oa, float sb, float ob, float* y){
+      vsLinearFrac(n, a, b, sa, oa, sb, ob, y);
+    }
+
+    template<>
+    void vLinearFrac<double>(Size n, double* a, double* b, double sa, double oa, double sb, double ob, double* y){
+      vdLinearFrac(n, a, b, sa, oa, sb, ob, y);
+    }
+
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base>& operator*=(Data<Device::CPU, Base>& a, B b){
-      Base bb = b;
-      for(Size i=0;i<a.size;i++){
-        a.base[i] *= bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, a.base.get());
       return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator*(const Data<Device::CPU, Base>& a, B b){
       Data<Device::CPU, Base> res(a.size);
-      Base bb = b;
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = a.base[i] * bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, res.base.get());
       return res;
     }
 
@@ -232,30 +246,21 @@ namespace data{
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base>& operator/=(Data<Device::CPU, Base>& a, B b){
-      Base bb = b;
-      for(Size i=0;i<a.size;i++){
-        a.base[i] /= bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, 0, 0, b, a.base.get());
       return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator/(const Data<Device::CPU, Base>& a, B b){
       Data<Device::CPU, Base> res(a.size);
-      Base bb = b;
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = a.base[i] / bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, 0, 0, b, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator/(B b, const Data<Device::CPU, Base>& a){
       Data<Device::CPU, Base> res(a.size);
-      Base bb = b;
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = bb / a.base[i];
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 0, b, 1, 0, res.base.get());
       return res;
     }
 
@@ -266,10 +271,7 @@ namespace data{
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, B b){
-      Base bb = b;
-      for(Size i=0;i<a.size;i++){
-        a.base[i] += bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, b, 0, 1, a.base.get());
       return a;
     }
 
@@ -277,10 +279,7 @@ namespace data{
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, B b){
       Data<Device::CPU, Base> res(a.size);
-      Base bb = b;
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = a.base[i] + bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, b, 0, 1, res.base.get());
       return res;
     }
 
@@ -292,38 +291,27 @@ namespace data{
     template<class Base>
     Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a){
       Data<Device::CPU, Base> res(a.size);
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = - a.base[i];
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), -1, 0, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, B b){
-      Base bb = b;
-      for(Size i=0;i<a.size;i++){
-        a.base[i] -= bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, -b, 0, 1, a.base.get());
       return a;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, B b){
       Data<Device::CPU, Base> res(a.size);
-      Base bb = b;
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = a.base[i] - bb;
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, -b, 0, 1, res.base.get());
       return res;
     }
 
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base> operator-(B b, const Data<Device::CPU, Base>& a){
       Data<Device::CPU, Base> res(a.size);
-      Base bb = b;
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = bb - a.base[i];
-      }
+      vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), -1, b, 0, 1, res.base.get());
       return res;
     }
 
@@ -410,6 +398,21 @@ namespace node{
     }
   }
 
+  namespace multiple{
+    void plan(Size& a, Size& b, Size& c, const std::vector<Size>& dims, const Rank& index){
+      Rank i;
+      a = 1;
+      for(i=0;i<index;i++){
+        a *= dims[i];
+      }
+      b = dims[i];
+      i++;
+      for(i=0;i<index;i++){
+        c *= dims[i];
+      }
+    }
+  }
+
   template<Device device, class Base>
   class Node{
     Node() = default;
@@ -476,6 +479,16 @@ namespace node{
       transpose::plan(dims2, node2.dims, plan2);
       contract::plan(res.dims, m, k, n, dims1, dims2, contract_num);
       res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, dims1, dims2, m, k, n);
+      return res;
+    }
+
+    Node<device, Base> multiple(const Node<device, Base>& other, const Rank& index){
+      Node<device, Base> res;
+      res.dims = dims;
+      Size a, b, c;
+      multiple::plan(a, b, c, dims, index);
+      assert(b==other.dims[0]);
+      res.data = data.multiple(other.data, a, b, c);
       return res;
     }
   };
@@ -705,6 +718,8 @@ namespace tensor{
     }
   }
 
+  namespace multiple{}
+
   template<Device device, class Base>
   class Tensor{
     Tensor() = default;
@@ -775,6 +790,16 @@ namespace tensor{
       assert(new_legs2.size()==tensor2.legs.size());
       assert(plan2.size()==tensor2.legs.size());
       res.node = Node<device, Base>::contract(tensor1.node, tensor2.node, plan1, plan2, contract_num);
+      return res;
+    }
+
+    Tensor<device, Base> multiple(const Tensor<device, Base>& other, const Legs& position){
+      Tensor<device, Base> res;
+      assert(other.legs.size()==1);
+      res.legs = legs;
+      auto pos = std::find(legs.begin(), legs.end(), position);
+      Rank index = std::distance(legs.begin(), pos);
+      res.node = node.multiple(other.node, index);
       return res;
     }
   };
@@ -1103,5 +1128,16 @@ int main(){
       //Tensor<>::contract(t1, t2, {Up,Down}, {Up, Up}, {}, {{Up, Down1}});
     }
   } // contract
+  std::cout << "multiple\n";
+  { // multiple
+    {
+      Tensor<> t1({3,4}, {Down, Up});
+      Tensor<> t2({4}, {Down});
+      t1.set_test();
+      t2.set_test();
+      auto t3 = t1.multiple(t2, Up);
+      std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
+    }
+  } // multiple
 }
 #endif // TAT_TEST
