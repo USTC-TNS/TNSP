@@ -124,6 +124,20 @@ namespace data{
                   0, data, n);
     }
   }
+
+  namespace multiple{
+    template<class Base>
+    void run(Base* res_data, Base* src_data, Base* other_data, Size a, Size b, Size c){
+      for(Size i=0;i<a;i++){
+        for(Size j=0;j<b;j++){
+          Base v = other_data[j];
+          for(Size k=0;k<c;k++){
+            *(res_data++) = *(src_data++) * v;
+          }
+        }
+      }
+    }
+  }
   template<class Base>
   class Data<Device::CPU, Base>{
     Data() = default;
@@ -205,7 +219,9 @@ namespace data{
 
     Data<Device::CPU, Base> multiple(const Data<Device::CPU, Base>& other, const Size& a, const Size& b, const Size& c){
       Data<Device::CPU, Base> res(size);
-      PASS;
+      assert(b==other.size);
+      assert(a*b*c==size);
+      multiple::run<Base>(res.base.get(), base.get(), other.base.get(), a, b, c);
       return res;
     }
   };
@@ -418,14 +434,13 @@ namespace node{
 
   namespace multiple{
     void plan(Size& a, Size& b, Size& c, const std::vector<Size>& dims, const Rank& index){
-      Rank i;
-      a = 1;
-      for(i=0;i<index;i++){
+      Rank i=0;
+      for(;i<index;i++){
         a *= dims[i];
       }
       b = dims[i];
       i++;
-      for(i=0;i<index;i++){
+      for(;i<dims.size();i++){
         c *= dims[i];
       }
     }
@@ -503,7 +518,7 @@ namespace node{
     Node<device, Base> multiple(const Node<device, Base>& other, const Rank& index){
       Node<device, Base> res;
       res.dims = dims;
-      Size a, b, c;
+      Size a=1, b=1, c=1;
       multiple::plan(a, b, c, dims, index);
       assert(b==other.dims[0]);
       res.data = data.multiple(other.data, a, b, c);
@@ -1155,6 +1170,22 @@ int main(){
       t2.set_test();
       auto t3 = t1.multiple(t2, Up);
       std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
+    }
+    {
+      Tensor<> t1({2,3,4}, {Right,Down, Up});
+      Tensor<> t2({3}, {Down});
+      t1.set_test();
+      t2.set_test();
+      auto t3 = t1.multiple(t2, Down);
+      std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
+    }
+    {
+      //Tensor<> t1({2,3,4}, {Right,Down, Up});
+      //Tensor<> t2({3}, {Down});
+      //t1.set_test();
+      //t2.set_test();
+      //auto t3 = t1.multiple(t2, Up);
+      //std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
     }
   } // multiple
 }
