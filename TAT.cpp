@@ -6,6 +6,7 @@
 #include <cassert>
 #include <type_traits>
 #include <functional>
+#include <set>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
@@ -13,6 +14,10 @@
 #define TAT_TEST
 
 #ifdef TAT_USE_CPU
+extern "C"
+{
+#include <cblas.h>
+}
 #include <hptt.h>
 #endif
 
@@ -80,6 +85,45 @@ using tensor::Tensor;
 
 namespace data{
 #ifdef TAT_USE_CPU
+  namespace transpose {}
+
+  namespace contract {
+    template<class Base>
+    void gemm(Base* data,
+              const Base* data1,
+              const Base* data2,
+              Size m,
+              Size n,
+              Size k);
+
+    template<>
+    void gemm<double>(double* data,
+                      const double* data1,
+                      const double* data2,
+                      Size m,
+                      Size n,
+                      Size k)
+    {
+      cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                  m, n, k,
+                  1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
+                  0, data, n);
+    }
+
+    template<>
+    void gemm<float>(float* data,
+                     const float* data1,
+                     const float* data2,
+                     Size m,
+                     Size n,
+                     Size k)
+    {
+      cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                  m, n, k,
+                  1, const_cast<float*>(data1), k, const_cast<float*>(data2), n,
+                  0, data, n);
+    }
+  }
   template<class Base>
   class Data<Device::CPU, Base>{
     Data() = default;
@@ -120,7 +164,7 @@ namespace data{
     }
 
     template<class Base2>
-    Data<Device::CPU, Base2> to(){
+    Data<Device::CPU, Base2> to() const {
       Data<Device::CPU, Base2> res;
       res.size = size;
       res.base = std::unique_ptr<Base2[]>(new Base2[size]);
@@ -130,7 +174,9 @@ namespace data{
       return res;
     }
 
-    Data<Device::CPU, Base> transpose(std::vector<Size> dims, std::vector<Rank> plan, std::vector<Size> new_dims){
+    Data<Device::CPU, Base> transpose(const std::vector<Size>& dims,
+                                      const std::vector<Rank>& plan,
+                                      const std::vector<Size>& new_dims) const {
       Data<Device::CPU, Base> res(size);
       std::vector<int> int_plan(plan.begin(), plan.end());
       std::vector<int> int_dims(dims.begin(), dims.end());
@@ -138,6 +184,22 @@ namespace data{
                         1, base.get(), int_dims.data(), NULL,
                         0, res.base.get(), NULL,
                         hptt::ESTIMATE, 1, NULL, 1)->execute();
+      return res;
+    }
+
+    static Data<Device::CPU, Base> contract(const Data<Device::CPU, Base>& data1,
+                                            const Data<Device::CPU, Base>& data2,
+                                            const std::vector<Size>& dims1,
+                                            const std::vector<Size>& dims2,
+                                            const std::vector<Rank>& plan1,
+                                            const std::vector<Rank>& plan2,
+                                            const std::vector<Size>& new_dims1,
+                                            const std::vector<Size>& new_dims2,
+                                            const Size& m, const Size& k, const Size&n){
+      Data<Device::CPU, Base> a = data1.transpose(dims1, plan1, new_dims1);
+      Data<Device::CPU, Base> b = data1.transpose(dims2, plan2, new_dims2);
+      Data<Device::CPU, Base> res(m*n);
+      contract::gemm<Base>(res.base.get(), a.base.get(), b.base.get(), m, n, k);
       return res;
     }
   };
@@ -322,13 +384,29 @@ namespace data{
 
 namespace node{
   namespace transpose{
-    void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan)
-    {
+    void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan){
       const Rank& rank = dims.size();
-      for(Rank i=0;i<rank;i++)
-        {
-          new_dims.push_back(dims[plan[i]]);
-        }
+      for(Rank i=0;i<rank;i++){
+        new_dims.push_back(dims[plan[i]]);
+      }
+    }
+  }
+
+  namespace contract{
+    void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n, const::std::vector<Size>& dims1, const::std::vector<Size>& dims2, const Rank& contract_num){
+      Rank i, tmp=dims1.size()-contract_num;
+      for(i=0;i<tmp;i++){
+        m *= dims1[i];
+        dims.push_back(dims1[i]);
+      }
+      for(i=0;i<contract_num;i++){
+        k *= dims1[i+tmp];
+        assert(dims1[i+tmp]==dims2[i]);
+      }
+      for(;i<dims2.size();i++){
+        n *= dims2[i];
+        dims.push_back(dims2[i]);
+      }
     }
   }
 
@@ -371,17 +449,33 @@ namespace node{
     }
 
     template<class Base2>
-    Node<device, Base2> to(){
+    Node<device, Base2> to() const {
       Node<device, Base2> res;
       res.dims = dims;
       res.data = data.template to<Base2>();
       return res;
     }
 
-    Node<device, Base> transpose(std::vector<Rank> plan){
+    Node<device, Base> transpose(const std::vector<Rank>& plan) const {
       Node<device, Base> res;
       transpose::plan(res.dims, dims, plan);
+      assert(get_size(res.dims)==data.size);
       res.data = data.transpose(dims, plan, res.dims);
+      return res;
+    }
+
+    static Node<device, Base> contract(const Node<device, Base>& node1,
+                                       const Node<device, Base>& node2,
+                                       const std::vector<Rank>& plan1,
+                                       const std::vector<Rank>& plan2,
+                                       const Rank& contract_num){
+      Node<device, Base> res;
+      Size m=1, k=1, n=1;
+      std::vector<Size> dims1, dims2;
+      transpose::plan(dims1, node1.dims, plan1);
+      transpose::plan(dims2, node2.dims, plan2);
+      contract::plan(res.dims, m, k, n, dims1, dims2, contract_num);
+      res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, dims1, dims2, m, k, n);
       return res;
     }
   };
@@ -561,17 +655,53 @@ namespace tensor{
     void plan(std::vector<Rank>& plan, const std::vector<Legs>& new_legs, const std::vector<Legs>& legs)
     {
       const Rank& rank = legs.size();
-      for(Rank i=0;i<rank;i++)
-        {
-          for(Rank j=0;j<rank;j++)
-            {
-              if(new_legs[i]==legs[j])
-                {
-                  plan.push_back(j);
-                  break;
-                }
-            }
+      for(Rank i=0;i<rank;i++){
+        for(Rank j=0;j<rank;j++){
+          if(new_legs[i]==legs[j]){
+            plan.push_back(j);
+            break;
+          }
         }
+      }
+    }
+  }
+
+  namespace contract{
+    void plan(std::vector<Legs>& legs,
+              std::vector<Legs>& new_legs1,
+              std::vector<Legs>& new_legs2,
+              const std::vector<Legs>& total_legs1,
+              const std::vector<Legs>& total_legs2,
+              const std::vector<Legs>& legs1,
+              const std::vector<Legs>& legs2,
+              const std::map<Legs, Legs>& map1,
+              const std::map<Legs, Legs>& map2)
+    {
+      for(auto i : total_legs1){
+        auto pos = std::find(legs1.begin(), legs1.end(), i);
+        if(pos == legs1.end()){
+          new_legs1.push_back(i);
+          try{
+            legs.push_back(map1.at(i));
+          }catch(const std::out_of_range& e){
+            legs.push_back(i);
+          }
+        }
+      }
+      new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
+
+      new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
+      for(auto i : total_legs2){
+        auto pos = std::find(legs2.begin(), legs2.end(), i);
+        if(pos == legs2.end()){
+          new_legs2.push_back(i);
+          try{
+            legs.push_back(map2.at(i));
+          }catch(const std::out_of_range& e){
+            legs.push_back(i);
+          }
+        }
+      }
     }
   }
 
@@ -594,8 +724,9 @@ namespace tensor{
     Tensor<device, Base>& operator=(Tensor<device, Base>&& other) = default;
     Tensor<device, Base>& operator=(const Tensor<device, Base>& other) = default;
     template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-    Tensor(T1&& _dims, T2&& _legs) : legs(std::forward<T2>(_legs)), node(std::forward<T1>(_dims)) { 
+    Tensor(T1&& _dims, T2&& _legs) : legs(std::forward<T2>(_legs)), node(std::forward<T1>(_dims)) {
       assert(legs.size()==node.dims.size());
+      assert(std::set<Legs>(legs.begin(), legs.end()).size()==legs.size());
     }
 
     void set_test(){
@@ -606,7 +737,7 @@ namespace tensor{
     }
 
     template<class Base2>
-    Tensor<device, Base2> to(){
+    Tensor<device, Base2> to() const {
       Tensor<device, Base2> res;
       res.legs = legs;
       res.node = node.template to<Base2>();
@@ -614,16 +745,33 @@ namespace tensor{
     }
 
     template<class T=std::vector<Legs>>
-    Tensor<device, Base> transpose(T&& new_legs){
+    Tensor<device, Base> transpose(T&& new_legs) const {
       Tensor<device, Base> res;
       res.legs = new_legs;
       std::vector<Rank> plan;
       transpose::plan(plan, res.legs, legs);
+      assert(new_legs.size()==legs.size());
+      assert(plan.size()==legs.size());
       res.node = node.transpose(plan);
       return res;
     }
 
-    Tensor<device, Base> contract(Tensor<device, Base>tensor1){
+    static Tensor<device, Base> contract(const Tensor<device, Base>& tensor1,
+                                         const Tensor<device, Base>& tensor2,
+                                         const std::vector<Legs> legs1,
+                                         const std::vector<Legs> legs2,
+                                         const std::map<Legs, Legs>& map1 = {},
+                                         const std::map<Legs, Legs>& map2 = {}){
+      Tensor<device, Base> res;
+      std::vector<Legs> new_legs1, new_legs2;
+      std::vector<Rank> plan1, plan2;
+      Rank contract_num = legs1.size();
+      assert(legs1.size()==legs2.size());
+      contract::plan(res.legs, new_legs1, new_legs2, tensor1.legs, tensor2.legs, legs1, legs2, map1, map2);
+      transpose::plan(plan1, new_legs1, tensor1.legs);
+      transpose::plan(plan2, new_legs2, tensor1.legs);
+      res.node = Node<device, Base>::contract(tensor1.node, tensor2.node, plan1, plan2, contract_num);
+      return res;
     }
   };
 
@@ -901,5 +1049,13 @@ int main(){
       std::cout << t1 << "\n" << t2 << "\n";
     }
   } // to
+  std::cout << "contract\n";
+  { // contract
+    Tensor<> t1({2,3}, {Down, Up});
+    Tensor<> t2({2,3}, {Down, Up});
+    t1.set_test();
+    t2.set_test();
+    std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << "\n";
+  } // contract
 }
 #endif // TAT_TEST
