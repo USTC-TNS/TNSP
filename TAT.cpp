@@ -8,7 +8,7 @@
 #include <functional>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
-#define ENABLE_IF(...) typename = typename std::enable_if<__VA_ARGS__::value>::type
+#define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 #define TAT_USE_CPU
 #define TAT_TEST
 
@@ -84,6 +84,8 @@ namespace data{
   class Data<Device::CPU, Base>{
     Data() = default;
     friend class Node<Device::CPU, Base>;
+    template<Device device2, class Base2, class>
+    friend class Data;
   public:
     static Data<Device::CPU, Base> get_empty_data(){
       return Data();
@@ -115,6 +117,17 @@ namespace data{
       for(Size i=0;i<size;i++){
         base[i] = 0;
       }
+    }
+
+    template<class Base2>
+    Data<Device::CPU, Base2> to(){
+      Data<Device::CPU, Base2> res;
+      res.size = size;
+      res.base = std::unique_ptr<Base2[]>(new Base2[size]);
+      for(Size i=0;i<size;i++){
+        res.base[i] = base[i];
+      }
+      return res;
     }
 
     Data<Device::CPU, Base> transpose(std::vector<Size> dims, std::vector<Rank> plan, std::vector<Size> new_dims){
@@ -323,6 +336,8 @@ namespace node{
   class Node{
     Node() = default;
     friend class Tensor<device, Base>;
+    template<Device device2, class Base2>
+    friend class Node;
   public:
     static Node<device, Base> get_empty_node(){
       return Node();
@@ -353,6 +368,14 @@ namespace node{
     }
     void set_zero(){
       data.set_zero();
+    }
+
+    template<class Base2>
+    Node<device, Base2> to(){
+      Node<device, Base2> res;
+      res.dims = dims;
+      res.data = data.template to<Base2>();
+      return res;
     }
 
     Node<device, Base> transpose(std::vector<Rank> plan){
@@ -555,6 +578,8 @@ namespace tensor{
   template<Device device, class Base>
   class Tensor{
     Tensor() = default;
+    template<Device device2, class Base2>
+    friend class Tensor;
   public:
     static Tensor<device, Base> get_empty_tensor(){
       return Tensor<device, Base>();
@@ -580,6 +605,14 @@ namespace tensor{
       node.set_zero();
     }
 
+    template<class Base2>
+    Tensor<device, Base2> to(){
+      Tensor<device, Base2> res;
+      res.legs = legs;
+      res.node = node.template to<Base2>();
+      return res;
+    }
+
     template<class T=std::vector<Legs>>
     Tensor<device, Base> transpose(T&& new_legs){
       Tensor<device, Base> res;
@@ -588,6 +621,9 @@ namespace tensor{
       transpose::plan(plan, res.legs, legs);
       res.node = node.transpose(plan);
       return res;
+    }
+
+    Tensor<device, Base> contract(Tensor<device, Base>tensor1){
     }
   };
 
@@ -856,5 +892,14 @@ int main(){
       std::cout << t1 << "\n" << t2 << "\n";
     }
   } // transpose
+  std::cout << "to\n";
+  { // to
+    {
+      Tensor<> t1({2,3},{Left,Right});
+      t1.set_test();
+      Tensor<Device::CPU, int> t2 = t1.to<int>();
+      std::cout << t1 << "\n" << t2 << "\n";
+    }
+  } // to
 }
 #endif // TAT_TEST
