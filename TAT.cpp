@@ -5,9 +5,11 @@
 #include <cstring>
 #include <cassert>
 #include <type_traits>
+#include <functional>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
 #define ENABLE_IF(...) typename std::enable_if<__VA_ARGS__::value>::type* = nullptr
+#define TAT_USE_CPU
 
 enum class Device {CPU, CUDA, DCU, SW};
 
@@ -55,6 +57,7 @@ namespace data{
   template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
   class Data;
 
+#ifdef TAT_USE_CPU
   template<class Base>
   class Data<Device::CPU, Base>{
     Data() = default;
@@ -221,9 +224,9 @@ namespace data{
     }
 
     template<class Base1, class Base2>
-    Data<Device::CPU, typename std::result_of<std::plus<>(Base1, Base2)>::type> operator+(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+    Data<Device::CPU, decltype(Base1()+Base2())> operator+(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
       assert(a.size==b.size);
-      Data<Device::CPU, typename std::result_of<std::plus<>(Base1, Base2)>::type> res(a.size);
+      Data<Device::CPU, decltype(Base1()+Base2())> res(a.size);
       for(Size i=0;i<res.size;i++){
         res.base[i] = a.base[i] + b.base[i];
       }
@@ -240,9 +243,9 @@ namespace data{
     }
 
     template<class Base1, class Base2>
-    Data<Device::CPU, typename std::result_of<std::minus<>(Base1, Base2)>::type> operator-(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+    Data<Device::CPU, decltype(Base1()-Base2())> operator-(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
       assert(a.size==b.size);
-      Data<Device::CPU, typename std::result_of<std::plus<>(Base1, Base2)>::type> res(a.size);
+      Data<Device::CPU, decltype(Base1()-Base2())> res(a.size);
       for(Size i=0;i<res.size;i++){
         res.base[i] = a.base[i] - b.base[i];
       }
@@ -262,8 +265,9 @@ namespace data{
       }
       return out;
     }
-  }
-}
+  } // namespace io
+#endif // TAT_USE_CPU
+} // namespace data
 using data::Data;
 
 namespace node{
@@ -422,9 +426,9 @@ namespace node{
     }
 
     template<Device device, class Base1, class Base2>
-    Node<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> operator+(const Node<device, Base1>& a, const Node<device, Base2>& b){
+    Node<device, decltype(Base1()+Base2())> operator+(const Node<device, Base1>& a, const Node<device, Base2>& b){
       assert(a.dims==b.dims);
-      Node<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      Node<device, decltype(Base1()+Base2())> res;
       res.dims = a.dims;
       res.data = a.data + b.data;
       return res;
@@ -438,9 +442,9 @@ namespace node{
     }
 
     template<Device device, class Base1, class Base2>
-    Node<device, typename std::result_of<std::minus<>(Base1, Base2)>::type> operator-(const Node<device, Base1>& a, const Node<device, Base2>& b){
+    Node<device, decltype(Base1()-Base2())> operator-(const Node<device, Base1>& a, const Node<device, Base2>& b){
       assert(a.dims==b.dims);
-      Node<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      Node<device, decltype(Base1()+Base2())> res;
       res.dims = a.dims;
       res.data = a.data - b.data;
       return res;
@@ -616,9 +620,9 @@ namespace tensor{
     }
 
     template<Device device, class Base1, class Base2>
-    Tensor<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> operator+(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+    Tensor<device, decltype(Base1()+Base2())> operator+(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
       assert(a.legs==b.legs);
-      Tensor<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      Tensor<device, decltype(Base1()+Base2())> res;
       res.legs = a.legs;
       res.node = a.node + b.node;
       return res;
@@ -632,9 +636,9 @@ namespace tensor{
     }
 
     template<Device device, class Base1, class Base2>
-    Tensor<device, typename std::result_of<std::minus<>(Base1, Base2)>::type> operator-(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+    Tensor<device, decltype(Base1()-Base2())> operator-(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
       assert(a.legs==b.legs);
-      Tensor<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      Tensor<device, decltype(Base1()-Base2())> res;
       res.legs = a.legs;
       res.node = a.node - b.node;
       return res;
