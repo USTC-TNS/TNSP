@@ -32,7 +32,7 @@ namespace legs{
     std::ostream& operator<<(std::ostream& out, const Legs& value){
       try{
         return out << legs_str.at(value);
-      } catch(const std::out_of_range& e) {
+      }catch(const std::out_of_range& e){
         return out;
       }
     }
@@ -57,11 +57,11 @@ namespace data{
 
   template<class Base>
   class Data<Device::CPU, Base>{
+    Data() = default;
   public:
     Size size;
     std::unique_ptr<Base[]> base;
 
-    Data() = delete;
     ~Data() = default;
     Data(Data<Device::CPU, Base>&& other) = default;
     Data<Device::CPU, Base>& operator=(Data<Device::CPU, Base>&& other) = default;
@@ -269,11 +269,11 @@ using data::Data;
 namespace node{
   template<Device device, class Base>
   class Node{
+    Node() = default;
   public:
     std::vector<Size> dims;
     Data<device, Base> data;
 
-    Node() = delete;
     ~Node() = default;
     Node(Node<device, Base>&& other) = default;
     Node(const Node<device, Base>& other) = default;
@@ -301,6 +301,150 @@ namespace node{
 
   inline namespace scalar{}
   namespace scalar{
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base>& operator*=(Node<device, Base>& a, B b){
+      a.data *= b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator*(const Node<device, Base>& a, B b){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = a.data * b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator*(B b, const Node<device, Base>& a){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = b * a.data;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base>& operator/=(Node<device, Base>& a, B b){
+      a.data /= b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator/(const Node<device, Base>& a, B b){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = a.data / b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator/(B b, const Node<device, Base>& a){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = b / a.data;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base>& operator+(Node<device, Base>& a){
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base>& operator+=(Node<device, Base>& a, B b){
+      a.data += b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator+(const Node<device, Base>& a, B b){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = a.data + b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator+(B b, const Node<device, Base>& a){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = a.data + b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator-(const Node<device, Base>& a){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = - a.data;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base>& operator-=(Node<device, Base>& a, B b){
+      a.data -= b;
+      return a;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator-(const Node<device, Base>& a, B b){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = a.data - b;
+      return res;
+    }
+
+    template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+    Node<device, Base> operator-(B b, const Node<device, Base>& a){
+      Node<device, Base> res;
+      res.dims = a.dims;
+      res.data = b - a.data;
+      return res;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Node<device, Base1>& operator+=(Node<device, Base1>& a, const Node<device, Base2>& b){
+      assert(a.dims==b.dims);
+      a.data += b.data;
+      return a;
+    }
+
+    bool operator==(const std::vector<Size>& a, const std::vector<Size>& b){
+      if(a.size()!=b.size()){
+        return false;
+      }
+      for(Rank i=0;i<a.size();i++){
+        if(a[i]!=b[i]){
+          return false;
+        }
+      }
+      return true;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Node<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> operator+(const Node<device, Base1>& a, const Node<device, Base2>& b){
+      assert(a.dims==b.dims);
+      Node<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      res.dims = a.dims;
+      res.data = a.data + b.data;
+      return res;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Node<device, Base1>& operator-=(Node<device, Base1>& a, const Node<device, Base2>& b){
+      assert(a.dims==b.dims);
+      a.data -= b.data;
+      return a;
+    }
+
+    template<Device device, class Base1, class Base2>
+    Node<device, typename std::result_of<std::minus<>(Base1, Base2)>::type> operator-(const Node<device, Base1>& a, const Node<device, Base2>& b){
+      assert(a.dims==b.dims);
+      Node<device, typename std::result_of<std::plus<>(Base1, Base2)>::type> res;
+      res.dims = a.dims;
+      res.data = a.data - b.data;
+      return res;
+    }
   }
 
   inline namespace io{}
@@ -326,11 +470,11 @@ using node::Node;
 namespace tensor{
   template<Device device=Device::CPU, class Base=double>
   class Tensor{
+    Tensor() = default;
   public:
     std::vector<Legs> legs;
     Node<device, Base> node;
 
-    Tensor() = delete;
     ~Tensor() = default;
     Tensor(Tensor<device, Base>&& other) = default;
     Tensor(const Tensor<device, Base>& other) = default;
