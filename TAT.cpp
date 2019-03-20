@@ -226,6 +226,32 @@ namespace data{
       vdLinearFrac(n, a, b, sa, oa, sb, ob, y);
     }
 
+    template<class Base>
+    void vAdd(Size n, Base* a, Base* b, Base* y);
+
+    template<>
+    void vAdd<float>(Size n, float* a, float* b, float* y){
+      vsAdd(n, a, b, y);
+    }
+
+    template<>
+    void vAdd<double>(Size n, double* a, double* b, double* y){
+      vdAdd(n, a, b, y);
+    }
+
+    template<class Base>
+    void vSub(Size n, Base* a, Base* b, Base* y);
+
+    template<>
+    void vSub<float>(Size n, float* a, float* b, float* y){
+      vsSub(n, a, b, y);
+    }
+
+    template<>
+    void vSub<double>(Size n, double* a, double* b, double* y){
+      vdSub(n, a, b, y);
+    }
+
     template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
     Data<Device::CPU, Base>& operator*=(Data<Device::CPU, Base>& a, B b){
       vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, a.base.get());
@@ -315,41 +341,33 @@ namespace data{
       return res;
     }
 
-    template<class Base1, class Base2>
-    Data<Device::CPU, Base1>& operator+=(Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+    template<class Base>
+    Data<Device::CPU, Base>& operator+=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
       assert(a.size==b.size);
-      for(Size i=0;i<a.size;i++){
-        a.base[i] += b.base[i];
-      }
+      vAdd<Base>(a.size, a.base.get(), b.base.get(), a.base.get());
       return a;
     }
 
-    template<class Base1, class Base2>
-    Data<Device::CPU, decltype(Base1()+Base2())> operator+(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+    template<class Base>
+    Data<Device::CPU, Base> operator+(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
       assert(a.size==b.size);
-      Data<Device::CPU, decltype(Base1()+Base2())> res(a.size);
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = a.base[i] + b.base[i];
-      }
+      Data<Device::CPU, Base> res(a.size);
+      vAdd<Base>(a.size, a.base.get(), b.base.get(), res.base.get());
       return res;
     }
 
-    template<class Base1, class Base2>
-    Data<Device::CPU, Base1>& operator-=(Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+    template<class Base>
+    Data<Device::CPU, Base>& operator-=(Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
       assert(a.size==b.size);
-      for(Size i=0;i<a.size;i++){
-        a.base[i] -= b.base[i];
-      }
+      vSub<Base>(a.size, a.base.get(), b.base.get(), a.base.get());
       return a;
     }
 
-    template<class Base1, class Base2>
-    Data<Device::CPU, decltype(Base1()-Base2())> operator-(const Data<Device::CPU, Base1>& a, const Data<Device::CPU, Base2>& b){
+    template<class Base>
+    Data<Device::CPU, Base> operator-(const Data<Device::CPU, Base>& a, const Data<Device::CPU, Base>& b){
       assert(a.size==b.size);
-      Data<Device::CPU, decltype(Base1()-Base2())> res(a.size);
-      for(Size i=0;i<res.size;i++){
-        res.base[i] = a.base[i] - b.base[i];
-      }
+      Data<Device::CPU, Base> res(a.size);
+      vSub<Base>(a.size, a.base.get(), b.base.get(), res.base.get());
       return res;
     }
   }
