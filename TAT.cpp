@@ -227,12 +227,12 @@ namespace TAT{
 
       void set_test(){
         for(Size i=0;i<size;i++){
-          base[i] = i;
+          base[i] = Base(i);
         } // for i
       } // set_test
       void set_zero(){
         for(Size i=0;i<size;i++){
-          base[i] = 0;
+          base[i] = Base(0);
         } // for i
       } // set_zero
 
@@ -500,9 +500,8 @@ namespace TAT{
   namespace node{
     namespace transpose{
       void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan){
-        Rank rank = dims.size();
-        for(Rank i=0;i<rank;i++){
-          new_dims.push_back(dims[plan[i]]);
+        for(auto& i : plan){
+          new_dims.push_back(dims[i]);
         } // for i
       } // plan
     } // namespace node::transpose
@@ -598,6 +597,7 @@ namespace TAT{
       Node<device, Base> transpose(const std::vector<Rank>& plan) const {
         Node<device, Base> res;
         transpose::plan(res.dims, dims, plan);
+        assert(plan.size()==dims.size());
         assert(get_size(res.dims)==data.size);
         res.data = data.transpose(dims, plan);
         return res;
@@ -631,7 +631,7 @@ namespace TAT{
         Node<device, Base> U;
         Node<device, Base> S;
         Node<device, Base> V;
-      }; // svd_res
+      }; // class svd_res
 
       svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const {
         svd_res res;
@@ -835,11 +835,11 @@ namespace TAT{
             if(new_legs[i]==legs[j]){
               plan.push_back(j);
               break;
-            }
-          }
-        }
-      }
-    }
+            } // if
+          } // for j
+        } // for i
+      } // plan
+    } // namespace tensor::transpose
 
     namespace contract{
       void plan(std::vector<Legs>& legs,
@@ -860,9 +860,9 @@ namespace TAT{
               legs.push_back(map1.at(i));
             }catch(const std::out_of_range& e){
               legs.push_back(i);
-            }
-          }
-        }
+            } // try
+          } // if
+        } // for
         new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
 
         new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
@@ -874,11 +874,11 @@ namespace TAT{
               legs.push_back(map2.at(i));
             }catch(const std::out_of_range& e){
               legs.push_back(i);
-            }
-          }
-        }
-      }
-    }
+            } // try
+          } // if
+        } // for
+      } // plan
+    } // namespace tensor::contract
 
     namespace multiple{}
 
@@ -899,13 +899,13 @@ namespace TAT{
             V_legs.push_back(i);
           }else{ // to U
             U_legs.push_back(i);
-          }
-        }
+          } // if
+        } // for
         U_legs.push_back(new_u_legs);
         tmp_legs.insert(tmp_legs.end(), U_legs.begin(), U_legs.end()-1);
         tmp_legs.insert(tmp_legs.end(), V_legs.begin()+1, V_legs.end());
-      }
-    }
+      } // plan
+    } // namespace tensor::svd
 
     template<Device device, class Base>
     class Tensor{
@@ -933,18 +933,18 @@ namespace TAT{
 
       void set_test(){
         node.set_test();
-      }
+      } // set_test
       void set_zero(){
         node.set_zero();
-      }
+      } // set_zero
 
-      template<class Base2>
+      template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Tensor<device, Base2> to() const {
         Tensor<device, Base2> res;
         res.legs = legs;
         res.node = node.template to<Base2>();
         return res;
-      }
+      } // to
 
       template<class T=std::vector<Legs>>
       Tensor<device, Base> transpose(T&& new_legs) const {
@@ -956,7 +956,7 @@ namespace TAT{
         assert(plan.size()==legs.size());
         res.node = node.transpose(plan);
         return res;
-      }
+      } // transpose
 
       static Tensor<device, Base> contract(const Tensor<device, Base>& tensor1,
                                            const Tensor<device, Base>& tensor2,
@@ -978,9 +978,9 @@ namespace TAT{
         assert(plan2.size()==tensor2.legs.size());
         res.node = Node<device, Base>::contract(tensor1.node, tensor2.node, plan1, plan2, contract_num);
         return res;
-      }
+      } // contract
 
-      Tensor<device, Base> multiple(const Tensor<device, Base>& other, const Legs& position){
+      Tensor<device, Base> multiple(const Tensor<device, Base>& other, const Legs& position) const {
         Tensor<device, Base> res;
         assert(other.legs.size()==1);
         res.legs = legs;
@@ -988,7 +988,7 @@ namespace TAT{
         Rank index = std::distance(legs.begin(), pos);
         res.node = node.multiple(other.node, index);
         return res;
-      }
+      } // multiple
 
       friend class svd_res;
       class svd_res{
@@ -996,9 +996,9 @@ namespace TAT{
         Tensor<device, Base> U;
         Tensor<device, Base> S;
         Tensor<device, Base> V;
-      };
+      }; // class svd_res
 
-      svd_res svd(const std::vector<Legs>& u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut=-1){
+      svd_res svd(const std::vector<Legs>& u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut=-1) const {
         svd_res res;
         std::vector<Legs> tmp_legs;
         std::vector<Rank> plan;
@@ -1011,54 +1011,54 @@ namespace TAT{
         res.S.node = std::move(node_res.S);
         res.V.node = std::move(node_res.V);
         return res;
-      }
-    };
+      } // svd
+    }; // class Tensor
 
     inline namespace scalar{}
     namespace scalar{
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator*=(Tensor<device, Base>& a, B b){
+      Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const B& b){
         a.node *= b;
         return a;
-      }
+      } // operator*=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator*(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> operator*(const Tensor<device, Base>& a, const B& b){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = a.node * b;
         return res;
-      }
+      } // operator*
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator*(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> operator*(const B& b, const Tensor<device, Base>& a){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = b * a.node;
         return res;
-      }
+      } // operator*
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator/=(Tensor<device, Base>& a, B b){
+      Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const B& b){
         a.node /= b;
         return a;
-      }
+      } // operator/=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator/(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> operator/(const Tensor<device, Base>& a, const B& b){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = a.node / b;
         return res;
-      }
+      } // operator/
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator/(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> operator/(const B& b, const Tensor<device, Base>& a){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = b / a.node;
         return res;
-      }
+      } // operator/
 
       template<Device device, class Base>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a){
@@ -1066,29 +1066,29 @@ namespace TAT{
         res.legs = a.legs;
         res.node = + a.node;
         return res;
-      }
+      } // operator+
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator+=(Tensor<device, Base>& a, B b){
+      Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const B& b){
         a.node += b;
         return a;
-      }
+      } // operator+
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator+(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> operator+(const Tensor<device, Base>& a, const B& b){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = a.node + b;
         return res;
-      }
+      } // operator+
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator+(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> operator+(const B& b, const Tensor<device, Base>& a){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = b + a.node;
         return res;
-      }
+      } // operator+
 
       template<Device device, class Base>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a){
@@ -1096,75 +1096,75 @@ namespace TAT{
         res.legs = a.legs;
         res.node = - a.node;
         return res;
-      }
+      } // operator-
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator-=(Tensor<device, Base>& a, B b){
+      Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const B& b){
         a.node -= b;
         return a;
-      }
+      } // operator-=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator-(const Tensor<device, Base>& a, B b){
+      Tensor<device, Base> operator-(const Tensor<device, Base>& a, const B& b){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = a.node - b;
         return res;
-      }
+      } // operator-
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator-(B b, const Tensor<device, Base>& a){
+      Tensor<device, Base> operator-(const B& b, const Tensor<device, Base>& a){
         auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = b - a.node;
         return res;
-      }
+      } // operator-
 
       bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b){
         if(a.size()!=b.size()){
           return false;
-        }
+        } // if size
         Rank size=a.size();
         for(Rank i=0;i<size;i++){
           if(a[i]!=b[i]){
             return false;
-          }
-        }
+          } // if i
+        } // for
         return true;
-      }
+      } // operator==
 
-      template<Device device, class Base1, class Base2>
-      Tensor<device, Base1>& operator+=(Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      template<Device device, class Base>
+      Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const Tensor<device, Base>& b){
         assert(a.legs==b.legs);
         a.node += b.node;
         return a;
-      }
+      } // operator+=
 
-      template<Device device, class Base1, class Base2>
-      Tensor<device, decltype(Base1()+Base2())> operator+(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      template<Device device, class Base>
+      Tensor<device, Base> operator+(const Tensor<device, Base>& a, const Tensor<device, Base>& b){
         assert(a.legs==b.legs);
-        auto res = Tensor<device, decltype(Base1()+Base2())>::get_empty_tensor();
+        auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = a.node + b.node;
         return res;
-      }
+      } // operator+
 
-      template<Device device, class Base1, class Base2>
-      Tensor<device, Base1>& operator-=(Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      template<Device device, class Base>
+      Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const Tensor<device, Base>& b){
         assert(a.legs==b.legs);
         a.node -= b.node;
         return a;
-      }
+      } // operator-=
 
-      template<Device device, class Base1, class Base2>
-      Tensor<device, decltype(Base1()-Base2())> operator-(const Tensor<device, Base1>& a, const Tensor<device, Base2>& b){
+      template<Device device, class Base>
+      Tensor<device, Base> operator-(const Tensor<device, Base>& a, const Tensor<device, Base>& b){
         assert(a.legs==b.legs);
-        auto res = Tensor<device, decltype(Base1()-Base2())>::get_empty_tensor();
+        auto res = Tensor<device, Base>::get_empty_tensor();
         res.legs = a.legs;
         res.node = a.node - b.node;
         return res;
-      }
-    }
+      } // operator-
+    } // namespace tensor::scalar
 
     inline namespace io{}
     namespace io{
