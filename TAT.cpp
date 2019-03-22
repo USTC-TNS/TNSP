@@ -8,7 +8,7 @@
 #include <functional>
 #include <set>
 
-#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ <<std::endl;
+#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 #define TAT_USE_CPU
 #define TAT_TEST
@@ -19,7 +19,7 @@
 extern "C"
 {
 #include <mkl.h>
-}
+} // extern "C"
 #include <hptt.h>
 #endif // TAT_USE_CPU
 
@@ -34,7 +34,7 @@ namespace TAT{
        CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4),
        CreateLeg(5), CreateLeg(6), CreateLeg(7), CreateLeg(8), CreateLeg(9)
 #undef CreateLeg
-      };
+      }; // enum class Legs
 
     inline namespace io{}
     namespace io{
@@ -46,14 +46,10 @@ namespace TAT{
 #undef IncEnum
 
       std::ostream& operator<<(std::ostream& out, const Legs& value){
-        try{
-          return out << legs_str.at(value);
-        }catch(const std::out_of_range& e){
-          return out;
-        }
-      }
-    }
-  }
+        return out << legs_str.at(value);
+      } // operator<<
+    } // namespace io
+  } // namespace legs
   using legs::Legs;
 
 #define DefineLeg(x) static const Legs x = Legs::x
@@ -63,26 +59,25 @@ namespace TAT{
 #undef DefineLegs
 #undef DefineLeg
 
-
   using Size = std::size_t;
   using Rank = unsigned int;
 
   namespace data{
     template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
     class Data;
-  }
+  } // namespace data
   using data::Data;
 
   namespace node{
     template<Device device, class Base>
     class Node;
-  }
+  } // namespace node
   using node::Node;
 
   namespace tensor{
     template<Device device=Device::CPU, class Base=double>
     class Tensor;
-  }
+  } // namespace tensor
   using tensor::Tensor;
 
   namespace data{
@@ -96,80 +91,78 @@ namespace TAT{
       void run(Base* data,
                const Base* data1,
                const Base* data2,
-               Size m,
-               Size n,
-               Size k);
+               const Size& m,
+               const Size& n,
+               const Size& k);
 
       template<>
       void run<float>(float* data,
                       const float* data1,
                       const float* data2,
-                      Size m,
-                      Size n,
-                      Size k)
+                      const Size& m,
+                      const Size& n,
+                      const Size& k)
       {
         cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     m, n, k,
                     1, data1, k, data2, n,
                     0, data, n);
-      }
+      } // run<float>
 
       template<>
       void run<double>(double* data,
                        const double* data1,
                        const double* data2,
-                       Size m,
-                       Size n,
-                       Size k)
+                       const Size& m,
+                       const Size& n,
+                       const Size& k)
       {
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     m, n, k,
                     1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
                     0, data, n);
-      }
-    }
+      } // run<double>
+    } // namespace data::contract
 
     namespace multiple{
       template<class Base>
-      void run(Base* res_data, Base* src_data, Base* other_data, Size a, Size b, Size c){
+      void run(Base* res_data, const Base* src_data, const Base* other_data, const Size& a, const Size& b, const Size& c){
         for(Size i=0;i<a;i++){
           for(Size j=0;j<b;j++){
             Base v = other_data[j];
             for(Size k=0;k<c;k++){
               *(res_data++) = *(src_data++) * v;
-            }
-          }
-        }
-      }
-    }
+            } // for k
+          } // for j
+        } // for i
+      } // run
+    } // namespace data::multiple
 
     namespace svd{
       template<class Base>
-      void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, Base*s, Base*vt);
+      void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, Base* s, Base* vt);
 
       template<>
-      void run<float>(const Size& m, const Size& n, const Size& min, float* a, float* u, float*s, float*vt){
+      void run<float>(const Size& m, const Size& n, const Size& min, float* a, float* u, float* s, float* vt){
 #ifdef TAT_USE_DGESDD
         PASS;
 #else
         auto superb = new float[min-1];
         LAPACKE_sgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
-        // svd input will destroy, but won't worry, because it is tranposed into tmp matrix
         delete[] superb;
 #endif // TAT_USE_DGESDD
-      }
+      } // run<float>
 
       template<>
-      void run<double>(const Size& m, const Size& n, const Size& min, double* a, double* u, double*s, double*vt){
+      void run<double>(const Size& m, const Size& n, const Size& min, double* a, double* u, double* s, double* vt){
 #ifdef TAT_USE_DGESDD
         PASS;
 #else
         auto superb = new double[min-1];
         LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
-        // svd input will destroy, but won't worry, because it is tranposed into tmp matrix
         delete[] superb;
 #endif // TAT_USE_DGESDD
-      }
+      } // run<double>
 
       template<class Base>
       Data<device, Base> cut(const Data<device, Base>& other,
@@ -179,22 +172,22 @@ namespace TAT{
                              const Size& n2){
         Data<device, Base> res(m2*n2);
         assert(n2<=n1);
-        assert(m2<=m2);
+        assert(m2<=m1);
         if(n2==n1){
-          std::memcpy(res.base.get(), other.base.get(), n2*m2*sizeof(Base));
+          std::memcpy(res.get(), other.get(), n2*m2*sizeof(Base));
         }else{
-          Base* dst = res.base.get();
-          Base* src = other.base.get();
+          Base* dst = res.get();
+          const Base* src = other.get();
           Size size = n2*sizeof(Base);
           for(Size i=0;i<m2;i++){
             std::memcpy(dst, src, size);
             dst += n2;
             src += n1;
-          }
-        }
+          } // for i
+        } // if
         return res;
-      }
-    }
+      } // cut
+    } // namespace data::svd
 
     template<class Base>
     class Data<device, Base>{
@@ -205,7 +198,7 @@ namespace TAT{
     public:
       static Data<device, Base> get_empty_data(){
         return Data();
-      }
+      } // get_empty_data, use to call Data() in public
 
       Size size;
       std::unique_ptr<Base[]> base;
@@ -218,44 +211,52 @@ namespace TAT{
       }
       Data(const Data<device, Base>& other){
         new (this) Data(other.size);
-        std::memcpy(base.get(), other.base.get(), size*sizeof(Base));
+        std::memcpy(get(), other.get(), size*sizeof(Base));
       }
       Data<device, Base>& operator=(const Data<device, Base>& other){
         new (this) Data(other);
       }
 
+      const Base* get() const {
+        return base.get();
+      } // get
+
+      Base* get(){
+        return base.get();
+      } // get
+
       void set_test(){
         for(Size i=0;i<size;i++){
           base[i] = i;
-        }
-      }
+        } // for i
+      } // set_test
       void set_zero(){
         for(Size i=0;i<size;i++){
           base[i] = 0;
-        }
-      }
+        } // for i
+      } // set_zero
 
-      template<class Base2>
+      template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Data<device, Base2> to() const {
         Data<device, Base2> res(size);
         for(Size i=0;i<size;i++){
-          res.base[i] = base[i];
-        }
+          res.base[i] = Base2(base[i]);
+        } // for i
         return res;
-      }
+      } // to
 
       Data<device, Base> transpose(const std::vector<Size>& dims,
-                                   const std::vector<Rank>& plan,
-                                   const std::vector<Size>& new_dims) const {
+                                   const std::vector<Rank>& plan) const {
         Data<device, Base> res(size);
+        assert(dims.size()==plan.size());
         std::vector<int> int_plan(plan.begin(), plan.end());
         std::vector<int> int_dims(dims.begin(), dims.end());
         hptt::create_plan(int_plan.data(), int_plan.size(),
-                          1, base.get(), int_dims.data(), NULL,
-                          0, res.base.get(), NULL,
+                          1, get(), int_dims.data(), NULL,
+                          0, res.get(), NULL,
                           hptt::ESTIMATE, 1, NULL, 1)->execute();
         return res;
-      }
+      } // transpose
 
       static Data<device, Base> contract(const Data<device, Base>& data1,
                                          const Data<device, Base>& data2,
@@ -263,24 +264,24 @@ namespace TAT{
                                          const std::vector<Size>& dims2,
                                          const std::vector<Rank>& plan1,
                                          const std::vector<Rank>& plan2,
-                                         const std::vector<Size>& new_dims1,
-                                         const std::vector<Size>& new_dims2,
                                          const Size& m, const Size& k, const Size& n){
-        Data<device, Base> a = data1.transpose(dims1, plan1, new_dims1);
-        Data<device, Base> b = data1.transpose(dims2, plan2, new_dims2);
+        assert(m*k==data1.size);
+        assert(k*n==data2.size);
+        Data<device, Base> a = data1.transpose(dims1, plan1);
+        Data<device, Base> b = data2.transpose(dims2, plan2);
         // wasted transpose
         Data<device, Base> res(m*n);
-        contract::run<Base>(res.base.get(), a.base.get(), b.base.get(), m, n, k);
+        contract::run<Base>(res.get(), a.get(), b.get(), m, n, k);
         return res;
-      }
+      } // contract
 
       Data<device, Base> multiple(const Data<device, Base>& other, const Size& a, const Size& b, const Size& c) const {
         Data<device, Base> res(size);
         assert(b==other.size);
         assert(a*b*c==size);
-        multiple::run<Base>(res.base.get(), base.get(), other.base.get(), a, b, c);
+        multiple::run<Base>(res.get(), get(), other.get(), a, b, c);
         return res;
-      }
+      } // multiple
 
       friend class svd_res;
       class svd_res{
@@ -288,30 +289,27 @@ namespace TAT{
         Data<device, Base> U;
         Data<device, Base> S;
         Data<device, Base> V;
-      };
+      }; // class svd_res
 
       svd_res svd(const std::vector<Size>& dims,
                   const std::vector<Rank>& plan,
-                  const std::vector<Size>& tmp_dims,
                   const Size& u_size,
                   const Size& cut) const {
+        assert(size%u_size==0);
         Size v_size = size/u_size;
         Size min_mn = (u_size<v_size)?u_size:v_size;
-        Size cut_dim = cut;
-        if(cut_dim>min_mn){
-          // -1 > any int
-          cut_dim = min_mn;
-        }
+        Size cut_dim = (cut<min_mn)?cut:min_mn;
+        // -1 > any integer
         svd_res res;
         res.U = Data<device, Base>(u_size*min_mn);
         res.S = Data<device, Base>(min_mn);
         res.V = Data<device, Base>(min_mn*v_size);
-        Data<device, Base> tmp = transpose(dims, plan, tmp_dims);
+        Data<device, Base> tmp = transpose(dims, plan);
         // used in svd, dgesvd will destroy it
 #ifdef TAT_USE_TRUNCATE_SVD
         PASS;
 #else
-        svd::run(u_size, v_size, min_mn, tmp.base.get(), res.U.base.get(), res.S.base.get(), res.V.base.get());
+        svd::run(u_size, v_size, min_mn, tmp.get(), res.U.get(), res.S.get(), res.V.get());
         if(cut_dim!=min_mn){
           res.U = svd::cut(res.U, u_size, min_mn, u_size, cut_dim);
           res.S = svd::cut(res.S, min_mn, 1, cut_dim, 1);
@@ -319,170 +317,169 @@ namespace TAT{
         }
 #endif // TAT_USE_TRUNCATE_SVD
         return res;
-      }
-    };
+      } // svd
+    }; // class Data
 
     inline namespace scalar{}
     namespace scalar{
       template<class Base>
-      void vLinearFrac(Size n, Base* a, Base* b, Base sa, Base oa, Base sb, Base ob, Base* y);
+      void vLinearFrac(const Size& n, const Base* a, const Base* b, const Base& sa, const Base& oa, const Base& sb, const Base& ob, Base* y);
       // y = (a*sa + oa)/(b*sb + ob)
 
       template<>
-      void vLinearFrac<float>(Size n, float* a, float* b, float sa, float oa, float sb, float ob, float* y){
+      void vLinearFrac<float>(const Size& n, const float* a, const float* b, const float& sa, const float& oa, const float& sb, const float& ob, float* y){
         vsLinearFrac(n, a, b, sa, oa, sb, ob, y);
-      }
+      } // vLinearFrac
 
       template<>
-      void vLinearFrac<double>(Size n, double* a, double* b, double sa, double oa, double sb, double ob, double* y){
+      void vLinearFrac<double>(const Size& n, const double* a, const double* b, const double& sa, const double& oa, const double& sb, const double& ob, double* y){
         vdLinearFrac(n, a, b, sa, oa, sb, ob, y);
-      }
+      } // vLinearFrac
 
       template<class Base>
-      void vAdd(Size n, Base* a, Base* b, Base* y);
+      void vAdd(const Size& n, const Base* a, const Base* b, Base* y);
 
       template<>
-      void vAdd<float>(Size n, float* a, float* b, float* y){
+      void vAdd<float>(const Size& n, const float* a, const float* b, float* y){
         vsAdd(n, a, b, y);
-      }
+      } // vAdd
 
       template<>
-      void vAdd<double>(Size n, double* a, double* b, double* y){
+      void vAdd<double>(const Size& n, const double* a, const double* b, double* y){
         vdAdd(n, a, b, y);
-      }
+      } // vAdd
 
       template<class Base>
-      void vSub(Size n, Base* a, Base* b, Base* y);
+      void vSub(const Size& n, const Base* a, const Base* b, Base* y);
 
       template<>
-      void vSub<float>(Size n, float* a, float* b, float* y){
+      void vSub<float>(const Size& n, const float* a, const float* b, float* y){
         vsSub(n, a, b, y);
-      }
+      } // vSub
 
       template<>
-      void vSub<double>(Size n, double* a, double* b, double* y){
+      void vSub<double>(const Size& n, const double* a, const double* b, double* y){
         vdSub(n, a, b, y);
-      }
+      } // vSub
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator*=(Data<device, Base>& a, B b){
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, a.base.get());
+      Data<device, Base>& operator*=(Data<device, Base>& a, const B& b){
+        vLinearFrac<Base>(a.size, a.get(), a.get(), b, 0, 0, 1, a.get());
         return a;
-      }
+      } // operator*=
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator*(const Data<device, Base>& a, B b){
+      Data<device, Base> operator*(const Data<device, Base>& a, const B& b){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), b, 0, 0, 1, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), b, 0, 0, 1, res.get());
         return res;
-      }
+      } // operator*
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator*(B b, const Data<device, Base>& a){
+      Data<device, Base> operator*(const B& b, const Data<device, Base>& a){
         return a * b;
-      }
+      } // operator*
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator/=(Data<device, Base>& a, B b){
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, 0, 0, b, a.base.get());
+      Data<device, Base>& operator/=(Data<device, Base>& a, const B& b){
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, 0, 0, b, a.get());
         return a;
-      }
+      } // operator/=
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator/(const Data<device, Base>& a, B b){
+      Data<device, Base> operator/(const Data<device, Base>& a, const B& b){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, 0, 0, b, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, 0, 0, b, res.get());
         return res;
-      }
+      } // operator/
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator/(B b, const Data<device, Base>& a){
+      Data<device, Base> operator/(const B& b, const Data<device, Base>& a){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 0, b, 1, 0, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 0, b, 1, 0, res.get());
         return res;
-      }
+      } // operator/
 
       template<class Base>
       Data<device, Base> operator+(const Data<device, Base>& a){
         return Data<device, Base>(a);
-      }
+      } // operator+
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator+=(Data<device, Base>& a, B b){
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, b, 0, 1, a.base.get());
+      Data<device, Base>& operator+=(Data<device, Base>& a, const B& b){
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, b, 0, 1, a.get());
         return a;
-      }
-
+      } // operator+=
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator+(const Data<device, Base>& a, B b){
+      Data<device, Base> operator+(const Data<device, Base>& a, const B& b){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, b, 0, 1, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, b, 0, 1, res.get());
         return res;
-      }
+      } // operator+
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator+(B b, const Data<device, Base>& a){
+      Data<device, Base> operator+(const B& b, const Data<device, Base>& a){
         return a + b;
-      }
+      } // operator+
 
       template<class Base>
       Data<device, Base> operator-(const Data<device, Base>& a){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), -1, 0, 0, 1, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), -1, 0, 0, 1, res.get());
         return res;
-      }
+      } // operator-
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator-=(Data<device, Base>& a, B b){
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, -b, 0, 1, a.base.get());
+      Data<device, Base>& operator-=(Data<device, Base>& a, const B& b){
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, -b, 0, 1, a.get());
         return a;
-      }
+      } // operator-=
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator-(const Data<device, Base>& a, B b){
+      Data<device, Base> operator-(const Data<device, Base>& a, const B& b){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), 1, -b, 0, 1, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, -b, 0, 1, res.get());
         return res;
-      }
+      } // operator-
 
       template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator-(B b, const Data<device, Base>& a){
+      Data<device, Base> operator-(const B& b, const Data<device, Base>& a){
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.base.get(), a.base.get(), -1, b, 0, 1, res.base.get());
+        vLinearFrac<Base>(a.size, a.get(), a.get(), -1, b, 0, 1, res.get());
         return res;
-      }
+      } // operator-
 
       template<class Base>
       Data<device, Base>& operator+=(Data<device, Base>& a, const Data<device, Base>& b){
         assert(a.size==b.size);
-        vAdd<Base>(a.size, a.base.get(), b.base.get(), a.base.get());
+        vAdd<Base>(a.size, a.get(), b.get(), a.get());
         return a;
-      }
+      } // operator+=
 
       template<class Base>
       Data<device, Base> operator+(const Data<device, Base>& a, const Data<device, Base>& b){
         assert(a.size==b.size);
         Data<device, Base> res(a.size);
-        vAdd<Base>(a.size, a.base.get(), b.base.get(), res.base.get());
+        vAdd<Base>(a.size, a.get(), b.get(), res.get());
         return res;
-      }
+      } // operator+
 
       template<class Base>
       Data<device, Base>& operator-=(Data<device, Base>& a, const Data<device, Base>& b){
         assert(a.size==b.size);
-        vSub<Base>(a.size, a.base.get(), b.base.get(), a.base.get());
+        vSub<Base>(a.size, a.get(), b.get(), a.get());
         return a;
-      }
+      } // operator-=
 
       template<class Base>
       Data<device, Base> operator-(const Data<device, Base>& a, const Data<device, Base>& b){
         assert(a.size==b.size);
         Data<device, Base> res(a.size);
-        vSub<Base>(a.size, a.base.get(), b.base.get(), res.base.get());
+        vSub<Base>(a.size, a.get(), b.get(), res.get());
         return res;
-      }
-    }
+      } // operator-
+    } // namespace scalar
 
     inline namespace io{}
     namespace io{
@@ -490,12 +487,12 @@ namespace TAT{
       std::ostream& operator<<(std::ostream& out, const Data<device, Base>& value){
         for(Size i=0;i<value.size-1;i++){
           out << value.base[i] << " ";
-        }
+        } // for i
         if(value.size!=0){
           out << value.base[value.size-1];
-        }
+        } // if
         return out;
-      }
+      } // operator<<
     } // namespace io
 #endif // TAT_USE_CPU
   } // namespace data
@@ -503,52 +500,52 @@ namespace TAT{
   namespace node{
     namespace transpose{
       void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan){
-        const Rank& rank = dims.size();
+        Rank rank = dims.size();
         for(Rank i=0;i<rank;i++){
           new_dims.push_back(dims[plan[i]]);
-        }
-      }
-    }
+        } // for i
+      } // plan
+    } // namespace node::transpose
 
     namespace contract{
       void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n, const::std::vector<Size>& dims1, const::std::vector<Size>& dims2, const Rank& contract_num){
-        Rank i, tmp=dims1.size()-contract_num;
+        Rank i, tmp=dims1.size()-contract_num, rank2=dims2.size();
         for(i=0;i<tmp;i++){
           m *= dims1[i];
           dims.push_back(dims1[i]);
-        }
+        } // for i
         for(i=0;i<contract_num;i++){
           k *= dims1[i+tmp];
           assert(dims1[i+tmp]==dims2[i]);
-        }
-        for(;i<dims2.size();i++){
+        } // for i
+        for(;i<rank2;i++){
           n *= dims2[i];
           dims.push_back(dims2[i]);
-        }
-      }
-    }
+        } // for i
+      } // plan
+    } // namespace node::contract
 
     namespace multiple{
       void plan(Size& a, Size& b, Size& c, const std::vector<Size>& dims, const Rank& index){
-        Rank i=0;
+        Rank i=0, rank=dims.size();
         for(;i<index;i++){
           a *= dims[i];
-        }
+        } // for i
         b = dims[i];
         i++;
-        for(;i<dims.size();i++){
+        for(;i<rank;i++){
           c *= dims[i];
-        }
-      }
-    }
+        } // for
+      } // plan
+    } // namespace node::multiple
 
     namespace svd{
       void plan(Size& u_size, const Rank& u_rank, const std::vector<Size>& tmp_dims){
         for(Rank i=0;i<u_rank;i++){
           u_size *= tmp_dims[i];
-        }
-      }
-    }
+        } // for i
+      } // plan
+    } // namespace node::svd
 
     template<Device device, class Base>
     class Node{
@@ -559,7 +556,7 @@ namespace TAT{
     public:
       static Node<device, Base> get_empty_node(){
         return Node();
-      }
+      } // get_empty_node
 
       std::vector<Size> dims;
       Data<device, Base> data;
@@ -571,11 +568,11 @@ namespace TAT{
       Node<device, Base>& operator=(const Node<device, Base>& other) = default;
       static Size get_size(const std::vector<Size>& _dims){
         Size res = 1;
-        for(auto i : _dims){
+        for(auto& i : _dims){
           res *= i;
-        }
+        } // for i
         return res;
-      }
+      } // get_size
       template<class T=std::vector<Size>>
       Node(T&& _dims) : data(get_size(_dims)){
         dims = std::forward<T>(_dims);
@@ -600,7 +597,7 @@ namespace TAT{
         Node<device, Base> res;
         transpose::plan(res.dims, dims, plan);
         assert(get_size(res.dims)==data.size);
-        res.data = data.transpose(dims, plan, res.dims);
+        res.data = data.transpose(dims, plan);
         return res;
       }
 
@@ -615,7 +612,7 @@ namespace TAT{
         transpose::plan(dims1, node1.dims, plan1);
         transpose::plan(dims2, node2.dims, plan2);
         contract::plan(res.dims, m, k, n, dims1, dims2, contract_num);
-        res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, dims1, dims2, m, k, n);
+        res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, m, k, n);
         return res;
       }
 
@@ -643,7 +640,7 @@ namespace TAT{
         Size u_size=1;
         transpose::plan(tmp_dims, dims, plan);
         svd::plan(u_size, u_rank, tmp_dims);
-        auto data_res = data.svd(dims, plan, tmp_dims, u_size, cut);
+        auto data_res = data.svd(dims, plan, u_size, cut);
         res.U.dims.insert(res.U.dims.end(), dims.begin(), dims.begin()+u_rank);
         res.U.dims.push_back(data_res.S.size);
         res.S.dims.push_back(data_res.S.size);
@@ -766,7 +763,8 @@ namespace TAT{
         if(a.size()!=b.size()){
           return false;
         }
-        for(Rank i=0;i<a.size();i++){
+        Rank size=a.size();
+        for(Rank i=0;i<size;i++){
           if(a[i]!=b[i]){
             return false;
           }
@@ -810,11 +808,12 @@ namespace TAT{
     inline namespace io{}
     namespace io{
       std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value){
-        for(Rank i=0;i<value.size()-1;i++){
+        Rank size=value.size();
+        for(Rank i=0;i<size-1;i++){
           out << value[i] << " ";
         }
-        if(value.size()!=0){
-          out << value[value.size()-1];
+        if(size!=0){
+          out << value[size-1];
         }
         return out;
       }
@@ -853,7 +852,7 @@ namespace TAT{
                 const std::map<Legs, Legs>& map1,
                 const std::map<Legs, Legs>& map2)
       {
-        for(auto i : total_legs1){
+        for(auto& i : total_legs1){
           auto pos = std::find(legs1.begin(), legs1.end(), i);
           if(pos == legs1.end()){
             new_legs1.push_back(i);
@@ -867,7 +866,7 @@ namespace TAT{
         new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
 
         new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
-        for(auto i : total_legs2){
+        for(auto& i : total_legs2){
           auto pos = std::find(legs2.begin(), legs2.end(), i);
           if(pos == legs2.end()){
             new_legs2.push_back(i);
@@ -894,7 +893,7 @@ namespace TAT{
                 const Legs& new_v_legs){
         u_rank = u_legs.size();
         V_legs.push_back(new_v_legs);
-        for(auto i : total_legs){
+        for(auto& i : total_legs){
           auto pos = std::find(u_legs.begin(), u_legs.end(), i);
           if(pos==u_legs.end()){ // to V
             V_legs.push_back(i);
@@ -1125,7 +1124,8 @@ namespace TAT{
         if(a.size()!=b.size()){
           return false;
         }
-        for(Rank i=0;i<a.size();i++){
+        Rank size=a.size();
+        for(Rank i=0;i<size;i++){
           if(a[i]!=b[i]){
             return false;
           }
@@ -1169,11 +1169,12 @@ namespace TAT{
     inline namespace io{}
     namespace io{
       std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value){
-        for(Rank i=0;i<value.size()-1;i++){
+        Rank size=value.size();
+        for(Rank i=0;i<size-1;i++){
           out << value[i] << " ";
         }
-        if(value.size()!=0){
-          out << value[value.size()-1];
+        if(size!=0){
+          out << value[size-1];
         }
         return out;
       }
