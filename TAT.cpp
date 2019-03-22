@@ -200,7 +200,7 @@ namespace TAT{
         assert(res==0);
         assert(ns==lapack_int(cut));
         delete[] superb;
-      } // run<float>
+      } // runx<float>
 
       template<>
       void runx<double>(const Size& m, const Size& n, const Size& min, const Size& cut, double* a, double* u, double* s, double* vt){
