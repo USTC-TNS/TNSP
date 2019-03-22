@@ -1,3 +1,5 @@
+#ifndef TAT_HPP_
+
 #include <iostream>
 #include <vector>
 #include <map>
@@ -1172,19 +1174,19 @@ namespace TAT{
         Rank size=value.size();
         for(Rank i=0;i<size-1;i++){
           out << value[i] << " ";
-        }
+        } // for i
         if(size!=0){
           out << value[size-1];
-        }
+        } // if
         return out;
-      }
+      } // operator<<
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value){
         return out << "[legs(" << value.legs << ") node(" << value.node << ")]";
-      }
-    }
-  }
+      } // operator<<
+    } // namespace tensor::io
+  } // namespace tensor
 } // namespace TAT
 
 #ifdef TAT_TEST
@@ -1394,5 +1396,7 @@ int main(){
       std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
     }
   } // svd
-}
+} // main
 #endif // TAT_TEST
+
+#endif // TAT_HPP_
