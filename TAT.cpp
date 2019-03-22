@@ -542,9 +542,9 @@ namespace TAT{
     } // namespace node::multiple
 
     namespace svd{
-      void plan(Size& u_size, const Rank& u_rank, const std::vector<Size>& tmp_dims){
+      void plan(Size& u_size, const Rank& u_rank, const std::vector<Size>& dims){
         for(Rank i=0;i<u_rank;i++){
-          u_size *= tmp_dims[i];
+          u_size *= dims[i];
         } // for i
       } // plan
     } // namespace node::svd
@@ -623,7 +623,7 @@ namespace TAT{
         assert(b==other.dims[0]);
         res.data = data.multiple(other.data, a, b, c);
         return res;
-      }
+      } // multiple
 
       friend class svd_res;
       class svd_res{
@@ -631,26 +631,27 @@ namespace TAT{
         Node<device, Base> U;
         Node<device, Base> S;
         Node<device, Base> V;
-      };
+      }; // svd_res
 
-      svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, Size cut) const {
+      svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const {
         svd_res res;
-        std::vector<Size> tmp_dims;
         Size u_size=1;
+        std::vector<Size> tmp_dims;
         transpose::plan(tmp_dims, dims, plan);
         svd::plan(u_size, u_rank, tmp_dims);
         auto data_res = data.svd(dims, plan, u_size, cut);
-        res.U.dims.insert(res.U.dims.end(), dims.begin(), dims.begin()+u_rank);
+        auto mid = tmp_dims.begin()+u_rank;
+        res.U.dims.insert(res.U.dims.end(), tmp_dims.begin(), mid);
         res.U.dims.push_back(data_res.S.size);
         res.S.dims.push_back(data_res.S.size);
         res.V.dims.push_back(data_res.S.size);
-        res.V.dims.insert(res.V.dims.end(), dims.begin()+u_rank, dims.end());
+        res.V.dims.insert(res.V.dims.end(), mid, tmp_dims.end()); // !!! wrong... dims is before transpose
         res.U.data = std::move(data_res.U);
         res.S.data = std::move(data_res.S);
         res.V.data = std::move(data_res.V);
         return res;
-      }
-    };
+      } // svd
+    }; // class Node
 
     inline namespace scalar{}
     namespace scalar{
