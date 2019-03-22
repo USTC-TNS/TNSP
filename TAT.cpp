@@ -222,14 +222,14 @@ namespace data{
     }
 
     static Data<device, Base> contract(const Data<device, Base>& data1,
-                                            const Data<device, Base>& data2,
-                                            const std::vector<Size>& dims1,
-                                            const std::vector<Size>& dims2,
-                                            const std::vector<Rank>& plan1,
-                                            const std::vector<Rank>& plan2,
-                                            const std::vector<Size>& new_dims1,
-                                            const std::vector<Size>& new_dims2,
-                                            const Size& m, const Size& k, const Size&n){
+                                       const Data<device, Base>& data2,
+                                       const std::vector<Size>& dims1,
+                                       const std::vector<Size>& dims2,
+                                       const std::vector<Rank>& plan1,
+                                       const std::vector<Rank>& plan2,
+                                       const std::vector<Size>& new_dims1,
+                                       const std::vector<Size>& new_dims2,
+                                       const Size& m, const Size& k, const Size& n){
       Data<device, Base> a = data1.transpose(dims1, plan1, new_dims1);
       Data<device, Base> b = data1.transpose(dims2, plan2, new_dims2);
       // wasted transpose
@@ -238,7 +238,7 @@ namespace data{
       return res;
     }
 
-    Data<device, Base> multiple(const Data<device, Base>& other, const Size& a, const Size& b, const Size& c){
+    Data<device, Base> multiple(const Data<device, Base>& other, const Size& a, const Size& b, const Size& c) const {
       Data<device, Base> res(size);
       assert(b==other.size);
       assert(a*b*c==size);
@@ -258,7 +258,7 @@ namespace data{
                 const std::vector<Rank>& plan,
                 const std::vector<Size>& tmp_dims,
                 const Size& u_size,
-                const Size& cut){
+                const Size& cut) const {
       Size v_size = size/u_size;
       Size min_mn = (u_size<v_size)?u_size:v_size;
       svd_res res;
@@ -849,8 +849,8 @@ namespace tensor{
       u_rank = u_legs.size();
       V_legs.push_back(new_v_legs);
       for(auto i : total_legs){
-        auto pos = std::find(total_legs.begin(), total_legs.end(), i);
-        if(pos==total_legs.end()){ // to V
+        auto pos = std::find(u_legs.begin(), u_legs.end(), i);
+        if(pos==u_legs.end()){ // to V
           V_legs.push_back(i);
         }else{ // to U
           U_legs.push_back(i);
@@ -960,8 +960,8 @@ namespace tensor{
       Rank u_rank;
       svd::plan(res.U.legs, res.V.legs, tmp_legs, u_rank, legs, u_legs, new_u_legs, new_v_legs);
       transpose::plan(plan, tmp_legs, legs);
-      res.S.legs = {new_u_legs};// new_u_legs or new_v_legs
       auto node_res = node.svd(plan, u_rank, cut);
+      res.S.legs = {new_u_legs};// new_u_legs or new_v_legs
       res.U.node = std::move(node_res.U);
       res.S.node = std::move(node_res.S);
       res.V.node = std::move(node_res.V);
@@ -1323,9 +1323,21 @@ int main(){
   std::cout << "svd\n";
   { //  svd
     {
-      Tensor<> t1({4,5},{Left,Right});
+      Tensor<> t1({4,6},{Left,Right});
       t1.set_test();
       auto res = t1.svd({Left}, Right, Down, 4);
+      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+    }
+    {
+      Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
+      t1.set_test();
+      auto res = t1.svd({Left,Right}, Right1, Down1, 4);
+      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+    }
+    {
+      Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
+      t1.set_test();
+      auto res = t1.svd({Left,Down}, Right1, Down1, 4);
       std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
     }
   } // svd
