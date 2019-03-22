@@ -158,6 +158,30 @@ namespace data{
       delete[] superb;
 #endif // TAT_USE_DGESDD
     }
+
+    template<class Base>
+    Data<device, Base> cut(const Data<device, Base>& other,
+                           const Size& m1,
+                           const Size& n1,
+                           const Size& m2,
+                           const Size& n2){
+      Data<device, Base> res(m2*n2);
+      assert(n2<=n1);
+      assert(m2<=m2);
+      if(n2==n1){
+        std::memcpy(res.base.get(), other.base.get(), n2*m2*sizeof(Base));
+      }else{
+        Base* dst = res.base.get();
+        Base* src = other.base.get();
+        Size size = n2*sizeof(Base);
+        for(Size i=0;i<m2;i++){
+          std::memcpy(dst, src, size);
+          dst += n2;
+          src += n1;
+        }
+      }
+      return res;
+    }
   }
 
   template<class Base>
@@ -261,6 +285,11 @@ namespace data{
                 const Size& cut) const {
       Size v_size = size/u_size;
       Size min_mn = (u_size<v_size)?u_size:v_size;
+      Size cut_dim = cut;
+      if(cut_dim>min_mn){
+        // -1 > any int
+        cut_dim = min_mn;
+      }
       svd_res res;
       res.U = Data<device, Base>(u_size*min_mn);
       res.S = Data<device, Base>(min_mn);
@@ -271,6 +300,11 @@ namespace data{
       PASS;
 #else
       svd::run(u_size, v_size, min_mn, tmp.base.get(), res.U.base.get(), res.S.base.get(), res.V.base.get());
+      if(cut_dim!=min_mn){
+        res.U = svd::cut(res.U, u_size, min_mn, u_size, cut_dim);
+        res.S = svd::cut(res.S, min_mn, 1, cut_dim, 1);
+        res.V = svd::cut(res.V, min_mn, v_size, cut_dim, v_size);
+      }
 #endif // TAT_USE_TRUNCATE_SVD
       return res;
     }
@@ -599,9 +633,9 @@ namespace node{
       svd::plan(u_size, u_rank, tmp_dims);
       auto data_res = data.svd(dims, plan, tmp_dims, u_size, cut);
       res.U.dims.insert(res.U.dims.end(), dims.begin(), dims.begin()+u_rank);
-      res.U.dims.push_back(cut);
-      res.S.dims.push_back(cut);
-      res.V.dims.push_back(cut);
+      res.U.dims.push_back(data_res.S.size);
+      res.S.dims.push_back(data_res.S.size);
+      res.V.dims.push_back(data_res.S.size);
       res.V.dims.insert(res.V.dims.end(), dims.begin()+u_rank, dims.end());
       res.U.data = std::move(data_res.U);
       res.S.data = std::move(data_res.S);
@@ -1337,7 +1371,13 @@ int main(){
     {
       Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
       t1.set_test();
-      auto res = t1.svd({Left,Down}, Right1, Down1, 4);
+      auto res = t1.svd({Left,Down}, Right1, Down1, -1);
+      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+    }
+    {
+      Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
+      t1.set_test();
+      auto res = t1.svd({Left,Down}, Right1, Down1, 3);
       std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
     }
   } // svd
