@@ -1194,7 +1194,7 @@ namespace TAT{
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value){
-        return out << "[legs(" << value.legs << ") node(" << value.node << ")]";
+        return out << "[rank(" << value.legs.size() << ") legs(" << value.legs << ") node(" << value.node << ")]";
       } // operator<<
     } // namespace tensor::io
   } // namespace tensor
