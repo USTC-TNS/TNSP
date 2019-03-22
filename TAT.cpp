@@ -2,14 +2,10 @@
 
 #include <iostream>
 #include <fstream>
-#include <ios>
 #include <vector>
 #include <map>
-#include <memory>
 #include <cstring>
 #include <cassert>
-#include <type_traits>
-#include <functional>
 #include <set>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl
@@ -29,10 +25,10 @@ extern "C"
 
 namespace TAT{
 
-  enum class Device : char {CPU, CUDA, DCU, SW};
+  enum class Device : unsigned char {CPU, CUDA, DCU, SW};
 
   namespace legs{
-    enum class Legs : char{
+    enum class Legs : unsigned char {
 #define CreateLeg(x) Left##x, Right##x, Up##x, Down##x, Phy##x
        CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4),
        CreateLeg(5), CreateLeg(6), CreateLeg(7), CreateLeg(8), CreateLeg(9)
@@ -1460,6 +1456,10 @@ int main(){
       t1.set_test();
       auto res = t1.svd({Left,Down}, Right1, Down1, 3);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
+      std::ofstream f2;
+      f2.open("test_io2.out");
+      f2 << res.V;
+      f2.close();
     }
   } // svd
   std::cout << "io\n";
