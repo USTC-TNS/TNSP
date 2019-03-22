@@ -1554,9 +1554,9 @@ int main(){
       auto res = t1.svd({Left,Down}, Right1, Down1, 3);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
       std::ofstream f2;
-      //f2.open("test_io2.out");
-      //f2 << res.V;
-      //f2.close();
+      f2.open("test_io2.out");
+      f2 << res.V;
+      f2.close();
     }
   } // svd
   std::cout << "io\n";
