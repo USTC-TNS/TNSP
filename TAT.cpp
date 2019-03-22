@@ -1,19 +1,19 @@
 #ifndef TAT_HPP_
 
+#include <cassert>
+#include <cstring>
 #include <iostream>
 #include <fstream>
-#include <vector>
 #include <map>
-#include <cstring>
-#include <cassert>
 #include <set>
+#include <vector>
 
-#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl
+#define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl, exit(233)
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 #define TAT_USE_CPU
 #define TAT_TEST
-//#define TAT_USE_TRUNCATE_SVD
-//#define TAT_USE_DGESDD
+#define TAT_USE_TRUNCATE_SVD
+#define TAT_USE_DGESDD
 
 #ifdef TAT_USE_CPU
 extern "C"
@@ -144,23 +144,25 @@ namespace TAT{
       template<>
       void run<float>(const Size& m, const Size& n, const Size& min, float* a, float* u, float* s, float* vt){
 #ifdef TAT_USE_DGESDD
-        PASS;
+        auto res = LAPACKE_sgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
 #else
         auto superb = new float[min-1];
-        LAPACKE_sgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
+        auto res = LAPACKE_sgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
         delete[] superb;
 #endif // TAT_USE_DGESDD
+        assert(res==0);
       } // run<float>
 
       template<>
       void run<double>(const Size& m, const Size& n, const Size& min, double* a, double* u, double* s, double* vt){
 #ifdef TAT_USE_DGESDD
-        PASS;
+        auto res = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
 #else
         auto superb = new double[min-1];
-        LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
+        auto res = LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
         delete[] superb;
 #endif // TAT_USE_DGESDD
+        assert(res==0);
       } // run<double>
 
       template<class Base>
@@ -186,7 +188,32 @@ namespace TAT{
         } // if
         return res;
       } // cut
+
+      template<class Base>
+      void runx(const Size& m, const Size& n, const Size& min, const Size& cut, Base* a, Base* u, Base* s, Base* vt);
+
+      template<>
+      void runx<float>(const Size& m, const Size& n, const Size& min, const Size& cut, float* a, float* u, float* s, float* vt){
+        lapack_int ns;
+        auto superb = new lapack_int[12*min];
+        auto res = LAPACKE_sgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
+        assert(res==0);
+        assert(ns==lapack_int(cut));
+        delete[] superb;
+      } // run<float>
+
+      template<>
+      void runx<double>(const Size& m, const Size& n, const Size& min, const Size& cut, double* a, double* u, double* s, double* vt){
+        lapack_int ns;
+        auto superb = new lapack_int[12*min];
+        auto res = LAPACKE_dgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
+        assert(res==0);
+        assert(ns==lapack_int(cut));
+        delete[] superb;
+      } // runx<double>
     } // namespace data::svd
+
+    namespace qr{}
 
     template<class Base>
     class Data<device, Base>{
@@ -299,15 +326,19 @@ namespace TAT{
         Size min_mn = (u_size<v_size)?u_size:v_size;
         Size cut_dim = (cut<min_mn)?cut:min_mn;
         // -1 > any integer
+        Data<device, Base> tmp = transpose(dims, plan);
+        // used in svd, dgesvd will destroy it
         svd_res res;
+#ifdef TAT_USE_TRUNCATE_SVD
+        res.U = Data<device, Base>(u_size*cut_dim);
+        res.S = Data<device, Base>(min_mn);
+        res.S.size = cut_dim;
+        res.V = Data<device, Base>(cut_dim*v_size);
+        svd::runx(u_size, v_size, min_mn, cut_dim, tmp.get(), res.U.get(), res.S.get(), res.V.get());
+#else
         res.U = Data<device, Base>(u_size*min_mn);
         res.S = Data<device, Base>(min_mn);
         res.V = Data<device, Base>(min_mn*v_size);
-        Data<device, Base> tmp = transpose(dims, plan);
-        // used in svd, dgesvd will destroy it
-#ifdef TAT_USE_TRUNCATE_SVD
-        PASS;
-#else
         svd::run(u_size, v_size, min_mn, tmp.get(), res.U.get(), res.S.get(), res.V.get());
         if(cut_dim!=min_mn){
           res.U = svd::cut(res.U, u_size, min_mn, u_size, cut_dim);
@@ -317,6 +348,22 @@ namespace TAT{
 #endif // TAT_USE_TRUNCATE_SVD
         return res;
       } // svd
+
+      friend class qr_res;
+      class qr_res{
+      public:
+        Data<device, Base> Q;
+        Data<device, Base> R;
+      }; // class qr_res
+
+      qr_res qr(const std::vector<Size>& dims,
+                const std::vector<Rank>& plan,
+                const Size& u_size) const {
+        assert(size%u_size==0);
+        qr_res res;
+        PASS;
+        return res;
+      } // qr
     }; // class Data
 
     inline namespace scalar{}
@@ -573,6 +620,8 @@ namespace TAT{
       } // plan
     } // namespace node::svd
 
+    namespace qr{}
+
     template<Device device, class Base>
     class Node{
       Node() = default;
@@ -676,6 +725,32 @@ namespace TAT{
         res.V.data = std::move(data_res.V);
         return res;
       } // svd
+
+      friend class qr_res;
+      class qr_res{
+      public:
+        Node<device, Base> Q;
+        Node<device, Base> R;
+      }; // class qr_res
+
+      qr_res qr(const std::vector<Rank>& plan, const Rank& q_rank) const {
+        qr_res res;
+        Size q_size=1;
+        std::vector<Size> tmp_dims;
+        transpose::plan(tmp_dims, dims, plan);
+        svd::plan(q_size, q_rank, tmp_dims);
+        auto data_res = data.qr(dims, plan, q_size);
+        auto mid = tmp_dims.begin()+q_rank;
+        Size r_size=data.size/q_size;
+        Size min_size = (q_size<r_size)?q_size:r_size;
+        res.Q.dims.insert(res.Q.dims.end(), tmp_dims.begin(), mid);
+        res.Q.dims.push_back(min_size);
+        res.R.dims.push_back(min_size);
+        res.R.dims.insert(res.R.dims.end(), mid, tmp_dims.end());
+        res.Q.data = std::move(data_res.Q);
+        res.R.data = std::move(data_res.R);
+        return res;
+      } // qr
     }; // class Node
 
     inline namespace scalar{}
@@ -951,6 +1026,8 @@ namespace TAT{
       } // plan
     } // namespace tensor::svd
 
+    namespace qr{}
+
     template<Device device, class Base>
     class Tensor{
       Tensor() = default;
@@ -1056,6 +1133,26 @@ namespace TAT{
         res.V.node = std::move(node_res.V);
         return res;
       } // svd
+
+      friend class qr_res;
+      class qr_res{
+      public:
+        Tensor<device, Base> Q;
+        Tensor<device, Base> R;
+      }; // class qr_res
+
+      qr_res qr(const std::vector<Legs>& q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
+        qr_res res;
+        std::vector<Legs> tmp_legs;
+        std::vector<Rank> plan;
+        Rank q_rank;
+        svd::plan(res.Q.legs, res.R.legs, tmp_legs, q_rank, legs, q_legs, new_q_legs, new_r_legs);
+        transpose::plan(plan, tmp_legs, legs);
+        auto node_res = node.qr(plan, q_rank);
+        res.Q.node = std::move(node_res.Q);
+        res.R.node = std::move(node_res.R);
+        return res;
+      } // qr
     }; // class Tensor
 
     inline namespace scalar{}
@@ -1432,7 +1529,7 @@ int main(){
     }
   } // multiple
   std::cout << "svd\n";
-  { //  svd
+  { // svd
     {
       Tensor<> t1({4,6},{Left,Right});
       t1.set_test();
@@ -1442,7 +1539,7 @@ int main(){
     {
       Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
       t1.set_test();
-      auto res = t1.svd({Left,Right}, Right1, Down1, 4);
+      auto res = t1.svd({Left,Right}, Right1, Down1);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
@@ -1457,9 +1554,9 @@ int main(){
       auto res = t1.svd({Left,Down}, Right1, Down1, 3);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
       std::ofstream f2;
-      f2.open("test_io2.out");
-      f2 << res.V;
-      f2.close();
+      //f2.open("test_io2.out");
+      //f2 << res.V;
+      //f2.close();
     }
   } // svd
   std::cout << "io\n";
@@ -1480,6 +1577,15 @@ int main(){
       std::cout << t2 << std::endl;
     }
   } // io
+  std::cout << "qr\n";
+  { // qr
+    {
+      Tensor<> t1({4,6},{Left,Right});
+      t1.set_test();
+      auto res = t1.qr({Left}, Right, Down);
+      std::cout << res.Q << std::endl << res.R << std::endl;
+    }
+  } // qr
 } // main
 #endif // TAT_TEST
 
