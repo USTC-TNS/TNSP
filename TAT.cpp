@@ -1,6 +1,8 @@
 #ifndef TAT_HPP_
 
 #include <iostream>
+#include <fstream>
+#include <ios>
 #include <vector>
 #include <map>
 #include <memory>
@@ -27,11 +29,10 @@ extern "C"
 
 namespace TAT{
 
-  enum class Device {CPU, CUDA, DCU, SW};
+  enum class Device : char {CPU, CUDA, DCU, SW};
 
   namespace legs{
-    enum class Legs
-      {
+    enum class Legs : char{
 #define CreateLeg(x) Left##x, Right##x, Up##x, Down##x, Phy##x
        CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4),
        CreateLeg(5), CreateLeg(6), CreateLeg(7), CreateLeg(8), CreateLeg(9)
@@ -501,6 +502,21 @@ namespace TAT{
         } // if
         return out;
       } // operator<<
+
+      template<Device device, class Base>
+      std::ofstream& operator<<(std::ofstream& out, const Data<device, Base>& value){
+        out.write((char*)&value.size, sizeof(Size));
+        out.write((char*)value.get(), value.size*sizeof(Base));
+        return out;
+      } // operator<<
+
+      template<Device device, class Base>
+      std::ifstream& operator>>(std::ifstream& in, Data<device, Base>& value){
+        in.read((char*)&value.size, sizeof(Size));
+        value.base = std::unique_ptr<Base[]>(new Base[value.size]);
+        in.read((char*)value.get(), value.size*sizeof(Base));
+        return in;
+      } // operator<<
     } // namespace data::io
 #endif // TAT_USE_CPU
   } // namespace data
@@ -834,6 +850,25 @@ namespace TAT{
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value){
         return out << "[dims(" << value.dims << ") data(" << value.data << ")]";
+      } // operator<<
+
+      template<Device device, class Base>
+      std::ofstream& operator<<(std::ofstream& out, const Node<device, Base>& value){
+        Rank rank = value.dims.size();
+        out.write((char*)&rank, sizeof(Rank));
+        out.write((char*)value.dims.data(), rank*sizeof(Size));
+        out << value.data;
+        return out;
+      } // operator<<
+
+      template<Device device, class Base>
+      std::ifstream& operator>>(std::ifstream& in, Node<device, Base>& value){
+        Rank rank;
+        in.read((char*)&rank, sizeof(Rank));
+        value.dims.resize(rank);
+        in.read((char*)value.dims.data(), rank*sizeof(Size));
+        in >> value.data;
+        return in;
       } // operator<<
     } // namespace node::io
   } // namespace node
@@ -1196,6 +1231,25 @@ namespace TAT{
       std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value){
         return out << "[rank(" << value.legs.size() << ") legs(" << value.legs << ") node(" << value.node << ")]";
       } // operator<<
+
+      template<Device device, class Base>
+      std::ofstream& operator<<(std::ofstream& out, const Tensor<device, Base>& value){
+        Rank rank = value.legs.size();
+        out.write((char*)&rank, sizeof(Rank));
+        out.write((char*)value.legs.data(), rank*sizeof(Legs));
+        out << value.node;
+        return out;
+      } // operator<<
+
+      template<Device device, class Base>
+      std::ifstream& operator>>(std::ifstream& in, Tensor<device, Base>& value){
+        Rank rank;
+        in.read((char*)&rank, sizeof(Rank));
+        value.legs.resize(rank);
+        in.read((char*)value.legs.data(), rank*sizeof(Legs));
+        in >> value.node;
+        return in;
+      } // operator<<
     } // namespace tensor::io
   } // namespace tensor
 } // namespace TAT
@@ -1203,40 +1257,41 @@ namespace TAT{
 #ifdef TAT_TEST
 using namespace TAT;
 int main(){
+  std::ios_base::sync_with_stdio(false);
   std::cout << "scalar\n";
   { // scalar
     {
       Tensor<> t1({2,3},{Up, Down});
-      std::cout << t1 << "\n";
+      std::cout << t1 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
-      std::cout << t1 << "\n";
+      std::cout << t1 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
       t1 += 1.2;
-      std::cout << t1 << "\n";
+      std::cout << t1 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
       t1 -= 1.2;
-      std::cout << t1 << "\n";
+      std::cout << t1 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
       t1 *= 1.2;
-      std::cout << t1 << "\n";
+      std::cout << t1 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
       t1 /= 1.2;
-      std::cout << t1 << "\n";
+      std::cout << t1 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
@@ -1244,7 +1299,7 @@ int main(){
       t1.set_test();
       t2.set_test();
       t1 += t2;
-      std::cout << t1*2.3 << "\n";
+      std::cout << t1*2.3 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
@@ -1252,31 +1307,31 @@ int main(){
       t1.set_zero();
       t2.set_test();
       t1 -= t2;
-      std::cout << 1-t1/3.4 << "\n";
+      std::cout << 1-t1/3.4 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       Tensor<> t2({2,3},{Up, Down});
       t1.set_test();
       t2.set_test();
-      std::cout << 1+3/(t1+1)+t2 << "\n";
+      std::cout << 1+3/(t1+1)+t2 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       Tensor<> t2({2,3},{Up, Down});
       t1.set_test();
       t2.set_test();
-      std::cout << +(t1-1.2)-t2 << "\n";
+      std::cout << +(t1-1.2)-t2 << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
-      std::cout << 3+1.2/(t1*1.2) << "\n";
+      std::cout << 3+1.2/(t1*1.2) << std::endl;
     }
     {
       Tensor<> t1({2,3},{Up, Down});
       t1.set_test();
-      std::cout << -(2.4*(t1/1.2)) << "\n";
+      std::cout << -(2.4*(t1/1.2)) << std::endl;
     }
     {
       //Tensor<> t1({2},{});
@@ -1291,13 +1346,13 @@ int main(){
       Tensor<> t1({2,3},{Left,Right});
       t1.set_test();
       auto t2 = t1.transpose({Right,Left});
-      std::cout << t1 << "\n" << t2 << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl;
     }
     {
       Tensor<> t1({2,3,4,5},{Down,Up,Left,Right});
       t1.set_test();
       auto t2 = t1.transpose({Left,Down,Right,Up});
-      std::cout << t1 << "\n" << t2 << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl;
     }
     {
       //Tensor<> t1({2,3},{Left,Right});
@@ -1318,7 +1373,7 @@ int main(){
       Tensor<> t1({2,3},{Left,Right});
       t1.set_test();
       Tensor<Device::CPU, int> t2 = t1.to<int>();
-      std::cout << t1 << "\n" << t2 << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl;
     }
   } // to
   std::cout << "contract\n";
@@ -1328,14 +1383,14 @@ int main(){
       Tensor<> t2({2,3}, {Down, Up});
       t1.set_test();
       t2.set_test();
-      std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << std::endl;
     }
     {
       Tensor<> t1({2,3,4,5,6}, {Down, Up, Left, Right,Phy});
       Tensor<> t2({5,3,7}, {Down, Up, Left});
       t1.set_test();
       t2.set_test();
-      std::cout << t1 << "\n" << t2 << "\n" << Tensor<>::contract(t1, t2, {Up, Right},{Up,Down},{},{{Left,Left3}}) << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up, Right},{Up,Down},{},{{Left,Left3}}) << std::endl;
     }
     {
       //Tensor<> t1({2,3}, {Down, Up});
@@ -1361,7 +1416,7 @@ int main(){
       t1.set_test();
       t2.set_test();
       auto t3 = t1.multiple(t2, Up);
-      std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl << t3 << std::endl;
     }
     {
       Tensor<> t1({2,3,4}, {Right,Down, Up});
@@ -1369,7 +1424,7 @@ int main(){
       t1.set_test();
       t2.set_test();
       auto t3 = t1.multiple(t2, Down);
-      std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
+      std::cout << t1 << std::endl << t2 << std::endl << t3 << std::endl;
     }
     {
       //Tensor<> t1({2,3,4}, {Right,Down, Up});
@@ -1377,7 +1432,7 @@ int main(){
       //t1.set_test();
       //t2.set_test();
       //auto t3 = t1.multiple(t2, Up);
-      //std::cout << t1 << "\n" << t2 << "\n" << t3 << "\n";
+      //std::cout << t1 << std::endl << t2 << std::endl << t3 << std::endl;
     }
   } // multiple
   std::cout << "svd\n";
@@ -1386,27 +1441,45 @@ int main(){
       Tensor<> t1({4,6},{Left,Right});
       t1.set_test();
       auto res = t1.svd({Left}, Right, Down, 4);
-      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+      std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
       Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
       t1.set_test();
       auto res = t1.svd({Left,Right}, Right1, Down1, 4);
-      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+      std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
       Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
       t1.set_test();
       auto res = t1.svd({Left,Down}, Right1, Down1, -1);
-      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+      std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
       Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
       t1.set_test();
       auto res = t1.svd({Left,Down}, Right1, Down1, 3);
-      std::cout << res.U << "\n" << res.S << "\n" << res.V << "\n";
+      std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
   } // svd
+  std::cout << "io\n";
+  { // io
+    {
+      Tensor<> t1({2,2,3,2},{Left,Right,Up,Down});
+      t1.set_test();
+      std::cout << t1 << std::endl;
+      std::ofstream f1;
+      f1.open("test_io.out");
+      f1 << t1;
+      f1.close();
+      auto t2 = Tensor<>::get_empty_tensor();
+      std::ifstream f2;
+      f2.open("test_io.out");
+      f2 >> t2;
+      f2.close();
+      std::cout << t2 << std::endl;
+    }
+  } // io
 } // main
 #endif // TAT_TEST
 
