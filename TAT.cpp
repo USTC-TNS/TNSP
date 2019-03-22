@@ -325,16 +325,22 @@ namespace TAT{
     inline namespace scalar{}
     namespace scalar{
       template<class Base>
-      void vLinearFrac(const Size& n, const Base* a, const Base* b, const Base& sa, const Base& oa, const Base& sb, const Base& ob, Base* y);
+      void vLinearFrac(const Size& n, const Base* a, const Base* b,
+                       const Base& sa, const Base& oa, const Base& sb, const Base& ob,
+                       Base* y);
       // y = (a*sa + oa)/(b*sb + ob)
 
       template<>
-      void vLinearFrac<float>(const Size& n, const float* a, const float* b, const float& sa, const float& oa, const float& sb, const float& ob, float* y){
+      void vLinearFrac<float>(const Size& n, const float* a, const float* b,
+                              const float& sa, const float& oa, const float& sb, const float& ob,
+                              float* y){
         vsLinearFrac(n, a, b, sa, oa, sb, ob, y);
       } // vLinearFrac
 
       template<>
-      void vLinearFrac<double>(const Size& n, const double* a, const double* b, const double& sa, const double& oa, const double& sb, const double& ob, double* y){
+      void vLinearFrac<double>(const Size& n, const double* a, const double* b,
+                               const double& sa, const double& oa, const double& sb, const double& ob,
+                               double* y){
         vdLinearFrac(n, a, b, sa, oa, sb, ob, y);
       } // vLinearFrac
 
@@ -509,7 +515,12 @@ namespace TAT{
     } // namespace node::transpose
 
     namespace contract{
-      void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n, const::std::vector<Size>& dims1, const::std::vector<Size>& dims2, const std::vector<Rank>& plan1, const std::vector<Rank>& plan2, const Rank& contract_num){
+      void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n,
+                const::std::vector<Size>& dims1,
+                const::std::vector<Size>& dims2,
+                const std::vector<Rank>& plan1,
+                const std::vector<Rank>& plan2,
+                const Rank& contract_num){
         Rank i, tmp=dims1.size()-contract_num, rank2=dims2.size();
         for(i=0;i<tmp;i++){
           const Size& t = dims1[plan1[i]];
