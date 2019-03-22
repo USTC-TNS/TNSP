@@ -479,7 +479,7 @@ namespace TAT{
         vSub<Base>(a.size, a.get(), b.get(), res.get());
         return res;
       } // operator-
-    } // namespace scalar
+    } // namespace data::scalar
 
     inline namespace io{}
     namespace io{
@@ -493,7 +493,7 @@ namespace TAT{
         } // if
         return out;
       } // operator<<
-    } // namespace io
+    } // namespace data::io
 #endif // TAT_USE_CPU
   } // namespace data
 
@@ -645,7 +645,7 @@ namespace TAT{
         res.U.dims.push_back(data_res.S.size);
         res.S.dims.push_back(data_res.S.size);
         res.V.dims.push_back(data_res.S.size);
-        res.V.dims.insert(res.V.dims.end(), mid, tmp_dims.end()); // !!! wrong... dims is before transpose
+        res.V.dims.insert(res.V.dims.end(), mid, tmp_dims.end());
         res.U.data = std::move(data_res.U);
         res.S.data = std::move(data_res.S);
         res.V.data = std::move(data_res.V);
@@ -656,48 +656,48 @@ namespace TAT{
     inline namespace scalar{}
     namespace scalar{
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator*=(Node<device, Base>& a, B b){
+      Node<device, Base>& operator*=(Node<device, Base>& a, const B& b){
         a.data *= b;
         return a;
-      }
+      } // operator*=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator*(const Node<device, Base>& a, B b){
+      Node<device, Base> operator*(const Node<device, Base>& a, const B& b){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = a.data * b;
         return res;
-      }
+      } // operator*
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator*(B b, const Node<device, Base>& a){
+      Node<device, Base> operator*(const B& b, const Node<device, Base>& a){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = b * a.data;
         return res;
-      }
+      } // operator*
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator/=(Node<device, Base>& a, B b){
+      Node<device, Base>& operator/=(Node<device, Base>& a, const B& b){
         a.data /= b;
         return a;
-      }
+      } // operator/=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator/(const Node<device, Base>& a, B b){
+      Node<device, Base> operator/(const Node<device, Base>& a, const B& b){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = a.data / b;
         return res;
-      }
+      } // operator/
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator/(B b, const Node<device, Base>& a){
+      Node<device, Base> operator/(const B& b, const Node<device, Base>& a){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = b / a.data;
         return res;
-      }
+      } // operator/
 
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a){
@@ -705,29 +705,29 @@ namespace TAT{
         res.dims = a.dims;
         res.data = + a.data;
         return res;
-      }
+      } // operator+
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator+=(Node<device, Base>& a, B b){
+      Node<device, Base>& operator+=(Node<device, Base>& a, const B& b){
         a.data += b;
         return a;
-      }
+      } // operator+=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator+(const Node<device, Base>& a, B b){
+      Node<device, Base> operator+(const Node<device, Base>& a, const B& b){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = a.data + b;
         return res;
-      }
+      } // operator+
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator+(B b, const Node<device, Base>& a){
+      Node<device, Base> operator+(const B& b, const Node<device, Base>& a){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = b + a.data;
         return res;
-      }
+      } // operator+
 
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a){
@@ -735,75 +735,75 @@ namespace TAT{
         res.dims = a.dims;
         res.data = - a.data;
         return res;
-      }
+      } // operator-
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator-=(Node<device, Base>& a, B b){
+      Node<device, Base>& operator-=(Node<device, Base>& a, const B& b){
         a.data -= b;
         return a;
-      }
+      } // operator-=
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator-(const Node<device, Base>& a, B b){
+      Node<device, Base> operator-(const Node<device, Base>& a, const B& b){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = a.data - b;
         return res;
-      }
+      } // operator-
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator-(B b, const Node<device, Base>& a){
+      Node<device, Base> operator-(const B& b, const Node<device, Base>& a){
         auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = b - a.data;
         return res;
-      }
+      } // operator-
 
       bool operator==(const std::vector<Size>& a, const std::vector<Size>& b){
         if(a.size()!=b.size()){
           return false;
-        }
+        } // if size
         Rank size=a.size();
         for(Rank i=0;i<size;i++){
           if(a[i]!=b[i]){
             return false;
-          }
-        }
+          } // if
+        } // for i
         return true;
-      }
+      } // operator==
 
-      template<Device device, class Base1, class Base2>
-      Node<device, Base1>& operator+=(Node<device, Base1>& a, const Node<device, Base2>& b){
+      template<Device device, class Base>
+      Node<device, Base>& operator+=(Node<device, Base>& a, const Node<device, Base>& b){
         assert(a.dims==b.dims);
         a.data += b.data;
         return a;
-      }
+      } // operator+=
 
-      template<Device device, class Base1, class Base2>
-      Node<device, decltype(Base1()+Base2())> operator+(const Node<device, Base1>& a, const Node<device, Base2>& b){
+      template<Device device, class Base>
+      Node<device, Base> operator+(const Node<device, Base>& a, const Node<device, Base>& b){
         assert(a.dims==b.dims);
-        auto res = Node<device, decltype(Base1()+Base2())>::get_empty_node();
+        auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = a.data + b.data;
         return res;
-      }
+      } // operator+
 
-      template<Device device, class Base1, class Base2>
-      Node<device, Base1>& operator-=(Node<device, Base1>& a, const Node<device, Base2>& b){
+      template<Device device, class Base>
+      Node<device, Base>& operator-=(Node<device, Base>& a, const Node<device, Base>& b){
         assert(a.dims==b.dims);
         a.data -= b.data;
         return a;
-      }
+      } // operator-=
 
-      template<Device device, class Base1, class Base2>
-      Node<device, decltype(Base1()-Base2())> operator-(const Node<device, Base1>& a, const Node<device, Base2>& b){
+      template<Device device, class Base>
+      Node<device, Base> operator-(const Node<device, Base>& a, const Node<device, Base>& b){
         assert(a.dims==b.dims);
-        auto res = Node<device, decltype(Base1()-Base2())>::get_empty_node();
+        auto res = Node<device, Base>::get_empty_node();
         res.dims = a.dims;
         res.data = a.data - b.data;
         return res;
-      }
-    }
+      } // operator-
+    } // namespace node::scalar
 
     inline namespace io{}
     namespace io{
@@ -811,19 +811,19 @@ namespace TAT{
         Rank size=value.size();
         for(Rank i=0;i<size-1;i++){
           out << value[i] << " ";
-        }
+        } // for i
         if(size!=0){
           out << value[size-1];
-        }
+        } // if
         return out;
-      }
+      } // operator<<
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value){
         return out << "[dims(" << value.dims << ") data(" << value.data << ")]";
-      }
-    }
-  }
+      } // operator<<
+    } // namespace node::io
+  } // namespace node
 
   namespace tensor{
     namespace transpose{
