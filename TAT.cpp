@@ -508,19 +508,21 @@ namespace TAT{
     } // namespace node::transpose
 
     namespace contract{
-      void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n, const::std::vector<Size>& dims1, const::std::vector<Size>& dims2, const Rank& contract_num){
+      void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n, const::std::vector<Size>& dims1, const::std::vector<Size>& dims2, const std::vector<Rank>& plan1, const std::vector<Rank>& plan2, const Rank& contract_num){
         Rank i, tmp=dims1.size()-contract_num, rank2=dims2.size();
         for(i=0;i<tmp;i++){
-          m *= dims1[i];
-          dims.push_back(dims1[i]);
+          const Size& t = dims1[plan1[i]];
+          m *= t;
+          dims.push_back(t);
         } // for i
         for(i=0;i<contract_num;i++){
-          k *= dims1[i+tmp];
-          assert(dims1[i+tmp]==dims2[i]);
+          k *= dims1[plan1[i+tmp]];
+          assert(dims1[plan1[i+tmp]]==dims2[plan2[i]]);
         } // for i
         for(;i<rank2;i++){
-          n *= dims2[i];
-          dims.push_back(dims2[i]);
+          const Size& t = dims2[plan2[i]];
+          n *= t;
+          dims.push_back(t);
         } // for i
       } // plan
     } // namespace node::contract
@@ -580,18 +582,18 @@ namespace TAT{
 
       void set_test(){
         data.set_test();
-      }
+      } // set_test
       void set_zero(){
         data.set_zero();
-      }
+      } // set_zero
 
-      template<class Base2>
+      template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Node<device, Base2> to() const {
         Node<device, Base2> res;
         res.dims = dims;
         res.data = data.template to<Base2>();
         return res;
-      }
+      } // to
 
       Node<device, Base> transpose(const std::vector<Rank>& plan) const {
         Node<device, Base> res;
@@ -599,7 +601,7 @@ namespace TAT{
         assert(get_size(res.dims)==data.size);
         res.data = data.transpose(dims, plan);
         return res;
-      }
+      } // transpose
 
       static Node<device, Base> contract(const Node<device, Base>& node1,
                                          const Node<device, Base>& node2,
@@ -608,15 +610,12 @@ namespace TAT{
                                          const Rank& contract_num){
         Node<device, Base> res;
         Size m=1, k=1, n=1;
-        std::vector<Size> dims1, dims2;
-        transpose::plan(dims1, node1.dims, plan1);
-        transpose::plan(dims2, node2.dims, plan2);
-        contract::plan(res.dims, m, k, n, dims1, dims2, contract_num);
+        contract::plan(res.dims, m, k, n, node1.dims, node2.dims, plan1, plan2, contract_num);
         res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, m, k, n);
         return res;
-      }
+      } // contract
 
-      Node<device, Base> multiple(const Node<device, Base>& other, const Rank& index){
+      Node<device, Base> multiple(const Node<device, Base>& other, const Rank& index) const {
         Node<device, Base> res;
         res.dims = dims;
         Size a=1, b=1, c=1;
@@ -634,7 +633,7 @@ namespace TAT{
         Node<device, Base> V;
       };
 
-      svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, Size cut){
+      svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, Size cut) const {
         svd_res res;
         std::vector<Size> tmp_dims;
         Size u_size=1;
@@ -971,7 +970,7 @@ namespace TAT{
         assert(legs1.size()==legs2.size());
         contract::plan(res.legs, new_legs1, new_legs2, tensor1.legs, tensor2.legs, legs1, legs2, map1, map2);
         transpose::plan(plan1, new_legs1, tensor1.legs);
-        transpose::plan(plan2, new_legs2, tensor1.legs);
+        transpose::plan(plan2, new_legs2, tensor2.legs);
         assert(new_legs1.size()==tensor1.legs.size());
         assert(plan1.size()==tensor1.legs.size());
         assert(new_legs2.size()==tensor2.legs.size());
