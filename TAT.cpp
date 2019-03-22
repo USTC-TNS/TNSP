@@ -152,7 +152,9 @@ namespace data{
 #ifdef TAT_USE_DGESDD
       PASS;
 #else
-      LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, nullptr);
+      auto superb = new double[min-1];
+      LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
+      delete[] superb;
 #endif // TAT_USE_DGESDD
     }
   }
@@ -260,11 +262,11 @@ namespace data{
       svd_res res;
       Data<device, Base> tmp = transpose(dims, plan, tmp_dims);
       Size v_size = size/u_size;
-      Size before_cut = (u_size<v_size)?u_size:v_size;
+      Size min_mn = (u_size<v_size)?u_size:v_size;
 #ifdef TAT_USE_TRUNCATE_SVD
       PASS;
 #else
-      svd::run(u_size, v_size, before_cut, tmp.base.get(), res.U.base.get(), res.S.base.get(), res.V.base.get());
+      svd::run(u_size, v_size, min_mn, tmp.base.get(), res.U.base.get(), res.S.base.get(), res.V.base.get());
 #endif // TAT_USE_TRUNCATE_SVD
       return res;
     }
