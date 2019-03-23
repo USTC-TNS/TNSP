@@ -27,10 +27,10 @@
 namespace shuffle
 {
   void shuffle(PlainData    data_new,
-                PlainData    data_old,
-                const Dims&  dims_new,
-                const Dims&  dims_old,
-                const Order& plan)
+               PlainData    data_old,
+               const Dims&  dims_new,
+               const Dims&  dims_old,
+               const Order& plan)
   {
     //Stream !!!
     const Rank& size = plan.size();
@@ -287,7 +287,63 @@ namespace TAT{
       } // runx<double>
     } // namespace data::svd
 
-    namespace qr{}
+    namespace qr{
+      template<class Base>
+      void geqrf(Base* A, Base* tau, const Size& m, const Size& n);
+
+      template<>
+      void geqrf<float>(float* A, float* tau, const Size& m, const Size& n){
+        auto res = LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
+        assert(res==0);
+      } // geqrf<float>
+
+      template<>
+      void geqrf<double>(double* A, double* tau, const Size& m, const Size& n){
+        auto res = LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
+        assert(res==0);
+      } // geqrf<double>
+
+      template<class Base>
+      void orgqr(Base* A, Base* tau, const Size& m, const Size& min);
+
+      template<>
+      void orgqr<float>(float* A, float* tau, const Size& m, const Size& min){
+        auto res = LAPACKE_sorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
+        assert(res==0);
+      } // orgqr<float>
+
+      template<>
+      void orgqr<double>(double* A, double* tau, const Size& m, const Size& min){
+        auto res = LAPACKE_dorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
+        assert(res==0);
+      } // orgqr<double>
+
+      template<class Base>
+      void run(Base* Q, Base* R, const Size& m, const Size& n, const Size& min_mn){
+        auto tau = new Base[min_mn];
+        geqrf(R, tau, m, n);
+        // copy to Q and delete unused R
+        if(min_mn==n){
+          std::memcpy(Q, R, m*n*sizeof(Base));
+        }else{
+          // Q is m*m
+          auto q = Q;
+          auto r = R;
+          for(Size i=0;i<m;i++){
+            std::memcpy(q, r, m*sizeof(Base));
+            q += m;
+            r += n;
+          } // for i
+        } // if
+        orgqr(Q, tau, m, min_mn);
+        auto r = R;
+        for(Size i=0;i<m;i++){
+          std::memset(r, 0, i*sizeof(Base));
+          r += n;
+        } // for i
+        delete[] tau;
+      } // run
+    } // namespace data::qr
 
     template<class Base>
     class Data<device, Base>{
@@ -435,8 +491,13 @@ namespace TAT{
                 const Size& q_size,
                 const Size& r_size) const {
         assert(size==q_size*r_size);
+        Size min_mn = (q_size<r_size)?q_size:r_size;
         qr_res res;
-        PASS;
+        res.Q = Data<device, Base>(q_size*min_mn);
+        res.R = transpose(dims, plan);
+        // R is q_size*r_size, should be min_size*r_size
+        qr::run(res.Q.get(), res.R.get(), q_size, r_size, min_mn);
+        res.R.size = min_mn*r_size;
         return res;
       } // qr
     }; // class Data
