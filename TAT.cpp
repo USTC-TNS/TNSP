@@ -335,10 +335,10 @@ namespace TAT{
           } // for i
         } // if
         orgqr(Q, tau, m, min_mn);
-        auto r = R+n;
-        for(Size i=1;i<m;i++){
-          std::memset(r, 0, i*sizeof(Base));
+        auto r = R;
+        for(Size i=1;i<min_mn;i++){
           r += n;
+          std::memset(r, 0, i*sizeof(Base));
         } // for i
         delete[] tau;
       } // run
@@ -1728,6 +1728,7 @@ int main(){
       std::cout << res.Q << std::endl << res.R << std::endl;
     }
   } // qr
+  return 0;
 } // main
 #endif // TAT_TEST
 
