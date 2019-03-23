@@ -1,13 +1,15 @@
 CXX = g++
 NVCC = nvcc
-CXXFLAGS += -std=c++11
-CXXFLAGS += -lgomp hptt/lib/libhptt.a -Ihptt/include -g
-CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lm -ldl -lpthread
-DEBUG = -pg -g -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
-NDEBUG = -DNDEBUG -O3
+CXXFLAGS += -std=c++11 -static-libstdc++ -static-libgcc -fdata-sections -ffunction-sections -Wl,--gc-sections
+CXXFLAGS += -lgomp hptt/lib/libhptt.a -Ihptt/include
+CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group -Wl,-Bdynamic -lpthread -lm -ldl
 
-debug:
-	$(CXX) TAT.cpp $(CXXFLAGS) $(DEBUG)
+DEBUG?=1
+ifeq ($(DEBUG), 1)
+	CXXFLAGS += -DDEBUG -pg -g -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
+else
+	CXXFLAGS += -DNDEBUG -O3
+endif
 
-ndebug:
-	$(CXX) TAT.cpp $(CXXFLAGS) $(NDEBUG)
+all:
+	$(CXX) TAT.cc $(CXXFLAGS)
