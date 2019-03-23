@@ -12,4 +12,4 @@ else
 endif
 
 all:
-	$(CXX) TAT.cc $(CXXFLAGS)
+	$(CXX) TAT.cpp $(CXXFLAGS)
