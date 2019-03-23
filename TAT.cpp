@@ -495,7 +495,7 @@ namespace TAT{
         qr_res res;
         res.Q = Data<device, Base>(q_size*min_mn);
         res.R = transpose(dims, plan);
-        // R is q_size*r_size, should be min_size*r_size
+        // R is q_size*r_size, should be min_mn*r_size
         qr::run(res.Q.get(), res.R.get(), q_size, r_size, min_mn);
         res.R.size = min_mn*r_size;
         return res;
