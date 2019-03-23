@@ -1,10 +1,11 @@
 .project
 .vscode
-coverage.info
+tmp.*
+coverage.*
+callgrind.*
 *.gcda
 *.gcno
 *.out
 *.gch
+*.gcov
 *.o
-callgrind.out.*
-tmp.*
