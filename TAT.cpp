@@ -304,16 +304,16 @@ namespace TAT{
       } // geqrf<double>
 
       template<class Base>
-      void orgqr(Base* A, Base* tau, const Size& m, const Size& min);
+      void orgqr(Base* A, const Base* tau, const Size& m, const Size& min);
 
       template<>
-      void orgqr<float>(float* A, float* tau, const Size& m, const Size& min){
+      void orgqr<float>(float* A, const float* tau, const Size& m, const Size& min){
         auto res = LAPACKE_sorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
         assert(res==0);
       } // orgqr<float>
 
       template<>
-      void orgqr<double>(double* A, double* tau, const Size& m, const Size& min){
+      void orgqr<double>(double* A, const double* tau, const Size& m, const Size& min){
         auto res = LAPACKE_dorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
         assert(res==0);
       } // orgqr<double>
@@ -1719,6 +1719,12 @@ int main(){
       Tensor<> t1({4,6},{Left,Right});
       t1.set_test();
       auto res = t1.qr({Left}, Right, Down);
+      std::cout << res.Q << std::endl << res.R << std::endl;
+    }
+    {
+      Tensor<> t1({4,6},{Left,Right});
+      t1.set_test();
+      auto res = t1.qr({Right}, Up, Down);
       std::cout << res.Q << std::endl << res.R << std::endl;
     }
   } // qr
