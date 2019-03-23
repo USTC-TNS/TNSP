@@ -1,4 +1,4 @@
-CXX = g++
+CXX ?= g++
 NVCC = nvcc
 CXXFLAGS += -std=c++11 -static-libstdc++ -static-libgcc -fdata-sections -ffunction-sections -Wl,--gc-sections
 CXXFLAGS += -lgomp hptt/lib/libhptt.a -Ihptt/include
@@ -8,7 +8,7 @@ DEBUG?=1
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -DDEBUG -pg -g -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
 else
-	CXXFLAGS += -DNDEBUG -O3
+	CXXFLAGS += -DNDEBUG -Ofast
 endif
 
 all:

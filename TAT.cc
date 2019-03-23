@@ -358,8 +358,9 @@ namespace TAT{
 
       qr_res qr(const std::vector<Size>& dims,
                 const std::vector<Rank>& plan,
-                const Size& u_size) const {
-        assert(size%u_size==0);
+                const Size& q_size,
+                const Size& r_size) const {
+        assert(size==q_size*r_size);
         qr_res res;
         PASS;
         return res;
@@ -739,10 +740,10 @@ namespace TAT{
         std::vector<Size> tmp_dims;
         transpose::plan(tmp_dims, dims, plan);
         svd::plan(q_size, q_rank, tmp_dims);
-        auto data_res = data.qr(dims, plan, q_size);
         auto mid = tmp_dims.begin()+q_rank;
         Size r_size=data.size/q_size;
         Size min_size = (q_size<r_size)?q_size:r_size;
+        auto data_res = data.qr(dims, plan, q_size, r_size);
         res.Q.dims.insert(res.Q.dims.end(), tmp_dims.begin(), mid);
         res.Q.dims.push_back(min_size);
         res.R.dims.push_back(min_size);
