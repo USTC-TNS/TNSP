@@ -335,8 +335,8 @@ namespace TAT{
           } // for i
         } // if
         orgqr(Q, tau, m, min_mn);
-        auto r = R;
-        for(Size i=0;i<m;i++){
+        auto r = R+n;
+        for(Size i=1;i<m;i++){
           std::memset(r, 0, i*sizeof(Base));
           r += n;
         } // for i
@@ -1490,6 +1490,7 @@ int main(){
   { // scalar
     {
       Tensor<> t1({2,3},{Up, Down});
+      t1.set_zero();
       std::cout << t1 << std::endl;
     }
     {
