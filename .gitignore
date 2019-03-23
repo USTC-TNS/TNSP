@@ -6,3 +6,5 @@ coverage.info
 *.out
 *.gch
 *.o
+callgrind.out.*
+tmp.*
