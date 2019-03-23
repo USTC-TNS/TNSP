@@ -17,7 +17,8 @@
 
 /* TODO LIST
  * - Truncated SVD
- * - QR
+ * - QR dgeqrf
+ * - QR only require Q, we can use QR with pivot, dgeqp3
  * - all kind of Norm
  * - use it
  */
