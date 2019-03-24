@@ -660,7 +660,7 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base>& operator*=(Data<device, Base>& a, const Data<device, Base>& b) {
-        if(b.size==1) {
+        if (b.size==1) {
           LinearFrac<Base>(a, a, *b.get(), 0, 0, 1);
         } else {
           Mul<Base>(a, b, a);
@@ -670,12 +670,12 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base> operator*(const Data<device, Base>& a, const Data<device, Base>& b) {
-        if(a.size==1){
+        if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, *a.get(), 0, 0, 1);
           return res;
         } // if
-        if(b.size==1){
+        if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, *b.get(), 0, 0, 1);
           return res;
@@ -687,7 +687,7 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base>& operator/=(Data<device, Base>& a, const Data<device, Base>& b) {
-        if(b.size==1) {
+        if (b.size==1) {
           LinearFrac<Base>(a, a, 1, 0, 0, *b.get());
         } else {
           Div<Base>(a, b, a);
@@ -697,12 +697,12 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base> operator/(const Data<device, Base>& a, const Data<device, Base>& b) {
-        if(a.size==1){
+        if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, 0, *a.get(), 1, 0);
           return res;
         } // if
-        if(b.size==1){
+        if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, 1, 0, 0, *b.get());
           return res;
@@ -719,7 +719,7 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base>& operator+=(Data<device, Base>& a, const Data<device, Base>& b) {
-        if(b.size==1) {
+        if (b.size==1) {
           LinearFrac<Base>(a, a, 1, *b.get(), 0, 1);
         } else {
           Add<Base>(a, b, a);
@@ -729,12 +729,12 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base> operator+(const Data<device, Base>& a, const Data<device, Base>& b) {
-        if(a.size==1){
+        if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, 1, *a.get(), 0, 1);
           return res;
         } // if
-        if(b.size==1){
+        if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, 1, *b.get(), 0, 1);
           return res;
@@ -753,7 +753,7 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base>& operator-=(Data<device, Base>& a, const Data<device, Base>& b) {
-        if(b.size==1) {
+        if (b.size==1) {
           LinearFrac<Base>(a, a, 1, -*b.get(), 0, 1);
         } else {
           Sub<Base>(a, b, a);
@@ -763,12 +763,12 @@ namespace TAT {
 
       template<class Base>
       Data<device, Base> operator-(const Data<device, Base>& a, const Data<device, Base>& b) {
-        if(a.size==1){
+        if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, -1, *a.get(), 0, 1);
           return res;
         } // if
-        if(b.size==1){
+        if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, 1, -*b.get(), 0, 1);
           return res;
@@ -1020,7 +1020,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator*=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if(b.data.size!=1){
+        if (b.data.size!=1) {
           assert(a.dims==b.dims);
         }
         a.data *= b.data;
@@ -1030,9 +1030,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator*(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if(b.data.size==1){
+        if (b.data.size==1) {
           res.dims = a.dims;
-        }else if(a.data.size==1){
+        } else if (a.data.size==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1044,7 +1044,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator/=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if(b.data.size!=1){
+        if (b.data.size!=1) {
           assert(a.dims==b.dims);
         }
         a.data /= b.data;
@@ -1054,9 +1054,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator/(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if(b.data.size==1){
+        if (b.data.size==1) {
           res.dims = a.dims;
-        }else if(a.data.size==1){
+        } else if (a.data.size==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1076,7 +1076,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator+=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if(b.data.size!=1){
+        if (b.data.size!=1) {
           assert(a.dims==b.dims);
         }
         a.data += b.data;
@@ -1086,9 +1086,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if(b.data.size==1){
+        if (b.data.size==1) {
           res.dims = a.dims;
-        }else if(a.data.size==1){
+        } else if (a.data.size==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1108,7 +1108,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator-=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if(b.data.size!=1){
+        if (b.data.size!=1) {
           assert(a.dims==b.dims);
         }
         a.data -= b.data;
@@ -1118,9 +1118,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if(b.data.size==1){
+        if (b.data.size==1) {
           res.dims = a.dims;
-        }else if(a.data.size==1){
+        } else if (a.data.size==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1409,7 +1409,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if(b.node.data.size!=1){
+        if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
         }
         a.node *= b.node;
@@ -1419,9 +1419,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator*(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if(b.node.data.size==1){
+        if (b.node.data.size==1) {
           res.legs = a.legs;
-        }else if(a.node.data.size==1){
+        } else if (a.node.data.size==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
@@ -1433,7 +1433,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if(b.node.data.size!=1){
+        if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
         }
         a.node /= b.node;
@@ -1443,9 +1443,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator/(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if(b.node.data.size==1){
+        if (b.node.data.size==1) {
           res.legs = a.legs;
-        }else if(a.node.data.size==1){
+        } else if (a.node.data.size==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
@@ -1465,7 +1465,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if(b.node.data.size!=1){
+        if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
         }
         a.node += b.node;
@@ -1475,9 +1475,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if(b.node.data.size==1){
+        if (b.node.data.size==1) {
           res.legs = a.legs;
-        }else if(a.node.data.size==1){
+        } else if (a.node.data.size==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
@@ -1497,7 +1497,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if(b.node.data.size!=1){
+        if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
         }
         a.node -= b.node;
@@ -1507,9 +1507,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if(b.node.data.size==1){
+        if (b.node.data.size==1) {
           res.legs = a.legs;
-        }else if(a.node.data.size==1){
+        } else if (a.node.data.size==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
