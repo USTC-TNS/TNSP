@@ -98,8 +98,8 @@ extern "C"
 #error only one of GESDD, GESVD and GESVDX could be in use
 #endif
 #if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
-#warning must use one of GESDD, GESVD and GESVDX, default use GESVDX now
-#define TAT_USE_GESVDX
+#warning must use one of GESDD, GESVD and GESVDX, default use GESVD now
+#define TAT_USE_GESVD
 #endif
 
 // QR
@@ -420,6 +420,19 @@ namespace TAT {
       } // vPowx<double>
 
       template<class Base>
+      void vSqr(const Size& size, const Base* a, Base* y);
+
+      template<>
+      void vSqr<float>(const Size& size, const float* a, float* y) {
+        vsSqr(size, a y);
+      } // vSqr<float>
+
+      template<>
+      void vSqr<double>(const Size& size, const double* a, double* y) {
+        vdSqr(size, a, y);
+      } // vSqr<double>
+
+      template<class Base>
       Base asum(const Size& size, const Base* a);
 
       template<>
@@ -452,8 +465,14 @@ namespace TAT {
           return abs(data[i]);
         }
         auto tmp = new Base[size];
-        vAbs<Base>(size, data, tmp);
-        vPowx<Base>(size, tmp, Base(n), tmp);
+        if (n==2) {
+          vSqr<Base>(size, data, tmp);
+        } else if (n%2==0) {
+          vPowx<Base>(size, data, Base(n), tmp);
+        } else {
+          vAbs<Base>(size, data, tmp);
+          vPowx<Base>(size, tmp, Base(n), tmp);
+        }
         auto res = asum<Base>(size, tmp);
         delete[] tmp;
         return res;
