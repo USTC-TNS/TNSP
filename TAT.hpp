@@ -424,7 +424,7 @@ namespace TAT {
 
       template<>
       void vSqr<float>(const Size& size, const float* a, float* y) {
-        vsSqr(size, a y);
+        vsSqr(size, a, y);
       } // vSqr<float>
 
       template<>
