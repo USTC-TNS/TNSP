@@ -410,6 +410,7 @@ namespace TAT {
       }
       Data<device, Base>& operator=(const Data<device, Base>& other) {
         new (this) Data(other);
+        return *this;
       }
 
       const Base* get() const {
@@ -747,7 +748,7 @@ namespace TAT {
   namespace node {
     namespace transpose {
       void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan) {
-        for (auto& i : plan) {
+        for (const auto& i : plan) {
           new_dims.push_back(dims[i]);
         } // for i
       } // plan
@@ -823,7 +824,7 @@ namespace TAT {
       Node<device, Base>& operator=(const Node<device, Base>& other) = default;
       static Size get_size(const std::vector<Size>& _dims) {
         Size res = 1;
-        for (auto& i : _dims) {
+        for (const auto& i : _dims) {
           res *= i;
         } // for i
         return res;
@@ -1152,7 +1153,7 @@ namespace TAT {
                 const std::vector<Legs>& legs2,
                 const std::map<Legs, Legs>& map1,
                 const std::map<Legs, Legs>& map2) {
-        for (auto& i : total_legs1) {
+        for (const auto& i : total_legs1) {
           auto pos = std::find(legs1.begin(), legs1.end(), i);
           if (pos == legs1.end()) {
             new_legs1.push_back(i);
@@ -1166,7 +1167,7 @@ namespace TAT {
         new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
 
         new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
-        for (auto& i : total_legs2) {
+        for (const auto& i : total_legs2) {
           auto pos = std::find(legs2.begin(), legs2.end(), i);
           if (pos == legs2.end()) {
             new_legs2.push_back(i);
@@ -1193,7 +1194,7 @@ namespace TAT {
                 const Legs& new_v_legs) {
         u_rank = u_legs.size();
         V_legs.push_back(new_v_legs);
-        for (auto& i : total_legs) {
+        for (const auto& i : total_legs) {
           auto pos = std::find(u_legs.begin(), u_legs.end(), i);
           if (pos==u_legs.end()) { // to V
             V_legs.push_back(i);
@@ -1242,6 +1243,15 @@ namespace TAT {
       void set_random(Base(*random)()) {
         node.set_random(random);
       } // set_random
+
+      void legs_rename(const std::map<Legs, Legs>& dict) {
+        for (auto& i : legs) {
+          auto where = dict.find(i);
+          if (where!=dict.end()) {
+            i = where->second;
+          }
+        }
+      } // legs_rename
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Tensor<device, Base2> to() const {
