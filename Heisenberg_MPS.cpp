@@ -187,9 +187,19 @@ std::ostream& operator<<(std::ostream& out, const MPS& mps) {
   return out;
 }
 
+void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_step, double delta_t) {
+  MPS mps(L, D);
+  mps.set_random_state(seed);
+  mps.update(step, print_step, delta_t);
+}
+
 int main() {
-  MPS mps(100, 12);
-  mps.set_random_state(42);
-  mps.update(100, 100, 0.01);
+  int L = 100;
+  TAT::Size D = 12;
+  unsigned seed = 42;
+  int step = 100;
+  int print_step = 100;
+  double delta_t = 0.01;
+  Heisenberg_MPS(L, D, seed, step, print_step, delta_t);
   return 0;
 }
