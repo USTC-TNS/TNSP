@@ -1702,6 +1702,38 @@ int main() {
       std::cout << -(2.4*(t1/1.2)) << std::endl;
     }
     {
+      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t2({2, 3}, {Up, Down});
+      t1.set_test();
+      t2.set_test();
+      std::cout << t1/t2 << std::endl;
+    }
+    {
+      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t2({2, 3}, {Up, Down});
+      t1.set_test();
+      t2.set_test();
+      t2+=1;
+      t1/=t2;
+      std::cout << t1 << std::endl;
+    }
+    {
+      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t2({2, 3}, {Up, Down});
+      t1.set_test();
+      t2.set_test();
+      std::cout << t1*t2 << std::endl;
+    }
+    {
+      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t2({2, 3}, {Up, Down});
+      t1.set_test();
+      t2.set_test();
+      t1+=1;
+      t1*=t2;
+      std::cout << t1 << std::endl;
+    }
+    {
       //Tensor<> t1({2},{});
     }
     {
