@@ -92,7 +92,7 @@ struct MPS {
     }
   }
 
-  void update(Tensor& updater) {
+  void update(const Tensor& updater) {
     for (Size i=0; i<L-1; i++) {
       auto big = Tensor::contract(lattice[i], lattice[i+1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
       auto Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
@@ -112,8 +112,26 @@ struct MPS {
       lattice[i-1].legs_rename({{Phy4, Phy}});
     }
     for (Size i=0; i<L; i++) {
-      lattice[i] /= lattice[i].norm_inf();
+      lattice[i] /= lattice[i].norm<-1>();
     }
+  }
+
+  void pre() {
+    for (Size i=L-1; i>1; i--) {
+      auto qr = lattice[i].qr({Phy, Right}, Left, Right);
+      lattice[i] = qr.Q;
+      lattice[i-1] = Tensor::contract(lattice[i-1], qr.R, {Right}, {Left});
+    }
+  }
+  
+  void update(int n, double delta_t) {
+    pre();
+    auto updater = identity - delta_t* hamiltonian;
+    for (int i=0; i<n; i++) {
+      update(updater);
+      std::cout << i << "\r" << std::flush;
+    }
+    std::cout << "\n";
   }
 };
 
@@ -129,6 +147,8 @@ std::ostream& operator<<(std::ostream& out, const MPS& mps) {
 int main() {
   MPS mps(4, 4);
   mps.set_random_state(42);
+  std::cout << mps;
+  mps.update(100, 0.1);
   std::cout << mps;
   return 0;
 }

@@ -386,6 +386,74 @@ namespace TAT {
       } // run
     } // namespace data::qr
 
+    namespace norm {
+      template<class Base>
+      void vAbs(const Size& size, const Base* a, Base* y);
+
+      template<>
+      void vAbs<float>(const Size& size, const float* a, float* y) {
+        vsAbs(size, a, y);
+      } // vAbs<float>
+
+      template<>
+      void vAbs<double>(const Size& size, const double* a, double* y) {
+        vdAbs(size, a, y);
+      } // vAbs<double>
+
+      template<class Base>
+      void vPowx(const Size& size, const Base* a, const Base& n, Base* y);
+
+      template<>
+      void vPowx<float>(const Size& size, const float* a, const float& n, float* y) {
+        vsPowx(size, a, n, y);
+      } // vPowx<float>
+
+      template<>
+      void vPowx<double>(const Size& size, const double* a, const double& n, double* y) {
+        vdPowx(size, a, n, y);
+      } // vPowx<double>
+
+      template<class Base>
+      Base asum(const Size& size, const Base* a);
+
+      template<>
+      float asum<float>(const Size& size, const float* a) {
+        return cblas_sasum(size, a, 1);
+      } // asum<float>
+
+      template<>
+      double asum<double>(const Size& size, const double* a) {
+        return cblas_dasum(size, a, 1);
+      } // asum<double>
+
+      template<class Base>
+      CBLAS_INDEX iamax(const Size& size, const Base* a);
+
+      template<>
+      CBLAS_INDEX iamax<float>(const Size& size, const float* a) {
+        return cblas_isamax(size, a, 1);
+      } // iamax<float>
+
+      template<>
+      CBLAS_INDEX iamax<double>(const Size& size, const double* a) {
+        return cblas_idamax(size, a, 1);
+      } // iamax<double>
+
+      template<class Base, int n>
+      Base run(const Size& size, const Base* data) {
+        if (n==-1) {
+          auto i = iamax<Base>(size, data);
+          return abs(data[i]);
+        }
+        auto tmp = new Base[size];
+        vAbs<Base>(size, data, tmp);
+        vPowx<Base>(size, tmp, Base(n), tmp);
+        auto res = asum<Base>(size, tmp);
+        delete[] tmp;
+        return res;
+      } // run
+    } // namespace data::norm
+
     template<class Base>
     class Data<device, Base> {
       Data() = default;
@@ -441,6 +509,13 @@ namespace TAT {
           base[i] = random();
         } // for i
       } // set_random
+
+      template<int n>
+      Data<device, Base> norm() const {
+        Data<device, Base> res(Size(1));
+        *res.get() = norm::run<Base, n>(size, get());
+        return res;
+      } // norm
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Data<device, Base2> to() const {
@@ -910,6 +985,13 @@ namespace TAT {
         data.set_random(random);
       } // set_random
 
+      template<int n>
+      Node<device, Base> norm() const {
+        Node<device, Base> res({});
+        res.data = data.template norm<n>();
+        return res;
+      } // norm
+
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Node<device, Base2> to() const {
         Node<device, Base2> res;
@@ -1295,6 +1377,13 @@ namespace TAT {
           }
         }
       } // legs_rename
+
+      template<int n>
+      Tensor<device, Base> norm() const {
+        Tensor<device, Base> res({}, {});
+        res.node = node.template norm<n>();
+        return res;
+      } // norm
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Tensor<device, Base2> to() const {
@@ -1722,15 +1811,15 @@ int main() {
       Tensor<> t2({2, 3}, {Up, Down});
       t1.set_test();
       t2.set_test();
-      std::cout << t1*t2 << std::endl;
+      std::cout << t1* t2 << std::endl;
     }
     {
       Tensor<> t1({2, 3}, {Up, Down});
       Tensor<> t2({2, 3}, {Up, Down});
       t1.set_test();
       t2.set_test();
-      t1+=1;
-      t1*=t2;
+      t1 += 1;
+      t1 *= t2;
       std::cout << t1 << std::endl;
     }
     {
