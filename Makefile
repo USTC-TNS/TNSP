@@ -13,9 +13,9 @@ else
 endif
 
 FILE ?= TAT.cpp
-
 all:
 	$(CXX) $(FILE) $(CXXFLAGS)
 
+SFILE ?= TAT.hpp
 style:
-	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type TAT.hpp
+	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $(SFILE)
