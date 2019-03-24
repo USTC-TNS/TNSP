@@ -9,3 +9,4 @@ callgrind.*
 *.gch
 *.gcov
 *.o
+*.orig

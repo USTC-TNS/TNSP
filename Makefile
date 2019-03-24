@@ -14,3 +14,6 @@ endif
 
 all:
 	$(CXX) TAT.cpp $(CXXFLAGS)
+
+style:
+	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type TAT.cpp
