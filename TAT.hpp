@@ -98,7 +98,8 @@ extern "C"
 #error only one of GESDD, GESVD and GESVDX could be in use
 #endif
 #if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
-#error must use one of GESDD, GESVD and GESVDX
+#warning must use one of GESDD, GESVD and GESVDX, default use GESVDX now
+#define TAT_USE_GESVDX
 #endif
 
 // QR
@@ -106,7 +107,8 @@ extern "C"
 #error only one of GEQRF and GEQP3 could be in use
 #endif
 #if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
-#error must use one of GEQRF and GEQP3
+#warning must use one of GEQRF and GEQP3, default use GEQRF now
+#define TAT_USE_GEQRF
 #endif
 
 #ifdef TAT_USE_GEQP3
@@ -412,6 +414,10 @@ namespace TAT {
         new (this) Data(other);
         return *this;
       }
+      Data(const Base& num) {
+        new (this) Data(Size(1));
+        *base.get() = num;
+      }
 
       const Base* get() const {
         return base.get();
@@ -570,6 +576,13 @@ namespace TAT {
       } // vLinearFrac
 
       template<class Base>
+      void LinearFrac(const Data<device, Base>& src, Data<device, Base>& dst,
+                      const Base& sa, const Base& oa, const Base& sb, const Base& ob) {
+        assert(src.size==dst.size);
+        vLinearFrac<Base>(src.size, src.get(), src.get(), sa, oa, sb, ob, dst.get());
+      }
+
+      template<class Base>
       void vAdd(const Size& n, const Base* a, const Base* b, Base* y);
 
       template<>
@@ -581,6 +594,12 @@ namespace TAT {
       void vAdd<double>(const Size& n, const double* a, const double* b, double* y) {
         vdAdd(n, a, b, y);
       } // vAdd
+
+      template<class Base>
+      void Add(const Data<device, Base>& a, const Data<device, Base>& b, Data<device, Base>& y) {
+        assert(a.size==b.size);
+        vAdd<Base>(a.size, a.get(), b.get(), y.get());
+      } // Add
 
       template<class Base>
       void vSub(const Size& n, const Base* a, const Base* b, Base* y);
@@ -595,41 +614,101 @@ namespace TAT {
         vdSub(n, a, b, y);
       } // vSub
 
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator*=(Data<device, Base>& a, const B& b) {
-        vLinearFrac<Base>(a.size, a.get(), a.get(), b, 0, 0, 1, a.get());
+      template<class Base>
+      void Sub(const Data<device, Base>& a, const Data<device, Base>& b, Data<device, Base>& y) {
+        assert(a.size==b.size);
+        vSub<Base>(a.size, a.get(), b.get(), y.get());
+      } // Sub
+
+      template<class Base>
+      void vMul(const Size& n, const Base* a, const Base* b, Base* y);
+
+      template<>
+      void vMul<float>(const Size& n, const float* a, const float* b, float* y) {
+        vsMul(n, a, b, y);
+      } // vMul
+
+      template<>
+      void vMul<double>(const Size& n, const double* a, const double* b, double* y) {
+        vdMul(n, a, b, y);
+      } // vMul
+
+      template<class Base>
+      void Mul(const Data<device, Base>& a, const Data<device, Base>& b, Data<device, Base>& y) {
+        assert(a.size==b.size);
+        vMul<Base>(a.size, a.get(), b.get(), y.get());
+      } // Mul
+
+      template<class Base>
+      void vDiv(const Size& n, const Base* a, const Base* b, Base* y);
+
+      template<>
+      void vDiv<float>(const Size& n, const float* a, const float* b, float* y) {
+        vsDiv(n, a, b, y);
+      } // vDiv
+
+      template<>
+      void vDiv<double>(const Size& n, const double* a, const double* b, double* y) {
+        vdDiv(n, a, b, y);
+      } // vDiv
+
+      template<class Base>
+      void Div(const Data<device, Base>& a, const Data<device, Base>& b, Data<device, Base>& y) {
+        assert(a.size==b.size);
+        vDiv<Base>(a.size, a.get(), b.get(), y.get());
+      } // Div
+
+      template<class Base>
+      Data<device, Base>& operator*=(Data<device, Base>& a, const Data<device, Base>& b) {
+        if(b.size==1) {
+          LinearFrac<Base>(a, a, *b.get(), 0, 0, 1);
+        } else {
+          Mul<Base>(a, b, a);
+        } // if
         return a;
       } // operator*=
 
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator*(const Data<device, Base>& a, const B& b) {
+      template<class Base>
+      Data<device, Base> operator*(const Data<device, Base>& a, const Data<device, Base>& b) {
+        if(a.size==1){
+          Data<device, Base> res(b.size);
+          LinearFrac<Base>(b, res, *a.get(), 0, 0, 1);
+          return res;
+        } // if
+        if(b.size==1){
+          Data<device, Base> res(a.size);
+          LinearFrac<Base>(a, res, *b.get(), 0, 0, 1);
+          return res;
+        } // if
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), b, 0, 0, 1, res.get());
+        Mul<Base>(a, b, res);
         return res;
       } // operator*
 
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator*(const B& b, const Data<device, Base>& a) {
-        return a * b;
-      } // operator*
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator/=(Data<device, Base>& a, const B& b) {
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, 0, 0, b, a.get());
+      template<class Base>
+      Data<device, Base>& operator/=(Data<device, Base>& a, const Data<device, Base>& b) {
+        if(b.size==1) {
+          LinearFrac<Base>(a, a, 1, 0, 0, *b.get());
+        } else {
+          Div<Base>(a, b, a);
+        } // if
         return a;
       } // operator/=
 
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator/(const Data<device, Base>& a, const B& b) {
+      template<class Base>
+      Data<device, Base> operator/(const Data<device, Base>& a, const Data<device, Base>& b) {
+        if(a.size==1){
+          Data<device, Base> res(b.size);
+          LinearFrac<Base>(b, res, 0, *a.get(), 1, 0);
+          return res;
+        } // if
+        if(b.size==1){
+          Data<device, Base> res(a.size);
+          LinearFrac<Base>(a, res, 1, 0, 0, *b.get());
+          return res;
+        } // if
         Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, 0, 0, b, res.get());
-        return res;
-      } // operator/
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator/(const B& b, const Data<device, Base>& a) {
-        Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 0, b, 1, 0, res.get());
+        Div<Base>(a, b, res);
         return res;
       } // operator/
 
@@ -638,78 +717,64 @@ namespace TAT {
         return Data<device, Base>(a);
       } // operator+
 
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator+=(Data<device, Base>& a, const B& b) {
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, b, 0, 1, a.get());
-        return a;
-      } // operator+=
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator+(const Data<device, Base>& a, const B& b) {
-        Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, b, 0, 1, res.get());
-        return res;
-      } // operator+
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator+(const B& b, const Data<device, Base>& a) {
-        return a + b;
-      } // operator+
-
-      template<class Base>
-      Data<device, Base> operator-(const Data<device, Base>& a) {
-        Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), -1, 0, 0, 1, res.get());
-        return res;
-      } // operator-
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base>& operator-=(Data<device, Base>& a, const B& b) {
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, -b, 0, 1, a.get());
-        return a;
-      } // operator-=
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator-(const Data<device, Base>& a, const B& b) {
-        Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), 1, -b, 0, 1, res.get());
-        return res;
-      } // operator-
-
-      template<class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Data<device, Base> operator-(const B& b, const Data<device, Base>& a) {
-        Data<device, Base> res(a.size);
-        vLinearFrac<Base>(a.size, a.get(), a.get(), -1, b, 0, 1, res.get());
-        return res;
-      } // operator-
-
       template<class Base>
       Data<device, Base>& operator+=(Data<device, Base>& a, const Data<device, Base>& b) {
-        assert(a.size==b.size);
-        vAdd<Base>(a.size, a.get(), b.get(), a.get());
+        if(b.size==1) {
+          LinearFrac<Base>(a, a, 1, *b.get(), 0, 1);
+        } else {
+          Add<Base>(a, b, a);
+        } // if
         return a;
       } // operator+=
 
       template<class Base>
       Data<device, Base> operator+(const Data<device, Base>& a, const Data<device, Base>& b) {
-        assert(a.size==b.size);
+        if(a.size==1){
+          Data<device, Base> res(b.size);
+          LinearFrac<Base>(b, res, 1, *a.get(), 0, 1);
+          return res;
+        } // if
+        if(b.size==1){
+          Data<device, Base> res(a.size);
+          LinearFrac<Base>(a, res, 1, *b.get(), 0, 1);
+          return res;
+        } // if
         Data<device, Base> res(a.size);
-        vAdd<Base>(a.size, a.get(), b.get(), res.get());
+        Add<Base>(a, b, res);
         return res;
       } // operator+
 
       template<class Base>
+      Data<device, Base> operator-(const Data<device, Base>& a) {
+        Data<device, Base> res(a.size);
+        LinearFrac<Base>(a, res, -1, 0, 0, 1);
+        return res;
+      } // operator-
+
+      template<class Base>
       Data<device, Base>& operator-=(Data<device, Base>& a, const Data<device, Base>& b) {
-        assert(a.size==b.size);
-        vSub<Base>(a.size, a.get(), b.get(), a.get());
+        if(b.size==1) {
+          LinearFrac<Base>(a, a, 1, -*b.get(), 0, 1);
+        } else {
+          Sub<Base>(a, b, a);
+        } // if
         return a;
       } // operator-=
 
       template<class Base>
       Data<device, Base> operator-(const Data<device, Base>& a, const Data<device, Base>& b) {
-        assert(a.size==b.size);
+        if(a.size==1){
+          Data<device, Base> res(b.size);
+          LinearFrac<Base>(b, res, -1, *a.get(), 0, 1);
+          return res;
+        } // if
+        if(b.size==1){
+          Data<device, Base> res(a.size);
+          LinearFrac<Base>(a, res, 1, -*b.get(), 0, 1);
+          return res;
+        } // if
         Data<device, Base> res(a.size);
-        vSub<Base>(a.size, a.get(), b.get(), res.get());
+        Sub<Base>(a, b, res);
         return res;
       } // operator-
     } // namespace data::scalar
@@ -833,6 +898,7 @@ namespace TAT {
       Node(T&& _dims) : data(get_size(_dims)) {
         dims = std::forward<T>(_dims);
       }
+      Node(const Base& num) : dims({}), data(num) {}
 
       void set_test() {
         data.set_test();
@@ -939,110 +1005,6 @@ namespace TAT {
 
     inline namespace scalar {}
     namespace scalar {
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator*=(Node<device, Base>& a, const B& b) {
-        a.data *= b;
-        return a;
-      } // operator*=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator*(const Node<device, Base>& a, const B& b) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = a.data * b;
-        return res;
-      } // operator*
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator*(const B& b, const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = b * a.data;
-        return res;
-      } // operator*
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator/=(Node<device, Base>& a, const B& b) {
-        a.data /= b;
-        return a;
-      } // operator/=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator/(const Node<device, Base>& a, const B& b) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = a.data / b;
-        return res;
-      } // operator/
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator/(const B& b, const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = b / a.data;
-        return res;
-      } // operator/
-
-      template<Device device, class Base>
-      Node<device, Base> operator+(const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = + a.data;
-        return res;
-      } // operator+
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator+=(Node<device, Base>& a, const B& b) {
-        a.data += b;
-        return a;
-      } // operator+=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator+(const Node<device, Base>& a, const B& b) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = a.data + b;
-        return res;
-      } // operator+
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator+(const B& b, const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = b + a.data;
-        return res;
-      } // operator+
-
-      template<Device device, class Base>
-      Node<device, Base> operator-(const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = - a.data;
-        return res;
-      } // operator-
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base>& operator-=(Node<device, Base>& a, const B& b) {
-        a.data -= b;
-        return a;
-      } // operator-=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator-(const Node<device, Base>& a, const B& b) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = a.data - b;
-        return res;
-      } // operator-
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Node<device, Base> operator-(const B& b, const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
-        res.data = b - a.data;
-        return res;
-      } // operator-
-
       bool operator==(const std::vector<Size>& a, const std::vector<Size>& b) {
         if (a.size()!=b.size()) {
           return false;
@@ -1057,33 +1019,113 @@ namespace TAT {
       } // operator==
 
       template<Device device, class Base>
+      Node<device, Base>& operator*=(Node<device, Base>& a, const Node<device, Base>& b) {
+        if(b.data.size!=1){
+          assert(a.dims==b.dims);
+        }
+        a.data *= b.data;
+        return a;
+      } // operator*=
+
+      template<Device device, class Base>
+      Node<device, Base> operator*(const Node<device, Base>& a, const Node<device, Base>& b) {
+        auto res = Node<device, Base>::get_empty_node();
+        if(b.data.size==1){
+          res.dims = a.dims;
+        }else if(a.data.size==1){
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        }
+        res.data = a.data * b.data;
+        return res;
+      } // operator*
+
+      template<Device device, class Base>
+      Node<device, Base>& operator/=(Node<device, Base>& a, const Node<device, Base>& b) {
+        if(b.data.size!=1){
+          assert(a.dims==b.dims);
+        }
+        a.data /= b.data;
+        return a;
+      } // operator/=
+
+      template<Device device, class Base>
+      Node<device, Base> operator/(const Node<device, Base>& a, const Node<device, Base>& b) {
+        auto res = Node<device, Base>::get_empty_node();
+        if(b.data.size==1){
+          res.dims = a.dims;
+        }else if(a.data.size==1){
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        }
+        res.data = a.data / b.data;
+        return res;
+      } // operator/
+
+      template<Device device, class Base>
+      Node<device, Base> operator+(const Node<device, Base>& a) {
+        auto res = Node<device, Base>::get_empty_node();
+        res.dims = a.dims;
+        res.data = + a.data;
+        return res;
+      } // operator+
+
+      template<Device device, class Base>
       Node<device, Base>& operator+=(Node<device, Base>& a, const Node<device, Base>& b) {
-        assert(a.dims==b.dims);
+        if(b.data.size!=1){
+          assert(a.dims==b.dims);
+        }
         a.data += b.data;
         return a;
       } // operator+=
 
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a, const Node<device, Base>& b) {
-        assert(a.dims==b.dims);
         auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
+        if(b.data.size==1){
+          res.dims = a.dims;
+        }else if(a.data.size==1){
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        }
         res.data = a.data + b.data;
         return res;
       } // operator+
 
       template<Device device, class Base>
+      Node<device, Base> operator-(const Node<device, Base>& a) {
+        auto res = Node<device, Base>::get_empty_node();
+        res.dims = a.dims;
+        res.data = - a.data;
+        return res;
+      } // operator-
+
+      template<Device device, class Base>
       Node<device, Base>& operator-=(Node<device, Base>& a, const Node<device, Base>& b) {
-        assert(a.dims==b.dims);
+        if(b.data.size!=1){
+          assert(a.dims==b.dims);
+        }
         a.data -= b.data;
         return a;
       } // operator-=
 
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a, const Node<device, Base>& b) {
-        assert(a.dims==b.dims);
         auto res = Node<device, Base>::get_empty_node();
-        res.dims = a.dims;
+        if(b.data.size==1){
+          res.dims = a.dims;
+        }else if(a.data.size==1){
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        }
         res.data = a.data - b.data;
         return res;
       } // operator-
@@ -1233,6 +1275,7 @@ namespace TAT {
         assert(legs.size()==node.dims.size());
         assert(std::set<Legs>(legs.begin(), legs.end()).size()==legs.size());
       }
+      Tensor(const Base& num) : legs({}), node(num) {}
 
       void set_test() {
         node.set_test();
@@ -1351,110 +1394,6 @@ namespace TAT {
 
     inline namespace scalar {}
     namespace scalar {
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const B& b) {
-        a.node *= b;
-        return a;
-      } // operator*=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator*(const Tensor<device, Base>& a, const B& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = a.node * b;
-        return res;
-      } // operator*
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator*(const B& b, const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = b * a.node;
-        return res;
-      } // operator*
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const B& b) {
-        a.node /= b;
-        return a;
-      } // operator/=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator/(const Tensor<device, Base>& a, const B& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = a.node / b;
-        return res;
-      } // operator/
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator/(const B& b, const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = b / a.node;
-        return res;
-      } // operator/
-
-      template<Device device, class Base>
-      Tensor<device, Base> operator+(const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = + a.node;
-        return res;
-      } // operator+
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const B& b) {
-        a.node += b;
-        return a;
-      } // operator+
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator+(const Tensor<device, Base>& a, const B& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = a.node + b;
-        return res;
-      } // operator+
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator+(const B& b, const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = b + a.node;
-        return res;
-      } // operator+
-
-      template<Device device, class Base>
-      Tensor<device, Base> operator-(const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = - a.node;
-        return res;
-      } // operator-
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const B& b) {
-        a.node -= b;
-        return a;
-      } // operator-=
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator-(const Tensor<device, Base>& a, const B& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = a.node - b;
-        return res;
-      } // operator-
-
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
-      Tensor<device, Base> operator-(const B& b, const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
-        res.node = b - a.node;
-        return res;
-      } // operator-
-
       bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b) {
         if (a.size()!=b.size()) {
           return false;
@@ -1469,35 +1408,175 @@ namespace TAT {
       } // operator==
 
       template<Device device, class Base>
+      Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
+        if(b.node.data.size!=1){
+          assert(a.legs==b.legs);
+        }
+        a.node *= b.node;
+        return a;
+      } // operator*=
+
+      template<Device device, class Base>
+      Tensor<device, Base> operator*(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
+        auto res = Tensor<device, Base>::get_empty_tensor();
+        if(b.node.data.size==1){
+          res.legs = a.legs;
+        }else if(a.node.data.size==1){
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        }
+        res.node = a.node * b.node;
+        return res;
+      } // operator*
+
+      template<Device device, class Base>
+      Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
+        if(b.node.data.size!=1){
+          assert(a.legs==b.legs);
+        }
+        a.node /= b.node;
+        return a;
+      } // operator/=
+
+      template<Device device, class Base>
+      Tensor<device, Base> operator/(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
+        auto res = Tensor<device, Base>::get_empty_tensor();
+        if(b.node.data.size==1){
+          res.legs = a.legs;
+        }else if(a.node.data.size==1){
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        }
+        res.node = a.node / b.node;
+        return res;
+      } // operator/
+
+      template<Device device, class Base>
+      Tensor<device, Base> operator+(const Tensor<device, Base>& a) {
+        auto res = Tensor<device, Base>::get_empty_tensor();
+        res.legs = a.legs;
+        res.node = + a.node;
+        return res;
+      } // operator+
+
+      template<Device device, class Base>
       Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        assert(a.legs==b.legs);
+        if(b.node.data.size!=1){
+          assert(a.legs==b.legs);
+        }
         a.node += b.node;
         return a;
       } // operator+=
 
       template<Device device, class Base>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        assert(a.legs==b.legs);
         auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
+        if(b.node.data.size==1){
+          res.legs = a.legs;
+        }else if(a.node.data.size==1){
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        }
         res.node = a.node + b.node;
         return res;
       } // operator+
 
       template<Device device, class Base>
+      Tensor<device, Base> operator-(const Tensor<device, Base>& a) {
+        auto res = Tensor<device, Base>::get_empty_tensor();
+        res.legs = a.legs;
+        res.node = - a.node;
+        return res;
+      } // operator-
+
+      template<Device device, class Base>
       Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        assert(a.legs==b.legs);
+        if(b.node.data.size!=1){
+          assert(a.legs==b.legs);
+        }
         a.node -= b.node;
         return a;
       } // operator-=
 
       template<Device device, class Base>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        assert(a.legs==b.legs);
         auto res = Tensor<device, Base>::get_empty_tensor();
-        res.legs = a.legs;
+        if(b.node.data.size==1){
+          res.legs = a.legs;
+        }else if(a.node.data.size==1){
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        }
         res.node = a.node - b.node;
         return res;
+      } // operator-
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const B& b) {
+        return a*=Tensor<device, Base>(b);
+      } // operator*=
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator*(const Tensor<device, Base>& a, const B& b) {
+        return a*Tensor<device, Base>(b);
+      } // operator*
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator*(const B& b, const Tensor<device, Base>& a) {
+        return Tensor<device, Base>(b)*a;
+      } // operator*
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const B& b) {
+        return a/=Tensor<device, Base>(b);
+      } // operator/=
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator/(const Tensor<device, Base>& a, const B& b) {
+        return a/Tensor<device, Base>(b);
+      } // operator/
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator/(const B& b, const Tensor<device, Base>& a) {
+        return Tensor<device, Base>(b)/a;
+      } // operator/
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const B& b) {
+        return a+=Tensor<device, Base>(b);
+      } // operator+
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator+(const Tensor<device, Base>& a, const B& b) {
+        return a+Tensor<device, Base>(b);
+      } // operator+
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator+(const B& b, const Tensor<device, Base>& a) {
+        return Tensor<device, Base>(b)+a;
+      } // operator+
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const B& b) {
+        return a-=Tensor<device, Base>(b);
+      } // operator-=
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator-(const Tensor<device, Base>& a, const B& b) {
+        return a-Tensor<device, Base>(b);
+      } // operator-
+
+      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      Tensor<device, Base> operator-(const B& b, const Tensor<device, Base>& a) {
+        return Tensor<device, Base>(b)-a;
       } // operator-
     } // namespace tensor::scalar
 
