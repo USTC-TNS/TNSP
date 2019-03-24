@@ -10,3 +10,5 @@ callgrind.*
 *.gcov
 *.o
 *.orig
+*.ii
+*.s
