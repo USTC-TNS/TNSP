@@ -655,7 +655,7 @@ namespace TAT {
                       const Base& sa, const Base& oa, const Base& sb, const Base& ob) {
         assert(src.size==dst.size);
         vLinearFrac<Base>(src.size, src.get(), src.get(), sa, oa, sb, ob, dst.get());
-      }
+      } // LinearFrac
 
       template<class Base>
       void vAdd(const Size& n, const Base* a, const Base* b, Base* y);
@@ -1104,7 +1104,7 @@ namespace TAT {
       Node<device, Base>& operator*=(Node<device, Base>& a, const Node<device, Base>& b) {
         if (b.data.size!=1) {
           assert(a.dims==b.dims);
-        }
+        } // if
         a.data *= b.data;
         return a;
       } // operator*=
@@ -1119,7 +1119,7 @@ namespace TAT {
         } else {
           res.dims = a.dims;
           assert(a.dims==b.dims);
-        }
+        } // if
         res.data = a.data * b.data;
         return res;
       } // operator*
@@ -1128,7 +1128,7 @@ namespace TAT {
       Node<device, Base>& operator/=(Node<device, Base>& a, const Node<device, Base>& b) {
         if (b.data.size!=1) {
           assert(a.dims==b.dims);
-        }
+        } // if
         a.data /= b.data;
         return a;
       } // operator/=
@@ -1143,7 +1143,7 @@ namespace TAT {
         } else {
           res.dims = a.dims;
           assert(a.dims==b.dims);
-        }
+        } // if
         res.data = a.data / b.data;
         return res;
       } // operator/
@@ -1160,7 +1160,7 @@ namespace TAT {
       Node<device, Base>& operator+=(Node<device, Base>& a, const Node<device, Base>& b) {
         if (b.data.size!=1) {
           assert(a.dims==b.dims);
-        }
+        } // if
         a.data += b.data;
         return a;
       } // operator+=
@@ -1175,7 +1175,7 @@ namespace TAT {
         } else {
           res.dims = a.dims;
           assert(a.dims==b.dims);
-        }
+        } // if
         res.data = a.data + b.data;
         return res;
       } // operator+
@@ -1192,7 +1192,7 @@ namespace TAT {
       Node<device, Base>& operator-=(Node<device, Base>& a, const Node<device, Base>& b) {
         if (b.data.size!=1) {
           assert(a.dims==b.dims);
-        }
+        } // if
         a.data -= b.data;
         return a;
       } // operator-=
@@ -1207,7 +1207,7 @@ namespace TAT {
         } else {
           res.dims = a.dims;
           assert(a.dims==b.dims);
-        }
+        } // if
         res.data = a.data - b.data;
         return res;
       } // operator-
@@ -1515,7 +1515,7 @@ namespace TAT {
         } else {
           res.legs = a.legs;
           assert(a.legs==b.legs);
-        }
+        } // if
         res.node = a.node * b.node;
         return res;
       } // operator*
@@ -1524,7 +1524,7 @@ namespace TAT {
       Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
-        }
+        } // if
         a.node /= b.node;
         return a;
       } // operator/=
@@ -1539,7 +1539,7 @@ namespace TAT {
         } else {
           res.legs = a.legs;
           assert(a.legs==b.legs);
-        }
+        } // if
         res.node = a.node / b.node;
         return res;
       } // operator/
@@ -1556,7 +1556,7 @@ namespace TAT {
       Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
-        }
+        } // if
         a.node += b.node;
         return a;
       } // operator+=
@@ -1571,7 +1571,7 @@ namespace TAT {
         } else {
           res.legs = a.legs;
           assert(a.legs==b.legs);
-        }
+        } // if
         res.node = a.node + b.node;
         return res;
       } // operator+
@@ -1588,7 +1588,7 @@ namespace TAT {
       Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         if (b.node.data.size!=1) {
           assert(a.legs==b.legs);
-        }
+        } // if
         a.node -= b.node;
         return a;
       } // operator-=
@@ -1603,7 +1603,7 @@ namespace TAT {
         } else {
           res.legs = a.legs;
           assert(a.legs==b.legs);
-        }
+        } // if
         res.node = a.node - b.node;
         return res;
       } // operator-
