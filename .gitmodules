@@ -4,3 +4,6 @@
 [submodule "cutt"]
 	path = cutt
 	url = https://github.com/ap-hynninen/cutt.git
+[submodule "args"]
+	path = args
+	url = https://github.com/Taywee/args.git
