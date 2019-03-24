@@ -199,34 +199,27 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 
 int main(int argc, char** argv) {
   args::ArgumentParser parser("This is a test program.", "This goes after the options.");
-  args::ValueFlag<int> L(parser, "L", "system size L=10", {'L',"length"}, 100);
-  args::ValueFlag<unsigned long> D(parser, "D", "bond dimension=12", {'D',"dimension"}, 12);
-  args::ValueFlag<unsigned> S(parser, "S", "random seed=42", {'S',"random_seed"}, 42);
-  args::ValueFlag<int> N(parser, "N", "total step to run=100", {'N',"step_num"}, 100);
-  args::ValueFlag<int> T(parser, "T", "print energy every T step=100", {'T',"print_step"}, 100);
-  args::ValueFlag<double> I(parser, "I", "step size when update=0.01", {'I',"step_size"}, 0.01);
+  args::ValueFlag<int> L(parser, "L", "system size L=10", {'L', "length"}, 100);
+  args::ValueFlag<unsigned long> D(parser, "D", "bond dimension=12", {'D', "dimension"}, 12);
+  args::ValueFlag<unsigned> S(parser, "S", "random seed=42", {'S', "random_seed"}, 42);
+  args::ValueFlag<int> N(parser, "N", "total step to run=100", {'N', "step_num"}, 100);
+  args::ValueFlag<int> T(parser, "T", "print energy every T step=100", {'T', "print_step"}, 100);
+  args::ValueFlag<double> I(parser, "I", "step size when update=0.01", {'I', "step_size"}, 0.01);
 
-  try
-    {
-      parser.ParseCLI(argc, argv);
-    }
-  catch (args::Help)
-    {
-      std::cout << parser;
-      return 0;
-    }
-  catch (args::ParseError e)
-    {
-      std::cerr << e.what() << std::endl;
-      std::cerr << parser;
-      return 1;
-    }
-  catch (args::ValidationError e)
-    {
-      std::cerr << e.what() << std::endl;
-      std::cerr << parser;
-      return 1;
-    }
+  try {
+    parser.ParseCLI(argc, argv);
+  } catch (args::Help) {
+    std::cout << parser;
+    return 0;
+  } catch (args::ParseError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  } catch (args::ValidationError e) {
+    std::cerr << e.what() << std::endl;
+    std::cerr << parser;
+    return 1;
+  }
 
   Heisenberg_MPS(args::get(L), args::get(D), args::get(S), args::get(N), args::get(T), args::get(I));
   return 0;
