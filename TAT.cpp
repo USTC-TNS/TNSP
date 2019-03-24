@@ -18,6 +18,8 @@
 /* TODO LIST
  * - Truncated SVD
  * - QR only require Q, we can use QR with pivot, dgeqp3
+ * - dgedqr magma
+ * - cuda，sw
  * - all kind of Norm
  * - use it
  */
