@@ -36,13 +36,13 @@
 struct MPS {
   using Size=TAT::Size;
   using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
-  
+
   Size L;
   Size D;
   Tensor hamiltonian;
   Tensor identity;
   std::vector<Tensor> lattice;
-  
+
   static double random() {
     return double(std::rand())/(RAND_MAX);
   }

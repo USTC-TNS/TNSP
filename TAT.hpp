@@ -987,6 +987,9 @@ namespace TAT {
       const Base* get() const {
         return data.get();
       } // get
+      Base* get() {
+        return data.get();
+      } // get
 
       void set_test() {
         data.set_test();
@@ -1376,6 +1379,9 @@ namespace TAT {
         return node.size();
       } // size
       const Base* get() const {
+        return node.get();
+      } // get
+      Base* get() {
         return node.get();
       } // get
 
