@@ -1,3 +1,20 @@
+/* TAT
+ * Copyright (C) 2019  Hao Zhang
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <cstdlib>
 #include <iostream>
 #include <ctime>
@@ -41,16 +58,17 @@ struct MPS {
     } // lattice
     {
       double default_H[16] = {
-        1/4., 0, 0, 0,
-        0, -1/4., 2/4., 0,
-        0, 2/4., -1/4., 0,
-        0, 0,    0, 1/4.
+        1, 0, 0, 0,
+        0, -1, 2, 0,
+        0, 2, -1, 0,
+        0, 0, 0, 1
       };
       hamiltonian = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
       double* H = hamiltonian.node.data.get();
       for (int i=0; i<16; i++) {
         H[i] = default_H[16];
       }
+      hamiltonian /= 4;
     } // hamiltonian
     {
       double default_I[16] = {
@@ -93,7 +111,7 @@ struct MPS {
       lattice[i-1] = svd.V.multiple(svd.S, Right);
       lattice[i-1].legs_rename({{Phy4, Phy}});
     }
-    for (int i=0; i<L; i++) {
+    for (Size i=0; i<L; i++) {
       lattice[i] /= lattice[i].norm_inf();
     }
   }
