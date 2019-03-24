@@ -462,14 +462,8 @@ namespace TAT {
 
     template<class Base>
     class Data<device, Base> {
-      Data() = default;
-      friend class Node<device, Base>;
-      template<Device device2, class Base2, class>
-      friend class Data;
      public:
-      static Data<device, Base> get_empty_data() {
-        return Data();
-      } // get_empty_data, use to call Data() in public
+      Data() : size(0), base() {}
 
       Size size;
       std::unique_ptr<Base[]> base;
@@ -951,14 +945,8 @@ namespace TAT {
 
     template<Device device, class Base>
     class Node {
-      Node() = default;
-      friend class Tensor<device, Base>;
-      template<Device device2, class Base2>
-      friend class Node;
      public:
-      static Node<device, Base> get_empty_node() {
-        return Node();
-      } // get_empty_node
+      Node() : dims({}), data() {}
 
       std::vector<Size> dims;
       Data<device, Base> data;
@@ -1127,7 +1115,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base> operator*(const Node<device, Base>& a, const Node<device, Base>& b) {
-        auto res = Node<device, Base>::get_empty_node();
+        Node<device, Base> res;
         if (b.size()==1) {
           res.dims = a.dims;
         } else if (a.size()==1) {
@@ -1151,7 +1139,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base> operator/(const Node<device, Base>& a, const Node<device, Base>& b) {
-        auto res = Node<device, Base>::get_empty_node();
+        Node<device, Base> res;
         if (b.size()==1) {
           res.dims = a.dims;
         } else if (a.size()==1) {
@@ -1166,7 +1154,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
+        Node<device, Base> res;
         res.dims = a.dims;
         res.data = + a.data;
         return res;
@@ -1183,7 +1171,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a, const Node<device, Base>& b) {
-        auto res = Node<device, Base>::get_empty_node();
+        Node<device, Base> res;
         if (b.size()==1) {
           res.dims = a.dims;
         } else if (a.size()==1) {
@@ -1198,7 +1186,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a) {
-        auto res = Node<device, Base>::get_empty_node();
+        Node<device, Base> res;
         res.dims = a.dims;
         res.data = - a.data;
         return res;
@@ -1215,7 +1203,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a, const Node<device, Base>& b) {
-        auto res = Node<device, Base>::get_empty_node();
+        Node<device, Base> res;
         if (b.size()==1) {
           res.dims = a.dims;
         } else if (a.size()==1) {
@@ -1352,13 +1340,8 @@ namespace TAT {
 
     template<Device device, class Base>
     class Tensor {
-      Tensor() = default;
-      template<Device device2, class Base2>
-      friend class Tensor;
      public:
-      static Tensor<device, Base> get_empty_tensor() {
-        return Tensor<device, Base>();
-      }
+      Tensor() : legs({}), node() {}
 
       std::vector<Legs> legs;
       Node<device, Base> node;
@@ -1533,7 +1516,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base> operator*(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
+        Tensor<device, Base> res;
         if (b.size()==1) {
           res.legs = a.legs;
         } else if (a.size()==1) {
@@ -1557,7 +1540,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base> operator/(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
+        Tensor<device, Base> res;
         if (b.size()==1) {
           res.legs = a.legs;
         } else if (a.size()==1) {
@@ -1572,7 +1555,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
+        Tensor<device, Base> res;
         res.legs = a.legs;
         res.node = + a.node;
         return res;
@@ -1589,7 +1572,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
+        Tensor<device, Base> res;
         if (b.size()==1) {
           res.legs = a.legs;
         } else if (a.size()==1) {
@@ -1604,7 +1587,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
+        Tensor<device, Base> res;
         res.legs = a.legs;
         res.node = - a.node;
         return res;
@@ -1621,7 +1604,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        auto res = Tensor<device, Base>::get_empty_tensor();
+        Tensor<device, Base> res;
         if (b.size()==1) {
           res.legs = a.legs;
         } else if (a.size()==1) {
@@ -1997,7 +1980,7 @@ int main() {
       f1.open("test_io.out");
       f1 << t1;
       f1.close();
-      auto t2 = Tensor<>::get_empty_tensor();
+      Tensor<> t2;
       std::ifstream f2;
       f2.open("test_io.out");
       f2 >> t2;
