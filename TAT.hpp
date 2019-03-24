@@ -109,6 +109,10 @@ extern "C"
 #error must use one of GEQRF and GEQP3
 #endif
 
+#ifdef TAT_USE_GEQP3
+#warning GEQP3 is current unusable
+#endif
+
 #endif // TAT_USE_CPU
 
 namespace TAT {
@@ -141,20 +145,13 @@ namespace TAT {
   } // namespace legs
   using legs::Legs;
 
-#define DefineLeg(x) static const Legs x = Legs::x
-#define DefineLegs(n) DefineLeg(Left##n); DefineLeg(Right##n); DefineLeg(Up##n); DefineLeg(Down##n); DefineLeg(Phy##n)
-  DefineLegs();
-  DefineLegs(1);
-  DefineLegs(2);
-  DefineLegs(3);
-  DefineLegs(4);
-  DefineLegs(5);
-  DefineLegs(6);
-  DefineLegs(7);
-  DefineLegs(8);
-  DefineLegs(9);
-#undef DefineLegs
-#undef DefineLeg
+#define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
+#define TAT_DefineLegs(n) TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n)
+#define TAT_Legs \
+  TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
+  TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
+
+  TAT_Legs;
 
   using Size = std::size_t;
   using Rank = unsigned int;
@@ -418,7 +415,6 @@ namespace TAT {
       const Base* get() const {
         return base.get();
       } // get
-
       Base* get() {
         return base.get();
       } // get
@@ -433,6 +429,11 @@ namespace TAT {
           base[i] = Base(0);
         } // for i
       } // set_zero
+      void set_random(Base(*random)()) {
+        for (Size i=0; i<size; i++) {
+          base[i] = random();
+        } // for i
+      } // set_random
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Data<device, Base2> to() const {
@@ -838,6 +839,9 @@ namespace TAT {
       void set_zero() {
         data.set_zero();
       } // set_zero
+      void set_random(Base(*random)()) {
+        data.set_random(random);
+      } // set_random
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Node<device, Base2> to() const {
@@ -1235,6 +1239,9 @@ namespace TAT {
       void set_zero() {
         node.set_zero();
       } // set_zero
+      void set_random(Base(*random)()) {
+        node.set_random(random);
+      } // set_random
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
       Tensor<device, Base2> to() const {

@@ -5,15 +5,17 @@ CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
 CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group -Wl,-Bdynamic -lpthread -lm -ldl
 CXXFLAGS += -Wl,-Bdynamic -lgomp -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
 
-DEBUG?=1
+DEBUG ?= 1
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
 else
 	CXXFLAGS += -DNDEBUG -Ofast
 endif
 
+FILE ?= TAT.cpp
+
 all:
-	$(CXX) TAT.cpp $(CXXFLAGS)
+	$(CXX) $(FILE) $(CXXFLAGS)
 
 style:
-	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type TAT.cpp
+	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type TAT.hpp
