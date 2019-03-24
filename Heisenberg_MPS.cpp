@@ -44,17 +44,17 @@ struct MPS {
   std::vector<Tensor> lattice;
   
   static double random() {
-    return double(std::rand())/(RAND_MAX)*2-1;
+    return double(std::rand())/(RAND_MAX);
   }
 
   MPS(Size _L, Size _D) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
     using namespace TAT::legs_name;
     {
-      lattice.push_back(Tensor({2, D}, {Phy, Right}));
+      lattice.push_back(Tensor({2, 1, D}, {Phy, Left, Right}));
       for (Size i=1; i<L-1; i++) {
         lattice.push_back(Tensor({2, D, D}, {Phy, Left, Right}));
       }
-      lattice.push_back(Tensor({2, D}, {Phy, Left}));
+      lattice.push_back(Tensor({2, D, 1}, {Phy, Left, Right}));
     } // lattice
     {
       double default_H[16] = {
@@ -66,7 +66,7 @@ struct MPS {
       hamiltonian = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
       double* H = hamiltonian.node.data.get();
       for (int i=0; i<16; i++) {
-        H[i] = default_H[16];
+        H[i] = default_H[i];
       }
       hamiltonian /= 4;
     } // hamiltonian
@@ -80,7 +80,7 @@ struct MPS {
       identity = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
       double* I = identity.node.data.get();
       for (int i=0; i<16; i++) {
-        I[i] = default_I[16];
+        I[i] = default_I[i];
       }
     } // identity
   }
@@ -98,7 +98,7 @@ struct MPS {
       Tensor big = Tensor::contract(lattice[i], lattice[i+1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
       Tensor Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
       auto svd = Big.svd({Left, Phy3}, Right, Left, D);
-      lattice[i] = svd.U;
+      lattice[i] = std::move(svd.U);
       lattice[i].legs_rename({{Phy3, Phy}});
       lattice[i+1] = svd.V.multiple(svd.S, Left);
       lattice[i+1].legs_rename({{Phy4, Phy}});
@@ -107,7 +107,7 @@ struct MPS {
       auto big = Tensor::contract(lattice[i], lattice[i-1], {Left}, {Right}, {{Phy, Phy1}}, {{Phy, Phy2}});
       auto Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
       auto svd = Big.svd({Right, Phy3}, Left, Right, D);
-      lattice[i] = svd.U;
+      lattice[i] = std::move(svd.U);
       lattice[i].legs_rename({{Phy3, Phy}});
       lattice[i-1] = svd.V.multiple(svd.S, Right);
       lattice[i-1].legs_rename({{Phy4, Phy}});
@@ -119,10 +119,9 @@ struct MPS {
 
   void pre() {
     using namespace TAT::legs_name;
-    std::cout << Left << std::endl;
     for (Size i=L-1; i>1; i--) {
       auto qr = lattice[i].qr({Phy, Right}, Left, Right);
-      lattice[i] = qr.Q;
+      lattice[i] = std::move(qr.Q);
       lattice[i-1] = Tensor::contract(lattice[i-1], qr.R, {Right}, {Left});
     }
   }

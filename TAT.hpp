@@ -981,6 +981,13 @@ namespace TAT {
       }
       Node(const Base& num) : dims({}), data(num) {}
 
+      const Size& size() const {
+        return data.size;
+      } // size
+      const Base* get() const {
+        return data.get();
+      } // get
+
       void set_test() {
         data.set_test();
       } // set_test
@@ -1108,7 +1115,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator*=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.dims==b.dims);
         } // if
         a.data *= b.data;
@@ -1118,9 +1125,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator*(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if (b.data.size==1) {
+        if (b.size()==1) {
           res.dims = a.dims;
-        } else if (a.data.size==1) {
+        } else if (a.size()==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1132,7 +1139,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator/=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.dims==b.dims);
         } // if
         a.data /= b.data;
@@ -1142,9 +1149,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator/(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if (b.data.size==1) {
+        if (b.size()==1) {
           res.dims = a.dims;
-        } else if (a.data.size==1) {
+        } else if (a.size()==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1164,7 +1171,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator+=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.dims==b.dims);
         } // if
         a.data += b.data;
@@ -1174,9 +1181,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if (b.data.size==1) {
+        if (b.size()==1) {
           res.dims = a.dims;
-        } else if (a.data.size==1) {
+        } else if (a.size()==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1196,7 +1203,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Node<device, Base>& operator-=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.dims==b.dims);
         } // if
         a.data -= b.data;
@@ -1206,9 +1213,9 @@ namespace TAT {
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a, const Node<device, Base>& b) {
         auto res = Node<device, Base>::get_empty_node();
-        if (b.data.size==1) {
+        if (b.size()==1) {
           res.dims = a.dims;
-        } else if (a.data.size==1) {
+        } else if (a.size()==1) {
           res.dims = b.dims;
         } else {
           res.dims = a.dims;
@@ -1365,6 +1372,13 @@ namespace TAT {
       }
       Tensor(const Base& num) : legs({}), node(num) {}
 
+      const Size& size() const {
+        return node.size();
+      } // size
+      const Base* get() const {
+        return node.get();
+      } // get
+
       void set_test() {
         node.set_test();
       } // set_test
@@ -1504,7 +1518,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if (b.node.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.legs==b.legs);
         }
         a.node *= b.node;
@@ -1514,9 +1528,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator*(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if (b.node.data.size==1) {
+        if (b.size()==1) {
           res.legs = a.legs;
-        } else if (a.node.data.size==1) {
+        } else if (a.size()==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
@@ -1528,7 +1542,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if (b.node.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.legs==b.legs);
         } // if
         a.node /= b.node;
@@ -1538,9 +1552,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator/(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if (b.node.data.size==1) {
+        if (b.size()==1) {
           res.legs = a.legs;
-        } else if (a.node.data.size==1) {
+        } else if (a.size()==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
@@ -1560,7 +1574,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if (b.node.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.legs==b.legs);
         } // if
         a.node += b.node;
@@ -1570,9 +1584,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if (b.node.data.size==1) {
+        if (b.size()==1) {
           res.legs = a.legs;
-        } else if (a.node.data.size==1) {
+        } else if (a.size()==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
@@ -1592,7 +1606,7 @@ namespace TAT {
 
       template<Device device, class Base>
       Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const Tensor<device, Base>& b) {
-        if (b.node.data.size!=1) {
+        if (b.size()!=1) {
           assert(a.legs==b.legs);
         } // if
         a.node -= b.node;
@@ -1602,9 +1616,9 @@ namespace TAT {
       template<Device device, class Base>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a, const Tensor<device, Base>& b) {
         auto res = Tensor<device, Base>::get_empty_tensor();
-        if (b.node.data.size==1) {
+        if (b.size()==1) {
           res.legs = a.legs;
-        } else if (a.node.data.size==1) {
+        } else if (a.size()==1) {
           res.legs = b.legs;
         } else {
           res.legs = a.legs;
