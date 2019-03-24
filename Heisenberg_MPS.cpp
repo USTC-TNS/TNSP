@@ -23,14 +23,14 @@
 #define TAT_USE_CPU
 
 // SVD
-// #define TAT_USE_GESDD
-// #define TAT_USE_GESVD
-#define TAT_USE_GESVDX
+#if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
+#define TAT_USE_GESVD
+#endif
 
 // QR
+#if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
 #define TAT_USE_GEQRF
-// #define TAT_USE_GEQP3
-// GEQP3 not understand, maybe useful if R will drop
+#endif
 
 #include "TAT.hpp"
 
@@ -188,7 +188,7 @@ std::ostream& operator<<(std::ostream& out, const MPS& mps) {
 }
 
 int main() {
-  MPS mps(100, 10);
+  MPS mps(100, 12);
   mps.set_random_state(42);
   mps.update(100, 100, 0.01);
   return 0;
