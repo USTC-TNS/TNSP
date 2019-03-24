@@ -34,24 +34,24 @@
 #include "TAT.hpp"
 
 struct MPS {
-  TAT_Legs;
   using Size=TAT::Size;
   using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
-
+  
   Size L;
   Size D;
   Tensor hamiltonian;
   Tensor identity;
   std::vector<Tensor> lattice;
-
+  
   static double random() {
     return double(std::rand())/(RAND_MAX)*2-1;
   }
 
   MPS(Size _L, Size _D) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
+    using namespace TAT::legs_name;
     {
       lattice.push_back(Tensor({2, D}, {Phy, Right}));
-      for (TAT::Size i=1; i<L-1; i++) {
+      for (Size i=1; i<L-1; i++) {
         lattice.push_back(Tensor({2, D, D}, {Phy, Left, Right}));
       }
       lattice.push_back(Tensor({2, D}, {Phy, Left}));
@@ -93,9 +93,10 @@ struct MPS {
   }
 
   void update(const Tensor& updater) {
+    using namespace TAT::legs_name;
     for (Size i=0; i<L-1; i++) {
-      auto big = Tensor::contract(lattice[i], lattice[i+1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
-      auto Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
+      Tensor big = Tensor::contract(lattice[i], lattice[i+1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
+      Tensor Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
       auto svd = Big.svd({Left, Phy3}, Right, Left, D);
       lattice[i] = svd.U;
       lattice[i].legs_rename({{Phy3, Phy}});
@@ -117,13 +118,15 @@ struct MPS {
   }
 
   void pre() {
+    using namespace TAT::legs_name;
+    std::cout << Left << std::endl;
     for (Size i=L-1; i>1; i--) {
       auto qr = lattice[i].qr({Phy, Right}, Left, Right);
       lattice[i] = qr.Q;
       lattice[i-1] = Tensor::contract(lattice[i-1], qr.R, {Right}, {Left});
     }
   }
-  
+
   void update(int n, double delta_t) {
     pre();
     auto updater = identity - delta_t* hamiltonian;

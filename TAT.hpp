@@ -147,13 +147,19 @@ namespace TAT {
   } // namespace legs
   using legs::Legs;
 
+  inline namespace legs_name {}
+  namespace legs_name {
 #define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
 #define TAT_DefineLegs(n) TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n)
 #define TAT_Legs \
   TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
   TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
 
-  TAT_Legs;
+    TAT_Legs;
+#undef TAT_Legs
+#undef TAT_DefineLegs
+#undef TAT_DefineLeg
+  } // namespace legs_name
 
   using Size = std::size_t;
   using Rank = unsigned int;
