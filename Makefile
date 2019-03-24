@@ -12,7 +12,7 @@ else
 	CXXFLAGS += -DNDEBUG -Ofast
 endif
 
-FILE ?= TAT.cpp
+FILE ?= test.cpp
 all:
 	$(CXX) $(FILE) $(CXXFLAGS)
 
