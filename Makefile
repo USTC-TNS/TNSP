@@ -10,7 +10,10 @@ DEBUG ?= 1
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
 else
-	CXXFLAGS += -DNDEBUG -Ofast -march=native -fwhole-program
+	CXXFLAGS += -DNDEBUG -Ofast -march=native
+	ifeq ($(CXX), g++)
+		CXXFLAGS += -fwhole-program
+	endif
 endif
 
 compile: FILE ?= test.cpp
