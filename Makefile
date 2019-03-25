@@ -1,4 +1,8 @@
 CXX ?= g++
+
+TAT_VERSION = $(shell git describe --tags)
+CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\"
+
 CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
 CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group

@@ -74,7 +74,9 @@ namespace contract
 
 #ifndef TAT_HPP_
 
-#define TAT_VERSION "0.0.1"
+#ifndef TAT_VERSION
+#define TAT_VERSION "unknown"
+#endif // TAT_VERSION
 
 #include <cassert>
 #include <cstring>
