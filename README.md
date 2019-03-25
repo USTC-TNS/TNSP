@@ -20,6 +20,7 @@ now, I am writing this tensor library finally.
 - [hptt](https://github.com/springer13/hptt) BSD 3-Clause License
 
 ---
+The following is for developer to take note
 
 ## TODO LIST
 - transpose may be optimized
