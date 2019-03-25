@@ -1774,8 +1774,6 @@ namespace TAT {
     } // namespace tensor::io
   } // namespace tensor
 
-  using Direction=Legs;
-
   namespace site {
     template<Device device, class Base>
     class Site {
@@ -1784,8 +1782,8 @@ namespace TAT {
       using GC_Tensor = std::shared_ptr<OB_Tensor>;
 
       GC_Tensor tensor;
-      std::map<Direction, Site<device, Base>*> neighbor;
-      std::map<Direction, GC_Tensor> env;
+      std::map<Legs, Site<device, Base>*> neighbor;
+      std::map<Legs, GC_Tensor> env;
 
       ~Site() = default;
       Site() = default;
