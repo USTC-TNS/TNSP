@@ -198,7 +198,15 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 }
 
 int main(int argc, char** argv) {
-  args::ArgumentParser parser("Heisenberg_MPS\nversion " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang\ncompiled " __DATE__ " " __TIME__ ".\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it\nunder the terms and conditions of the GNU General Public License.\nSee http://www.gnu.org/copyleft/gpl.html for details.\n", "Simple Update in MPS of Heisenberg Model.");
+  args::ArgumentParser parser(
+    "Heisenberg_MPS\n"
+    "version " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang\n"
+    "compiled " __DATE__ " " __TIME__ ".\n"
+    "This program comes with ABSOLUTELY NO WARRANTY.\n"
+    "This is free software, and you are welcome to redistribute it\n"
+    "under the terms and conditions of the GNU General Public License.\n"
+    "See http://www.gnu.org/copyleft/gpl.html for details.\n",
+    "Simple Update in MPS of Heisenberg Model.");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::ValueFlag<int> L(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
   args::ValueFlag<unsigned long> D(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
