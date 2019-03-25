@@ -291,7 +291,7 @@ namespace TAT {
             src += n1;
           } // for i
         } // if
-        return res;
+        return std::move(res);
       } // cut
 #endif // TAT_USE_GESVD TAT_USE_GESDD
 
@@ -497,6 +497,7 @@ namespace TAT {
       Data(const Data<device, Base>& other) {
         new (this) Data(other.size);
         std::memcpy(get(), other.get(), size*sizeof(Base));
+        std::clog << "Copying Data..." << std::endl;
       }
       Data<device, Base>& operator=(const Data<device, Base>& other) {
         new (this) Data(other);
@@ -534,7 +535,7 @@ namespace TAT {
       Data<device, Base> norm() const {
         Data<device, Base> res(Size(1));
         *res.get() = norm::run<Base, n>(size, get());
-        return res;
+        return std::move(res);
       } // norm
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
@@ -543,7 +544,7 @@ namespace TAT {
         for (Size i=0; i<size; i++) {
           res.base[i] = Base2(base[i]);
         } // for i
-        return res;
+        return std::move(res);
       } // to
 
       Data<device, Base> transpose(const std::vector<Size>& dims,
@@ -556,7 +557,7 @@ namespace TAT {
                           1, get(), int_dims.data(), NULL,
                           0, res.get(), NULL,
                           hptt::ESTIMATE, 1, NULL, 1)->execute();
-        return res;
+        return std::move(res);
       } // transpose
 
       static Data<device, Base> contract(const Data<device, Base>& data1,
@@ -573,7 +574,7 @@ namespace TAT {
         // wasted transpose
         Data<device, Base> res(m*n);
         contract::run<Base>(res.get(), a.get(), b.get(), m, n, k);
-        return res;
+        return std::move(res);
       } // contract
 
       Data<device, Base> multiple(const Data<device, Base>& other, const Size& a, const Size& b, const Size& c) const {
@@ -581,7 +582,7 @@ namespace TAT {
         assert(b==other.size);
         assert(a*b*c==size);
         multiple::run<Base>(res.get(), get(), other.get(), a, b, c);
-        return res;
+        return std::move(res);
       } // multiple
 
       friend class svd_res;
@@ -622,7 +623,7 @@ namespace TAT {
           res.V = svd::cut(res.V, min_mn, v_size, cut_dim, v_size);
         }
 #endif // TAT_USE_GESVD TAT_USE_GESDD
-        return res;
+        return std::move(res);
       } // svd
 
       friend class qr_res;
@@ -644,7 +645,7 @@ namespace TAT {
         // R is q_size*r_size, should be min_mn*r_size
         qr::run(res.Q.get(), res.R.get(), q_size, r_size, min_mn);
         res.R.size = min_mn*r_size;
-        return res;
+        return std::move(res);
       } // qr
     }; // class Data
 
@@ -767,16 +768,16 @@ namespace TAT {
         if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, *a.get(), 0, 0, 1);
-          return res;
+          return std::move(res);
         } // if
         if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, *b.get(), 0, 0, 1);
-          return res;
+          return std::move(res);
         } // if
         Data<device, Base> res(a.size);
         Mul<Base>(a, b, res);
-        return res;
+        return std::move(res);
       } // operator*
 
       template<class Base>
@@ -794,21 +795,26 @@ namespace TAT {
         if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, 0, *a.get(), 1, 0);
-          return res;
+          return std::move(res);
         } // if
         if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, 1, 0, 0, *b.get());
-          return res;
+          return std::move(res);
         } // if
         Data<device, Base> res(a.size);
         Div<Base>(a, b, res);
-        return res;
+        return std::move(res);
       } // operator/
 
       template<class Base>
       Data<device, Base> operator+(const Data<device, Base>& a) {
         return Data<device, Base>(a);
+      } // operator+
+
+      template<class Base>
+      Data<device, Base> operator+(Data<device, Base>&& a) {
+        return Data<device, Base>(std::move(a));
       } // operator+
 
       template<class Base>
@@ -826,23 +832,23 @@ namespace TAT {
         if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, 1, *a.get(), 0, 1);
-          return res;
+          return std::move(res);
         } // if
         if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, 1, *b.get(), 0, 1);
-          return res;
+          return std::move(res);
         } // if
         Data<device, Base> res(a.size);
         Add<Base>(a, b, res);
-        return res;
+        return std::move(res);
       } // operator+
 
       template<class Base>
       Data<device, Base> operator-(const Data<device, Base>& a) {
         Data<device, Base> res(a.size);
         LinearFrac<Base>(a, res, -1, 0, 0, 1);
-        return res;
+        return std::move(res);
       } // operator-
 
       template<class Base>
@@ -860,16 +866,16 @@ namespace TAT {
         if (a.size==1) {
           Data<device, Base> res(b.size);
           LinearFrac<Base>(b, res, -1, *a.get(), 0, 1);
-          return res;
+          return std::move(res);
         } // if
         if (b.size==1) {
           Data<device, Base> res(a.size);
           LinearFrac<Base>(a, res, 1, -*b.get(), 0, 1);
-          return res;
+          return std::move(res);
         } // if
         Data<device, Base> res(a.size);
         Sub<Base>(a, b, res);
-        return res;
+        return std::move(res);
       } // operator-
     } // namespace data::scalar
 
@@ -1011,7 +1017,7 @@ namespace TAT {
       Node<device, Base> norm() const {
         Node<device, Base> res({});
         res.data = data.template norm<n>();
-        return res;
+        return std::move(res);
       } // norm
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
@@ -1019,7 +1025,7 @@ namespace TAT {
         Node<device, Base2> res;
         res.dims = dims;
         res.data = data.template to<Base2>();
-        return res;
+        return std::move(res);
       } // to
 
       Node<device, Base> transpose(const std::vector<Rank>& plan) const {
@@ -1028,7 +1034,7 @@ namespace TAT {
         assert(plan.size()==dims.size());
         assert(get_size(res.dims)==data.size);
         res.data = data.transpose(dims, plan);
-        return res;
+        return std::move(res);
       } // transpose
 
       static Node<device, Base> contract(const Node<device, Base>& node1,
@@ -1040,7 +1046,7 @@ namespace TAT {
         Size m=1, k=1, n=1;
         contract::plan(res.dims, m, k, n, node1.dims, node2.dims, plan1, plan2, contract_num);
         res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, m, k, n);
-        return res;
+        return std::move(res);
       } // contract
 
       Node<device, Base> multiple(const Node<device, Base>& other, const Rank& index) const {
@@ -1050,7 +1056,7 @@ namespace TAT {
         multiple::plan(a, b, c, dims, index);
         assert(b==other.dims[0]);
         res.data = data.multiple(other.data, a, b, c);
-        return res;
+        return std::move(res);
       } // multiple
 
       friend class svd_res;
@@ -1077,7 +1083,7 @@ namespace TAT {
         res.U.data = std::move(data_res.U);
         res.S.data = std::move(data_res.S);
         res.V.data = std::move(data_res.V);
-        return res;
+        return std::move(res);
       } // svd
 
       friend class qr_res;
@@ -1103,7 +1109,7 @@ namespace TAT {
         res.R.dims.insert(res.R.dims.end(), mid, tmp_dims.end());
         res.Q.data = std::move(data_res.Q);
         res.R.data = std::move(data_res.R);
-        return res;
+        return std::move(res);
       } // qr
     }; // class Node
 
@@ -1142,7 +1148,7 @@ namespace TAT {
           assert(a.dims==b.dims);
         } // if
         res.data = a.data * b.data;
-        return res;
+        return std::move(res);
       } // operator*
 
       template<Device device, class Base>
@@ -1166,7 +1172,7 @@ namespace TAT {
           assert(a.dims==b.dims);
         } // if
         res.data = a.data / b.data;
-        return res;
+        return std::move(res);
       } // operator/
 
       template<Device device, class Base>
@@ -1174,7 +1180,15 @@ namespace TAT {
         Node<device, Base> res;
         res.dims = a.dims;
         res.data = + a.data;
-        return res;
+        return std::move(res);
+      } // operator+
+
+      template<Device device, class Base>
+      Node<device, Base> operator+(Node<device, Base>&& a) {
+        Node<device, Base> res;
+        res.dims = std::move(a.dims);
+        res.data = + std::move(a.data);
+        return std::move(res);
       } // operator+
 
       template<Device device, class Base>
@@ -1198,7 +1212,7 @@ namespace TAT {
           assert(a.dims==b.dims);
         } // if
         res.data = a.data + b.data;
-        return res;
+        return std::move(res);
       } // operator+
 
       template<Device device, class Base>
@@ -1206,7 +1220,7 @@ namespace TAT {
         Node<device, Base> res;
         res.dims = a.dims;
         res.data = - a.data;
-        return res;
+        return std::move(res);
       } // operator-
 
       template<Device device, class Base>
@@ -1230,7 +1244,7 @@ namespace TAT {
           assert(a.dims==b.dims);
         } // if
         res.data = a.data - b.data;
-        return res;
+        return std::move(res);
       } // operator-
     } // namespace node::scalar
 
@@ -1407,7 +1421,7 @@ namespace TAT {
       Tensor<device, Base> norm() const {
         Tensor<device, Base> res({}, {});
         res.node = node.template norm<n>();
-        return res;
+        return std::move(res);
       } // norm
 
       template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
@@ -1415,7 +1429,7 @@ namespace TAT {
         Tensor<device, Base2> res;
         res.legs = legs;
         res.node = node.template to<Base2>();
-        return res;
+        return std::move(res);
       } // to
 
       template<class T=std::vector<Legs>>
@@ -1427,7 +1441,7 @@ namespace TAT {
         assert(new_legs.size()==legs.size());
         assert(plan.size()==legs.size());
         res.node = node.transpose(plan);
-        return res;
+        return std::move(res);
       } // transpose
 
       static Tensor<device, Base> contract(const Tensor<device, Base>& tensor1,
@@ -1449,7 +1463,7 @@ namespace TAT {
         assert(new_legs2.size()==tensor2.legs.size());
         assert(plan2.size()==tensor2.legs.size());
         res.node = Node<device, Base>::contract(tensor1.node, tensor2.node, plan1, plan2, contract_num);
-        return res;
+        return std::move(res);
       } // contract
 
       Tensor<device, Base> multiple(const Tensor<device, Base>& other, const Legs& position) const {
@@ -1459,7 +1473,7 @@ namespace TAT {
         auto pos = std::find(legs.begin(), legs.end(), position);
         Rank index = std::distance(legs.begin(), pos);
         res.node = node.multiple(other.node, index);
-        return res;
+        return std::move(res);
       } // multiple
 
       friend class svd_res;
@@ -1482,7 +1496,7 @@ namespace TAT {
         res.U.node = std::move(node_res.U);
         res.S.node = std::move(node_res.S);
         res.V.node = std::move(node_res.V);
-        return res;
+        return std::move(res);
       } // svd
 
       friend class qr_res;
@@ -1502,7 +1516,7 @@ namespace TAT {
         auto node_res = node.qr(plan, q_rank);
         res.Q.node = std::move(node_res.Q);
         res.R.node = std::move(node_res.R);
-        return res;
+        return std::move(res);
       } // qr
     }; // class Tensor
 
@@ -1541,7 +1555,7 @@ namespace TAT {
           assert(a.legs==b.legs);
         } // if
         res.node = a.node * b.node;
-        return res;
+        return std::move(res);
       } // operator*
 
       template<Device device, class Base>
@@ -1565,7 +1579,7 @@ namespace TAT {
           assert(a.legs==b.legs);
         } // if
         res.node = a.node / b.node;
-        return res;
+        return std::move(res);
       } // operator/
 
       template<Device device, class Base>
@@ -1573,7 +1587,15 @@ namespace TAT {
         Tensor<device, Base> res;
         res.legs = a.legs;
         res.node = + a.node;
-        return res;
+        return std::move(res);
+      } // operator+
+
+      template<Device device, class Base>
+      Tensor<device, Base> operator+(Tensor<device, Base>&& a) {
+        Tensor<device, Base> res;
+        res.legs = std::move(a.legs);
+        res.node = + std::move(a.node);
+        return std::move(res);
       } // operator+
 
       template<Device device, class Base>
@@ -1597,7 +1619,7 @@ namespace TAT {
           assert(a.legs==b.legs);
         } // if
         res.node = a.node + b.node;
-        return res;
+        return std::move(res);
       } // operator+
 
       template<Device device, class Base>
@@ -1605,7 +1627,7 @@ namespace TAT {
         Tensor<device, Base> res;
         res.legs = a.legs;
         res.node = - a.node;
-        return res;
+        return std::move(res);
       } // operator-
 
       template<Device device, class Base>
@@ -1629,7 +1651,7 @@ namespace TAT {
           assert(a.legs==b.legs);
         } // if
         res.node = a.node - b.node;
-        return res;
+        return std::move(res);
       } // operator-
 
       template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
