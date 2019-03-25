@@ -18,7 +18,7 @@
 /* TODO LIST
  * - transpose may be optimized
  * - Truncated SVD
- * - dgedqr magma
+ * - dgegqr magma
  * - cuda，sw
  * - use it, peps, kitaev, hubbard
  */
