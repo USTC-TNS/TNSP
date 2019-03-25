@@ -3,7 +3,7 @@ TAT is A Tensor library
 
 ## current function
 - a [TAT lib](https://github.com/hzhangxyz/TAT/blob/TAT/TAT.hpp)
-- a [MPS demo](https://github.com/hzhangxyz/TAT/blob/TAT/Heisenberg_MPS.cpp)
+- a [MPS demo](https://github.com/hzhangxyz/TAT/blob/TAT/Heisenberg_MPS_SU.cpp)
 
 ## history
 after many try and exercise and rewrite include

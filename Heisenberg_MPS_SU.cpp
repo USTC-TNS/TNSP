@@ -72,7 +72,7 @@ struct MPS {
         0, 0, 0, 1
       };
       hamiltonian = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
-      double* hamiltonian_data = hamiltonian.node.data.get();
+      double* hamiltonian_data = hamiltonian.get();
       for (int i=0; i<16; i++) {
         hamiltonian_data[i] = default_H[i];
       }
@@ -86,7 +86,7 @@ struct MPS {
         0, 0, 0, 1
       };
       identity = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
-      double* identity_data = identity.node.data.get();
+      double* identity_data = identity.get();
       for (int i=0; i<16; i++) {
         identity_data[i] = default_I[i];
       }
@@ -144,7 +144,6 @@ struct MPS {
         std::cout << std::setprecision(12) << energy() << std::endl;
       }
     }
-    std::cout << "\n";
   }
 
   double energy_at_i_and_i_plus_1(int i) {

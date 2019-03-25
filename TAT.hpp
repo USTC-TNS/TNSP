@@ -69,7 +69,9 @@ namespace TAT {
 
   namespace legs {
     enum class Legs : unsigned char {
-#define CreateLeg(x) Left##x, Right##x, Up##x, Down##x, Phy##x
+#define CreateLeg(x) \
+        Left##x, Right##x, Up##x, Down##x, Phy##x, \
+        LeftUp##x, LeftDown##x, RightUp##x, RightDown##x
       CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4),
       CreateLeg(5), CreateLeg(6), CreateLeg(7), CreateLeg(8), CreateLeg(9)
 #undef CreateLeg
@@ -77,7 +79,9 @@ namespace TAT {
 
     inline namespace io {
 #define IncEnum(p) {Legs::p, #p}
-#define IncGroup(x) IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x)
+#define IncGroup(x) \
+        IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x), \
+        IncEnum(LeftUp##x), IncEnum(LeftDown##x), IncEnum(RightUp##x), IncEnum(RightDown##x)
       static const std::map<Legs, std::string> legs_str = {
         IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
         IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)
@@ -89,12 +93,46 @@ namespace TAT {
         return out << legs_str.at(value);
       } // operator<<
     } // namespace io
+
+    inline namespace scalar {
+#define IncEnum(p, q) {Legs::p, Legs::q}
+#define IncGroup(x) \
+        IncEnum(Left##x, Right##x), IncEnum(Right##x, Left##x), IncEnum(Up##x, Down##x), IncEnum(Down##x, Up##x), IncEnum(Phy##x, Phy##x), \
+        IncEnum(LeftUp##x, RightDown##x), IncEnum(LeftDown##x, RightUp##x), IncEnum(RightUp##x, LeftDown##x), IncEnum(RightDown##x, LeftUp##x)
+      static const std::map<Legs, Legs> minus_legs = {
+        IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
+        IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)
+      };
+#undef IncGroup
+#undef IncEnum
+
+      Legs operator-(const Legs& value) {
+        return minus_legs.at(value);
+      } // operator-
+
+#define IncEnum(p, q) {Legs::p, Legs::q}
+#define IncGroup(x, y)                                                  \
+        IncEnum(Left##x, Left##y), IncEnum(Right##x, Right##y), IncEnum(Up##x, Up##y), IncEnum(Down##x, Down##y), IncEnum(Phy##x, Phy##y), \
+        IncEnum(LeftUp##x, LeftUp##y), IncEnum(LeftDown##x, LeftDown##y), IncEnum(RightUp##x, RightUp##y), IncEnum(RightDown##x, RightDown##y)
+      static const std::map<Legs, Legs> inc_legs = {
+        IncGroup(, 1), IncGroup(1, 2), IncGroup(2, 3), IncGroup(3, 4), IncGroup(4, 5),
+        IncGroup(5, 6), IncGroup(6, 7), IncGroup(7, 8), IncGroup(8, 9), IncGroup(9,)
+      };
+#undef IncGroup
+#undef IncEnum
+
+      Legs operator+(const Legs& value) {
+        return inc_legs.at(value);
+      } // operator+
+    } // namespace scalar;
   } // namespace legs
   using legs::Legs;
 
   inline namespace legs_name {
 #define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
-#define TAT_DefineLegs(n) TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n)
+#define TAT_DefineLegs(n) \
+           TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n); \
+           TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
 #define TAT_Legs \
   TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
   TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
@@ -475,6 +513,11 @@ namespace TAT {
           base[i] = random();
         } // for i
       } // set_random
+      void set_constant(Base num) {
+        for (Size i=0; i<size; i++) {
+          base[i] = num;
+        } // for i
+      } // set_constant
 
       template<int n>
       Data<device, Base> norm() const {
@@ -966,6 +1009,9 @@ namespace TAT {
       void set_random(Base(*random)()) {
         data.set_random(random);
       } // set_random
+      void set_constant(Base num) {
+        data.set_constant(num);
+      } // set_constant
 
       template<int n>
       Node<device, Base> norm() const {
@@ -1368,6 +1414,9 @@ namespace TAT {
       void set_random(Base(*random)()) {
         node.set_random(random);
       } // set_random
+      void set_constant(Base num) {
+        node.set_constant(num);
+      } // set_constant
 
       void legs_rename(const std::map<Legs, Legs>& dict) {
         for (auto& i : legs) {
@@ -1721,5 +1770,47 @@ namespace TAT {
       } // operator<<
     } // namespace tensor::io
   } // namespace tensor
+
+  using Direction=Legs;
+
+  namespace site {
+    template<Device device, class Base>
+    class Site {
+     public:
+      using GC_Tensor = std::shared_ptr<Tensor<device, Base>>;
+
+      GC_Tensor tensor;
+      std::map<Direction, GC_Tensor> neighbor;
+      std::map<Direction, GC_Tensor> env;
+
+      ~Site() = default;
+      Site() = default;
+      Site(Site<device, Base>&& other) = default;
+      Site(const Site<device, Base>& other) = default;
+      Site<device, Base>& operator=(Site<device, Base>&& other) = default;
+      Site<device, Base>& operator=(const Site<device, Base>& other) = default;
+
+      template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
+      Site(T1&& _dims, T2&& _legs) {
+        tensor = GC_Tensor(new Tensor<device, Base>(std::forward<T2>(_legs), std::forward<T1>(_dims)));
+      }
+
+      Tensor<device, Base>& operator*() const {
+        return *tensor.get();
+      }
+      Tensor<device, Base>* operator->() const {
+        return tensor.get();
+      }
+
+      static link(Site<device, Base>& site1, Site<device, Base>& site2, const Legs& legs1, const Legs& legs2) {
+        site1.neighbor[legs1] = site2.tensor;
+        site2.neighbor[legs2] = site1.tensor;
+      } // link
+
+      static unlink(Site<device, Base>& site1, Site<device, Base>& site2) {
+      } // unlink
+    }; // class Site
+  } // nameespace site
+  using site::Site;
 } // namespace TAT
 #endif // TAT_HPP_
