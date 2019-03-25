@@ -1,5 +1,4 @@
 CXX ?= g++
-NVCC = nvcc
 CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
 CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group -Wl,-Bdynamic -lpthread -lm -ldl
@@ -13,10 +12,10 @@ else
 	CXXFLAGS += -DNDEBUG -Ofast -march=native -fwhole-program
 endif
 
-FILE ?= test.cpp
+all: FILE ?= test.cpp
 all:
-	$(CXX) $(FILE) $(CXXFLAGS)
+	$(CXX) $(FILE) $(CXXFLAGS) -o $(FILE:.cpp=.out)
 
-SFILE ?= TAT.hpp
+style: FILE ?= TAT.hpp
 style:
-	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $(SFILE)
+	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $(FILE)
