@@ -130,8 +130,7 @@ namespace TAT {
 #undef CreateLeg
     }; // enum class Legs
 
-    inline namespace io {}
-    namespace io {
+    inline namespace io {
 #define IncEnum(p) {Legs::p, #p}
 #define IncGroup(x) IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x)
       static const std::map<Legs, std::string> legs_str = {
@@ -148,8 +147,7 @@ namespace TAT {
   } // namespace legs
   using legs::Legs;
 
-  inline namespace legs_name {}
-  namespace legs_name {
+  inline namespace legs_name {
 #define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
 #define TAT_DefineLegs(n) TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n)
 #define TAT_Legs \
@@ -648,8 +646,7 @@ namespace TAT {
       } // qr
     }; // class Data
 
-    inline namespace scalar {}
-    namespace scalar {
+    inline namespace scalar {
       template<class Base>
       void vLinearFrac(const Size& n, const Base* a, const Base* b,
                        const Base& sa, const Base& oa, const Base& sb, const Base& ob,
@@ -874,8 +871,7 @@ namespace TAT {
       } // operator-
     } // namespace data::scalar
 
-    inline namespace io {}
-    namespace io {
+    inline namespace io {
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Data<device, Base>& value) {
         for (Size i=0; i<value.size-1; i++) {
@@ -1109,8 +1105,7 @@ namespace TAT {
       } // qr
     }; // class Node
 
-    inline namespace scalar {}
-    namespace scalar {
+    inline namespace scalar {
       bool operator==(const std::vector<Size>& a, const std::vector<Size>& b) {
         if (a.size()!=b.size()) {
           return false;
@@ -1237,8 +1232,7 @@ namespace TAT {
       } // operator-
     } // namespace node::scalar
 
-    inline namespace io {}
-    namespace io {
+    inline namespace io {
       std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value) {
         Rank size=value.size();
         for (Rank i=0; i<size-1; i++) {
@@ -1510,8 +1504,7 @@ namespace TAT {
       } // qr
     }; // class Tensor
 
-    inline namespace scalar {}
-    namespace scalar {
+    inline namespace scalar {
       bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b) {
         if (a.size()!=b.size()) {
           return false;
@@ -1698,8 +1691,7 @@ namespace TAT {
       } // operator-
     } // namespace tensor::scalar
 
-    inline namespace io {}
-    namespace io {
+    inline namespace io {
       std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value) {
         Rank size=value.size();
         for (Rank i=0; i<size-1; i++) {
