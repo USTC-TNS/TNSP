@@ -1838,19 +1838,19 @@ namespace TAT {
       } // link
 
       static void unlink(Self& site1, Self& site2) {
-        for(const auto& x : site1.neighber) {
-          if(x.second==&site2){
+        for (const auto& x : site1.neighber) {
+          if (x.second==&site2) {
             auto pos1 = site1.env.find(x.first);
-            if(pos1!=site1.env.end()) {
+            if (pos1!=site1.env.end()) {
               site1.env.erase(pos1);
             } // if env
             site1.neighbor.erase(x);
           } // if it is
         } // for
-        for(const auto& x : site2.neighber) {
-          if(x.second==&site1){
+        for (const auto& x : site2.neighber) {
+          if (x.second==&site1) {
             auto pos2 = site2.env.find(x.first);
-            if(pos2!=site2.env.end()) {
+            if (pos2!=site2.env.end()) {
               site2.env.erase(pos2);
             } // if env
             site2.neighbor.erase(x);
