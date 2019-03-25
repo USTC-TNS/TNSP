@@ -214,7 +214,6 @@ int main(int argc, char** argv) {
   args::ValueFlag<int> N(parser, "N", "total step to run [default: 100]", {'N', "step_num"}, 100);
   args::ValueFlag<int> T(parser, "T", "print energy every T step [default: 100]", {'T', "print_inteval"}, 100);
   args::ValueFlag<double> I(parser, "I", "step size when update [default: 0.01]", {'I', "step_size"}, 0.01);
-
   try {
     parser.ParseCLI(argc, argv);
   } catch (const args::Help& h) {
@@ -229,12 +228,10 @@ int main(int argc, char** argv) {
     std::cerr << parser;
     return 1;
   }
-
-  if(version) {
+  if (version) {
     std::cout << "Heisenberg_MPS " TAT_VERSION << std::endl;
     return 0;
   }
-
   Heisenberg_MPS(args::get(L), args::get(D), args::get(S), args::get(N), args::get(T), args::get(I));
   return 0;
 }
