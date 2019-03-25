@@ -199,12 +199,12 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 
 int main(int argc, char** argv) {
   args::ArgumentParser parser(
-    "Heisenberg_MPS (compiled " __DATE__ " " __TIME__ ")\n"
-    "version " TAT_VERSION ",  Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
-    "This program comes with ABSOLUTELY NO WARRANTY.\n"
-    "This is free software, and you are welcome to redistribute it\n"
-    "under the terms and conditions of the GNU General Public License.\n"
-    "See http://www.gnu.org/copyleft/gpl.html for details.\n",
+    "Heisenberg_MPS " TAT_VERSION " (compiled " __DATE__ " " __TIME__ ")\n"
+    "Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+    "This program comes with ABSOLUTELY NO WARRANTY. "
+    "This is free software, and you are welcome to redistribute it "
+    "under the terms and conditions of the GNU General Public License. "
+    "See http://www.gnu.org/copyleft/gpl.html for details.",
     "Simple Update in MPS of Heisenberg Model.");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::Flag version(parser, "version", "Display the version", {'v', "version"});
