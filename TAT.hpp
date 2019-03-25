@@ -1859,7 +1859,7 @@ namespace TAT {
         } // for
       } // unlink
     }; // class Site
-  } // nameespace site
+  } // namespace site
   using site::Site;
 } // namespace TAT
 #endif // TAT_HPP_
