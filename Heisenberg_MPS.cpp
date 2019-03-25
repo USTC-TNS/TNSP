@@ -4,7 +4,7 @@
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -198,13 +198,14 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 }
 
 int main(int argc, char** argv) {
-  args::ArgumentParser parser("This is a test program.", "This goes after the options.");
-  args::ValueFlag<int> L(parser, "L", "system size L=10", {'L', "length"}, 100);
-  args::ValueFlag<unsigned long> D(parser, "D", "bond dimension=12", {'D', "dimension"}, 12);
-  args::ValueFlag<unsigned> S(parser, "S", "random seed=42", {'S', "random_seed"}, 42);
-  args::ValueFlag<int> N(parser, "N", "total step to run=100", {'N', "step_num"}, 100);
-  args::ValueFlag<int> T(parser, "T", "print energy every T step=100", {'T', "print_step"}, 100);
-  args::ValueFlag<double> I(parser, "I", "step size when update=0.01", {'I', "step_size"}, 0.01);
+  args::ArgumentParser parser("Heisenberg_MPS\nversion " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang\ncompiled " __DATE__ " " __TIME__ ".\nThis program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it\nunder the terms and conditions of the GNU General Public License.\nSee http://www.gnu.org/copyleft/gpl.html for details.\n", "Simple Update in MPS of Heisenberg Model.");
+  args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::ValueFlag<int> L(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
+  args::ValueFlag<unsigned long> D(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
+  args::ValueFlag<unsigned> S(parser, "S", "random seed [default: 42]", {'S', "random_seed"}, 42);
+  args::ValueFlag<int> N(parser, "N", "total step to run [default: 100]", {'N', "step_num"}, 100);
+  args::ValueFlag<int> T(parser, "T", "print energy every T step [default: 100]", {'T', "print_inteval"}, 100);
+  args::ValueFlag<double> I(parser, "I", "step size when update [default: 0.01]", {'I', "step_size"}, 0.01);
 
   try {
     parser.ParseCLI(argc, argv);
