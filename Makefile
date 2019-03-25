@@ -12,8 +12,8 @@ else
 	CXXFLAGS += -DNDEBUG -Ofast -march=native -fwhole-program
 endif
 
-all: FILE ?= test.cpp
-all:
+compile: FILE ?= test.cpp
+compile:
 	$(CXX) $(FILE) $(CXXFLAGS) -o $(FILE:.cpp=.out)
 
 style: FILE ?= TAT.hpp
