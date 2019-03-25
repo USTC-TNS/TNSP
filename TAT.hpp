@@ -20,7 +20,6 @@
  * - Truncated SVD
  * - dgegqr magma
  * - cuda，sw
- * - add object bind contract function for better interface
  * - use it, peps, kitaev, hubbard
  */
 
@@ -498,7 +497,9 @@ namespace TAT {
       Data(const Data<device, Base>& other) {
         new (this) Data(other.size);
         std::memcpy(get(), other.get(), size*sizeof(Base));
+#ifndef TAT_NOT_CHECK_COPY
         std::clog << "Copying Data..." << std::endl;
+#endif // TAT_NOT_CHECK_COPY
       }
       Data<device, Base>& operator=(const Data<device, Base>& other) {
         new (this) Data(other);
