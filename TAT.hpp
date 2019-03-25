@@ -20,6 +20,7 @@
  * - Truncated SVD
  * - dgegqr magma
  * - cuda，sw
+ * - add object bind contract function for better interface
  * - use it, peps, kitaev, hubbard
  */
 
