@@ -1,5 +1,5 @@
 /* TAT
- * Copyright (C) 2019  Hao Zhang
+ * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -200,7 +200,7 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 int main(int argc, char** argv) {
   args::ArgumentParser parser(
     "Heisenberg_MPS (compiled " __DATE__ " " __TIME__ ")\n"
-    "version " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang\n"
+    "version " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
     "This program comes with ABSOLUTELY NO WARRANTY.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under the terms and conditions of the GNU General Public License.\n"
