@@ -8,10 +8,10 @@ TAT is A Tensor library
 ## history
 after many try and exercise and rewrite include
 
-- [MPS](https://github.com/Aaaaaaaah/MPS) 2017 Autumn
-- [SquareLattice](https://github.com/Aaaaaaaah/SquareLattice) 2018 Spring
-- [tnsp](https://github.com/hzhangxyz/tnsp) 2018 Autumn
-- [TNC](https://github.com/hzhangxyz/TNC) 2019 Winter
+- [MPS-np/tf](https://github.com/Aaaaaaaah/MPS) 2017 Autumn
+- [SquareLattice-np/tf](https://github.com/Aaaaaaaah/SquareLattice) 2018 Spring
+- [tnsp-np/tf](https://github.com/hzhangxyz/tnsp) 2018 Autumn
+- [TNC-eigen](https://github.com/hzhangxyz/TNC) 2019 Winter
 
 now, I am writing this tensor library finally.
 
