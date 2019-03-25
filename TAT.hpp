@@ -1824,6 +1824,7 @@ namespace TAT {
       } // link
 
       static void link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2, GC_Tensor env) {
+        assert(env->dims().size()==1);
         auto dim = link(site1, legs1, legs2, site2);
         assert(dim==env.size());
         site1.env[legs1] = env;
