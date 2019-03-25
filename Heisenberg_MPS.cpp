@@ -199,9 +199,8 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 
 int main(int argc, char** argv) {
   args::ArgumentParser parser(
-    "Heisenberg_MPS\n"
+    "Heisenberg_MPS (compiled " __DATE__ " " __TIME__ ")\n"
     "version " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang\n"
-    "compiled " __DATE__ " " __TIME__ ".\n"
     "This program comes with ABSOLUTELY NO WARRANTY.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under the terms and conditions of the GNU General Public License.\n"
