@@ -1778,37 +1778,38 @@ namespace TAT {
     template<Device device, class Base>
     class Site {
      public:
+      using Self = Site<device, Base>;
       using OB_Tensor = Tensor<device, Base>;
       using GC_Tensor = std::shared_ptr<OB_Tensor>;
 
       GC_Tensor tensor;
-      std::map<Legs, Site<device, Base>*> neighbor;
+      std::map<Legs, Self*> neighbor;
       std::map<Legs, GC_Tensor> env;
 
       ~Site() = default;
       Site() = default;
-      Site(Site<device, Base>&& other) = default;
-      Site(const Site<device, Base>& other) = default;
-      Site<device, Base>& operator=(Site<device, Base>&& other) = default;
-      Site<device, Base>& operator=(const Site<device, Base>& other) = default;
+      Site(Self&& other) = default;
+      Site(const Self& other) = default;
+      Self& operator=(Self&& other) = default;
+      Self& operator=(const Self& other) = default;
 
       template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-      Site(T1&& _dims, T2&& _legs) : tensor(new Tensor<device, Base>(std::forward<T2>(_legs), std::forward<T1>(_dims))) {}
+      Site(T1&& _dims, T2&& _legs) : tensor(new OB_Tensor(std::forward<T2>(_legs), std::forward<T1>(_dims))) {}
 
-      const Tensor<device, Base>& operator*() const {
+      const OB_Tensor& operator*() const {
         return *tensor.get();
       } // operator*
-      Tensor<device, Base>& operator*() {
+      OB_Tensor& operator*() {
         return *tensor.get();
       } // operator*
-      const Tensor<device, Base>* operator->() const {
+      const OB_Tensor* operator->() const {
         return tensor.get();
       } // operator->
-      Tensor<device, Base>* operator->() {
+      OB_Tensor* operator->() {
         return tensor.get();
       } // operator->
 
-      static Size link(Site<device, Base>& site1, const Legs& legs1, const Legs& legs2, Site<device, Base>& site2) {
+      static Size link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2) {
         assert(legs1==-legs2);
         auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
         auto pos2 = std::find(site2->legs.begin(), site2->legs.end(), legs2);
@@ -1822,21 +1823,21 @@ namespace TAT {
         return site1->dims()[index1];
       } // link
 
-      static void link(Site<device, Base>& site1, const Legs& legs1, const Legs& legs2, Site<device, Base>& site2, GC_Tensor env) {
+      static void link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2, GC_Tensor env) {
         auto dim = link(site1, legs1, legs2, site2);
         assert(dim==env.size());
         site1.env[legs1] = env;
         site2.env[legs2] = env;
       } // link
 
-      static void link(Site<device, Base>& site1, const Legs& legs1, const Legs& legs2, Site<device, Base>& site2, bool add_env) {
+      static void link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2, bool add_env) {
         auto dim = link(site1, legs1, legs2, site2);
         auto env = GC_Tensor(new Tensor<device, Base>({Phy}, {dim}));
         site1.env[legs1] = env;
         site2.env[legs2] = env;
       } // link
 
-      static void unlink(Site<device, Base>& site1, Site<device, Base>& site2) {
+      static void unlink(Self& site1, Self& site2) {
         for(const auto& x : site1.neighber) {
           if(x.second==&site2){
             auto pos1 = site1.env.find(x.first);
