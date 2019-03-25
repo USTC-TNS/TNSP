@@ -72,9 +72,9 @@ struct MPS {
         0, 0, 0, 1
       };
       hamiltonian = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
-      double* H = hamiltonian.node.data.get();
+      double* hamiltonian_data = hamiltonian.node.data.get();
       for (int i=0; i<16; i++) {
-        H[i] = default_H[i];
+        hamiltonian_data[i] = default_H[i];
       }
       hamiltonian /= 4;
     } // hamiltonian
@@ -86,9 +86,9 @@ struct MPS {
         0, 0, 0, 1
       };
       identity = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
-      double* I = identity.node.data.get();
+      double* identity_data = identity.node.data.get();
       for (int i=0; i<16; i++) {
-        I[i] = default_I[i];
+        identity_data[i] = default_I[i];
       }
     } // identity
   }
@@ -208,12 +208,12 @@ int main(int argc, char** argv) {
     "Simple Update in MPS of Heisenberg Model.");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
   args::Flag version(parser, "version", "Display the version", {'v', "version"});
-  args::ValueFlag<int> L(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
-  args::ValueFlag<unsigned long> D(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
-  args::ValueFlag<unsigned> S(parser, "S", "random seed [default: 42]", {'S', "random_seed"}, 42);
-  args::ValueFlag<int> N(parser, "N", "total step to run [default: 100]", {'N', "step_num"}, 100);
-  args::ValueFlag<int> T(parser, "T", "print energy every T step [default: 100]", {'T', "print_inteval"}, 100);
-  args::ValueFlag<double> I(parser, "I", "step size when update [default: 0.01]", {'I', "step_size"}, 0.01);
+  args::ValueFlag<int> length(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
+  args::ValueFlag<unsigned long> dimension(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
+  args::ValueFlag<unsigned> random_seed(parser, "S", "random seed [default: 42]", {'S', "random_seed"}, 42);
+  args::ValueFlag<int> step_num(parser, "N", "total step to run [default: 100]", {'N', "step_num"}, 100);
+  args::ValueFlag<int> print_inteval(parser, "T", "print energy every T step [default: 100]", {'T', "print_inteval"}, 100);
+  args::ValueFlag<double> step_size(parser, "I", "step size when update [default: 0.01]", {'I', "step_size"}, 0.01);
   try {
     parser.ParseCLI(argc, argv);
   } catch (const args::Help& h) {
@@ -232,6 +232,6 @@ int main(int argc, char** argv) {
     std::cout << "Heisenberg_MPS " TAT_VERSION << std::endl;
     return 0;
   }
-  Heisenberg_MPS(args::get(L), args::get(D), args::get(S), args::get(N), args::get(T), args::get(I));
+  Heisenberg_MPS(args::get(length), args::get(dimension), args::get(random_seed), args::get(step_num), args::get(print_inteval), args::get(step_size));
   return 0;
 }
