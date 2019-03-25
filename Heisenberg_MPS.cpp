@@ -200,13 +200,14 @@ void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_s
 int main(int argc, char** argv) {
   args::ArgumentParser parser(
     "Heisenberg_MPS (compiled " __DATE__ " " __TIME__ ")\n"
-    "version " "v0.0.1" ",  Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+    "version " TAT_VERSION ",  Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
     "This program comes with ABSOLUTELY NO WARRANTY.\n"
     "This is free software, and you are welcome to redistribute it\n"
     "under the terms and conditions of the GNU General Public License.\n"
     "See http://www.gnu.org/copyleft/gpl.html for details.\n",
     "Simple Update in MPS of Heisenberg Model.");
   args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+  args::Flag version(parser, "version", "Display the version", {'v', "version"});
   args::ValueFlag<int> L(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
   args::ValueFlag<unsigned long> D(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
   args::ValueFlag<unsigned> S(parser, "S", "random seed [default: 42]", {'S', "random_seed"}, 42);
@@ -227,6 +228,11 @@ int main(int argc, char** argv) {
     std::cerr << e.what() << std::endl;
     std::cerr << parser;
     return 1;
+  }
+
+  if(version) {
+    std::cout << "Heisenberg_MPS " TAT_VERSION << std::endl;
+    return 0;
   }
 
   Heisenberg_MPS(args::get(L), args::get(D), args::get(S), args::get(N), args::get(T), args::get(I));
