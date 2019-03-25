@@ -577,6 +577,15 @@ namespace TAT {
         return std::move(res);
       } // contract
 
+      Data<device, Base> contract(const Data<device, Base>& data2,
+                                  const std::vector<Size>& dims1,
+                                  const std::vector<Size>& dims2,
+                                  const std::vector<Rank>& plan1,
+                                  const std::vector<Rank>& plan2,
+                                  const Size& m, const Size& k, const Size& n) const {
+        return std::move(Data<device, Base>::contract(*this, data2, dims1, dims2, plan1, plan2, m, k, n));
+      } // contract
+
       Data<device, Base> multiple(const Data<device, Base>& other, const Size& a, const Size& b, const Size& c) const {
         Data<device, Base> res(size);
         assert(b==other.size);
@@ -1049,6 +1058,13 @@ namespace TAT {
         return std::move(res);
       } // contract
 
+      Node<device, Base> contract(const Node<device, Base>& node2,
+                                  const std::vector<Rank>& plan1,
+                                  const std::vector<Rank>& plan2,
+                                  const Rank& contract_num) const {
+        return std::move(Node<device, Base>::contract(*this, node2, plan1, plan2, contract_num));
+      } // contract
+
       Node<device, Base> multiple(const Node<device, Base>& other, const Rank& index) const {
         Node<device, Base> res;
         res.dims = dims;
@@ -1464,6 +1480,14 @@ namespace TAT {
         assert(plan2.size()==tensor2.legs.size());
         res.node = Node<device, Base>::contract(tensor1.node, tensor2.node, plan1, plan2, contract_num);
         return std::move(res);
+      } // contract
+
+      Tensor<device, Base> contract(const Tensor<device, Base>& tensor2,
+                                    const std::vector<Legs> legs1,
+                                    const std::vector<Legs> legs2,
+                                    const std::map<Legs, Legs>& map1 = {},
+                                    const std::map<Legs, Legs>& map2 = {}) const {
+        return std::move(Tensor<device, Base>::contract(*this, tensor2, legs1, legs2, map1, map2));
       } // contract
 
       Tensor<device, Base> multiple(const Tensor<device, Base>& other, const Legs& position) const {
