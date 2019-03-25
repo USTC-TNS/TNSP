@@ -1780,7 +1780,7 @@ namespace TAT {
       using GC_Tensor = std::shared_ptr<Tensor<device, Base>>;
 
       GC_Tensor tensor;
-      std::map<Direction, GC_Tensor> neighbor;
+      std::map<Direction, Site<device, Base>*> neighbor;
       std::map<Direction, GC_Tensor> env;
 
       ~Site() = default;
@@ -1795,19 +1795,55 @@ namespace TAT {
         tensor = GC_Tensor(new Tensor<device, Base>(std::forward<T2>(_legs), std::forward<T1>(_dims)));
       }
 
-      Tensor<device, Base>& operator*() const {
+      const Tensor<device, Base>& operator*() const {
         return *tensor.get();
       }
-      Tensor<device, Base>* operator->() const {
+      Tensor<device, Base>& operator*() {
+        return *tensor.get();
+      }
+      const Tensor<device, Base>* operator->() const {
+        return tensor.get();
+      }
+      Tensor<device, Base>* operator->() {
         return tensor.get();
       }
 
-      static link(Site<device, Base>& site1, Site<device, Base>& site2, const Legs& legs1, const Legs& legs2) {
-        site1.neighbor[legs1] = site2.tensor;
-        site2.neighbor[legs2] = site1.tensor;
+      static void link(Site<device, Base>& site1, Site<device, Base>& site2, const Legs& legs1, const Legs& legs2, bool add_env=false) {
+        assert(legs1==-legs2);
+        auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
+        auto pos2 = std::find(site2->legs.begin(), site2->legs.end(), legs2);
+        assert(pos1!=site1->legs.end());
+        assert(pos2!=site2->legs.end());
+        Rank index1 = std::distance(site1->legs.begin(), pos1);
+        Rank index2 = std::distance(site2->legs.begin(), pos2);
+        site1.neighbor[legs1] = &site2;
+        site2.neighbor[legs2] = &site1;
+        if (add_env) {
+          assert(site1->dims()[index1]==site2->dims()[index2]);
+          site1.env[legs1] = GC_Tensor(new Tensor<device, Base>({Phy}, {site1->dims()[index1]}));
+          site2.env[legs2] = site1.env[legs1];
+        } // if env
       } // link
 
-      static unlink(Site<device, Base>& site1, Site<device, Base>& site2) {
+      static void unlink(Site<device, Base>& site1, Site<device, Base>& site2) {
+        for(const auto& x : site1.neighber) {
+          if(x.second==&site2){
+            auto pos1 = site1.env.find(x.first);
+            if(pos1!=site1.env.end()) {
+              site1.env.erase(pos1);
+            }
+            site1.neighbor.erase(x);
+          }
+        }
+        for(const auto& x : site2.neighber) {
+          if(x.second==&site1){
+            auto pos2 = site2.env.find(x.first);
+            if(pos2!=site2.env.end()) {
+              site2.env.erase(pos2);
+            }
+            site2.neighbor.erase(x);
+          }
+        }
       } // unlink
     }; // class Site
   } // nameespace site
