@@ -34,6 +34,11 @@
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl, exit(233)
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 
+#if (!defined TAT_USE_CPU && !defined TAT_USE_CUDA && !defined TAT_USE_DCU && !defined TAT_USE_SW)
+#warning use CPU by default
+#define TAT_USE_CPU
+#endif
+
 #ifdef TAT_USE_CPU
 extern "C"
 {
@@ -1298,6 +1303,54 @@ namespace TAT {
   } // namespace node
 
   namespace tensor {
+    namespace internal {
+      template<class T>
+      bool in(const T& i, const std::vector<T>& b) {
+        auto pos = std::find(b.begin(), b.end(), i);
+        return pos!=b.end();
+      } // in
+
+      template<class T>
+      std::vector<T> in_and_in(const std::vector<T>& a, const std::vector<T>& b) {
+        std::vector<T> res;
+        for (const auto& i : a) {
+          if (in(i, b)) {
+            res.push_back(i);
+          }
+        }
+        return res;
+      } // in_and_in
+
+      template<class T>
+      std::vector<T> in_and_not_in(const std::vector<T>& a, const std::vector<T>& b) {
+        std::vector<T> res;
+        for (const auto& i : a) {
+          if (!in(i, b)) {
+            res.push_back(i);
+          }
+        }
+        return res;
+      } // in_and_not_in
+
+      template<class T>
+      void append(std::vector<T>& a, const std::vector<T>& b) {
+        a.insert(a.end(), b.begin(), b.end());
+      } // append
+
+      template<class T>
+      std::vector<T> map_or_not(const std::vector<T>& a, const std::map<T, T>& b) {
+        std::vector<T> res;
+        for (const auto& i : a) {
+          try {
+            res.push_back(b.at(i));
+          } catch (const std::out_of_range& e) {
+            res.push_back(i);
+          } // try
+        } // for
+        return res;
+      } // map_or_not
+    } // namespace tensor::internal
+
     namespace transpose {
       void plan(std::vector<Rank>& plan, const std::vector<Legs>& new_legs, const std::vector<Legs>& legs) {
         const Rank& rank = legs.size();
@@ -1323,48 +1376,22 @@ namespace TAT {
                 const std::vector<Legs>& legs2,
                 const std::map<Legs, Legs>& map1,
                 const std::map<Legs, Legs>& map2) {
-        Rank contract_num1 = 0, contract_num2 = 0;;
-        for (const auto& i : total_legs1) {
-          auto pos = std::find(legs1.begin(), legs1.end(), i);
-          if (pos == legs1.end()) {
-            new_legs1.push_back(i);
-            try {
-              legs.push_back(map1.at(i));
-            } catch (const std::out_of_range& e) {
-              legs.push_back(i);
-            } // try
-          } // if
-        } // for
-        for(const auto& i : legs1) {
-          auto pos = std::find(total_legs1.begin(), total_legs1.end(), i);
-          if (pos != total_legs1.end()) {
-            new_legs1.push_back(i);
-            contract_num1++;
-          }
-        }
-        //new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
+        auto filt_legs1 = internal::in_and_not_in(total_legs1, legs1);
+        internal::append(new_legs1, filt_legs1);
+        internal::append(legs, internal::map_or_not(filt_legs1, map1));
 
-        //new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
-        for(const auto& i : legs2) {
-          auto pos = std::find(total_legs2.begin(), total_legs2.end(), i);
-          if (pos != total_legs2.end()) {
-            new_legs2.push_back(i);
-            contract_num2++;
-          }
-        }
-        for (const auto& i : total_legs2) {
-          auto pos = std::find(legs2.begin(), legs2.end(), i);
-          if (pos == legs2.end()) {
-            new_legs2.push_back(i);
-            try {
-              legs.push_back(map2.at(i));
-            } catch (const std::out_of_range& e) {
-              legs.push_back(i);
-            } // try
-          } // if
-        } // for
-        assert(contract_num1==contract_num2);
-        contract_num = contract_num1;
+        auto tmp_legs1 = internal::in_and_in(legs1, total_legs1);
+        internal::append(new_legs1, tmp_legs1);
+
+        auto tmp_legs2 = internal::in_and_in(legs2, total_legs2);
+        internal::append(new_legs2, tmp_legs2);
+
+        auto filt_legs2 = internal::in_and_not_in(total_legs2, legs2);
+        internal::append(new_legs2, filt_legs2);
+        internal::append(legs, internal::map_or_not(filt_legs2, map2));
+
+        assert(tmp_legs1.size()==tmp_legs2.size());
+        contract_num = tmp_legs1.size();
       } // plan
     } // namespace tensor::contract
 
@@ -1382,11 +1409,10 @@ namespace TAT {
         u_rank = u_legs.size();
         V_legs.push_back(new_v_legs);
         for (const auto& i : total_legs) {
-          auto pos = std::find(u_legs.begin(), u_legs.end(), i);
-          if (pos==u_legs.end()) { // to V
-            V_legs.push_back(i);
-          } else { // to U
+          if(internal::in(i, u_legs)) {
             U_legs.push_back(i);
+          } else {
+            V_legs.push_back(i);
           } // if
         } // for
         U_legs.push_back(new_u_legs);
@@ -1470,12 +1496,7 @@ namespace TAT {
 
       Tensor<device, Base> transpose(const std::vector<Legs>& new_legs) const {
         Tensor<device, Base> res;
-        for(auto& i : new_legs) {
-          auto pos = std::find(legs.begin(), legs.end(), i);
-          if(pos!=legs.end()){
-            res.legs.push_back(i);
-          } // if
-        } // for, filter new_legs
+        res.legs = internal::in_and_in(new_legs, legs);
         assert(legs.size()==res.legs.size());
 #ifndef NDEBUG
         auto set_new = std::set<Legs>(res.legs.begin(), res.legs.end());
@@ -1526,7 +1547,7 @@ namespace TAT {
         assert(other.legs.size()==1);
         res.legs = legs;
         auto pos = std::find(legs.begin(), legs.end(), position);
-        if(pos==legs.end()) {
+        if (pos==legs.end()) {
           return *this;
         }
         Rank index = std::distance(legs.begin(), pos);
@@ -1542,7 +1563,8 @@ namespace TAT {
         Tensor<device, Base> V;
       }; // class svd_res
 
-      svd_res svd(const std::vector<Legs>& u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut=-1) const {
+      svd_res svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut=-1) const {
+        std::vector<Legs> u_legs = internal::in_and_in(legs, input_u_legs);
         svd_res res;
         std::vector<Legs> tmp_legs;
         std::vector<Rank> plan;
@@ -1564,7 +1586,8 @@ namespace TAT {
         Tensor<device, Base> R;
       }; // class qr_res
 
-      qr_res qr(const std::vector<Legs>& q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
+      qr_res qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
+        std::vector<Legs> q_legs = internal::in_and_in(legs, input_q_legs);
         qr_res res;
         std::vector<Legs> tmp_legs;
         std::vector<Rank> plan;
