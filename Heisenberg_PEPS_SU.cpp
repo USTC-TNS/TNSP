@@ -42,7 +42,7 @@
 struct PEPS {
   using Size=TAT::Size;
   using Legs=TAT::Legs
-  using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
+             using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
 
   int L1;
   int L2;
@@ -127,10 +127,10 @@ struct PEPS {
       for (int j=0; j<L2-1; j++) {
         Tensor t1 = cal_neighbor(i, j, Right);
         Tensor t2 = cal_neighbor(i, j+1, Phy);
-        Tensor Big = t1.contract(t2, {Right}, {Left}, {{Up, Up1},{Down, Down1},{Phy,Phy1}}, {{Up, Up2}, {Down, Down2}, {Phy, Phy2}}).contract(updater, {Phy1, Phy2}, {Phy3, Phy4});
+        Tensor Big = t1.contract(t2, {Right}, {Left}, {{Up, Up1}, {Down, Down1}, {Phy, Phy1}}, {{Up, Up2}, {Down, Down2}, {Phy, Phy2}}).contract(updater, {Phy1, Phy2}, {Phy3, Phy4});
         auto SVD = Big.svd({Left, Up1, Down1, Phy1}, Right, Left, D);
-        env[{i,j,Right}] = std::move(SVD.S);
-        lattice[{i,j}] = std::move(SVD.U.legs_rename({{Up1, Up},{Down1, Down}}));
+        env[ {i, j, Right}] = std::move(SVD.S);
+        lattice[ {i, j}] = std::move(SVD.U.legs_rename({{Up1, Up}, {Down1, Down}}));
       }
     }
     for (int i=0; i<L1-1; i++) {
@@ -141,17 +141,17 @@ struct PEPS {
 
   std::tuple<Tensor&, Legs> get_neighbor(int i, int j, Legs leg) {
     std::tuple<Tensor&, Legs> res;
-    if(i!=0 && leg!=Up) res.push_back({env[{i-1,j,Down}], Up});
-    if(j!=0 && leg!=Left) res.push_back({env[{i,j-1,Right}], Left});
-    if(i!=L1-1 && leg!=Down) res.push_back({env[{i,j,Down}], Down});
-    if(j!=L2-1 && leg!=Right) res.push_back({env[{i,j,Right}], Right});
+    if (i!=0 && leg!=Up) res.push_back({env[{i-1, j, Down}], Up});
+    if (j!=0 && leg!=Left) res.push_back({env[{i, j-1, Right}], Left});
+    if (i!=L1-1 && leg!=Down) res.push_back({env[{i, j, Down}], Down});
+    if (j!=L2-1 && leg!=Right) res.push_back({env[{i, j, Right}], Right});
     return std::move(res);
   }
 
   Tensor calc_neighbor(int i, int j, Legs leg) {
     auto n = get_neighbor(i, j, leg);
-    Tensor res = lattice[{i,j}].multiple(std::get<0>(n[0]), std::get<1>(n[0]));
-    for(int i=1;i<n.size();i++) {
+    Tensor res = lattice[ {i, j}].multiple(std::get<0>(n[0]), std::get<1>(n[0]));
+    for (int i=1; i<n.size(); i++) {
       res = res.multiple(std::get<0>(n[i]), std::get<1>(n[i]));
     }
     return std::move(res);
