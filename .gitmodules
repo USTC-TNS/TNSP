@@ -3,7 +3,8 @@
 	url = git@github.com:hzhangxyz/hptt.git
 [submodule "cutt"]
 	path = cutt
-	url = https://github.com/ap-hynninen/cutt.git
+	url = git@github.com:hzhangxyz/cutt.git
 [submodule "args"]
 	path = args
 	url = git@github.com:hzhangxyz/args.git
+	
