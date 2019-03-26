@@ -41,6 +41,7 @@
 
 struct PEPS {
   using Size=TAT::Size;
+  using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
   using Site=TAT::Site<TAT::Device::CPU, double>;
 
   int L1;

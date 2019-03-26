@@ -1879,7 +1879,6 @@ namespace TAT {
       } // operator=
 
       static Size link_with(Self& site1, const Legs& legs1, Self& site2, const Legs& legs2) {
-        assert(legs1==-legs2);
         site1.neighbor[legs1] = SelfEdge(site1, legs1, site2, legs2);
         auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
         assert(pos1!=site1->legs.end());
