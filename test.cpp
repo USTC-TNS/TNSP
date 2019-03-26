@@ -22,6 +22,8 @@
 #include "TAT.hpp"
 
 using namespace TAT;
+using namespace legs_name;
+
 int main() {
   std::ios_base::sync_with_stdio(false);
   std::cout << "scalar\n";

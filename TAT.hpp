@@ -28,6 +28,8 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <algorithm>
+#include <memory>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl, exit(233)
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
@@ -128,20 +130,21 @@ namespace TAT {
   } // namespace legs
   using legs::Legs;
 
-  inline namespace legs_name {
+  namespace legs_name {
 #define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
 #define TAT_DefineLegs(n) \
-           TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n); \
-           TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
+    TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n); \
+    TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
 #define TAT_Legs \
-  TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
-  TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
+    TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
+    TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
 
     TAT_Legs;
 #undef TAT_Legs
 #undef TAT_DefineLegs
 #undef TAT_DefineLeg
   } // namespace legs_name
+
 
   using Size = std::size_t;
   using Rank = unsigned int;
@@ -1833,7 +1836,7 @@ namespace TAT {
 
       static void link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2, bool add_env) {
         auto dim = link(site1, legs1, legs2, site2);
-        auto env = GC_Tensor(new Tensor<device, Base>({Phy}, {dim}));
+        auto env = GC_Tensor(new Tensor<device, Base>({Legs::Phy}, {dim}));
         site1.env[legs1] = env;
         site2.env[legs2] = env;
       } // link
