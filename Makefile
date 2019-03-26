@@ -1,4 +1,4 @@
-CXX ?= g++
+CXX = clang++
 
 TAT_VERSION = $(shell git describe --tags)
 CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\"
@@ -10,7 +10,7 @@ CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/int
 CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
 CXXFLAGS += -Iargs
 
-DEBUG ?= 1
+DEBUG ?= 0
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
 else
@@ -19,6 +19,12 @@ else
 		CXXFLAGS += -fwhole-program
 	endif
 endif
+
+all: style compile
+
+compile: test.out Heisenberg_MPS_SU.out Heisenberg_PEPS_SU.out
+
+style: test.cpp.style TAT.hpp.style Heisenberg_MPS_SU.cpp.style Heisenberg_PEPS_SU.cpp.style
 
 %.out: %.cpp
 	$(CXX) $< $(CXXFLAGS) -o $@
