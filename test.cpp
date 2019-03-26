@@ -166,6 +166,12 @@ int main() {
       std::cout << t1 << std::endl << t2 << std::endl;
     }
     {
+      Tensor<> t1({2, 3, 4, 5}, {Down, Up, Left, Right});
+      t1.set_test();
+      auto t2 = t1.transpose({Left, Down, Right, Phy, Up});
+      std::cout << t1 << std::endl << t2 << std::endl;
+    }
+    {
       //Tensor<> t1({2,3},{Left,Right});
       //auto t2 = t1.transpose({Right,Down});
     }
@@ -204,6 +210,13 @@ int main() {
       t1.set_test();
       t2.set_test();
       std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up, Right}, {Up, Down}, {}, {{Left, Left3}}) << std::endl;
+    }
+    {
+      Tensor<> t1({2, 3, 4, 5, 6}, {Down, Up, Left, Right, Phy});
+      Tensor<> t2({5, 3, 7}, {Down, Up, Left});
+      t1.set_test();
+      t2.set_test();
+      std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up, Right,Left3, Right3}, {Up, Down, Left4, Right4}, {{Left2, Right2}}, {{Left, Left3}}) << std::endl;
     }
     {
       //Tensor<> t1({2,3}, {Down, Up});

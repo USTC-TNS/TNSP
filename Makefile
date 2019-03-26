@@ -12,7 +12,7 @@ CXXFLAGS += -Iargs
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
-	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra -fprofile-arcs -ftest-coverage
+	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra #-fprofile-arcs -ftest-coverage
 else
 	CXXFLAGS += -DNDEBUG -Ofast -march=native
 	ifeq ($(CXX), g++)

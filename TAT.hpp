@@ -1064,6 +1064,7 @@ namespace TAT {
         res.dims = dims;
         Size a=1, b=1, c=1;
         multiple::plan(a, b, c, dims, index);
+        assert(other.dims.size()==1);
         assert(b==other.dims[0]);
         res.data = data.multiple(other.data, a, b, c);
         return std::move(res);
@@ -1312,7 +1313,8 @@ namespace TAT {
     } // namespace tensor::transpose
 
     namespace contract {
-      void plan(std::vector<Legs>& legs,
+      void plan(Rank& contract_num,
+                std::vector<Legs>& legs,
                 std::vector<Legs>& new_legs1,
                 std::vector<Legs>& new_legs2,
                 const std::vector<Legs>& total_legs1,
@@ -1321,6 +1323,7 @@ namespace TAT {
                 const std::vector<Legs>& legs2,
                 const std::map<Legs, Legs>& map1,
                 const std::map<Legs, Legs>& map2) {
+        Rank contract_num1 = 0, contract_num2 = 0;;
         for (const auto& i : total_legs1) {
           auto pos = std::find(legs1.begin(), legs1.end(), i);
           if (pos == legs1.end()) {
@@ -1332,9 +1335,23 @@ namespace TAT {
             } // try
           } // if
         } // for
-        new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
+        for(const auto& i : legs1) {
+          auto pos = std::find(total_legs1.begin(), total_legs1.end(), i);
+          if (pos != total_legs1.end()) {
+            new_legs1.push_back(i);
+            contract_num1++;
+          }
+        }
+        //new_legs1.insert(new_legs1.end(), legs1.begin(), legs1.end());
 
-        new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
+        //new_legs2.insert(new_legs2.end(), legs2.begin(), legs2.end());
+        for(const auto& i : legs2) {
+          auto pos = std::find(total_legs2.begin(), total_legs2.end(), i);
+          if (pos != total_legs2.end()) {
+            new_legs2.push_back(i);
+            contract_num2++;
+          }
+        }
         for (const auto& i : total_legs2) {
           auto pos = std::find(legs2.begin(), legs2.end(), i);
           if (pos == legs2.end()) {
@@ -1346,6 +1363,8 @@ namespace TAT {
             } // try
           } // if
         } // for
+        assert(contract_num1==contract_num2);
+        contract_num = contract_num1;
       } // plan
     } // namespace tensor::contract
 
@@ -1449,13 +1468,24 @@ namespace TAT {
         return std::move(res);
       } // to
 
-      template<class T=std::vector<Legs>>
-      Tensor<device, Base> transpose(T&& new_legs) const {
+      Tensor<device, Base> transpose(const std::vector<Legs>& new_legs) const {
         Tensor<device, Base> res;
-        res.legs = std::forward<T>(new_legs);
+        for(auto& i : new_legs) {
+          auto pos = std::find(legs.begin(), legs.end(), i);
+          if(pos!=legs.end()){
+            res.legs.push_back(i);
+          } // if
+        } // for, filter new_legs
+        assert(legs.size()==res.legs.size());
+#ifndef NDEBUG
+        auto set_new = std::set<Legs>(res.legs.begin(), res.legs.end());
+        assert(set_new.size()==res.legs.size());
+        set_new.insert(legs.begin(), legs.end());
+        assert(set_new.size()==res.legs.size());
+#endif // NDEBUG
         std::vector<Rank> plan;
         transpose::plan(plan, res.legs, legs);
-        assert(new_legs.size()==legs.size());
+        assert(res.legs.size()==legs.size());
         assert(plan.size()==legs.size());
         res.node = node.transpose(plan);
         return std::move(res);
@@ -1470,9 +1500,9 @@ namespace TAT {
         Tensor<device, Base> res;
         std::vector<Legs> new_legs1, new_legs2;
         std::vector<Rank> plan1, plan2;
-        Rank contract_num = legs1.size();
+        Rank contract_num;
         assert(legs1.size()==legs2.size());
-        contract::plan(res.legs, new_legs1, new_legs2, tensor1.legs, tensor2.legs, legs1, legs2, map1, map2);
+        contract::plan(contract_num, res.legs, new_legs1, new_legs2, tensor1.legs, tensor2.legs, legs1, legs2, map1, map2);
         transpose::plan(plan1, new_legs1, tensor1.legs);
         transpose::plan(plan2, new_legs2, tensor2.legs);
         assert(new_legs1.size()==tensor1.legs.size());
@@ -1496,6 +1526,9 @@ namespace TAT {
         assert(other.legs.size()==1);
         res.legs = legs;
         auto pos = std::find(legs.begin(), legs.end(), position);
+        if(pos==legs.end()) {
+          return *this;
+        }
         Rank index = std::distance(legs.begin(), pos);
         res.node = node.multiple(other.node, index);
         return std::move(res);
