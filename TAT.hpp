@@ -1812,7 +1812,11 @@ namespace TAT {
         return tensor.get();
       } // operator->
 
-      static Size link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2) {
+      template<bool env=false>
+      static Size link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2);
+
+      template<>
+      static Size link<false>(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2) {
         assert(legs1==-legs2);
         auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
         auto pos2 = std::find(site2->legs.begin(), site2->legs.end(), legs2);
@@ -1828,14 +1832,15 @@ namespace TAT {
 
       static void link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2, GC_Tensor env) {
         assert(env->dims().size()==1);
-        auto dim = link(site1, legs1, legs2, site2);
+        auto dim = link<false>(site1, legs1, legs2, site2);
         assert(dim==env.size());
         site1.env[legs1] = env;
         site2.env[legs2] = env;
       } // link
 
-      static void link(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2, bool add_env) {
-        auto dim = link(site1, legs1, legs2, site2);
+      template<>
+      static void link<true>(Self& site1, const Legs& legs1, const Legs& legs2, Self& site2) {
+        auto dim = link<false>(site1, legs1, legs2, site2);
         auto env = GC_Tensor(new Tensor<device, Base>({Legs::Phy}, {dim}));
         site1.env[legs1] = env;
         site2.env[legs2] = env;
