@@ -41,7 +41,7 @@
 
 struct PEPS {
   using Size=TAT::Size;
-  using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
+  using Site=TAT::Site<TAT::Device::CPU, double>;
 
   int L1;
   int L2;
@@ -51,8 +51,7 @@ struct PEPS {
   Tensor identity;
 
   enum class Direction {Right, Down};
-  std::map<std::tuple<int, int>, Tensor> lattice;
-  std::map<std::tuple<int, int, Direction>, Tensor> env;
+  std::map<std::tuple<int, int>, Site> lattice;
 
   PEPS (int _L1, int _L2, Size _d, Size _D, double* H_data) : L1(_L1), L2(_L2), d(_d), D(_D) {
     using namespace TAT::legs_name;
@@ -73,7 +72,7 @@ struct PEPS {
           if (j==L2-1) {
             right = 1;
           }
-          lattice[ {i, j}] = Tensor({d, left, right, up, down}, {Phy, Left, Right, Up, Down});
+          lattice[ {i, j}] = Site({d, left, right, up, down}, {Phy, Left, Right, Up, Down});
         }
       }
     }
