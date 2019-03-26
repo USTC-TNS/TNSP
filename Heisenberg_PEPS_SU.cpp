@@ -80,16 +80,16 @@ struct PEPS {
     {
       for (int i=0; i<L1; i++) {
         for (int j=0; j<L2-1; j++) {
-          env[{i,j,Direction::Right}] = Tensor({D}, {Phy});
-          env[{i,j,Direction::Right}].set_constant(1);
-          std::cout << env[{i,j,Direction::Right}];
+          env[ {i, j, Direction::Right}] = Tensor({D}, {Phy});
+          env[ {i, j, Direction::Right}].set_constant(1);
+          std::cout << env[ {i, j, Direction::Right}];
         }
       }
       for (int i=0; i<L1-1; i++) {
         for (int j=0; j<L2; j++) {
-          env[{i,j,Direction::Down}] = Tensor({D}, {Phy});
-          env[{i,j,Direction::Down}].set_constant(1);
-          std::cout << env[{i,j,Direction::Down}];
+          env[ {i, j, Direction::Down}] = Tensor({D}, {Phy});
+          env[ {i, j, Direction::Down}].set_constant(1);
+          std::cout << env[ {i, j, Direction::Down}];
         }
       }
     }
@@ -114,8 +114,8 @@ struct PEPS {
     std::srand(seed);
     for (int i=0; i<L1; i++) {
       for (int j=0; j<L2; j++) {
-        lattice[{i, j}].set_random(random);
-        std::cout << lattice[{i, j}] << std::endl;
+        lattice[ {i, j}].set_random(random);
+        std::cout << lattice[ {i, j}] << std::endl;
       }
     }
   }

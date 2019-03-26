@@ -20,10 +20,8 @@ else
 	endif
 endif
 
-compile: FILE ?= test.cpp
-compile:
-	$(CXX) $(FILE) $(CXXFLAGS) -o $(FILE:.cpp=.out)
+%.out: %.cpp
+	$(CXX) $< $(CXXFLAGS) -o $@
 
-style: FILE ?= TAT.hpp
-style:
-	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $(FILE)
+%.style: %
+	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $<
