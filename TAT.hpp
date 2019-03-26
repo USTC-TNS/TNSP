@@ -1424,13 +1424,14 @@ namespace TAT {
         node.set_constant(num);
       } // set_constant
 
-      void legs_rename(const std::map<Legs, Legs>& dict) {
+      Tensor<device, Base>& legs_rename(const std::map<Legs, Legs>& dict) {
         for (auto& i : legs) {
           auto where = dict.find(i);
           if (where!=dict.end()) {
             i = where->second;
           }
         }
+        return *this;
       } // legs_rename
 
       template<int n>
@@ -1886,16 +1887,12 @@ namespace TAT {
         return site1->dims()[index1];
       } // link_with, single link, return dim
 
-      static Size link(Self& site1, const Legs& legs1, Self& site2, const Legs& legs2) {
-        auto dim1 = link_with(site1, legs1, site2, legs2);
-        auto dim2 = link_with(site2, legs2, site1, legs1);
-        assert(dim1==dim2);
-        return dim1;
-      } // link, double link, return dim
-
       void link(const Legs& legs1, Self& site2, const Legs& legs2, GC_Tensor env=GC_Tensor()) {
         Self& site1 = *this;
-        auto dim = link(site1, legs1, site2, legs2);
+        auto dim1 = link_with(site1, legs1, site2, legs2);
+        auto dim2 = link_with(site2, legs2, site1, legs1);
+        auto dim = dim1;
+        assert(dim1==dim2);
         if (!env) {
           env = std::make_shared<OB_Tensor>({Legs::Phy}, {dim});
           env->set_constant(1);
@@ -1913,7 +1910,7 @@ namespace TAT {
         auto edge = pos1.second;
         site1.neighbor.erase(pos1);
         return edge;
-      }
+      } // unlink, single unlink
 
       void unlink(const Legs& legs1) {
         Self& site1 = *this;
@@ -1927,7 +1924,7 @@ namespace TAT {
         if (edge1) {
           site1 = site1->multiple(edge1.environment, legs1);
         }
-      } // unlink
+      } // unlink, double unlink
     }; // class Site
   } // namespace site
   using site::Site;
