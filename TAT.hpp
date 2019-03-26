@@ -1897,7 +1897,7 @@ namespace TAT {
       void link(const Legs& legs1, Self& site2, const Legs& legs2, GC_Tensor env=GC_Tensor()) {
         Self& site1 = *this;
         auto dim = link(site1, legs1, site2, legs2);
-        if(!env) {
+        if (!env) {
           env = std::make_shared<OB_Tensor>({Legs::Phy}, {dim});
           env->set_constant(1);
         } else {
@@ -1925,7 +1925,7 @@ namespace TAT {
         Self& legs2 = edge1.dst_leg;
         auto pos2 = site2.neighbor.find(legs2);
         site2.neighbor.erase(pos2);
-        if(edge1){
+        if (edge1) {
           site1 = site1->multiple(edge1.environment, legs1);
         }
       } // unlink

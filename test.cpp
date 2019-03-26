@@ -16,8 +16,16 @@
  */
 
 #define TAT_USE_CPU
+
+// SVD
+#if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
 #define TAT_USE_GESVDX
+#endif
+
+// QR
+#if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
 #define TAT_USE_GEQRF
+#endif
 
 #include "TAT.hpp"
 
