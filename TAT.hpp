@@ -1839,7 +1839,7 @@ namespace TAT {
       using GC_Tensor = std::shared_ptr<OB_Tensor>;
 
       GC_Tensor tensor;
-      std::map<Legs, SelfEdge&> neighbor;
+      std::map<Legs, SelfEdge> neighbor;
 
       Site() : tensor(std::make_shared<OB_Tensor>()) {}
       template<class T>
@@ -1909,44 +1909,26 @@ namespace TAT {
         site2.neighbor[legs2] = env;
       } // link, double link
 
-      static void unlink_with(Self& site1, Self& site2) {
-        for (const auto& x : site1.neighber) {
-          if (x.second==&site2) {
-            auto pos1 = site1.env.find(x.first);
-            if (pos1!=site1.env.end()) {
-              site1.replace(site1->multiple(pos1.second, x.first));
-              site1.env.erase(pos1);
-            } // if env
-            site1.neighbor.erase(x);
-          } // if it is
-        } // for
+      static SelfEdge unlink_with(Self& site1, const Legs& legs1) {
+        auto pos1 = site1.neighbor.find(legs1);
+        auto edge = pos1.second;
+        site1.neighbor.erase(pos1);
+        return edge;
       }
 
-      static void unlink(Self& site1, Self& site2) {
-        for (const auto& x : site1.neighber) {
-          if (x.second==&site2) {
-            auto pos1 = site1.env.find(x.first);
-            if (pos1!=site1.env.end()) {
-              site1.replace(site1->multiple(pos1.second, x.first));
-              site1.env.erase(pos1);
-            } // if env
-            site1.neighbor.erase(x);
-          } // if it is
-        } // for
-        for (const auto& x : site2.neighber) {
-          if (x.second==&site1) {
-            auto pos2 = site2.env.find(x.first);
-            if (pos2!=site2.env.end()) {
-              site2.env.erase(pos2);
-            } // if env
-            site2.neighbor.erase(x);
-          } // if it is
-        } // for
+      void unlink(const Legs& legs1) {
+        Self& site1 = *this;
+        auto pos1 = site1.neighbor.find(legs1);
+        auto edge1 = pos1.second;
+        site1.neighbor.erase(pos1);
+        Self& site2 = edge1.dst;
+        Self& legs2 = edge1.dst_leg;
+        auto pos2 = site2.neighbor.find(legs2);
+        site2.neighbor.erase(pos2);
+        if(edge1){
+          site1 = site1->multiple(edge1.environment, legs1);
+        }
       } // unlink
-
-      void unlink(Self& site2) {
-        unlink(*this, site2);
-      }
     }; // class Site
   } // namespace site
   using site::Site;
