@@ -56,16 +56,16 @@ struct MPS {
   MPS(int _L, Size _D) : L(_L), D(_D) {
     using namespace TAT::legs_name;
     {
-      lattice.push_back(Tensor({2, 1, D}, {Phy, Left, Right}));
+      lattice.push_back(Tensor({Phy, Left, Right}, {2, 1, D}));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Tensor({2, D, D}, {Phy, Left, Right}));
+        lattice.push_back(Tensor({Phy, Left, Right}, {2, D, D}));
       }
-      lattice.push_back(Tensor({2, D, 1}, {Phy, Left, Right}));
+      lattice.push_back(Tensor({Phy, Left, Right}, {2, D, 1}));
     } // lattice
-    /*
     {
       for(int i=0; i<L-1; i++) {
         lattice[i].link_env(Right, lattice[i+1], Left);
+        /*
         for(int j=0; j<L; j++) {
           std::cout << lattice[j].neighbor.size() << " ";
         }std::cout << std::endl;
@@ -76,9 +76,9 @@ struct MPS {
           std::cout << i.second.src->get() << " ";
         }
         std::cout << std::endl;
+        */
       }
     }
-    */
     {
       double default_H[16] = {
                               1, 0, 0, 0,
@@ -86,7 +86,7 @@ struct MPS {
                               0, 2, -1, 0,
                               0, 0, 0, 1
       };
-      hamiltonian = RawTensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
+      hamiltonian = RawTensor( {Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* hamiltonian_data = hamiltonian.get();
       for (int i=0; i<16; i++) {
         hamiltonian_data[i] = default_H[i];
@@ -100,7 +100,7 @@ struct MPS {
                               0, 0, 1, 0,
                               0, 0, 0, 1
       };
-      identity = RawTensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
+      identity = RawTensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* identity_data = identity.get();
       for (int i=0; i<16; i++) {
         identity_data[i] = default_I[i];
