@@ -171,6 +171,7 @@ namespace TAT {
     DefineData(CUDA);
     DefineData(DCU);
     DefineData(SW);
+#undef DefineData
 
     template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
     using Data = typename Magic<device, Base>::type;
