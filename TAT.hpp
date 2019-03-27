@@ -1868,7 +1868,7 @@ namespace TAT {
   using site::Edge;
   using site::Site;
 
-  namespace site
+  namespace site {
     // lifetime should be maintained manually
     template<Device device, class Base>
     class Edge {
