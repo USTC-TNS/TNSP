@@ -1873,9 +1873,9 @@ namespace TAT {
       friend class Edge;
       class Edge {
        public:
-        const Site<device, Base>* site_ptr;
+        const Site<device, Base>* site_ptr; // edge won't change it, but could let other change it
         Legs legs;
-        std::shared_ptr<const Tensor<device, Base>> env;
+        std::shared_ptr<const Tensor<device, Base>> env; // edge won't change it, but could let other change it
 
         Edge(const Site<device, Base>& _site, const Legs& _legs) : site_ptr(&_site), legs(_legs) {}
         Edge() = default;
@@ -1896,16 +1896,21 @@ namespace TAT {
         } // get
 
         Edge& set(Tensor<device, Base>&& t) {
-          env = std::make_shared<Tensor<device, Base>>(std::move(t));
+          env = std::make_shared<const Tensor<device, Base>>(std::move(t));
           return *this;
         } // set
         Edge& set(const Tensor<device, Base>& t) {
-          env = std::make_shared<Tensor<device, Base>>(t);
+          env = std::make_shared<const Tensor<device, Base>>(t);
           // copy
           return *this;
         } // set
-        Edge& set(std::shared_ptr<Tensor<device, Base>>& t) {
+        Edge& set(std::shared_ptr<const Tensor<device, Base>>& t) {
           env = t;
+          return *this;
+        } // set
+        Edge& set(std::shared_ptr<Tensor<device, Base>>& t) {
+          env = std::make_shared<const Tensor<device, Base>>(*t);
+          // copy
           return *this;
         } // set
       };
@@ -1946,6 +1951,11 @@ namespace TAT {
         tensor = t;
         return *this;
       } // set
+      Site<device, Base>& set(std::shared_ptr<Tensor<device, Base>>& t) {
+        tensor = std::make_shared<const Tensor<device, Base>>(*t);
+        // copy
+        return *this;
+      } // set
 
       Size link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
@@ -1963,13 +1973,13 @@ namespace TAT {
         return dim1;
       } // link, double link, return dim
 
-      void link_env(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<Tensor<device, Base>> env=std::shared_ptr<Tensor<device, Base>>()) {
+      void link_env(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>()) {
         Site<device, Base>& site1 = *this;
         auto dim = link(site1, legs1, site2, legs2);
         if (!env) {
           //env = std::make_shared<Tensor<device, Base>, std::vector<Size>, std::vector<Legs>>({dim}, {Legs::Phy});
-          env = std::shared_ptr<Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
-          env->set_constant(1);
+          env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
+          const_cast<Tensor<device, Base>&>(*env).set_constant(1);
         } else {
           assert(env->dims().size()==1);
           assert(dim==env->size());
@@ -1987,7 +1997,7 @@ namespace TAT {
         return edge;
       } // unlink, single unlink
 
-      static std::shared_ptr<Tensor<device, Base>> unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+      static std::shared_ptr<const Tensor<device, Base>> unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
         auto edge1 = site1.unlink(legs1);
         auto edge2 = site2.unlink(legs2);
         assert(edge1.dst==&site2);
