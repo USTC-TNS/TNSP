@@ -3,12 +3,23 @@ CXX = clang++
 TAT_VERSION = $(shell git describe --tags)
 CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\"
 
-CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
-CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
-CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
-CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
-CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
-CXXFLAGS += -Iargs
+STATIC ?= 1
+
+ifeq ($(STATIC), 1)
+	CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
+	CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
+	CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
+	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
+	CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
+	CXXFLAGS += -Iargs
+else
+	CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
+	CXXFLAGS += -ljemalloc
+	CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
+	CXXFLAGS += -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
+	CXXFLAGS += -lhptt -Lhptt/lib -Ihptt/include -Wl,-rpath,./hptt/lib
+	CXXFLAGS += -Iargs
+endif
 
 DEBUG ?= 0
 ifeq ($(DEBUG), 1)
