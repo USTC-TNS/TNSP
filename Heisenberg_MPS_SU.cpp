@@ -58,11 +58,11 @@ struct MPS {
   MPS(int _L, Size _D) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
     using namespace TAT::legs_name;
     {
-      lattice.push_back(Tensor({2, 1, D}, {Phy, Left, Right}));
+      lattice.push_back(Tensor({Phy, Left, Right}, {2, 1, D}));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Tensor({2, D, D}, {Phy, Left, Right}));
+        lattice.push_back(Tensor({Phy, Left, Right}, {2, D, D}));
       }
-      lattice.push_back(Tensor({2, D, 1}, {Phy, Left, Right}));
+      lattice.push_back(Tensor({Phy, Left, Right}, {2, D, 1}));
     } // lattice
     {
       double default_H[16] = {
@@ -71,7 +71,7 @@ struct MPS {
         0, 2, -1, 0,
         0, 0, 0, 1
       };
-      hamiltonian = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
+      hamiltonian = Tensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* hamiltonian_data = hamiltonian.get();
       for (int i=0; i<16; i++) {
         hamiltonian_data[i] = default_H[i];
@@ -85,7 +85,7 @@ struct MPS {
         0, 0, 1, 0,
         0, 0, 0, 1
       };
-      identity = Tensor({2, 2, 2, 2}, {Phy1, Phy2, Phy3, Phy4});
+      identity = Tensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* identity_data = identity.get();
       for (int i=0; i<16; i++) {
         identity_data[i] = default_I[i];
@@ -158,9 +158,9 @@ struct MPS {
 
   void prepare_aux() {
     using namespace TAT::legs_name;
-    left_contract[-1] = Tensor({1, 1}, {Right1, Right2});
+    left_contract[-1] = Tensor({Right1, Right2}, {1, 1});
     *left_contract[-1].get() = 1;
-    right_contract[L] = Tensor({1, 1}, {Left1, Left2});
+    right_contract[L] = Tensor({Left1, Left2}, {1, 1});
     *right_contract[L].get() = 1;
     for (int i=0; i<=L-1; i++) {
       left_contract[i] = Tensor::contract(left_contract[i-1], Tensor::contract(lattice[i], lattice[i], {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Right1, Right2}, {Left1, Left2});
