@@ -118,10 +118,10 @@ namespace TAT {
       } // operator-
 
 #define IncEnum(p, q) {Legs::p, Legs::q}
-#define IncGroup(x, y)                                                  \
+#define IncGroup(x, y) \
         IncEnum(Left##x, Left##y), IncEnum(Right##x, Right##y), IncEnum(Up##x, Up##y), IncEnum(Down##x, Down##y), IncEnum(Phy##x, Phy##y), \
         IncEnum(LeftUp##x, LeftUp##y), IncEnum(LeftDown##x, LeftDown##y), IncEnum(RightUp##x, RightUp##y), IncEnum(RightDown##x, RightDown##y)
-      static const std::map<Legs, Legs> inc_legs = {
+      static const std::map<Legs, Legs> plus_legs = {
         IncGroup(, 1), IncGroup(1, 2), IncGroup(2, 3), IncGroup(3, 4), IncGroup(4, 5),
         IncGroup(5, 6), IncGroup(6, 7), IncGroup(7, 8), IncGroup(8, 9), IncGroup(9,)
       };
@@ -129,7 +129,7 @@ namespace TAT {
 #undef IncEnum
 
       Legs operator+(const Legs& value) {
-        return inc_legs.at(value);
+        return plus_legs.at(value);
       } // operator+
     } // namespace scalar;
   } // namespace legs
@@ -138,18 +138,17 @@ namespace TAT {
   namespace legs_name {
 #define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
 #define TAT_DefineLegs(n) \
-    TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n); \
-    TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
+      TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n); \
+      TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
 #define TAT_Legs \
-    TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
-    TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
+      TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
+      TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
 
     TAT_Legs;
 #undef TAT_Legs
 #undef TAT_DefineLegs
 #undef TAT_DefineLeg
   } // namespace legs_name
-
 
   using Size = std::size_t;
   using Rank = unsigned int;
@@ -174,8 +173,7 @@ namespace TAT {
 
   namespace data {
 #ifdef TAT_USE_CPU
-    static const Device device = Device::CPU;
-
+#define device Device::CPU
     namespace transpose {}
 
     namespace contract {
@@ -296,7 +294,7 @@ namespace TAT {
         assert(res==0);
         assert(ns==lapack_int(cut));
         delete[] superb;
-      } // runx<float>
+      } // run<float>
 
       template<>
       void run<double>(const Size& m, const Size& n, const Size& min, const Size& cut, double* a, double* u, double* s, double* vt) {
@@ -306,7 +304,7 @@ namespace TAT {
         assert(res==0);
         assert(ns==lapack_int(cut));
         delete[] superb;
-      } // runx<double>
+      } // run<double>
 #endif // TAT_USE_GESVDX
     } // namespace data::svd
 
@@ -486,9 +484,9 @@ namespace TAT {
       Data(const Data<device, Base>& other) {
         new (this) Data(other.size);
         std::memcpy(get(), other.get(), size*sizeof(Base));
-#ifndef TAT_NOT_CHECK_COPY
+#ifndef NDEBUG
         std::clog << "Copying Data..." << std::endl;
-#endif // TAT_NOT_CHECK_COPY
+#endif // NDEBUG
       }
       Data<device, Base>& operator=(const Data<device, Base>& other) {
         new (this) Data(other);
@@ -911,6 +909,7 @@ namespace TAT {
         return in;
       } // operator<<
     } // namespace data::io
+#undef device // Device::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 
@@ -1409,7 +1408,7 @@ namespace TAT {
         u_rank = u_legs.size();
         V_legs.push_back(new_v_legs);
         for (const auto& i : total_legs) {
-          if(internal::in(i, u_legs)) {
+          if (internal::in(i, u_legs)) {
             U_legs.push_back(i);
           } else {
             V_legs.push_back(i);
