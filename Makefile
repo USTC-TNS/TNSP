@@ -3,17 +3,16 @@ CXX = clang++
 TAT_VERSION = $(shell git describe --tags)
 CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\"
 
-STATIC ?= 1
+STATIC ?= 0
 
+CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 ifeq ($(STATIC), 1)
-	CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 	CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
 	CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
 	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
 	CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
 	CXXFLAGS += -Iargs
 else
-	CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 	CXXFLAGS += -ljemalloc
 	CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 	CXXFLAGS += -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
