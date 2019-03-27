@@ -2025,11 +2025,17 @@ namespace TAT {
 
       //// high level op
 
+      // used in su
+      /*
       void qr_to();
       void update_to();
       void update_to_qr();
       void update_to_env();
       void update_to_qr_env();
+
+      void copy_net();
+      void contract_along();
+      */
 
       void qr_to(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
         std::vector<Legs> q_legs;
