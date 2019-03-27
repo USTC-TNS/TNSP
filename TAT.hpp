@@ -1988,7 +1988,6 @@ namespace TAT {
         Site<device, Base>& site1 = *this;
         auto dim = link(site1, legs1, site2, legs2);
         if (!env) {
-          //env = std::make_shared<Tensor<device, Base>, std::vector<Size>, std::vector<Legs>>({dim}, {Legs::Phy});
           env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
           const_cast<Tensor<device, Base>&>(*env).set_constant(1);
         } else {
