@@ -63,16 +63,17 @@ struct MPS {
       lattice.push_back(Tensor({Phy, Left, Right}, {2, D, 1}));
     } // lattice
     {
-      for(int i=0; i<L-1; i++) {
+      for (int i=0; i<L-1; i++) {
         lattice[i].link_env(Right, lattice[i+1], Left);
         //
-        for(int j=0; j<L; j++) {
+        for (int j=0; j<L; j++) {
           std::cout << lattice[j].neighbor.size() << " ";
-        }std::cout << std::endl;
+        }
+        std::cout << std::endl;
       }
-      for(int i=0; i<L; i++) {
+      for (int i=0; i<L; i++) {
         std::cout << lattice[i].get() << " ";
-        for(const auto& i : lattice[i].neighbor){
+        for (const auto& i : lattice[i].neighbor) {
           std::cout << i.second.site().get() << " ";
         }
         std::cout << std::endl;
@@ -82,10 +83,10 @@ struct MPS {
     }
     {
       double default_H[16] = {
-                              1, 0, 0, 0,
-                              0, -1, 2, 0,
-                              0, 2, -1, 0,
-                              0, 0, 0, 1
+        1, 0, 0, 0,
+        0, -1, 2, 0,
+        0, 2, -1, 0,
+        0, 0, 0, 1
       };
       hamiltonian = RawTensor( {Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* hamiltonian_data = hamiltonian.get();
@@ -96,10 +97,10 @@ struct MPS {
     } // hamiltonian
     {
       double default_I[16] = {
-                              1, 0, 0, 0,
-                              0, 1, 0, 0,
-                              0, 0, 1, 0,
-                              0, 0, 0, 1
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1
       };
       identity = RawTensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* identity_data = identity.get();

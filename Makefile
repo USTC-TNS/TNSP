@@ -32,9 +32,9 @@ endif
 
 all: style compile
 
-compile: test.out Heisenberg_MPS_SU.out Heisenberg_PEPS_SU.out
+compile: test.out Heisenberg_MPS_SU.out Heisenberg_MPS_SU_env.out #Heisenberg_PEPS_SU.out
 
-style: test.cpp.style TAT.hpp.style Heisenberg_MPS_SU.cpp.style Heisenberg_PEPS_SU.cpp.style
+style: TAT.hpp.style test.cpp.style Heisenberg_MPS_SU.cpp.style Heisenberg_MPS_SU_env.cpp.style Heisenberg_PEPS_SU.cpp.style
 
 %.out: %.cpp
 	$(CXX) $< $(CXXFLAGS) -o $@
