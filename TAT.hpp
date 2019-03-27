@@ -203,7 +203,7 @@ namespace TAT {
                             0, dst, NULL,
                             hptt::ESTIMATE, 1, NULL, 1)->execute();
         } // run
-      } // namespace data::transpose
+      } // namespace data::CPU::transpose
 
       namespace contract {
         template<class Base>
@@ -239,7 +239,7 @@ namespace TAT {
                       1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
                       0, data, n);
         } // run<double>
-      } // namespace data::contract
+      } // namespace data::CPU::contract
 
       namespace multiple {
         template<class Base>
@@ -253,7 +253,7 @@ namespace TAT {
             } // for j
           } // for i
         } // run
-      } // namespace data::multiple
+      } // namespace data::CPU::multiple
 
       namespace svd {
 #if (defined TAT_USE_GESVD) || (defined TAT_USE_GESDD)
@@ -335,7 +335,7 @@ namespace TAT {
           delete[] superb;
         } // run<double>
 #endif // TAT_USE_GESVDX
-      } // namespace data::svd
+      } // namespace data::CPU::svd
 
       namespace qr {
         template<class Base>
@@ -407,7 +407,7 @@ namespace TAT {
           } // for i
           delete[] tau;
         } // run
-      } // namespace data::qr
+      } // namespace data::CPU::qr
 
       namespace norm {
         template<class Base>
@@ -494,7 +494,7 @@ namespace TAT {
           delete[] tmp;
           return res;
         } // run
-      } // namespace data::norm
+      } // namespace data::CPU::norm
 
       template<class Base>
       class Data {
@@ -904,7 +904,7 @@ namespace TAT {
           Sub<Base>(a, b, res);
           return std::move(res);
         } // operator-
-      } // namespace data::scalar
+      } // namespace data::CPU::scalar
 
       inline namespace io {
         template<class Base>
@@ -932,7 +932,7 @@ namespace TAT {
           in.read((char*)value.get(), value.size*sizeof(Base));
           return in;
         } // operator<<
-      } // namespace data::io
+      } // namespace data::CPU::io
 #endif // TAT_USE_CPU
     } // namespace CPU
   } // namespace data
@@ -1864,7 +1864,11 @@ namespace TAT {
     class Edge;
     template<Device device, class Base>
     class Site;
+  } // namespace site
+  using site::Edge;
+  using site::Site;
 
+  namespace site
     // lifetime should be maintained manually
     template<Device device, class Base>
     class Edge {
