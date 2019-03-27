@@ -1872,45 +1872,36 @@ namespace TAT {
     // lifetime should be maintained manually
     template<Device device, class Base>
     class Edge {
-      using Self = Edge<device, Base>;
-      using SelfSite = Site<device, Base>;
-      using OB_Tensor = Tensor<device, Base>;
-      using GC_Tensor = std::shared_ptr<OB_Tensor>;
+     public:
+      Site<device, Base>* src=nullptr;
+      Legs src_leg;
+      Site<device, Base>* dst=nullptr;
+      Legs dst_leg;
+      std::shared_ptr<Tensor<device, Base>> environment;
 
-      SelfSite& src, dst;
-      Legs src_leg, dst_leg;
-      GC_Tensor environment;
+      Edge(Site<device, Base>& _src, const Legs& _src_leg, Site<device, Base>& _dst, const Legs& _dst_leg)
+        : src(&_src), src_leg(_src_leg), dst(&_dst), dst_leg(_dst_leg) {}
 
-      Edge(SelfSite& _src, const Legs& _src_leg, SelfSite& _dst, const Legs& _dst_leg) : src(_src), src_leg(_src_leg), dst(_dst), dst_leg(_dst_leg) {}
-      Edge(SelfSite& _src, const Legs& _src_leg, SelfSite& _dst, const Legs& _dst_leg, GC_Tensor& _env) : src(_src), src_leg(_src_leg), dst(_dst), dst_leg(_dst_leg), environment(_env) {}
-
-      const OB_Tensor& operator*() const {
+      Tensor<device, Base>& operator*() {
         return *environment.get();
       } // operator*
-      OB_Tensor& operator*() {
-        return *environment.get();
-      } // operator*
-      const OB_Tensor* operator->() const {
+      Tensor<device, Base>* operator->() {
         return environment.get();
       } // operator->
-      OB_Tensor* operator->() {
+      Tensor<device, Base>* get() {
         return environment.get();
-      } // operator->
+      } // get
 
-      operator bool() const {
-        return bool(environment);
-      } // operator bool()
-
-      Self& operator=(OB_Tensor&& t) {
-        environment = std::make_shared<OB_Tensor>(std::move(t));
+      Edge<device, Base>& operator=(Tensor<device, Base>&& t) {
+        environment = std::make_shared<Tensor<device, Base>>(std::move(t));
         return *this;
       } // operator=
-      Self& operator=(const OB_Tensor& t) {
-        environment = std::make_shared<OB_Tensor>(t);
+      Edge<device, Base>& operator=(const Tensor<device, Base>& t) {
+        environment = std::make_shared<Tensor<device, Base>>(t);
         // copy
         return *this;
       } // operator=
-      Self& operator=(GC_Tensor& t) {
+      Edge<device, Base>& operator=(std::shared_ptr<Tensor<device, Base>>& t) {
         environment = t;
         return *this;
       } // operator=
@@ -1919,95 +1910,89 @@ namespace TAT {
     template<Device device, class Base>
     class Site {
      public:
-      using Self = Site<device, Base>;
-      using SelfEdge = Edge<device, Base>;
-      using OB_Tensor = Tensor<device, Base>;
-      using GC_Tensor = std::shared_ptr<OB_Tensor>;
+      std::shared_ptr<Tensor<device, Base>> tensor;
+      std::map<Legs, Edge<device, Base>> neighbor;
 
-      GC_Tensor tensor;
-      std::map<Legs, SelfEdge> neighbor;
-
-      Site() : tensor(std::make_shared<OB_Tensor>()) {}
-      template<class T>
-      Site(T&& _tensor) : tensor(std::make_shared<OB_Tensor>(std::forward<T>(_tensor))) {}
       template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-      Site(T1&& _legs, T2&& _dims) : tensor(std::make_shared<OB_Tensor>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
+      Site(T1&& _legs, T2&& _dims) : tensor(std::make_shared<Tensor<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
 
-      const OB_Tensor& operator*() const {
+      Tensor<device, Base>& operator*() {
         return *tensor.get();
       } // operator*
-      OB_Tensor& operator*() {
-        return *tensor.get();
-      } // operator*
-      const OB_Tensor* operator->() const {
+      Tensor<device, Base>* operator->() {
         return tensor.get();
       } // operator->
-      OB_Tensor* operator->() {
+      Tensor<device, Base>* get() {
         return tensor.get();
-      } // operator->
+      } // get
 
-      operator bool() const {
-        return bool(tensor);
-      } // operator bool()
-
-      Self& operator=(OB_Tensor&& t) {
-        tensor = std::make_shared<OB_Tensor>(std::move(t));
+      Site<device, Base>& operator=(Tensor<device, Base>&& t) {
+        tensor = std::make_shared<Tensor<device, Base>>(std::move(t));
         return *this;
       } // operator=
-      Self& operator=(const OB_Tensor& t) {
-        tensor = std::make_shared<OB_Tensor>(t);
+      Site<device, Base>& operator=(const Tensor<device, Base>& t) {
+        tensor = std::make_shared<Tensor<device, Base>>(t);
         // copy
         return *this;
       } // operator=
-      Self& operator=(GC_Tensor& t) {
+      Site<device, Base>& operator=(std::shared_ptr<Tensor<device, Base>>& t) {
         tensor = t;
         return *this;
       } // operator=
 
-      static Size link_with(Self& site1, const Legs& legs1, Self& site2, const Legs& legs2) {
-        site1.neighbor[legs1] = SelfEdge(site1, legs1, site2, legs2);
+      Size link(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        Site<device, Base>& site1 = *this;
+        site1.neighbor[legs1] = Edge<device, Base>(site1, legs1, site2, legs2);
         auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
         assert(pos1!=site1->legs.end());
         Rank index1 = std::distance(site1->legs.begin(), pos1);
         return site1->dims()[index1];
-      } // link_with, single link, return dim
+      } // link, single link, return dim
 
-      void link(const Legs& legs1, Self& site2, const Legs& legs2, GC_Tensor env=GC_Tensor()) {
-        Self& site1 = *this;
-        auto dim1 = link_with(site1, legs1, site2, legs2);
-        auto dim2 = link_with(site2, legs2, site1, legs1);
-        auto dim = dim1;
+      static Size link(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        auto dim1 = site1.link(legs1, site2, legs2);
+        auto dim2 = site2.link(legs2, site1, legs1);
         assert(dim1==dim2);
+        return dim1;
+      } // link, double link, return dim
+
+      void link_env(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<Tensor<device, Base>> env=std::shared_ptr<Tensor<device, Base>>()) {
+        Site<device, Base>& site1 = *this;
+        auto dim = link(site1, legs1, site2, legs2);
         if (!env) {
-          env = std::make_shared<OB_Tensor>({Legs::Phy}, {dim});
+          //env = std::make_shared<Tensor<device, Base>, std::vector<Size>, std::vector<Legs>>({dim}, {Legs::Phy});
+          env = std::shared_ptr<Tensor<device, Base>>(new Tensor<device, Base>({dim}, {Legs::Phy}));
           env->set_constant(1);
         } else {
           assert(env->dims().size()==1);
-          assert(dim==env.size());
+          assert(dim==env->size());
           site1 = site1->multiple(1/(*env), legs1);
         }
         site1.neighbor[legs1] = env;
         site2.neighbor[legs2] = env;
-      } // link, double link
+      } // link_env, double link, insert env
 
-      static SelfEdge unlink_with(Self& site1, const Legs& legs1) {
+      Edge<device, Base> unlink(const Legs& legs1) {
+        Site<device, Base>& site1 = *this;
         auto pos1 = site1.neighbor.find(legs1);
         auto edge = pos1.second;
         site1.neighbor.erase(pos1);
         return edge;
       } // unlink, single unlink
 
-      void unlink(const Legs& legs1) {
-        Self& site1 = *this;
-        auto pos1 = site1.neighbor.find(legs1);
-        auto edge1 = pos1.second;
-        site1.neighbor.erase(pos1);
-        Self& site2 = edge1.dst;
-        Self& legs2 = edge1.dst_leg;
-        auto pos2 = site2.neighbor.find(legs2);
-        site2.neighbor.erase(pos2);
-        if (edge1) {
-          site1 = site1->multiple(edge1.environment, legs1);
+      static std::shared_ptr<Tensor<device, Base>> unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        auto edge1 = site1.unlink(legs1);
+        auto edge2 = site2.unlink(legs2);
+        assert(edge1.dst==&site2);
+        assert(edge2.dst==&site1);
+        return edge1.environment;
+      } // unlink, double unlink
+
+      void unlink(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        Site<device, Base>& site1 = *this;
+        auto tmp = unlink(site1, legs1, site2, legs2);
+        if (tmp) {
+          site1 = site1->multiple(*tmp, legs1);
         }
       } // unlink, double unlink
     }; // class Site
