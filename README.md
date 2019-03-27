@@ -13,6 +13,8 @@ after many try and exercise and rewrite include
 - [tnsp-np/tf](https://github.com/hzhangxyz/tnsp) 2018 Autumn
 - [TNC-eigen](https://github.com/hzhangxyz/TNC) 2019 Winter
 
+and with practice and experience of using [TNSP](https://arxiv.org/pdf/1708.00136.pdf)
+
 now, I am writing this tensor library finally.
 
 ## dependence
