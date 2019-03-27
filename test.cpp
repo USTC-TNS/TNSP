@@ -38,89 +38,89 @@ int main() {
   {
     // scalar
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_zero();
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       t1 += 1.2;
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       t1 -= 1.2;
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       t1 *= 1.2;
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       t1 /= 1.2;
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       t1 += t2;
       std::cout << t1*2.3 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_zero();
       t2.set_test();
       t1 -= t2;
       std::cout << 1-t1/3.4 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       std::cout << 1+3/(t1+1)+t2 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       std::cout << +(t1-1.2)-t2 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       std::cout << 3+1.2/(t1*1.2) << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
       t1.set_test();
       std::cout << -(2.4*(t1/1.2)) << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       std::cout << t1/t2 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       t2+=1;
@@ -128,15 +128,15 @@ int main() {
       std::cout << t1 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       std::cout << t1* t2 << std::endl;
     }
     {
-      Tensor<> t1({2, 3}, {Up, Down});
-      Tensor<> t2({2, 3}, {Up, Down});
+      Tensor<> t1({Up, Down}, {2, 3});
+      Tensor<> t2({Up, Down}, {2, 3});
       t1.set_test();
       t2.set_test();
       t1 += 1;
@@ -154,19 +154,19 @@ int main() {
   {
     // transpose
     {
-      Tensor<> t1({2, 3}, {Left, Right});
+      Tensor<> t1({Left, Right}, {2, 3});
       t1.set_test();
       auto t2 = t1.transpose({Right, Left});
       std::cout << t1 << std::endl << t2 << std::endl;
     }
     {
-      Tensor<> t1({2, 3, 4, 5}, {Down, Up, Left, Right});
+      Tensor<> t1({Down, Up, Left, Right}, {2, 3, 4, 5});
       t1.set_test();
       auto t2 = t1.transpose({Left, Down, Right, Up});
       std::cout << t1 << std::endl << t2 << std::endl;
     }
     {
-      Tensor<> t1({2, 3, 4, 5}, {Down, Up, Left, Right});
+      Tensor<> t1({Down, Up, Left, Right}, {2, 3, 4, 5});
       t1.set_test();
       auto t2 = t1.transpose({Left, Down, Right, Phy, Up});
       std::cout << t1 << std::endl << t2 << std::endl;
@@ -188,7 +188,7 @@ int main() {
   {
     // to
     {
-      Tensor<> t1({2, 3}, {Left, Right});
+      Tensor<> t1({Left, Right}, {2, 3});
       t1.set_test();
       Tensor<Device::CPU, int> t2 = t1.to<int>();
       std::cout << t1 << std::endl << t2 << std::endl;
@@ -198,22 +198,22 @@ int main() {
   {
     // contract
     {
-      Tensor<> t1({2, 3}, {Down, Up});
-      Tensor<> t2({2, 3}, {Down, Up});
+      Tensor<> t1({Down, Up}, {2, 3});
+      Tensor<> t2({Down, Up}, {2, 3});
       t1.set_test();
       t2.set_test();
       std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << std::endl;
     }
     {
-      Tensor<> t1({2, 3, 4, 5, 6}, {Down, Up, Left, Right, Phy});
-      Tensor<> t2({5, 3, 7}, {Down, Up, Left});
+      Tensor<> t1({Down, Up, Left, Right, Phy}, {2, 3, 4, 5, 6});
+      Tensor<> t2({Down, Up, Left}, {5, 3, 7});
       t1.set_test();
       t2.set_test();
       std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up, Right}, {Up, Down}, {}, {{Left, Left3}}) << std::endl;
     }
     {
-      Tensor<> t1({2, 3, 4, 5, 6}, {Down, Up, Left, Right, Phy});
-      Tensor<> t2({5, 3, 7}, {Down, Up, Left});
+      Tensor<> t1({Down, Up, Left, Right, Phy}, {2, 3, 4, 5, 6});
+      Tensor<> t2({Down, Up, Left}, {5, 3, 7});
       t1.set_test();
       t2.set_test();
       std::cout << t1 << std::endl << t2 << std::endl << Tensor<>::contract(t1, t2, {Up, Right, Left3, Right3}, {Up, Down, Left4, Right4}, {{Left2, Right2}}, {{Left, Left3}}) << std::endl;
@@ -238,16 +238,16 @@ int main() {
   {
     // multiple
     {
-      Tensor<> t1({3, 4}, {Down, Up});
-      Tensor<> t2({4}, {Down});
+      Tensor<> t1({Down, Up}, {3, 4});
+      Tensor<> t2({Down}, {4});
       t1.set_test();
       t2.set_test();
       auto t3 = t1.multiple(t2, Up);
       std::cout << t1 << std::endl << t2 << std::endl << t3 << std::endl;
     }
     {
-      Tensor<> t1({2, 3, 4}, {Right, Down, Up});
-      Tensor<> t2({3}, {Down});
+      Tensor<> t1({Right, Down, Up}, {2, 3, 4});
+      Tensor<> t2({Down}, {3});
       t1.set_test();
       t2.set_test();
       auto t3 = t1.multiple(t2, Down);
@@ -266,25 +266,25 @@ int main() {
   {
     // svd
     {
-      Tensor<> t1({4, 6}, {Left, Right});
+      Tensor<> t1({Left, Right}, {4, 6});
       t1.set_test();
       auto res = t1.svd({Left}, Right, Down, 4);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
-      Tensor<> t1({2, 2, 3, 2}, {Left, Right, Up, Down});
+      Tensor<> t1({Left, Right, Up, Down}, {2, 2, 3, 2});
       t1.set_test();
       auto res = t1.svd({Left, Right}, Right1, Down1);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
-      Tensor<> t1({2, 2, 3, 2}, {Left, Right, Up, Down});
+      Tensor<> t1({Left, Right, Up, Down}, {2, 2, 3, 2});
       t1.set_test();
       auto res = t1.svd({Left, Down}, Right1, Down1, -1);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
     }
     {
-      Tensor<> t1({2, 2, 3, 2}, {Left, Right, Up, Down});
+      Tensor<> t1({Left, Right, Up, Down}, {2, 2, 3, 2});
       t1.set_test();
       auto res = t1.svd({Left, Down}, Right1, Down1, 3);
       std::cout << res.U << std::endl << res.S << std::endl << res.V << std::endl;
@@ -298,7 +298,7 @@ int main() {
   {
     // io
     {
-      Tensor<> t1({2, 2, 3, 2}, {Left, Right, Up, Down});
+      Tensor<> t1({Left, Right, Up, Down}, {2, 2, 3, 2});
       t1.set_test();
       std::cout << t1 << std::endl;
       std::ofstream f1;
@@ -317,13 +317,13 @@ int main() {
   {
     // qr
     {
-      Tensor<> t1({4, 6}, {Left, Right});
+      Tensor<> t1({Left, Right}, {4, 6});
       t1.set_test();
       auto res = t1.qr({Left}, Right, Down);
       std::cout << res.Q << std::endl << res.R << std::endl;
     }
     {
-      Tensor<> t1({4, 6}, {Left, Right});
+      Tensor<> t1({Left, Right}, {4, 6});
       t1.set_test();
       auto res = t1.qr({Right}, Up, Down);
       std::cout << res.Q << std::endl << res.R << std::endl;

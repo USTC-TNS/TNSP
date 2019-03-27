@@ -1461,8 +1461,8 @@ namespace TAT {
       Tensor(const Tensor<device, Base>& other) = default;
       Tensor<device, Base>& operator=(Tensor<device, Base>&& other) = default;
       Tensor<device, Base>& operator=(const Tensor<device, Base>& other) = default;
-      template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-      Tensor(T1&& _dims, T2&& _legs) : legs(std::forward<T2>(_legs)), node(std::forward<T1>(_dims)) {
+      template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
+      Tensor(T1&& _legs, T2&& _dims) : legs(std::forward<T1>(_legs)), node(std::forward<T2>(_dims)) {
         assert(legs.size()==node.dims.size());
         assert(std::set<Legs>(legs.begin(), legs.end()).size()==legs.size());
       }
@@ -1868,6 +1868,11 @@ namespace TAT {
   using site::Edge;
   using site::Site;
 
+  template<Device device, class Base, class Dims=std::vector<Size>, class Legs=std::vector<Legs>>
+  std::shared_ptr<Tensor<device, Base>> make_shared_tensor(Dims dims, Legs legs) {
+    return std::make_shared<Tensor<device, Base>>(dims, legs);
+  }
+
   namespace site {
     // lifetime should be maintained manually
     template<Device device, class Base>
@@ -1913,8 +1918,8 @@ namespace TAT {
       std::shared_ptr<Tensor<device, Base>> tensor;
       std::map<Legs, Edge<device, Base>> neighbor;
 
-      template<class T1=std::vector<Size>, class T2=std::vector<Legs>>
-      Site(T1&& _legs, T2&& _dims) : tensor(std::make_shared<Tensor<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
+      template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
+      Site(T1&& _legs, T2&& _dims) : tensor(make_shared_tensor(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
 
       Tensor<device, Base>& operator*() {
         return *tensor.get();
@@ -1961,7 +1966,8 @@ namespace TAT {
         auto dim = link(site1, legs1, site2, legs2);
         if (!env) {
           //env = std::make_shared<Tensor<device, Base>, std::vector<Size>, std::vector<Legs>>({dim}, {Legs::Phy});
-          env = std::shared_ptr<Tensor<device, Base>>(new Tensor<device, Base>({dim}, {Legs::Phy}));
+          //env = std::shared_ptr<Tensor<device, Base>>(new Tensor<device, Base>({dim}, {Legs::Phy}));
+          env = make_shared_tensor({Legs::Phy}, {dim});
           env->set_constant(1);
         } else {
           assert(env->dims().size()==1);
