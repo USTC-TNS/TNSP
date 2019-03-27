@@ -1868,34 +1868,36 @@ namespace TAT {
   using site::Edge;
   using site::Site;
 
-  template<Device device, class Base, class Dims=std::vector<Legs>, class Legs=std::vector<Size>>
-  std::shared_ptr<Tensor<device, Base>> make_shared_tensor(Legs legs, Dims dims) {
-    return std::make_shared<Tensor<device, Base>>(legs, dims);
-  }
-
   namespace site {
     // lifetime should be maintained manually
     template<Device device, class Base>
     class Edge {
      public:
-      Site<device, Base>* src=nullptr;
+      Site<device, Base>* _src;
       Legs src_leg;
-      Site<device, Base>* dst=nullptr;
+      Site<device, Base>* _dst;
       Legs dst_leg;
       std::shared_ptr<Tensor<device, Base>> environment;
 
-      Edge(Site<device, Base>& _src, const Legs& _src_leg, Site<device, Base>& _dst, const Legs& _dst_leg)
-        : src(&_src), src_leg(_src_leg), dst(&_dst), dst_leg(_dst_leg) {}
+      Edge(Site<device, Base>& __src, const Legs& __src_leg, Site<device, Base>& __dst, const Legs& __dst_leg)
+        : _src(&__src), src_leg(__src_leg), _dst(&__dst), dst_leg(__dst_leg) {}
       Edge() = default;
       ~Edge() = default;
 
-      Tensor<device, Base>& operator*() {
+      Site<device, Base>& src() const {
+        return *_src;
+      }
+      Site<device, Base>& dst() const {
+        return *_dst;
+      }
+
+      Tensor<device, Base>& operator*() const {
         return *environment.get();
       } // operator*
-      Tensor<device, Base>* operator->() {
+      Tensor<device, Base>* operator->() const {
         return environment.get();
       } // operator->
-      Tensor<device, Base>* get() {
+      Tensor<device, Base>* get() const {
         return environment.get();
       } // get
 
@@ -1925,15 +1927,18 @@ namespace TAT {
       Site() = default;
       ~Site() = default;
 
-      Tensor<device, Base>& operator*() {
+      Tensor<device, Base>& operator*() const {
         return *tensor.get();
       } // operator*
-      Tensor<device, Base>* operator->() {
+      Tensor<device, Base>* operator->() const {
         return tensor.get();
       } // operator->
-      Tensor<device, Base>* get() {
+      Tensor<device, Base>* get() const {
         return tensor.get();
       } // get
+      Edge<device, Base>& operator()(Legs legs) {
+        return neighbor[legs];
+      }
 
       Site<device, Base>& set(Tensor<device, Base>&& t) {
         tensor = std::make_shared<Tensor<device, Base>>(std::move(t));
@@ -1951,7 +1956,7 @@ namespace TAT {
 
       Size link(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
-        site1.neighbor[legs1] = Edge<device, Base>(site1, legs1, site2, legs2);
+        site1(legs1) = Edge<device, Base>(site1, legs1, site2, legs2);
         auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
         assert(pos1!=site1->legs.end());
         Rank index1 = std::distance(site1->legs.begin(), pos1);
@@ -1977,8 +1982,8 @@ namespace TAT {
           assert(dim==env->size());
           site1.set(site1->multiple(1/(*env), legs1));
         }
-        site1.neighbor[legs1].set(env);
-        site2.neighbor[legs2].set(env);
+        site1(legs1).set(env);
+        site2(legs2).set(env);
       } // link_env, double link, insert env
 
       Edge<device, Base> unlink(const Legs& legs1) {
@@ -2002,7 +2007,7 @@ namespace TAT {
         auto tmp = unlink(site1, legs1, site2, legs2);
         if (tmp) {
           site1.set(site1->multiple(*tmp, legs1));
-        }
+        } // if
       } // unlink, double unlink
     }; // class Site
   } // namespace site

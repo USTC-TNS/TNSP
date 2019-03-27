@@ -65,7 +65,7 @@ struct MPS {
     {
       for(int i=0; i<L-1; i++) {
         lattice[i].link_env(Right, lattice[i+1], Left);
-        /*
+        //
         for(int j=0; j<L; j++) {
           std::cout << lattice[j].neighbor.size() << " ";
         }std::cout << std::endl;
@@ -73,11 +73,12 @@ struct MPS {
       for(int i=0; i<L; i++) {
         std::cout << lattice[i].get() << " ";
         for(const auto& i : lattice[i].neighbor){
-          std::cout << i.second.src->get() << " ";
+          std::cout << i.second.dst().get() << " ";
         }
         std::cout << std::endl;
-        */
+        //
       }
+      std::cout << lattice[0](Right).dst()(Right).dst()(Right).dst().get() << std::endl ;
     }
     {
       double default_H[16] = {
