@@ -173,7 +173,8 @@ namespace TAT {
 
   namespace data {
 #ifdef TAT_USE_CPU
-#define device Device::CPU
+    static const Device device = Device::CPU;
+
     namespace transpose {}
 
     namespace contract {
@@ -909,7 +910,6 @@ namespace TAT {
         return in;
       } // operator<<
     } // namespace data::io
-#undef device // Device::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 
