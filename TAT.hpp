@@ -175,7 +175,17 @@ namespace TAT {
 #ifdef TAT_USE_CPU
     static const Device device = Device::CPU;
 
-    namespace transpose {}
+    namespace transpose {
+      template<class Base>
+      void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst){
+        std::vector<int> int_plan(plan.begin(), plan.end());
+        std::vector<int> int_dims(dims.begin(), dims.end());
+        hptt::create_plan(int_plan.data(), int_plan.size(),
+                          1, src, int_dims.data(), NULL,
+                          0, dst, NULL,
+                          hptt::ESTIMATE, 1, NULL, 1)->execute();
+      }
+    }
 
     namespace contract {
       template<class Base>
@@ -546,12 +556,7 @@ namespace TAT {
                                    const std::vector<Rank>& plan) const {
         Data<device, Base> res(size);
         assert(dims.size()==plan.size());
-        std::vector<int> int_plan(plan.begin(), plan.end());
-        std::vector<int> int_dims(dims.begin(), dims.end());
-        hptt::create_plan(int_plan.data(), int_plan.size(),
-                          1, get(), int_dims.data(), NULL,
-                          0, res.get(), NULL,
-                          hptt::ESTIMATE, 1, NULL, 1)->execute();
+        transpose::run(plan, dims, get(), res.get());
         return std::move(res);
       } // transpose
 
