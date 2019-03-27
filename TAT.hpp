@@ -1942,7 +1942,7 @@ namespace TAT {
         // copy
         return *this;
       } // set
-      Site<device, Base>& set(std::shared_ptr<Tensor<device, Base>>& t) {
+      Site<device, Base>& set(std::shared_ptr<const Tensor<device, Base>>& t) {
         tensor = t;
         return *this;
       } // set
