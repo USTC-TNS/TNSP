@@ -154,46 +154,23 @@ namespace TAT {
   using Rank = unsigned int;
 
   namespace data {
-    namespace cpu {
-      template<class Base>
-      class Data;
-    }
-    namespace cuda {
-      template<class Base>
-      class Data;
-    }
-    namespace dcu {
-      template<class Base>
-      class Data;
-    }
-    namespace sw {
-      template<class Base>
-      class Data;
-    }
-
     template<Device device, class Base>
     class Magic;
+#define DefineData(x) \
+      namespace x { \
+        template<class Base> \
+        class Data; \
+      } \
+      template<class Base> \
+      class Magic<Device::x, Base>{ \
+       public: \
+        using type=x::Data<Base>; \
+      }
 
-    template<class Base>
-    class Magic<Device::CPU, Base>{
-    public:
-      using type=cpu::Data<Base>;
-    };
-    template<class Base>
-    class Magic<Device::CUDA, Base>{
-    public:
-      using type=cuda::Data<Base>;
-    };
-    template<class Base>
-    class Magic<Device::DCU, Base>{
-    public:
-      using type=dcu::Data<Base>;
-    };
-    template<class Base>
-    class Magic<Device::SW, Base>{
-    public:
-      using type=sw::Data<Base>;
-    };
+    DefineData(CPU);
+    DefineData(CUDA);
+    DefineData(DCU);
+    DefineData(SW);
 
     template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
     using Data = typename Magic<device, Base>::type;
@@ -213,11 +190,11 @@ namespace TAT {
   using tensor::Tensor;
 
   namespace data {
-    namespace cpu {
+    namespace CPU {
 #ifdef TAT_USE_CPU
       namespace transpose {
         template<class Base>
-        void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst){
+        void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
           std::vector<int> int_plan(plan.begin(), plan.end());
           std::vector<int> int_dims(dims.begin(), dims.end());
           hptt::create_plan(int_plan.data(), int_plan.size(),
@@ -230,11 +207,11 @@ namespace TAT {
       namespace contract {
         template<class Base>
         void run(Base* data,
-                const Base* data1,
-                const Base* data2,
-                const Size& m,
-                const Size& n,
-                const Size& k);
+                 const Base* data1,
+                 const Base* data2,
+                 const Size& m,
+                 const Size& n,
+                 const Size& k);
 
         template<>
         void run<float>(float* data,
@@ -251,11 +228,11 @@ namespace TAT {
 
         template<>
         void run<double>(double* data,
-                        const double* data1,
-                        const double* data2,
-                        const Size& m,
-                        const Size& n,
-                        const Size& k) {
+                         const double* data1,
+                         const double* data2,
+                         const Size& m,
+                         const Size& n,
+                         const Size& k) {
           cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                       m, n, k,
                       1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
@@ -310,10 +287,10 @@ namespace TAT {
 
         template<class Base>
         Data<Base> cut(const Data<Base>& other,
-                              const Size& m1,
-                              const Size& n1,
-                              const Size& m2,
-                              const Size& n2) {
+                       const Size& m1,
+                       const Size& n1,
+                       const Size& m2,
+                       const Size& n2) {
           Data<Base> res(m2*n2);
           assert(n2<=n1);
           assert(m2<=m1);
@@ -520,7 +497,7 @@ namespace TAT {
 
       template<class Base>
       class Data {
-      public:
+       public:
         Data() : size(0), base() {}
 
         Size size;
@@ -593,7 +570,7 @@ namespace TAT {
         } // to
 
         Data<Base> transpose(const std::vector<Size>& dims,
-                                    const std::vector<Rank>& plan) const {
+                             const std::vector<Rank>& plan) const {
           Data<Base> res(size);
           assert(dims.size()==plan.size());
           transpose::run(plan, dims, get(), res.get());
@@ -601,12 +578,12 @@ namespace TAT {
         } // transpose
 
         static Data<Base> contract(const Data<Base>& data1,
-                                          const Data<Base>& data2,
-                                          const std::vector<Size>& dims1,
-                                          const std::vector<Size>& dims2,
-                                          const std::vector<Rank>& plan1,
-                                          const std::vector<Rank>& plan2,
-                                          const Size& m, const Size& k, const Size& n) {
+                                   const Data<Base>& data2,
+                                   const std::vector<Size>& dims1,
+                                   const std::vector<Size>& dims2,
+                                   const std::vector<Rank>& plan1,
+                                   const std::vector<Rank>& plan2,
+                                   const Size& m, const Size& k, const Size& n) {
           assert(m*k==data1.size);
           assert(k*n==data2.size);
           Data<Base> a = data1.transpose(dims1, plan1);
@@ -618,11 +595,11 @@ namespace TAT {
         } // contract
 
         Data<Base> contract(const Data<Base>& data2,
-                                    const std::vector<Size>& dims1,
-                                    const std::vector<Size>& dims2,
-                                    const std::vector<Rank>& plan1,
-                                    const std::vector<Rank>& plan2,
-                                    const Size& m, const Size& k, const Size& n) const {
+                            const std::vector<Size>& dims1,
+                            const std::vector<Size>& dims2,
+                            const std::vector<Rank>& plan1,
+                            const std::vector<Rank>& plan2,
+                            const Size& m, const Size& k, const Size& n) const {
           return std::move(Data<Base>::contract(*this, data2, dims1, dims2, plan1, plan2, m, k, n));
         } // contract
 
@@ -636,7 +613,7 @@ namespace TAT {
 
         friend class svd_res;
         class svd_res {
-        public:
+         public:
           Data<Base> U;
           Data<Base> S;
           Data<Base> V;
@@ -677,7 +654,7 @@ namespace TAT {
 
         friend class qr_res;
         class qr_res {
-        public:
+         public:
           Data<Base> Q;
           Data<Base> R;
         }; // class qr_res
@@ -701,8 +678,8 @@ namespace TAT {
       inline namespace scalar {
         template<class Base>
         void vLinearFrac(const Size& n, const Base* a, const Base* b,
-                        const Base& sa, const Base& oa, const Base& sb, const Base& ob,
-                        Base* y);
+                         const Base& sa, const Base& oa, const Base& sb, const Base& ob,
+                         Base* y);
         // y = (a*sa + oa)/(b*sb + ob)
 
         template<>
@@ -714,8 +691,8 @@ namespace TAT {
 
         template<>
         void vLinearFrac<double>(const Size& n, const double* a, const double* b,
-                                const double& sa, const double& oa, const double& sb, const double& ob,
-                                double* y) {
+                                 const double& sa, const double& oa, const double& sb, const double& ob,
+                                 double* y) {
           vdLinearFrac(n, a, b, sa, oa, sb, ob, y);
         } // vLinearFrac
 
@@ -956,7 +933,7 @@ namespace TAT {
         } // operator<<
       } // namespace data::io
 #endif // TAT_USE_CPU
-    }
+    } // namespace CPU
   } // namespace data
 
   namespace node {
