@@ -1875,7 +1875,7 @@ namespace TAT {
        public:
         const Site<device, Base>* site_ptr; // edge won't change it, but could let other change it
         Legs legs;
-        std::shared_ptr<const Tensor<device, Base>> env; // edge won't change it, but could let other change it
+        std::shared_ptr<const Tensor<device, Base>> _env; // edge won't change it, but could let other change it
 
         Edge(const Site<device, Base>& _site, const Legs& _legs) : site_ptr(&_site), legs(_legs) {}
         Edge() = default;
@@ -1886,58 +1886,51 @@ namespace TAT {
         } // site
 
         Tensor<device, Base>& operator*() const {
-          return const_cast<Tensor<device, Base>&>(*env.get());
+          return const_cast<Tensor<device, Base>&>(*_env.get());
         } // operator*
         Tensor<device, Base>* operator->() const {
-          return const_cast<Tensor<device, Base>*>(env.get());
+          return const_cast<Tensor<device, Base>*>(_env.get());
         } // operator->
         Tensor<device, Base>* get() const {
-          return const_cast<Tensor<device, Base>*>(env.get());
+          return const_cast<Tensor<device, Base>*>(_env.get());
+        } // get
+        Tensor<device, Base>& env() const {
+          return const_cast<Tensor<device, Base>&>(*_env.get());
         } // get
 
         Edge& set(Tensor<device, Base>&& t) {
-          env = std::make_shared<const Tensor<device, Base>>(std::move(t));
+          _env = std::make_shared<const Tensor<device, Base>>(std::move(t));
           return *this;
-        } // set
-        /*
-        Edge& set(const Tensor<device, Base>& t) {
-          env = std::make_shared<const Tensor<device, Base>>(t);
-          // copy
-          return *this;
-        } // set
-        */
+        } //
         Edge& set(std::shared_ptr<const Tensor<device, Base>>& t) {
-          env = t;
+          _env = t;
           return *this;
         } // set
-        /*
-        Edge& set(std::shared_ptr<Tensor<device, Base>>& t) {
-          env = std::make_shared<const Tensor<device, Base>>(*t);
-          // copy
-          return *this;
-        } // set
-        */
       };
 
-      std::shared_ptr<const Tensor<device, Base>> tensor;
+      std::shared_ptr<const Tensor<device, Base>> _tensor;
       std::map<Legs, Edge> neighbor;
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      Site(T1&& _legs, T2&& _dims) : tensor(std::make_shared<const Tensor<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
+      Site(T1&& _legs, T2&& _dims) : _tensor(std::make_shared<const Tensor<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
       Site() = default;
       ~Site() = default;
       Site(const Site<device, Base>& e) = default;
       Site<device, Base>& operator=(const Site<device, Base>& e) = default;
 
       Tensor<device, Base>& operator*() const {
-        return const_cast<Tensor<device, Base>&>(*tensor.get());
+        return const_cast<Tensor<device, Base>&>(*_tensor.get());
       } // operator*
       Tensor<device, Base>* operator->() const {
-        return const_cast<Tensor<device, Base>*>(tensor.get());
+        return const_cast<Tensor<device, Base>*>(_tensor.get());
       } // operator->
       Tensor<device, Base>* get() const {
-        return const_cast<Tensor<device, Base>*>(tensor.get());
+        return const_cast<Tensor<device, Base>*>(_tensor.get());
       } // get
+      Tensor<device, Base>& tensor() const {
+        return const_cast<Tensor<device, Base>&>(*_tensor.get());
+      } // get
+
       const Edge& operator()(Legs legs) const {
         return neighbor[legs];
       }
@@ -1946,27 +1939,13 @@ namespace TAT {
       }
 
       Site<device, Base>& set(Tensor<device, Base>&& t) {
-        tensor = std::make_shared<Tensor<device, Base>>(std::move(t));
+        _tensor = std::make_shared<Tensor<device, Base>>(std::move(t));
         return *this;
       } // set
-      /*
-      Site<device, Base>& set(const Tensor<device, Base>& t) {
-        tensor = std::make_shared<Tensor<device, Base>>(t);
-        // copy
-        return *this;
-      } // set
-      */
       Site<device, Base>& set(std::shared_ptr<const Tensor<device, Base>>& t) {
-        tensor = t;
+        _tensor = t;
         return *this;
       } // set
-      /*
-      Site<device, Base>& set(std::shared_ptr<Tensor<device, Base>>& t) {
-        tensor = std::make_shared<const Tensor<device, Base>>(*t);
-        // copy
-        return *this;
-      } // set
-      */
 
       Size link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
@@ -2039,10 +2018,10 @@ namespace TAT {
 
       void qr_to(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
         std::vector<Legs> q_legs;
-        auto pos = tensor->legs.find(legs1);
-        q_legs.insert(q_legs.end(), tensor->legs.begin(), pos);
-        q_legs.insert(q_legs.end(), pos+1, tensor->legs.end());
-        auto res = tensor->qr(q_legs, legs1, legs2);
+        auto pos = tensor().legs.find(legs1);
+        q_legs.insert(q_legs.end(), tensor().legs.begin(), pos);
+        q_legs.insert(q_legs.end(), pos+1, tensor().legs.end());
+        auto res = tensor().qr(q_legs, legs1, legs2);
         this->set(std::move(res.Q));
         site2.set(std::move(site2->contract(res.Q, {legs2}, {legs1})));
       } // qr_to

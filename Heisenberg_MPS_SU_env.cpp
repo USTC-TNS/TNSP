@@ -105,7 +105,7 @@ struct MPS {
       std::cout << std::endl << &i << " ";
       for (auto& j : i.neighbor) {
         std::cout << &j.second.site() << " ";
-        std::cout << *j.second.env << "  ";
+        std::cout << j.second.env() << "  ";
       }
       std::cout << std::endl;
     }
