@@ -190,6 +190,12 @@ namespace TAT {
   } // namespace tensor
   using tensor::Tensor;
 
+  namespace site {
+    template<Device device=Device::CPU, class Base=double>
+    class Site;
+  } // namespace site
+  using site::Site;
+
   namespace data {
     namespace CPU {
 #ifdef TAT_USE_CPU
@@ -1861,71 +1867,56 @@ namespace TAT {
 
   namespace site {
     template<Device device, class Base>
-    class Edge;
-    template<Device device, class Base>
-    class Site;
-  } // namespace site
-  using site::Edge;
-  using site::Site;
-
-  namespace site {
-    // lifetime should be maintained manually
-    template<Device device, class Base>
-    class Edge {
-     public:
-      Site<device, Base>* _src;
-      Legs src_leg;
-      Site<device, Base>* _dst;
-      Legs dst_leg;
-      std::shared_ptr<Tensor<device, Base>> environment;
-
-      Edge(Site<device, Base>& __src, const Legs& __src_leg, Site<device, Base>& __dst, const Legs& __dst_leg)
-        : _src(&__src), src_leg(__src_leg), _dst(&__dst), dst_leg(__dst_leg) {}
-      Edge() = default;
-      ~Edge() = default;
-
-      Site<device, Base>& src() const {
-        return *_src;
-      }
-      Site<device, Base>& dst() const {
-        return *_dst;
-      }
-
-      Tensor<device, Base>& operator*() const {
-        return *environment.get();
-      } // operator*
-      Tensor<device, Base>* operator->() const {
-        return environment.get();
-      } // operator->
-      Tensor<device, Base>* get() const {
-        return environment.get();
-      } // get
-
-      Edge<device, Base>& set(Tensor<device, Base>&& t) {
-        environment = std::make_shared<Tensor<device, Base>>(std::move(t));
-        return *this;
-      } // set
-      Edge<device, Base>& set(const Tensor<device, Base>& t) {
-        environment = std::make_shared<Tensor<device, Base>>(t);
-        // copy
-        return *this;
-      } // set
-      Edge<device, Base>& set(std::shared_ptr<Tensor<device, Base>>& t) {
-        environment = t;
-        return *this;
-      } // set
-    }; // class Edge
-
-    template<Device device, class Base>
     class Site {
      public:
+      friend class Edge;
+      class Edge {
+       public:
+        const Site<device, Base>* site_ptr;
+        Legs legs;
+        std::shared_ptr<Tensor<device, Base>> env;
+
+        Edge(const Site<device, Base>& _site, const Legs& _legs) : site_ptr(&_site), legs(_legs) {}
+
+        const Site<device, Base>& site() const {
+          return *site_ptr;
+        }
+
+        Tensor<device, Base>& operator*() const {
+          return *env.get();
+        } // operator*
+        Tensor<device, Base>* operator->() const {
+          return env.get();
+        } // operator->
+        Tensor<device, Base>* get() const {
+          return env.get();
+        } // get
+
+        Edge& set(Tensor<device, Base>&& t) {
+          env = std::make_shared<Tensor<device, Base>>(std::move(t));
+          return *this;
+        } // set
+        Edge& set(const Tensor<device, Base>& t) {
+          env = std::make_shared<Tensor<device, Base>>(t);
+          // copy
+          return *this;
+        } // set
+        Edge& set(std::shared_ptr<Tensor<device, Base>>& t) {
+          env = t;
+          return *this;
+        } // set
+      };
+
       std::shared_ptr<Tensor<device, Base>> tensor;
-      std::map<Legs, Edge<device, Base>> neighbor;
+      std::map<Legs, Edge> neighbor;
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
       Site(T1&& _legs, T2&& _dims) : tensor(std::make_shared<Tensor<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
       Site() = default;
       ~Site() = default;
+      Site(const Site<device, Base>& e) = default;
+      Site<device, Base>& operator=(const Site<device, Base>& e) = default;
+      // move
 
       Tensor<device, Base>& operator*() const {
         return *tensor.get();
@@ -1936,8 +1927,8 @@ namespace TAT {
       Tensor<device, Base>* get() const {
         return tensor.get();
       } // get
-      Edge<device, Base>& operator()(Legs legs) {
-        return neighbor[legs];
+      Edge& operator()(Legs legs) {
+        return neighbor.at(legs);
       }
 
       Site<device, Base>& set(Tensor<device, Base>&& t) {
@@ -1954,9 +1945,9 @@ namespace TAT {
         return *this;
       } // set
 
-      Size link(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+      Size link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
-        site1(legs1) = Edge<device, Base>(site1, legs1, site2, legs2);
+        site1(legs1) = Edge(site2, legs2);
         auto pos1 = std::find(site1->legs.begin(), site1->legs.end(), legs1);
         assert(pos1!=site1->legs.end());
         Rank index1 = std::distance(site1->legs.begin(), pos1);
@@ -1986,7 +1977,7 @@ namespace TAT {
         site2(legs2).set(env);
       } // link_env, double link, insert env
 
-      Edge<device, Base> unlink(const Legs& legs1) {
+      Edge unlink(const Legs& legs1) {
         Site<device, Base>& site1 = *this;
         auto pos1 = site1.neighbor.find(legs1);
         auto edge = pos1.second;

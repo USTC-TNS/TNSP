@@ -73,12 +73,12 @@ struct MPS {
       for(int i=0; i<L; i++) {
         std::cout << lattice[i].get() << " ";
         for(const auto& i : lattice[i].neighbor){
-          std::cout << i.second.dst().get() << " ";
+          std::cout << i.second.site().get() << " ";
         }
         std::cout << std::endl;
         //
       }
-      std::cout << lattice[0](Right).dst()(Right).dst()(Right).dst().get() << std::endl ;
+      //std::cout << lattice[0](Right).site()(Right).site()(Right).site().get() << std::endl ;
     }
     {
       double default_H[16] = {
