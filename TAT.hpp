@@ -184,8 +184,8 @@ namespace TAT {
                           1, src, int_dims.data(), NULL,
                           0, dst, NULL,
                           hptt::ESTIMATE, 1, NULL, 1)->execute();
-      }
-    }
+      } // run
+    } // namespace data::transpose
 
     namespace contract {
       template<class Base>
@@ -605,10 +605,10 @@ namespace TAT {
       svd_res svd(const std::vector<Size>& dims,
                   const std::vector<Rank>& plan,
                   const Size& u_size,
+                  const Size& v_size,
+                  const Size& min_mn,
                   const Size& cut) const {
         assert(size%u_size==0);
-        Size v_size = size/u_size;
-        Size min_mn = (u_size<v_size)?u_size:v_size;
         Size cut_dim = (cut<min_mn)?cut:min_mn;
         // -1 > any integer
         Data<device, Base> tmp = transpose(dims, plan);
@@ -645,9 +645,9 @@ namespace TAT {
       qr_res qr(const std::vector<Size>& dims,
                 const std::vector<Rank>& plan,
                 const Size& q_size,
-                const Size& r_size) const {
+                const Size& r_size,
+                const Size& min_mn) const {
         assert(size==q_size*r_size);
-        Size min_mn = (q_size<r_size)?q_size:r_size;
         qr_res res;
         res.Q = Data<device, Base>(q_size*min_mn);
         res.R = transpose(dims, plan);
@@ -1093,7 +1093,9 @@ namespace TAT {
         std::vector<Size> tmp_dims;
         transpose::plan(tmp_dims, dims, plan);
         svd::plan(u_size, u_rank, tmp_dims);
-        auto data_res = data.svd(dims, plan, u_size, cut);
+        Size v_size = size()/u_size;
+        Size min_mn = (u_size<v_size)?u_size:v_size;
+        auto data_res = data.svd(dims, plan, u_size, v_size, min_mn, cut);
         auto mid = tmp_dims.begin()+u_rank;
         res.U.dims.insert(res.U.dims.end(), tmp_dims.begin(), mid);
         res.U.dims.push_back(data_res.S.size);
@@ -1122,7 +1124,7 @@ namespace TAT {
         auto mid = tmp_dims.begin()+q_rank;
         Size r_size=data.size/q_size;
         Size min_size = (q_size<r_size)?q_size:r_size;
-        auto data_res = data.qr(dims, plan, q_size, r_size);
+        auto data_res = data.qr(dims, plan, q_size, r_size, min_size);
         res.Q.dims.insert(res.Q.dims.end(), tmp_dims.begin(), mid);
         res.Q.dims.push_back(min_size);
         res.R.dims.push_back(min_size);
