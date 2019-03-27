@@ -1994,7 +1994,7 @@ namespace TAT {
           assert(env->dims().size()==1);
           assert(dim==env->size());
           site1.set(std::move(site1->multiple(1/(*env), legs1)));
-        }
+        } // if
         site1(legs1).set(env);
         site2(legs2).set(env);
       } // link_env, double link, insert env
