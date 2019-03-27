@@ -2022,6 +2022,41 @@ namespace TAT {
           site1.set(std::move(site1->multiple(*tmp, legs1)));
         } // if
       } // unlink, double unlink
+
+      //// high level op
+
+      void qr_to();
+      void update_to();
+      void update_to_qr();
+      void update_to_env();
+      void update_to_qr_env();
+
+      void qr_to(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        std::vector<Legs> q_legs;
+        auto pos = tensor->legs.find(legs1);
+        q_legs.insert(q_legs.end(), tensor->legs.begin(), pos);
+        q_legs.insert(q_legs.end(), pos+1, tensor->legs.end());
+        auto res = tensor->qr(q_legs, legs1, legs2);
+        this->set(std::move(res.Q));
+        site2.set(std::move(site2->contract(res.Q, {legs2}, {legs1})));
+      } // qr_to
+
+      void update_to(const Legs& legs1,
+                     Site<device, Base>& site2, const Legs& legs2,
+                     const Tensor<device, Base>& updater, // Phy1..4
+                     const std::map<Legs, Legs>& map1,
+                     const std::map<Legs, Legs>& map2,
+                     const std::vector<Legs>& svd_u,
+                     const std::map<Legs, Legs>& map1inv,
+                     const std::map<Legs, Legs>& map2inv) {
+        using namespace legs_name;
+        Site<device, Base>& site1 = *this;
+        auto svd_res = site1->contract(*site2, {legs1}, {legs2}, map1, map2)
+                       .contract(updater, {Phy1, Phy2}, {Phy1, Phy2})
+                       .svd(svd_u, legs1, legs2);
+        site1.set(std::move(svd_res.U.legs_rename(map1inv)));
+        site1.set(std::move(svd_res.V.legs_rename(map2inv).multiple(svd_res.S, legs2)));
+      } //
     }; // class Site
   } // namespace site
   using site::Site;

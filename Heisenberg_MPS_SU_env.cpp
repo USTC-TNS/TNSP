@@ -65,19 +65,6 @@ struct MPS {
     {
       for (int i=0; i<L-1; i++) {
         lattice[i].link_env(Right, lattice[i+1], Left);
-        //
-        for (int j=0; j<L; j++) {
-          std::cout << lattice[j].neighbor.size() << " ";
-        }
-        std::cout << std::endl;
-      }
-      for (int i=0; i<L; i++) {
-        std::cout << lattice[i].get() << " ";
-        for (const auto& i : lattice[i].neighbor) {
-          std::cout << i.second.site().get() << " ";
-        }
-        std::cout << std::endl;
-        //
       }
       //std::cout << lattice[0](Right).site()(Right).site()(Right).site().get() << std::endl ;
     }
@@ -115,6 +102,12 @@ struct MPS {
     for (auto& i : lattice) {
       i->set_random(random);
       std::cout << *i << std::endl;
+      std::cout << std::endl << &i << " ";
+      for (auto& j : i.neighbor) {
+        std::cout << &j.second.site() << " ";
+        std::cout << *j.second.env << "  ";
+      }
+      std::cout << std::endl;
     }
   }
 };
