@@ -56,14 +56,15 @@ struct MPS {
     return double(std::rand())/(RAND_MAX)*2-1;
   }
 
-  MPS(int _L, Size _D) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
+  MPS(int _L, Size _D, unsigned seed) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
     using namespace TAT::legs_name;
+    std::srand(seed);
     {
-      lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, 1, D})));
+      lattice.push_back(Site().set(std::move(Tensor({Phy, Left, Right}, {2, 1, D}).set_random(random))));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, D, D})));
+        lattice.push_back(Site().set(std::move(Tensor({Phy, Left, Right}, {2, D, D}).set_random(random))));
       }
-      lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, D, 1})));
+      lattice.push_back(Site().set(std::move(Tensor({Phy, Left, Right}, {2, D, 1}).set_random(random))));
     } // lattice
     {
       for (int i=0; i<L-1; i++) {
@@ -97,13 +98,6 @@ struct MPS {
         identity_data[i] = default_I[i];
       }
     } // identity
-  }
-
-  void set_random_state(unsigned seed) {
-    std::srand(seed);
-    for (auto& i : lattice) {
-      i.tensor().set_random(random);
-    }
   }
 
   void update(const Tensor& updater) {
@@ -197,8 +191,7 @@ std::ostream& operator<<(std::ostream& out, const MPS& mps) {
 }
 
 void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_step, double delta_t) {
-  MPS mps(L, D);
-  mps.set_random_state(seed);
+  MPS mps(L, D, seed);
   mps.update(step, print_step, delta_t);
 }
 
