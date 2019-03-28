@@ -182,17 +182,23 @@ struct MPS {
 };
 
 std::ostream& operator<<(std::ostream& out, const MPS& mps) {
-  out << "[L(" << mps.L << ") D(" << mps.D << ") lattice(" << std::endl;
+  out << "{\"L\": " << mps.L << ", \"D\": " << mps.D << ", \"lattice\": [";
+  bool flag = false;
   for (auto& i : mps.lattice) {
-    out << "  " << i.tensor() << std::endl;
+    if (flag) {
+      out << ",";
+    }
+    out << " " << i;
+    flag = true;
   }
-  out << ")]" << std::endl;
+  out << "]}";
   return out;
 }
 
 void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_step, double delta_t) {
   MPS mps(L, D, seed);
   mps.update(step, print_step, delta_t);
+  std::cout << mps << std::endl;
 }
 
 int main(int argc, char** argv) {
