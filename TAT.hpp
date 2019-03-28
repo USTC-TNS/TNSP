@@ -196,6 +196,12 @@ namespace TAT {
   } // namespace site
   using site::Site;
 
+  namespace lattice {
+    template<Device device=Device::CPU, class Base=double>
+    class Lattice;
+  } // namespace lattice
+  using lattice::Lattice;
+
   namespace data {
     namespace CPU {
 #ifdef TAT_USE_CPU
@@ -1896,7 +1902,7 @@ namespace TAT {
           _env = t;
           return *this;
         } // set
-      };
+      }; // class Edge
 
       std::shared_ptr<const Tensor<device, Base>> _tensor;
       std::map<Legs, Edge> neighbor;
@@ -1987,7 +1993,11 @@ namespace TAT {
   } // namespace site
   using site::Site;
 
-  namespace SiteToolkit {
+  namespace lattice {
+    template<Device device, class Base>
+    class Lattice : public std::vector<Tensor<device, Base>> {
+
+    }; // class Lattice
     // used in su
     /*
     void qr_to();
@@ -2027,6 +2037,6 @@ namespace TAT {
           site1.set(std::move(svd_res.V.legs_rename(map2inv).multiple(svd_res.S, legs2)));
         } //
     */
-  } // namespace SiteToolkit
+  } // namespace lattice
 } // namespace TAT
 #endif // TAT_HPP_
