@@ -2042,6 +2042,20 @@ namespace TAT {
         set(std::move(qr.Q));
         other.set(std::move(other.tensor().contract(qr.R, {leg_r}, {leg_q})));
       }
+
+      void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r) {
+        std::vector<Legs> q_legs;
+        for (const auto& i : tensor().legs) {
+          if (i!=leg_q) {
+            q_legs.push_back(i);
+          }
+        }
+        qr_to(other, q_legs, leg_q, leg_r);
+      }
+
+      void qr_to(Site<device, Base>& other, const Legs& leg) {
+        qr_to(other, leg, -leg);
+      }
     }; // class Site
   } // namespace site
 
