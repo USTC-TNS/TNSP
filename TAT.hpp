@@ -519,9 +519,9 @@ namespace TAT {
         Data(const Data<Base>& other) {
           new (this) Data(other.size);
           std::memcpy(get(), other.get(), size*sizeof(Base));
-#ifndef NDEBUG
+#ifndef TAT_NOT_WARN_COPY
           std::clog << "Copying Data..." << std::endl;
-#endif // NDEBUG
+#endif // TAT_NOT_WARN_COPY
         }
         Data<Base>& operator=(const Data<Base>& other) {
           new (this) Data(other);
@@ -2010,14 +2010,7 @@ namespace TAT {
         } // if
       } // unlink, double unlink, delete env
 
-      // else
-
-      template<int n>
-      Site<device, Base>& normalize() {
-        tensor() /= tensor().template norm<n>();
-        return *this;
-      } // normalize
-
+      // io
       friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
         out << "{\"addr\": \"" << &value << "\", \"neighbor\": {";
         bool flag=false;
@@ -2036,6 +2029,19 @@ namespace TAT {
         out << "} ,\"tensor\": " << value.tensor() << "}";
         return out;
       } // operator<<
+
+      // op
+      template<int n>
+      Site<device, Base>& normalize() {
+        tensor() /= tensor().template norm<n>();
+        return *this;
+      } // normalize
+
+      void qr_to(Site<device, Base>& other, const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
+        auto qr = tensor().qr(q_legs, {leg_q}, {leg_r});
+        set(std::move(qr.Q));
+        other.set(std::move(other.tensor().contract(qr.R, {leg_r}, {leg_q})));
+      }
     }; // class Site
   } // namespace site
 

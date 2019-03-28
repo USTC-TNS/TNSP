@@ -128,9 +128,7 @@ struct MPS {
   void pre() {
     using namespace TAT::legs_name;
     for (int i=L-1; i>1; i--) {
-      auto qr = lattice[i].tensor().qr({Phy, Right}, Left, Right);
-      lattice[i].set(std::move(qr.Q));
-      lattice[i-1].set(Tensor::contract(lattice[i-1].tensor(), qr.R, {Right}, {Left}));
+      lattice[i].qr_to(lattice[i-1], {Phy, Right}, Left, Right);
     }
   }
 
