@@ -103,6 +103,9 @@ struct MPS {
   void update(const Tensor& updater) {
     using namespace TAT::legs_name;
     for (int i=0; i<L-1; i++) {
+      //lattice[i].update(lattice[i+1], Right, Left, {Left, Phy1}, D, updater, {{Phy, Phy1}}, {{Phy, Phy2}}, {{Phy1, Phy}}, {{Phy2, Phy}});
+      lattice[i].update_to(lattice[i+1], Right, Left, D, updater, {Left1});
+      /*
       Tensor big = Tensor::contract(lattice[i].tensor(), lattice[i+1].tensor(), {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
       Tensor Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
       auto svd = Big.svd({Left, Phy3}, Right, Left, D);
@@ -110,6 +113,7 @@ struct MPS {
       lattice[i].tensor().legs_rename({{Phy3, Phy}});
       lattice[i+1].set(svd.V.multiple(svd.S, Left));
       lattice[i+1].tensor().legs_rename({{Phy4, Phy}});
+      */
     }
     for (int i=L-1; i>0; i--) {
       auto big = Tensor::contract(lattice[i].tensor(), lattice[i-1].tensor(), {Left}, {Right}, {{Phy, Phy1}}, {{Phy, Phy2}});

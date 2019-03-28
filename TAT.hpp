@@ -1884,6 +1884,34 @@ namespace TAT {
   } // namespace tensor
 
   namespace site {
+    namespace internal {
+      template<class T>
+      std::vector<T> vector_except(const std::vector<T>& v, const T& j) {
+        std::vector<Legs> res;
+        for (const auto& i : v) {
+          if (i!=j) {
+            res.push_back(i);
+          }
+        }
+        return res;
+      } // vector_except
+
+      template<class T>
+      void vector_replace_one(std::vector<T>& v, const T& j, const T& k) {
+        for (auto& i : v) {
+          if (i==j) {
+            i = k;
+            return;
+          }
+        }
+      } // vector_replace_one
+
+      template<class T>
+      bool in_vector(const T& i, const std::vector<T>& v) {
+        auto pos = std::find(v.begin(), v.end(), i);
+        return pos!=v.end();
+      } // in_vector
+    } // namespace internal
     // Site won't change Tensor itself, but allow user change it
     // usually, it only replace Tensor rather than change it
     // user should not change Tensor too except initialize or normalize
@@ -2030,54 +2058,84 @@ namespace TAT {
         return out;
       } // operator<<
 
-      // op
+      // norm
       template<int n>
       Site<device, Base>& normalize() {
         tensor() /= tensor().template norm<n>();
         return *this;
       } // normalize
 
+      // high level op
+
+     private:
+      void qr_off(const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
+        auto qr = tensor().qr(q_legs, {leg_q}, {leg_r});
+        set(std::move(qr.Q));
+      } // qr_off
+      void qr_off(const Legs& leg_q, const Legs& leg_r) {
+        std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
+        qr_off(q_legs, leg_q, leg_r);
+      } // qr_off
+     public:
+      void qr_off(const Legs& leg) {
+        qr_off(leg, -leg);
+      } // qr_off
+
+     private:
       void qr_to(Site<device, Base>& other, const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
         auto qr = tensor().qr(q_legs, {leg_q}, {leg_r});
         set(std::move(qr.Q));
         other.set(std::move(other.tensor().contract(qr.R, {leg_r}, {leg_q})));
-      }
-
+      } // qr_to
       void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r) {
-        std::vector<Legs> q_legs;
-        for (const auto& i : tensor().legs) {
-          if (i!=leg_q) {
-            q_legs.push_back(i);
-          }
-        }
+        std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
         qr_to(other, q_legs, leg_q, leg_r);
-      }
-
+      } // qr_to
+     public:
       void qr_to(Site<device, Base>& other, const Legs& leg) {
         qr_to(other, leg, -leg);
+      } // qr_to
+
+     private:
+      void update_to(Site<device, Base>& site2,
+                     const Legs& leg1, const Legs& leg2,
+                     const std::vector<Legs>& tmp_leg1,
+                     const Size& D, const Tensor<device, Base>& updater,
+                     const std::map<Legs, Legs>& leg_to_tmp1, const std::map<Legs, Legs>& leg_to_tmp2,
+                     const std::map<Legs, Legs>& tmp_to_leg1, const std::map<Legs, Legs>& tmp_to_leg2) {
+        Site<device, Base>& site1 = *this;
+        auto res = site1.tensor()
+                   .contract(site2.tensor(), {leg1}, {leg2}, leg_to_tmp1, leg_to_tmp2)
+                   .contract(updater, {TAT::Legs::Phy1, TAT::Legs::Phy2}, {TAT::Legs::Phy3, TAT::Legs::Phy4})
+                   .svd(tmp_leg1, leg1, leg2, D);
+        site1.set(std::move(res.U));
+        site1.tensor().legs_rename(tmp_to_leg1);
+        site2.set(res.V.multiple(res.S, leg2));
+        site2.tensor().legs_rename(tmp_to_leg2);
+      } // update
+     public:
+      void update_to(Site<device, Base>& site2,
+                     const Legs& leg1, const Legs& leg2,
+                     const Size& D, const Tensor<device, Base>& updater,
+                     const std::vector<Legs>& free_leg) {
+        using namespace legs_name;
+        Site<device, Base>& site1 = *this;
+        std::vector<Legs> tmp_leg1 = internal::vector_except(site1.tensor().legs, leg1);
+        internal::vector_replace_one(tmp_leg1, Phy, Phy1);
+        std::map<Legs, Legs> map1, map2;
+        map1[Phy] = Phy2;
+        map2[Phy2] = Phy;
+        int p = 0;
+        for (const auto& i : site2.tensor().legs) {
+          if (i!=Phy && i!=leg2 && internal::in_vector(i, site1.tensor().legs)) {
+            map1[i] = free_leg[p];
+            map2[free_leg[p]] = i;
+            p++;
+          }
+        }
+        update_to(site2, leg1, leg2, tmp_leg1, D, updater, {{Phy, Phy1}}, map1, {{Phy1, Phy}}, map2);
       }
     }; // class Site
   } // namespace site
-
-  namespace siteToolkit {
-    // this namespace is in development
-    template<Device device, class Base>
-    void update_to(Site<device, Base>& site1, const Legs& legs1,
-                   Site<device, Base>& site2, const Legs& legs2,
-                   const Tensor<device, Base>& updater, // Phy1..4
-                   const std::map<Legs, Legs>& map1,
-                   const std::map<Legs, Legs>& map2,
-                   const std::vector<Legs>& svd_u,
-                   const std::map<Legs, Legs>& map1inv,
-                   const std::map<Legs, Legs>& map2inv,
-                   const Size& D) {
-      using namespace legs_name;
-      auto svd_res = site1->contract(*site2, {legs1}, {legs2}, map1, map2)
-                     .contract(updater, {Phy1, Phy2}, {Phy3, Phy4})
-                     .svd(svd_u, legs1, legs2, D);
-      site1.set(std::move(svd_res.U.legs_rename(map1inv)));
-      site1.set(std::move(svd_res.V.legs_rename(map2inv).multiple(svd_res.S, legs2)));
-    } // update_to
-  } // namespace lattice
 } // namespace TAT
 #endif // TAT_HPP_
