@@ -545,25 +545,29 @@ namespace TAT {
           return base.get();
         } // get
 
-        void set_test() {
+        Data<Base>& set_test() {
           for (Size i=0; i<size; i++) {
             base[i] = Base(i);
           } // for i
+          return *this;
         } // set_test
-        void set_zero() {
+        Data<Base>& set_zero() {
           for (Size i=0; i<size; i++) {
             base[i] = Base(0);
           } // for i
+          return *this;
         } // set_zero
-        void set_random(Base(*random)()) {
+        Data<Base>& set_random(Base(*random)()) {
           for (Size i=0; i<size; i++) {
             base[i] = random();
           } // for i
+          return *this;
         } // set_random
-        void set_constant(Base num) {
+        Data<Base>& set_constant(Base num) {
           for (Size i=0; i<size; i++) {
             base[i] = num;
           } // for i
+          return *this;
         } // set_constant
 
         template<int n>
@@ -1043,17 +1047,21 @@ namespace TAT {
         return data.get();
       } // get
 
-      void set_test() {
+      Node<device, Base>& set_test() {
         data.set_test();
+        return *this;
       } // set_test
-      void set_zero() {
+      Node<device, Base>& set_zero() {
         data.set_zero();
+        return *this;
       } // set_zero
-      void set_random(Base(*random)()) {
+      Node<device, Base>& set_random(Base(*random)()) {
         data.set_random(random);
+        return *this;
       } // set_random
-      void set_constant(Base num) {
+      Node<device, Base>& set_constant(Base num) {
         data.set_constant(num);
+        return *this;
       } // set_constant
 
       template<int n>
@@ -1493,17 +1501,21 @@ namespace TAT {
         return node.get();
       } // get
 
-      void set_test() {
+      Tensor<device, Base> set_test() {
         node.set_test();
+        return *this;
       } // set_test
-      void set_zero() {
+      Tensor<device, Base> set_zero() {
         node.set_zero();
+        return *this;
       } // set_zero
-      void set_random(Base(*random)()) {
+      Tensor<device, Base> set_random(Base(*random)()) {
         node.set_random(random);
+        return *this;
       } // set_random
-      void set_constant(Base num) {
+      Tensor<device, Base> set_constant(Base num) {
         node.set_constant(num);
+        return *this;
       } // set_constant
 
       Tensor<device, Base>& legs_rename(const std::map<Legs, Legs>& dict) {
@@ -1895,7 +1907,7 @@ namespace TAT {
         } // site
         Tensor<device, Base>& env() const {
           return const_cast<Tensor<device, Base>&>(*_env.get());
-        } // get
+        } // env
 
         Edge& set(Tensor<device, Base>&& t) {
           _env = std::make_shared<const Tensor<device, Base>>(std::move(t));
@@ -1919,7 +1931,7 @@ namespace TAT {
 
       Tensor<device, Base>& tensor() const {
         return const_cast<Tensor<device, Base>&>(*_tensor.get());
-      } // get
+      } // tensor
       const Edge& operator()(Legs legs) const {
         return neighbor[legs];
       } // operator()
