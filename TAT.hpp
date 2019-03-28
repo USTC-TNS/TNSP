@@ -196,12 +196,6 @@ namespace TAT {
   } // namespace site
   using site::Site;
 
-  namespace lattice {
-    template<Device device=Device::CPU, class Base=double>
-    class Lattice;
-  } // namespace lattice
-  using lattice::Lattice;
-
   namespace data {
     namespace CPU {
 #ifdef TAT_USE_CPU
@@ -1501,19 +1495,19 @@ namespace TAT {
         return node.get();
       } // get
 
-      Tensor<device, Base> set_test() {
+      Tensor<device, Base>& set_test() {
         node.set_test();
         return *this;
       } // set_test
-      Tensor<device, Base> set_zero() {
+      Tensor<device, Base>& set_zero() {
         node.set_zero();
         return *this;
       } // set_zero
-      Tensor<device, Base> set_random(Base(*random)()) {
+      Tensor<device, Base>& set_random(Base(*random)()) {
         node.set_random(random);
         return *this;
       } // set_random
-      Tensor<device, Base> set_constant(Base num) {
+      Tensor<device, Base>& set_constant(Base num) {
         node.set_constant(num);
         return *this;
       } // set_constant
@@ -1900,7 +1894,6 @@ namespace TAT {
 
         Edge(const Site<device, Base>& site_ref, const Legs& _legs) : _site(&site_ref), legs(_legs) {}
         Edge() = default;
-        ~Edge() = default;
 
         Site<device, Base>& site() const {
           return const_cast<Site<device, Base>&>(*_site);
@@ -1921,13 +1914,6 @@ namespace TAT {
 
       std::shared_ptr<const Tensor<device, Base>> _tensor;
       std::map<Legs, Edge> neighbor;
-
-      template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      Site(T1&& _legs, T2&& _dims) : _tensor(std::make_shared<const Tensor<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims))) {}
-      Site() = default;
-      ~Site() = default;
-      Site(const Site<device, Base>& e) = default;
-      Site<device, Base>& operator=(const Site<device, Base>& e) = default;
 
       Tensor<device, Base>& tensor() const {
         return const_cast<Tensor<device, Base>&>(*_tensor.get());
@@ -2008,50 +1994,24 @@ namespace TAT {
   } // namespace site
   using site::Site;
 
-  namespace lattice {
+  namespace siteToolkit {
     template<Device device, class Base>
-    class Lattice : public std::vector<Tensor<device, Base>> {
-
-    }; // class Lattice
-    // used in su
-    /*
-    void qr_to();
-    void update_to();
-    void update_to_qr();
-    void update_to_env();
-    void update_to_qr_env();
-
-    void copy_net();
-    void contract_along();
-    */
-    /*
-        void qr_to(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
-          std::vector<Legs> q_legs;
-          auto pos = tensor().legs.find(legs1);
-          q_legs.insert(q_legs.end(), tensor().legs.begin(), pos);
-          q_legs.insert(q_legs.end(), pos+1, tensor().legs.end());
-          auto res = tensor().qr(q_legs, legs1, legs2);
-          this->set(std::move(res.Q));
-          site2.set(std::move(site2->contract(res.Q, {legs2}, {legs1})));
-        } // qr_to
-
-        void update_to(const Legs& legs1,
-                       Site<device, Base>& site2, const Legs& legs2,
-                       const Tensor<device, Base>& updater, // Phy1..4
-                       const std::map<Legs, Legs>& map1,
-                       const std::map<Legs, Legs>& map2,
-                       const std::vector<Legs>& svd_u,
-                       const std::map<Legs, Legs>& map1inv,
-                       const std::map<Legs, Legs>& map2inv) {
-          using namespace legs_name;
-          Site<device, Base>& site1 = *this;
-          auto svd_res = site1->contract(*site2, {legs1}, {legs2}, map1, map2)
-                         .contract(updater, {Phy1, Phy2}, {Phy1, Phy2})
-                         .svd(svd_u, legs1, legs2);
-          site1.set(std::move(svd_res.U.legs_rename(map1inv)));
-          site1.set(std::move(svd_res.V.legs_rename(map2inv).multiple(svd_res.S, legs2)));
-        } //
-    */
+    void update_to(Site<device, Base>& site1, const Legs& legs1,
+                   Site<device, Base>& site2, const Legs& legs2,
+                   const Tensor<device, Base>& updater, // Phy1..4
+                   const std::map<Legs, Legs>& map1,
+                   const std::map<Legs, Legs>& map2,
+                   const std::vector<Legs>& svd_u,
+                   const std::map<Legs, Legs>& map1inv,
+                   const std::map<Legs, Legs>& map2inv,
+                   const Size& D) {
+      using namespace legs_name;
+      auto svd_res = site1->contract(*site2, {legs1}, {legs2}, map1, map2)
+                      .contract(updater, {Phy1, Phy2}, {Phy3, Phy4})
+                      .svd(svd_u, legs1, legs2, D);
+      site1.set(std::move(svd_res.U.legs_rename(map1inv)));
+      site1.set(std::move(svd_res.V.legs_rename(map2inv).multiple(svd_res.S, legs2)));
+    } // update_to
   } // namespace lattice
 } // namespace TAT
 #endif // TAT_HPP_

@@ -56,11 +56,11 @@ struct MPS {
   MPS(int _L, Size _D) : L(_L), D(_D) {
     using namespace TAT::legs_name;
     {
-      lattice.push_back(Tensor({Phy, Left, Right}, {2, 1, D}));
+      lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, 1, D})));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Tensor({Phy, Left, Right}, {2, D, D}));
+        lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, 1})));
       }
-      lattice.push_back(Tensor({Phy, Left, Right}, {2, D, 1}));
+      lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, 1})));
     } // lattice
     {
       for (int i=0; i<L-1; i++) {
