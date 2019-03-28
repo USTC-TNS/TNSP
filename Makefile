@@ -30,14 +30,21 @@ else
 	endif
 endif
 
+SRC=$(wildcard ./*.cpp)
+STYLE=$(SRC:.cpp=.cpp.style)
+COMPILE=$(SRC:.cpp=.out)
+
 all: style compile
 
-compile: test.out Heisenberg_MPS_SU.out Heisenberg_MPS_SU_env.out #Heisenberg_PEPS_SU.out
+compile: $(COMPILE)
 
-style: TAT.hpp.style test.cpp.style Heisenberg_MPS_SU.cpp.style Heisenberg_MPS_SU_env.cpp.style Heisenberg_PEPS_SU.cpp.style
+style: TAT.hpp.style $(STYLE)
 
 %.out: %.cpp
 	$(CXX) $< $(CXXFLAGS) -o $@
 
 %.style: %
 	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $<
+
+clean:
+	rm -rf ${COMPILE}
