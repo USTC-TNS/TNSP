@@ -919,12 +919,14 @@ namespace TAT {
       inline namespace io {
         template<class Base>
         std::ostream& operator<<(std::ostream& out, const Data<Base>& value) {
+          out << "{\"size\": " << value.size << ", \"base\": [";
           for (Size i=0; i<value.size-1; i++) {
-            out << value.base[i] << " ";
+            out << value.base[i] << ", ";
           } // for i
           if (value.size!=0) {
             out << value.base[value.size-1];
           } // if
+          out << "]}";
           return out;
         } // operator<<
 
@@ -1306,18 +1308,20 @@ namespace TAT {
     inline namespace io {
       std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value) {
         Rank size=value.size();
+        out << "[";
         for (Rank i=0; i<size-1; i++) {
-          out << value[i] << " ";
+          out << value[i] << ", ";
         } // for i
         if (size!=0) {
           out << value[size-1];
         } // if
+        out << "]";
         return out;
       } // operator<<
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value) {
-        return out << "[dims(" << value.dims << ") data(" << value.data << ")]";
+        return out << "{\"dims\": " << value.dims << ", \"data\": " << value.data << "}";
       } // operator<<
 
       template<Device device, class Base>
@@ -1842,18 +1846,20 @@ namespace TAT {
     inline namespace io {
       std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value) {
         Rank size=value.size();
+        out << "[";
         for (Rank i=0; i<size-1; i++) {
-          out << value[i] << " ";
+          out << "\"" << value[i] << "\", ";
         } // for i
         if (size!=0) {
-          out << value[size-1];
+          out << "\"" << value[size-1] << "\"";
         } // if
+        out << "]";
         return out;
       } // operator<<
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value) {
-        return out << "[rank(" << value.legs.size() << ") legs(" << value.legs << ") node(" << value.node << ")]";
+        return out << "{\"rank\": " << value.legs.size() << ", \"legs\": " << value.legs << ", \"node\": " << value.node << "}";
       } // operator<<
 
       template<Device device, class Base>
@@ -1983,7 +1989,7 @@ namespace TAT {
       Edge unlink(const Legs& legs1) {
         Site<device, Base>& site1 = *this;
         auto pos1 = site1.neighbor.find(legs1);
-        auto&& edge = std::move(pos1->second);
+        auto edge = std::move(pos1->second);
         site1.neighbor.erase(pos1);
         return std::move(edge);
       } // unlink, single unlink
@@ -2003,6 +2009,25 @@ namespace TAT {
           site1.set(std::move(site1.tensor().multiple(*tmp, legs1)));
         } // if
       } // unlink, double unlink, delete env
+
+      friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
+        out << "{\"addr\": \"" << &value << "\", \"neighbor\": {";
+        bool flag=false;
+        for(const auto& i : value.neighbor) {
+          if(flag){
+            out << ", ";
+          }
+          out << "\"" << i.first << "\": " << "{\"addr\": \"" << &i.second.site() << "\", \"legs\": \"" << i.second.legs << "\"";
+          if(i.second._env) {
+            out << ", \"env\": ";
+            out << i.second.env();
+          }
+          out << "}";
+          flag = true;
+        }
+        out << "} ,\"tensor\": " << value.tensor() << "}";
+        return out;
+      }
     }; // class Site
   } // namespace site
   using site::Site;
