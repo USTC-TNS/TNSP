@@ -2127,14 +2127,14 @@ namespace TAT {
         map2[Phy2] = Phy;
         int p = 0;
         for (const auto& i : site2.tensor().legs) {
-          if (i!=Phy && i!=leg2 && internal::in_vector(i, site1.tensor().legs)) {
+          if (i!=Phy && i!=leg1 && i!=leg2 && internal::in_vector(i, site1.tensor().legs)) {
             map1[i] = free_leg[p];
             map2[free_leg[p]] = i;
             p++;
-          }
-        }
+          } // if same
+        } // for leg
         update_to(site2, leg1, leg2, tmp_leg1, D, updater, {{Phy, Phy1}}, map1, {{Phy1, Phy}}, map2);
-      }
+      } // update
     }; // class Site
   } // namespace site
 } // namespace TAT
