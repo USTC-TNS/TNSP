@@ -127,7 +127,7 @@ struct MPS {
       lattice[i-1].tensor().legs_rename({{Phy4, Phy}});
     }
     for (int i=0; i<L; i++) {
-      lattice[i].set(lattice[i].tensor()/lattice[i].tensor().norm<-1>());
+      lattice[i].normalize<-1>();
     }
   }
 

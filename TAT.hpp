@@ -2010,15 +2010,23 @@ namespace TAT {
         } // if
       } // unlink, double unlink, delete env
 
+      // else
+
+      template<int n>
+      Site<device, Base>& normalize() {
+        tensor() /= tensor().template norm<n>();
+        return *this;
+      } // normalize
+
       friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
         out << "{\"addr\": \"" << &value << "\", \"neighbor\": {";
         bool flag=false;
-        for(const auto& i : value.neighbor) {
-          if(flag){
+        for (const auto& i : value.neighbor) {
+          if (flag) {
             out << ", ";
           } // if flag
           out << "\"" << i.first << "\": " << "{\"addr\": \"" << &i.second.site() << "\", \"legs\": \"" << i.second.legs << "\"";
-          if(i.second._env) {
+          if (i.second._env) {
             out << ", \"env\": ";
             out << i.second.env();
           } // if env
@@ -2045,8 +2053,8 @@ namespace TAT {
                    const Size& D) {
       using namespace legs_name;
       auto svd_res = site1->contract(*site2, {legs1}, {legs2}, map1, map2)
-                      .contract(updater, {Phy1, Phy2}, {Phy3, Phy4})
-                      .svd(svd_u, legs1, legs2, D);
+                     .contract(updater, {Phy1, Phy2}, {Phy3, Phy4})
+                     .svd(svd_u, legs1, legs2, D);
       site1.set(std::move(svd_res.U.legs_rename(map1inv)));
       site1.set(std::move(svd_res.V.legs_rename(map2inv).multiple(svd_res.S, legs2)));
     } // update_to
