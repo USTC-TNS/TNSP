@@ -66,6 +66,13 @@ struct MPS {
       lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, D, 1})));
     } // lattice
     {
+      for (int i=0; i<L-1; i++) {
+        lattice[i].link_env(Right, lattice[i+1], Left);
+      }
+      lattice[2].unlink_env(Left, lattice[1], Right);
+      lattice[1].link_env(Right, lattice[2], Left);
+    } // link
+    {
       double default_H[16] = {
         1, 0, 0, 0,
         0, -1, 2, 0,
