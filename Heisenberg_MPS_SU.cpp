@@ -41,12 +41,13 @@
 struct MPS {
   using Size=TAT::Size;
   using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
+  using Site=TAT::Site<TAT::Device::CPU, double>;
 
   int L;
   Size D;
   Tensor hamiltonian;
   Tensor identity;
-  std::vector<Tensor> lattice;
+  std::vector<Site> lattice;
 
   std::map<int, Tensor> left_contract;
   std::map<int, Tensor> right_contract;
@@ -58,12 +59,17 @@ struct MPS {
   MPS(int _L, Size _D) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
     using namespace TAT::legs_name;
     {
-      lattice.push_back(Tensor({Phy, Left, Right}, {2, 1, D}));
+      lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, 1, D})));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Tensor({Phy, Left, Right}, {2, D, D}));
+        lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, D, D})));
       }
-      lattice.push_back(Tensor({Phy, Left, Right}, {2, D, 1}));
+      lattice.push_back(Site().set(Tensor({Phy, Left, Right}, {2, D, 1})));
     } // lattice
+    {
+      for (int i=0; i<L-1; i++) {
+        Site::link(lattice[i], Right, lattice[i+1], Left);
+      }
+    } // link
     {
       double default_H[16] = {
         1, 0, 0, 0,
@@ -96,41 +102,41 @@ struct MPS {
   void set_random_state(unsigned seed) {
     std::srand(seed);
     for (auto& i : lattice) {
-      i.set_random(random);
+      i.tensor().set_random(random);
     }
   }
 
   void update(const Tensor& updater) {
     using namespace TAT::legs_name;
     for (int i=0; i<L-1; i++) {
-      Tensor big = Tensor::contract(lattice[i], lattice[i+1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
+      Tensor big = Tensor::contract(lattice[i].tensor(), lattice[i+1].tensor(), {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
       Tensor Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
       auto svd = Big.svd({Left, Phy3}, Right, Left, D);
-      lattice[i] = std::move(svd.U);
-      lattice[i].legs_rename({{Phy3, Phy}});
-      lattice[i+1] = svd.V.multiple(svd.S, Left);
-      lattice[i+1].legs_rename({{Phy4, Phy}});
+      lattice[i].set(std::move(svd.U));
+      lattice[i].tensor().legs_rename({{Phy3, Phy}});
+      lattice[i+1].set(svd.V.multiple(svd.S, Left));
+      lattice[i+1].tensor().legs_rename({{Phy4, Phy}});
     }
     for (int i=L-1; i>0; i--) {
-      auto big = Tensor::contract(lattice[i], lattice[i-1], {Left}, {Right}, {{Phy, Phy1}}, {{Phy, Phy2}});
+      auto big = Tensor::contract(lattice[i].tensor(), lattice[i-1].tensor(), {Left}, {Right}, {{Phy, Phy1}}, {{Phy, Phy2}});
       auto Big = Tensor::contract(big, updater, {Phy1, Phy2}, {Phy1, Phy2});
       auto svd = Big.svd({Right, Phy3}, Left, Right, D);
-      lattice[i] = std::move(svd.U);
-      lattice[i].legs_rename({{Phy3, Phy}});
-      lattice[i-1] = svd.V.multiple(svd.S, Right);
-      lattice[i-1].legs_rename({{Phy4, Phy}});
+      lattice[i].set(std::move(svd.U));
+      lattice[i].tensor().legs_rename({{Phy3, Phy}});
+      lattice[i-1].set(svd.V.multiple(svd.S, Right));
+      lattice[i-1].tensor().legs_rename({{Phy4, Phy}});
     }
     for (int i=0; i<L; i++) {
-      lattice[i] /= lattice[i].norm<-1>();
+      lattice[i].set(lattice[i].tensor()/lattice[i].tensor().norm<-1>());
     }
   }
 
   void pre() {
     using namespace TAT::legs_name;
     for (int i=L-1; i>1; i--) {
-      auto qr = lattice[i].qr({Phy, Right}, Left, Right);
-      lattice[i] = std::move(qr.Q);
-      lattice[i-1] = Tensor::contract(lattice[i-1], qr.R, {Right}, {Left});
+      auto qr = lattice[i].tensor().qr({Phy, Right}, Left, Right);
+      lattice[i].set(std::move(qr.Q));
+      lattice[i-1].set(Tensor::contract(lattice[i-1].tensor(), qr.R, {Right}, {Left}));
     }
   }
 
@@ -148,7 +154,7 @@ struct MPS {
 
   double energy_at_i_and_i_plus_1(int i) {
     using namespace TAT::legs_name;
-    auto psi = Tensor::contract(lattice[i], lattice[i+1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
+    auto psi = Tensor::contract(lattice[i].tensor(), lattice[i+1].tensor(), {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
     auto Hpsi = Tensor::contract(psi, hamiltonian, {Phy1, Phy2}, {Phy1, Phy2});
     auto psiHpsi = Tensor::contract(Hpsi, psi, {Phy3, Phy4}, {Phy1, Phy2}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}});
     auto leftpsiHpsi = Tensor::contract(psiHpsi, left_contract[i-1], {Left1, Left2}, {Right1, Right2});
@@ -163,10 +169,10 @@ struct MPS {
     right_contract[L] = Tensor({Left1, Left2}, {1, 1});
     *right_contract[L].get() = 1;
     for (int i=0; i<=L-1; i++) {
-      left_contract[i] = Tensor::contract(left_contract[i-1], Tensor::contract(lattice[i], lattice[i], {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Right1, Right2}, {Left1, Left2});
+      left_contract[i] = Tensor::contract(left_contract[i-1], Tensor::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Right1, Right2}, {Left1, Left2});
     }
     for (int i=L-1; i>=0; i--) {
-      right_contract[i] = Tensor::contract(right_contract[i+1], Tensor::contract(lattice[i], lattice[i], {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Left1, Left2}, {Right1, Right2});
+      right_contract[i] = Tensor::contract(right_contract[i+1], Tensor::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Left1, Left2}, {Right1, Right2});
     }
   }
 
@@ -184,7 +190,7 @@ struct MPS {
 std::ostream& operator<<(std::ostream& out, const MPS& mps) {
   out << "[L(" << mps.L << ") D(" << mps.D << ") lattice(" << std::endl;
   for (auto& i : mps.lattice) {
-    out << "  " << i << std::endl;
+    out << "  " << i.tensor() << std::endl;
   }
   out << ")]" << std::endl;
   return out;

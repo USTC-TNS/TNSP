@@ -2016,23 +2016,23 @@ namespace TAT {
         for(const auto& i : value.neighbor) {
           if(flag){
             out << ", ";
-          }
+          } // if flag
           out << "\"" << i.first << "\": " << "{\"addr\": \"" << &i.second.site() << "\", \"legs\": \"" << i.second.legs << "\"";
           if(i.second._env) {
             out << ", \"env\": ";
             out << i.second.env();
-          }
+          } // if env
           out << "}";
           flag = true;
-        }
+        } // for
         out << "} ,\"tensor\": " << value.tensor() << "}";
         return out;
-      }
+      } // operator<<
     }; // class Site
   } // namespace site
-  using site::Site;
 
   namespace siteToolkit {
+    // this namespace is in development
     template<Device device, class Base>
     void update_to(Site<device, Base>& site1, const Legs& legs1,
                    Site<device, Base>& site2, const Legs& legs2,
