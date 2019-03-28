@@ -1872,16 +1872,19 @@ namespace TAT {
   } // namespace tensor
 
   namespace site {
-    // shared_ptr content is a part of class, but Site* is not
+    // Site won't change Tensor itself, but allow user change it
+    // usually, it only replace Tensor rather than change it
+    // user should not change Tensor too except initialize or normalize
+    // in other word, keep the meaning of Tensor
     template<Device device, class Base>
     class Site {
      public:
       friend class Edge;
       class Edge {
        public:
-        const Site<device, Base>* _site; // edge won't change it, but could let other change it
+        const Site<device, Base>* _site;
         Legs legs;
-        std::shared_ptr<const Tensor<device, Base>> _env; // edge won't change it, but could let other change it
+        std::shared_ptr<const Tensor<device, Base>> _env;
 
         Edge(const Site<device, Base>& site_ref, const Legs& _legs) : _site(&site_ref), legs(_legs) {}
         Edge() = default;
