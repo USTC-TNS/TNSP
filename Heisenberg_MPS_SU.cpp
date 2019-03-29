@@ -172,9 +172,9 @@ std::ostream& operator<<(std::ostream& out, const MPS& mps) {
   bool flag = false;
   for (auto& i : mps.lattice) {
     if (flag) {
-      out << ",";
+      out << ", ";
     }
-    out << " " << i;
+    out << i;
     flag = true;
   }
   out << "]}";
