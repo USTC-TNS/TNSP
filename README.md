@@ -30,6 +30,7 @@ The following is for developer to take note
 - dgegqr magma
 - cuda，sw
 - use it, peps, kitaev, hubbard
+- symmetry tensor
 
 ### note for some of cuda program
 ```c++
