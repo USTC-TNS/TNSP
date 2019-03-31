@@ -15,8 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef Site_HPP_
-#define Site_HPP_
+#ifndef TAT_Site_HPP_
+#define TAT_Site_HPP_
 
 #include "TAT.hpp"
 
@@ -282,4 +282,4 @@ namespace TAT {
     }; // class Site
   } // namespace site
 } // namespace TAT
-#endif // Site_HPP_
+#endif // TAT_Site_HPP_
