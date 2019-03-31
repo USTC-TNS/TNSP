@@ -204,6 +204,9 @@ namespace TAT {
       } // normalize
 
       // high level op
+      // norm add scalar operated onto tensor directly
+      // so, we need implement svd, qr and contract only
+      // all op have env and non_env version
 
      private:
       void qr_off(const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
@@ -273,6 +276,14 @@ namespace TAT {
         } // for leg
         update_to(site2, leg1, leg2, tmp_leg1, D, updater, {{Phy, Phy1}}, map1, {{Phy1, Phy}}, map2);
       } // update
+
+     public:
+      Site<device, Base> contract(const Site<device, Base>& site1,
+                                  const Site<device, Base>& site2,
+                                  const std::vector<Legs>& legs1,
+                                  const std::vector<Legs>& legs2,
+                                  const std::map<Legs, Legs>& map1,
+                                  const std::map<Legs, Legs>& map2);
     }; // class Site
   } // namespace site
 } // namespace TAT

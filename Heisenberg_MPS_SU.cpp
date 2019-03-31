@@ -49,6 +49,11 @@ struct MPS {
   Tensor identity;
   std::vector<Site> lattice;
 
+  std::vector<Site> psipsiUp;
+  std::vector<Site> psipsiDown;
+  std::vector<Site> psipsiLeft;
+  std::vector<Site> psipsiRight;
+
   std::map<int, Tensor> left_contract;
   std::map<int, Tensor> right_contract;
 
@@ -153,6 +158,16 @@ struct MPS {
     }
     for (int i=L-1; i>=0; i--) {
       right_contract[i] = Tensor::contract(right_contract[i+1], Tensor::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Left1, Left2}, {Right1, Right2});
+    }
+
+    for(int i=0;i<L;i++) {
+      psipsiUp[i] = lattice[i];
+      psipsiDown[i] = lattice[i];
+      Site::link(psipsiUp[i], Phy, psipsiDown[i], Phy);
+    }
+    for (int i=0; i<L-1; i++) {
+      Site::link(psipsiUp[i], Right, psipsiUp[i+1], Left);
+      Site::link(psipsiDown[i], Right, psipsiDown[i+1], Left);
     }
   }
 
