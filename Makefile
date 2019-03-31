@@ -36,6 +36,7 @@ SRC=$(wildcard ./*.cpp)
 SRC_STYLE=$(SRC:.cpp=.cpp.style)
 COMPILE=$(SRC:.cpp=.out)
 ORIG=$(SRC:.cpp=.cpp.orig) $(HEADER:.hpp=.hpp.orig)
+MISC_TO_REMOVE=test_io2.out test_io.out
 
 all: style compile
 
@@ -50,4 +51,4 @@ style: $(HEADER_STYLE) $(SRC_STYLE)
 	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $<
 
 clean:
-	rm -rf ${COMPILE} ${ORIG}
+	rm -rf ${COMPILE} ${ORIG} $(MISC_TO_REMOVE)
