@@ -1,4 +1,4 @@
-/* TAT
+/* TAT/Site.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,12 +21,6 @@
 #include "TAT.hpp"
 
 namespace TAT {
-  namespace site {
-    template<Device device=Device::CPU, class Base=double>
-    class Site;
-  } // namespace site
-  using site::Site;
-
   namespace site {
     namespace internal {
       template<class T>
@@ -282,4 +276,5 @@ namespace TAT {
     }; // class Site
   } // namespace site
 } // namespace TAT
+
 #endif // TAT_Site_HPP_

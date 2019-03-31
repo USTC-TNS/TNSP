@@ -30,15 +30,17 @@ else
 	endif
 endif
 
+HEADER=$(wildcard ./*.hpp)
+HEADER_STYLE=$(HEADER:.hpp=.hpp.style)
 SRC=$(wildcard ./*.cpp)
-STYLE=$(SRC:.cpp=.cpp.style)
+SRC_STYLE=$(SRC:.cpp=.cpp.style)
 COMPILE=$(SRC:.cpp=.out)
 
 all: style compile
 
 compile: $(COMPILE)
 
-style: TAT.hpp.style $(STYLE)
+style: $(HEADER_STYLE) $(SRC_STYLE)
 
 %.out: %.cpp
 	$(CXX) $< $(CXXFLAGS) -o $@
