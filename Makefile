@@ -35,6 +35,7 @@ HEADER_STYLE=$(HEADER:.hpp=.hpp.style)
 SRC=$(wildcard ./*.cpp)
 SRC_STYLE=$(SRC:.cpp=.cpp.style)
 COMPILE=$(SRC:.cpp=.out)
+ORIG=$(SRC:.cpp=.cpp.orig) $(HEADER:.hpp=.hpp.orig)
 
 all: style compile
 
@@ -49,4 +50,4 @@ style: $(HEADER_STYLE) $(SRC_STYLE)
 	astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type $<
 
 clean:
-	rm -rf ${COMPILE}
+	rm -rf ${COMPILE} ${ORIG}
