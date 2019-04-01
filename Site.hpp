@@ -38,6 +38,13 @@ namespace TAT {
         return std::move(res);
       } // map_hop
 
+      template<Device device, class Base>
+      std::shared_ptr<const Tensor<device, Base>> new_env(const Size& dim) {
+        auto env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
+        const_cast<Tensor<device, Base>&>(*env).set_constant(1);
+        return env;
+      } // new_env
+
       template<class T>
       T replace_or_not(std::map<T, T>& m, const T& k) {
         T res = k;
@@ -151,87 +158,77 @@ namespace TAT {
         return *this;
       } // set
 
+      const std::vector<Legs>& legs() const  {
+        return tensor().legs;
+      } // legs
+      const std::vector<Size>& dims() const {
+        return tensor().dims();
+      } // dims
+      const Size& size() const {
+        return tensor().size();
+      } // size
+
+      // absorb env and emit
+      void absorb_env(const Legs& leg) {
+        set(std::move(tensor().multiple(neighbor[leg].env(), leg)));
+      } // absorb_env
+
+      void emit_env(const Legs& leg) {
+        set(std::move(tensor().multiple(1/neighbor[leg].env(), leg)));
+      } // emit_env
+
       // link/unlink * with_env/without_env * single/double
       // single is member function and double is always static function
-      Edge& link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
-        Site<device, Base>& site1 = *this;
-        Edge& edge_ref = site1(legs1) = Edge::make_edge(site2, legs2);
-        return edge_ref;
+      void link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
+        neighbor[legs1] = Edge::make_edge(site2, legs2);
       } // link, single link
 
-      friend class link_res;
-      class link_res {
-       public:
-        Edge& edge1;
-        Edge& edge2;
-      }; // class link_res
       static link_res link(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
         auto res1 = site1.link(legs1, site2, legs2);
         auto res2 = site2.link(legs2, site1, legs1);
-#ifndef NDEBUG
-        auto dim1 = site1.tensor().dims()[internal::get_index(site1.tensor().legs, legs1)];
-        auto dim2 = site2.tensor().dims()[internal::get_index(site2.tensor().legs, legs2)];
-        assert(dim1==dim2);
-#endif // NDEBUG
         return link_res2{res1, res2};
       } // link, double link, return dim
 
-      void link_env(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>()) {
-        auto res = link(legs1, site2, legs2);
+      void link_env(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>(), bool emit=true) {
+        link(legs1, site2, legs2);
         if(env) {
-          // whether multiple ?
-          PASS;
+          neighbor[legs1].set(env);
+          if(emit) {
+            emit_env(legs1);
+          } // if emit
         } else {
-          auto dim = tensor().dims()[internal::get_index(tensor().legs, legs1)];
-          env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
-          const_cast<Tensor<device, Base>&>(*env).set_constant(1);
-        }
-        res.set(env);
+          auto dim = dims()[internal::get_index(legs(), legs1)];
+          // dim should be equal, but checked by user
+          env = internal::new_env<device, Base>(dim);
+          neighbor[legs1].set(env);
+        } // if env
       } // link_env, single link
 
       static void link_env(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>()) {
-        auto res = link(site1, legs1, site2, legs2);
-        if (env) {
-          assert(env->dims().size()==1);
-          assert(env->size()==site1.tensor().dims()[internal::get_index(site1.tensor().legs, legs1)]);
-          site1.set(std::move(site1.tensor().multiple(1/(*env), legs1)));
-          // multiple
-        } else {
-          auto dim = site1.tensor().dims()[internal::get_index(site1.tensor().legs, legs1)];
-          env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
-          const_cast<Tensor<device, Base>&>(*env).set_constant(1);
-        } // if
-        res.edge1.set(env);
-        res.edge2.set(env);
+        site1.link_env(legs1, site2, legs2, env, true);
+        site2.link_env(legs2, site1, legs1, env, false);
       } // link_env, double link, insert env and change site1
 
-      Edge unlink(const Legs& legs1) {
-        Site<device, Base>& site1 = *this;
-        auto edge = internal::map_hop(site1.neighbor, legs1);
-        return std::move(edge);
+      void unlink(const Legs& legs1) {
+        m.erase(legs1);
       } // unlink, single unlink
 
-      static std::shared_ptr<const Tensor<device, Base>> unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
-        auto edge1 = site1.unlink(legs1);
-        auto edge2 = site2.unlink(legs2);
-        assert(&edge1.site()==&site2);
-        assert(&edge2.site()==&site1);
-        return edge1._env;
+      static void unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        site1.unlink(legs1);
+        site2.unlink(legs2);
       } // unlink, double unlink
 
-      void unlink_env(const Legs& legs1) {
-        Site<device, Base>& site1 = *this;
-        auto tmp = unlink(site1, legs1);
-        assert(tmp._env.get());
-        site1.set(std::move(site1.tensor().multiple(tmp.env(), legs1)));
+      void unlink_env(const Legs& legs1, bool absorb=true) {
+        if(absorb) {
+          absorb(legs1);
+        }
+        unlink(legs1);
       } // unlink, single unlink, delete env
 
-      void unlink_env(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
-        Site<device, Base>& site1 = *this;
-        auto tmp = unlink(site1, legs1, site2, legs2);
-        assert(tmp.get());
-        site1.set(std::move(site1.tensor().multiple(*tmp, legs1)));
-      } // unlink, double unlink, delete env
+      static void unlink_env(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        site1.unlink_env(legs1, true);
+        site2.unlink_env(legs2, false);
+      } // unlink, double unlink, delete env, change site1
 
       // io
       friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
