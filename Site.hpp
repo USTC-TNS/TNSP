@@ -38,7 +38,7 @@ namespace TAT {
         return std::move(res);
       } // map_hop
 
-      template<class T, class T>
+      template<class T>
       T replace_or_not(std::map<T, T>& m, const T& k) {
         T res = k;
         try {
@@ -46,7 +46,7 @@ namespace TAT {
         } catch (const std::out_of_range& e) {
         } // try
         return res;
-      }
+      } // replace_or_not
 
       template<class T>
       std::vector<T> vector_except(const std::vector<T>& v, const T& j) {
@@ -151,7 +151,7 @@ namespace TAT {
         return *this;
       } // set
 
-      // link
+      // link/unlink * with_env/without_env * single/double
       friend class link_res1;
       class link_res1 {
        public:
@@ -331,7 +331,7 @@ namespace TAT {
         auto tensor_res = sites.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
         res.U.set(std::move(tensor_res.U));
         res.V.set(std::move(tensor_res.V));
-        
+
       } // this function force u is unitary
 
       // high level op
