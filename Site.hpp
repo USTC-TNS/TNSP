@@ -24,6 +24,21 @@ namespace TAT {
   namespace site {
     namespace internal {
       template<class T>
+      Rank get_index(const std::vector<T>& v, const T& j) {
+        auto pos = std::find(v.begin(), v.end(), j);
+        assert(pos!=v.end());
+        return std::distance(v.begin(), pos);
+      } // get_index
+
+      template<class T1, class T2>
+      T2 map_hop(std::map<T1, T2>& m, const T1& k) {
+        auto pos = m.find(k);
+        auto res = std::move(pos->second);
+        m.erase(pos);
+        return std::move(res);
+      } // map_hop
+
+      template<class T>
       std::vector<T> vector_except(const std::vector<T>& v, const T& j) {
         std::vector<Legs> res;
         for (const auto& i : v) {
@@ -136,10 +151,8 @@ namespace TAT {
       link_res1 link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
         Edge& edge_ref = site1(legs1) = Edge::make_edge(site2, legs2);
-        auto pos1 = std::find(site1.tensor().legs.begin(), site1.tensor().legs.end(), legs1);
-        assert(pos1!=site1.tensor().legs.end());
-        Rank index1 = std::distance(site1.tensor().legs.begin(), pos1);
-        return link_res1{edge_ref, site1.tensor().dims()[index1]};
+        Rank index = internal::get_index(site1.tensor().legs, legs1);
+        return link_res1{edge_ref, site1.tensor().dims()[index]};
       } // link, single link, return dim
 
       friend class link_res2;
@@ -174,9 +187,7 @@ namespace TAT {
 
       Edge unlink(const Legs& legs1) {
         Site<device, Base>& site1 = *this;
-        auto pos1 = site1.neighbor.find(legs1);
-        auto edge = std::move(pos1->second);
-        site1.neighbor.erase(pos1);
+        auto edge = internal::map_hop(site1.neighbor, legs1);
         return std::move(edge);
       } // unlink, single unlink
 
