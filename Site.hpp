@@ -38,6 +38,16 @@ namespace TAT {
         return std::move(res);
       } // map_hop
 
+      template<class T, class T>
+      T replace_or_not(std::map<T, T>& m, const T& k) {
+        T res = k;
+        try {
+          res = m.at(k);
+        } catch (const std::out_of_range& e) {
+        } // try
+        return res;
+      }
+
       template<class T>
       std::vector<T> vector_except(const std::vector<T>& v, const T& j) {
         std::vector<Legs> res;
@@ -206,6 +216,13 @@ namespace TAT {
         site1.set(std::move(site1.tensor().multiple(*tmp, legs1)));
       } // unlink, double unlink, delete env
 
+      void unlink_env(const Legs& legs1) {
+        Site<device, Base>& site1 = *this;
+        auto tmp = unlink(site1, legs1);
+        assert(tmp._env.get());
+        site1.set(std::move(site1.tensor().multiple(tmp.env(), legs1)));
+      } // unlink, single unlink, delete env
+
       // io
       friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
         out << "{\"addr\": \"" << &value << "\", \"neighbor\": {";
@@ -250,10 +267,74 @@ namespace TAT {
         return *this;
       } // normalize
 
-      // high level op
+      // middle level op
       // norm add scalar operated onto tensor directly
       // so, we need implement svd, qr and contract only
-      // all op have env and non_env version
+      // nearly all op have env and non_env version
+      // it have same param to tensor
+      // higher level op see below
+
+      static Site<device, Base> contract(const Site<device, Base>& site1,
+                                         const Site<device, Base>& site2,
+                                         const std::vector<Legs>& legs1,
+                                         const std::vector<Legs>& legs2,
+                                         const std::map<Legs, Legs>& map1 = {},
+                                         const std::map<Legs, Legs>& map2 = {}) {
+        Tensor<device, Base> t = Tensor<device, Base>::contract(site1.tensor(), site2.tensor(), legs1, legs2, map1, map2);
+        Site<device, Base> res;
+        res.set(std::move(t));
+        for (const auto& i : site1.neighbor) {
+          if (&i.second.site()!=&site2) {
+            Legs new_leg = internal::replace_or_not(map1, i.first)
+            res.link(new_leg, std::copy(i.second));
+          } // if not connect
+        } // for 1
+        for (const auto& i : site2.neighbor) {
+          if (&i.second.site()!=&site1) {
+            Legs new_leg = internal::replace_or_not(map2, i.first)
+            res.link(new_leg, std::copy(i.second));
+          } // if not connect
+        } // for 2
+        return res;
+      } // contract
+
+      static Site<device, Base> contract_env(const Site<device, Base>& site1,
+                                             const Site<device, Base>& site2,
+                                             const std::vector<Legs>& legs1,
+                                             const std::vector<Legs>& legs2,
+                                             const std::map<Legs, Legs>& map1 = {},
+                                             const std::map<Legs, Legs>& map2 = {}) {
+        auto site1s = site1;
+        auto site2s = site2;
+        Rank rank = legs1.size();
+        for(Rank i=0;i<rank;i++) {
+          site1s(legs1[i]).link(site2s);
+          site2s(legs2[i]).link(site1s);
+          site1s.unlink_env(legs1[i], site2s, legs2[i]);
+        } // for connect env
+        return contract(site1s, site2s, legs1, legs2, map1, map2);
+      } // contract_env
+
+      friend class svd_res;
+      class svd_res {
+       public:
+        Site<device, Base> U;
+        Site<device, Base> V;
+      }; // class svd_res
+
+      svd_res svd_env(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
+        svd_res res;
+        auto sites = *this;
+        for(const auto& i : sites.neighbor) {
+          sites.unlink_env(i.first);
+        } // absorb env
+        auto tensor_res = sites.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
+        res.U.set(std::move(tensor_res.U));
+        res.V.set(std::move(tensor_res.V));
+        
+      } // this function force u is unitary
+
+      // high level op
 
      private:
       void qr_off(const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
@@ -323,14 +404,6 @@ namespace TAT {
         } // for leg
         update_to(site2, leg1, leg2, tmp_leg1, D, updater, {{Phy, Phy1}}, map1, {{Phy1, Phy}}, map2);
       } // update
-
-     public:
-      Site<device, Base> contract(const Site<device, Base>& site1,
-                                  const Site<device, Base>& site2,
-                                  const std::vector<Legs>& legs1,
-                                  const std::vector<Legs>& legs2,
-                                  const std::map<Legs, Legs>& map1,
-                                  const std::map<Legs, Legs>& map2);
     }; // class Site
   } // namespace site
 } // namespace TAT

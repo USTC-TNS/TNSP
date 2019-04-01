@@ -237,8 +237,8 @@ namespace TAT {
 
       static Tensor<device, Base> contract(const Tensor<device, Base>& tensor1,
                                            const Tensor<device, Base>& tensor2,
-                                           const std::vector<Legs> legs1,
-                                           const std::vector<Legs> legs2,
+                                           const std::vector<Legs>& legs1,
+                                           const std::vector<Legs>& legs2,
                                            const std::map<Legs, Legs>& map1 = {},
                                            const std::map<Legs, Legs>& map2 = {}) {
         Tensor<device, Base> res;
@@ -258,8 +258,8 @@ namespace TAT {
       } // contract
 
       Tensor<device, Base> contract(const Tensor<device, Base>& tensor2,
-                                    const std::vector<Legs> legs1,
-                                    const std::vector<Legs> legs2,
+                                    const std::vector<Legs>& legs1,
+                                    const std::vector<Legs>& legs2,
                                     const std::map<Legs, Legs>& map1 = {},
                                     const std::map<Legs, Legs>& map2 = {}) const {
         return std::move(Tensor<device, Base>::contract(*this, tensor2, legs1, legs2, map1, map2));
