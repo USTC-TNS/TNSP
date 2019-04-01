@@ -30,14 +30,6 @@ namespace TAT {
         return std::distance(v.begin(), pos);
       } // get_index
 
-      template<class T1, class T2>
-      T2 map_hop(std::map<T1, T2>& m, const T1& k) {
-        auto pos = m.find(k);
-        auto res = std::move(pos->second);
-        m.erase(pos);
-        return std::move(res);
-      } // map_hop
-
       template<Device device, class Base>
       std::shared_ptr<const Tensor<device, Base>> new_env(const Size& dim) {
         auto env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
@@ -183,17 +175,16 @@ namespace TAT {
         neighbor[legs1] = Edge::make_edge(site2, legs2);
       } // link, single link
 
-      static link_res link(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
-        auto res1 = site1.link(legs1, site2, legs2);
-        auto res2 = site2.link(legs2, site1, legs1);
-        return link_res2{res1, res2};
+      static void link(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+        site1.link(legs1, site2, legs2);
+        site2.link(legs2, site1, legs1);
       } // link, double link, return dim
 
       void link_env(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>(), bool emit=true) {
         link(legs1, site2, legs2);
-        if(env) {
+        if (env) {
           neighbor[legs1].set(env);
-          if(emit) {
+          if (emit) {
             emit_env(legs1);
           } // if emit
         } else {
@@ -210,7 +201,7 @@ namespace TAT {
       } // link_env, double link, insert env and change site1
 
       void unlink(const Legs& legs1) {
-        m.erase(legs1);
+        neighbor.erase(legs1);
       } // unlink, single unlink
 
       static void unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
@@ -219,8 +210,8 @@ namespace TAT {
       } // unlink, double unlink
 
       void unlink_env(const Legs& legs1, bool absorb=true) {
-        if(absorb) {
-          absorb(legs1);
+        if (absorb) {
+          absorb_env(legs1);
         }
         unlink(legs1);
       } // unlink, single unlink, delete env
@@ -292,13 +283,13 @@ namespace TAT {
         res.set(std::move(t));
         for (const auto& i : site1.neighbor) {
           if (&i.second.site()!=&site2) {
-            Legs new_leg = internal::replace_or_not(map1, i.first)
+            Legs new_leg = internal::replace_or_not(map1, i.first);
             res.link(new_leg, std::copy(i.second));
           } // if not connect
         } // for 1
         for (const auto& i : site2.neighbor) {
           if (&i.second.site()!=&site1) {
-            Legs new_leg = internal::replace_or_not(map2, i.first)
+            Legs new_leg = internal::replace_or_not(map2, i.first);
             res.link(new_leg, std::copy(i.second));
           } // if not connect
         } // for 2
@@ -314,7 +305,7 @@ namespace TAT {
         auto site1s = site1;
         auto site2s = site2;
         Rank rank = legs1.size();
-        for(Rank i=0;i<rank;i++) {
+        for (Rank i=0; i<rank; i++) {
           site1s(legs1[i]).link(site2s);
           site2s(legs2[i]).link(site1s);
           site1s.unlink_env(legs1[i], site2s, legs2[i]);
@@ -332,7 +323,7 @@ namespace TAT {
       svd_res svd_env(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
         svd_res res;
         auto sites = *this;
-        for(const auto& i : sites.neighbor) {
+        for (const auto& i : sites.neighbor) {
           sites.unlink_env(i.first);
         } // absorb env
         auto tensor_res = sites.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
