@@ -24,7 +24,7 @@ endif
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra #-fprofile-arcs -ftest-coverage
 else
-	CXXFLAGS += -DNDEBUG -Ofast -march=native
+	CXXFLAGS += -DNDEBUG -Ofast -march=native -Wall -Wextra
 	ifeq ($(CXX), g++)
 		CXXFLAGS += -fwhole-program
 	endif
