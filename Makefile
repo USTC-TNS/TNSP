@@ -1,26 +1,26 @@
 CXX = clang++
+STATIC ?= 0
+DEBUG ?= 0
+MKL=/opt/intel/compilers_and_libraries_2019.2.187/linux/mkl
 
 TAT_VERSION = $(shell git describe --tags)
 CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\"
-
-STATIC ?= 0
 
 CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 ifeq ($(STATIC), 1)
 	CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
 	CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
-	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
+	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I$(MKL)/include -L$(MKL)/lib/intel64
 	CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
 	CXXFLAGS += -Iargs
 else
 	CXXFLAGS += -ljemalloc
 	CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
-	CXXFLAGS += -lpthread -lm -ldl -I/opt/intel/mkl/include -L/opt/intel/mkl/lib/intel64
+	CXXFLAGS += -lpthread -lm -ldl -I$(MKL)/include -L$(MKL)/lib/intel64
 	CXXFLAGS += -lhptt -Lhptt/lib -Ihptt/include -Wl,-rpath,./hptt/lib
 	CXXFLAGS += -Iargs
 endif
 
-DEBUG ?= 0
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -DDEBUG -pg -O0 -Wall -Wextra #-fprofile-arcs -ftest-coverage
 else
