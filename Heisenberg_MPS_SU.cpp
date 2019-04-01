@@ -61,15 +61,21 @@ struct MPS {
     return double(std::rand())/(RAND_MAX)*2-1;
   }
 
-  MPS(int _L, Size _D, unsigned seed) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
-    using namespace TAT::legs_name;
+  void set_random_state(unsigned seed) {
     std::srand(seed);
+    for (int i=0; i<L; i++) {
+      lattice[i].set_random(random);
+    }
+  }
+
+  MPS(int _L, Size _D) : L(_L), D(_D), hamiltonian({}, {}), identity({}, {}) {
+    using namespace TAT::legs_name;
     {
-      lattice.push_back(Site().set(std::move(Tensor({Phy, Left, Right}, {2, 1, D}).set_random(random))));
+      lattice.push_back(Site::make_site({Phy, Left, Right}, {2, 1, D}));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Site().set(std::move(Tensor({Phy, Left, Right}, {2, D, D}).set_random(random))));
+        lattice.push_back(Site::make_site({Phy, Left, Right}, {2, D, D}));
       }
-      lattice.push_back(Site().set(std::move(Tensor({Phy, Left, Right}, {2, D, 1}).set_random(random))));
+      lattice.push_back(Site::make_site({Phy, Left, Right}, {2, D, 1}));
     } // lattice
     {
       for (int i=0; i<L-1; i++) {
@@ -160,7 +166,8 @@ struct MPS {
       right_contract[i] = Tensor::contract(right_contract[i+1], Tensor::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Left1, Left2}, {Right1, Right2});
     }
 
-    for(int i=0;i<L;i++) {
+    /*
+    for (int i=0; i<L; i++) {
       psipsiUp[i] = lattice[i];
       psipsiDown[i] = lattice[i];
       Site::link(psipsiUp[i], Phy, psipsiDown[i], Phy);
@@ -169,6 +176,7 @@ struct MPS {
       Site::link(psipsiUp[i], Right, psipsiUp[i+1], Left);
       Site::link(psipsiDown[i], Right, psipsiDown[i+1], Left);
     }
+    */
   }
 
   double energy() {
@@ -197,7 +205,8 @@ std::ostream& operator<<(std::ostream& out, const MPS& mps) {
 }
 
 void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_step, double delta_t) {
-  MPS mps(L, D, seed);
+  MPS mps(L, D);
+  mps.set_random_state(seed);
   mps.update(step, print_step, delta_t);
   std::cout << mps << std::endl;
 }

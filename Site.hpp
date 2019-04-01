@@ -50,6 +50,7 @@ namespace TAT {
         return pos!=v.end();
       } // in_vector
     } // namespace internal
+
     // Site won't change Tensor itself, but allow user change it
     // usually, it only replace Tensor rather than change it
     // user should not change Tensor too except initialize or normalize
@@ -64,8 +65,11 @@ namespace TAT {
         Legs legs;
         std::shared_ptr<const Tensor<device, Base>> _env;
 
-        Edge(const Site<device, Base>& site_ref, const Legs& _legs) : _site(&site_ref), legs(_legs) {}
-        Edge() = default;
+        static Edge make_edge(const Site<device, Base>& site_ref, const Legs& _legs) {
+          Edge res;
+          res.link(site_ref, _legs);
+          return res;
+        }
 
         Site<device, Base>& site() const {
           return const_cast<Site<device, Base>&>(*_site);
@@ -74,6 +78,15 @@ namespace TAT {
           return const_cast<Tensor<device, Base>&>(*_env.get());
         } // env
 
+        Edge& link(const Site<device, Base>& site_ref) {
+          _site = &site_ref;
+          return *this;
+        } // link
+        Edge& link(const Site<device, Base>& site_ref, const Legs& _legs) {
+          _site = &site_ref;
+          legs = _legs;
+          return *this;
+        } // link
         Edge& set(Tensor<device, Base>&& t) {
           _env = std::make_shared<const Tensor<device, Base>>(std::move(t));
           return *this;
@@ -83,6 +96,13 @@ namespace TAT {
           return *this;
         } // set
       }; // class Edge
+
+      template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
+      static Site<device, Base> make_site(T1&& _legs, T2&& _dims) {
+        Site<device, Base> res;
+        res.set(Tensor<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
+        return std::move(res);
+      } // make_site
 
       std::shared_ptr<const Tensor<device, Base>> _tensor;
       std::map<Legs, Edge> neighbor;
@@ -115,7 +135,7 @@ namespace TAT {
       }; // class link_res
       link_res1 link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
-        Edge& edge_ref = site1(legs1) = Edge(site2, legs2);
+        Edge& edge_ref = site1(legs1) = Edge::make_edge(site2, legs2);
         auto pos1 = std::find(site1.tensor().legs.begin(), site1.tensor().legs.end(), legs1);
         assert(pos1!=site1.tensor().legs.end());
         Rank index1 = std::distance(site1.tensor().legs.begin(), pos1);
@@ -171,9 +191,8 @@ namespace TAT {
       void unlink_env(const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
         Site<device, Base>& site1 = *this;
         auto tmp = unlink(site1, legs1, site2, legs2);
-        if (tmp) {
-          site1.set(std::move(site1.tensor().multiple(*tmp, legs1)));
-        } // if
+        assert(tmp.get());
+        site1.set(std::move(site1.tensor().multiple(*tmp, legs1)));
       } // unlink, double unlink, delete env
 
       // io
@@ -196,7 +215,24 @@ namespace TAT {
         return out;
       } // operator<<
 
-      // norm
+      // normalize and other inplace op
+      Site<device, Base>& set_test() {
+        tensor().set_test();
+        return *this;
+      } // set_test
+      Site<device, Base>& set_zero() {
+        tensor().set_zero();
+        return *this;
+      } // set_zero
+      Site<device, Base>& set_random(Base(*random)()) {
+        tensor().set_random(random);
+        return *this;
+      } // set_random
+      Site<device, Base>& set_constant(Base num) {
+        tensor().set_constant(num);
+        return *this;
+      } // set_constant
+
       template<int n>
       Site<device, Base>& normalize() {
         tensor() /= tensor().template norm<n>();

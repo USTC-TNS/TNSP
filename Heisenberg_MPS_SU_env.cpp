@@ -100,14 +100,7 @@ struct MPS {
   void set_random_state(unsigned seed) {
     std::srand(seed);
     for (auto& i : lattice) {
-      i.tensor().set_random(random);
-      std::cout << i.tensor() << std::endl;
-      std::cout << std::endl << &i << " ";
-      for (auto& j : i.neighbor) {
-        std::cout << &j.second.site() << " ";
-        std::cout << j.second.env() << "  ";
-      }
-      std::cout << std::endl;
+      std::cout << i << std::endl;
     }
   }
 };
