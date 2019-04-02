@@ -100,6 +100,7 @@ struct MPS {
   void set_random_state(unsigned seed) {
     std::srand(seed);
     for (auto& i : lattice) {
+      i.set_random(random);
       std::cout << i << std::endl;
     }
   }
