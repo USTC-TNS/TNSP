@@ -162,12 +162,30 @@ namespace TAT {
 
       // absorb env and emit
       void absorb_env(const Legs& leg) {
-        set(std::move(tensor().multiple(neighbor[leg].env(), leg)));
+        auto edge = neighbor[leg];
+        if (edge._env) {
+          set(std::move(tensor().multiple(edge.env(), leg)));
+        } // if env
       } // absorb_env
 
       void emit_env(const Legs& leg) {
-        set(std::move(tensor().multiple(1/neighbor[leg].env(), leg)));
+        auto edge = neighbor[leg];
+        if (edge._env) {
+          set(std::move(tensor().multiple(1/edge.env(), leg)));
+        } // if env
       } // emit_env
+
+      void absorb_all() {
+        for (const auto& i : neighbor) {
+          absorb_env(i.first);
+        } // for edge
+      } // absorb_all
+
+      void emit_all() {
+        for (const auto& i : neighbor) {
+          emit_env(i.first);
+        } // for edge
+      } // emit_all
 
       // link/unlink * with_env/without_env * single/double
       // single is member function and double is always static function
@@ -272,46 +290,35 @@ namespace TAT {
       // it have same param to tensor
       // higher level op see below
 
-      static Site<device, Base> contract(const Site<device, Base>& site1,
-                                         const Site<device, Base>& site2,
-                                         const std::vector<Legs>& legs1,
-                                         const std::vector<Legs>& legs2,
-                                         const std::map<Legs, Legs>& map1 = {},
-                                         const std::map<Legs, Legs>& map2 = {}) {
+      static void contract(Site<device, Base>& res,
+                           Site<device, Base> site1,
+                           Site<device, Base> site2,
+                           const std::vector<Legs>& legs1,
+                           const std::vector<Legs>& legs2,
+                           const std::map<Legs, Legs>& map1 = {},
+                           const std::map<Legs, Legs>& map2 = {}) {
+        for (const auto& i : site1.neighbor) {
+          if (&i.second.site()==&site2) {
+            site1.absorb_env(i.first);
+          } // if in
+        } // for absorb
         Tensor<device, Base> t = Tensor<device, Base>::contract(site1.tensor(), site2.tensor(), legs1, legs2, map1, map2);
-        Site<device, Base> res;
         res.set(std::move(t));
+        // set edge of new site
         for (const auto& i : site1.neighbor) {
           if (&i.second.site()!=&site2) {
             Legs new_leg = internal::replace_or_not(map1, i.first);
-            res.link(new_leg, std::copy(i.second));
+            res(new_leg) = std::move(i.second);
           } // if not connect
         } // for 1
         for (const auto& i : site2.neighbor) {
           if (&i.second.site()!=&site1) {
             Legs new_leg = internal::replace_or_not(map2, i.first);
-            res.link(new_leg, std::copy(i.second));
+            res(new_leg) = std::move(i.second);
           } // if not connect
         } // for 2
         return res;
       } // contract
-
-      static Site<device, Base> contract_env(const Site<device, Base>& site1,
-                                             const Site<device, Base>& site2,
-                                             const std::vector<Legs>& legs1,
-                                             const std::vector<Legs>& legs2,
-                                             const std::map<Legs, Legs>& map1 = {},
-                                             const std::map<Legs, Legs>& map2 = {}) {
-        auto site1s = site1;
-        auto site2s = site2;
-        Rank rank = legs1.size();
-        for (Rank i=0; i<rank; i++) {
-          site1s(legs1[i]).link(site2s);
-          site2s(legs2[i]).link(site1s);
-          site1s.unlink_env(legs1[i], site2s, legs2[i]);
-        } // for connect env
-        return contract(site1s, site2s, legs1, legs2, map1, map2);
-      } // contract_env
 
       friend class svd_res;
       class svd_res {
@@ -320,17 +327,19 @@ namespace TAT {
         Site<device, Base> V;
       }; // class svd_res
 
-      svd_res svd_env(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
+      svd_res svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
         svd_res res;
         auto sites = *this;
-        for (const auto& i : sites.neighbor) {
-          sites.unlink_env(i.first);
-        } // absorb env
+        sites.absorb_all();
         auto tensor_res = sites.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
         res.U.set(std::move(tensor_res.U));
         res.V.set(std::move(tensor_res.V));
+        //res.U.unlink_env(legs1, true);
+        //res.V.unlink_env(legs2, false);
+      } // svd
 
-      } // this function force u is unitary
+      // qr must not use env
+      void qr();
 
       // high level op
 
