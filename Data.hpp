@@ -94,11 +94,17 @@ namespace TAT {
         template<>
         void run<float>(const Size& m, const Size& n, const Size& min, float* a, float* u, float* s, float* vt) {
 #ifdef TAT_USE_GESDD
-          auto res = LAPACKE_sgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_sgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
 #endif // TAT_USE_GESDD
 #ifdef TAT_USE_GESVD
           auto superb = new float[min-1];
-          auto res = LAPACKE_sgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_sgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
           delete[] superb;
 #endif // TAT_USE_GESVD
           assert(res==0);
@@ -107,11 +113,17 @@ namespace TAT {
         template<>
         void run<double>(const Size& m, const Size& n, const Size& min, double* a, double* u, double* s, double* vt) {
 #ifdef TAT_USE_GESDD
-          auto res = LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_dgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
 #endif // TAT_USE_GESDD
 #ifdef TAT_USE_GESVD
           auto superb = new double[min-1];
-          auto res = LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_dgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, s, u, min, vt, n, superb);
           delete[] superb;
 #endif // TAT_USE_GESVD
           assert(res==0);
@@ -123,6 +135,7 @@ namespace TAT {
                        const Size& n1,
                        const Size& m2,
                        const Size& n2) {
+          (void)m1; // avoid warning of unused when NDEBUG
           Data<Base> res(m2*n2);
           assert(n2<=n1);
           assert(m2<=m1);
@@ -150,7 +163,10 @@ namespace TAT {
         void run<float>(const Size& m, const Size& n, const Size& min, const Size& cut, float* a, float* u, float* s, float* vt) {
           lapack_int ns;
           auto superb = new lapack_int[12*min];
-          auto res = LAPACKE_sgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_sgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
           assert(res==0);
           assert(ns==lapack_int(cut));
           delete[] superb;
@@ -160,7 +176,10 @@ namespace TAT {
         void run<double>(const Size& m, const Size& n, const Size& min, const Size& cut, double* a, double* u, double* s, double* vt) {
           lapack_int ns;
           auto superb = new lapack_int[12*min];
-          auto res = LAPACKE_dgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_dgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
           assert(res==0);
           assert(ns==lapack_int(cut));
           delete[] superb;
@@ -176,11 +195,17 @@ namespace TAT {
         void geqrf<float>(float* A, float* tau, const Size& m, const Size& n) {
 #ifdef TAT_USE_GEQP3
           auto jpvt = new lapack_int[n];
-          auto res = LAPACKE_sgeqp3(LAPACK_ROW_MAJOR, m, n, A, n, jpvt, tau);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_sgeqp3(LAPACK_ROW_MAJOR, m, n, A, n, jpvt, tau);
           delete[] jpvt;
 #endif // TAT_USE_GEQP3
 #ifdef TAT_USE_GEQRF
-          auto res = LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_sgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
 #endif // TAT_USE_GEQRF
           assert(res==0);
         } // geqrf<float>
@@ -189,11 +214,17 @@ namespace TAT {
         void geqrf<double>(double* A, double* tau, const Size& m, const Size& n) {
 #ifdef TAT_USE_GEQP3
           auto jpvt = new lapack_int[n];
-          auto res = LAPACKE_dgeqp3(LAPACK_ROW_MAJOR, m, n, A, n, jpvt, tau);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_dgeqp3(LAPACK_ROW_MAJOR, m, n, A, n, jpvt, tau);
           delete[] jpvt;
 #endif // TAT_USE_GEQP3
 #ifdef TAT_USE_GEQRF
-          auto res = LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_dgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
 #endif // TAT_USE_GEQRF
           assert(res==0);
         } // geqrf<double>
@@ -203,13 +234,19 @@ namespace TAT {
 
         template<>
         void orgqr<float>(float* A, const float* tau, const Size& m, const Size& min) {
-          auto res = LAPACKE_sorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_sorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
           assert(res==0);
         } // orgqr<float>
 
         template<>
         void orgqr<double>(double* A, const double* tau, const Size& m, const Size& min) {
-          auto res = LAPACKE_dorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_dorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
           assert(res==0);
         } // orgqr<double>
 

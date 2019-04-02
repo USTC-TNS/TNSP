@@ -16,7 +16,7 @@ ifeq ($(STATIC), 1)
 else
 	CXXFLAGS += -ljemalloc
 	CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
-	CXXFLAGS += -lpthread -lm -ldl -I$(MKL)/include -L$(MKL)/lib/intel64
+	CXXFLAGS += -lpthread -lm -ldl -I$(MKL)/include -L$(MKL)/lib/intel64 -Wl,-rpath,$(MKL)/lib/intel64
 	CXXFLAGS += -lhptt -Lhptt/lib -Ihptt/include -Wl,-rpath,./hptt/lib
 	CXXFLAGS += -Iargs
 endif
