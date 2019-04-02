@@ -1,7 +1,6 @@
 <div align="center">
   <img src="https://github.com/hzhangxyz/TAT/raw/TAT/logo.png"><br><br>
 </div>
-
 ---
 
 TAT is A Tensor library
