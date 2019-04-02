@@ -64,7 +64,7 @@ struct MPS {
     } // lattice
     {
       for (int i=0; i<L-1; i++) {
-        lattice[i].link_env(Right, lattice[i+1], Left);
+        Tensor::link_env(lattice[i], Right, lattice[i+1], Left, lattice[i].create_env_for_leg(Right));
       }
       //std::cout << lattice[0](Right).site()(Right).site()(Right).site().get() << std::endl ;
     }

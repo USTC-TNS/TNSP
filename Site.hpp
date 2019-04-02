@@ -38,7 +38,7 @@ namespace TAT {
       } // new_env
 
       template<class T>
-      T replace_or_not(std::map<T, T>& m, const T& k) {
+      T replace_or_not(const std::map<T, T>& m, const T& k) {
         T res = k;
         try {
           res = m.at(k);
@@ -93,7 +93,7 @@ namespace TAT {
           Edge res;
           res.link(site_ref, _legs);
           return res;
-        }
+        } // make_edge
 
         Site<device, Base>& site() const {
           return const_cast<Site<device, Base>&>(*_site);
@@ -134,10 +134,10 @@ namespace TAT {
       Tensor<device, Base>& tensor() const {
         return const_cast<Tensor<device, Base>&>(*_tensor.get());
       } // tensor
-      const Edge& operator()(Legs legs) const {
+      const Edge& operator()(const Legs& legs) const {
         return neighbor[legs];
       } // operator()
-      Edge& operator()(Legs legs) {
+      Edge& operator()(const Legs& legs) {
         return neighbor[legs];
       } // operator()
 
@@ -161,34 +161,55 @@ namespace TAT {
       } // size
 
       // absorb env and emit
-      void absorb_env(const Legs& leg) {
-        auto edge = neighbor[leg];
+      void absorb_env(const Legs& leg, const Edge& edge) {
         if (edge._env) {
           set(std::move(tensor().multiple(edge.env(), leg)));
         } // if env
       } // absorb_env
 
-      void emit_env(const Legs& leg) {
+      void absorb_env(const Legs& leg) {
         auto edge = neighbor[leg];
+        absorb_env(leg, edge);
+      } // absorb_env
+
+      void emit_env(const Legs& leg, const Edge& edge) {
         if (edge._env) {
           set(std::move(tensor().multiple(1/edge.env(), leg)));
         } // if env
       } // emit_env
 
+      void emit_env(const Legs& leg) {
+        auto edge = neighbor[leg];
+        emit_env(leg, edge);
+      } // emit_env
+
       void absorb_all() {
         for (const auto& i : neighbor) {
-          absorb_env(i.first);
+          if (i.second._env) {
+            set(std::move(tensor().multiple(i.second.env(), i.first)));
+          } // if env
         } // for edge
       } // absorb_all
 
       void emit_all() {
         for (const auto& i : neighbor) {
-          emit_env(i.first);
+          if (i.second._env) {
+            set(std::move(tensor().multiple(1/i.second.env(), i.first)));
+          } // if env
         } // for edge
       } // emit_all
 
       // link/unlink * with_env/without_env * single/double
       // single is member function and double is always static function
+      std::shared_ptr<const Tensor<device, Base>> create_env_for_leg(const Legs& leg) {
+        auto pos = std::find(legs().begin(), legs().end(), leg);
+        auto index = std::distance(legs().begin(), pos);
+        auto dim = dims()[index];
+        auto env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
+        const_cast<Tensor<device, Base>&>(*env).set_constant(1);
+        return env;
+      } // create_env_for_leg
+
       void link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
         neighbor[legs1] = Edge::make_edge(site2, legs2);
       } // link, single link
@@ -198,25 +219,18 @@ namespace TAT {
         site2.link(legs2, site1, legs1);
       } // link, double link, return dim
 
-      void link_env(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>(), bool emit=true) {
+      void link_env(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env, bool emit=true) {
         link(legs1, site2, legs2);
-        if (env) {
-          neighbor[legs1].set(env);
-          if (emit) {
-            emit_env(legs1);
-          } // if emit
-        } else {
-          auto dim = dims()[internal::get_index(legs(), legs1)];
-          // dim should be equal, but checked by user
-          env = internal::new_env<device, Base>(dim);
-          neighbor[legs1].set(env);
-        } // if env
+        neighbor[legs1].set(env);
+        if (emit) {
+          emit_env(legs1);
+        } // if emit
       } // link_env, single link
 
-      static void link_env(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env=std::shared_ptr<const Tensor<device, Base>>()) {
+      static void link_env(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Tensor<device, Base>> env) {
         site1.link_env(legs1, site2, legs2, env, true);
         site2.link_env(legs2, site1, legs1, env, false);
-      } // link_env, double link, insert env and change site1
+      } // link_env, double link, insert env, change site1
 
       void unlink(const Legs& legs1) {
         neighbor.erase(legs1);
@@ -227,7 +241,7 @@ namespace TAT {
         site2.unlink(legs2);
       } // unlink, double unlink
 
-      void unlink_env(const Legs& legs1, bool absorb=true) {
+      void unlink_env(const Legs& legs1, const bool& absorb=true) {
         if (absorb) {
           absorb_env(legs1);
         }
@@ -240,6 +254,7 @@ namespace TAT {
       } // unlink, double unlink, delete env, change site1
 
       // io
+      // site does not implement file write, write tensor directly since addr of site is not fixed
       friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
         out << "{\"addr\": \"" << &value << "\", \"neighbor\": {";
         bool flag=false;
@@ -286,8 +301,9 @@ namespace TAT {
       // middle level op
       // norm add scalar operated onto tensor directly
       // so, we need implement svd, qr and contract only
-      // nearly all op have env and non_env version
-      // it have same param to tensor
+      // it have nearly the same parameter to tensor
+      // but it use subroutine always instead of function
+      // since it need to know address of site
       // higher level op see below
 
       static void contract(Site<device, Base>& res,
@@ -297,12 +313,15 @@ namespace TAT {
                            const std::vector<Legs>& legs2,
                            const std::map<Legs, Legs>& map1 = {},
                            const std::map<Legs, Legs>& map2 = {}) {
+        // absorb env between two site
         for (const auto& i : site1.neighbor) {
           if (&i.second.site()==&site2) {
-            site1.absorb_env(i.first);
+            site1.absorb_env(i.first, i.second);
           } // if in
         } // for absorb
+        // contract tensor
         Tensor<device, Base> t = Tensor<device, Base>::contract(site1.tensor(), site2.tensor(), legs1, legs2, map1, map2);
+        res.neighbor.clear();
         res.set(std::move(t));
         // set edge of new site
         for (const auto& i : site1.neighbor) {
@@ -317,28 +336,24 @@ namespace TAT {
             res(new_leg) = std::move(i.second);
           } // if not connect
         } // for 2
-        return res;
-      } // contract
+      } // contract, contract env between 2 site only, without other env linked with them
 
-      friend class svd_res;
-      class svd_res {
-       public:
-        Site<device, Base> U;
-        Site<device, Base> V;
-      }; // class svd_res
-
-      svd_res svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
-        svd_res res;
-        auto sites = *this;
-        sites.absorb_all();
-        auto tensor_res = sites.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
-        res.U.set(std::move(tensor_res.U));
-        res.V.set(std::move(tensor_res.V));
-        //res.U.unlink_env(legs1, true);
+      static void svd(Site<device, Base>& U, Site<device, Base>& V, Site<device, Base> site,
+                      const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
+        // absorb all env before svd
+        site.absorb_all();
+        // svd tensor
+        auto tensor_res = site.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
+        U.neighbor.clear();
+        V.neighbor.clear();
+        U.set(std::move(tensor_res.U));
+        V.set(std::move(tensor_res.V));
+        // set edge
+        U.link(new_u_legs, V, new_v_legs);
+        V.link(new_v_legs, U, new_u_legs);
         //res.V.unlink_env(legs2, false);
       } // svd
 
-      // qr must not use env
       void qr();
 
       // high level op
