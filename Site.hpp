@@ -23,19 +23,23 @@
 namespace TAT {
   namespace site {
     namespace internal {
+      /*
       template<class T>
       Rank get_index(const std::vector<T>& v, const T& j) {
         auto pos = std::find(v.begin(), v.end(), j);
         assert(pos!=v.end());
         return std::distance(v.begin(), pos);
       } // get_index
+      */
 
+      /*
       template<Device device, class Base>
       std::shared_ptr<const Tensor<device, Base>> new_env(const Size& dim) {
         auto env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
         const_cast<Tensor<device, Base>&>(*env).set_constant(1);
         return env;
       } // new_env
+      */
 
       template<class T>
       T replace_or_not(const std::map<T, T>& m, const T& k) {
@@ -186,7 +190,7 @@ namespace TAT {
       void absorb_all() {
         for (const auto& i : neighbor) {
           if (i.second._env) {
-            set(std::move(tensor().multiple(i.second.env(), i.first)));
+            absorb_env(i.first, i.second);
           } // if env
         } // for edge
       } // absorb_all
@@ -194,14 +198,14 @@ namespace TAT {
       void emit_all() {
         for (const auto& i : neighbor) {
           if (i.second._env) {
-            set(std::move(tensor().multiple(1/i.second.env(), i.first)));
+            emit_env(i.first, i.second);
           } // if env
         } // for edge
       } // emit_all
 
       // link/unlink * with_env/without_env * single/double
       // single is member function and double is always static function
-      std::shared_ptr<const Tensor<device, Base>> create_env_for_leg(const Legs& leg) {
+      std::shared_ptr<const Tensor<device, Base>> create_env_for_leg(const Legs& leg) const {
         auto pos = std::find(legs().begin(), legs().end(), leg);
         auto index = std::distance(legs().begin(), pos);
         auto dim = dims()[index];
@@ -252,6 +256,13 @@ namespace TAT {
         site1.unlink_env(legs1, true);
         site2.unlink_env(legs2, false);
       } // unlink, double unlink, delete env, change site1
+
+      //    link <--------- link env
+      //      ^                ^
+      //     | |              | |
+      // double link    double link env
+      // it is same for unlinks
+      // in the function above, leg searching is before optimization, it is written for clear code
 
       // io
       // site does not implement file write, write tensor directly since addr of site is not fixed
@@ -357,6 +368,7 @@ namespace TAT {
       void qr();
 
       // high level op
+      // useful in lattice operation
 
      private:
       void qr_off(const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
