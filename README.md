@@ -1,8 +1,6 @@
-<center>
-  <h1>
-    <a href="https://github.com/hzhangxyz/TAT">TAT</a>
-  </h1>
-</center>
+<h1 align="center">
+  <a href="https://github.com/hzhangxyz/TAT">TAT</a>
+</h1>
 
 ---
 
