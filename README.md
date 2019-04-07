@@ -1,6 +1,4 @@
-<h1 align="center">
-  <a href="https://github.com/hzhangxyz/TAT">TAT</a>
-</h1>
+# [TAT](https://github.com/hzhangxyz/TAT) &middot; ![version](https://img.shields.io/github/tag-date/hzhangxyz/TAT.svg) ![license](https://img.shields.io/github/license/hzhangxyz/TAT.svg)
 
 TAT is A Tensor library
 
