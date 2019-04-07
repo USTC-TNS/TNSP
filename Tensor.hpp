@@ -197,8 +197,8 @@ namespace TAT {
           auto where = dict.find(i);
           if (where!=dict.end()) {
             i = where->second;
-          }
-        }
+          } // if map
+        } // for leg
         return *this;
       } // legs_rename
 
@@ -272,7 +272,7 @@ namespace TAT {
         auto pos = std::find(legs.begin(), legs.end(), position);
         if (pos==legs.end()) {
           return *this;
-        }
+        } // if not multiple
         Rank index = std::distance(legs.begin(), pos);
         res.node = node.multiple(other.node, index);
         return std::move(res);

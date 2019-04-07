@@ -66,7 +66,7 @@ extern "C"
 #endif
 
 #ifdef TAT_USE_GEQP3
-#warning GEQP3 is current unusable
+#error GEQP3 is current unusable
 #endif
 
 #endif // TAT_USE_CPU
