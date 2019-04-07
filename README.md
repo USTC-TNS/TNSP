@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/hzhangxyz/TAT/raw/TAT/logo.png">
+  <span style="font-size: 200px; color: indigo;">TAT</span>
 </div>
 
 ---
