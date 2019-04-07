@@ -2,8 +2,6 @@
   <a href="https://github.com/hzhangxyz/TAT">TAT</a>
 </h1>
 
----
-
 TAT is A Tensor library
 
 ## current function
