@@ -1,6 +1,4 @@
-<div align="center">
-  <span style="font-size: 200px; color: indigo;">TAT</span>
-</div>
+# [<center>TAT</center>](https://github.com/hzhangxyz/TAT)
 
 ---
 
