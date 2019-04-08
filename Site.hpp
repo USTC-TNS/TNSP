@@ -323,6 +323,9 @@ namespace TAT {
                            const std::map<Legs, Legs>& map1 = {},
                            const std::map<Legs, Legs>& map2 = {}) {
         Site<device, Base> site1 = _site1, site2 = _site2;
+        std::clog << "\033[1;31min contract\033[0m\n";
+        std::clog << site1 << std::endl;
+        std::clog << site2 << std::endl;
         // absorb env between two site
         std::vector<Legs> legs1, legs2;
         for (const auto& i : site1.neighbor) {
@@ -354,7 +357,7 @@ namespace TAT {
       void contract(Site<device, Base>& res,
                     const Site<device, Base>& _site2,
                     const std::map<Legs, Legs>& map1 = {},
-                    const std::map<Legs, Legs>& map2 = {}) {
+                    const std::map<Legs, Legs>& map2 = {}) const {
         contract(res, *this, _site2, map1, map2);
       } // contract
 
@@ -369,7 +372,7 @@ namespace TAT {
 
       Site<device, Base> contract(const Site<device, Base>& _site2,
                                   const std::map<Legs, Legs>& map1 = {},
-                                  const std::map<Legs, Legs>& map2 = {}) {
+                                  const std::map<Legs, Legs>& map2 = {}) const {
         return contract(*this, _site2, map1, map2);
       } // contract
 
@@ -443,8 +446,8 @@ namespace TAT {
 
      private:
       void qr_off(const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
-        auto qr = tensor().qr(q_legs, {leg_q}, {leg_r});
-        set(std::move(qr.Q));
+        Site<device, Base> tmp_r;
+        qr(*this, tmp_r, q_legs, leg_q, leg_r);
       } // qr_off
       void qr_off(const Legs& leg_q, const Legs& leg_r) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
@@ -457,9 +460,15 @@ namespace TAT {
 
      private:
       void qr_to(Site<device, Base>& other, const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
-        auto qr = tensor().qr(q_legs, {leg_q}, {leg_r});
-        set(std::move(qr.Q));
-        other.set(std::move(other.tensor().contract(qr.R, {leg_r}, {leg_q})));
+        std::clog << "\033[1;31min qr_off\033[0m\n";
+        std::clog << *this << std::endl;
+        std::clog << other << std::endl;
+        Site<device, Base> tmp_r;
+        qr(*this, tmp_r, q_legs, leg_q, leg_r);
+        std::clog << *this << std::endl;
+        std::clog << tmp_r << std::endl;
+        tmp_r.contract(other, other);
+        std::clog << other << std::endl;
       } // qr_to
       void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
