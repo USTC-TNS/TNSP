@@ -321,7 +321,8 @@ namespace TAT {
                            const Site<device, Base>& _site1,
                            const Site<device, Base>& _site2,
                            const std::map<Legs, Legs>& map1 = {},
-                           const std::map<Legs, Legs>& map2 = {}) {
+                           const std::map<Legs, Legs>& map2 = {},
+                           const bool& replace=false) {
         Site<device, Base> site1 = _site1, site2 = _site2;
         // absorb env between two site
         std::vector<Legs> legs1, legs2;
@@ -340,13 +341,19 @@ namespace TAT {
         for (auto& i : site1.neighbor) {
           if (&i.second.site()!=&_site2) {
             Legs new_leg = internal::replace_or_not(map1, i.first);
-            res(new_leg) = i.second;
+            const auto& edge = res(new_leg) = i.second;
+            if (replace) {
+              edge.site()(edge.legs).link(res);
+            } // if replace
           } // if not connect
         } // for 1
         for (auto& i : site2.neighbor) {
           if (&i.second.site()!=&_site1) {
             Legs new_leg = internal::replace_or_not(map2, i.first);
-            res(new_leg) = i.second;
+            const auto& edge = res(new_leg) = i.second;
+            if (replace) {
+              edge.site()(edge.legs).link(res);
+            } // if replace
           } // if not connect
         } // for 2
       } // contract two linked site with env between then only, without other env linked with them
@@ -354,28 +361,14 @@ namespace TAT {
       void contract(Site<device, Base>& res,
                     const Site<device, Base>& _site2,
                     const std::map<Legs, Legs>& map1 = {},
-                    const std::map<Legs, Legs>& map2 = {}) const {
-        contract(res, *this, _site2, map1, map2);
-      } // contract
-
-      static Site<device, Base> contract(const Site<device, Base>& _site1,
-                                         const Site<device, Base>& _site2,
-                                         const std::map<Legs, Legs>& map1 = {},
-                                         const std::map<Legs, Legs>& map2 = {}) {
-        Site<device, Base> res;
-        contract(res, _site1, _site2, map1, map2);
-        return res;
-      } // contract
-
-      Site<device, Base> contract(const Site<device, Base>& _site2,
-                                  const std::map<Legs, Legs>& map1 = {},
-                                  const std::map<Legs, Legs>& map2 = {}) const {
-        return contract(*this, _site2, map1, map2);
+                    const std::map<Legs, Legs>& map2 = {},
+                    const bool& replace=false) const {
+        contract(res, *this, _site2, map1, map2, replace);
       } // contract
 
       static void svd(Site<device, Base>& U, Site<device, Base>& V, const Site<device, Base>& _site,
                       const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
-                      const Rank& cut=-1) {
+                      const Rank& cut=-1, const bool& replace=false) {
         // absorb all env before svd
         Site<device, Base> site = _site;
         site.absorb_all();
@@ -395,21 +388,28 @@ namespace TAT {
           if (internal::in_vector(i.first, input_u_legs)) {
             const auto& edge = U(i.first) = std::move(i.second);
             U.emit_env(i.first, edge);
+            if (replace) {
+              edge.site()(edge.legs).link(U);
+            } // if replace
           } else {
             const auto& edge = V(i.first) = std::move(i.second);
             V.emit_env(i.first, edge);
+            if (replace) {
+              edge.site()(edge.legs).link(V);
+            } // if replace
           } // if link U
         } // for leg
       } // svd after absorbing all env to two site and create env between them from S matrix
 
       void svd(Site<device, Base>& U, Site<device, Base>& V,
                const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
-               const Rank& cut=-1) {
-        svd(U, V, *this, input_u_legs, new_u_legs, new_v_legs, cut);
+               const Rank& cut=-1, const bool& replace=false) {
+        svd(U, V, *this, input_u_legs, new_u_legs, new_v_legs, cut, replace);
       } // svd
 
       static void qr(Site<device, Base>& Q, Site<device, Base>& R, const Site<device, Base>& _site,
-                     const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) {
+                     const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs,
+                     const bool& replace=false) {
         // absorb all env before svd
         Site<device, Base> site = _site;
         // site.absorb_all();
@@ -426,31 +426,39 @@ namespace TAT {
         // link other edge
         for (auto& i : site.neighbor) {
           if (internal::in_vector(i.first, input_q_legs)) {
-            Q(i.first) = std::move(i.second);
+            const auto& edge = Q(i.first) = std::move(i.second);
+            if (replace) {
+              edge.site()(edge.legs).link(Q);
+            } // if replace
           } else {
-            R(i.first) = std::move(i.second);
+            const auto& edge = R(i.first) = std::move(i.second);
+            if (replace) {
+              edge.site()(edge.legs).link(R);
+            } // if replace
           } // if link Q
         } // for leg
       } // qr, user should ensure that there is no env linked with it
 
       void qr(Site<device, Base>& Q, Site<device, Base>& R,
-              const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) {
-        qr(Q, R, *this, input_q_legs, new_q_legs, new_r_legs);
+              const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs,
+              const bool& replace=false) {
+        qr(Q, R, *this, input_q_legs, new_q_legs, new_r_legs, replace);
       } // qr
 
       // high level op
       // useful in lattice operation
 
-      void qr_to(Site<device, Base>& other, const Legs& leg, bool do_contract=true) {
+      void qr_to(Site<device, Base>& other, const Legs& leg, const bool& do_contract=true) {
         auto leg_q = leg;
         auto leg_r = -leg;
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
         Site<device, Base> tmp_r;
         qr(*this, tmp_r, q_legs, leg_q, leg_r);
         if (do_contract) {
-          tmp_r.contract(other, other);
+          tmp_r.contract(other, other, {}, {}, true);
+        } else {
+          neighbor[leg_q].link(other);
         } // do_contract
-        neighbor[leg_q].link(other);
       } // qr_to
 
      private:
