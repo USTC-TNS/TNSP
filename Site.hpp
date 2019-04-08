@@ -318,10 +318,11 @@ namespace TAT {
       // higher level op see below
 
       static void contract(Site<device, Base>& res,
-                           Site<device, Base> site1,
-                           Site<device, Base> site2,
+                           const Site<device, Base>& _site1,
+                           const Site<device, Base>& _site2,
                            const std::map<Legs, Legs>& map1 = {},
                            const std::map<Legs, Legs>& map2 = {}) {
+        Site<device, Base> site1 = _site1, site2 = _site2;
         // absorb env between two site
         std::vector<Legs> legs1, legs2;
         for (const auto& i : site1.neighbor) {
@@ -336,34 +337,66 @@ namespace TAT {
         res.neighbor.clear();
         res.set(std::move(t));
         // set edge of new site
-        for (const auto& i : site1.neighbor) {
+        for (auto& i : site1.neighbor) {
           if (&i.second.site()!=&site2) {
             Legs new_leg = internal::replace_or_not(map1, i.first);
             res(new_leg) = std::move(i.second);
           } // if not connect
         } // for 1
-        for (const auto& i : site2.neighbor) {
+        for (auto& i : site2.neighbor) {
           if (&i.second.site()!=&site1) {
             Legs new_leg = internal::replace_or_not(map2, i.first);
             res(new_leg) = std::move(i.second);
           } // if not connect
         } // for 2
-      } // contract, contract env between 2 site only, without other env linked with them
+      } // contract two linked site with env between then only, without other env linked with them
 
-      static void svd(Site<device, Base>& U, Site<device, Base>& V, Site<device, Base> site,
-                      const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs) {
+      static Site<device, Base> contract(const Site<device, Base>& _site1,
+                                         const Site<device, Base>& _site2,
+                                         const std::map<Legs, Legs>& map1 = {},
+                                         const std::map<Legs, Legs>& map2 = {}) {
+        Site<device, Base> res;
+        contract(res, _site1, _site2, map1, map2);
+        return res;
+      } // contract
+
+      Site<device, Base> contract(const Site<device, Base>& _site2,
+                                  const std::map<Legs, Legs>& map1 = {},
+                                  const std::map<Legs, Legs>& map2 = {}) {
+        return contract(*this, _site2, map1, map2);
+      } // contract
+
+      static void svd(Site<device, Base>& U, Site<device, Base>& V, const Site<device, Base>& _site,
+                      const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
+                      const Rank& cut=-1) {
         // absorb all env before svd
+        Site<device, Base> site = _site;
         site.absorb_all();
         // svd tensor
-        auto tensor_res = site.tensor().svd(input_u_legs, new_u_legs, new_v_legs);
+        auto tensor_res = site.tensor().svd(input_u_legs, new_u_legs, new_v_legs, cut);
         U.neighbor.clear();
         V.neighbor.clear();
         U.set(std::move(tensor_res.U));
         V.set(std::move(tensor_res.V));
-        // set edge
-        U.link(new_u_legs, V, new_v_legs);
-        V.link(new_v_legs, U, new_u_legs);
-        //res.V.unlink_env(legs2, false);
+        // get shared_ptr of S
+        auto S = std::make_shared<const Tensor<device, Base>>(std::move(tensor_res.S));
+        // set edge between them
+        U.link_env(new_u_legs, V, new_v_legs, S, false);
+        V.link_env(new_v_legs, U, new_u_legs, S, false);
+        // link other edge
+        for (auto& i : site.neighbor) {
+          if (internal::in_vector(i.first, input_u_legs)) {
+            U(i.first) = std::move(i.second);
+          } else {
+            V(i.first) = std::move(i.second);
+          } // if link U
+        } // for leg
+      } // svd after absorbing all env to two site and create env between them from S matrix
+
+      void svd(Site<device, Base>& U, Site<device, Base>& V,
+               const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
+               const Rank& cut=-1) {
+        svd(U, V, *this, input_u_legs, new_u_legs, new_v_legs, cut);
       } // svd
 
       void qr();
