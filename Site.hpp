@@ -323,13 +323,10 @@ namespace TAT {
                            const std::map<Legs, Legs>& map1 = {},
                            const std::map<Legs, Legs>& map2 = {}) {
         Site<device, Base> site1 = _site1, site2 = _site2;
-        std::clog << "\033[1;31min contract\033[0m\n";
-        std::clog << site1 << std::endl;
-        std::clog << site2 << std::endl;
         // absorb env between two site
         std::vector<Legs> legs1, legs2;
         for (const auto& i : site1.neighbor) {
-          if (&i.second.site()==&site2) {
+          if (&i.second.site()==&_site2) {
             site1.absorb_env(i.first, i.second);
             legs1.push_back(i.first);
             legs2.push_back(i.second.legs);
@@ -460,15 +457,9 @@ namespace TAT {
 
      private:
       void qr_to(Site<device, Base>& other, const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
-        std::clog << "\033[1;31min qr_off\033[0m\n";
-        std::clog << *this << std::endl;
-        std::clog << other << std::endl;
         Site<device, Base> tmp_r;
         qr(*this, tmp_r, q_legs, leg_q, leg_r);
-        std::clog << *this << std::endl;
-        std::clog << tmp_r << std::endl;
         tmp_r.contract(other, other);
-        std::clog << other << std::endl;
       } // qr_to
       void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
