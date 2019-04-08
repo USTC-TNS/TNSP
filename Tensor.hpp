@@ -535,7 +535,7 @@ namespace TAT {
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value) {
-        return out << "{\"rank\": " << value.legs.size() << ", \"legs\": " << value.legs << ", \"node\": " << value.node << "}";
+        return out << "{" << rang::fgB::yellow << "\"rank\": " << value.legs.size() << rang::fg::reset << ", " << rang::fgB::blue << "\"legs\": " << value.legs << rang::fg::reset << ", \"node\": " << value.node << "}";
       } // operator<<
 
       template<Device device, class Base>

@@ -12,13 +12,13 @@ ifeq ($(STATIC), 1)
 	CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
 	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I$(MKL)/include -L$(MKL)/lib/intel64
 	CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
-	CXXFLAGS += -Iargs
+	CXXFLAGS += -Iargs -Irang/include
 else
 	CXXFLAGS += -ljemalloc
 	CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 	CXXFLAGS += -lpthread -lm -ldl -I$(MKL)/include -L$(MKL)/lib/intel64 -Wl,-rpath,$(MKL)/lib/intel64
 	CXXFLAGS += -lhptt -Lhptt/lib -Ihptt/include -Wl,-rpath,./hptt/lib
-	CXXFLAGS += -Iargs
+	CXXFLAGS += -Iargs -Irang/include
 endif
 
 ifeq ($(DEBUG), 1)

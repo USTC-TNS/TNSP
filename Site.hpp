@@ -267,13 +267,13 @@ namespace TAT {
       // io
       // site does not implement file write, write tensor directly since addr of site is not fixed
       friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
-        out << "{\"addr\": \"" << &value << "\", \"neighbor\": {";
+        out << "{" << rang::fgB::red << "\"addr\": \"" << &value << "\"" << rang::fg::reset << ", \"neighbor\": {";
         bool flag=false;
         for (const auto& i : value.neighbor) {
           if (flag) {
             out << ", ";
           } // if flag
-          out << "\"" << i.first << "\": " << "{\"addr\": \"" << &i.second.site() << "\", \"legs\": \"" << i.second.legs << "\"";
+          out << rang::fg::cyan << "\"" << i.first << "\"" << rang::fg::reset << ": " << "{\"addr\": \"" << rang::fgB::magenta << &i.second.site() << rang::fg::reset << "\", \"legs\": \"" << rang::fg::cyan << i.second.legs << rang::fg::reset << "\"";
           if (i.second._env) {
             out << ", \"env\": ";
             out << i.second.env();
@@ -338,15 +338,15 @@ namespace TAT {
         res.set(std::move(t));
         // set edge of new site
         for (auto& i : site1.neighbor) {
-          if (&i.second.site()!=&site2) {
+          if (&i.second.site()!=&_site2) {
             Legs new_leg = internal::replace_or_not(map1, i.first);
-            res(new_leg) = std::move(i.second);
+            res(new_leg) = i.second;
           } // if not connect
         } // for 1
         for (auto& i : site2.neighbor) {
-          if (&i.second.site()!=&site1) {
+          if (&i.second.site()!=&_site1) {
             Legs new_leg = internal::replace_or_not(map2, i.first);
-            res(new_leg) = std::move(i.second);
+            res(new_leg) = i.second;
           } // if not connect
         } // for 2
       } // contract two linked site with env between then only, without other env linked with them

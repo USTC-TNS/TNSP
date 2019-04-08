@@ -7,4 +7,6 @@
 [submodule "args"]
 	path = args
 	url = git@github.com:hzhangxyz/args.git
-	
+[submodule "rang"]
+	path = rang
+	url = git@github.com:hzhangxyz/rang.git

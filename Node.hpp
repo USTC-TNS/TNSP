@@ -393,7 +393,7 @@ namespace TAT {
 
       template<Device device, class Base>
       std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value) {
-        return out << "{\"dims\": " << value.dims << ", \"data\": " << value.data << "}";
+        return out << "{" << rang::fg::magenta << "\"dims\": " << value.dims << rang::fg::reset << ", \"data\": " << value.data << "}";
       } // operator<<
 
       template<Device device, class Base>

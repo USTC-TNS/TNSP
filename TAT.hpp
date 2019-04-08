@@ -46,6 +46,7 @@ extern "C"
 #include <mkl.h>
 } // extern "C"
 #include <hptt.h>
+#include <rang.hpp>
 
 // SVD
 #if (defined TAT_USE_GESDD && defined TAT_USE_GESVD) || (defined TAT_USE_GESVD && defined TAT_USE_GESVDX) || (defined TAT_USE_GESVDX && defined TAT_USE_GESDD)

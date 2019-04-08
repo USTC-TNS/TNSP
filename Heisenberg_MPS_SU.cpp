@@ -126,9 +126,12 @@ struct MPS {
 
   void pre() {
     using namespace TAT::legs_name;
+    std::cout << *this << std::endl;
     for (int i=L-1; i>1; i--) {
       lattice[i].qr_to(lattice[i-1], Left);
+      std::cout << *this << std::endl;
     }
+    std::cout << *this << std::endl;
   }
 
   void update(int n, int t, double delta_t) {
@@ -188,21 +191,22 @@ struct MPS {
     total /= *left_contract[L-1].get();
     return total/L;
   }
+
+  friend std::ostream& operator<<(std::ostream& out, const MPS& mps) {
+    out << "{\"L\": " << mps.L << ", \"D\": " << mps.D << ", \"lattice\": [" << std::endl;
+    bool flag = false;
+    for (auto& i : mps.lattice) {
+      if (flag) {
+        out << ", " << std::endl;
+      }
+      out << i;
+      flag = true;
+    }
+    out << "]}" << std::endl;
+    return out;
+  }
 };
 
-std::ostream& operator<<(std::ostream& out, const MPS& mps) {
-  out << "{\"L\": " << mps.L << ", \"D\": " << mps.D << ", \"lattice\": [";
-  bool flag = false;
-  for (auto& i : mps.lattice) {
-    if (flag) {
-      out << ", ";
-    }
-    out << i;
-    flag = true;
-  }
-  out << "]}";
-  return out;
-}
 
 void Heisenberg_MPS(int L, unsigned long D, unsigned seed, int step, int print_step, double delta_t) {
   MPS mps(L, D);
