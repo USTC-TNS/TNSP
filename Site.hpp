@@ -320,14 +320,15 @@ namespace TAT {
       static void contract(Site<device, Base>& res,
                            Site<device, Base> site1,
                            Site<device, Base> site2,
-                           const std::vector<Legs>& legs1,
-                           const std::vector<Legs>& legs2,
                            const std::map<Legs, Legs>& map1 = {},
                            const std::map<Legs, Legs>& map2 = {}) {
         // absorb env between two site
+        std::vector<Legs> legs1, legs2;
         for (const auto& i : site1.neighbor) {
           if (&i.second.site()==&site2) {
             site1.absorb_env(i.first, i.second);
+            legs1.push_back(i.first);
+            legs2.push_back(i.second.legs);
           } // if in
         } // for absorb
         // contract tensor

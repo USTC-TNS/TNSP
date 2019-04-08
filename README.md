@@ -30,6 +30,7 @@ The following is for developer to take note
 - Truncated SVD
 - dgegqr magma
 - cuda，sw
+- site api
 - use it, peps, kitaev, hubbard
 - symmetry tensor
 
