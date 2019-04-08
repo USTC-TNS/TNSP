@@ -351,6 +351,13 @@ namespace TAT {
         } // for 2
       } // contract two linked site with env between then only, without other env linked with them
 
+      void contract(Site<device, Base>& res,
+                    const Site<device, Base>& _site2,
+                    const std::map<Legs, Legs>& map1 = {},
+                    const std::map<Legs, Legs>& map2 = {}) {
+        contract(res, *this, _site2, map1, map2);
+      } // contract
+
       static Site<device, Base> contract(const Site<device, Base>& _site1,
                                          const Site<device, Base>& _site2,
                                          const std::map<Legs, Legs>& map1 = {},
@@ -386,9 +393,11 @@ namespace TAT {
         // link other edge
         for (auto& i : site.neighbor) {
           if (internal::in_vector(i.first, input_u_legs)) {
-            U(i.first) = std::move(i.second);
+            const auto& edge = U(i.first) = std::move(i.second);
+            U.emit_env(i.first, edge);
           } else {
-            V(i.first) = std::move(i.second);
+            const auto& edge = V(i.first) = std::move(i.second);
+            V.emit_env(i.first, edge);
           } // if link U
         } // for leg
       } // svd after absorbing all env to two site and create env between them from S matrix
@@ -399,7 +408,35 @@ namespace TAT {
         svd(U, V, *this, input_u_legs, new_u_legs, new_v_legs, cut);
       } // svd
 
-      void qr();
+      static void qr(Site<device, Base>& Q, Site<device, Base>& R, const Site<device, Base>& _site,
+                     const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) {
+        // absorb all env before svd
+        Site<device, Base> site = _site;
+        // site.absorb_all();
+        // env should not exist here
+        // svd tensor
+        auto tensor_res = site.tensor().qr(input_q_legs, new_q_legs, new_r_legs);
+        Q.neighbor.clear();
+        R.neighbor.clear();
+        Q.set(std::move(tensor_res.Q));
+        R.set(std::move(tensor_res.R));
+        // set edge between them
+        Q.link(new_q_legs, R, new_r_legs);
+        R.link(new_r_legs, Q, new_q_legs);
+        // link other edge
+        for (auto& i : site.neighbor) {
+          if (internal::in_vector(i.first, input_q_legs)) {
+            Q(i.first) = std::move(i.second);
+          } else {
+            R(i.first) = std::move(i.second);
+          } // if link Q
+        } // for leg
+      } // qr, user should ensure that there is no env linked with it
+
+      void qr(Site<device, Base>& Q, Site<device, Base>& R,
+              const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) {
+        qr(Q, R, *this, input_q_legs, new_q_legs, new_r_legs);
+      } // qr
 
       // high level op
       // useful in lattice operation
