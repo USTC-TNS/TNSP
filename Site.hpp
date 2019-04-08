@@ -399,7 +399,7 @@ namespace TAT {
             } // if replace
           } // if link U
         } // for leg
-      } // svd after absorbing all env to two site and create env between them from S matrix
+      } // svd after absorbing all env to two site and create env between them from S matrix, after all emit all env absorbed
 
       void svd(Site<device, Base>& U, Site<device, Base>& V,
                const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
@@ -460,6 +460,20 @@ namespace TAT {
           neighbor[leg_q].link(other);
         } // do_contract
       } // qr_to
+
+      /*
+      static void update(Site<device, Base>& site1, Site<device, Base>& site2, const Tensor<device, Base>& updater,
+                         const Legs& leg1, const Legs& leg2, std::pair<Legs, Legs>map_for_site2) {
+        Site<device, Base> big;
+        site1.contract(big, site2, {legs_name::Phy, legs_name::Phy1}, {legs_name::Phy, legs_name::Phy2, ?}, true);
+        big.set(big.tensor().contract(updater), {legs_name::Phy1, legs_name::Phy2}, {legs_name::Phy3, legs_name::Phy4});
+        big.svd(site1, site2, {?}, ?, ?);
+      } // update two site linked
+
+      void update_to() {
+        PASS;
+      } // update_to
+      */
 
      private:
       void update_to(Site<device, Base>& site2,
