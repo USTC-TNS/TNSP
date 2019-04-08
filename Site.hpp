@@ -442,17 +442,18 @@ namespace TAT {
       // useful in lattice operation
 
      private:
-      void qr_off(const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
+      void qr_off(Site<device, Base>& other, const std::vector<Legs>& q_legs, const Legs& leg_q, const Legs& leg_r) {
         Site<device, Base> tmp_r;
         qr(*this, tmp_r, q_legs, leg_q, leg_r);
+        neighbor[leg_q].link(other);
       } // qr_off
-      void qr_off(const Legs& leg_q, const Legs& leg_r) {
+      void qr_off(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
-        qr_off(q_legs, leg_q, leg_r);
+        qr_off(other, q_legs, leg_q, leg_r);
       } // qr_off
      public:
-      void qr_off(const Legs& leg) {
-        qr_off(leg, -leg);
+      void qr_off(Site<device, Base>& other, const Legs& leg) {
+        qr_off(other, leg, -leg);
       } // qr_off
 
      private:
@@ -460,6 +461,7 @@ namespace TAT {
         Site<device, Base> tmp_r;
         qr(*this, tmp_r, q_legs, leg_q, leg_r);
         tmp_r.contract(other, other);
+        neighbor[leg_q].link(other);
       } // qr_to
       void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
