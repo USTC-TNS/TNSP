@@ -10,3 +10,6 @@ install:
 script:
 - ./test.out
 - ./Heisenberg_MPS_SU.out -L4 -D4
+env:
+  global:
+    - MAKEFLAGS="-j 8"
