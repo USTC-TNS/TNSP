@@ -58,7 +58,7 @@ struct MPS {
     {
       lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, 1, D})));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, 1})));
+        lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, D})));
       }
       lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, 1})));
     } // lattice
