@@ -2,7 +2,7 @@ dist: xenial
 sudo: required
 language: cpp
 compiler:
-- gcc
+- clang
 python: 3.7
 cache:
   directories:
@@ -17,11 +17,11 @@ addons:
     - --allow-unauthenticated intel-mkl-2019.2-057
 before_install:
 - cd hptt
-- ls lib/libhptt.a lib/libhptt.so || make CXX=g++
+- ls lib/libhptt.a lib/libhptt.so || make
 - cd ..
 - pip install --user cpp-coveralls
 install:
-- make compile DEBUG=1 CXX=g++
+- make compile DEBUG=1
 script:
 # - diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
