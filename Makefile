@@ -1,4 +1,4 @@
-CXX = clang++
+CXX ?= clang++
 STATIC ?= 0
 DEBUG ?= 0
 MKL=/opt/intel/compilers_and_libraries_2019.2.187/linux/mkl

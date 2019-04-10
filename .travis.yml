@@ -7,17 +7,23 @@ python: 3.7
 cache:
   directories:
   - hptt
+addons:
+  apt:
+    sources:
+    - sourceline: deb https://apt.repos.intel.com/mkl all main
+    update: true
+    packages:
+    - gcc-5.3
+    - g++-5.3
+    - libjemalloc-dev
+    - --allow-unauthenticated intel-mkl-2019.2-057
 before_install:
-- sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
-- sudo apt-get update && sudo apt-get install -y --allow-unauthenticated intel-mkl-2019.2-057 libjemalloc-dev
 - cd hptt
-- sed -i s/clang++/g++/ Makefile
-- ls lib/libhptt.a lib/libhptt.so || make
+- ls lib/libhptt.a lib/libhptt.so || make CXX=g++-5.3
 - cd ..
 - pip install --user cpp-coveralls
 install:
-- sed -i s/clang++/g++/ Makefile
-- make compile DEBUG=1
+- make compile DEBUG=1 CXX=g++-5.3
 script:
 # - diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
