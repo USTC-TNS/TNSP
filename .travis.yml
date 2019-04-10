@@ -3,9 +3,10 @@ compiler:
 - clang
 os:
 - linux
-install:
+before_install:
 - cd hptt && make
-- make
+install:
+- make compile
 script:
 - ./test.out
 - ./Heisenberg_MPS_SU.out -L4 -D4
