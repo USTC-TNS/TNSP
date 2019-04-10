@@ -347,7 +347,7 @@ namespace TAT {
         Base run(const Size& size, const Base* data) {
           if (n==-1) {
             auto i = iamax<Base>(size, data);
-            return abs(data[i]);
+            return std::abs(data[i]);
           }
           auto tmp = new Base[size];
           if (n==2) {

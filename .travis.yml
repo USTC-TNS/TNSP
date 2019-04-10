@@ -13,8 +13,9 @@ before_install:
 install:
 - make compile
 script:
-- ./test.out
-- ./Heisenberg_MPS_SU.out -L4 -D4
+- diff <(./test.out) ./test.stdout
+- diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
+- ! (diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 1 | python -m json.tool) <(cat ./Heisenberg_MPS_SU.stdout | tail -n 1 | python -m json.tool) -y | grep -v "addr" | grep "|")
 env:
   global:
     - MAKEFLAGS="-j 8"
