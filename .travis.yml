@@ -14,6 +14,7 @@ addons:
     - llvm-toolchain-xenial-8
     update: true
     packages:
+    - llvm-8
     - clang-8
     - libjemalloc-dev
     - --allow-unauthenticated intel-mkl-2019.2-057
