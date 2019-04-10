@@ -17,12 +17,12 @@ TAT is A Tensor library
 ## history
 after many try and exercise and rewrite include
 
-|Repo|Time|
-|----|----|
-| [![history](https://img.shields.io/badge/MPS-np/tf-red.svg)](https://github.com/Aaaaaaaah/MPS) | 2017 Autumn |
-| [![history](https://img.shields.io/badge/SquareLattice-np/tf-red.svg)](https://github.com/Aaaaaaaah/SquareLattice) | 2018 Spring |
-| [![history](https://img.shields.io/badge/tnsp-np/tf-red.svg)](https://github.com/hzhangxyz/tnsp) | 2018 Autumn |
-| [![history](https://img.shields.io/badge/TNC-Eigen-red.svg)](https://github.com/hzhangxyz/TNC) | 2019 Winter |
+|Repo|Time|Desciption|
+|----|----|----------|
+| [![history](https://img.shields.io/badge/MPS-np/tf-red.svg)](https://github.com/Aaaaaaaah/MPS) | 2017 Autumn | MPS implementation in np |
+| [![history](https://img.shields.io/badge/SquareLattice-np-red.svg)](https://github.com/Aaaaaaaah/SquareLattice) | 2018 Spring | attempt to write a library, failure |
+| [![history](https://img.shields.io/badge/tnsp-np/tf-red.svg)](https://github.com/hzhangxyz/tnsp) | 2018 Autumn | tensorflow wrap as tensor library |
+| [![history](https://img.shields.io/badge/TNC-Eigen-red.svg)](https://github.com/hzhangxyz/TNC) | 2019 Winter | eigen wrap as tensor library |
 
 and with practice and experience of using [![history](https://img.shields.io/badge/TNSP-Fortran-blue.svg)](https://arxiv.org/pdf/1708.00136.pdf)
 
