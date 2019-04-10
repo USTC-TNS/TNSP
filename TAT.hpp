@@ -198,16 +198,10 @@ namespace TAT {
   using site::Site;
 
   namespace lattice {
-    struct D1 {
-      int i;
-    }; // D1
+    template<int dimension>
+    class Dimension;
 
-    struct D2 {
-      int i;
-      int j;
-    }; // D2
-
-    template<class Tags=D2, Device device=Device::CPU, class Base=double>
+    template<class Tags=Dimension<2>, Device device=Device::CPU, class Base=double>
     class Lattice;
   } // namespace lattice
   using site::Site;

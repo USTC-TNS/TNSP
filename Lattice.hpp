@@ -23,6 +23,27 @@
 
 namespace TAT {
   namespace lattice {
+    template<>
+    class Dimension<1> {
+     public:
+      int i;
+    }; // Dimension<1>
+
+    template<>
+    class Dimension<2> {
+     public:
+      int i;
+      int j;
+    }; // Dimension<2>
+
+    template<>
+    class Dimension<3> {
+     public:
+      int i;
+      int j;
+      int k;
+    }; // Dimension<3>
+
     template<class Tags, Device device, class Base>
     class Lattice {
       using TensorObj = Tensor<device, Base>;
