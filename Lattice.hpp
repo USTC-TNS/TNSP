@@ -68,8 +68,8 @@ namespace TAT {
       } // operator()
 
       // set_bond(.., .., .., ..)
-      // set_bond(.., .., .., dim)
-      // set_bond(.., .., .., env)
+      // set_bond(.., .., .., .., dim)
+      // set_bond(.., .., .., .., env)
       void set_bond(const Tags& tag1, const Legs& leg1,
                     const Tags& tag2, const Legs& leg2,
                     std::shared_ptr<Tensor<device, Base>> env) {
@@ -83,9 +83,11 @@ namespace TAT {
       } // set_bond
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      static TensorPtr make_site(T1&& _legs, T2&& _dims, const std::function<Base()>& random) {
+      static TensorPtr make_site(T1&& _legs, T2&& _dims, const std::function<Base()>& random= {}) {
         auto res = std::make_shared<TensorObj>(std::forward<T1>(_legs), std::forward<T2>(_dims));
-        res->set_random(random);
+        if (random) {
+          res->set_random(random);
+        } // is random exsit
         return res;
       } // make_site
 
