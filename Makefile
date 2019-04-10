@@ -36,7 +36,7 @@ SRC=$(wildcard ./*.cpp)
 SRC_STYLE=$(SRC:.cpp=.cpp.style)
 COMPILE=$(SRC:.cpp=.out)
 ORIG=$(SRC:.cpp=.cpp.orig) $(HEADER:.hpp=.hpp.orig)
-MISC_TO_REMOVE=test_io2.out test_io.out
+MISC_TO_REMOVE=test_io2.out test_io.out *.gcda *.gcno
 
 all: style compile
 

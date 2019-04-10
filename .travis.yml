@@ -17,7 +17,7 @@ install:
 script:
 - diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
-- [ `diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 1 | python -m json.tool) <(cat ./Heisenberg_MPS_SU.stdout | tail -n 1 | python -m json.tool) -y | grep -v "addr" | grep "|" | wc -l` -eq 0 ]
+- diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 1 | python -m json.tool | grep -v addr) <(cat ./Heisenberg_MPS_SU.stdout | tail -n 1 | python -m json.tool | grep -v addr)
 - ./test.stdout
 - ./Heisenberg_MPS_SU.out -L4 -D4
 - ./Heisenberg_MPS_SU_env.out
