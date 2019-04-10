@@ -19,8 +19,9 @@ and with practice and experience of using [TNSP](https://arxiv.org/pdf/1708.0013
 now, I am writing this tensor library finally.
 
 ## dependence
-- [args](https://github.com/Taywee/args) MIT License
-- [hptt](https://github.com/springer13/hptt) BSD 3-Clause License
+- [args](https://github.com/Taywee/args) [MIT](https://github.com/Taywee/args/blob/master/LICENSE)
+- [hptt](https://github.com/springer13/hptt) [BSD-3-Clause](https://github.com/springer13/hptt/blob/master/LICENSE.txt)
+- [rang](https://github.com/agauniyal/rang) [Unlicense](https://github.com/agauniyal/rang/blob/master/LICENSE)
 
 ---
 The following is for developer to take note
