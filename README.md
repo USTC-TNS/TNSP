@@ -7,22 +7,26 @@ TAT is A Tensor library
 - a MPS demo
 
 ## dependence
-- [![dependence](https://img.shields.io/badge/Taywee-args-blue.svg)](https://github.com/Taywee/args) &middot; [![license](https://img.shields.io/github/license/Taywee/args.svg)](https://github.com/Taywee/args/blob/master/LICENSE)
-- [![dependence](https://img.shields.io/badge/springer13-hptt-blue.svg)](https://github.com/springer13/hptt) &middot; [![license](https://img.shields.io/github/license/springer13/hptt.svg)](https://github.com/springer13/hptt/blob/master/LICENSE.txt)
-- [![dependence](https://img.shields.io/badge/agauniyal-rang-blue.svg)](https://github.com/agauniyal/rang) &middot; [![license](https://img.shields.io/github/license/agauniyal/rang.svg)](https://github.com/agauniyal/rang/blob/master/LICENSE)
+
+|Repo|License|
+|----|-------|
+| [![dependence](https://img.shields.io/badge/Taywee-args-blue.svg)](https://github.com/Taywee/args) | [![license](https://img.shields.io/github/license/Taywee/args.svg)](https://github.com/Taywee/args/blob/master/LICENSE) |
+| [![dependence](https://img.shields.io/badge/springer13-hptt-blue.svg)](https://github.com/springer13/hptt) | [![license](https://img.shields.io/github/license/springer13/hptt.svg)](https://github.com/springer13/hptt/blob/master/LICENSE.txt) |
+| [![dependence](https://img.shields.io/badge/agauniyal-rang-blue.svg)](https://github.com/agauniyal/rang) | [![license](https://img.shields.io/github/license/agauniyal/rang.svg)](https://github.com/agauniyal/rang/blob/master/LICENSE) |
 
 ## history
 after many try and exercise and rewrite include
 
-- [![history](https://img.shields.io/badge/MPS-np/tf-red.svg)](https://github.com/Aaaaaaaah/MPS) at 2017 Autumn
-- [![history](https://img.shields.io/badge/SquareLattice-np/tf-red.svg)](https://github.com/Aaaaaaaah/SquareLattice) at 2018 Spring
-- [![history](https://img.shields.io/badge/tnsp-np/tf-red.svg)](https://github.com/hzhangxyz/tnsp) at 2018 Autumn
-- [![history](https://img.shields.io/badge/TNC-Eigen-red.svg)](https://github.com/hzhangxyz/TNC) at 2019 Winter
+|Repo|Time|
+|----|----|
+| [![history](https://img.shields.io/badge/MPS-np/tf-red.svg)](https://github.com/Aaaaaaaah/MPS) | 2017 Autumn |
+| [![history](https://img.shields.io/badge/SquareLattice-np/tf-red.svg)](https://github.com/Aaaaaaaah/SquareLattice) | 2018 Spring |
+| [![history](https://img.shields.io/badge/tnsp-np/tf-red.svg)](https://github.com/hzhangxyz/tnsp) | 2018 Autumn |
+| [![history](https://img.shields.io/badge/TNC-Eigen-red.svg)](https://github.com/hzhangxyz/TNC) | 2019 Winter |
 
 and with practice and experience of using [![history](https://img.shields.io/badge/TNSP-Fortran-blue.svg)](https://arxiv.org/pdf/1708.00136.pdf)
 
 now, I am writing this tensor library.
-
 
 ---
 The following is for developer to take note
