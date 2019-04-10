@@ -1,12 +1,12 @@
 [submodule "hptt"]
 	path = hptt
-	url = git@github.com:hzhangxyz/hptt.git
+	url = https://github.com/hzhangxyz/hptt.git
 [submodule "cutt"]
 	path = cutt
-	url = git@github.com:hzhangxyz/cutt.git
+	url = https://github.com/hzhangxyz/cutt.git
 [submodule "args"]
 	path = args
-	url = git@github.com:hzhangxyz/args.git
+	url = https://github.com/hzhangxyz/args.git
 [submodule "rang"]
 	path = rang
-	url = git@github.com:hzhangxyz/rang.git
+	url = https://github.com/hzhangxyz/rang.git
