@@ -3,8 +3,11 @@ compiler:
 - clang
 os:
 - linux
+cache:
+  directories:
+  - hptt/lib
 before_install:
-- cd hptt && make
+- cd hptt && make && cd ..
 install:
 - make compile
 script:
