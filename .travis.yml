@@ -10,7 +10,10 @@ cache:
 before_install:
 - sudo sh -c 'echo deb https://apt.repos.intel.com/mkl all main > /etc/apt/sources.list.d/intel-mkl.list'
 - sudo apt-get update && sudo apt-get install -y --allow-unauthenticated intel-mkl-2019.2-057 libjemalloc-dev
-- cd hptt && ls lib/libhptt.a lib/libhptt.so || make && cd ..
+- cd hptt
+- sed -i s/clang++/g++/ Makefile
+- ls lib/libhptt.a lib/libhptt.so || make
+- cd ..
 - pip install --user cpp-coveralls
 install:
 - sed -i s/clang++/g++/ Makefile
@@ -19,9 +22,9 @@ script:
 # - diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 1 | python -m json.tool | grep -v addr) <(cat ./Heisenberg_MPS_SU.stdout | tail -n 1 | python -m json.tool | grep -v addr)
-- ./test.out
 - ./Heisenberg_MPS_SU.out -L4 -D4
 - ./Heisenberg_MPS_SU_env.out
+- ./test.out
 after_success:
 - coveralls --exclude args --exclude rang --exclude cutt --exclude hptt
 env:
