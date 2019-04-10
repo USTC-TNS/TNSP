@@ -5,7 +5,7 @@ sudo: required
 dist: xenial
 cache:
   directories:
-  - hptt/lib
+  - hptt
 before_install:
 - cd hptt && make && cd ..
 - sudo apt-get install intel-mkl
