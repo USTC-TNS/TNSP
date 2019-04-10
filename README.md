@@ -1,4 +1,4 @@
-# [TAT](https://github.com/hzhangxyz/TAT) &middot; ![version](https://img.shields.io/github/tag-date/hzhangxyz/TAT.svg) ![license](https://img.shields.io/github/license/hzhangxyz/TAT.svg)
+# [TAT](https://github.com/hzhangxyz/TAT) &middot; [![version](https://img.shields.io/github/tag-date/hzhangxyz/TAT.svg)](https://github.com/hzhangxyz/TAT/releases/latest) [![license](https://img.shields.io/github/license/hzhangxyz/TAT.svg)](https://github.com/hzhangxyz/TAT/blob/TAT/LICENSE)
 
 TAT is A Tensor library
 
