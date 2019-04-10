@@ -3,25 +3,26 @@
 TAT is A Tensor library
 
 ## current function
-- a [TAT lib](https://github.com/hzhangxyz/TAT/blob/TAT/TAT.hpp)
-- a [MPS demo](https://github.com/hzhangxyz/TAT/blob/TAT/Heisenberg_MPS_SU.cpp)
+- a TAT lib
+- a MPS demo
+
+## dependence
+- [![dependence](https://img.shields.io/badge/Taywee-args-blue.svg)](https://github.com/Taywee/args) &middot; [![license](https://img.shields.io/github/license/Taywee/args.svg)](https://github.com/Taywee/args/blob/master/LICENSE)
+- [![dependence](https://img.shields.io/badge/springer13-hptt-blue.svg)](https://github.com/springer13/hptt) &middot; [![license](https://img.shields.io/github/license/springer13/hptt.svg)](https://github.com/springer13/hptt/blob/master/LICENSE.txt)
+- [![dependence](https://img.shields.io/badge/agauniyal-rang-blue.svg)](https://github.com/agauniyal/rang) &middot; [![license](https://img.shields.io/github/license/agauniyal/rang.svg)](https://github.com/agauniyal/rang/blob/master/LICENSE)
 
 ## history
 after many try and exercise and rewrite include
 
-- [MPS-np/tf](https://github.com/Aaaaaaaah/MPS) 2017 Autumn
-- [SquareLattice-np/tf](https://github.com/Aaaaaaaah/SquareLattice) 2018 Spring
-- [tnsp-np/tf](https://github.com/hzhangxyz/tnsp) 2018 Autumn
-- [TNC-eigen](https://github.com/hzhangxyz/TNC) 2019 Winter
+- [![history](https://img.shields.io/badge/MPS-np/tf-red.svg)](https://github.com/Aaaaaaaah/MPS) at 2017 Autumn
+- [![history](https://img.shields.io/badge/SquareLattice-np/tf-red.svg)](https://github.com/Aaaaaaaah/SquareLattice) at 2018 Spring
+- [![history](https://img.shields.io/badge/tnsp-np/tf-red.svg)](https://github.com/hzhangxyz/tnsp) at 2018 Autumn
+- [![history](https://img.shields.io/badge/TNC-Eigen-red.svg)](https://github.com/hzhangxyz/TNC) at 2019 Winter
 
-and with practice and experience of using [TNSP](https://arxiv.org/pdf/1708.00136.pdf)
+and with practice and experience of using [![history](https://img.shields.io/badge/TNSP-Fortran-blue.svg)](https://arxiv.org/pdf/1708.00136.pdf)
 
-now, I am writing this tensor library finally.
+now, I am writing this tensor library.
 
-## dependence
-- [args](https://github.com/Taywee/args) &middot; [![license](https://img.shields.io/github/license/Taywee/args.svg)](https://github.com/Taywee/args/blob/master/LICENSE)
-- [hptt](https://github.com/springer13/hptt) &middot; [![license](https://img.shields.io/github/license/springer13/hptt.svg)](https://github.com/springer13/hptt/blob/master/LICENSE.txt)
-- [rang](https://github.com/agauniyal/rang) &middot; [![license](https://img.shields.io/github/license/agauniyal/rang.svg)](https://github.com/agauniyal/rang/blob/master/LICENSE)
 
 ---
 The following is for developer to take note
