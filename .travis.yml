@@ -7,8 +7,8 @@ cache:
   directories:
   - hptt/lib
 before_install:
-- cd hptt && ls lib || make && cd ..
-- sudo apt-get install intel-mkl-full_2019.2-187
+- cd hptt && ls lib/libhptt.a lib/libhptt.so || make && cd ..
+- sudo apt-get install intel-mkl-full_2019.2.187
 install:
 - make compile
 script:
