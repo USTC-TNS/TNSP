@@ -31,6 +31,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
+#include <functional>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl, exit(233)
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type

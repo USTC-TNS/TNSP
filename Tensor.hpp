@@ -183,7 +183,7 @@ namespace TAT {
         node.set_zero();
         return *this;
       } // set_zero
-      Tensor<device, Base>& set_random(Base(*random)()) {
+      Tensor<device, Base>& set_random(const std::function<Base()>& random) {
         node.set_random(random);
         return *this;
       } // set_random

@@ -413,7 +413,7 @@ namespace TAT {
           } // for i
           return *this;
         } // set_zero
-        Data<Base>& set_random(Base(*random)()) {
+        Data<Base>& set_random(const std::function<Base()>& random) {
           for (Size i=0; i<size; i++) {
             base[i] = random();
           } // for i

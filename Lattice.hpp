@@ -83,8 +83,10 @@ namespace TAT {
       } // set_bond
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      static TensorPtr make_site(T1&& _legs, T2&& _dims) {
-        return std::make_shared<TensorObj>(std::forward<T1>(_legs), std::forward<T2>(_dims));
+      static TensorPtr make_site(T1&& _legs, T2&& _dims, const std::function<Base()>& random) {
+        auto res = std::make_shared<TensorObj>(std::forward<T1>(_legs), std::forward<T2>(_dims));
+        res->set_random(random);
+        return res;
       } // make_site
 
       static TensorPtr make_env(const Size& dims=-1) {

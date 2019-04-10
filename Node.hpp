@@ -123,7 +123,7 @@ namespace TAT {
         data.set_zero();
         return *this;
       } // set_zero
-      Node<device, Base>& set_random(Base(*random)()) {
+      Node<device, Base>& set_random(const std::function<Base()>& random) {
         data.set_random(random);
         return *this;
       } // set_random
