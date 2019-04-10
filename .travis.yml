@@ -1,0 +1,11 @@
+language: cpp
+compiler:
+- clang
+os:
+- linux
+install:
+- cd hptt && make
+- make
+script:
+- ./test.out
+- ./Heisenberg_MPS_SU.out -L4 -D4
