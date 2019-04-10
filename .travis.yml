@@ -11,8 +11,11 @@ addons:
   apt:
     sources:
     - sourceline: deb https://apt.repos.intel.com/mkl all main
+    - ubuntu-toolchain-r-test
+    - llvm-toolchain-xenial-8.0
     update: true
     packages:
+    - clang-8.0
     - libjemalloc-dev
     - --allow-unauthenticated intel-mkl-2019.2-057
 before_install:
@@ -34,3 +37,5 @@ after_success:
 env:
   global:
     - MAKEFLAGS="-j 8"
+    - CC=clang-8.0
+    - CXX=clang++-8.0
