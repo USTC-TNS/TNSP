@@ -11,19 +11,6 @@ matrix:
         - ubuntu-toolchain-r-test
         - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
-        - g++-4.6
-        - libjemalloc-dev
-        - --allow-unauthenticated intel-mkl-2019.2-057
-    env:
-    - MATRIX_EVAL="CXX=g++-4.6"
-    compiler: gcc-4.6
-  - addons:
-      apt:
-        update: true
-        sources:
-        - ubuntu-toolchain-r-test
-        - sourceline: deb https://apt.repos.intel.com/mkl all main
-        packages:
         - g++-4.7
         - libjemalloc-dev
         - --allow-unauthenticated intel-mkl-2019.2-057
