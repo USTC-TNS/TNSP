@@ -123,7 +123,7 @@ before_install:
 install:
 - make compile
 script:
-- diff <(./test.out) ./test.stdout
+#- diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 1 | python -m json.tool | grep -v addr) <(cat ./Heisenberg_MPS_SU.stdout | tail -n 1 | python -m json.tool | grep -v addr)
 - ./Heisenberg_MPS_SU.out -L4 -D4
