@@ -1,34 +1,111 @@
+os: linux
 dist: xenial
-sudo: required
 language: cpp
-compiler:
-- gcc-5
-- gcc-6
-- gcc-7
-- gcc-8
-- clang-5
-- clang-6
-- clang-7
-- clang-8
+matrix:
+  fast_finish: true
+  include:
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-5
+    env:
+    - MATRIX_EVAL="CXX=g++-5"
+    compiler: gcc-5
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-6
+    env:
+    - MATRIX_EVAL="CXX=g++-6"
+    compiler: gcc-6
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-7
+    env:
+    - MATRIX_EVAL="CXX=g++-7"
+    compiler: gcc-7
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-8
+    env:
+    - MATRIX_EVAL="CXX=g++-8"
+    compiler: gcc-8
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-5
+        packages:
+        - clang-5
+    env:
+    - MATRIX_EVAL="CXX=clang++-5"
+    compiler: clang-5
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-6
+        packages:
+        - clang-6
+    env:
+    - MATRIX_EVAL="CXX=clang++-6"
+    compiler: clang-6
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-7
+        packages:
+        - clang-7
+    env:
+    - MATRIX_EVAL="CXX=clang++-7"
+    compiler: clang-7
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-8
+        packages:
+        - clang-8
+    env:
+    - MATRIX_EVAL="CXX=clang++-8"
+    compiler: clang-8
 cache:
   directories:
   - hptt
 addons:
   apt:
+    update: true
     sources:
     - sourceline: deb https://apt.repos.intel.com/mkl all main
-    - ubuntu-toolchain-r-test
-    - llvm-toolchain-xenial
-    update: true
     packages:
     - libjemalloc-dev
     - --allow-unauthenticated intel-mkl-2019.2-057
 before_install:
+- eval "${MATRIX_EVAL}"
 - cd hptt
-- ls lib/libhptt.a lib/libhptt.so || make -j8
+- ls lib/libhptt.a lib/libhptt.so || make
 - cd ..
 install:
-- make compile -j8 DEBUG=1
+- make compile
 script:
 - diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
@@ -36,5 +113,8 @@ script:
 - ./Heisenberg_MPS_SU.out -L4 -D4
 - ./Heisenberg_MPS_SU_env.out
 - ./test.out
+env:
+  global:
+    - MAKEFLAGS="-j 2"
 notifications:
   email: false
