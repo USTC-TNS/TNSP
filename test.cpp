@@ -19,7 +19,7 @@
 
 // SVD
 #if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
-#define TAT_USE_GESVDX
+#define TAT_USE_GESVD
 #endif
 
 // QR
