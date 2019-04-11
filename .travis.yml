@@ -9,8 +9,11 @@ matrix:
         update: true
         sources:
         - ubuntu-toolchain-r-test
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - g++-5
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=g++-5"
     compiler: gcc-5
@@ -19,8 +22,11 @@ matrix:
         update: true
         sources:
         - ubuntu-toolchain-r-test
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - g++-6
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=g++-6"
     compiler: gcc-6
@@ -29,8 +35,11 @@ matrix:
         update: true
         sources:
         - ubuntu-toolchain-r-test
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - g++-7
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=g++-7"
     compiler: gcc-7
@@ -39,8 +48,11 @@ matrix:
         update: true
         sources:
         - ubuntu-toolchain-r-test
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - g++-8
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=g++-8"
     compiler: gcc-8
@@ -50,8 +62,11 @@ matrix:
         sources:
         - ubuntu-toolchain-r-test
         - llvm-toolchain-xenial-5
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - clang-5
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=clang++-5"
     compiler: clang-5
@@ -61,8 +76,11 @@ matrix:
         sources:
         - ubuntu-toolchain-r-test
         - llvm-toolchain-xenial-6
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - clang-6
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=clang++-6"
     compiler: clang-6
@@ -72,8 +90,11 @@ matrix:
         sources:
         - ubuntu-toolchain-r-test
         - llvm-toolchain-xenial-7
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - clang-7
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=clang++-7"
     compiler: clang-7
@@ -83,22 +104,17 @@ matrix:
         sources:
         - ubuntu-toolchain-r-test
         - llvm-toolchain-xenial-8
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
         packages:
         - clang-8
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.2-057
     env:
     - MATRIX_EVAL="CXX=clang++-8"
     compiler: clang-8
 cache:
   directories:
   - hptt
-addons:
-  apt:
-    update: true
-    sources:
-    - sourceline: deb https://apt.repos.intel.com/mkl all main
-    packages:
-    - libjemalloc-dev
-    - --allow-unauthenticated intel-mkl-2019.2-057
 before_install:
 - eval "${MATRIX_EVAL}"
 - cd hptt
@@ -115,6 +131,6 @@ script:
 - ./test.out
 env:
   global:
-    - MAKEFLAGS="-j 2"
+    - MAKEFLAGS=-j8
 notifications:
   email: false
