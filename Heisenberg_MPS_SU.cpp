@@ -127,7 +127,7 @@ struct MPS {
   void pre() {
     using namespace TAT::legs_name;
     for (int i=L-1; i>1; i--) {
-      lattice[i].qr_to(lattice[i-1], Left);
+      lattice[i].qr_to(lattice[i-1], Left, Right);
     }
   }
 

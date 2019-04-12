@@ -209,7 +209,7 @@ namespace TAT {
         auto pos = std::find(legs().begin(), legs().end(), leg);
         auto index = std::distance(legs().begin(), pos);
         auto dim = dims()[index];
-        auto env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({Legs::Phy}, {dim}));
+        auto env = std::shared_ptr<const Tensor<device, Base>>(new Tensor<device, Base>({legs_name::Phy}, {dim}));
         const_cast<Tensor<device, Base>&>(*env).set_constant(1);
         return env;
       } // create_env_for_leg
@@ -448,9 +448,7 @@ namespace TAT {
       // high level op
       // useful in lattice operation
 
-      void qr_to(Site<device, Base>& other, const Legs& leg, const bool& do_contract=true) {
-        auto leg_q = leg;
-        auto leg_r = -leg;
+      void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r, const bool& do_contract=true) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
         Site<device, Base> tmp_r;
         qr(*this, tmp_r, q_legs, leg_q, leg_r);
@@ -485,7 +483,7 @@ namespace TAT {
         Site<device, Base>& site1 = *this;
         auto res = site1.tensor()
                    .contract(site2.tensor(), {leg1}, {leg2}, leg_to_tmp1, leg_to_tmp2)
-                   .contract(updater, {TAT::Legs::Phy1, TAT::Legs::Phy2}, {TAT::Legs::Phy3, TAT::Legs::Phy4})
+                   .contract(updater, {TAT::legs_name::Phy1, TAT::legs_name::Phy2}, {TAT::legs_name::Phy3, TAT::legs_name::Phy4})
                    .svd(tmp_leg1, leg1, leg2, D);
         site1.set(std::move(res.U));
         site1.tensor().legs_rename(tmp_to_leg1);

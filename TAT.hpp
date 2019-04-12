@@ -78,75 +78,51 @@ namespace TAT {
   enum class Device : unsigned char {CPU, CUDA, DCU, SW};
 
   namespace legs {
-    enum class Legs : unsigned char {
-#define CreateLeg(x) \
-        Left##x, Right##x, Up##x, Down##x, Phy##x, \
-        LeftUp##x, LeftDown##x, RightUp##x, RightDown##x
-      CreateLeg(), CreateLeg(1), CreateLeg(2), CreateLeg(3), CreateLeg(4),
-      CreateLeg(5), CreateLeg(6), CreateLeg(7), CreateLeg(8), CreateLeg(9)
-#undef CreateLeg
-    }; // enum class Legs
+    class Legs {
+     public:
+      unsigned char id;
+      bool operator==(const Legs& other) const {
+        return id==other.id;
+      }
+      bool operator!=(const Legs& other) const {
+        return id!=other.id;
+      }
+      bool operator<(const Legs& other) const {
+        return id<other.id;
+      }
+      Legs() = default;
+      Legs(const std::string& name) {
+        try {
+          id = name2id.at(name);
+        } catch (const std::out_of_range& e) {
+          id = total++;
+          name2id[name]=id;
+          id2name[id]=name;
+        } // set id
+      }
+      static unsigned char total;
+      static std::map<std::string, unsigned char> name2id;
+      static std::map<unsigned char, std::string> id2name;
 
-    inline namespace io {
-#define IncEnum(p) {Legs::p, #p}
-#define IncGroup(x) \
-        IncEnum(Left##x), IncEnum(Right##x), IncEnum(Up##x), IncEnum(Down##x), IncEnum(Phy##x), \
-        IncEnum(LeftUp##x), IncEnum(LeftDown##x), IncEnum(RightUp##x), IncEnum(RightDown##x)
-      static const std::map<Legs, std::string> legs_str = {
-        IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
-        IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)
-      };
-#undef IncGroup
-#undef IncEnum
-
-      std::ostream& operator<<(std::ostream& out, const Legs& value) {
-        return out << legs_str.at(value);
+      friend std::ostream& operator<<(std::ostream& out, const Legs& value) {
+        return out << id2name.at(value.id);
       } // operator<<
-    } // namespace io
+    }; // class Legs
 
-    inline namespace scalar {
-#define IncEnum(p, q) {Legs::p, Legs::q}
-#define IncGroup(x) \
-        IncEnum(Left##x, Right##x), IncEnum(Right##x, Left##x), IncEnum(Up##x, Down##x), IncEnum(Down##x, Up##x), IncEnum(Phy##x, Phy##x), \
-        IncEnum(LeftUp##x, RightDown##x), IncEnum(LeftDown##x, RightUp##x), IncEnum(RightUp##x, LeftDown##x), IncEnum(RightDown##x, LeftUp##x)
-      static const std::map<Legs, Legs> minus_legs = {
-        IncGroup(), IncGroup(1), IncGroup(2), IncGroup(3), IncGroup(4),
-        IncGroup(5), IncGroup(6), IncGroup(7), IncGroup(8), IncGroup(9)
-      };
-#undef IncGroup
-#undef IncEnum
-
-      Legs operator-(const Legs& value) {
-        return minus_legs.at(value);
-      } // operator-
-
-#define IncEnum(p, q) {Legs::p, Legs::q}
-#define IncGroup(x, y) \
-        IncEnum(Left##x, Left##y), IncEnum(Right##x, Right##y), IncEnum(Up##x, Up##y), IncEnum(Down##x, Down##y), IncEnum(Phy##x, Phy##y), \
-        IncEnum(LeftUp##x, LeftUp##y), IncEnum(LeftDown##x, LeftDown##y), IncEnum(RightUp##x, RightUp##y), IncEnum(RightDown##x, RightDown##y)
-      static const std::map<Legs, Legs> plus_legs = {
-        IncGroup(, 1), IncGroup(1, 2), IncGroup(2, 3), IncGroup(3, 4), IncGroup(4, 5),
-        IncGroup(5, 6), IncGroup(6, 7), IncGroup(7, 8), IncGroup(8, 9), IncGroup(9,)
-      };
-#undef IncGroup
-#undef IncEnum
-
-      Legs operator+(const Legs& value) {
-        return plus_legs.at(value);
-      } // operator+
-    } // namespace scalar;
+    unsigned char Legs::total = 0;
+    std::map<std::string, unsigned char> Legs::name2id = {};
+    std::map<unsigned char, std::string> Legs::id2name = {};
   } // namespace legs
   using legs::Legs;
 
   namespace legs_name {
-#define TAT_DefineLeg(x) static const TAT::Legs x = TAT::Legs::x
+#define TAT_DefineLeg(x) static const TAT::Legs x(#x);
 #define TAT_DefineLegs(n) \
-      TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); TAT_DefineLeg(Phy##n); \
+      TAT_DefineLeg(Phy##n); TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); \
       TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
 #define TAT_Legs \
       TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
       TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
-
     TAT_Legs;
 #undef TAT_Legs
 #undef TAT_DefineLegs
@@ -193,6 +169,12 @@ namespace TAT {
   } // namespace tensor
   using tensor::Tensor;
 
+  namespace lensor {
+    template<Device device=Device::CPU, class Base=double>
+    class Lensor;
+  } // namespace lensor
+  using lensor::Lensor;
+
   namespace site {
     template<Device device=Device::CPU, class Base=double>
     class Site;
@@ -212,6 +194,7 @@ namespace TAT {
 #include "Data.hpp"
 #include "Node.hpp"
 #include "Tensor.hpp"
+#include "Lensor.hpp"
 #include "Site.hpp"
 #include "Lattice.hpp"
 
