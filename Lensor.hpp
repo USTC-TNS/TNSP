@@ -38,12 +38,39 @@ namespace TAT {
   // std::cout << e()
   namespace lensor {
     template<Device device, class Base>
-    class Lensor : std::enable_shared_from_this<Lensor<device, Base>> {
+    class Lensor : public std::enable_shared_from_this<Lensor<device, Base>> {
      public:
       Tensor<device, Base> tensor;
-      bool flag = false;
+      bool flag = false; // whether tensor is valid
       std::function<Tensor<device, Base>()> func;
       std::vector<std::weak_ptr<Lensor>> downstream;
+
+      template<class ... Args>
+      static std::shared_ptr<Lensor<device, Base>> make_lensor(Args&& ... args) {
+        auto res = std::make_shared<Lensor<device, Base>>();
+        res.tensor = std::move(Tensor<device, Base>(std::forward<Args>(args) ...));
+        res.flag = true;
+        return res;
+      } // make_lensor
+
+      template<class ... Args>
+      std::shared_ptr<Lensor<device, Base>> set_lensor(Args&& ... args) {
+        tensor = std::move(Tensor<device, Base>(std::forward<Args>(args) ...));
+        flag = true;
+        return shared_from_this();
+      } // make_lensor
+
+      void calc() {
+        tensor = func();
+        flag = true;
+      } // calc
+
+      const Tensor<device, Base>& operator()() {
+        if (!flag) {
+          calc();
+        } // calc
+        return tensor;
+      } // operator()
 
       void reset() {
         if (flag) {
@@ -55,6 +82,8 @@ namespace TAT {
           } // downstream
         } // if flag
       } // reset
+
+      void to();
     }; // class Lensor
   } // namespace lensor
 } // namespace TAT
