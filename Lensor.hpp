@@ -28,15 +28,22 @@ namespace TAT {
   } // namespace lensor
   using lensor::Lensor;
   */
-  /*
+  // using T = std::shared_ptr<Lensor<.., ..>>
+  // T a = Tensor(.., ..).set_...()
+  // T b = Tensor(.., ..).set_...()
+  // T c = a.contract(b, ...)
+  // std::cout << c()
+  // auto d = c.svd(...)
+  // T e = d.U/S/V
+  // std::cout << e()
   namespace lensor {
     template<Device device, class Base>
-    class LensorData {
+    class Lensor : std::enable_shared_from_this<Lensor<device, Base>> {
      public:
       Tensor<device, Base> tensor;
       bool flag = false;
       std::function<Tensor<device, Base>()> func;
-      std::vector<std::weak_ptr<LensorData>> downstream;
+      std::vector<std::weak_ptr<Lensor>> downstream;
 
       void reset() {
         if (flag) {
@@ -48,19 +55,8 @@ namespace TAT {
           } // downstream
         } // if flag
       } // reset
-    }; // class LensorData
-
-    template<Device device, class Base>
-    class Lensor : public std::shared_ptr<LensorData<device, Base>> {
-     public:
-      Lensor() : std::shared_ptr<LensorData<device, Base>>(std::make_shared<LensorData<device, Base>>()) {}
-
-      void reset() {
-        operator*().reset();
-      } // reset
-    }; // class LazyTensor
+    }; // class Lensor
   } // namespace lensor
-  */
 } // namespace TAT
 
 #endif // TAT_Lensor_HPP_

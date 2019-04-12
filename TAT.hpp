@@ -98,14 +98,18 @@ namespace TAT {
           id = total++;
           name2id[name]=id;
           id2name[id]=name;
-        } // set id
+        } // exsit name
       }
       static unsigned char total;
       static std::map<std::string, unsigned char> name2id;
       static std::map<unsigned char, std::string> id2name;
 
       friend std::ostream& operator<<(std::ostream& out, const Legs& value) {
-        return out << id2name.at(value.id);
+        try {
+          return out << id2name.at(value.id);
+        } catch (const std::out_of_range& e) {
+          return out << "UserDefinedLeg" << value.id;
+        } // get name
       } // operator<<
     }; // class Legs
 
