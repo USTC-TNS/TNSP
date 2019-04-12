@@ -57,7 +57,7 @@ namespace TAT {
       std::shared_ptr<Lensor<device, Base>> set_lensor(Args&& ... args) {
         tensor = std::move(Tensor<device, Base>(std::forward<Args>(args) ...));
         flag = true;
-        return shared_from_this();
+        return std::enable_shared_from_this<Lensor<device, Base>>::shared_from_this();
       } // make_lensor
 
       void calc() {
