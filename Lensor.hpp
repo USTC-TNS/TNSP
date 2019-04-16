@@ -82,6 +82,31 @@ namespace TAT {
         return res;
       } // make_lensor by initial tensor
 
+      Lensor<device, Base>& set_test() {
+        reset();
+        tensor.set_test();
+        flag = true;
+        return *this;
+      } // set_test
+      Lensor<device, Base>& set_zero() {
+        reset();
+        tensor.set_zero();
+        flag = true;
+        return *this;
+      } // set_zero
+      Lensor<device, Base>& set_random(const std::function<Base()>& random) {
+        reset();
+        tensor.set_random(random);
+        flag = true;
+        return *this;
+      } // set_random
+      Lensor<device, Base>& set_constant(Base num) {
+        reset();
+        tensor.set_constant(num);
+        flag = true;
+        return *this;
+      } // set_constant
+
       const Tensor<device, Base>& value() {
         if (!flag) {
           tensor = func();
