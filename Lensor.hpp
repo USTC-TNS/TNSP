@@ -82,29 +82,29 @@ namespace TAT {
         return res;
       } // make_lensor by initial tensor
 
-      Lensor<device, Base>& set_test() {
+      std::shared_ptr<Lensor<device, Base>>& set_test() {
         reset();
         tensor.set_test();
         flag = true;
-        return *this;
+        return shared_from_this();
       } // set_test
-      Lensor<device, Base>& set_zero() {
+      std::shared_ptr<Lensor<device, Base>>& set_zero() {
         reset();
         tensor.set_zero();
         flag = true;
-        return *this;
+        return shared_from_this();
       } // set_zero
-      Lensor<device, Base>& set_random(const std::function<Base()>& random) {
+      std::shared_ptr<Lensor<device, Base>>& set_random(const std::function<Base()>& random) {
         reset();
         tensor.set_random(random);
         flag = true;
-        return *this;
+        return shared_from_this();
       } // set_random
-      Lensor<device, Base>& set_constant(Base num) {
+      std::shared_ptr<Lensor<device, Base>>& set_constant(Base num) {
         reset();
         tensor.set_constant(num);
         flag = true;
-        return *this;
+        return shared_from_this();
       } // set_constant
 
       const Tensor<device, Base>& value() {
@@ -114,6 +114,11 @@ namespace TAT {
         }
         return tensor;
       } // calc
+
+      //std::shared_ptr<Lensor<device, Base>>& legs_rename(const std::map<Legs, Legs>& dict) {
+      //  tensor.legs_rename(dict);
+      //  return shared_from_this();
+      //} // legs_rename
 
       std::shared_ptr<Lensor<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lensor<device, Base>>();
