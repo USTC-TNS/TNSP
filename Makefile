@@ -10,13 +10,13 @@ CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 ifeq ($(STATIC), 1)
 	CXXFLAGS += -static-libgcc -static-libstdc++ -Wl,-Bstatic -ljemalloc_pic
 	CXXFLAGS += -Wl,-Bstatic -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group
-	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64
+	CXXFLAGS += -Wl,-Bdynamic -lpthread -lm -ldl -I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64 -I/usr/include/mkl
 	CXXFLAGS += -Wl,-Bstatic -lhptt -Lhptt/lib -Ihptt/include
 	CXXFLAGS += -Iargs -Irang/include
 else
 	CXXFLAGS += -ljemalloc
 	CXXFLAGS += -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
-	CXXFLAGS += -lpthread -lm -ldl -I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64 -Wl,-rpath,$(MKLROOT)/lib/intel64
+	CXXFLAGS += -lpthread -lm -ldl -I$(MKLROOT)/include -L$(MKLROOT)/lib/intel64 -Wl,-rpath,$(MKLROOT)/lib/intel64 -I/usr/include/mkl
 	CXXFLAGS += -lhptt -Lhptt/lib -Ihptt/include -Wl,-rpath,./hptt/lib
 	CXXFLAGS += -Iargs -Irang/include
 endif

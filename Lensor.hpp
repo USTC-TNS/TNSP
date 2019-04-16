@@ -39,7 +39,9 @@ namespace TAT {
   namespace lensor {
     namespace transpose {
       template<Device device, class Base>
-      Tensor<device, Base> run(std::shared_ptr<Tensor<device, Base>> tensor, const std::vector<Legs>& legs);
+      Tensor<device, Base> run(std::shared_ptr<Lensor<device, Base>> tensor, const std::vector<Legs>& legs) {
+        return tensor->value().transpose(legs);
+      } // run
     } // namespace transpsoe
 
     template<Device device, class Base>
@@ -71,26 +73,27 @@ namespace TAT {
         tensor = std::move(Tensor<device, Base>(std::forward<Args>(args) ...));
         flag = true;
         return shared_from_this();
-      } // make_lensor
+      } // set_lensor, update tensor
 
       template<class ... Args>
       static std::shared_ptr<Lensor<device, Base>> make_lensor(Args&& ... args) {
         auto res = std::make_shared<Lensor<device, Base>>();
         res->set_lensor(std::forward<Args>(args) ...);
-        res->flag = true;
         return res;
       } // make_lensor by initial tensor
 
-      void calc() {
-        tensor = func();
-        flag = true;
+      const Tensor<device, Base>& value() {
+        if (!flag) {
+          tensor = func();
+          flag = true;
+        }
+        return tensor;
       } // calc
 
       std::shared_ptr<Lensor<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lensor<device, Base>>();
-        res->func = std::bind(transpose::run(shared_from_this(), new_legs));
-        res->flag = false;
-        downstream.puch_back(res);
+        res->func = std::bind(transpose::run<device, Base>, shared_from_this(), new_legs);
+        downstream.push_back(res);
         return res;
       } // transpose
     }; // class Lensor
