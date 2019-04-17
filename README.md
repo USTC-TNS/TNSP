@@ -44,6 +44,7 @@ The following is for developer to take note
 - site api
 - use it, peps, kitaev, hubbard
 - symmetry tensor
+- mkl VML replacement
 
 ### note for some of cuda program
 ```c++
