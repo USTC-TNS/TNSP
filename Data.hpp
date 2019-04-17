@@ -24,6 +24,36 @@ namespace TAT {
   namespace data {
     namespace CPU {
 #ifdef TAT_USE_CPU
+      template<class Base>
+      class RealBaseClass;
+
+      template<>
+      class RealBaseClass<float> {
+       public:
+        using type=float;
+      };
+
+      template<>
+      class RealBaseClass<double> {
+       public:
+        using type=double;
+      };
+
+      template<>
+      class RealBaseClass<std::complex<float>> {
+       public:
+        using type=float;
+      };
+
+      template<>
+      class RealBaseClass<std::complex<double>> {
+       public:
+        using type=double;
+      };
+
+      template<class Base>
+      using RealBase = typename RealBaseClass<Base>::type;
+
       namespace transpose {
         template<class Base>
         void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
@@ -54,7 +84,7 @@ namespace TAT {
                         const Size& k) {
           cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                       m, n, k,
-                      1, data1, k, data2, n,
+                      1, const_cast<float*>(data1), k, const_cast<float*>(data2), n,
                       0, data, n);
         } // run<float>
 
@@ -70,6 +100,36 @@ namespace TAT {
                       1, const_cast<double*>(data1), k, const_cast<double*>(data2), n,
                       0, data, n);
         } // run<double>
+
+        template<>
+        void run<std::complex<float>>(std::complex<float>* data,
+                                      const std::complex<float>* data1,
+                                      const std::complex<float>* data2,
+                                      const Size& m,
+                                      const Size& n,
+        const Size& k) {
+          std::complex<float> alpha = 1;
+          std::complex<float> beta = 0;
+          cblas_cgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                      m, n, k,
+                      &alpha, const_cast<std::complex<float>*>(data1), k, const_cast<std::complex<float>*>(data2), n,
+                      &beta, data, n);
+        } // run<std::complex<float>>
+
+        template<>
+        void run<std::complex<double>>(std::complex<double>* data,
+                                       const std::complex<double>* data1,
+                                       const std::complex<double>* data2,
+                                       const Size& m,
+                                       const Size& n,
+        const Size& k) {
+          std::complex<double> alpha = 1;
+          std::complex<double> beta = 0;
+          cblas_zgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                      m, n, k,
+                      &alpha, const_cast<std::complex<double>*>(data1), k, const_cast<std::complex<double>*>(data2), n,
+                      &beta, data, n);
+        } // run<std::complex<double>>
       } // namespace data::CPU::contract
 
       namespace multiple {
@@ -129,6 +189,50 @@ namespace TAT {
           assert(res==0);
         } // run<double>
 
+        template<>
+        void run<std::complex<float>>(const Size& m, const Size& n, const Size& min, std::complex<float>* a, std::complex<float>* u, std::complex<float>* s, std::complex<float>* vt) {
+#ifdef TAT_USE_GESDD
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_cgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
+#endif // TAT_USE_GESDD
+#ifdef TAT_USE_GESVD
+          auto superb = new float[min-1];
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_cgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, reinterpret_cast<float*>(s), u, min, vt, n, superb);
+          //for (int i=min-1; i>=0; i--) {
+          //  s[i] = reinterpret_cast<float*>(s)[i];
+          //} // for S
+          delete[] superb;
+#endif // TAT_USE_GESVD
+          assert(res==0);
+        } // run<std::complex<float>>
+
+        template<>
+        void run<std::complex<double>>(const Size& m, const Size& n, const Size& min, std::complex<double>* a, std::complex<double>* u, std::complex<double>* s, std::complex<double>* vt) {
+#ifdef TAT_USE_GESDD
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_zgesdd(LAPACK_ROW_MAJOR, 'S', m, n, a, n, s, u, min, vt, n);
+#endif // TAT_USE_GESDD
+#ifdef TAT_USE_GESVD
+          auto superb = new double[min-1];
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_zgesvd(LAPACK_ROW_MAJOR, 'S', 'S', m, n, a, n, reinterpret_cast<double*>(s), u, min, vt, n, superb);
+          //for (int i=min-1; i>=0; i--) {
+          //  s[i] = reinterpret_cast<double*>(s)[i];
+          //} // for S
+          delete[] superb;
+#endif // TAT_USE_GESVD
+          assert(res==0);
+        } // run<std::complex<double>>
+
         template<class Base>
         Data<Base> cut(const Data<Base>& other,
                        const Size& m1,
@@ -153,6 +257,20 @@ namespace TAT {
           } // if
           return std::move(res);
         } // cut
+
+        template<class Base>
+        Data<Base> cutS(const Data<RealBase<Base>>& other,
+                        const Size& n1,
+                        const Size& n2) {
+          Data<Base> res(n2);
+          assert(n2<=n1);
+          Base* dst = res.get();
+          const RealBase<Base>* src = reinterpret_cast<const RealBase<Base>*>(other.get());
+          for (int i=n1-1; i>=0; i--) {
+            dst[i] = src[i];
+          } // for i
+          return std::move(res);
+        } // cutS
 #endif // TAT_USE_GESVD TAT_USE_GESDD
 
 #ifdef TAT_USE_GESVDX
@@ -184,6 +302,32 @@ namespace TAT {
           assert(ns==lapack_int(cut));
           delete[] superb;
         } // run<double>
+
+        template<>
+        void run<std::complex<float>>(const Size& m, const Size& n, const Size& min, const Size& cut, std::complex<float>* a, std::complex<float>* u, std::complex<float>* s, std::complex<float>* vt) {
+          lapack_int ns;
+          auto superb = new lapack_int[12*min];
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_cgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
+          assert(res==0);
+          assert(ns==lapack_int(cut));
+          delete[] superb;
+        } // run<std::complex<float>>
+
+        template<>
+        void run<std::complex<double>>(const Size& m, const Size& n, const Size& min, const Size& cut, std::complex<double>* a, std::complex<double>* u, std::complex<double>* s, std::complex<double>* vt) {
+          lapack_int ns;
+          auto superb = new lapack_int[12*min];
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_zgesvdx(LAPACK_ROW_MAJOR, 'V', 'V', 'I', m, n, a, n, 0, 0, 1, cut, &ns, s, u, cut, vt, n, superb);
+          assert(res==0);
+          assert(ns==lapack_int(cut));
+          delete[] superb;
+        } // run<std::complex<double>>
 #endif // TAT_USE_GESVDX
       } // namespace data::CPU::svd
 
@@ -229,6 +373,44 @@ namespace TAT {
           assert(res==0);
         } // geqrf<double>
 
+        template<>
+        void geqrf<std::complex<float>>(std::complex<float>* A, std::complex<float>* tau, const Size& m, const Size& n) {
+#ifdef TAT_USE_GEQP3
+          auto jpvt = new lapack_int[n];
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_cgeqp3(LAPACK_ROW_MAJOR, m, n, A, n, jpvt, tau);
+          delete[] jpvt;
+#endif // TAT_USE_GEQP3
+#ifdef TAT_USE_GEQRF
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_cgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
+#endif // TAT_USE_GEQRF
+          assert(res==0);
+        } // geqrf<std::complex<float>>
+
+        template<>
+        void geqrf<std::complex<double>>(std::complex<double>* A, std::complex<double>* tau, const Size& m, const Size& n) {
+#ifdef TAT_USE_GEQP3
+          auto jpvt = new lapack_int[n];
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_zgeqp3(LAPACK_ROW_MAJOR, m, n, A, n, jpvt, tau);
+          delete[] jpvt;
+#endif // TAT_USE_GEQP3
+#ifdef TAT_USE_GEQRF
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_zgeqrf(LAPACK_ROW_MAJOR, m, n, A, n, tau);
+#endif // TAT_USE_GEQRF
+          assert(res==0);
+        } // geqrf<std::complex<double>>
+
         template<class Base>
         void orgqr(Base* A, const Base* tau, const Size& m, const Size& min);
 
@@ -249,6 +431,24 @@ namespace TAT {
             LAPACKE_dorgqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
           assert(res==0);
         } // orgqr<double>
+
+        template<>
+        void orgqr<std::complex<float>>(std::complex<float>* A, const std::complex<float>* tau, const Size& m, const Size& min) {
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_cungqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
+          assert(res==0);
+        } // orgqr<std::complex<float>>
+
+        template<>
+        void orgqr<std::complex<double>>(std::complex<double>* A, const std::complex<double>* tau, const Size& m, const Size& min) {
+#ifndef NDEBUG
+          auto res =
+#endif // NDEBUG
+            LAPACKE_zungqr(LAPACK_ROW_MAJOR, m, min, min, A, min, tau);
+          assert(res==0);
+        } // orgqr<std::complex<double>>
 
         template<class Base>
         void run(Base* Q, Base* R, const Size& m, const Size& n, const Size& min_mn) {
@@ -279,7 +479,7 @@ namespace TAT {
 
       namespace norm {
         template<class Base>
-        void vAbs(const Size& size, const Base* a, Base* y);
+        void vAbs(const Size& size, const Base* a, RealBase<Base>* y);
 
         template<>
         void vAbs<float>(const Size& size, const float* a, float* y) {
@@ -290,6 +490,16 @@ namespace TAT {
         void vAbs<double>(const Size& size, const double* a, double* y) {
           vdAbs(size, a, y);
         } // vAbs<double>
+
+        template<>
+        void vAbs<std::complex<float>>(const Size& size, const std::complex<float>* a, float* y) {
+          vcAbs(size, a, y);
+        } // vAbs<std::complex<float>>
+
+        template<>
+        void vAbs<std::complex<double>>(const Size& size, const std::complex<double>* a, double* y) {
+          vzAbs(size, a, y);
+        } // vAbs<std::complex<double>>
 
         template<class Base>
         void vPowx(const Size& size, const Base* a, const Base& n, Base* y);
@@ -343,22 +553,30 @@ namespace TAT {
           return cblas_idamax(size, a, 1);
         } // iamax<double>
 
+        template<>
+        CBLAS_INDEX iamax<std::complex<float>>(const Size& size, const std::complex<float>* a) {
+          return cblas_icamax(size, a, 1);
+        } // iamax<std::complex<float>>
+
+        template<>
+        CBLAS_INDEX iamax<std::complex<double>>(const Size& size, const std::complex<double>* a) {
+          return cblas_izamax(size, a, 1);
+        } // iamax<std::complex<double>>
+
         template<class Base, int n>
         Base run(const Size& size, const Base* data) {
           if (n==-1) {
             auto i = iamax<Base>(size, data);
             return std::abs(data[i]);
           }
-          auto tmp = new Base[size];
+          auto tmp = new RealBase<Base>[size];
+          vAbs<Base>(size, data, tmp);
           if (n==2) {
-            vSqr<Base>(size, data, tmp);
-          } else if (n%2==0) {
-            vPowx<Base>(size, data, Base(n), tmp);
+            vSqr<RealBase<Base>>(size, tmp, tmp);
           } else {
-            vAbs<Base>(size, data, tmp);
-            vPowx<Base>(size, tmp, Base(n), tmp);
+            vPowx<RealBase<Base>>(size, tmp, Base(n), tmp);
           }
-          auto res = asum<Base>(size, tmp);
+          auto res = asum<RealBase<Base>>(size, tmp);
           delete[] tmp;
           return res;
         } // run
@@ -502,7 +720,7 @@ namespace TAT {
           Size cut_dim = (cut<min_mn)?cut:min_mn;
           // -1 > any integer
           Data<Base> tmp = transpose(dims, plan);
-          // used in svd, dgesvd will destroy it
+          // used in svd, gesvd will destroy it
           svd_res res;
 #ifdef TAT_USE_GESVDX
           res.U = Data<Base>(u_size*cut_dim);
@@ -513,14 +731,14 @@ namespace TAT {
 #endif // TAT_USE_GESVDX
 #if (defined TAT_USE_GESVD) || (defined TAT_USE_GESDD)
           res.U = Data<Base>(u_size*min_mn);
-          res.S = Data<Base>(min_mn);
+          auto tmpS = Data<RealBase<Base>>(min_mn);
           res.V = Data<Base>(min_mn*v_size);
-          svd::run(u_size, v_size, min_mn, tmp.get(), res.U.get(), res.S.get(), res.V.get());
+          svd::run(u_size, v_size, min_mn, tmp.get(), res.U.get(), tmpS.get(), res.V.get());
           if (cut_dim!=min_mn) {
             res.U = svd::cut(res.U, u_size, min_mn, u_size, cut_dim);
-            res.S = svd::cut(res.S, min_mn, 1, cut_dim, 1);
             res.V = svd::cut(res.V, min_mn, v_size, cut_dim, v_size);
           }
+          res.S = svd::cutS<Base>(tmpS, min_mn, cut_dim);
 #endif // TAT_USE_GESVD TAT_USE_GESDD
           return std::move(res);
         } // svd
@@ -569,6 +787,26 @@ namespace TAT {
           vdLinearFrac(n, a, b, sa, oa, sb, ob, y);
         } // vLinearFrac
 
+        template<>
+        void vLinearFrac<std::complex<float>>(const Size& n, const std::complex<float>* a, const std::complex<float>* b,
+                                              const std::complex<float>& sa, const std::complex<float>& oa, const std::complex<float>& sb, const std::complex<float>& ob,
+        std::complex<float>* y) {
+          //vcLinearFrac(n, a, b, sa, oa, sb, ob, y);
+          for (Size i=0; i<n; i++) {
+            y[i] = (a[i]*sa + oa)/(b[i]*sb + ob);
+          } // for
+        } // vLinearFrac
+
+        template<>
+        void vLinearFrac<std::complex<double>>(const Size& n, const std::complex<double>* a, const std::complex<double>* b,
+                                               const std::complex<double>& sa, const std::complex<double>& oa, const std::complex<double>& sb, const std::complex<double>& ob,
+        std::complex<double>* y) {
+          //vzLinearFrac(n, a, b, sa, oa, sb, ob, y);
+          for (Size i=0; i<n; i++) {
+            y[i] = (a[i]*sa + oa)/(b[i]*sb + ob);
+          } // for
+        } // vLinearFrac
+
         template<class Base>
         void LinearFrac(const Data<Base>& src, Data<Base>& dst,
                         const Base& sa, const Base& oa, const Base& sb, const Base& ob) {
@@ -587,6 +825,16 @@ namespace TAT {
         template<>
         void vAdd<double>(const Size& n, const double* a, const double* b, double* y) {
           vdAdd(n, a, b, y);
+        } // vAdd
+
+        template<>
+        void vAdd<std::complex<float>>(const Size& n, const std::complex<float>* a, const std::complex<float>* b, std::complex<float>* y) {
+          vcAdd(n, a, b, y);
+        } // vAdd
+
+        template<>
+        void vAdd<std::complex<double>>(const Size& n, const std::complex<double>* a, const std::complex<double>* b, std::complex<double>* y) {
+          vzAdd(n, a, b, y);
         } // vAdd
 
         template<class Base>
@@ -608,6 +856,16 @@ namespace TAT {
           vdSub(n, a, b, y);
         } // vSub
 
+        template<>
+        void vSub<std::complex<float>>(const Size& n, const std::complex<float>* a, const std::complex<float>* b, std::complex<float>* y) {
+          vcSub(n, a, b, y);
+        } // vSub
+
+        template<>
+        void vSub<std::complex<double>>(const Size& n, const std::complex<double>* a, const std::complex<double>* b, std::complex<double>* y) {
+          vzSub(n, a, b, y);
+        } // vSub
+
         template<class Base>
         void Sub(const Data<Base>& a, const Data<Base>& b, Data<Base>& y) {
           assert(a.size==b.size);
@@ -627,6 +885,16 @@ namespace TAT {
           vdMul(n, a, b, y);
         } // vMul
 
+        template<>
+        void vMul<std::complex<float>>(const Size& n, const std::complex<float>* a, const std::complex<float>* b, std::complex<float>* y) {
+          vcMul(n, a, b, y);
+        } // vMul
+
+        template<>
+        void vMul<std::complex<double>>(const Size& n, const std::complex<double>* a, const std::complex<double>* b, std::complex<double>* y) {
+          vzMul(n, a, b, y);
+        } // vMul
+
         template<class Base>
         void Mul(const Data<Base>& a, const Data<Base>& b, Data<Base>& y) {
           assert(a.size==b.size);
@@ -644,6 +912,16 @@ namespace TAT {
         template<>
         void vDiv<double>(const Size& n, const double* a, const double* b, double* y) {
           vdDiv(n, a, b, y);
+        } // vDiv
+
+        template<>
+        void vDiv<std::complex<float>>(const Size& n, const std::complex<float>* a, const std::complex<float>* b, std::complex<float>* y) {
+          vcDiv(n, a, b, y);
+        } // vDiv
+
+        template<>
+        void vDiv<std::complex<double>>(const Size& n, const std::complex<double>* a, const std::complex<double>* b, std::complex<double>* y) {
+          vzDiv(n, a, b, y);
         } // vDiv
 
         template<class Base>

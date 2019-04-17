@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <memory>
 #include <functional>
+#include <complex>
 
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl, exit(233)
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
@@ -45,6 +46,8 @@
 #ifdef TAT_USE_CPU
 extern "C"
 {
+#define MKL_Complex8 std::complex<float>
+#define MKL_Complex16 std::complex<double>
 #include <mkl.h>
 } // extern "C"
 #include <hptt.h>
