@@ -45,6 +45,8 @@ The following is for developer to take note
 - use it, peps, kitaev, hubbard
 - symmetry tensor
 - mkl VML replacement
+- lazy应该在Tensor这一层中实现
+- 对称性表现在node中含有多个data而不是tensor中含有多个node
 
 ### note for some of cuda program
 ```c++
