@@ -262,6 +262,7 @@ namespace TAT {
         Data<Base> cutS(const Data<RealBase<Base>>& other,
                         const Size& n1,
                         const Size& n2) {
+          (void)n1; // avoid warning of unused when NDEBUG
           Data<Base> res(n2);
           assert(n2<=n1);
           Base* dst = res.get();

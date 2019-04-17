@@ -123,7 +123,7 @@ namespace TAT {
   using legs::Legs;
 
   namespace legs_name {
-#define TAT_DefineLeg(x) static const TAT::Legs x(#x);
+#define TAT_DefineLeg(x) static const TAT::Legs x(#x)
 #define TAT_DefineLegs(n) \
       TAT_DefineLeg(Phy##n); TAT_DefineLeg(Left##n); TAT_DefineLeg(Right##n); TAT_DefineLeg(Up##n); TAT_DefineLeg(Down##n); \
       TAT_DefineLeg(LeftUp##n); TAT_DefineLeg(LeftDown##n); TAT_DefineLeg(RightUp##n); TAT_DefineLeg(RightDown##n)
@@ -133,7 +133,17 @@ namespace TAT {
     TAT_Legs;
 #undef TAT_Legs
 #undef TAT_DefineLegs
+#define TAT_DefineLegs(n) \
+      TAT_DefineLeg(Tmp##n##0); TAT_DefineLeg(Tmp##n##1); TAT_DefineLeg(Tmp##n##2); TAT_DefineLeg(Tmp##n##3); TAT_DefineLeg(Tmp##n##4); \
+      TAT_DefineLeg(Tmp##n##5); TAT_DefineLeg(Tmp##n##6); TAT_DefineLeg(Tmp##n##7); TAT_DefineLeg(Tmp##n##8); TAT_DefineLeg(Tmp##n##9)
+#define TAT_Legs \
+      TAT_DefineLegs(); TAT_DefineLegs(1); TAT_DefineLegs(2); TAT_DefineLegs(3); TAT_DefineLegs(4); \
+      TAT_DefineLegs(5); TAT_DefineLegs(6); TAT_DefineLegs(7); TAT_DefineLegs(8); TAT_DefineLegs(9)
+    TAT_Legs;
+#undef TAT_Legs
+#undef TAT_DefineLegs
 #undef TAT_DefineLeg
+    // total = 190 currently
   } // namespace legs_name
 
   using Size = std::size_t;
