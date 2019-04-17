@@ -265,8 +265,8 @@ namespace TAT {
           Data<Base> res(n2);
           assert(n2<=n1);
           Base* dst = res.get();
-          const RealBase<Base>* src = reinterpret_cast<const RealBase<Base>*>(other.get());
-          for (int i=n1-1; i>=0; i--) {
+          const RealBase<Base>* src = other.get();
+          for (Size i=0; i<n2; i++) {
             dst[i] = src[i];
           } // for i
           return std::move(res);
