@@ -159,6 +159,9 @@ namespace TAT {
         return shared_from_this();
       } // normalize
 
+      // no to<n> function since downstream need same type
+      // the function above is lensor inplace, the below is not
+
       std::shared_ptr<Lensor<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lensor<device, Base>>();
         res->func = std::bind(transpose::run<device, Base>, shared_from_this(), new_legs);

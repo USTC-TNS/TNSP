@@ -43,5 +43,7 @@ int main() {
   b->legs_rename({{Up, Right}});
   b->normalize<-1>();
   std::cout << b->value() << std::endl;
+  auto c = TAT::Lensor<TAT::Device::CPU, int>::make()->set(b->value().to<int>());
+  std::cout << c->value() << std::endl;
   return 0;
 } // main
