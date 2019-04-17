@@ -34,13 +34,13 @@ using Lensor=TAT::Lensor<TAT::Device::CPU, double>;
 using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
 
 int main() {
-  auto a = Lensor::make_lensor(Tensor({Up, Down}, {2, 3}));
-  a->set_test();
+  auto a = Lensor::make({Up, Down}, {2, 3})->set_test();
   std::cout << a->value() << std::endl;
   auto b = a->transpose({Down, Up});
   std::cout << b->value() << std::endl;
-  a->set_lensor(Tensor({Up, Down}, {4, 5}));
-  a->set_test();
+  a->set(Tensor({Up, Down}, {4, 5}))->set_test();
+  std::cout << b->value() << std::endl;
+  b->legs_rename({{Up, Right}});
   std::cout << b->value() << std::endl;
   return 0;
 } // main

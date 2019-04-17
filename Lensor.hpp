@@ -29,14 +29,21 @@ namespace TAT {
   using lensor::Lensor;
   */
   // using T = std::shared_ptr<Lensor<.., ..>>
-  // T a = Tensor(.., ..).set_...()
-  // T b = Tensor(.., ..).set_...()
-  // T c = a.contract(b, ...)
-  // std::cout << c()
+  // auto a = T::make_lensor({}, {})->set...()
+  // auto b = T::make_lensor({}, {})->set...()
+  // auto c = a->contract(b, ...)
+  // std::cout << c.value()
   // auto d = c.svd(...)
   // T e = d.U/S/V
-  // std::cout << e()
+  // std::cout << e.value()
   namespace lensor {
+    namespace legs_rename {
+      template<Device device, class Base>
+      Tensor<device, Base> run(std::function<Tensor<device, Base>()> tensor, const std::map<Legs, Legs>& dict) {
+        return std::move(tensor().legs_rename(dict));
+      } // run
+    } // legs_rename
+
     namespace transpose {
       template<Device device, class Base>
       Tensor<device, Base> run(std::shared_ptr<Lensor<device, Base>> tensor, const std::vector<Legs>& legs) {
@@ -52,7 +59,7 @@ namespace TAT {
       std::function<Tensor<device, Base>()> func;
       std::vector<std::weak_ptr<Lensor>> downstream;
 
-      void reset() {
+      std::shared_ptr<Lensor<device, Base>> reset() {
         if (flag) {
           flag = false;
           for (const auto& ds : downstream) {
@@ -61,6 +68,7 @@ namespace TAT {
             } // need reset
           } // downstream
         } // if flag
+        return shared_from_this();
       } // reset this lensor and all its children
 
       std::shared_ptr<Lensor<device, Base>> shared_from_this() {
@@ -68,17 +76,32 @@ namespace TAT {
       } // shared_from_this
 
       template<class ... Args>
-      std::shared_ptr<Lensor<device, Base>> set_lensor(Args&& ... args) {
+      std::shared_ptr<Lensor<device, Base>> set(Args&& ... args) {
         reset(); // since new tensor set, lensor need reset
         tensor = std::move(Tensor<device, Base>(std::forward<Args>(args) ...));
         flag = true;
         return shared_from_this();
       } // set_lensor, update tensor
 
+      template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
+      std::shared_ptr<Lensor<device, Base>> set(T1&& _legs, T2&& _dims) {
+        reset(); // since new tensor set, lensor need reset
+        tensor = std::move(Tensor<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
+        flag = true;
+        return shared_from_this();
+      } // set_lensor, update tensor
+
       template<class ... Args>
-      static std::shared_ptr<Lensor<device, Base>> make_lensor(Args&& ... args) {
+      static std::shared_ptr<Lensor<device, Base>> make(Args&& ... args) {
         auto res = std::make_shared<Lensor<device, Base>>();
-        res->set_lensor(std::forward<Args>(args) ...);
+        res->set(std::forward<Args>(args) ...);
+        return res;
+      } // make_lensor by initial tensor
+
+      template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
+      static std::shared_ptr<Lensor<device, Base>> make(T1&& _legs, T2&& _dims) {
+        auto res = std::make_shared<Lensor<device, Base>>();
+        res->set(std::forward<T1>(_legs), std::forward<T2>(_dims));
         return res;
       } // make_lensor by initial tensor
 
@@ -115,10 +138,11 @@ namespace TAT {
         return tensor;
       } // calc
 
-      //std::shared_ptr<Lensor<device, Base>>& legs_rename(const std::map<Legs, Legs>& dict) {
-      //  tensor.legs_rename(dict);
-      //  return shared_from_this();
-      //} // legs_rename
+      std::shared_ptr<Lensor<device, Base>> legs_rename(const std::map<Legs, Legs>& dict) {
+        reset();
+        func = std::bind(legs_rename::run<device, Base>, std::move(func), dict);
+        return shared_from_this();
+      } // legs_rename
 
       std::shared_ptr<Lensor<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lensor<device, Base>>();
