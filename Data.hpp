@@ -254,7 +254,7 @@ namespace TAT {
               dst += n2;
               src += n1;
             } // for i
-          } // if
+          } // if continue then copy as a whole or as many part
           return std::move(res);
         } // cut
 
@@ -760,6 +760,7 @@ namespace TAT {
           res.Q = Data<Base>(q_size*min_mn);
           res.R = transpose(dims, plan);
           // R is q_size*r_size, should be min_mn*r_size
+          // so if q_size > r_size, R will occupy some unused memory
           qr::run(res.Q.get(), res.R.get(), q_size, r_size, min_mn);
           res.R.size = min_mn*r_size;
           return std::move(res);
