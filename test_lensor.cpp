@@ -41,6 +41,7 @@ int main() {
   a->set(Tensor({Up, Down}, {4, 5}))->set_test();
   std::cout << b->value() << std::endl;
   b->legs_rename({{Up, Right}});
+  b->normalize<-1>();
   std::cout << b->value() << std::endl;
   return 0;
 } // main

@@ -44,6 +44,14 @@ namespace TAT {
       } // run
     } // legs_rename
 
+    namespace normalize {
+      template<Device device, class Base, int n>
+      Tensor<device, Base> run(std::function<Tensor<device, Base>()> tensor) {
+        auto tmp = tensor();
+        return tmp/tmp.template norm<n>();
+      } // run
+    } // legs_rename
+
     namespace transpose {
       template<Device device, class Base>
       Tensor<device, Base> run(std::shared_ptr<Lensor<device, Base>> tensor, const std::vector<Legs>& legs) {
@@ -143,6 +151,13 @@ namespace TAT {
         func = std::bind(legs_rename::run<device, Base>, std::move(func), dict);
         return shared_from_this();
       } // legs_rename
+
+      template<int n>
+      std::shared_ptr<Lensor<device, Base>> normalize() {
+        reset();
+        func = std::bind(normalize::run<device, Base, n>, std::move(func));
+        return shared_from_this();
+      } // normalize
 
       std::shared_ptr<Lensor<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lensor<device, Base>>();
