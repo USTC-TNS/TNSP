@@ -35,10 +35,12 @@ now, I am writing this tensor library.
 The following is for developer to take note
 
 ## TODO LIST
+- test complex
 - transpose may be optimized
 - Truncated SVD
 - dgegqr magma
 - cuda，sw
+- lazy tensor
 - site api
 - use it, peps, kitaev, hubbard
 - symmetry tensor
