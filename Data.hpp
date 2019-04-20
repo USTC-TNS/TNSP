@@ -24,36 +24,6 @@ namespace TAT {
   namespace data {
     namespace CPU {
 #ifdef TAT_USE_CPU
-      template<class Base>
-      class RealBaseClass;
-
-      template<>
-      class RealBaseClass<float> {
-       public:
-        using type=float;
-      };
-
-      template<>
-      class RealBaseClass<double> {
-       public:
-        using type=double;
-      };
-
-      template<>
-      class RealBaseClass<std::complex<float>> {
-       public:
-        using type=float;
-      };
-
-      template<>
-      class RealBaseClass<std::complex<double>> {
-       public:
-        using type=double;
-      };
-
-      template<class Base>
-      using RealBase = typename RealBaseClass<Base>::type;
-
       namespace transpose {
         template<class Base>
         void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
@@ -149,7 +119,7 @@ namespace TAT {
       namespace svd {
 #if (defined TAT_USE_GESVD) || (defined TAT_USE_GESDD)
         template<class Base>
-        void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, Base* s, Base* vt);
+        void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, RealBase<Base>* s, Base* vt);
 
         template<>
         void run<float>(const Size& m, const Size& n, const Size& min, float* a, float* u, float* s, float* vt) {
@@ -190,7 +160,7 @@ namespace TAT {
         } // run<double>
 
         template<>
-        void run<std::complex<float>>(const Size& m, const Size& n, const Size& min, std::complex<float>* a, std::complex<float>* u, std::complex<float>* s, std::complex<float>* vt) {
+        void run<std::complex<float>>(const Size& m, const Size& n, const Size& min, std::complex<float>* a, std::complex<float>* u, float* s, std::complex<float>* vt) {
 #ifdef TAT_USE_GESDD
 #ifndef NDEBUG
           auto res =
@@ -212,7 +182,7 @@ namespace TAT {
         } // run<std::complex<float>>
 
         template<>
-        void run<std::complex<double>>(const Size& m, const Size& n, const Size& min, std::complex<double>* a, std::complex<double>* u, std::complex<double>* s, std::complex<double>* vt) {
+        void run<std::complex<double>>(const Size& m, const Size& n, const Size& min, std::complex<double>* a, std::complex<double>* u, double* s, std::complex<double>* vt) {
 #ifdef TAT_USE_GESDD
 #ifndef NDEBUG
           auto res =
@@ -652,7 +622,7 @@ namespace TAT {
           return std::move(res);
         } // norm
 
-        template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
+        template<class Base2, ENABLE_IF(is_scalar<Base2>)>
         Data<Base2> to() const {
           Data<Base2> res(size);
           for (Size i=0; i<size; i++) {

@@ -78,6 +78,35 @@ extern "C"
 #endif // TAT_USE_CPU
 
 namespace TAT {
+  template<class T>
+  class is_scalar {
+   public:
+    static constexpr bool value = std::is_scalar<T>::value || std::is_same<T, std::complex<float>>::value || std::is_same<T, std::complex<double>>::value || std::is_same<T, std::complex<long double>>::value;
+  };
+
+  template<class Base>
+  class RealBaseClass {
+   public:
+    using type=Base;
+  };
+  template<>
+  class RealBaseClass<std::complex<float>> {
+   public:
+    using type=float;
+  };
+  template<>
+  class RealBaseClass<std::complex<double>> {
+   public:
+    using type=double;
+  };
+  template<>
+  class RealBaseClass<std::complex<long double>> {
+   public:
+    using type=long double;
+  };
+  template<class T>
+  using RealBase = typename RealBaseClass<T>::type;
+
   enum class Device : unsigned char {CPU, CUDA, DCU, SW};
 
   namespace legs {
@@ -169,7 +198,7 @@ namespace TAT {
     DefineData(SW);
 #undef DefineData
 
-    template<Device device, class Base, ENABLE_IF(std::is_scalar<Base>)>
+    template<Device device, class Base, ENABLE_IF(is_scalar<Base>)>
     using Data = typename Magic<device, Base>::type;
   } // namespace data
   using data::Data;

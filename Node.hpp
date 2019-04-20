@@ -139,7 +139,7 @@ namespace TAT {
         return std::move(res);
       } // norm
 
-      template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
+      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
       Node<device, Base2> to() const {
         Node<device, Base2> res;
         res.dims = dims;

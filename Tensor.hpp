@@ -209,7 +209,7 @@ namespace TAT {
         return std::move(res);
       } // norm
 
-      template<class Base2, ENABLE_IF(std::is_scalar<Base2>)>
+      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
       Tensor<device, Base2> to() const {
         Tensor<device, Base2> res;
         res.legs = legs;
@@ -458,62 +458,62 @@ namespace TAT {
         return std::move(res);
       } // operator-
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base>& operator*=(Tensor<device, Base>& a, const B& b) {
         return a*=Tensor<device, Base>(b);
       } // operator*=
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator*(const Tensor<device, Base>& a, const B& b) {
         return a*Tensor<device, Base>(b);
       } // operator*
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator*(const B& b, const Tensor<device, Base>& a) {
         return Tensor<device, Base>(b)*a;
       } // operator*
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base>& operator/=(Tensor<device, Base>& a, const B& b) {
         return a/=Tensor<device, Base>(b);
       } // operator/=
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator/(const Tensor<device, Base>& a, const B& b) {
         return a/Tensor<device, Base>(b);
       } // operator/
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator/(const B& b, const Tensor<device, Base>& a) {
         return Tensor<device, Base>(b)/a;
       } // operator/
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base>& operator+=(Tensor<device, Base>& a, const B& b) {
         return a+=Tensor<device, Base>(b);
       } // operator+
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator+(const Tensor<device, Base>& a, const B& b) {
         return a+Tensor<device, Base>(b);
       } // operator+
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator+(const B& b, const Tensor<device, Base>& a) {
         return Tensor<device, Base>(b)+a;
       } // operator+
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base>& operator-=(Tensor<device, Base>& a, const B& b) {
         return a-=Tensor<device, Base>(b);
       } // operator-=
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator-(const Tensor<device, Base>& a, const B& b) {
         return a-Tensor<device, Base>(b);
       } // operator-
 
-      template<Device device, class Base, class B, ENABLE_IF(std::is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
       Tensor<device, Base> operator-(const B& b, const Tensor<device, Base>& a) {
         return Tensor<device, Base>(b)-a;
       } // operator-
