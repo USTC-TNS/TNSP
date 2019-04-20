@@ -1032,10 +1032,10 @@ namespace TAT {
         template<class Base>
         std::ostream& operator<<(std::ostream& out, const Data<Base>& value) {
           out << "{\"" << rang::fgB::green << "size\": " << value.size << "" << rang::fg::reset << ", " << rang::fg::yellow << "\"base\": [";
-          for (Size i=0; i<value.size-1; i++) {
-            out << value.base[i] << ", ";
-          } // for i
           if (value.size!=0) {
+            for (Size i=0; i<value.size-1; i++) {
+              out << value.base[i] << ", ";
+            } // for i
             out << value.base[value.size-1];
           } // if
           out << "]" << rang::fg::reset << "}";

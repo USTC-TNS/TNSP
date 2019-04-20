@@ -381,12 +381,12 @@ namespace TAT {
       std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value) {
         Rank size=value.size();
         out << "[";
-        for (Rank i=0; i<size-1; i++) {
-          out << value[i] << ", ";
+        for (Rank i=0; i<size; i++) {
+          out << value[i];
+          if (i!=size-1) {
+            out << ", ";
+          } // if not last
         } // for i
-        if (size!=0) {
-          out << value[size-1];
-        } // if
         out << "]";
         return out;
       } // operator<<
