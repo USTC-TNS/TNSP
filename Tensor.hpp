@@ -239,8 +239,8 @@ namespace TAT {
                                            const Tensor<device, Base>& tensor2,
                                            const std::vector<Legs>& legs1,
                                            const std::vector<Legs>& legs2,
-                                           const std::map<Legs, Legs>& map1 = {},
-                                           const std::map<Legs, Legs>& map2 = {}) {
+                                           const std::map<Legs, Legs>& map1,
+                                           const std::map<Legs, Legs>& map2) {
         Tensor<device, Base> res;
         std::vector<Legs> new_legs1, new_legs2;
         std::vector<Rank> plan1, plan2;
