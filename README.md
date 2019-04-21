@@ -47,6 +47,7 @@ The following is for developer to take note
 - lazy应该在Tensor这一层中实现
 - 对称性表现在node中含有多个data而不是tensor中含有多个node
 - contract中, 可能使用?dot, ?gemv,以及转置策略问题, 类似的lq问题
+- Adaptors
 
 ### note for some of cuda program
 ```c++
