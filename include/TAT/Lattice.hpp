@@ -19,7 +19,7 @@
 #ifndef TAT_Lattice_HPP_
 #define TAT_Lattice_HPP_
 
-#include "TAT.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace lattice {

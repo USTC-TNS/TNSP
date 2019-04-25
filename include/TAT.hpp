@@ -1,4 +1,4 @@
-/* TAT/TAT.hpp
+/* TAT.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -237,11 +237,11 @@ namespace TAT {
   using site::Site;
 } // namespace TAT
 
-#include "Data.hpp"
-#include "Node.hpp"
-#include "Tensor.hpp"
-#include "Lensor.hpp"
-#include "Site.hpp"
-#include "Lattice.hpp"
+#include "TAT/Data.hpp"
+#include "TAT/Node.hpp"
+#include "TAT/Tensor.hpp"
+#include "TAT/Lensor.hpp"
+#include "TAT/Site.hpp"
+#include "TAT/Lattice.hpp"
 
 #endif // TAT_HPP_

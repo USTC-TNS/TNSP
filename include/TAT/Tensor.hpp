@@ -18,7 +18,7 @@
 #ifndef TAT_Tensor_HPP_
 #define TAT_Tensor_HPP_
 
-#include "TAT.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace tensor {

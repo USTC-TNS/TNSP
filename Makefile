@@ -4,7 +4,7 @@ DEBUG ?= 0
 MKLROOT?=/opt/intel/compilers_and_libraries_2019.2.187/linux/mkl
 
 TAT_VERSION = $(shell git describe --tags)
-CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\"
+CXXFLAGS += -DTAT_VERSION=\"$(TAT_VERSION)\" -Iinclude
 
 CXXFLAGS += -g -std=c++11 -fdata-sections -ffunction-sections -Wl,--gc-sections
 ifeq ($(STATIC), 1)

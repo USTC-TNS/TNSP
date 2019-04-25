@@ -18,7 +18,7 @@
 #ifndef TAT_Data_HPP_
 #define TAT_Data_HPP_
 
-#include "TAT.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace data {

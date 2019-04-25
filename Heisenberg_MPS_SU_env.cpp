@@ -36,7 +36,7 @@
 #define TAT_USE_GEQRF
 #endif
 
-#include "TAT.hpp"
+#include <TAT.hpp>
 
 struct MPS {
   using Size=TAT::Size;

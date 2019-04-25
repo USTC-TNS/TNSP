@@ -18,7 +18,7 @@
 #ifndef TAT_Lensor_HPP_
 #define TAT_Lensor_HPP_
 
-#include "TAT.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   /*

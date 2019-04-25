@@ -27,7 +27,7 @@
 #define TAT_USE_GEQRF
 #endif
 
-#include "TAT.hpp"
+#include <TAT.hpp>
 
 using namespace TAT::legs_name;
 using Tensor = TAT::Tensor<TAT::Device::CPU, std::complex<double>>;

@@ -18,7 +18,7 @@
 #ifndef TAT_Node_HPP_
 #define TAT_Node_HPP_
 
-#include "TAT.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace node {

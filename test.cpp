@@ -27,7 +27,7 @@
 #define TAT_USE_GEQRF
 #endif
 
-#include "TAT.hpp"
+#include <TAT.hpp>
 
 using namespace TAT;
 using namespace legs_name;
