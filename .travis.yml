@@ -119,7 +119,8 @@ before_install:
 - ls lib/libhptt.a lib/libhptt.so || make
 - cd ..
 install:
-- make compile
+- cmake . -DCMAKE_BUILD_TYPE=Debug
+- make
 script:
 #- diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)

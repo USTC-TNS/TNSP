@@ -3,6 +3,10 @@
 tmp.*
 coverage.*
 callgrind.*
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+Makefile
 *.gcda
 *.gcno
 *.out
