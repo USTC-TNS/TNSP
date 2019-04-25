@@ -131,6 +131,6 @@ script:
 env:
   global:
     - MAKEFLAGS=-j8
-    - MKLROOT=/opt/intel/compilers_and_libraries_2019.3.203/linux/mkl
+    - MKLROOT=/opt/intel/compilers_and_libraries_2019.3.199/linux/mkl
 notifications:
   email: false
