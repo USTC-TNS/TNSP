@@ -112,7 +112,7 @@ matrix:
     compiler: clang-8
 cache:
   directories:
-  - hptt
+  - deps/hptt
 before_install:
 - eval "${MATRIX_EVAL}"
 - cd hptt

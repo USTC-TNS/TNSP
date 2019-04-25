@@ -23,12 +23,12 @@ list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(MKL)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(${PROJECT_SOURCE_DIR}/hptt/include)
-include_directories(${PROJECT_SOURCE_DIR}/rang/include)
-include_directories(${PROJECT_SOURCE_DIR}/args)
+include_directories(${PROJECT_SOURCE_DIR}/deps/hptt/include)
+include_directories(${PROJECT_SOURCE_DIR}/deps/rang/include)
+include_directories(${PROJECT_SOURCE_DIR}/deps/args)
 include_directories(${MKL_INCLUDE_DIRS})
 
-link_directories(${PROJECT_SOURCE_DIR}/hptt/lib)
+link_directories(${PROJECT_SOURCE_DIR}/deps/hptt/lib)
 link_directories(${MKL_LIBRARY_DIRS})
 
 if(DEFINED ENV{STATIC})
