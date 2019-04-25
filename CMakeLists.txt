@@ -44,9 +44,9 @@ else()
   link_libraries(${THR_LIB} ${MAT_LIB} ${LDL_LIB})
 endif()
 
-add_custom_target(style COMMAND astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type *.cpp `find ./include -type f`)
+add_custom_target(style COMMAND astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type `find ${PROJECT_SOURCE_DIR}/example -type f` `find ${PROJECT_SOURCE_DIR}/include -type f`)
 
-file(GLOB CPP_SRC ./example/*.cpp)
+file(GLOB CPP_SRC ${PROJECT_SOURCE_DIR}/example/*.cpp)
 
 foreach(FILE ${CPP_SRC})
   get_filename_component(NAME ${FILE} NAME_WE)
