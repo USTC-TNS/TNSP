@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.12)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 project (TAT)
 
@@ -44,7 +44,7 @@ endif()
 
 add_custom_target(style COMMAND astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type *.cpp `find ./include -type f`)
 
-file(GLOB CPP_SRC *.cpp)
+file(GLOB CPP_SRC ./example/*.cpp)
 
 foreach(FILE ${CPP_SRC})
   get_filename_component(NAME ${FILE} NAME_WE)
