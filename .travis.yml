@@ -120,7 +120,7 @@ before_install:
 - cd ..
 install:
 - cmake . -DCMAKE_BUILD_TYPE=Debug
-- make
+- make VERBOSE=1
 script:
 #- diff <(./test.out) ./test.stdout
 - diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ./diff/Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)

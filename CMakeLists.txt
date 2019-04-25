@@ -5,11 +5,6 @@ project (TAT)
 execute_process(COMMAND git describe --tags OUTPUT_VARIABLE TAT_VERSION_ORIGIN)
 string(STRIP ${TAT_VERSION_ORIGIN} TAT_VERSION)
 
-include_directories("${PROJECT_SOURCE_DIR}/include")
-include_directories("${PROJECT_SOURCE_DIR}/hptt/include")
-include_directories("${PROJECT_SOURCE_DIR}/rang/include")
-include_directories("${PROJECT_SOURCE_DIR}/args")
-
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -24,10 +19,14 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fwhole-program")
 endif()
 
-#set(BUILD_SHARED_LIBS ON)
-
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 find_package(MKL)
+
+include_directories("${PROJECT_SOURCE_DIR}/include")
+include_directories("${PROJECT_SOURCE_DIR}/hptt/include")
+include_directories("${PROJECT_SOURCE_DIR}/rang/include")
+include_directories("${PROJECT_SOURCE_DIR}/args")
+include_directories("${MKL_INCLUDE_DIRS}")
 
 if(DEFINED ENV{STATIC})
   link_libraries(-static-libgcc -static-libstdc++)
