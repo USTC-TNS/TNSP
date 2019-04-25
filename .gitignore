@@ -7,6 +7,8 @@ CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
 Makefile
+cmake-build-debug
+.idea
 *.gcda
 *.gcno
 *.out
