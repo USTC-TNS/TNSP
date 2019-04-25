@@ -30,7 +30,7 @@ else
 	endif
 endif
 
-HEADER=$(wildcard ./*.hpp)
+HEADER=$(wildcard ./*.hpp) $(wildcard ./Data/*.hpp)
 HEADER_STYLE=$(HEADER:.hpp=.hpp.style)
 SRC=$(wildcard ./*.cpp)
 SRC_STYLE=$(SRC:.cpp=.cpp.style)
