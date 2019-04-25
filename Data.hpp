@@ -24,18 +24,6 @@ namespace TAT {
   namespace data {
     namespace CPU {
 #ifdef TAT_USE_CPU
-      namespace transpose {
-        template<class Base>
-        void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
-          std::vector<int> int_plan(plan.begin(), plan.end());
-          std::vector<int> int_dims(dims.begin(), dims.end());
-          hptt::create_plan(int_plan.data(), int_plan.size(),
-                            1, src, int_dims.data(), NULL,
-                            0, dst, NULL,
-                            hptt::ESTIMATE, 1, NULL, 1)->execute();
-        } // run
-      } // namespace data::CPU::transpose
-
       namespace contract {
         template<class Base>
         void run(Base* data,
@@ -632,12 +620,7 @@ namespace TAT {
         } // to
 
         Data<Base> transpose(const std::vector<Size>& dims,
-                             const std::vector<Rank>& plan) const {
-          Data<Base> res(size);
-          assert(dims.size()==plan.size());
-          transpose::run(plan, dims, get(), res.get());
-          return std::move(res);
-        } // transpose
+                             const std::vector<Rank>& plan) const;
 
         static Data<Base> contract(const Data<Base>& data1,
                                    const Data<Base>& data2,
@@ -1061,5 +1044,7 @@ namespace TAT {
     } // namespace CPU
   } // namespace data
 } // namespace TAT
+
+#include "Data/transpose.hpp"
 
 #endif // TAT_Data_HPP_
