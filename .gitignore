@@ -1,15 +1,2 @@
-.vscode
-tmp.*
-coverage.*
-callgrind.*
-cmake-build-debug
-.idea
-*.gcda
-*.gcno
-*.out
-*.gch
-*.gcov
-*.o
-*.orig
-*.ii
-*.s
+cmake-build-*
+build
