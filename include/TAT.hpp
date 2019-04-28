@@ -43,6 +43,10 @@
 #define TAT_USE_CPU
 #endif
 
+#ifdef TAT_EXTREME
+#warning EXTREME compile may cost much of compile time
+#endif // TAT_EXTREME
+
 #ifdef TAT_USE_CPU
 extern "C"
 {
@@ -51,6 +55,12 @@ extern "C"
 #include <mkl.h>
 } // extern "C"
 #include <hptt.h>
+#ifdef TAT_EXTREME
+#include <../src/hptt.cpp>
+#include <../src/plan.cpp>
+#include <../src/transpose.cpp>
+#include <../src/utils.cpp>
+#endif // TAT_EXTREME
 #include <rang.hpp>
 
 // SVD
