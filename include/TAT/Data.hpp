@@ -151,13 +151,13 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#include "Data/norm.hpp"
-#include "Data/transpose.hpp"
-#include "Data/contract.hpp"
-#include "Data/multiple.hpp"
-#include "Data/svd.hpp"
-#include "Data/qr.hpp"
-#include "Data/scalar.hpp"
-#include "Data/io.hpp"
+#include "Data/CPU/norm.hpp"
+#include "Data/CPU/transpose.hpp"
+#include "Data/CPU/contract.hpp"
+#include "Data/CPU/multiple.hpp"
+#include "Data/CPU/svd.hpp"
+#include "Data/CPU/qr.hpp"
+#include "Data/CPU/scalar.hpp"
+#include "Data/CPU/io.hpp"
 
 #endif // TAT_Data_HPP_

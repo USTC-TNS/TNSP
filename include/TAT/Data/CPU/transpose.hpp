@@ -1,4 +1,4 @@
-/* TAT/Data/transpose.hpp
+/* TAT/Data/CPU/transpose.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,10 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_Transpose_HPP_
-#define TAT_Data_Transpose_HPP_
+#ifndef TAT_Data_CPU_Transpose_HPP_
+#define TAT_Data_CPU_Transpose_HPP_
 
-#include "../Data.hpp"
+#include "../../Data.hpp"
 
 namespace TAT {
   namespace data {
@@ -49,4 +49,4 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_Transpose_HPP_
+#endif // TAT_Data_CPU_Transpose_HPP_
