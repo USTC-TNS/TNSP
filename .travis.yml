@@ -16,7 +16,8 @@ matrix:
         - libjemalloc-dev
         - --allow-unauthenticated intel-mkl-2019.3-062
     env:
-    - MATRIX_EVAL="CXX=clang++-8 EXTREME=1"
+    - MATRIX_EVAL="CXX=clang++-8"
+    - EXTREME=1
     compiler: clang-8
   - addons:
       apt:
