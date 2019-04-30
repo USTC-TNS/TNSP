@@ -91,7 +91,7 @@ else()
 endif()
 
 # Style
-add_custom_target(style COMMAND astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type `find ${PROJECT_SOURCE_DIR}/example -type f` `find ${PROJECT_SOURCE_DIR}/include -type f`)
+add_custom_target(style COMMAND astyle --indent=spaces=2 --indent-namespaces --style=google --pad-comma --pad-header --align-pointer=type --align-reference=type `find ${PROJECT_SOURCE_DIR}/example -type f -name '*.cpp'` `find ${PROJECT_SOURCE_DIR}/include -type f -name '*.hpp'`)
 
 # Target
 if(WIN32)

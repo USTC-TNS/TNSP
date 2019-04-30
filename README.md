@@ -34,18 +34,15 @@ now, I am writing this tensor library.
 ---
 
 ## TODO LIST
-- transpose may be optimized
-- Truncated SVD
-- dgegqr magma
-- cuda，sw
-- lazy tensor
-- site api
-- use it, peps, kitaev, hubbard
-- symmetry tensor
-- mkl VML replacement
-- lazy应该在Tensor这一层中实现
-- 对称性表现在node中含有多个data而不是tensor中含有多个node
-- contract中, 可能使用?dot, ?gemv,以及转置策略问题, 类似的lq问题
-- Adaptors
-- cl 兼容性
-- swig bind python
+- cl 兼容性                                                       [无重要性]
+- swig bind python                                                [无重要性]
+- dgegqr magma                                                    [等待cuda]
+- cuda，sw                                                        [等待cpu完善]
+- Truncated SVD                                                   [无重要性]
+- use it, peps, kitaev, hubbard                                   [等待lazy与lattice]
+- 对称性表现在node中含有多个data而不是tensor中含有多个node        [等待lazy与lattice]
+- transpose may be optimized                                      [比较重要]
+- mkl VML replacement                                             [比较重要]
+- contract中, 可能使用?dot, ?gemv,以及转置策略问题, 类似的lq问题  [比较重要]
+- Adaptors                                                        [?需使用经验]
+- lazy应该在Tensor这一层中实现                                    [WIP]
