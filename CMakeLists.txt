@@ -19,7 +19,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Binary Size
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # CL Option to get small binary size here
+  # TODO: CL Option to get small binary size here
 else()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdata-sections -ffunction-sections")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
@@ -27,7 +27,7 @@ endif()
 
 # Cl specified
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # several patch to let cl could compile
+  # TODO: several patch to let cl could compile
   add_definitions("-D__restrict__=__restrict")
   add_definitions("-D_Complex=complex")
   set(ENV{EXTREME} 1)
@@ -35,7 +35,7 @@ endif()
 
 # Optimize and Warning
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  # Cl option is different with gcc
+  # TODO: Cl option is different with gcc
   # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall")
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2")
