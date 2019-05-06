@@ -64,6 +64,10 @@ else()
     set(LDL_LIB "-ldl")
 endif()
 
+if(NOT DEFINED ENV{MKLROOT})
+    set(ENV{MKLROOT} /opt/intel/compilers_and_libraries/linux/mkl)
+endif()
+
 find_path(MKL_INCLUDE_DIRS mkl.h HINTS $ENV{MKLROOT}/include)
 if(WIN32)
     if(${CMAKE_CL_64} EQUAL 1)
