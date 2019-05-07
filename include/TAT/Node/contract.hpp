@@ -23,40 +23,55 @@
 namespace TAT {
   namespace node {
     namespace contract {
-      void plan(std::vector<Size>& dims, Size& m, Size& k, Size& n,
-                const::std::vector<Size>& dims1,
-                const::std::vector<Size>& dims2,
-                const std::vector<Rank>& plan1,
-                const std::vector<Rank>& plan2,
-                const Rank& contract_num) {
-        Rank i, tmp=dims1.size()-contract_num, rank2=dims2.size();
-        for (i=0; i<tmp; i++) {
-          const Size& t = dims1[plan1[i]];
-          m *= t;
-          dims.push_back(t);
-        } // for i
-        for (i=0; i<contract_num; i++) {
-          k *= dims1[plan1[i+tmp]];
-          assert(dims1[plan1[i+tmp]]==dims2[plan2[i]]);
-        } // for i
-        for (; i<rank2; i++) {
-          const Size& t = dims2[plan2[i]];
-          n *= t;
-          dims.push_back(t);
-        } // for i
+      void plan(Rank& contract_num,
+                std::vector<Legs>& legs,
+                std::vector<Legs>& new_legs1,
+                std::vector<Legs>& new_legs2,
+                const std::vector<Legs>& total_legs1,
+                const std::vector<Legs>& total_legs2,
+                const std::vector<Legs>& legs1,
+                const std::vector<Legs>& legs2,
+                const std::map<Legs, Legs>& map1,
+                const std::map<Legs, Legs>& map2) {
+        auto filt_legs1 = internal::in_and_not_in(total_legs1, legs1);
+        internal::append(new_legs1, filt_legs1);
+        internal::append(legs, internal::map_or_not(filt_legs1, map1));
+
+        auto tmp_legs1 = internal::in_and_in(legs1, total_legs1);
+        internal::append(new_legs1, tmp_legs1);
+
+        auto tmp_legs2 = internal::in_and_in(legs2, total_legs2);
+        internal::append(new_legs2, tmp_legs2);
+
+        auto filt_legs2 = internal::in_and_not_in(total_legs2, legs2);
+        internal::append(new_legs2, filt_legs2);
+        internal::append(legs, internal::map_or_not(filt_legs2, map2));
+
+        assert(tmp_legs1.size()==tmp_legs2.size());
+        contract_num = tmp_legs1.size();
       } // plan
     } // namespace node::contract
 
     template<Device device, class Base>
     Node<device, Base> Node<device, Base>::contract(const Node<device, Base>& node1,
         const Node<device, Base>& node2,
-        const std::vector<Rank>& plan1,
-        const std::vector<Rank>& plan2,
-        const Rank& contract_num) {
+        const std::vector<Legs>& legs1,
+        const std::vector<Legs>& legs2,
+        const std::map<Legs, Legs>& map1,
+        const std::map<Legs, Legs>& map2) {
       Node<device, Base> res;
-      Size m=1, k=1, n=1;
-      contract::plan(res.dims, m, k, n, node1.dims, node2.dims, plan1, plan2, contract_num);
-      res.data = Data<device, Base>::contract(node1.data, node2.data, node1.dims, node2.dims, plan1, plan2, m, k, n);
+      std::vector<Legs> new_legs1, new_legs2;
+      std::vector<Rank> plan1, plan2;
+      Rank contract_num;
+      assert(legs1.size()==legs2.size());
+      contract::plan(contract_num, res.legs, new_legs1, new_legs2, node1.legs, node2.legs, legs1, legs2, map1, map2);
+      transpose::plan(plan1, new_legs1, node1.legs);
+      transpose::plan(plan2, new_legs2, node2.legs);
+      assert(new_legs1.size()==node1.legs.size());
+      assert(plan1.size()==node1.legs.size());
+      assert(new_legs2.size()==node2.legs.size());
+      assert(plan2.size()==node2.legs.size());
+      res.tensor = Tensor<device, Base>::contract(node1.tensor, node2.tensor, plan1, plan2, contract_num);
       return std::move(res);
     } // contract
   } // namespace node

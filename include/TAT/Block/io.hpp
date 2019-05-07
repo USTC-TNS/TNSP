@@ -1,4 +1,4 @@
-/* TAT/Tensor/io.hpp
+/* TAT/Block/io.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,19 +15,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Tensor_Io_HPP_
-#define TAT_Tensor_Io_HPP_
+#ifndef TAT_Block_Io_HPP_
+#define TAT_Block_Io_HPP_
 
-#include "../Tensor.hpp"
+#include "../Block.hpp"
 
 namespace TAT {
-  namespace tensor {
+  namespace block {
     inline namespace io {
-      std::ostream& operator<<(std::ostream& out, const std::vector<Legs>& value) {
+      std::ostream& operator<<(std::ostream& out, const std::vector<Size>& value) {
         Rank size=value.size();
         out << "[";
         for (Rank i=0; i<size; i++) {
-          out << "\"" << value[i] << "\"";
+          out << value[i];
           if (i!=size-1) {
             out << ", ";
           } // if not last
@@ -37,30 +37,30 @@ namespace TAT {
       } // operator<<
 
       template<Device device, class Base>
-      std::ostream& operator<<(std::ostream& out, const Tensor<device, Base>& value) {
-        return out << "{" << rang::fgB::yellow << "\"rank\": " << value.legs.size() << rang::fg::reset << ", " << rang::fgB::blue << "\"legs\": " << value.legs << rang::fg::reset << ", \"node\": " << value.node << "}";
+      std::ostream& operator<<(std::ostream& out, const Block<device, Base>& value) {
+        return out << "{" << rang::fg::magenta << "\"dims\": " << value.dims << rang::fg::reset << ", \"data\": " << value.data << "}";
       } // operator<<
 
       template<Device device, class Base>
-      std::ofstream& operator<<(std::ofstream& out, const Tensor<device, Base>& value) {
-        Rank rank = value.legs.size();
+      std::ofstream& operator<<(std::ofstream& out, const Block<device, Base>& value) {
+        Rank rank = value.dims.size();
         out.write((char*)&rank, sizeof(Rank));
-        out.write((char*)value.legs.data(), rank*sizeof(Legs));
-        out << value.node;
+        out.write((char*)value.dims.data(), rank*sizeof(Size));
+        out << value.data;
         return out;
       } // operator<<
 
       template<Device device, class Base>
-      std::ifstream& operator>>(std::ifstream& in, Tensor<device, Base>& value) {
+      std::ifstream& operator>>(std::ifstream& in, Block<device, Base>& value) {
         Rank rank;
         in.read((char*)&rank, sizeof(Rank));
-        value.legs.resize(rank);
-        in.read((char*)value.legs.data(), rank*sizeof(Legs));
-        in >> value.node;
+        value.dims.resize(rank);
+        in.read((char*)value.dims.data(), rank*sizeof(Size));
+        in >> value.data;
         return in;
       } // operator<<
-    } // namespace tensor::io
-  } // namespace tensor
+    } // namespace block::io
+  } // namespace block
 } // namespace TAT
 
-#endif // TAT_Tensor_Io_HPP_
+#endif // TAT_Block_Io_HPP_

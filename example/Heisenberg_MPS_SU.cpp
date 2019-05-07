@@ -1,4 +1,4 @@
-/* TAT/Heisenberg_MPS_SU.cpp
+/* example/Heisenberg_MPS_SU.cpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify

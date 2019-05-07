@@ -1,4 +1,4 @@
-/* example/test_lensor.cpp
+/* example/test_new_tensor.cpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,20 +30,20 @@
 #include <TAT.hpp>
 
 using namespace TAT::legs_name;
-using Lensor=TAT::Lensor<TAT::Device::CPU, double>;
-using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
+using Node=TAT::Node<TAT::Device::CPU, double>;
 
 int main() {
-  auto a = Lensor::make({Up, Down}, {2, 3})->set_test();
-  std::cout << a->value() << std::endl;
-  auto b = a->transpose({Down, Up});
-  std::cout << b->value() << std::endl;
-  a->set(Tensor({Up, Down}, {4, 5}))->set_test();
-  std::cout << b->value() << std::endl;
-  b->legs_rename({{Up, Right}});
-  b->normalize<-1>();
-  std::cout << b->value() << std::endl;
-  auto c = TAT::Lensor<TAT::Device::CPU, int>::make()->set(b->value().to<int>());
-  std::cout << c->value() << std::endl;
+  auto a = Node::make({Up, Down}, {2, 3})->set_test();
+  std::cout << *a->calc() << std::endl;
+  //auto b = a->transpose({Down, Up});
+  //std::cout << b->value() << std::endl;
+  //a->set(Tensor({Up, Down}, {4, 5}))->set_test();
+  //std::cout << b->value() << std::endl;
+  //b->legs_rename({{Up, Right}});
+  //b->normalize<-1>();
+  //std::cout << b->value() << std::endl;
+  //auto c = TAT::Lensor<TAT::Device::CPU, int>::make()->set(b->value().to<int>());
+  //std::cout << c->value() << std::endl;
   return 0;
 } // main
+

@@ -23,20 +23,35 @@
 namespace TAT {
   namespace node {
     namespace transpose {
-      void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan) {
-        for (const auto& i : plan) {
-          new_dims.push_back(dims[i]);
+      void plan(std::vector<Rank>& plan, const std::vector<Legs>& new_legs, const std::vector<Legs>& legs) {
+        const Rank& rank = legs.size();
+        for (Rank i=0; i<rank; i++) {
+          for (Rank j=0; j<rank; j++) {
+            if (new_legs[i]==legs[j]) {
+              plan.push_back(j);
+              break;
+            } // if
+          } // for j
         } // for i
       } // plan
     } // namespace node::transpose
 
     template<Device device, class Base>
-    Node<device, Base> Node<device, Base>::transpose(const std::vector<Rank>& plan) const {
+    Node<device, Base> Node<device, Base>::transpose(const std::vector<Legs>& new_legs) const {
       Node<device, Base> res;
-      transpose::plan(res.dims, dims, plan);
-      assert(plan.size()==dims.size());
-      assert(get_size(res.dims)==data.size);
-      res.data = data.transpose(dims, plan);
+      res.legs = internal::in_and_in(new_legs, legs);
+      assert(legs.size()==res.legs.size());
+#ifndef NDEBUG
+      auto set_new = std::set<Legs>(res.legs.begin(), res.legs.end());
+      assert(set_new.size()==res.legs.size());
+      set_new.insert(legs.begin(), legs.end());
+      assert(set_new.size()==res.legs.size());
+#endif // NDEBUG
+      std::vector<Rank> plan;
+      transpose::plan(plan, res.legs, legs);
+      assert(res.legs.size()==legs.size());
+      assert(plan.size()==legs.size());
+      res.tensor = tensor.transpose(plan);
       return std::move(res);
     } // transpose
   } // namespace node

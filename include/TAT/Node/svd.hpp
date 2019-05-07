@@ -23,32 +23,43 @@
 namespace TAT {
   namespace node {
     namespace svd {
-      void plan(Size& u_size, const Rank& u_rank, const std::vector<Size>& dims) {
-        for (Rank i=0; i<u_rank; i++) {
-          u_size *= dims[i];
-        } // for i
+      void plan(std::vector<Legs>& U_legs,
+                std::vector<Legs>& V_legs,
+                std::vector<Legs>& tmp_legs,
+                Rank& u_rank,
+                const std::vector<Legs>& total_legs,
+                const std::vector<Legs>& u_legs,
+                const Legs& new_u_legs,
+                const Legs& new_v_legs) {
+        u_rank = u_legs.size();
+        V_legs.push_back(new_v_legs);
+        for (const auto& i : total_legs) {
+          if (internal::in(i, u_legs)) {
+            U_legs.push_back(i);
+          } else {
+            V_legs.push_back(i);
+          } // if
+        } // for
+        U_legs.push_back(new_u_legs);
+        tmp_legs.insert(tmp_legs.end(), U_legs.begin(), U_legs.end()-1);
+        tmp_legs.insert(tmp_legs.end(), V_legs.begin()+1, V_legs.end());
       } // plan
     } // namespace node::svd
 
     template<Device device, class Base>
-    typename Node<device, Base>::svd_res Node<device, Base>::svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const {
+    typename Node<device, Base>::svd_res Node<device, Base>::svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut) const {
+      std::vector<Legs> u_legs = internal::in_and_in(legs, input_u_legs);
       svd_res res;
-      Size u_size=1;
-      std::vector<Size> tmp_dims;
-      transpose::plan(tmp_dims, dims, plan);
-      svd::plan(u_size, u_rank, tmp_dims);
-      Size v_size = size()/u_size;
-      Size min_mn = (u_size<v_size)?u_size:v_size;
-      auto data_res = data.svd(dims, plan, u_size, v_size, min_mn, cut);
-      auto mid = tmp_dims.begin()+u_rank;
-      res.U.dims.insert(res.U.dims.end(), tmp_dims.begin(), mid);
-      res.U.dims.push_back(data_res.S.size);
-      res.S.dims.push_back(data_res.S.size);
-      res.V.dims.push_back(data_res.S.size);
-      res.V.dims.insert(res.V.dims.end(), mid, tmp_dims.end());
-      res.U.data = std::move(data_res.U);
-      res.S.data = std::move(data_res.S);
-      res.V.data = std::move(data_res.V);
+      std::vector<Legs> tmp_legs;
+      std::vector<Rank> plan;
+      Rank u_rank;
+      svd::plan(res.U.legs, res.V.legs, tmp_legs, u_rank, legs, u_legs, new_u_legs, new_v_legs);
+      transpose::plan(plan, tmp_legs, legs);
+      auto tensor_res = tensor.svd(plan, u_rank, cut);
+      res.S.legs = {new_u_legs};// new_u_legs or new_v_legs
+      res.U.tensor = std::move(tensor_res.U);
+      res.S.tensor = std::move(tensor_res.S);
+      res.V.tensor = std::move(tensor_res.V);
       return std::move(res);
     } // svd
   } // namespace node

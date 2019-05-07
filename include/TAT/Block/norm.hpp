@@ -1,4 +1,4 @@
-/* TAT/Tensor/qr.hpp
+/* TAT/Block/norm.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,28 +15,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Tensor_Qr_HPP_
-#define TAT_Tensor_Qr_HPP_
+#ifndef TAT_Block_Norm_HPP_
+#define TAT_Block_Norm_HPP_
 
-#include "../Tensor.hpp"
+#include "../Block.hpp"
 
 namespace TAT {
-  namespace tensor {
+  namespace block {
     template<Device device, class Base>
-    typename Tensor<device, Base>::qr_res Tensor<device, Base>::qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
-      std::vector<Legs> q_legs = internal::in_and_in(legs, input_q_legs);
-      qr_res res;
-      std::vector<Legs> tmp_legs;
-      std::vector<Rank> plan;
-      Rank q_rank;
-      svd::plan(res.Q.legs, res.R.legs, tmp_legs, q_rank, legs, q_legs, new_q_legs, new_r_legs);
-      transpose::plan(plan, tmp_legs, legs);
-      auto node_res = node.qr(plan, q_rank);
-      res.Q.node = std::move(node_res.Q);
-      res.R.node = std::move(node_res.R);
+    template<int n>
+    Block<device, Base> Block<device, Base>::norm() const {
+      Block<device, Base> res({});
+      res.data = data.template norm<n>();
       return std::move(res);
-    } // qr
-  } // namespace tensor
+    } // norm
+  } // namespace block
 } // namespace TAT
 
-#endif // TAT_Tensor_Qr_HPP_
+#endif // TAT_Block_Norm_HPP_

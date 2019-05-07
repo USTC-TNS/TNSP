@@ -1,4 +1,4 @@
-/* TAT/Tensor/norm.hpp
+/* TAT/Block/transpose.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -15,21 +15,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Tensor_Norm_HPP_
-#define TAT_Tensor_Norm_HPP_
+#ifndef TAT_Block_Transpose_HPP_
+#define TAT_Block_Transpose_HPP_
 
-#include "../Tensor.hpp"
+#include "../Block.hpp"
 
 namespace TAT {
-  namespace tensor {
+  namespace block {
+    namespace transpose {
+      void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan) {
+        for (const auto& i : plan) {
+          new_dims.push_back(dims[i]);
+        } // for i
+      } // plan
+    } // namespace block::transpose
+
     template<Device device, class Base>
-    template<int n>
-    Tensor<device, Base> Tensor<device, Base>::norm() const {
-      Tensor<device, Base> res({}, {});
-      res.node = node.template norm<n>();
+    Block<device, Base> Block<device, Base>::transpose(const std::vector<Rank>& plan) const {
+      Block<device, Base> res;
+      transpose::plan(res.dims, dims, plan);
+      assert(plan.size()==dims.size());
+      assert(get_size(res.dims)==data.size);
+      res.data = data.transpose(dims, plan);
       return std::move(res);
-    } // norm
-  } // namespace tensor
+    } // transpose
+  } // namespace block
 } // namespace TAT
 
-#endif // TAT_Tensor_Norm_HPP_
+#endif // TAT_Block_Transpose_HPP_

@@ -23,7 +23,7 @@
 namespace TAT {
   namespace node {
     inline namespace scalar {
-      bool operator==(const std::vector<Size>& a, const std::vector<Size>& b) {
+      bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b) {
         if (a.size()!=b.size()) {
           return false;
         } // if size
@@ -31,129 +31,189 @@ namespace TAT {
         for (Rank i=0; i<size; i++) {
           if (a[i]!=b[i]) {
             return false;
-          } // if
-        } // for i
+          } // if i
+        } // for
         return true;
       } // operator==
 
       template<Device device, class Base>
       Node<device, Base>& operator*=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.dims.size()!=0) {
-          assert(a.dims==b.dims);
-        } // if
-        a.data *= b.data;
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
+        }
+        a.tensor *= b.tensor;
         return a;
       } // operator*=
 
       template<Device device, class Base>
       Node<device, Base> operator*(const Node<device, Base>& a, const Node<device, Base>& b) {
         Node<device, Base> res;
-        if (b.dims.size()==0) {
-          res.dims = a.dims;
-        } else if (a.dims.size()==0) {
-          res.dims = b.dims;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
         } else {
-          res.dims = a.dims;
-          assert(a.dims==b.dims);
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
         } // if
-        res.data = a.data * b.data;
+        res.tensor = a.tensor * b.tensor;
         return std::move(res);
       } // operator*
 
       template<Device device, class Base>
       Node<device, Base>& operator/=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.dims.size()!=0) {
-          assert(a.dims==b.dims);
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
         } // if
-        a.data /= b.data;
+        a.tensor /= b.tensor;
         return a;
       } // operator/=
 
       template<Device device, class Base>
       Node<device, Base> operator/(const Node<device, Base>& a, const Node<device, Base>& b) {
         Node<device, Base> res;
-        if (b.dims.size()==0) {
-          res.dims = a.dims;
-        } else if (a.dims.size()==0) {
-          res.dims = b.dims;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
         } else {
-          res.dims = a.dims;
-          assert(a.dims==b.dims);
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
         } // if
-        res.data = a.data / b.data;
+        res.tensor = a.tensor / b.tensor;
         return std::move(res);
       } // operator/
 
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a) {
         Node<device, Base> res;
-        res.dims = a.dims;
-        res.data = + a.data;
+        res.legs = a.legs;
+        res.tensor = + a.tensor;
         return std::move(res);
       } // operator+
 
       template<Device device, class Base>
       Node<device, Base> operator+(Node<device, Base>&& a) {
         Node<device, Base> res;
-        res.dims = std::move(a.dims);
-        res.data = + std::move(a.data);
+        res.legs = std::move(a.legs);
+        res.tensor = + std::move(a.tensor);
         return std::move(res);
       } // operator+
 
       template<Device device, class Base>
       Node<device, Base>& operator+=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.dims.size()!=0) {
-          assert(a.dims==b.dims);
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
         } // if
-        a.data += b.data;
+        a.tensor += b.tensor;
         return a;
       } // operator+=
 
       template<Device device, class Base>
       Node<device, Base> operator+(const Node<device, Base>& a, const Node<device, Base>& b) {
         Node<device, Base> res;
-        if (b.dims.size()==0) {
-          res.dims = a.dims;
-        } else if (a.dims.size()==0) {
-          res.dims = b.dims;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
         } else {
-          res.dims = a.dims;
-          assert(a.dims==b.dims);
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
         } // if
-        res.data = a.data + b.data;
+        res.tensor = a.tensor + b.tensor;
         return std::move(res);
       } // operator+
 
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a) {
         Node<device, Base> res;
-        res.dims = a.dims;
-        res.data = - a.data;
+        res.legs = a.legs;
+        res.tensor = - a.tensor;
         return std::move(res);
       } // operator-
 
       template<Device device, class Base>
       Node<device, Base>& operator-=(Node<device, Base>& a, const Node<device, Base>& b) {
-        if (b.dims.size()!=0) {
-          assert(a.dims==b.dims);
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
         } // if
-        a.data -= b.data;
+        a.tensor -= b.tensor;
         return a;
       } // operator-=
 
       template<Device device, class Base>
       Node<device, Base> operator-(const Node<device, Base>& a, const Node<device, Base>& b) {
         Node<device, Base> res;
-        if (b.dims.size()==0) {
-          res.dims = a.dims;
-        } else if (a.dims.size()==0) {
-          res.dims = b.dims;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
         } else {
-          res.dims = a.dims;
-          assert(a.dims==b.dims);
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
         } // if
-        res.data = a.data - b.data;
+        res.tensor = a.tensor - b.tensor;
         return std::move(res);
+      } // operator-
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base>& operator*=(Node<device, Base>& a, const B& b) {
+        return a*=Node<device, Base>(b);
+      } // operator*=
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator*(const Node<device, Base>& a, const B& b) {
+        return a*Node<device, Base>(b);
+      } // operator*
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator*(const B& b, const Node<device, Base>& a) {
+        return Node<device, Base>(b)*a;
+      } // operator*
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base>& operator/=(Node<device, Base>& a, const B& b) {
+        return a/=Node<device, Base>(b);
+      } // operator/=
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator/(const Node<device, Base>& a, const B& b) {
+        return a/Node<device, Base>(b);
+      } // operator/
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator/(const B& b, const Node<device, Base>& a) {
+        return Node<device, Base>(b)/a;
+      } // operator/
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base>& operator+=(Node<device, Base>& a, const B& b) {
+        return a+=Node<device, Base>(b);
+      } // operator+
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator+(const Node<device, Base>& a, const B& b) {
+        return a+Node<device, Base>(b);
+      } // operator+
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator+(const B& b, const Node<device, Base>& a) {
+        return Node<device, Base>(b)+a;
+      } // operator+
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base>& operator-=(Node<device, Base>& a, const B& b) {
+        return a-=Node<device, Base>(b);
+      } // operator-=
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator-(const Node<device, Base>& a, const B& b) {
+        return a-Node<device, Base>(b);
+      } // operator-
+
+      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      Node<device, Base> operator-(const B& b, const Node<device, Base>& a) {
+        return Node<device, Base>(b)-a;
       } // operator-
     } // namespace node::scalar
   } // namespace node

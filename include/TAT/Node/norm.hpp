@@ -25,8 +25,8 @@ namespace TAT {
     template<Device device, class Base>
     template<int n>
     Node<device, Base> Node<device, Base>::norm() const {
-      Node<device, Base> res({});
-      res.data = data.template norm<n>();
+      Node<device, Base> res({}, {});
+      res.tensor = tensor.template norm<n>();
       return std::move(res);
     } // norm
   } // namespace node

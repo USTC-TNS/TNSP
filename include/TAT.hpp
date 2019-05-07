@@ -213,18 +213,27 @@ namespace TAT {
   } // namespace data
   using data::Data;
 
-  namespace node {
-    template<Device device, class Base>
-    class Node;
-  } // namespace node
-  using node::Node;
+  namespace block {
+    template<Device device=Device::CPU, class Base=double>
+    class Block;
+  } // namespace block
+  using block::Block;
 
   namespace tensor {
     template<Device device=Device::CPU, class Base=double>
     class Tensor;
   } // namespace tensor
-  using tensor::Tensor;
+  //using tensor::Tensor;
+  template<Device device=Device::CPU, class Base=double>
+  using Tensor=Block<device, Base>;
 
+  namespace node {
+    template<Device device=Device::CPU, class Base=double>
+    class Node;
+  } // namespace node
+  using node::Node;
+
+  /*
   namespace lensor {
     template<Device device=Device::CPU, class Base=double>
     class Lensor;
@@ -245,13 +254,17 @@ namespace TAT {
     class Lattice;
   } // namespace lattice
   using site::Site;
+  */
 } // namespace TAT
 
 #include "TAT/Data.hpp"
+#include "TAT/Block.hpp"
+// Tensor
 #include "TAT/Node.hpp"
-#include "TAT/Tensor.hpp"
+/*
 #include "TAT/Lensor.hpp"
 #include "TAT/Site.hpp"
 #include "TAT/Lattice.hpp"
+*/
 
 #endif // TAT_HPP_

@@ -22,32 +22,20 @@
 
 namespace TAT {
   namespace node {
-    namespace multiple {
-      void plan(Size& a, Size& b, Size& c, const std::vector<Size>& dims, const Rank& index) {
-        Rank i=0, rank=dims.size();
-        for (; i<index; i++) {
-          a *= dims[i];
-        } // for i
-        b = dims[i];
-        i++;
-        for (; i<rank; i++) {
-          c *= dims[i];
-        } // for
-      } // plan
-    } // namespace node::multiple
-
     template<Device device, class Base>
-    Node<device, Base> Node<device, Base>::multiple(const Node<device, Base>& other, const Rank& index) const {
+    Node<device, Base> Node<device, Base>::multiple(const Node<device, Base>& other, const Legs& position) const {
       Node<device, Base> res;
-      res.dims = dims;
-      Size a=1, b=1, c=1;
-      multiple::plan(a, b, c, dims, index);
-      assert(other.dims.size()==1);
-      assert(b==other.dims[0]);
-      res.data = data.multiple(other.data, a, b, c);
+      assert(other.legs.size()==1);
+      res.legs = legs;
+      auto pos = std::find(legs.begin(), legs.end(), position);
+      if (pos==legs.end()) {
+        return *this;
+      } // if not multiple
+      Rank index = std::distance(legs.begin(), pos);
+      res.tensor = tensor.multiple(other.tensor, index);
       return std::move(res);
     } // multiple
   } // namespace node
 } // namespace TAT
 
-#endif // TAT_Node_Multple_HPP_
+#endif // TAT_Node_Multiple_HPP_
