@@ -34,11 +34,13 @@ using Node=TAT::Node<TAT::Device::CPU, double>;
 
 int main() {
   auto a = Node::make({Up, Down}, {2, 3})->set_test();
-  std::cout << *a->calc() << std::endl;
-  //auto b = a->transpose({Down, Up});
-  //std::cout << b->value() << std::endl;
-  //a->set(Tensor({Up, Down}, {4, 5}))->set_test();
-  //std::cout << b->value() << std::endl;
+  std::cout << a->value() << std::endl;
+  auto b = a->transpose({Down, Up});
+  std::cout << b->value() << std::endl;
+  srand(0);
+  a->set_random(rand);
+  std::cout << a->value() << std::endl;
+  std::cout << b->value() << std::endl;
   //b->legs_rename({{Up, Right}});
   //b->normalize<-1>();
   //std::cout << b->value() << std::endl;
@@ -46,4 +48,3 @@ int main() {
   //std::cout << c->value() << std::endl;
   return 0;
 } // main
-

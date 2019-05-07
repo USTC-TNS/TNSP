@@ -79,17 +79,15 @@ namespace TAT {
       Tensor<device, Base> tensor;
       bool flag = false; // whether tensor is valid
       std::function<Tensor<device, Base>()> func;
-      std::vector<std::weak_ptr<Node<device, Base>>> downstream;
+      mutable std::vector<std::weak_ptr<Node<device, Base>>> downstream;
 
       // graph op
 
-      using NodePtr = std::shared_ptr<Node<device, Base>>;
-
-      NodePtr shared_from_this() {
+      std::shared_ptr<Node<device, Base>> shared_from_this() {
         return std::enable_shared_from_this<Node<device, Base>>::shared_from_this();
       } // shared_from_this
 
-      NodePtr reset() {
+      std::shared_ptr<Node<device, Base>> reset() {
         if (flag) {
           flag = false;
           for (const auto& ds : downstream) {
@@ -102,30 +100,35 @@ namespace TAT {
       } // reset this node and all its children
 
       template<class ... Args>
-      static NodePtr make(Args&& ... args) {
+      static std::shared_ptr<Node<device, Base>> make(Args&& ... args) {
         auto res = std::make_shared<Node<device, Base>>(std::forward<Args>(args) ...);
         return res;
       } // make_node by initial node
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      static NodePtr make(T1&& _legs, T2&& _dims) {
+      static std::shared_ptr<Node<device, Base>> make(T1&& _legs, T2&& _dims) {
         auto res = std::make_shared<Node<device, Base>>(std::forward<T1>(_legs), std::forward<T2>(_dims));
         return res;
       } // make_node by initial node
 
       template<class T=std::vector<Legs>>
-      static NodePtr make(T&& _legs) {
+      static std::shared_ptr<Node<device, Base>> make(T&& _legs) {
         auto res = std::make_shared<Node<device, Base>>(std::forward<T>(_legs));
         return res;
       } // make_node by initial node
 
-      NodePtr calc() {
+      std::shared_ptr<Node<device, Base>> calc() {
         if (!flag) {
           tensor = func();
           flag = true;
         }
         return shared_from_this();
       } // calc
+
+      const Node<device, Base>& value() {
+        calc();
+        return *this;
+      } // value
 
       // node op
 
@@ -156,25 +159,25 @@ namespace TAT {
         return tensor.get();
       } // get
 
-      NodePtr set_test() {
+      std::shared_ptr<Node<device, Base>> set_test() {
         reset();
         tensor.set_test();
         flag = true;
         return shared_from_this();
       } // set_test
-      NodePtr set_zero() {
+      std::shared_ptr<Node<device, Base>> set_zero() {
         reset();
         tensor.set_zero();
         flag = true;
         return shared_from_this();
       } // set_zero
-      NodePtr set_random(const std::function<Base()>& random) {
+      std::shared_ptr<Node<device, Base>> set_random(const std::function<Base()>& random) {
         reset();
         tensor.set_random(random);
         flag = true;
         return shared_from_this();
       } // set_random
-      NodePtr set_constant(Base num) {
+      std::shared_ptr<Node<device, Base>> set_constant(Base num) {
         reset();
         tensor.set_constant(num);
         flag = true;
@@ -202,7 +205,7 @@ namespace TAT {
       template<int n>
       Node<device, Base> norm() const;
 
-      Node<device, Base> transpose(const std::vector<Legs>& new_legs) const;
+      std::shared_ptr<Node<device, Base>> transpose(const std::vector<Legs>& new_legs) const;
 
       static Node<device, Base> contract(const Node<device, Base>& node1,
                                            const Node<device, Base>& node2,
