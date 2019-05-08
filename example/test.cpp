@@ -19,8 +19,7 @@
 
 #include <TAT.hpp>
 
-template<TAT::Device device=TAT::Device::CPU, class Base=double>
-using Node = TAT::Node<device, Base>;
+using TAT::Node;
 
 using namespace TAT::legs_name;
 

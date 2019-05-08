@@ -214,7 +214,7 @@ namespace TAT {
     DefineData(SW);
 #undef DefineData
 
-    template<Device device, class Base, ENABLE_IF(is_scalar<Base>)>
+    template<Device device=Device::CPU, class Base=double, ENABLE_IF(is_scalar<Base>)>
     using Data = typename Magic<device, Base>::type;
   } // namespace data
   using data::Data;
@@ -239,11 +239,11 @@ namespace TAT {
   } // namespace node
   using node::Node;
 
-  namespace lensor {
+  namespace lazy {
     template<Device device=Device::CPU, class Base=double>
-    class Lensor;
-  } // namespace lensor
-  using lensor::Lensor;
+    class Lazy;
+  } // namespace lazy
+  using lazy::Lazy;
 
   namespace site {
     template<Device device=Device::CPU, class Base=double>
@@ -265,8 +265,8 @@ namespace TAT {
 #include "TAT/Block.hpp"
 // Tensor
 #include "TAT/Node.hpp"
+#include "TAT/Lazy.hpp"
 
-#include "TAT/Lensor.hpp"
 #include "TAT/Site.hpp"
 #include "TAT/Lattice.hpp"
 

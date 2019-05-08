@@ -20,11 +20,11 @@
 #include <TAT.hpp>
 
 using namespace TAT::legs_name;
-using Lensor=TAT::Lensor<TAT::Device::CPU, double>;
+using Lazy=TAT::Lazy<TAT::Device::CPU, double>;
 using Node=TAT::Node<TAT::Device::CPU, double>;
 
 int main() {
-  auto a = Lensor::make({Up, Down}, {2, 3})->set_test();
+  auto a = Lazy::make({Up, Down}, {2, 3})->set_test();
   std::cout << a->value() << std::endl;
   auto b = a->transpose({Down, Up});
   std::cout << b->value() << std::endl;
@@ -33,7 +33,7 @@ int main() {
   b->legs_rename({{Up, Right}});
   b->normalize<-1>();
   std::cout << b->value() << std::endl;
-  auto c = TAT::Lensor<TAT::Device::CPU, int>::make()->set(b->value().to<int>());
+  auto c = TAT::Lazy<TAT::Device::CPU, int>::make()->set(b->value().to<int>());
   std::cout << c->value() << std::endl;
   return 0;
 } // main
