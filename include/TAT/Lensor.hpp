@@ -39,14 +39,14 @@ namespace TAT {
   namespace lensor {
     namespace legs_rename {
       template<Device device, class Base>
-      Tensor<device, Base> run(std::function<Tensor<device, Base>()> tensor, const std::map<Legs, Legs>& dict) {
+      Node<device, Base> run(std::function<Node<device, Base>()> tensor, const std::map<Legs, Legs>& dict) {
         return std::move(tensor().legs_rename(dict));
       } // run
     } // legs_rename
 
     namespace normalize {
       template<Device device, class Base, int n>
-      Tensor<device, Base> run(std::function<Tensor<device, Base>()> tensor) {
+      Node<device, Base> run(std::function<Node<device, Base>()> tensor) {
         auto tmp = tensor();
         return tmp/tmp.template norm<n>();
       } // run
@@ -54,7 +54,7 @@ namespace TAT {
 
     namespace transpose {
       template<Device device, class Base>
-      Tensor<device, Base> run(std::shared_ptr<Lensor<device, Base>> tensor, const std::vector<Legs>& legs) {
+      Node<device, Base> run(std::shared_ptr<Lensor<device, Base>> tensor, const std::vector<Legs>& legs) {
         return tensor->value().transpose(legs);
       } // run
     } // namespace transpsoe
@@ -62,9 +62,9 @@ namespace TAT {
     template<Device device, class Base>
     class Lensor : public std::enable_shared_from_this<Lensor<device, Base>> {
      public:
-      Tensor<device, Base> tensor;
+      Node<device, Base> tensor;
       bool flag = false; // whether tensor is valid
-      std::function<Tensor<device, Base>()> func;
+      std::function<Node<device, Base>()> func;
       std::vector<std::weak_ptr<Lensor>> downstream;
 
       std::shared_ptr<Lensor<device, Base>> reset() {
@@ -86,7 +86,7 @@ namespace TAT {
       template<class ... Args>
       std::shared_ptr<Lensor<device, Base>> set(Args&& ... args) {
         reset(); // since new tensor set, lensor need reset
-        tensor = std::move(Tensor<device, Base>(std::forward<Args>(args) ...));
+        tensor = std::move(Node<device, Base>(std::forward<Args>(args) ...));
         flag = true;
         return shared_from_this();
       } // set_lensor, update tensor
@@ -94,7 +94,7 @@ namespace TAT {
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
       std::shared_ptr<Lensor<device, Base>> set(T1&& _legs, T2&& _dims) {
         reset(); // since new tensor set, lensor need reset
-        tensor = std::move(Tensor<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
+        tensor = std::move(Node<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
         flag = true;
         return shared_from_this();
       } // set_lensor, update tensor
@@ -138,7 +138,7 @@ namespace TAT {
         return shared_from_this();
       } // set_constant
 
-      const Tensor<device, Base>& value() {
+      const Node<device, Base>& value() {
         if (!flag) {
           tensor = func();
           flag = true;

@@ -15,30 +15,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TAT_USE_CPU
-
-// SVD
-#if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
-#define TAT_USE_GESVD
-#endif
-
-// QR
-#if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
-#define TAT_USE_GEQRF
-#endif
+#define TAT_DEFAULT
 
 #include <TAT.hpp>
 
 using namespace TAT::legs_name;
 using Lensor=TAT::Lensor<TAT::Device::CPU, double>;
-using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
+using Node=TAT::Node<TAT::Device::CPU, double>;
 
 int main() {
   auto a = Lensor::make({Up, Down}, {2, 3})->set_test();
   std::cout << a->value() << std::endl;
   auto b = a->transpose({Down, Up});
   std::cout << b->value() << std::endl;
-  a->set(Tensor({Up, Down}, {4, 5}))->set_test();
+  a->set(Node({Up, Down}, {4, 5}))->set_test();
   std::cout << b->value() << std::endl;
   b->legs_rename({{Up, Right}});
   b->normalize<-1>();

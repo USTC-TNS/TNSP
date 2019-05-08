@@ -39,7 +39,9 @@
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 
 #if (!defined TAT_USE_CPU && !defined TAT_USE_CUDA && !defined TAT_USE_DCU && !defined TAT_USE_SW)
+#if !defined TAT_DEFAULT
 #warning use CPU by default
+#endif
 #define TAT_USE_CPU
 #endif
 
@@ -68,7 +70,9 @@ extern "C"
 #error only one of GESDD, GESVD and GESVDX could be in use
 #endif
 #if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
+#if !defined TAT_DEFAULT
 #warning must use one of GESDD, GESVD and GESVDX, default use GESVD now
+#endif
 #define TAT_USE_GESVD
 #endif
 
@@ -77,7 +81,9 @@ extern "C"
 #error only one of GEQRF and GEQP3 could be in use
 #endif
 #if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
+#if !defined TAT_DEFAULT
 #warning must use one of GEQRF and GEQP3, default use GEQRF now
+#endif
 #define TAT_USE_GEQRF
 #endif
 
@@ -233,7 +239,6 @@ namespace TAT {
   } // namespace node
   using node::Node;
 
-  /*
   namespace lensor {
     template<Device device=Device::CPU, class Base=double>
     class Lensor;
@@ -254,17 +259,15 @@ namespace TAT {
     class Lattice;
   } // namespace lattice
   using site::Site;
-  */
 } // namespace TAT
 
 #include "TAT/Data.hpp"
 #include "TAT/Block.hpp"
 // Tensor
 #include "TAT/Node.hpp"
-/*
+
 #include "TAT/Lensor.hpp"
 #include "TAT/Site.hpp"
 #include "TAT/Lattice.hpp"
-*/
 
 #endif // TAT_HPP_

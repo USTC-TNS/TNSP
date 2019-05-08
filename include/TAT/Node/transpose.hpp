@@ -37,23 +37,22 @@ namespace TAT {
     } // namespace node::transpose
 
     template<Device device, class Base>
-    std::shared_ptr<Node<device, Base>> Node<device, Base>::transpose(const std::vector<Legs>& new_legs) const {
-      auto res=std::make_shared<Node<device, Base>>();
-      res->legs = internal::in_and_in(new_legs, legs);
-      assert(legs.size()==res->legs.size());
+    Node<device, Base> Node<device, Base>::transpose(const std::vector<Legs>& new_legs) const {
+      Node<device, Base> res;
+      res.legs = internal::in_and_in(new_legs, legs);
+      assert(legs.size()==res.legs.size());
 #ifndef NDEBUG
-      auto set_new = std::set<Legs>(res->legs.begin(), res->legs.end());
-      assert(set_new.size()==res->legs.size());
+      auto set_new = std::set<Legs>(res.legs.begin(), res.legs.end());
+      assert(set_new.size()==res.legs.size());
       set_new.insert(legs.begin(), legs.end());
-      assert(set_new.size()==res->legs.size());
+      assert(set_new.size()==res.legs.size());
 #endif // NDEBUG
       std::vector<Rank> plan;
-      transpose::plan(plan, res->legs, legs);
-      assert(res->legs.size()==legs.size());
+      transpose::plan(plan, res.legs, legs);
+      assert(res.legs.size()==legs.size());
       assert(plan.size()==legs.size());
-      res->func = [&, plan](){return tensor.transpose(plan);};
-      downstream.push_back(res);
-      return res;
+      res.tensor = tensor.transpose(plan);
+      return std::move(res);
     } // transpose
   } // namespace node
 } // namespace TAT

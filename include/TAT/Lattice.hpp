@@ -46,24 +46,24 @@ namespace TAT {
 
     template<class Tags, Device device, class Base>
     class Lattice {
-      using TensorObj = Tensor<device, Base>;
-      using TensorPtr = std::shared_ptr<TensorObj>;
+      using NodeObj = Node<device, Base>;
+      using NodePtr = std::shared_ptr<NodeObj>;
       friend class Link;
       class Link {
        public:
         Tags tag;
         Legs leg;
-        TensorPtr env;
+        NodePtr env;
       }; // class Link
-      std::map<Tags, TensorPtr> site;
+      std::map<Tags, NodePtr> site;
       std::map<Tags, std::map<Legs, Link>> bond;
 
       // use lattice(i, j) = make_site({...}, {...})
-      TensorObj& operator[](const Tags& tag) {
+      NodeObj& operator[](const Tags& tag) {
         return *site[tag];
       } // operator[]
       template<class ... Args>
-      TensorObj& operator()(const Args& ... args) {
+      NodeObj& operator()(const Args& ... args) {
         return *site[ {args ...}];
       } // operator()
 
@@ -72,7 +72,7 @@ namespace TAT {
       // set_bond(.., .., .., .., env)
       void set_bond(const Tags& tag1, const Legs& leg1,
                     const Tags& tag2, const Legs& leg2,
-                    std::shared_ptr<Tensor<device, Base>> env) {
+                    std::shared_ptr<Node<device, Base>> env) {
         bond[tag1][leg1] = {tag2, leg2, env};
         bond[tag2][leg2] = {tag1, leg1, env};
       } // set_bond
@@ -83,19 +83,19 @@ namespace TAT {
       } // set_bond
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      static TensorPtr make_site(T1&& _legs, T2&& _dims, const std::function<Base()>& random= {}) {
-        auto res = std::make_shared<TensorObj>(std::forward<T1>(_legs), std::forward<T2>(_dims));
+      static NodePtr make_site(T1&& _legs, T2&& _dims, const std::function<Base()>& random= {}) {
+        auto res = std::make_shared<NodeObj>(std::forward<T1>(_legs), std::forward<T2>(_dims));
         if (random) {
           res->set_random(random);
         } // is random exsit
         return res;
       } // make_site
 
-      static TensorPtr make_env(const Size& dims=-1) {
+      static NodePtr make_env(const Size& dims=-1) {
         if (dims==-1) {
-          return TensorPtr();
+          return NodePtr();
         } // if no env
-        auto res = std::make_shared<TensorObj>({legs_name::Phy}, {dims});
+        auto res = std::make_shared<NodeObj>({legs_name::Phy}, {dims});
         res->set_constant(1);
         return res;
       } // make_env

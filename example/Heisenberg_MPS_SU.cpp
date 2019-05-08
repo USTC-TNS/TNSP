@@ -24,29 +24,19 @@
 
 #include <args.hxx>
 
-#define TAT_USE_CPU
-
-// SVD
-#if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
-#define TAT_USE_GESVD
-#endif
-
-// QR
-#if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
-#define TAT_USE_GEQRF
-#endif
+#define TAT_DEFAULT
 
 #include <TAT.hpp>
 
 struct MPS {
   using Size=TAT::Size;
-  using Tensor=TAT::Tensor<TAT::Device::CPU, double>;
+  using Node=TAT::Node<TAT::Device::CPU, double>;
   using Site=TAT::Site<TAT::Device::CPU, double>;
 
   int L;
   Size D;
-  Tensor hamiltonian;
-  Tensor identity;
+  Node hamiltonian;
+  Node identity;
   std::vector<Site> lattice;
 
   std::vector<Site> psipsiUp;
@@ -54,8 +44,8 @@ struct MPS {
   std::vector<Site> psipsiLeft;
   std::vector<Site> psipsiRight;
 
-  std::map<int, Tensor> left_contract;
-  std::map<int, Tensor> right_contract;
+  std::map<int, Node> left_contract;
+  std::map<int, Node> right_contract;
 
   static double random() {
     return double(std::rand())/(RAND_MAX)*2-1;
@@ -89,7 +79,7 @@ struct MPS {
         0, 2, -1, 0,
         0, 0, 0, 1
       };
-      hamiltonian = Tensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
+      hamiltonian = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* hamiltonian_data = hamiltonian.get();
       for (int i=0; i<16; i++) {
         hamiltonian_data[i] = default_H[i];
@@ -103,7 +93,7 @@ struct MPS {
         0, 0, 1, 0,
         0, 0, 0, 1
       };
-      identity = Tensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
+      identity = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* identity_data = identity.get();
       for (int i=0; i<16; i++) {
         identity_data[i] = default_I[i];
@@ -111,7 +101,7 @@ struct MPS {
     } // identity
   }
 
-  void update(const Tensor& updater) {
+  void update(const Node& updater) {
     using namespace TAT::legs_name;
     for (int i=0; i<L-1; i++) {
       lattice[i].update_to(lattice[i+1], Right, Left, D, updater, {});
@@ -145,25 +135,25 @@ struct MPS {
 
   double energy_at_i_and_i_plus_1(int i) {
     using namespace TAT::legs_name;
-    auto psi = Tensor::contract(lattice[i].tensor(), lattice[i+1].tensor(), {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
-    auto Hpsi = Tensor::contract(psi, hamiltonian, {Phy1, Phy2}, {Phy1, Phy2}, {}, {});
-    auto psiHpsi = Tensor::contract(Hpsi, psi, {Phy3, Phy4}, {Phy1, Phy2}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}});
-    auto leftpsiHpsi = Tensor::contract(psiHpsi, left_contract[i-1], {Left1, Left2}, {Right1, Right2}, {}, {});
-    auto res = Tensor::contract(leftpsiHpsi, right_contract[i+2], {Right1, Right2}, {Left1, Left2}, {}, {});
+    auto psi = Node::contract(lattice[i].tensor(), lattice[i+1].tensor(), {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
+    auto Hpsi = Node::contract(psi, hamiltonian, {Phy1, Phy2}, {Phy1, Phy2}, {}, {});
+    auto psiHpsi = Node::contract(Hpsi, psi, {Phy3, Phy4}, {Phy1, Phy2}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}});
+    auto leftpsiHpsi = Node::contract(psiHpsi, left_contract[i-1], {Left1, Left2}, {Right1, Right2}, {}, {});
+    auto res = Node::contract(leftpsiHpsi, right_contract[i+2], {Right1, Right2}, {Left1, Left2}, {}, {});
     return *res.get();
   }
 
   void prepare_aux() {
     using namespace TAT::legs_name;
-    left_contract[-1] = Tensor({Right1, Right2}, {1, 1});
+    left_contract[-1] = Node({Right1, Right2}, {1, 1});
     *left_contract[-1].get() = 1;
-    right_contract[L] = Tensor({Left1, Left2}, {1, 1});
+    right_contract[L] = Node({Left1, Left2}, {1, 1});
     *right_contract[L].get() = 1;
     for (int i=0; i<=L-1; i++) {
-      left_contract[i] = Tensor::contract(left_contract[i-1], Tensor::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Right1, Right2}, {Left1, Left2}, {}, {});
+      left_contract[i] = Node::contract(left_contract[i-1], Node::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Right1, Right2}, {Left1, Left2}, {}, {});
     }
     for (int i=L-1; i>=0; i--) {
-      right_contract[i] = Tensor::contract(right_contract[i+1], Tensor::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Left1, Left2}, {Right1, Right2}, {}, {});
+      right_contract[i] = Node::contract(right_contract[i+1], Node::contract(lattice[i].tensor(), lattice[i].tensor(), {Phy}, {Phy}, {{Left, Left1}, {Right, Right1}}, {{Left, Left2}, {Right, Right2}}), {Left1, Left2}, {Right1, Right2}, {}, {});
     }
 
     /*

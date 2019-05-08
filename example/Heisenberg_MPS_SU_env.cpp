@@ -24,30 +24,20 @@
 
 #include <args.hxx>
 
-#define TAT_USE_CPU
-
-// SVD
-#if (!defined TAT_USE_GESDD && !defined TAT_USE_GESVD && !defined TAT_USE_GESVDX)
-#define TAT_USE_GESVD
-#endif
-
-// QR
-#if (!defined TAT_USE_GEQRF && !defined TAT_USE_GEQP3)
-#define TAT_USE_GEQRF
-#endif
+#define TAT_DEFAULT
 
 #include <TAT.hpp>
 
 struct MPS {
   using Size=TAT::Size;
-  using RawTensor=TAT::Tensor<TAT::Device::CPU, double>;
-  using Tensor=TAT::Site<TAT::Device::CPU, double>;
+  using RawNode=TAT::Node<TAT::Device::CPU, double>;
+  using Node=TAT::Site<TAT::Device::CPU, double>;
 
   int L;
   Size D;
-  RawTensor hamiltonian;
-  RawTensor identity;
-  std::vector<Tensor> lattice;
+  RawNode hamiltonian;
+  RawNode identity;
+  std::vector<Node> lattice;
 
   static double random() {
     return double(std::rand())/(RAND_MAX)*2-1;
@@ -56,15 +46,15 @@ struct MPS {
   MPS(int _L, Size _D) : L(_L), D(_D) {
     using namespace TAT::legs_name;
     {
-      lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, 1, D})));
+      lattice.push_back(Node().set(RawNode({Phy, Left, Right}, {2, 1, D})));
       for (int i=1; i<L-1; i++) {
-        lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, D})));
+        lattice.push_back(Node().set(RawNode({Phy, Left, Right}, {2, D, D})));
       }
-      lattice.push_back(Tensor().set(RawTensor({Phy, Left, Right}, {2, D, 1})));
+      lattice.push_back(Node().set(RawNode({Phy, Left, Right}, {2, D, 1})));
     } // lattice
     {
       for (int i=0; i<L-1; i++) {
-        Tensor::link_env(lattice[i], Right, lattice[i+1], Left, lattice[i].create_env_for_leg(Right));
+        Node::link_env(lattice[i], Right, lattice[i+1], Left, lattice[i].create_env_for_leg(Right));
       }
       //std::cout << lattice[0](Right).site()(Right).site()(Right).site().get() << std::endl ;
     }
@@ -75,7 +65,7 @@ struct MPS {
         0, 2, -1, 0,
         0, 0, 0, 1
       };
-      hamiltonian = RawTensor( {Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
+      hamiltonian = RawNode( {Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* hamiltonian_data = hamiltonian.get();
       for (int i=0; i<16; i++) {
         hamiltonian_data[i] = default_H[i];
@@ -89,7 +79,7 @@ struct MPS {
         0, 0, 1, 0,
         0, 0, 0, 1
       };
-      identity = RawTensor({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
+      identity = RawNode({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2});
       double* identity_data = identity.get();
       for (int i=0; i<16; i++) {
         identity_data[i] = default_I[i];
