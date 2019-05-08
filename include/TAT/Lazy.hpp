@@ -37,46 +37,24 @@ namespace TAT {
   // T e = d.U/S/V
   // std::cout << e.value()
   namespace lazy {
-    namespace legs_rename {
-      template<Device device, class Base>
-      Node<device, Base> run(std::function<Node<device, Base>()> tensor, const std::map<Legs, Legs>& dict) {
-        return std::move(tensor().legs_rename(dict));
-      } // run
-    } // legs_rename
-
-    namespace normalize {
-      template<Device device, class Base, int n>
-      Node<device, Base> run(std::function<Node<device, Base>()> tensor) {
-        auto tmp = tensor();
-        return tmp/tmp.template norm<n>();
-      } // run
-    } // legs_rename
-
-    namespace transpose {
-      template<Device device, class Base>
-      Node<device, Base> run(std::shared_ptr<Lazy<device, Base>> tensor, const std::vector<Legs>& legs) {
-        return tensor->value().transpose(legs);
-      } // run
-    } // namespace transpsoe
-
     template<Device device, class Base>
-    class Lazy : public std::enable_shared_from_this<Lazy<device, Base>> {
+    class Lazy final : public BaseLazy, public std::enable_shared_from_this<Lazy<device, Base>> {
      public:
-      Node<device, Base> tensor;
-      bool flag = false; // whether tensor is valid
+      std::unique_ptr<Node<device, Base>> node;
       std::function<Node<device, Base>()> func;
       std::vector<std::weak_ptr<Lazy>> downstream;
 
-      std::shared_ptr<Lazy<device, Base>> reset() {
-        if (flag) {
-          flag = false;
+      void reset(bool release_itself=true) {
+        if (node) {
+          if(release_itself) {
+            delete node.release();
+          }
           for (const auto& ds : downstream) {
             if (!ds.expired()) {
               ds.lock()->reset();
             } // need reset
           } // downstream
-        } // if flag
-        return shared_from_this();
+        } // if node has value
       } // reset this lazy and all its children
 
       std::shared_ptr<Lazy<device, Base>> shared_from_this() {
@@ -85,77 +63,95 @@ namespace TAT {
 
       template<class ... Args>
       std::shared_ptr<Lazy<device, Base>> set(Args&& ... args) {
-        reset(); // since new tensor set, lazy need reset
-        tensor = std::move(Node<device, Base>(std::forward<Args>(args) ...));
-        flag = true;
+        reset(); // since new node set, lazy need reset
+        node = std::unique_ptr<Node<device, Base>>(new Node<device, Base>(std::forward<Args>(args) ...));
         return shared_from_this();
-      } // set_lazy, update tensor
+      } // set_lazy, update node
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
       std::shared_ptr<Lazy<device, Base>> set(T1&& _legs, T2&& _dims) {
-        reset(); // since new tensor set, lazy need reset
-        tensor = std::move(Node<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
-        flag = true;
+        reset(); // since new node set, lazy need reset
+        node = std::unique_ptr<Node<device, Base>>(new Node<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
         return shared_from_this();
-      } // set_lazy, update tensor
+      } // set_lazy, update node
 
       template<class ... Args>
       static std::shared_ptr<Lazy<device, Base>> make(Args&& ... args) {
         auto res = std::make_shared<Lazy<device, Base>>();
         res->set(std::forward<Args>(args) ...);
         return res;
-      } // make_lazy by initial tensor
+      } // make_lazy by initial node
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
       static std::shared_ptr<Lazy<device, Base>> make(T1&& _legs, T2&& _dims) {
         auto res = std::make_shared<Lazy<device, Base>>();
         res->set(std::forward<T1>(_legs), std::forward<T2>(_dims));
         return res;
-      } // make_lazy by initial tensor
+      } // make_lazy by initial node
 
       std::shared_ptr<Lazy<device, Base>> set_test() {
-        reset();
-        tensor.set_test();
-        flag = true;
+        reset(false);
+        node->set_test();
         return shared_from_this();
       } // set_test
       std::shared_ptr<Lazy<device, Base>> set_zero() {
-        reset();
-        tensor.set_zero();
-        flag = true;
+        reset(false);
+        node->set_zero();
         return shared_from_this();
       } // set_zero
       std::shared_ptr<Lazy<device, Base>> set_random(const std::function<Base()>& random) {
-        reset();
-        tensor.set_random(random);
-        flag = true;
+        reset(false);
+        node->set_random(random);
         return shared_from_this();
       } // set_random
       std::shared_ptr<Lazy<device, Base>> set_constant(Base num) {
-        reset();
-        tensor.set_constant(num);
-        flag = true;
+        reset(false);
+        node->set_constant(num);
         return shared_from_this();
       } // set_constant
 
-      const Node<device, Base>& value() {
-        if (!flag) {
-          tensor = func();
-          flag = true;
-        }
-        return tensor;
+      std::shared_ptr<Lazy<device, Base>> calc() {
+        if (!node) {
+          set(std::move(func()));
+        } // has no value
+        return shared_from_this();
       } // calc
 
+      const Node<device, Base>& value() {
+        calc();
+        return *node;
+      } // value
+
+      // several inplace op
+
       std::shared_ptr<Lazy<device, Base>> legs_rename(const std::map<Legs, Legs>& dict) {
-        reset();
-        func = std::bind(legs_rename::run<device, Base>, std::move(func), dict);
+        reset(false);
+        if (node) {
+          node->legs_rename(dict);
+        } else {
+          auto&& tmp = std::move(func);
+          func = [=](){
+            auto res = tmp();
+            res.legs_rename(dict);
+            return std::move(res);
+          };
+        } // flag
         return shared_from_this();
       } // legs_rename
 
       template<int n>
       std::shared_ptr<Lazy<device, Base>> normalize() {
-        reset();
-        func = std::bind(normalize::run<device, Base, n>, std::move(func));
+        reset(false);
+        if (node) {
+          *node /= node->template norm<n>();
+        } else {
+          auto&& tmp = std::move(func);
+          func = [=](){
+            auto res=tmp();
+            res/=res.template norm<n>();
+            return std::move(res);
+          };
+        } // has value
         return shared_from_this();
       } // normalize
 
@@ -164,7 +160,10 @@ namespace TAT {
 
       std::shared_ptr<Lazy<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lazy<device, Base>>();
-        res->func = std::bind(transpose::run<device, Base>, shared_from_this(), new_legs);
+        auto origin = shared_from_this();
+        res->func = [=](){
+          return origin->value().transpose(new_legs);
+        };
         downstream.push_back(res);
         return res;
       } // transpose

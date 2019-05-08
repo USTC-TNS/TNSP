@@ -240,11 +240,16 @@ namespace TAT {
   using node::Node;
 
   namespace lazy {
+    class BaseLazy {
+      virtual void reset(bool)=0;
+    };
+
     template<Device device=Device::CPU, class Base=double>
     class Lazy;
   } // namespace lazy
   using lazy::Lazy;
 
+  // deprecated
   namespace site {
     template<Device device=Device::CPU, class Base=double>
     class Site;
