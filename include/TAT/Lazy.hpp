@@ -38,13 +38,13 @@ namespace TAT {
   // std::cout << e.value()
   namespace lazy {
     template<Device device, class Base>
-    class Lazy final : public BaseLazy, public std::enable_shared_from_this<Lazy<device, Base>> {
+    class Lazy final : public BaseLazy {
      public:
       std::unique_ptr<Node<device, Base>> node;
       std::function<Node<device, Base>()> func;
-      std::vector<std::weak_ptr<Lazy>> downstream;
+      std::vector<std::weak_ptr<BaseLazy>> downstream;
 
-      void reset(bool release_itself=true) {
+      void reset(bool release_itself=true) override {
         if (node) {
           if(release_itself) {
             delete node.release();
@@ -58,7 +58,7 @@ namespace TAT {
       } // reset this lazy and all its children
 
       std::shared_ptr<Lazy<device, Base>> shared_from_this() {
-        return std::enable_shared_from_this<Lazy<device, Base>>::shared_from_this();
+        return std::dynamic_pointer_cast<Lazy<device, Base>>(std::enable_shared_from_this<BaseLazy>::shared_from_this());
       } // shared_from_this
 
       template<class ... Args>
@@ -164,9 +164,20 @@ namespace TAT {
         res->func = [=](){
           return origin->value().transpose(new_legs);
         };
-        downstream.push_back(res);
+        downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
         return res;
       } // transpose
+
+      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
+      std::shared_ptr<Lazy<device, Base2>> to() {
+        auto res = std::make_shared<Lazy<device, Base>>();
+        auto origin = shared_from_this();
+        res->func = [=](){
+          return origin->value().template to<Base2>();
+        };
+        downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
+        return res;
+      }
     }; // class Lazy
   } // namespace lazy
 } // namespace TAT

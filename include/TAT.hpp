@@ -240,8 +240,9 @@ namespace TAT {
   using node::Node;
 
   namespace lazy {
-    class BaseLazy {
-      virtual void reset(bool)=0;
+    class BaseLazy : public std::enable_shared_from_this<BaseLazy> {
+     public:
+      virtual void reset(bool reset_itself=true)=0;
     };
 
     template<Device device=Device::CPU, class Base=double>
