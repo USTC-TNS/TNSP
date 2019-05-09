@@ -47,3 +47,4 @@ now, I am writing this tensor library.
 - Adaptors                                                        [?需使用经验]
 - lazy应该在Tensor这一层中实现                                    [WIP]
 - 格式与组织方式有点丑啊
+- doxygen
