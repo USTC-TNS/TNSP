@@ -89,15 +89,15 @@ namespace TAT {
       Block<device, Base> transpose(const std::vector<Rank>& plan) const;
 
       static Block<device, Base> contract(const Block<device, Base>& block1,
-                                         const Block<device, Base>& block2,
-                                         const std::vector<Rank>& plan1,
-                                         const std::vector<Rank>& plan2,
-                                         const Rank& contract_num);
+                                          const Block<device, Base>& block2,
+                                          const std::vector<Rank>& plan1,
+                                          const std::vector<Rank>& plan2,
+                                          const Rank& contract_num);
 
       Block<device, Base> contract(const Block<device, Base>& block2,
-                                  const std::vector<Rank>& plan1,
-                                  const std::vector<Rank>& plan2,
-                                  const Rank& contract_num) const {
+                                   const std::vector<Rank>& plan1,
+                                   const std::vector<Rank>& plan2,
+                                   const Rank& contract_num) const {
         return std::move(Block<device, Base>::contract(*this, block2, plan1, plan2, contract_num));
       } // contract
 

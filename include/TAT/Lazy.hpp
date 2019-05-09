@@ -46,7 +46,7 @@ namespace TAT {
 
       void reset(bool release_itself=true) override {
         if (node) {
-          if(release_itself) {
+          if (release_itself) {
             delete node.release();
           }
           for (const auto& ds : downstream) {
@@ -130,7 +130,7 @@ namespace TAT {
           node->legs_rename(dict);
         } else {
           auto&& tmp = std::move(func);
-          func = [=](){
+          func = [=]() {
             auto res = tmp();
             res.legs_rename(dict);
             return std::move(res);
@@ -146,7 +146,7 @@ namespace TAT {
           *node /= node->template norm<n>();
         } else {
           auto&& tmp = std::move(func);
-          func = [=](){
+          func = [=]() {
             auto res=tmp();
             res/=res.template norm<n>();
             return std::move(res);
@@ -158,26 +158,53 @@ namespace TAT {
       // no to<n> function since downstream need same type
       // the function above is lazy inplace, the below is not
 
+      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
+      std::shared_ptr<Lazy<device, Base2>> to() {
+        auto res = std::make_shared<Lazy<device, Base>>();
+        auto origin = shared_from_this();
+        res->func = [=]() {
+          return origin->value().template to<Base2>();
+        };
+        downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
+        return res;
+      }
+
+      template<int n>
+      std::shared_ptr<Lazy<device, Base>> norm() {
+        auto res = std::make_shared<Lazy<device, Base>>();
+        auto origin = shared_from_this();
+        res->func = [=]() {
+          return origin->value().template norm<n>();
+        };
+        downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
+        return res;
+      } // norm
+
       std::shared_ptr<Lazy<device, Base>> transpose(const std::vector<Legs>& new_legs) {
         auto res = std::make_shared<Lazy<device, Base>>();
         auto origin = shared_from_this();
-        res->func = [=](){
+        res->func = [=]() {
           return origin->value().transpose(new_legs);
         };
         downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
         return res;
       } // transpose
 
-      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
-      std::shared_ptr<Lazy<device, Base2>> to() {
+      static std::shared_ptr<Lazy<device, Base>> contract(std::shared_ptr<Lazy<device, Base>> lazy1,
+                                              std::shared_ptr<Lazy<device, Base>> lazy2,
+                                              const std::vector<Legs>& legs1,
+                                              const std::vector<Legs>& legs2,
+                                              const std::map<Legs, Legs>& map1,
+      const std::map<Legs, Legs>& map2) {
         auto res = std::make_shared<Lazy<device, Base>>();
         auto origin = shared_from_this();
-        res->func = [=](){
-          return origin->value().template to<Base2>();
+        res->func = [=]() {
+          return Node<device, Base>::contract(lazy1->value(), lazy2->value(), legs1, legs2, map1, map2);
         };
-        downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
+        lazy1->downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
+        lazy2->downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
         return res;
-      }
+      } // contract
     }; // class Lazy
   } // namespace lazy
 } // namespace TAT

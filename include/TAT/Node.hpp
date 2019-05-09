@@ -144,17 +144,17 @@ namespace TAT {
       Node<device, Base> transpose(const std::vector<Legs>& new_legs) const;
 
       static Node<device, Base> contract(const Node<device, Base>& node1,
-                                           const Node<device, Base>& node2,
-                                           const std::vector<Legs>& legs1,
-                                           const std::vector<Legs>& legs2,
-                                           const std::map<Legs, Legs>& map1,
-                                           const std::map<Legs, Legs>& map2);
+                                         const Node<device, Base>& node2,
+                                         const std::vector<Legs>& legs1,
+                                         const std::vector<Legs>& legs2,
+                                         const std::map<Legs, Legs>& map1,
+                                         const std::map<Legs, Legs>& map2);
 
       Node<device, Base> contract(const Node<device, Base>& node2,
-                                    const std::vector<Legs>& legs1,
-                                    const std::vector<Legs>& legs2,
-                                    const std::map<Legs, Legs>& map1 = {},
-                                    const std::map<Legs, Legs>& map2 = {}) const {
+                                  const std::vector<Legs>& legs1,
+                                  const std::vector<Legs>& legs2,
+                                  const std::map<Legs, Legs>& map1 = {},
+                                  const std::map<Legs, Legs>& map2 = {}) const {
         return std::move(Node<device, Base>::contract(*this, node2, legs1, legs2, map1, map2));
       } // contract
 
