@@ -46,3 +46,4 @@ now, I am writing this tensor library.
 - contract中, 可能使用?dot, ?gemv,以及转置策略问题, 类似的lq问题  [比较重要]
 - Adaptors                                                        [?需使用经验]
 - lazy应该在Tensor这一层中实现                                    [WIP]
+- 格式与组织方式有点丑啊
