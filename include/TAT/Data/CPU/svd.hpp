@@ -18,7 +18,7 @@
 #ifndef TAT_Data_CPU_Svd_HPP_
 #define TAT_Data_CPU_Svd_HPP_
 
-#include "../../Data.hpp"
+#include "../CPU.hpp"
 
 namespace TAT {
   namespace data {
