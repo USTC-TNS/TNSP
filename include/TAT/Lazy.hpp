@@ -197,7 +197,6 @@ namespace TAT {
                                               const std::map<Legs, Legs>& map1,
       const std::map<Legs, Legs>& map2) {
         auto res = std::make_shared<Lazy<device, Base>>();
-        auto origin = shared_from_this();
         res->func = [=]() {
           return Node<device, Base>::contract(lazy1->value(), lazy2->value(), legs1, legs2, map1, map2);
         };
