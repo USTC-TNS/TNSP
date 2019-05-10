@@ -3,4 +3,5 @@ build
 .idea
 .vs
 .vscode
+doc
 *.orig

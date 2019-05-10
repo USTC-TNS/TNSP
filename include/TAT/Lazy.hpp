@@ -204,6 +204,16 @@ namespace TAT {
         lazy2->downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
         return res;
       } // contract
+
+      std::shared_ptr<Lazy<device, Base>> multiple(std::shared_ptr<Lazy<device, Base>> other, const Legs& position) {
+        auto res = std::make_shared<Lazy<device, Base>>();
+        auto origin = shared_from_this();
+        res->func = [=]() {
+          return origin->value().multiple(other, position);
+        };
+        downstream.push_back(std::dynamic_pointer_cast<BaseLazy>(res));
+        return res;
+      } // multiple
     }; // class Lazy
   } // namespace lazy
 } // namespace TAT
