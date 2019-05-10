@@ -1,5 +1,6 @@
-/* TAT/Block/io.hpp
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+/** TAT/Block/io.hpp
+ * @file
+ * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

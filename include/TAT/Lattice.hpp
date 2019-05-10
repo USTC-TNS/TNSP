@@ -1,4 +1,3 @@
-
 /* TAT/Lattice.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *

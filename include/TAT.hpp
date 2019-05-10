@@ -1,5 +1,6 @@
-/* TAT.hpp
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+/** TAT.hpp
+ * @file
+ * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -94,10 +95,15 @@ extern "C"
 #endif // TAT_USE_CPU
 
 namespace TAT {
-  template<class T>
+  template<class Base>
   class is_scalar {
    public:
-    static constexpr bool value = std::is_scalar<T>::value || std::is_same<T, std::complex<float>>::value || std::is_same<T, std::complex<double>>::value || std::is_same<T, std::complex<long double>>::value;
+    static constexpr bool value = std::is_scalar<Base>::value;
+  };
+  template<class Base>
+  class is_scalar<std::complex<Base>> {
+   public:
+    static constexpr bool value = std::is_scalar<Base>::value;
   };
 
   template<class Base>
@@ -105,20 +111,10 @@ namespace TAT {
    public:
     using type=Base;
   };
-  template<>
-  class RealBaseClass<std::complex<float>> {
+  template<class Base>
+  class RealBaseClass<std::complex<Base>> {
    public:
-    using type=float;
-  };
-  template<>
-  class RealBaseClass<std::complex<double>> {
-   public:
-    using type=double;
-  };
-  template<>
-  class RealBaseClass<std::complex<long double>> {
-   public:
-    using type=long double;
+    using type=Base;
   };
   template<class T>
   using RealBase = typename RealBaseClass<T>::type;
