@@ -131,7 +131,7 @@ namespace TAT {
         return *this;
       } // legs_rename
 
-      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
+      template<class Base2, ENABLE_IF(scalar_tools::is_scalar<Base2>)>
       Node<device, Base2> to() const {
         Node<device, Base2> res;
         res.legs = legs;

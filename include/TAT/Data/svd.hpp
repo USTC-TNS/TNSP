@@ -28,7 +28,7 @@ namespace TAT {
       namespace svd {
 #if (defined TAT_USE_GESVD) || (defined TAT_USE_GESDD)
         template<class Base>
-        void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, RealBase<Base>* s, Base* vt);
+        void run(const Size& m, const Size& n, const Size& min, Base* a, Base* u, scalar_tools::RealBase<Base>* s, Base* vt);
 
         template<>
         void run<float>(const Size& m, const Size& n, const Size& min, float* a, float* u, float* s, float* vt) {
@@ -138,14 +138,14 @@ namespace TAT {
         } // cut
 
         template<class Base>
-        Data<Base> cutS(const Data<RealBase<Base>>& other,
+        Data<Base> cutS(const Data<scalar_tools::RealBase<Base>>& other,
                         const Size& n1,
                         const Size& n2) {
           (void)n1; // avoid warning of unused when NDEBUG
           Data<Base> res(n2);
           assert(n2<=n1);
           Base* dst = res.get();
-          const RealBase<Base>* src = other.get();
+          const scalar_tools::RealBase<Base>* src = other.get();
           for (Size i=0; i<n2; i++) {
             dst[i] = src[i];
           } // for i
@@ -233,7 +233,7 @@ namespace TAT {
 #endif // TAT_USE_GESVDX
 #if (defined TAT_USE_GESVD) || (defined TAT_USE_GESDD)
         res.U = Data<Base>(u_size*min_mn);
-        auto tmpS = Data<RealBase<Base>>(min_mn);
+        auto tmpS = Data<scalar_tools::RealBase<Base>>(min_mn);
         res.V = Data<Base>(min_mn*v_size);
         svd::run(u_size, v_size, min_mn, tmp.get(), res.U.get(), tmpS.get(), res.V.get());
         if (cut_dim!=min_mn) {

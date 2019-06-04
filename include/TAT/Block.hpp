@@ -76,7 +76,7 @@ namespace TAT {
         return *this;
       } // set_constant
 
-      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
+      template<class Base2, ENABLE_IF(scalar_tools::is_scalar<Base2>)>
       Block<device, Base2> to() const {
         Block<device, Base2> res;
         res.dims = dims;

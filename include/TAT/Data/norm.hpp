@@ -27,7 +27,7 @@ namespace TAT {
     namespace CPU {
       namespace norm {
         template<class Base>
-        void vAbs(const Size& size, const Base* a, RealBase<Base>* y);
+        void vAbs(const Size& size, const Base* a, scalar_tools::RealBase<Base>* y);
 
         template<>
         void vAbs<float>(const Size& size, const float* a, float* y) {
@@ -117,14 +117,14 @@ namespace TAT {
             auto i = iamax<Base>(size, data);
             return std::abs(data[i]);
           }
-          auto tmp = new RealBase<Base>[size];
+          auto tmp = new scalar_tools::RealBase<Base>[size];
           vAbs<Base>(size, data, tmp);
           if (n==2) {
-            vSqr<RealBase<Base>>(size, tmp, tmp);
+            vSqr<scalar_tools::RealBase<Base>>(size, tmp, tmp);
           } else {
-            vPowx<RealBase<Base>>(size, tmp, Base(n), tmp);
+            vPowx<scalar_tools::RealBase<Base>>(size, tmp, Base(n), tmp);
           }
-          auto res = asum<RealBase<Base>>(size, tmp);
+          auto res = asum<scalar_tools::RealBase<Base>>(size, tmp);
           delete[] tmp;
           return res;
         } // run

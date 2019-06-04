@@ -102,7 +102,7 @@ extern "C"
 #endif // TAT_USE_CPU
 
 namespace TAT {
-  inline namespace internal {
+  namespace scalar_tools {
     /**
      * is_scalar provide the member `value` to tell whether Base is scalar type.
      * 
@@ -160,9 +160,9 @@ namespace TAT {
      */
     template<class Base>
     using RealBase = typename _real_base<Base>::type;
+  } // namespace scalar_tools
 
   enum class Device : unsigned char {CPU, CUDA, DCU, SW};
-  } // inline namespace
 
   namespace legs {
     class Legs {
@@ -253,7 +253,7 @@ namespace TAT {
     DefineData(SW);
 #undef DefineData
 
-    template<Device device=Device::CPU, class Base=double, ENABLE_IF(is_scalar<Base>)>
+    template<Device device=Device::CPU, class Base=double, ENABLE_IF(scalar_tools::is_scalar<Base>)>
     using Data = typename _magic<device, Base>::type;
   } // namespace data
   using data::Data;

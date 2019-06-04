@@ -157,62 +157,62 @@ namespace TAT {
         return std::move(res);
       } // operator-
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base>& operator*=(Node<device, Base>& a, const B& b) {
         return a*=Node<device, Base>(b);
       } // operator*=
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator*(const Node<device, Base>& a, const B& b) {
         return a*Node<device, Base>(b);
       } // operator*
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator*(const B& b, const Node<device, Base>& a) {
         return Node<device, Base>(b)*a;
       } // operator*
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base>& operator/=(Node<device, Base>& a, const B& b) {
         return a/=Node<device, Base>(b);
       } // operator/=
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator/(const Node<device, Base>& a, const B& b) {
         return a/Node<device, Base>(b);
       } // operator/
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator/(const B& b, const Node<device, Base>& a) {
         return Node<device, Base>(b)/a;
       } // operator/
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base>& operator+=(Node<device, Base>& a, const B& b) {
         return a+=Node<device, Base>(b);
       } // operator+
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator+(const Node<device, Base>& a, const B& b) {
         return a+Node<device, Base>(b);
       } // operator+
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator+(const B& b, const Node<device, Base>& a) {
         return Node<device, Base>(b)+a;
       } // operator+
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base>& operator-=(Node<device, Base>& a, const B& b) {
         return a-=Node<device, Base>(b);
       } // operator-=
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator-(const Node<device, Base>& a, const B& b) {
         return a-Node<device, Base>(b);
       } // operator-
 
-      template<Device device, class Base, class B, ENABLE_IF(is_scalar<B>)>
+      template<Device device, class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
       Node<device, Base> operator-(const B& b, const Node<device, Base>& a) {
         return Node<device, Base>(b)-a;
       } // operator-

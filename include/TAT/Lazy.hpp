@@ -159,7 +159,7 @@ namespace TAT {
       // no to<n> function since downstream need same type
       // the function above is lazy inplace, the below is not
 
-      template<class Base2, ENABLE_IF(is_scalar<Base2>)>
+      template<class Base2, ENABLE_IF(scalar_tools::is_scalar<Base2>)>
       std::shared_ptr<Lazy<device, Base2>> to() {
         auto res = std::make_shared<Lazy<device, Base>>();
         auto origin = shared_from_this();

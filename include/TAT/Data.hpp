@@ -87,7 +87,7 @@ namespace TAT {
           return *this;
         } // set_constant
 
-        template<class Base2, ENABLE_IF(is_scalar<Base2>)>
+        template<class Base2, ENABLE_IF(scalar_tools::is_scalar<Base2>)>
         Data<Base2> to() const {
           Data<Base2> res(size);
           for (Size i=0; i<size; i++) {
