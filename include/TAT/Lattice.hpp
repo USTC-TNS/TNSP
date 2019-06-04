@@ -43,9 +43,9 @@ namespace TAT {
       int k;
     }; // Dimension<3>
 
-    template<class Tags, Device device, class Base>
+    template<class Tags, class Base>
     class Lattice {
-      using NodeObj = Node<device, Base>;
+      using NodeObj = Node<Base>;
       using NodePtr = std::shared_ptr<NodeObj>;
       friend class Link;
       class Link {
@@ -71,7 +71,7 @@ namespace TAT {
       // set_bond(.., .., .., .., env)
       void set_bond(const Tags& tag1, const Legs& leg1,
                     const Tags& tag2, const Legs& leg2,
-                    std::shared_ptr<Node<device, Base>> env) {
+                    std::shared_ptr<Node<Base>> env) {
         bond[tag1][leg1] = {tag2, leg2, env};
         bond[tag2][leg2] = {tag1, leg1, env};
       } // set_bond

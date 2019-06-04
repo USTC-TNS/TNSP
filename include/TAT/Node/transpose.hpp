@@ -37,9 +37,9 @@ namespace TAT {
       } // plan
     } // namespace node::transpose
 
-    template<Device device, class Base>
-    Node<device, Base> Node<device, Base>::transpose(const std::vector<Legs>& new_legs) const {
-      Node<device, Base> res;
+    template<class Base>
+    Node<Base> Node<Base>::transpose(const std::vector<Legs>& new_legs) const {
+      Node<Base> res;
       res.legs = internal::in_and_in(new_legs, legs);
       assert(legs.size()==res.legs.size());
 #ifndef NDEBUG

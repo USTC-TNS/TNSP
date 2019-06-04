@@ -234,46 +234,27 @@ namespace TAT {
   using Rank = unsigned int;
 
   namespace data {
-    template<Device device, class Base>
-    class _magic;
-#define DefineData(x) \
-      namespace x { \
-        template<class Base> \
-        class Data; \
-      } \
-      template<class Base> \
-      class _magic<Device::x, Base>{ \
-       public: \
-        using type=x::Data<Base>; \
-      }
-
-    DefineData(CPU);
-    DefineData(CUDA);
-    DefineData(DCU);
-    DefineData(SW);
-#undef DefineData
-
-    template<Device device=Device::CPU, class Base=double, ENABLE_IF(scalar_tools::is_scalar<Base>)>
-    using Data = typename _magic<device, Base>::type;
+    template<class Base=double>
+    class Data;
   } // namespace data
   using data::Data;
 
   namespace block {
-    template<Device device=Device::CPU, class Base=double>
+    template<class Base=double>
     class Block;
   } // namespace block
   using block::Block;
 
   namespace tensor {
-    template<Device device=Device::CPU, class Base=double>
+    template<class Base=double>
     class Tensor;
   } // namespace tensor
   //using tensor::Tensor;
-  template<Device device=Device::CPU, class Base=double>
-  using Tensor=Block<device, Base>;
+  template<class Base=double>
+  using Tensor=Block<Base>;
 
   namespace node {
-    template<Device device=Device::CPU, class Base=double>
+    template<class Base=double>
     class Node;
   } // namespace node
   using node::Node;
@@ -284,14 +265,14 @@ namespace TAT {
       virtual void reset(bool reset_itself=true)=0;
     };
 
-    template<Device device=Device::CPU, class Base=double>
+    template<class Base=double>
     class Lazy;
   } // namespace lazy
   using lazy::Lazy;
 
   // deprecated
   namespace site {
-    template<Device device=Device::CPU, class Base=double>
+    template<class Base=double>
     class Site;
   } // namespace site
   using site::Site;
@@ -300,7 +281,7 @@ namespace TAT {
     template<int dimension>
     class Dimension;
 
-    template<class Tags=Dimension<2>, Device device=Device::CPU, class Base=double>
+    template<class Tags=Dimension<2>, class Base=double>
     class Lattice;
   } // namespace lattice
   using site::Site;

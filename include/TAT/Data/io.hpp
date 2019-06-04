@@ -24,7 +24,6 @@
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       inline namespace io {
         template<class Base>
         std::ostream& operator<<(std::ostream& out, const Data<Base>& value) {
@@ -54,7 +53,6 @@ namespace TAT {
           return in;
         } // operator<<
       } // namespace data::CPU::io
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT

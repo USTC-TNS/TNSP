@@ -24,7 +24,6 @@
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       namespace transpose {
         template<class Base>
         void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
@@ -45,7 +44,6 @@ namespace TAT {
         transpose::run(plan, dims, get(), res.get());
         return std::move(res);
       } // transpose
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT

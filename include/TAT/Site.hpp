@@ -33,10 +33,10 @@ namespace TAT {
       */
 
       /*
-      template<Device device, class Base>
-      std::shared_ptr<const Node<device, Base>> new_env(const Size& dim) {
-        auto env = std::shared_ptr<const Node<device, Base>>(new Node<device, Base>({Legs::Phy}, {dim}));
-        const_cast<Node<device, Base>&>(*env).set_constant(1);
+      template<class Base>
+      std::shared_ptr<const Node<Base>> new_env(const Size& dim) {
+        auto env = std::shared_ptr<const Node<Base>>(new Node<Base>({Legs::Phy}, {dim}));
+        const_cast<Node<Base>&>(*env).set_constant(1);
         return env;
       } // new_env
       */
@@ -83,60 +83,60 @@ namespace TAT {
     // usually, it only replace Node rather than change it
     // user should not change Node too except initialize or normalize
     // in other word, keep the meaning of Node
-    template<Device device, class Base>
+    template<class Base>
     class Site {
      public:
       friend class Edge;
       class Edge {
        public:
-        const Site<device, Base>* _site;
+        const Site<Base>* _site;
         Legs legs;
-        std::shared_ptr<const Node<device, Base>> _env;
+        std::shared_ptr<const Node<Base>> _env;
 
-        static Edge make_edge(const Site<device, Base>& site_ref, const Legs& _legs) {
+        static Edge make_edge(const Site<Base>& site_ref, const Legs& _legs) {
           Edge res;
           res.link(site_ref, _legs);
           return res;
         } // make_edge
 
-        Site<device, Base>& site() const {
-          return const_cast<Site<device, Base>&>(*_site);
+        Site<Base>& site() const {
+          return const_cast<Site<Base>&>(*_site);
         } // site
-        Node<device, Base>& env() const {
-          return const_cast<Node<device, Base>&>(*_env.get());
+        Node<Base>& env() const {
+          return const_cast<Node<Base>&>(*_env.get());
         } // env
 
-        Edge& link(const Site<device, Base>& site_ref) {
+        Edge& link(const Site<Base>& site_ref) {
           _site = &site_ref;
           return *this;
         } // link
-        Edge& link(const Site<device, Base>& site_ref, const Legs& _legs) {
+        Edge& link(const Site<Base>& site_ref, const Legs& _legs) {
           _site = &site_ref;
           legs = _legs;
           return *this;
         } // link
-        Edge& set(Node<device, Base>&& t) {
-          _env = std::make_shared<const Node<device, Base>>(std::move(t));
+        Edge& set(Node<Base>&& t) {
+          _env = std::make_shared<const Node<Base>>(std::move(t));
           return *this;
         } // set
-        Edge& set(std::shared_ptr<const Node<device, Base>>& t) {
+        Edge& set(std::shared_ptr<const Node<Base>>& t) {
           _env = t;
           return *this;
         } // set
       }; // class Edge
 
-      std::shared_ptr<const Node<device, Base>> _tensor;
+      std::shared_ptr<const Node<Base>> _tensor;
       std::map<Legs, Edge> neighbor;
 
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
-      static Site<device, Base> make_site(T1&& _legs, T2&& _dims) {
-        Site<device, Base> res;
-        res.set(Node<device, Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
+      static Site<Base> make_site(T1&& _legs, T2&& _dims) {
+        Site<Base> res;
+        res.set(Node<Base>(std::forward<T1>(_legs), std::forward<T2>(_dims)));
         return std::move(res);
       } // make_site
 
-      Node<device, Base>& tensor() const {
-        return const_cast<Node<device, Base>&>(*_tensor.get());
+      Node<Base>& tensor() const {
+        return const_cast<Node<Base>&>(*_tensor.get());
       } // tensor
       const Edge& operator()(const Legs& legs) const {
         return neighbor[legs];
@@ -145,11 +145,11 @@ namespace TAT {
         return neighbor[legs];
       } // operator()
 
-      Site<device, Base>& set(Node<device, Base>&& t) {
-        _tensor = std::make_shared<Node<device, Base>>(std::move(t));
+      Site<Base>& set(Node<Base>&& t) {
+        _tensor = std::make_shared<Node<Base>>(std::move(t));
         return *this;
       } // set
-      Site<device, Base>& set(std::shared_ptr<const Node<device, Base>>& t) {
+      Site<Base>& set(std::shared_ptr<const Node<Base>>& t) {
         _tensor = t;
         return *this;
       } // set
@@ -205,25 +205,25 @@ namespace TAT {
 
       // link/unlink * with_env/without_env * single/double
       // single is member function and double is always static function
-      std::shared_ptr<const Node<device, Base>> create_env_for_leg(const Legs& leg) const {
+      std::shared_ptr<const Node<Base>> create_env_for_leg(const Legs& leg) const {
         auto pos = std::find(legs().begin(), legs().end(), leg);
         auto index = std::distance(legs().begin(), pos);
         auto dim = dims()[index];
-        auto env = std::shared_ptr<const Node<device, Base>>(new Node<device, Base>({legs_name::Phy}, {dim}));
-        const_cast<Node<device, Base>&>(*env).set_constant(1);
+        auto env = std::shared_ptr<const Node<Base>>(new Node<Base>({legs_name::Phy}, {dim}));
+        const_cast<Node<Base>&>(*env).set_constant(1);
         return env;
       } // create_env_for_leg
 
-      void link(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2) {
+      void link(const Legs& legs1, const Site<Base>& site2, const Legs& legs2) {
         neighbor[legs1] = Edge::make_edge(site2, legs2);
       } // link, single link
 
-      static void link(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+      static void link(Site<Base>& site1, const Legs& legs1, Site<Base>& site2, const Legs& legs2) {
         site1.link(legs1, site2, legs2);
         site2.link(legs2, site1, legs1);
       } // link, double link, return dim
 
-      void link_env(const Legs& legs1, const Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Node<device, Base>> env, bool emit=true) {
+      void link_env(const Legs& legs1, const Site<Base>& site2, const Legs& legs2, std::shared_ptr<const Node<Base>> env, bool emit=true) {
         link(legs1, site2, legs2);
         neighbor[legs1].set(env);
         if (emit) {
@@ -231,7 +231,7 @@ namespace TAT {
         } // if emit
       } // link_env, single link
 
-      static void link_env(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2, std::shared_ptr<const Node<device, Base>> env) {
+      static void link_env(Site<Base>& site1, const Legs& legs1, Site<Base>& site2, const Legs& legs2, std::shared_ptr<const Node<Base>> env) {
         site1.link_env(legs1, site2, legs2, env, true);
         site2.link_env(legs2, site1, legs1, env, false);
       } // link_env, double link, insert env, change site1
@@ -240,7 +240,7 @@ namespace TAT {
         neighbor.erase(legs1);
       } // unlink, single unlink
 
-      static void unlink(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+      static void unlink(Site<Base>& site1, const Legs& legs1, Site<Base>& site2, const Legs& legs2) {
         site1.unlink(legs1);
         site2.unlink(legs2);
       } // unlink, double unlink
@@ -252,7 +252,7 @@ namespace TAT {
         unlink(legs1);
       } // unlink, single unlink, delete env
 
-      static void unlink_env(Site<device, Base>& site1, const Legs& legs1, Site<device, Base>& site2, const Legs& legs2) {
+      static void unlink_env(Site<Base>& site1, const Legs& legs1, Site<Base>& site2, const Legs& legs2) {
         site1.unlink_env(legs1, true);
         site2.unlink_env(legs2, false);
       } // unlink, double unlink, delete env, change site1
@@ -266,7 +266,7 @@ namespace TAT {
 
       // io
       // site does not implement file write, write tensor directly since addr of site is not fixed
-      friend std::ostream& operator<<(std::ostream& out, const Site<device, Base>& value) {
+      friend std::ostream& operator<<(std::ostream& out, const Site<Base>& value) {
         out << "{" << rang::fgB::red << "\"addr\": \"" << &value << "\"" << rang::fg::reset << ", \"neighbor\": {";
         bool flag=false;
         for (const auto& i : value.neighbor) {
@@ -286,25 +286,25 @@ namespace TAT {
       } // operator<<
 
       // normalize and other inplace op
-      Site<device, Base>& set_test() {
+      Site<Base>& set_test() {
         tensor().set_test();
         return *this;
       } // set_test
-      Site<device, Base>& set_zero() {
+      Site<Base>& set_zero() {
         tensor().set_zero();
         return *this;
       } // set_zero
-      Site<device, Base>& set_random(Base(*random)()) {
+      Site<Base>& set_random(Base(*random)()) {
         tensor().set_random(random);
         return *this;
       } // set_random
-      Site<device, Base>& set_constant(Base num) {
+      Site<Base>& set_constant(Base num) {
         tensor().set_constant(num);
         return *this;
       } // set_constant
 
       template<int n>
-      Site<device, Base>& normalize() {
+      Site<Base>& normalize() {
         tensor() /= tensor().template norm<n>();
         return *this;
       } // normalize
@@ -317,13 +317,13 @@ namespace TAT {
       // since it need to know address of site
       // higher level op see below
 
-      static void contract(Site<device, Base>& res,
-                           const Site<device, Base>& _site1,
-                           const Site<device, Base>& _site2,
+      static void contract(Site<Base>& res,
+                           const Site<Base>& _site1,
+                           const Site<Base>& _site2,
                            const std::map<Legs, Legs>& map1 = {},
                            const std::map<Legs, Legs>& map2 = {},
                            const bool& replace=false) {
-        Site<device, Base> site1 = _site1, site2 = _site2;
+        Site<Base> site1 = _site1, site2 = _site2;
         // absorb env between two site
         std::vector<Legs> legs1, legs2;
         for (const auto& i : site1.neighbor) {
@@ -334,7 +334,7 @@ namespace TAT {
           } // if in
         } // for absorb
         // contract tensor
-        Node<device, Base> t = Node<device, Base>::contract(site1.tensor(), site2.tensor(), legs1, legs2, map1, map2);
+        Node<Base> t = Node<Base>::contract(site1.tensor(), site2.tensor(), legs1, legs2, map1, map2);
         res.neighbor.clear();
         res.set(std::move(t));
         // set edge of new site
@@ -358,19 +358,19 @@ namespace TAT {
         } // for 2
       } // contract two linked site with env between then only, without other env linked with them
 
-      void contract(Site<device, Base>& res,
-                    const Site<device, Base>& _site2,
+      void contract(Site<Base>& res,
+                    const Site<Base>& _site2,
                     const std::map<Legs, Legs>& map1 = {},
                     const std::map<Legs, Legs>& map2 = {},
                     const bool& replace=false) const {
         contract(res, *this, _site2, map1, map2, replace);
       } // contract
 
-      static void svd(Site<device, Base>& U, Site<device, Base>& V, const Site<device, Base>& _site,
+      static void svd(Site<Base>& U, Site<Base>& V, const Site<Base>& _site,
                       const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
                       const Rank& cut=-1, const bool& replace=false) {
         // absorb all env before svd
-        Site<device, Base> site = _site;
+        Site<Base> site = _site;
         site.absorb_all();
         // svd tensor
         auto tensor_res = site.tensor().svd(input_u_legs, new_u_legs, new_v_legs, cut);
@@ -379,7 +379,7 @@ namespace TAT {
         U.set(std::move(tensor_res.U));
         V.set(std::move(tensor_res.V));
         // get shared_ptr of S
-        auto S = std::make_shared<const Node<device, Base>>(std::move(tensor_res.S));
+        auto S = std::make_shared<const Node<Base>>(std::move(tensor_res.S));
         // set edge between them
         U.link_env(new_u_legs, V, new_v_legs, S, false);
         V.link_env(new_v_legs, U, new_u_legs, S, false);
@@ -401,17 +401,17 @@ namespace TAT {
         } // for leg
       } // svd after absorbing all env to two site and create env between them from S matrix, after all emit all env absorbed
 
-      void svd(Site<device, Base>& U, Site<device, Base>& V,
+      void svd(Site<Base>& U, Site<Base>& V,
                const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs,
                const Rank& cut=-1, const bool& replace=false) {
         svd(U, V, *this, input_u_legs, new_u_legs, new_v_legs, cut, replace);
       } // svd
 
-      static void qr(Site<device, Base>& Q, Site<device, Base>& R, const Site<device, Base>& _site,
+      static void qr(Site<Base>& Q, Site<Base>& R, const Site<Base>& _site,
                      const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs,
                      const bool& replace=false) {
         // absorb all env before svd
-        Site<device, Base> site = _site;
+        Site<Base> site = _site;
         // site.absorb_all();
         // env should not exist here
         // svd tensor
@@ -439,7 +439,7 @@ namespace TAT {
         } // for leg
       } // qr, user should ensure that there is no env linked with it
 
-      void qr(Site<device, Base>& Q, Site<device, Base>& R,
+      void qr(Site<Base>& Q, Site<Base>& R,
               const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs,
               const bool& replace=false) {
         qr(Q, R, *this, input_q_legs, new_q_legs, new_r_legs, replace);
@@ -448,9 +448,9 @@ namespace TAT {
       // high level op
       // useful in lattice operation
 
-      void qr_to(Site<device, Base>& other, const Legs& leg_q, const Legs& leg_r, const bool& do_contract=true) {
+      void qr_to(Site<Base>& other, const Legs& leg_q, const Legs& leg_r, const bool& do_contract=true) {
         std::vector<Legs> q_legs = internal::vector_except(tensor().legs, leg_q);
-        Site<device, Base> tmp_r;
+        Site<Base> tmp_r;
         qr(*this, tmp_r, q_legs, leg_q, leg_r);
         if (do_contract) {
           tmp_r.contract(other, other, {}, {}, true);
@@ -460,9 +460,9 @@ namespace TAT {
       } // qr_to
 
       /*
-      static void update(Site<device, Base>& site1, Site<device, Base>& site2, const Node<device, Base>& updater,
+      static void update(Site<Base>& site1, Site<Base>& site2, const Node<Base>& updater,
                          const Legs& leg1, const Legs& leg2, std::pair<Legs, Legs>map_for_site2) {
-        Site<device, Base> big;
+        Site<Base> big;
         site1.contract(big, site2, {legs_name::Phy, legs_name::Phy1}, {legs_name::Phy, legs_name::Phy2, ?}, true);
         big.set(big.tensor().contract(updater), {legs_name::Phy1, legs_name::Phy2}, {legs_name::Phy3, legs_name::Phy4});
         big.svd(site1, site2, {?}, ?, ?);
@@ -474,13 +474,13 @@ namespace TAT {
       */
 
      private:
-      void update_to(Site<device, Base>& site2,
+      void update_to(Site<Base>& site2,
                      const Legs& leg1, const Legs& leg2,
                      const std::vector<Legs>& tmp_leg1,
-                     const Size& D, const Node<device, Base>& updater,
+                     const Size& D, const Node<Base>& updater,
                      const std::map<Legs, Legs>& leg_to_tmp1, const std::map<Legs, Legs>& leg_to_tmp2,
                      const std::map<Legs, Legs>& tmp_to_leg1, const std::map<Legs, Legs>& tmp_to_leg2) {
-        Site<device, Base>& site1 = *this;
+        Site<Base>& site1 = *this;
         auto res = site1.tensor()
                    .contract(site2.tensor(), {leg1}, {leg2}, leg_to_tmp1, leg_to_tmp2)
                    .contract(updater, {TAT::legs_name::Phy1, TAT::legs_name::Phy2}, {TAT::legs_name::Phy3, TAT::legs_name::Phy4})
@@ -491,12 +491,12 @@ namespace TAT {
         site2.tensor().legs_rename(tmp_to_leg2);
       } // update
      public:
-      void update_to(Site<device, Base>& site2,
+      void update_to(Site<Base>& site2,
                      const Legs& leg1, const Legs& leg2,
-                     const Size& D, const Node<device, Base>& updater,
+                     const Size& D, const Node<Base>& updater,
                      const std::vector<Legs>& free_leg) {
         using namespace legs_name;
-        Site<device, Base>& site1 = *this;
+        Site<Base>& site1 = *this;
         std::vector<Legs> tmp_leg1 = internal::vector_except(site1.tensor().legs, leg1);
         internal::vector_replace_one(tmp_leg1, Phy, Phy1);
         std::map<Legs, Legs> map1, map2;

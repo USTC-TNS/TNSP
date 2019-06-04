@@ -48,16 +48,16 @@ namespace TAT {
       } // plan
     } // namespace block::contract
 
-    template<Device device, class Base>
-    Block<device, Base> Block<device, Base>::contract(const Block<device, Base>& block1,
-        const Block<device, Base>& block2,
+    template<class Base>
+    Block<Base> Block<Base>::contract(const Block<Base>& block1,
+        const Block<Base>& block2,
         const std::vector<Rank>& plan1,
         const std::vector<Rank>& plan2,
         const Rank& contract_num) {
-      Block<device, Base> res;
+      Block<Base> res;
       Size m=1, k=1, n=1;
       contract::plan(res.dims, m, k, n, block1.dims, block2.dims, plan1, plan2, contract_num);
-      res.data = Data<device, Base>::contract(block1.data, block2.data, block1.dims, block2.dims, plan1, plan2, m, k, n);
+      res.data = Data<Base>::contract(block1.data, block2.data, block1.dims, block2.dims, plan1, plan2, m, k, n);
       return std::move(res);
     } // contract
   } // namespace block

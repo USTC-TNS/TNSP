@@ -37,13 +37,13 @@ namespace TAT {
         return out;
       } // operator<<
 
-      template<Device device, class Base>
-      std::ostream& operator<<(std::ostream& out, const Node<device, Base>& value) {
+      template<class Base>
+      std::ostream& operator<<(std::ostream& out, const Node<Base>& value) {
         return out << "{" << rang::fgB::yellow << "\"rank\": " << value.legs.size() << rang::fg::reset << ", " << rang::fgB::blue << "\"legs\": " << value.legs << rang::fg::reset << ", \"tensor\": " << value.tensor << "}";
       } // operator<<
 
-      template<Device device, class Base>
-      std::ofstream& operator<<(std::ofstream& out, const Node<device, Base>& value) {
+      template<class Base>
+      std::ofstream& operator<<(std::ofstream& out, const Node<Base>& value) {
         Rank rank = value.legs.size();
         out.write((char*)&rank, sizeof(Rank));
         out.write((char*)value.legs.data(), rank*sizeof(Legs));
@@ -51,8 +51,8 @@ namespace TAT {
         return out;
       } // operator<<
 
-      template<Device device, class Base>
-      std::ifstream& operator>>(std::ifstream& in, Node<device, Base>& value) {
+      template<class Base>
+      std::ifstream& operator>>(std::ifstream& in, Node<Base>& value) {
         Rank rank;
         in.read((char*)&rank, sizeof(Rank));
         value.legs.resize(rank);

@@ -31,9 +31,9 @@ namespace TAT {
       } // plan
     } // namespace block::transpose
 
-    template<Device device, class Base>
-    Block<device, Base> Block<device, Base>::transpose(const std::vector<Rank>& plan) const {
-      Block<device, Base> res;
+    template<class Base>
+    Block<Base> Block<Base>::transpose(const std::vector<Rank>& plan) const {
+      Block<Base> res;
       transpose::plan(res.dims, dims, plan);
       assert(plan.size()==dims.size());
       assert(get_size(res.dims)==data.size);

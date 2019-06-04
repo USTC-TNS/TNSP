@@ -23,10 +23,10 @@
 
 namespace TAT {
   namespace block {
-    template<Device device, class Base>
+    template<class Base>
     template<int n>
-    Block<device, Base> Block<device, Base>::norm() const {
-      Block<device, Base> res({});
+    Block<Base> Block<Base>::norm() const {
+      Block<Base> res({});
       res.data = data.template norm<n>();
       return std::move(res);
     } // norm

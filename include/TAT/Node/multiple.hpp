@@ -23,9 +23,9 @@
 
 namespace TAT {
   namespace node {
-    template<Device device, class Base>
-    Node<device, Base> Node<device, Base>::multiple(const Node<device, Base>& other, const Legs& position) const {
-      Node<device, Base> res;
+    template<class Base>
+    Node<Base> Node<Base>::multiple(const Node<Base>& other, const Legs& position) const {
+      Node<Base> res;
       assert(other.legs.size()==1);
       res.legs = legs;
       auto pos = std::find(legs.begin(), legs.end(), position);

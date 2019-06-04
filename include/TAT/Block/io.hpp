@@ -37,13 +37,13 @@ namespace TAT {
         return out;
       } // operator<<
 
-      template<Device device, class Base>
-      std::ostream& operator<<(std::ostream& out, const Block<device, Base>& value) {
+      template<class Base>
+      std::ostream& operator<<(std::ostream& out, const Block<Base>& value) {
         return out << "{" << rang::fg::magenta << "\"dims\": " << value.dims << rang::fg::reset << ", \"data\": " << value.data << "}";
       } // operator<<
 
-      template<Device device, class Base>
-      std::ofstream& operator<<(std::ofstream& out, const Block<device, Base>& value) {
+      template<class Base>
+      std::ofstream& operator<<(std::ofstream& out, const Block<Base>& value) {
         Rank rank = value.dims.size();
         out.write((char*)&rank, sizeof(Rank));
         out.write((char*)value.dims.data(), rank*sizeof(Size));
@@ -51,8 +51,8 @@ namespace TAT {
         return out;
       } // operator<<
 
-      template<Device device, class Base>
-      std::ifstream& operator>>(std::ifstream& in, Block<device, Base>& value) {
+      template<class Base>
+      std::ifstream& operator>>(std::ifstream& in, Block<Base>& value) {
         Rank rank;
         in.read((char*)&rank, sizeof(Rank));
         value.dims.resize(rank);

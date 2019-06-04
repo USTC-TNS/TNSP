@@ -37,9 +37,9 @@ namespace TAT {
       } // plan
     } // namespace block::multiple
 
-    template<Device device, class Base>
-    Block<device, Base> Block<device, Base>::multiple(const Block<device, Base>& other, const Rank& index) const {
-      Block<device, Base> res;
+    template<class Base>
+    Block<Base> Block<Base>::multiple(const Block<Base>& other, const Rank& index) const {
+      Block<Base> res;
       res.dims = dims;
       Size a=1, b=1, c=1;
       multiple::plan(a, b, c, dims, index);

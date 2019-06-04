@@ -16,15 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Scalar_HPP_
-#define TAT_Data_CPU_Scalar_HPP_
+#ifndef TAT_Data_Scalar_HPP_
+#define TAT_Data_Scalar_HPP_
 
 #include "../Data.hpp"
 
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       inline namespace scalar {
         template<class Base>
         void vLinearFrac(const Size& n, const Base* a, const Base* b,
@@ -314,9 +313,8 @@ namespace TAT {
           return std::move(res);
         } // operator-
       } // namespace data::CPU::scalar
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Scalar_HPP_
+#endif // TAT_Data_Scalar_HPP_

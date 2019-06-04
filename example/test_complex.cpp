@@ -20,7 +20,7 @@
 #include <TAT.hpp>
 
 using namespace TAT::legs_name;
-using Node = TAT::Node<TAT::Device::CPU, std::complex<double>>;
+using Node = TAT::Node<std::complex<double>>;
 
 int main() {
   std::ios_base::sync_with_stdio(false);
@@ -180,7 +180,7 @@ int main() {
     {
       Node t1({Left, Right}, {2, 3});
       t1.set_test();
-      TAT::Node<TAT::Device::CPU, std::complex<float>> t2 = t1.to<std::complex<float>>();
+      TAT::Node<std::complex<float>> t2 = t1.to<std::complex<float>>();
       std::cout << t1 << std::endl << t2 << std::endl;
     }
   } // to

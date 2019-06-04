@@ -16,15 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Norm_HPP_
-#define TAT_Data_CPU_Norm_HPP_
+#ifndef TAT_Data_Norm_HPP_
+#define TAT_Data_Norm_HPP_
 
 #include "../Data.hpp"
 
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       namespace norm {
         template<class Base>
         void vAbs(const Size& size, const Base* a, scalar_tools::RealBase<Base>* y);
@@ -137,9 +136,8 @@ namespace TAT {
         *res.get() = norm::run<Base, n>(size, get());
         return std::move(res);
       } // norm
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Norm_HPP_
+#endif // TAT_Data_Norm_HPP_

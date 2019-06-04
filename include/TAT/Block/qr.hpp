@@ -23,8 +23,8 @@
 
 namespace TAT {
   namespace block {
-    template<Device device, class Base>
-    typename Block<device, Base>::qr_res Block<device, Base>::qr(const std::vector<Rank>& plan, const Rank& q_rank) const {
+    template<class Base>
+    typename Block<Base>::qr_res Block<Base>::qr(const std::vector<Rank>& plan, const Rank& q_rank) const {
       qr_res res;
       Size q_size=1;
       std::vector<Size> tmp_dims;

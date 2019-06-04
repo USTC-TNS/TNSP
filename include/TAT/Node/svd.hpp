@@ -47,8 +47,8 @@ namespace TAT {
       } // plan
     } // namespace node::svd
 
-    template<Device device, class Base>
-    typename Node<device, Base>::svd_res Node<device, Base>::svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut) const {
+    template<class Base>
+    typename Node<Base>::svd_res Node<Base>::svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut) const {
       std::vector<Legs> u_legs = internal::in_and_in(legs, input_u_legs);
       svd_res res;
       std::vector<Legs> tmp_legs;

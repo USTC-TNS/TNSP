@@ -23,10 +23,10 @@
 
 namespace TAT {
   namespace node {
-    template<Device device, class Base>
+    template<class Base>
     template<int n>
-    Node<device, Base> Node<device, Base>::norm() const {
-      Node<device, Base> res({}, {});
+    Node<Base> Node<Base>::norm() const {
+      Node<Base> res({}, {});
       res.tensor = tensor.template norm<n>();
       return std::move(res);
     } // norm

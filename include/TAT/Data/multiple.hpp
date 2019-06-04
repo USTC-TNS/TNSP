@@ -24,7 +24,6 @@
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       namespace multiple {
         template<class Base>
         void run(Base* res_data, const Base* src_data, const Base* other_data, const Size& a, const Size& b, const Size& c) {
@@ -47,7 +46,6 @@ namespace TAT {
         multiple::run<Base>(res.get(), get(), other.get(), a, b, c);
         return std::move(res);
       } // multiple
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT

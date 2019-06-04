@@ -24,7 +24,6 @@
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       namespace qr {
         template<class Base>
         void geqrf(Base* A, Base* tau, const Size& m, const Size& n);
@@ -187,7 +186,6 @@ namespace TAT {
         res.R.size = min_mn*r_size;
         return std::move(res);
       } // qr
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT

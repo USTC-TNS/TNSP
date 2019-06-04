@@ -31,8 +31,8 @@ namespace TAT {
       } // plan
     } // namespace block::svd
 
-    template<Device device, class Base>
-    typename Block<device, Base>::svd_res Block<device, Base>::svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const {
+    template<class Base>
+    typename Block<Base>::svd_res Block<Base>::svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const {
       svd_res res;
       Size u_size=1;
       std::vector<Size> tmp_dims;

@@ -71,19 +71,19 @@ namespace TAT {
       } // map_or_not
     } // namespace node::internal
 
-    template<Device device, class Base>
+    template<class Base>
     class Node {
      public:
       Node() : legs({}), tensor() {}
 
       std::vector<Legs> legs;
-      Tensor<device, Base> tensor;
+      Tensor<Base> tensor;
 
       ~Node() = default;
-      Node(Node<device, Base>&& other) = default;
-      Node(const Node<device, Base>& other) = default;
-      Node<device, Base>& operator=(Node<device, Base>&& other) = default;
-      Node<device, Base>& operator=(const Node<device, Base>& other) = default;
+      Node(Node<Base>&& other) = default;
+      Node(const Node<Base>& other) = default;
+      Node<Base>& operator=(Node<Base>&& other) = default;
+      Node<Base>& operator=(const Node<Base>& other) = default;
       template<class T1=std::vector<Legs>, class T2=std::vector<Size>>
       Node(T1&& _legs, T2&& _dims) : legs(std::forward<T1>(_legs)), tensor(std::forward<T2>(_dims)) {
         assert(legs.size()==tensor.dims.size());
@@ -104,24 +104,24 @@ namespace TAT {
         return tensor.get();
       } // get
 
-      Node<device, Base>& set_test() {
+      Node<Base>& set_test() {
         tensor.set_test();
         return *this;
       } // set_test
-      Node<device, Base>& set_zero() {
+      Node<Base>& set_zero() {
         tensor.set_zero();
         return *this;
       } // set_zero
-      Node<device, Base>& set_random(const std::function<Base()>& random) {
+      Node<Base>& set_random(const std::function<Base()>& random) {
         tensor.set_random(random);
         return *this;
       } // set_random
-      Node<device, Base>& set_constant(Base num) {
+      Node<Base>& set_constant(Base num) {
         tensor.set_constant(num);
         return *this;
       } // set_constant
 
-      Node<device, Base>& legs_rename(const std::map<Legs, Legs>& dict) {
+      Node<Base>& legs_rename(const std::map<Legs, Legs>& dict) {
         for (auto& i : legs) {
           auto where = dict.find(i);
           if (where!=dict.end()) {
@@ -132,41 +132,41 @@ namespace TAT {
       } // legs_rename
 
       template<class Base2, ENABLE_IF(scalar_tools::is_scalar<Base2>)>
-      Node<device, Base2> to() const {
-        Node<device, Base2> res;
+      Node<Base2> to() const {
+        Node<Base2> res;
         res.legs = legs;
         res.tensor = tensor.template to<Base2>();
         return std::move(res);
       } // to
 
       template<int n>
-      Node<device, Base> norm() const;
+      Node<Base> norm() const;
 
-      Node<device, Base> transpose(const std::vector<Legs>& new_legs) const;
+      Node<Base> transpose(const std::vector<Legs>& new_legs) const;
 
-      static Node<device, Base> contract(const Node<device, Base>& node1,
-                                         const Node<device, Base>& node2,
+      static Node<Base> contract(const Node<Base>& node1,
+                                         const Node<Base>& node2,
                                          const std::vector<Legs>& legs1,
                                          const std::vector<Legs>& legs2,
                                          const std::map<Legs, Legs>& map1,
                                          const std::map<Legs, Legs>& map2);
 
-      Node<device, Base> contract(const Node<device, Base>& node2,
+      Node<Base> contract(const Node<Base>& node2,
                                   const std::vector<Legs>& legs1,
                                   const std::vector<Legs>& legs2,
                                   const std::map<Legs, Legs>& map1 = {},
                                   const std::map<Legs, Legs>& map2 = {}) const {
-        return std::move(Node<device, Base>::contract(*this, node2, legs1, legs2, map1, map2));
+        return std::move(Node<Base>::contract(*this, node2, legs1, legs2, map1, map2));
       } // contract
 
-      Node<device, Base> multiple(const Node<device, Base>& other, const Legs& position) const;
+      Node<Base> multiple(const Node<Base>& other, const Legs& position) const;
 
       friend class svd_res;
       class svd_res {
        public:
-        Node<device, Base> U;
-        Node<device, Base> S;
-        Node<device, Base> V;
+        Node<Base> U;
+        Node<Base> S;
+        Node<Base> V;
       }; // class svd_res
 
       svd_res svd(const std::vector<Legs>& input_u_legs, const Legs& new_u_legs, const Legs& new_v_legs, const Rank& cut=-1) const;
@@ -174,8 +174,8 @@ namespace TAT {
       friend class qr_res;
       class qr_res {
        public:
-        Node<device, Base> Q;
-        Node<device, Base> R;
+        Node<Base> Q;
+        Node<Base> R;
       }; // class qr_res
 
       qr_res qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const;

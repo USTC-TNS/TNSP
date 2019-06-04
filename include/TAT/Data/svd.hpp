@@ -16,15 +16,14 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Svd_HPP_
-#define TAT_Data_CPU_Svd_HPP_
+#ifndef TAT_Data_Svd_HPP_
+#define TAT_Data_Svd_HPP_
 
 #include "../Data.hpp"
 
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       namespace svd {
 #if (defined TAT_USE_GESVD) || (defined TAT_USE_GESDD)
         template<class Base>
@@ -244,9 +243,8 @@ namespace TAT {
 #endif // TAT_USE_GESVD TAT_USE_GESDD
         return std::move(res);
       } // svd
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Svd_HPP_
+#endif // TAT_Data_Svd_HPP_

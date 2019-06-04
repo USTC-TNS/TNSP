@@ -37,8 +37,8 @@ namespace TAT {
         return true;
       } // operator==
 
-      template<Device device, class Base>
-      Block<device, Base>& operator*=(Block<device, Base>& a, const Block<device, Base>& b) {
+      template<class Base>
+      Block<Base>& operator*=(Block<Base>& a, const Block<Base>& b) {
         if (b.dims.size()!=0) {
           assert(a.dims==b.dims);
         } // if
@@ -46,9 +46,9 @@ namespace TAT {
         return a;
       } // operator*=
 
-      template<Device device, class Base>
-      Block<device, Base> operator*(const Block<device, Base>& a, const Block<device, Base>& b) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator*(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
         if (b.dims.size()==0) {
           res.dims = a.dims;
         } else if (a.dims.size()==0) {
@@ -61,8 +61,8 @@ namespace TAT {
         return std::move(res);
       } // operator*
 
-      template<Device device, class Base>
-      Block<device, Base>& operator/=(Block<device, Base>& a, const Block<device, Base>& b) {
+      template<class Base>
+      Block<Base>& operator/=(Block<Base>& a, const Block<Base>& b) {
         if (b.dims.size()!=0) {
           assert(a.dims==b.dims);
         } // if
@@ -70,9 +70,9 @@ namespace TAT {
         return a;
       } // operator/=
 
-      template<Device device, class Base>
-      Block<device, Base> operator/(const Block<device, Base>& a, const Block<device, Base>& b) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator/(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
         if (b.dims.size()==0) {
           res.dims = a.dims;
         } else if (a.dims.size()==0) {
@@ -85,24 +85,24 @@ namespace TAT {
         return std::move(res);
       } // operator/
 
-      template<Device device, class Base>
-      Block<device, Base> operator+(const Block<device, Base>& a) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator+(const Block<Base>& a) {
+        Block<Base> res;
         res.dims = a.dims;
         res.data = + a.data;
         return std::move(res);
       } // operator+
 
-      template<Device device, class Base>
-      Block<device, Base> operator+(Block<device, Base>&& a) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator+(Block<Base>&& a) {
+        Block<Base> res;
         res.dims = std::move(a.dims);
         res.data = + std::move(a.data);
         return std::move(res);
       } // operator+
 
-      template<Device device, class Base>
-      Block<device, Base>& operator+=(Block<device, Base>& a, const Block<device, Base>& b) {
+      template<class Base>
+      Block<Base>& operator+=(Block<Base>& a, const Block<Base>& b) {
         if (b.dims.size()!=0) {
           assert(a.dims==b.dims);
         } // if
@@ -110,9 +110,9 @@ namespace TAT {
         return a;
       } // operator+=
 
-      template<Device device, class Base>
-      Block<device, Base> operator+(const Block<device, Base>& a, const Block<device, Base>& b) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator+(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
         if (b.dims.size()==0) {
           res.dims = a.dims;
         } else if (a.dims.size()==0) {
@@ -125,16 +125,16 @@ namespace TAT {
         return std::move(res);
       } // operator+
 
-      template<Device device, class Base>
-      Block<device, Base> operator-(const Block<device, Base>& a) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator-(const Block<Base>& a) {
+        Block<Base> res;
         res.dims = a.dims;
         res.data = - a.data;
         return std::move(res);
       } // operator-
 
-      template<Device device, class Base>
-      Block<device, Base>& operator-=(Block<device, Base>& a, const Block<device, Base>& b) {
+      template<class Base>
+      Block<Base>& operator-=(Block<Base>& a, const Block<Base>& b) {
         if (b.dims.size()!=0) {
           assert(a.dims==b.dims);
         } // if
@@ -142,9 +142,9 @@ namespace TAT {
         return a;
       } // operator-=
 
-      template<Device device, class Base>
-      Block<device, Base> operator-(const Block<device, Base>& a, const Block<device, Base>& b) {
-        Block<device, Base> res;
+      template<class Base>
+      Block<Base> operator-(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
         if (b.dims.size()==0) {
           res.dims = a.dims;
         } else if (a.dims.size()==0) {

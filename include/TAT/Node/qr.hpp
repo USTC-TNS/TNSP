@@ -23,8 +23,8 @@
 
 namespace TAT {
   namespace node {
-    template<Device device, class Base>
-    typename Node<device, Base>::qr_res Node<device, Base>::qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
+    template<class Base>
+    typename Node<Base>::qr_res Node<Base>::qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
       std::vector<Legs> q_legs = internal::in_and_in(legs, input_q_legs);
       qr_res res;
       std::vector<Legs> tmp_legs;

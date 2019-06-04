@@ -23,19 +23,19 @@
 
 namespace TAT {
   namespace block {
-    template<Device device, class Base>
+    template<class Base>
     class Block {
      public:
       Block() : dims({}), data() {}
 
       std::vector<Size> dims;
-      Data<device, Base> data;
+      Data<Base> data;
 
       ~Block() = default;
-      Block(Block<device, Base>&& other) = default;
-      Block(const Block<device, Base>& other) = default;
-      Block<device, Base>& operator=(Block<device, Base>&& other) = default;
-      Block<device, Base>& operator=(const Block<device, Base>& other) = default;
+      Block(Block<Base>&& other) = default;
+      Block(const Block<Base>& other) = default;
+      Block<Base>& operator=(Block<Base>&& other) = default;
+      Block<Base>& operator=(const Block<Base>& other) = default;
       static Size get_size(const std::vector<Size>& _dims) {
         Size res = 1;
         for (const auto& i : _dims) {
@@ -59,64 +59,64 @@ namespace TAT {
         return data.get();
       } // get
 
-      Block<device, Base>& set_test() {
+      Block<Base>& set_test() {
         data.set_test();
         return *this;
       } // set_test
-      Block<device, Base>& set_zero() {
+      Block<Base>& set_zero() {
         data.set_zero();
         return *this;
       } // set_zero
-      Block<device, Base>& set_random(const std::function<Base()>& random) {
+      Block<Base>& set_random(const std::function<Base()>& random) {
         data.set_random(random);
         return *this;
       } // set_random
-      Block<device, Base>& set_constant(Base num) {
+      Block<Base>& set_constant(Base num) {
         data.set_constant(num);
         return *this;
       } // set_constant
 
       template<class Base2, ENABLE_IF(scalar_tools::is_scalar<Base2>)>
-      Block<device, Base2> to() const {
-        Block<device, Base2> res;
+      Block<Base2> to() const {
+        Block<Base2> res;
         res.dims = dims;
         res.data = data.template to<Base2>();
         return std::move(res);
       } // to
 
       template<int n>
-      Block<device, Base> norm() const;
+      Block<Base> norm() const;
 
-      Block<device, Base> transpose(const std::vector<Rank>& plan) const;
+      Block<Base> transpose(const std::vector<Rank>& plan) const;
 
-      static Block<device, Base> contract(const Block<device, Base>& block1,
-                                          const Block<device, Base>& block2,
+      static Block<Base> contract(const Block<Base>& block1,
+                                          const Block<Base>& block2,
                                           const std::vector<Rank>& plan1,
                                           const std::vector<Rank>& plan2,
                                           const Rank& contract_num);
 
-      Block<device, Base> contract(const Block<device, Base>& block2,
+      Block<Base> contract(const Block<Base>& block2,
                                    const std::vector<Rank>& plan1,
                                    const std::vector<Rank>& plan2,
                                    const Rank& contract_num) const {
-        return std::move(Block<device, Base>::contract(*this, block2, plan1, plan2, contract_num));
+        return std::move(Block<Base>::contract(*this, block2, plan1, plan2, contract_num));
       } // contract
 
-      Block<device, Base> multiple(const Block<device, Base>& other, const Rank& index) const;
+      Block<Base> multiple(const Block<Base>& other, const Rank& index) const;
 
       class svd_res {
        public:
-        Block<device, Base> U;
-        Block<device, Base> S;
-        Block<device, Base> V;
+        Block<Base> U;
+        Block<Base> S;
+        Block<Base> V;
       }; // class svd_res
 
       svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const;
 
       class qr_res {
        public:
-        Block<device, Base> Q;
-        Block<device, Base> R;
+        Block<Base> Q;
+        Block<Base> R;
       }; // class qr_res
 
       qr_res qr(const std::vector<Rank>& plan, const Rank& q_rank) const;

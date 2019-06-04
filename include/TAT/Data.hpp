@@ -23,7 +23,6 @@
 
 namespace TAT {
   namespace data {
-    namespace CPU {
 #ifdef TAT_USE_CPU
       template<class Base>
       class Data {
@@ -148,7 +147,6 @@ namespace TAT {
                   const Size& min_mn) const;
       }; // class Data
 #endif // TAT_USE_CPU
-    } // namespace CPU
   } // namespace data
 } // namespace TAT
 

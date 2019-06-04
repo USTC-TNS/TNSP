@@ -24,7 +24,6 @@
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
-    namespace CPU {
       namespace contract {
         template<class Base>
         void run(Base* data,
@@ -108,7 +107,6 @@ namespace TAT {
         contract::run<Base>(res.get(), a.get(), b.get(), m, n, k);
         return std::move(res);
       } // contract
-    } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT

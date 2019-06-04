@@ -53,14 +53,14 @@ namespace TAT {
       } // plan
     } // namespace node::contract
 
-    template<Device device, class Base>
-    Node<device, Base> Node<device, Base>::contract(const Node<device, Base>& node1,
-        const Node<device, Base>& node2,
+    template<class Base>
+    Node<Base> Node<Base>::contract(const Node<Base>& node1,
+        const Node<Base>& node2,
         const std::vector<Legs>& legs1,
         const std::vector<Legs>& legs2,
         const std::map<Legs, Legs>& map1,
         const std::map<Legs, Legs>& map2) {
-      Node<device, Base> res;
+      Node<Base> res;
       std::vector<Legs> new_legs1, new_legs2;
       std::vector<Rank> plan1, plan2;
       Rank contract_num;
@@ -72,7 +72,7 @@ namespace TAT {
       assert(plan1.size()==node1.legs.size());
       assert(new_legs2.size()==node2.legs.size());
       assert(plan2.size()==node2.legs.size());
-      res.tensor = Tensor<device, Base>::contract(node1.tensor, node2.tensor, plan1, plan2, contract_num);
+      res.tensor = Tensor<Base>::contract(node1.tensor, node2.tensor, plan1, plan2, contract_num);
       return std::move(res);
     } // contract
   } // namespace node
