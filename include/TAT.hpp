@@ -36,7 +36,14 @@
 #include <functional>
 #include <complex>
 
+/**
+ * 类似python中的pass,可以编译,但会在运行时报错.
+ */
 #define PASS std::cerr << "calling a passing function at " << __FILE__ << ":" << __LINE__ << " in " << __PRETTY_FUNCTION__ << std::endl, exit(233)
+
+/** 
+ * enable_if, 应用于一些type trait.
+ */
 #define ENABLE_IF(...) class = typename std::enable_if<__VA_ARGS__::value>::type
 
 #if (!defined TAT_USE_CPU && !defined TAT_USE_CUDA && !defined TAT_USE_DCU && !defined TAT_USE_SW)
@@ -95,31 +102,67 @@ extern "C"
 #endif // TAT_USE_CPU
 
 namespace TAT {
-  template<class Base>
-  class is_scalar {
-   public:
-    static constexpr bool value = std::is_scalar<Base>::value;
-  };
-  template<class Base>
-  class is_scalar<std::complex<Base>> {
-   public:
-    static constexpr bool value = std::is_scalar<Base>::value;
-  };
+  inline namespace internal {
+    /**
+     * is_scalar provide the member `value` to tell whether Base is scalar type.
+     * 
+     * If Base is a scalar type, provides the member constant value equal true, and for any other type, value is false.
+     * It is almost the same class as `std::is_scalar`, but value also equal true for `std::complex<Base>` where `std::is_scalar<Base>::value` is true,
+     * 
+     * the example is
+     * ~~~{.cpp}
+     * assert(is_scalar<double>::value);
+     * assert(is_scalar<std::complex<float>>::value);
+     * ~~~
+     * 
+     * @tparam Base the type to check whether is scalar.
+     */
+    template<class Base>
+    class is_scalar {
+    public:
+      static constexpr bool value = std::is_scalar<Base>::value; /*!< true if std::is_scalar say Base is scalar */
+    };
+    /**
+     * Specialization for std::complex<Base>, which should be true if std::is_scalar<Base> is true
+     */
+    template<class Base>
+    class is_scalar<std::complex<Base>> {
+    public:
+      static constexpr bool value = std::is_scalar<Base>::value; /*!< true if std::is_scalar say Base in std::complex<Base> is scalar */
+    };
 
-  template<class Base>
-  class RealBaseClass {
-   public:
-    using type=Base;
-  };
-  template<class Base>
-  class RealBaseClass<std::complex<Base>> {
-   public:
-    using type=Base;
-  };
-  template<class T>
-  using RealBase = typename RealBaseClass<T>::type;
+    /**
+     * _real_base provide member type unpack the real type from a complex type.
+     * 
+     * type if T if Base=std::complex<T> and else is Base.
+     * 
+     * for example, _real_base<std::complex<double>>::type is double.
+     * 
+     * @tparam Base the type to unpack
+     */
+    template<class Base>
+    class _real_base {
+    public:
+      using type=Base; /*!< type is Base by default */
+    };
+    /**
+     * Specialization for std::complex<Base> where type=Base.
+     */
+    template<class Base>
+    class _real_base<std::complex<Base>> {
+    public:
+      using type=Base; /*< type is real type if Base is create by std::complex */
+    };
+    /**
+     * RealBase return the real type from a complex type, or itself if Base is not created by std::complex.
+     * 
+     * @tparam Base the type to unpack
+     */
+    template<class Base>
+    using RealBase = typename _real_base<Base>::type;
 
   enum class Device : unsigned char {CPU, CUDA, DCU, SW};
+  } // inline namespace
 
   namespace legs {
     class Legs {
@@ -192,14 +235,14 @@ namespace TAT {
 
   namespace data {
     template<Device device, class Base>
-    class Magic;
+    class _magic;
 #define DefineData(x) \
       namespace x { \
         template<class Base> \
         class Data; \
       } \
       template<class Base> \
-      class Magic<Device::x, Base>{ \
+      class _magic<Device::x, Base>{ \
        public: \
         using type=x::Data<Base>; \
       }
@@ -211,7 +254,7 @@ namespace TAT {
 #undef DefineData
 
     template<Device device=Device::CPU, class Base=double, ENABLE_IF(is_scalar<Base>)>
-    using Data = typename Magic<device, Base>::type;
+    using Data = typename _magic<device, Base>::type;
   } // namespace data
   using data::Data;
 

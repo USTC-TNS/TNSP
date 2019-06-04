@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Contract_HPP_
-#define TAT_Data_CPU_Contract_HPP_
+#ifndef TAT_Data_Contract_HPP_
+#define TAT_Data_Contract_HPP_
 
-#include "../CPU.hpp"
+#include "../Data.hpp"
 
 namespace TAT {
   namespace data {
@@ -113,4 +113,4 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Contract_HPP_
+#endif // TAT_Data_Contract_HPP_

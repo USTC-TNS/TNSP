@@ -19,7 +19,7 @@
 #ifndef TAT_Data_CPU_Norm_HPP_
 #define TAT_Data_CPU_Norm_HPP_
 
-#include "../CPU.hpp"
+#include "../Data.hpp"
 
 namespace TAT {
   namespace data {

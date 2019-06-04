@@ -1,4 +1,4 @@
-/** TAT/Data/CPU/transpose.hpp
+/** TAT/Data/CPU/multiple.hpp
  * @file
  * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
@@ -16,38 +16,40 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Transpose_HPP_
-#define TAT_Data_CPU_Transpose_HPP_
+#ifndef TAT_Data_CPU_Multiple_HPP_
+#define TAT_Data_CPU_Multiple_HPP_
 
-#include "../CPU.hpp"
+#include "../Data.hpp"
 
 namespace TAT {
   namespace data {
 #ifdef TAT_USE_CPU
     namespace CPU {
-      namespace transpose {
+      namespace multiple {
         template<class Base>
-        void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
-          std::vector<int> int_plan(plan.begin(), plan.end());
-          std::vector<int> int_dims(dims.begin(), dims.end());
-          hptt::create_plan(int_plan.data(), int_plan.size(),
-                            1, src, int_dims.data(), NULL,
-                            0, dst, NULL,
-                            hptt::ESTIMATE, 1, NULL, 1)->execute();
+        void run(Base* res_data, const Base* src_data, const Base* other_data, const Size& a, const Size& b, const Size& c) {
+          for (Size i=0; i<a; i++) {
+            for (Size j=0; j<b; j++) {
+              Base v = other_data[j];
+              for (Size k=0; k<c; k++) {
+                *(res_data++) = *(src_data++) * v;
+              } // for k
+            } // for j
+          } // for i
         } // run
-      } // namespace data::CPU::transpose
+      } // namespace data::CPU::multiple
 
       template<class Base>
-      Data<Base> Data<Base>::transpose(const std::vector<Size>& dims,
-                                       const std::vector<Rank>& plan) const {
+      Data<Base> Data<Base>::multiple(const Data<Base>& other, const Size& a, const Size& b, const Size& c) const {
         Data<Base> res(size);
-        assert(dims.size()==plan.size());
-        transpose::run(plan, dims, get(), res.get());
+        assert(b==other.size);
+        assert(a*b*c==size);
+        multiple::run<Base>(res.get(), get(), other.get(), a, b, c);
         return std::move(res);
-      } // transpose
+      } // multiple
     } // namespace data::CPU
 #endif // TAT_USE_CPU
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Transpose_HPP_
+#endif // TAT_Data_CPU_Multiple_HPP_
