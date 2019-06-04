@@ -124,13 +124,4 @@ namespace TAT {
   } // namespace block
 } // namespace TAT
 
-#include "Block/norm.hpp"
-#include "Block/transpose.hpp"
-#include "Block/contract.hpp"
-#include "Block/multiple.hpp"
-#include "Block/svd.hpp"
-#include "Block/qr.hpp"
-#include "Block/scalar.hpp"
-#include "Block/io.hpp"
-
 #endif // TAT_Block_HPP_

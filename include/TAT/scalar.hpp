@@ -1,4 +1,4 @@
-/** TAT/Data/CPU_scalar.hpp
+/** TAT/scalar.hpp
  * @file
  * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_Scalar_HPP_
-#define TAT_Data_Scalar_HPP_
+#ifndef TAT_Scalar_HPP_
+#define TAT_Scalar_HPP_
 
-#include "../Data.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace data {
@@ -317,4 +317,342 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_Scalar_HPP_
+namespace TAT {
+  namespace block {
+    inline namespace scalar {
+      bool operator==(const std::vector<Size>& a, const std::vector<Size>& b) {
+        if (a.size()!=b.size()) {
+          return false;
+        } // if size
+        Rank size=a.size();
+        for (Rank i=0; i<size; i++) {
+          if (a[i]!=b[i]) {
+            return false;
+          } // if
+        } // for i
+        return true;
+      } // operator==
+
+      template<class Base>
+      Block<Base>& operator*=(Block<Base>& a, const Block<Base>& b) {
+        if (b.dims.size()!=0) {
+          assert(a.dims==b.dims);
+        } // if
+        a.data *= b.data;
+        return a;
+      } // operator*=
+
+      template<class Base>
+      Block<Base> operator*(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
+        if (b.dims.size()==0) {
+          res.dims = a.dims;
+        } else if (a.dims.size()==0) {
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        } // if
+        res.data = a.data * b.data;
+        return std::move(res);
+      } // operator*
+
+      template<class Base>
+      Block<Base>& operator/=(Block<Base>& a, const Block<Base>& b) {
+        if (b.dims.size()!=0) {
+          assert(a.dims==b.dims);
+        } // if
+        a.data /= b.data;
+        return a;
+      } // operator/=
+
+      template<class Base>
+      Block<Base> operator/(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
+        if (b.dims.size()==0) {
+          res.dims = a.dims;
+        } else if (a.dims.size()==0) {
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        } // if
+        res.data = a.data / b.data;
+        return std::move(res);
+      } // operator/
+
+      template<class Base>
+      Block<Base> operator+(const Block<Base>& a) {
+        Block<Base> res;
+        res.dims = a.dims;
+        res.data = + a.data;
+        return std::move(res);
+      } // operator+
+
+      template<class Base>
+      Block<Base> operator+(Block<Base>&& a) {
+        Block<Base> res;
+        res.dims = std::move(a.dims);
+        res.data = + std::move(a.data);
+        return std::move(res);
+      } // operator+
+
+      template<class Base>
+      Block<Base>& operator+=(Block<Base>& a, const Block<Base>& b) {
+        if (b.dims.size()!=0) {
+          assert(a.dims==b.dims);
+        } // if
+        a.data += b.data;
+        return a;
+      } // operator+=
+
+      template<class Base>
+      Block<Base> operator+(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
+        if (b.dims.size()==0) {
+          res.dims = a.dims;
+        } else if (a.dims.size()==0) {
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        } // if
+        res.data = a.data + b.data;
+        return std::move(res);
+      } // operator+
+
+      template<class Base>
+      Block<Base> operator-(const Block<Base>& a) {
+        Block<Base> res;
+        res.dims = a.dims;
+        res.data = - a.data;
+        return std::move(res);
+      } // operator-
+
+      template<class Base>
+      Block<Base>& operator-=(Block<Base>& a, const Block<Base>& b) {
+        if (b.dims.size()!=0) {
+          assert(a.dims==b.dims);
+        } // if
+        a.data -= b.data;
+        return a;
+      } // operator-=
+
+      template<class Base>
+      Block<Base> operator-(const Block<Base>& a, const Block<Base>& b) {
+        Block<Base> res;
+        if (b.dims.size()==0) {
+          res.dims = a.dims;
+        } else if (a.dims.size()==0) {
+          res.dims = b.dims;
+        } else {
+          res.dims = a.dims;
+          assert(a.dims==b.dims);
+        } // if
+        res.data = a.data - b.data;
+        return std::move(res);
+      } // operator-
+    } // namespace block::scalar
+  } // namespace block
+} // namespace TAT
+
+namespace TAT {
+  namespace node {
+    inline namespace scalar {
+      bool operator==(const std::vector<Legs>& a, const std::vector<Legs>& b) {
+        if (a.size()!=b.size()) {
+          return false;
+        } // if size
+        Rank size=a.size();
+        for (Rank i=0; i<size; i++) {
+          if (a[i]!=b[i]) {
+            return false;
+          } // if i
+        } // for
+        return true;
+      } // operator==
+
+      template<class Base>
+      Node<Base>& operator*=(Node<Base>& a, const Node<Base>& b) {
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
+        }
+        a.tensor *= b.tensor;
+        return a;
+      } // operator*=
+
+      template<class Base>
+      Node<Base> operator*(const Node<Base>& a, const Node<Base>& b) {
+        Node<Base> res;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        } // if
+        res.tensor = a.tensor * b.tensor;
+        return std::move(res);
+      } // operator*
+
+      template<class Base>
+      Node<Base>& operator/=(Node<Base>& a, const Node<Base>& b) {
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
+        } // if
+        a.tensor /= b.tensor;
+        return a;
+      } // operator/=
+
+      template<class Base>
+      Node<Base> operator/(const Node<Base>& a, const Node<Base>& b) {
+        Node<Base> res;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        } // if
+        res.tensor = a.tensor / b.tensor;
+        return std::move(res);
+      } // operator/
+
+      template<class Base>
+      Node<Base> operator+(const Node<Base>& a) {
+        Node<Base> res;
+        res.legs = a.legs;
+        res.tensor = + a.tensor;
+        return std::move(res);
+      } // operator+
+
+      template<class Base>
+      Node<Base> operator+(Node<Base>&& a) {
+        Node<Base> res;
+        res.legs = std::move(a.legs);
+        res.tensor = + std::move(a.tensor);
+        return std::move(res);
+      } // operator+
+
+      template<class Base>
+      Node<Base>& operator+=(Node<Base>& a, const Node<Base>& b) {
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
+        } // if
+        a.tensor += b.tensor;
+        return a;
+      } // operator+=
+
+      template<class Base>
+      Node<Base> operator+(const Node<Base>& a, const Node<Base>& b) {
+        Node<Base> res;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        } // if
+        res.tensor = a.tensor + b.tensor;
+        return std::move(res);
+      } // operator+
+
+      template<class Base>
+      Node<Base> operator-(const Node<Base>& a) {
+        Node<Base> res;
+        res.legs = a.legs;
+        res.tensor = - a.tensor;
+        return std::move(res);
+      } // operator-
+
+      template<class Base>
+      Node<Base>& operator-=(Node<Base>& a, const Node<Base>& b) {
+        if (b.legs.size()!=0) {
+          assert(a.legs==b.legs);
+        } // if
+        a.tensor -= b.tensor;
+        return a;
+      } // operator-=
+
+      template<class Base>
+      Node<Base> operator-(const Node<Base>& a, const Node<Base>& b) {
+        Node<Base> res;
+        if (b.legs.size()==0) {
+          res.legs = a.legs;
+        } else if (a.legs.size()==0) {
+          res.legs = b.legs;
+        } else {
+          res.legs = a.legs;
+          assert(a.legs==b.legs);
+        } // if
+        res.tensor = a.tensor - b.tensor;
+        return std::move(res);
+      } // operator-
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base>& operator*=(Node<Base>& a, const B& b) {
+        return a*=Node<Base>(b);
+      } // operator*=
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator*(const Node<Base>& a, const B& b) {
+        return a*Node<Base>(b);
+      } // operator*
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator*(const B& b, const Node<Base>& a) {
+        return Node<Base>(b)*a;
+      } // operator*
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base>& operator/=(Node<Base>& a, const B& b) {
+        return a/=Node<Base>(b);
+      } // operator/=
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator/(const Node<Base>& a, const B& b) {
+        return a/Node<Base>(b);
+      } // operator/
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator/(const B& b, const Node<Base>& a) {
+        return Node<Base>(b)/a;
+      } // operator/
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base>& operator+=(Node<Base>& a, const B& b) {
+        return a+=Node<Base>(b);
+      } // operator+
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator+(const Node<Base>& a, const B& b) {
+        return a+Node<Base>(b);
+      } // operator+
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator+(const B& b, const Node<Base>& a) {
+        return Node<Base>(b)+a;
+      } // operator+
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base>& operator-=(Node<Base>& a, const B& b) {
+        return a-=Node<Base>(b);
+      } // operator-=
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator-(const Node<Base>& a, const B& b) {
+        return a-Node<Base>(b);
+      } // operator-
+
+      template<class Base, class B, ENABLE_IF(scalar_tools::is_scalar<B>)>
+      Node<Base> operator-(const B& b, const Node<Base>& a) {
+        return Node<Base>(b)-a;
+      } // operator-
+    } // namespace node::scalar
+  } // namespace node
+} // namespace TAT
+
+#endif // TAT_Scalar_HPP_

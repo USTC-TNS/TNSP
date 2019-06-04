@@ -1,4 +1,4 @@
-/** TAT/Data/CPU/multiple.hpp
+/** TAT/multiple.hpp
  * @file
  * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Multiple_HPP_
-#define TAT_Data_CPU_Multiple_HPP_
+#ifndef TAT_Multiple_HPP_
+#define TAT_Multiple_HPP_
 
-#include "../Data.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace data {
@@ -50,4 +50,52 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Multiple_HPP_
+namespace TAT {
+  namespace block {
+    namespace multiple {
+      void plan(Size& a, Size& b, Size& c, const std::vector<Size>& dims, const Rank& index) {
+        Rank i=0, rank=dims.size();
+        for (; i<index; i++) {
+          a *= dims[i];
+        } // for i
+        b = dims[i];
+        i++;
+        for (; i<rank; i++) {
+          c *= dims[i];
+        } // for
+      } // plan
+    } // namespace block::multiple
+
+    template<class Base>
+    Block<Base> Block<Base>::multiple(const Block<Base>& other, const Rank& index) const {
+      Block<Base> res;
+      res.dims = dims;
+      Size a=1, b=1, c=1;
+      multiple::plan(a, b, c, dims, index);
+      assert(other.dims.size()==1);
+      assert(b==other.dims[0]);
+      res.data = data.multiple(other.data, a, b, c);
+      return std::move(res);
+    } // multiple
+  } // namespace block
+} // namespace TAT
+
+namespace TAT {
+  namespace node {
+    template<class Base>
+    Node<Base> Node<Base>::multiple(const Node<Base>& other, const Legs& position) const {
+      Node<Base> res;
+      assert(other.legs.size()==1);
+      res.legs = legs;
+      auto pos = std::find(legs.begin(), legs.end(), position);
+      if (pos==legs.end()) {
+        return *this;
+      } // if not multiple
+      Rank index = std::distance(legs.begin(), pos);
+      res.tensor = tensor.multiple(other.tensor, index);
+      return std::move(res);
+    } // multiple
+  } // namespace node
+} // namespace TAT
+
+#endif // TAT_Multiple_HPP_

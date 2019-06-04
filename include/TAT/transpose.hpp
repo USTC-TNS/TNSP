@@ -1,4 +1,4 @@
-/** TAT/Node/transpose.hpp
+/** TAT/transpose.hpp
  * @file
  * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
@@ -16,10 +16,59 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Node_Transpose_HPP_
-#define TAT_Node_Transpose_HPP_
+#ifndef TAT_Transpose_HPP_
+#define TAT_Transpose_HPP_
 
-#include "../Node.hpp"
+#include "../TAT.hpp"
+
+namespace TAT {
+  namespace data {
+#ifdef TAT_USE_CPU
+      namespace transpose {
+        template<class Base>
+        void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
+          std::vector<int> int_plan(plan.begin(), plan.end());
+          std::vector<int> int_dims(dims.begin(), dims.end());
+          hptt::create_plan(int_plan.data(), int_plan.size(),
+                            1, src, int_dims.data(), NULL,
+                            0, dst, NULL,
+                            hptt::ESTIMATE, 1, NULL, 1)->execute();
+        } // run
+      } // namespace data::CPU::transpose
+
+      template<class Base>
+      Data<Base> Data<Base>::transpose(const std::vector<Size>& dims,
+                                       const std::vector<Rank>& plan) const {
+        Data<Base> res(size);
+        assert(dims.size()==plan.size());
+        transpose::run(plan, dims, get(), res.get());
+        return std::move(res);
+      } // transpose
+#endif // TAT_USE_CPU
+  } // namespace data
+} // namespace TAT
+
+namespace TAT {
+  namespace block {
+    namespace transpose {
+      void plan(std::vector<Size>& new_dims, const std::vector<Size>& dims, const std::vector<Rank>& plan) {
+        for (const auto& i : plan) {
+          new_dims.push_back(dims[i]);
+        } // for i
+      } // plan
+    } // namespace block::transpose
+
+    template<class Base>
+    Block<Base> Block<Base>::transpose(const std::vector<Rank>& plan) const {
+      Block<Base> res;
+      transpose::plan(res.dims, dims, plan);
+      assert(plan.size()==dims.size());
+      assert(get_size(res.dims)==data.size);
+      res.data = data.transpose(dims, plan);
+      return std::move(res);
+    } // transpose
+  } // namespace block
+} // namespace TAT
 
 namespace TAT {
   namespace node {
@@ -58,4 +107,4 @@ namespace TAT {
   } // namespace node
 } // namespace TAT
 
-#endif // TAT_Node_Transpose_HPP_
+#endif // TAT_Transpose_HPP_

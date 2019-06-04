@@ -1,4 +1,4 @@
-/** TAT/Data/CPU/norm.hpp
+/** TAT/norm.hpp
  * @file
  * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_Norm_HPP_
-#define TAT_Data_Norm_HPP_
+#ifndef TAT_Norm_HPP_
+#define TAT_Norm_HPP_
 
-#include "../Data.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace data {
@@ -140,4 +140,28 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_Norm_HPP_
+namespace TAT {
+  namespace block {
+    template<class Base>
+    template<int n>
+    Block<Base> Block<Base>::norm() const {
+      Block<Base> res({});
+      res.data = data.template norm<n>();
+      return std::move(res);
+    } // norm
+  } // namespace block
+} // namespace TAT
+
+namespace TAT {
+  namespace node {
+    template<class Base>
+    template<int n>
+    Node<Base> Node<Base>::norm() const {
+      Node<Base> res({}, {});
+      res.tensor = tensor.template norm<n>();
+      return std::move(res);
+    } // norm
+  } // namespace node
+} // namespace TAT
+
+#endif // TAT_Norm_HPP_

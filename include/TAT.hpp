@@ -296,4 +296,13 @@ namespace TAT {
 #include "TAT/Site.hpp"
 #include "TAT/Lattice.hpp"
 
+#include "TAT/norm.hpp"
+#include "TAT/transpose.hpp"
+#include "TAT/contract.hpp"
+#include "TAT/multiple.hpp"
+#include "TAT/svd.hpp"
+#include "TAT/qr.hpp"
+#include "TAT/scalar.hpp"
+#include "TAT/io.hpp"
+
 #endif // TAT_HPP_

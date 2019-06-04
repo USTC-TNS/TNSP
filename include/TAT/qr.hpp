@@ -1,4 +1,4 @@
-/** TAT/Data/CPU/qr.hpp
+/** TAT/qr.hpp
  * @file
  * @author  Hao Zhang <zh970204@mail.ustc.edu.cn>
  *
@@ -16,10 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_Data_CPU_Qr_HPP_
-#define TAT_Data_CPU_Qr_HPP_
+#ifndef TAT_Qr_HPP_
+#define TAT_Qr_HPP_
 
-#include "../Data.hpp"
+#include "../TAT.hpp"
 
 namespace TAT {
   namespace data {
@@ -190,4 +190,47 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#endif // TAT_Data_CPU_Qr_HPP_
+namespace TAT {
+  namespace block {
+    template<class Base>
+    typename Block<Base>::qr_res Block<Base>::qr(const std::vector<Rank>& plan, const Rank& q_rank) const {
+      qr_res res;
+      Size q_size=1;
+      std::vector<Size> tmp_dims;
+      transpose::plan(tmp_dims, dims, plan);
+      svd::plan(q_size, q_rank, tmp_dims);
+      auto mid = tmp_dims.begin()+q_rank;
+      Size r_size=data.size/q_size;
+      Size min_size = (q_size<r_size)?q_size:r_size;
+      auto data_res = data.qr(dims, plan, q_size, r_size, min_size);
+      res.Q.dims.insert(res.Q.dims.end(), tmp_dims.begin(), mid);
+      res.Q.dims.push_back(min_size);
+      res.R.dims.push_back(min_size);
+      res.R.dims.insert(res.R.dims.end(), mid, tmp_dims.end());
+      res.Q.data = std::move(data_res.Q);
+      res.R.data = std::move(data_res.R);
+      return std::move(res);
+    } // qr
+  } // namespace block
+} // namespace TAT
+
+namespace TAT {
+  namespace node {
+    template<class Base>
+    typename Node<Base>::qr_res Node<Base>::qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
+      std::vector<Legs> q_legs = internal::in_and_in(legs, input_q_legs);
+      qr_res res;
+      std::vector<Legs> tmp_legs;
+      std::vector<Rank> plan;
+      Rank q_rank;
+      svd::plan(res.Q.legs, res.R.legs, tmp_legs, q_rank, legs, q_legs, new_q_legs, new_r_legs);
+      transpose::plan(plan, tmp_legs, legs);
+      auto tensor_res = tensor.qr(plan, q_rank);
+      res.Q.tensor = std::move(tensor_res.Q);
+      res.R.tensor = std::move(tensor_res.R);
+      return std::move(res);
+    } // qr
+  } // namespace node
+} // namespace TAT
+
+#endif // TAT_Qr_HPP_

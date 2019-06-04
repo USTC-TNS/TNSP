@@ -150,13 +150,4 @@ namespace TAT {
   } // namespace data
 } // namespace TAT
 
-#include "Data/norm.hpp"
-#include "Data/transpose.hpp"
-#include "Data/contract.hpp"
-#include "Data/multiple.hpp"
-#include "Data/svd.hpp"
-#include "Data/qr.hpp"
-#include "Data/scalar.hpp"
-#include "Data/io.hpp"
-
 #endif // TAT_Data_HPP_
