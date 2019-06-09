@@ -1,0 +1,102 @@
+os: linux
+dist: xenial
+language: cpp
+matrix:
+  fast_finish: true
+  include:
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-8
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
+        packages:
+        - clang-8
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.3-062
+    env:
+    - MATRIX_EVAL="CXX=clang++-8"
+    - EXTREME=1
+    compiler: clang-8
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
+        packages:
+        - g++-7
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.3-062
+    env:
+    - MATRIX_EVAL="CXX=g++-7"
+    compiler: gcc-7
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
+        packages:
+        - g++-8
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.3-062
+    env:
+    - MATRIX_EVAL="CXX=g++-8"
+    compiler: gcc-8
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-7
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
+        packages:
+        - clang-7
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.3-062
+    env:
+    - MATRIX_EVAL="CXX=clang++-7"
+    compiler: clang-7
+  - addons:
+      apt:
+        update: true
+        sources:
+        - ubuntu-toolchain-r-test
+        - llvm-toolchain-xenial-8
+        - sourceline: deb https://apt.repos.intel.com/mkl all main
+        packages:
+        - clang-8
+        - libjemalloc-dev
+        - --allow-unauthenticated intel-mkl-2019.3-062
+    env:
+    - MATRIX_EVAL="CXX=clang++-8"
+    compiler: clang-8
+cache:
+  directories:
+  - deps/hptt
+before_install:
+- eval "${MATRIX_EVAL}"
+- cd deps/hptt
+- ls lib/libhptt.a lib/libhptt.so || make
+- cd ../..
+install:
+- mkdir -p build
+- cd build
+- cmake .. -DCMAKE_BUILD_TYPE=Debug
+- make VERBOSE=1
+script:
+#- diff <(./test.out) ./test.stdout
+- diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 2 | head -n 1) <(cat ../diff/Heisenberg_MPS_SU.stdout| tail -n 2 | head -n 1)
+- diff <(./Heisenberg_MPS_SU.out -L4 -D4 | tail -n 1 | python -m json.tool | grep -v addr) <(cat ../diff/Heisenberg_MPS_SU.stdout | tail -n 1 | python -m json.tool | grep -v addr)
+- ./Heisenberg_MPS_SU.out -L4 -D4
+- ./Heisenberg_MPS_SU_env.out
+- ./test.out
+env:
+  global:
+    - MAKEFLAGS=-j8
+    - MKLROOT=/opt/intel/compilers_and_libraries_2019.3.199/linux/mkl
+    - STATIC=1
+notifications:
+  email: false
