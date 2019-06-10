@@ -16,16 +16,32 @@
  */
 
 #define TAT_DEFAULT
-//#define TAT_USE_MKL
-
 #include <TAT.hpp>
 
+TAT::Lazy<float> to_float(TAT::Lazy<int> a) {
+      TAT::Lazy<float> res;
+      res.set_func([=](int a) { return float(a); }, a);
+      return res;
+}
+TAT::LazyNode<float> to_float(TAT::LazyNode<int> a) {
+      return a.to<float>();
+}
+
 int main() {
-    auto a = std::make_shared<TAT::Lazy<int>>(1);
-    auto b = TAT::Lazy<int>::make_lazy([](int x){return x+1;}, a);
-    auto c = TAT::Lazy<int>::make_lazy([](int x, int y){return x+y;}, a, b);
-    std::cout << a->calc() << "+1=" << b->calc() << ", " << a->calc() << "+" << b->calc() << "=" << c->calc() << std::endl;
-    a->reset()->set(10);
-    std::cout << a->calc() << "+" << b->calc() << "=" << c->calc() << std::endl;
-    return 0;
+      // auto a = TAT::Lazy<int>(2);
+      // auto b = TAT::Lazy<int>(3);
+      auto a = TAT::LazyNode<int>(2);
+      auto b = TAT::LazyNode<int>(3);
+      auto c = a * b;
+      auto d = c * 2;
+      auto e = to_float(d) + 2.3;
+      // std::cout << a << " " << e << std::endl;
+      std::cout << a << "*" << b << "=" << c << " and *2 = " << d << " and +2.3 = " << e << std::endl;
+      a.set_value(TAT::Node<int>(4));
+      // a.set_value(4);
+      std::cout << a << "*" << b << "=" << c << " and *2 = " << d << " and +2.3 = " << e << std::endl;
+      b.set_value(TAT::Node<int>(10));
+      // b.set_value(10);
+      std::cout << a << "*" << b << "=" << c << " and *2 = " << d << " and +2.3 = " << e << std::endl;
+      return 0;
 }

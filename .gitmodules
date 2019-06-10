@@ -1,9 +1,9 @@
 [submodule "hptt"]
 	path = deps/hptt
-	url = https://github.com/hzhangxyz/hptt.git
+	url = https://github.com/springer13/hptt.git
 [submodule "args"]
 	path = deps/args
-	url = https://github.com/hzhangxyz/args.git
+	url = https://github.com/Taywee/args.git
 [submodule "rang"]
 	path = deps/rang
-	url = https://github.com/hzhangxyz/rang.git
+	url = https://github.com/agauniyal/rang.git
