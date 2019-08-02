@@ -52,10 +52,11 @@ endif()
 # Find Math Library
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(MKL)
-find_package(CBLAS)
-find_package(LAPACKE)
 if(MKL_FOUND)
   add_definitions("-DTAT_USE_MKL")
+else()
+  find_package(CBLAS)
+  find_package(LAPACKE)
 endif()
 find_package(OpenMP)
 

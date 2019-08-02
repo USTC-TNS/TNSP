@@ -161,7 +161,7 @@ if (BLAS_FOUND)
 
     include(FindPkgConfig)
     find_package(PkgConfig QUIET)
-    if( PKG_CONFIG_EXECUTABLE AND NOT CBLAS_GIVEN_BY_USER)
+    if( PKG_CONFIG_EXECUTABLE AND NOT CBLAS_GIVEN_BY_USER AND 0 )
 
       if (BLA_STATIC)
         set(MKL_STR_BLA_STATIC "static")

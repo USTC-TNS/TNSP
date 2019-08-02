@@ -394,7 +394,7 @@ if(BLAS_FOUND)
   # -------------------------------------------------------------------------------------
   include(FindPkgConfig)
   find_package(PkgConfig QUIET)
-  if( PKG_CONFIG_EXECUTABLE AND NOT LAPACK_GIVEN_BY_USER AND BLA_VENDOR STREQUAL "All")
+  if( PKG_CONFIG_EXECUTABLE AND NOT LAPACK_GIVEN_BY_USER AND BLA_VENDOR STREQUAL "All" AND 0 )
 
     if (BLA_STATIC)
       set(MKL_STR_BLA_STATIC "static")

@@ -60,12 +60,14 @@
 
 #ifdef TAT_USE_CPU
 #      ifdef TAT_USE_MKL
-#            warning use intel mkl
 extern "C" {
 #            define MKL_Complex8 std::complex<float>
 #            define MKL_Complex16 std::complex<double>
 #            include <mkl.h>
 } // extern "C"
+#            ifdef TAT_USE_VML
+#                  warning use intel mkl vml
+#            endif // TAT_USE_VML
 #      else
 extern "C" {
 #            define lapack_complex_float std::complex<float>
@@ -73,6 +75,9 @@ extern "C" {
 #            include <cblas.h>
 #            include <lapacke.h>
 }
+#            ifdef TAT_USE_VML
+#                  error vml set on but mkl set off
+#            endif // TAT_USE_VML
 #      endif // TAT_USE_MKL
 #      include <hptt.h>
 #      ifdef TAT_EXTREME
@@ -910,7 +915,7 @@ namespace TAT {
       namespace data {
 
             namespace norm {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                   template<class Base>
                   void vAbs(const Size& size, const Base* a, real_base_t<Base>* y);
 
@@ -1050,7 +1055,7 @@ namespace TAT {
                         }
                         return std::pow(sum, 1. / n);
                   } // run
-#endif // TAT_USE_MKL
+#endif // TAT_USE_VML
             } // namespace norm
 
             template<class Base>
@@ -1089,7 +1094,7 @@ namespace TAT {
       //       SSS    CCC   A    A  LLLLL  A    A  R   R  _____  M     M  K    K  LLLLL
       //
       namespace data {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
             namespace scalar {
                   template<class Base>
                   void vLinearFrac(
@@ -1321,7 +1326,7 @@ namespace TAT {
                         vDiv<Base>(a.size, a.base.data(), b.base.data(), y.base.data());
                   } // Div
             } // namespace scalar
-#endif // TAT_USE_MKL
+#endif // TAT_USE_VML
       } // namespace data
 
       //
@@ -1339,7 +1344,7 @@ namespace TAT {
             template<class Base>
             Data<Base>& operator*=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, a, b.base[0], 0, 0, 1);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1347,7 +1352,7 @@ namespace TAT {
                         }
 #endif
                   } else {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::Mul<Base>(a, b, a);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1362,7 +1367,7 @@ namespace TAT {
             Data<Base> operator*(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(b, res, a.base[0], 0, 0, 1);
 #else
                         for (Size i = 0; i < b.size; i++) {
@@ -1373,7 +1378,7 @@ namespace TAT {
                   } // if
                   if (b.size == 1) {
                         auto res = Data<Base>(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, res, b.base[0], 0, 0, 1);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1383,7 +1388,7 @@ namespace TAT {
                         return res;
                   } // if
                   auto res = Data<Base>(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                   scalar::Mul<Base>(a, b, res);
 #else
                   for (Size i = 0; i < a.size; i++) {
@@ -1396,7 +1401,7 @@ namespace TAT {
             template<class Base>
             Data<Base>& operator/=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, a, 1, 0, 0, *b.base.data());
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1404,7 +1409,7 @@ namespace TAT {
                         }
 #endif
                   } else {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::Div<Base>(a, b, a);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1419,7 +1424,7 @@ namespace TAT {
             Data<Base> operator/(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(b, res, 0, *a.base.data(), 1, 0);
 #else
                         for (Size i = 0; i < b.size; i++) {
@@ -1430,7 +1435,7 @@ namespace TAT {
                   } // if
                   if (b.size == 1) {
                         Data<Base> res(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, res, 1, 0, 0, *b.base.data());
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1440,7 +1445,7 @@ namespace TAT {
                         return res;
                   } // if
                   Data<Base> res(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                   scalar::Div<Base>(a, b, res);
 #else
                   for (Size i = 0; i < a.size; i++) {
@@ -1463,7 +1468,7 @@ namespace TAT {
             template<class Base>
             Data<Base>& operator+=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, a, 1, *b.base.data(), 0, 1);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1471,7 +1476,7 @@ namespace TAT {
                         }
 #endif
                   } else {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::Add<Base>(a, b, a);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1486,7 +1491,7 @@ namespace TAT {
             Data<Base> operator+(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(b, res, 1, *a.base.data(), 0, 1);
 #else
                         for (Size i = 0; i < b.size; i++) {
@@ -1497,7 +1502,7 @@ namespace TAT {
                   } // if
                   if (b.size == 1) {
                         Data<Base> res(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, res, 1, *b.base.data(), 0, 1);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1507,7 +1512,7 @@ namespace TAT {
                         return res;
                   } // if
                   Data<Base> res(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                   scalar::Add<Base>(a, b, res);
 #else
                   for (Size i = 0; i < a.size; i++) {
@@ -1520,7 +1525,7 @@ namespace TAT {
             template<class Base>
             Data<Base> operator-(const Data<Base>& a) {
                   auto res = Data<Base>(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                   scalar::LinearFrac<Base>(a, res, -1, 0, 0, 1);
 #else
                   for (Size i = 0; i < a.size; i++) {
@@ -1533,7 +1538,7 @@ namespace TAT {
             template<class Base>
             Data<Base>& operator-=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, a, 1, -*b.base.data(), 0, 1);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1541,7 +1546,7 @@ namespace TAT {
                         }
 #endif
                   } else {
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::Sub<Base>(a, b, a);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1556,7 +1561,7 @@ namespace TAT {
             Data<Base> operator-(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(b, res, -1, *a.base.data(), 0, 1);
 #else
                         for (Size i = 0; i < b.size; i++) {
@@ -1567,7 +1572,7 @@ namespace TAT {
                   } // if
                   if (b.size == 1) {
                         auto res = Data<Base>(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                         scalar::LinearFrac<Base>(a, res, 1, -*b.base.data(), 0, 1);
 #else
                         for (Size i = 0; i < a.size; i++) {
@@ -1577,7 +1582,7 @@ namespace TAT {
                         return res;
                   } // if
                   auto res = Data<Base>(a.size);
-#ifdef TAT_USE_MKL
+#ifdef TAT_USE_VML
                   scalar::Sub<Base>(a, b, res);
 #else
                   for (Size i = 0; i < a.size; i++) {

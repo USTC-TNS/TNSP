@@ -16,7 +16,12 @@
  */
 
 #include <iomanip>
+#include <iostream>
+#include <map>
 #include <random>
+#include <vector>
+
+#include <args.hxx>
 
 #define TAT_DEFAULT
 #include <TAT.hpp>
@@ -67,6 +72,7 @@ class MPS {
       Node hamiltonian;
       Node identity;
       std::vector<Node> lattice;
+      Node energy;
 
       MPS(int L, Size D, const std::vector<double>& hamiltonian_vector) :
             L(L), D(D), d(sqrt(sqrt(hamiltonian_vector.size()))) {
@@ -81,8 +87,61 @@ class MPS {
             });
             identity = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2}).set([this]() {
                   static int pos = 0;
-                  return (pos++) % (d + 1) == 0;
+                  return (pos++) % (d * d + 1) == 0;
             });
+
+            auto left_contract = std::map<int, Node>();
+            auto right_contract = std::map<int, Node>();
+            left_contract[-1] = Node({Right1, Right2}, {1, 1}).set([]() { return 1; });
+            right_contract[L] = Node({Left1, Left2}, {1, 1}).set([]() { return 1; });
+            for (int i = 0; i <= L - 1; i++) {
+                  left_contract[i] = Node::contract(
+                        left_contract[i - 1],
+                        Node::contract(
+                              lattice[i],
+                              lattice[i],
+                              {Phy},
+                              {Phy},
+                              {{Left, Left1}, {Right, Right1}},
+                              {{Left, Left2}, {Right, Right2}}),
+                        {Right1, Right2},
+                        {Left1, Left2},
+                        {},
+                        {});
+            }
+            for (int i = L - 1; i >= 0; i--) {
+                  right_contract[i] = Node::contract(
+                        right_contract[i + 1],
+                        Node::contract(
+                              lattice[i],
+                              lattice[i],
+                              {Phy},
+                              {Phy},
+                              {{Left, Left1}, {Right, Right1}},
+                              {{Left, Left2}, {Right, Right2}}),
+                        {Left1, Left2},
+                        {Right1, Right2},
+                        {},
+                        {});
+            }
+            energy = Node(0);
+            for (int i = 0; i < L - 1; i++) {
+                  auto psi = Node::contract(lattice[i], lattice[i + 1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
+                  auto Hpsi = Node::contract(psi, hamiltonian, {Phy1, Phy2}, {Phy1, Phy2}, {}, {});
+                  auto psiHpsi = Node::contract(
+                        Hpsi,
+                        psi,
+                        {Phy3, Phy4},
+                        {Phy1, Phy2},
+                        {{Left, Left1}, {Right, Right1}},
+                        {{Left, Left2}, {Right, Right2}});
+                  auto leftpsiHpsi =
+                        Node::contract(psiHpsi, left_contract[i - 1], {Left1, Left2}, {Right1, Right2}, {}, {});
+                  auto res =
+                        Node::contract(leftpsiHpsi, right_contract[i + 2], {Right1, Right2}, {Left1, Left2}, {}, {});
+                  energy = energy + res;
+            }
+            energy = energy / left_contract[L - 1] / L;
       }
 
       void set_random_state(std::function<double()> setter) {
@@ -93,15 +152,16 @@ class MPS {
 
       void update(int total_step, int log_interval, double delta_t) {
             prepare();
-            std::cout << *this << std::endl;
             auto updater = identity - delta_t * hamiltonian;
             for (int i = 1; i <= total_step; i++) {
                   update_once(updater);
-                  std::cout << *this << std::endl;
-                  // std::cout << i << "\r" << std::flush;
-                  // if (i % log_interval == 0) {
-                  //      std::cout << std::setprecision(12) << energy() << std::endl;
-                  //}
+                  // std::cout << *this << std::endl;
+                  std::cout << i << "\r" << std::flush;
+                  if (log_interval == 0 || i % log_interval == 0) {
+                        // std::cout << rang::fg::red << " Current Lattice is " << rang::fg::reset << *this << "\n";
+                        std::cout << std::setprecision(12) << energy.value().at({{Right1, 0}, {Right2, 0}})
+                                  << std::endl;
+                  }
             }
       }
 
@@ -133,10 +193,6 @@ class MPS {
             }
       }
 
-      double energy() {
-            return 0;
-      }
-
       friend std::ostream& operator<<(std::ostream& out, const MPS& mps) {
             out << "{" << rang::fgB::cyan << "\"L\": " << mps.L << rang::fg::reset << ", " << rang::fgB::cyan
                 << "\"D\": " << mps.D << rang::fg::reset << ", " << rang::fgB::cyan << "\"d\": " << mps.d
@@ -154,14 +210,54 @@ class MPS {
       }
 };
 
-int main() {
-      auto seed = 42;
-      auto mps = MPS(3, 2, {1, 0, 0, 0, 0, -1, 2, 0, 0, 2, -1, 0, 0, 0, 0, 1}); // L = 3, D = 2, d=2
-      auto engine = std::default_random_engine(seed);
+int main(int argc, char** argv) {
+      args::ArgumentParser parser(
+            "Heisenberg_MPS_SU " TAT_VERSION " (compiled " __DATE__ " " __TIME__
+            ")\n"
+            "Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+            "This program comes with ABSOLUTELY NO WARRANTY. "
+            "This is free software, and you are welcome to redistribute it "
+            "under the terms and conditions of the GNU General Public License. "
+            "See http://www.gnu.org/copyleft/gpl.html for details.",
+            "Simple Update in MPS of Heisenberg Model.");
+      args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
+      args::Flag version(parser, "version", "Display the version", {'v', "version"});
+      args::ValueFlag<int> length(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
+      args::ValueFlag<unsigned long> dimension(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
+      args::ValueFlag<unsigned> random_seed(parser, "S", "random seed [default: 42]", {'S', "random_seed"}, 42);
+      args::ValueFlag<int> step_num(parser, "N", "total step to run [default: 100]", {'N', "step_num"}, 100);
+      args::ValueFlag<int> print_interval(
+            parser, "T", "print energy every T step [default: 100]", {'T', "print_interval"}, 100);
+      args::ValueFlag<double> step_size(parser, "I", "step size when update [default: 0.01]", {'I', "step_size"}, 0.01);
+      try {
+            parser.ParseCLI(argc, argv);
+      } catch (const args::Help& h) {
+            std::cout << parser;
+            return 0;
+      } catch (const args::ParseError& e) {
+            std::cerr << e.what() << std::endl;
+            std::cerr << parser;
+            return 1;
+      } catch (const args::ValidationError& e) {
+            std::cerr << e.what() << std::endl;
+            std::cerr << parser;
+            return 1;
+      }
+      if (version) {
+            std::cout << "Heisenberg_MPS " TAT_VERSION << std::endl;
+            return 0;
+      }
+
+      auto mps =
+            MPS(args::get(length),
+                args::get(dimension),
+                {1 / 4., 0, 0, 0, 0, -1 / 4., 2 / 4., 0, 0, 2 / 4., -1 / 4., 0, 0, 0, 0, 1 / 4.}); // L = 3, D = 2, d=2
+      auto engine = std::default_random_engine(args::get(random_seed));
       auto dist = std::uniform_real_distribution<double>(-1, 1);
       auto generator = [&dist, &engine]() { return dist(engine); };
       mps.set_random_state(generator);
+      mps.update(args::get(step_num), args::get(print_interval), args::get(step_size));
       std::cout << mps << std::endl;
-      mps.update(2, 0, 0.1);
-      std::cout << mps << std::endl;
+
+      return 0;
 }
