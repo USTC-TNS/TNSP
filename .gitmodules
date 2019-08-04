@@ -7,3 +7,6 @@
 [submodule "rang"]
 	path = deps/rang
 	url = https://github.com/agauniyal/rang.git
+[submodule "backward"]
+	path = deps/backward
+	url = https://github.com/bombela/backward-cpp.git

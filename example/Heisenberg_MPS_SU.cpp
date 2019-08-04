@@ -28,59 +28,19 @@
 
 using Node = TAT::LazyNode<double>;
 using namespace TAT::legs_name;
-using TAT::Size;
-
-class QRCanonicalizationGraph {
-   public:
-      Node to_split;
-      Node to_absorb;
-      Node splited;
-      Node absorbed;
-      QRCanonicalizationGraph(TAT::Legs split_leg, TAT::Legs absorb_leg) {
-            auto qr = to_split.rq({split_leg}, absorb_leg, split_leg);
-            splited = qr.Q;
-            absorbed = Node::contract(qr.R, to_absorb, {split_leg}, {absorb_leg});
-      }
-};
-
-class SVDGraph {
-   public:
-      Node old_A;
-      Node old_B;
-      Node new_A;
-      Node new_B;
-      SVDGraph(Node H, int cut, bool left = true) {
-            auto big = Node::contract(old_A, old_B, {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
-            auto Big = Node::contract(big, H, {Phy1, Phy2}, {Phy3, Phy4});
-            Big = Big / Big.norm<-1>();
-            auto svd = Big.svd({Phy1, Left}, Right, Left, cut);
-            new_A = svd.U.legs_rename({{Phy1, Phy}});
-            new_B = svd.V.legs_rename({{Phy2, Phy}});
-            if (left) {
-                  new_A = new_A.multiple(svd.S, Right);
-            } else {
-                  new_B = new_B.multiple(svd.S, Left);
-            }
-      }
-};
 
 class MPS {
    public:
       int L;
-      Size D;
-      Size d;
+      TAT::Size D;
+      TAT::Size d;
       Node hamiltonian;
       Node identity;
       std::vector<Node> lattice;
       Node energy;
 
-      MPS(int L, Size D, const std::vector<double>& hamiltonian_vector) :
+      MPS(int L, TAT::Size D, const std::vector<double>& hamiltonian_vector) :
             L(L), D(D), d(sqrt(sqrt(hamiltonian_vector.size()))) {
-            lattice.push_back(Node({Phy, Left, Right}, {2, 1, D}));
-            for (int i = 1; i < L - 1; i++) {
-                  lattice.push_back(Node({Phy, Left, Right}, {2, D, D}));
-            }
-            lattice.push_back(Node({Phy, Left, Right}, {2, D, 1}));
             hamiltonian = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2}).set([&hamiltonian_vector]() {
                   static int pos = 0;
                   return hamiltonian_vector[pos++];
@@ -89,7 +49,19 @@ class MPS {
                   static int pos = 0;
                   return (pos++) % (d * d + 1) == 0;
             });
+            generate_lattice();
+            calc_energy();
+      }
 
+      void generate_lattice() {
+            lattice.push_back(Node({Phy, Left, Right}, {2, 1, D}));
+            for (int i = 1; i < L - 1; i++) {
+                  lattice.push_back(Node({Phy, Left, Right}, {2, D, D}));
+            }
+            lattice.push_back(Node({Phy, Left, Right}, {2, D, 1}));
+      }
+
+      void calc_energy() {
             auto left_contract = std::map<int, Node>();
             auto right_contract = std::map<int, Node>();
             left_contract[-1] = Node({Right1, Right2}, {1, 1}).set([]() { return 1; });
@@ -158,7 +130,8 @@ class MPS {
                   // std::cout << *this << std::endl;
                   std::cout << i << "\r" << std::flush;
                   if (log_interval == 0 || i % log_interval == 0) {
-                        // std::cout << rang::fg::red << " Current Lattice is " << rang::fg::reset << *this << "\n";
+                        // std::cout << rang::fg::red << " Current Lattice is " << rang::fg::reset << *this <<
+                        // "\n";
                         std::cout << std::setprecision(12) << energy.value().at({{Right1, 0}, {Right2, 0}})
                                   << std::endl;
                   }
@@ -167,29 +140,20 @@ class MPS {
 
       // qr to left
       void prepare() {
-            auto qr_graph = QRCanonicalizationGraph(Left, Right);
+            auto qr_graph = TAT::graph::QRCanonicalizationGraph<double>(Left, Right);
             for (int i = L - 1; i > 1; i--) {
-                  qr_graph.to_split.set_value(lattice[i].pop());
-                  qr_graph.to_absorb.set_value(lattice[i - 1].pop());
-                  lattice[i].set_value(qr_graph.splited.pop());
-                  lattice[i - 1].set_value(qr_graph.absorbed.pop());
+                  qr_graph(lattice[i], lattice[i - 1]);
             }
       }
 
       void update_once(Node updater) {
-            auto to_left = SVDGraph(updater, D, true);
-            auto to_right = SVDGraph(updater, D, false);
+            auto to_left = TAT::graph::Dim1SVDGraph<double>(updater, D, true);
+            auto to_right = TAT::graph::Dim1SVDGraph<double>(updater, D, false);
             for (int i = 0; i < L - 1; i++) {
-                  to_right.old_A.set_value(lattice[i].pop());
-                  to_right.old_B.set_value(lattice[i + 1].pop());
-                  lattice[i].set_value(to_right.new_A.pop());
-                  lattice[i + 1].set_value(to_right.new_B.pop());
+                  to_right(lattice[i], lattice[i + 1]);
             }
             for (int i = L - 2; i >= 0; i--) {
-                  to_left.old_A.set_value(lattice[i].pop());
-                  to_left.old_B.set_value(lattice[i + 1].pop());
-                  lattice[i].set_value(to_left.new_A.pop());
-                  lattice[i + 1].set_value(to_left.new_B.pop());
+                  to_left(lattice[i], lattice[i + 1]);
             }
       }
 
@@ -211,6 +175,7 @@ class MPS {
 };
 
 int main(int argc, char** argv) {
+      std::ios::sync_with_stdio(false);
       args::ArgumentParser parser(
             "Heisenberg_MPS_SU " TAT_VERSION " (compiled " __DATE__ " " __TIME__
             ")\n"

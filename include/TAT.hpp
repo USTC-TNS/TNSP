@@ -116,6 +116,10 @@ extern "C" {
 #      endif
 #endif // TAT_USE_CPU
 
+#ifdef TAT_USE_BACKTRACE
+#      include <backward.hpp>
+#endif
+
 /**
  * TAT is A Tensor library
  */
@@ -160,7 +164,7 @@ namespace TAT {
              * check if T is a scalar type
              */
             template<class T>
-            static const bool is_scalar_v = is_scalar<T>::value;
+            static constexpr bool is_scalar_v = is_scalar<T>::value;
 
             template<class T>
             class real_base {
@@ -179,9 +183,30 @@ namespace TAT {
              */
             template<class T>
             using real_base_t = typename real_base<T>::type;
+
+            template<class T>
+            class vml_usable {
+               public:
+                  static constexpr bool value = false;
+            };
+
+#ifdef TAT_USE_VML
+            template<>
+            constexpr bool vml_usable<float>::value = true;
+            template<>
+            constexpr bool vml_usable<std::complex<float>>::value = true;
+            template<>
+            constexpr bool vml_usable<double>::value = true;
+            template<>
+            constexpr bool vml_usable<std::complex<double>>::value = true;
+#endif // TAT_USE_VML
+
+            template<class T>
+            static constexpr bool vml_usable_v = vml_usable<T>::value;
       } // namespace scalar_tools
       using scalar_tools::is_scalar_v;
       using scalar_tools::real_base_t;
+      using scalar_tools::vml_usable_v;
 
       //
       //      L      EEEEE   GGGG    SSS
@@ -206,9 +231,12 @@ namespace TAT {
              * Legs(IdType) to specify its id directly,
              * this method will NOT maintain id and name map.
              */
+            using IdType = int;
+            static IdType total = 0;
+            static std::map<std::string, IdType> name2id = {};
+            static std::map<IdType, std::string> id2name = {};
             class Legs {
                public:
-                  using IdType = int;
                   IdType id = -1;
                   Legs() = default;
                   explicit Legs(IdType id) : id{id} {}
@@ -221,14 +249,7 @@ namespace TAT {
                               id2name[id] = name;
                         } // exsit name
                   }
-                  static IdType total;
-                  static std::map<std::string, IdType> name2id;
-                  static std::map<IdType, std::string> id2name;
             }; // class Legs
-
-            Legs::IdType Legs::total = 0;
-            std::map<std::string, Legs::IdType> Legs::name2id = {};
-            std::map<Legs::IdType, std::string> Legs::id2name = {};
 
             bool operator==(const Legs& a, const Legs& b) {
                   return a.id == b.id;
@@ -242,7 +263,7 @@ namespace TAT {
 
             std::ostream& operator<<(std::ostream& out, const Legs& value) {
                   try {
-                        return out << Legs::id2name.at(value.id);
+                        return out << id2name.at(value.id);
                   } catch (const std::out_of_range& e) {
                         return out << "UserDefinedLeg" << value.id;
                   }
@@ -587,60 +608,6 @@ namespace TAT {
       using Tensor = Block<Base>;
 
       //
-      //      V   V  EEEEE   CCC   TTTTT   OOO   RRRR          L      EEEEE   GGGG    SSS
-      //      V   V  E      C   C    T    O   O  R   R         L      E      G    G  S   S
-      //      V   V  E      C        T    O   O  R   R         L      E      G       S
-      //       V V   E      C        T    O   O  R   R         L      E      G       S
-      //       V V   EEEE   C        T    O   O  RRRR          L      EEEE   G        SSS
-      //       V V   E      C        T    O   O  RR            L      E      G  GGG      S
-      //        V    E      C        T    O   O  R R           L      E      G    G      S
-      //        V    E      C   C    T    O   O  R  R          L      E      G   GG  S   S
-      //        V    EEEEE   CCC     T     OOO   R   R  _____  LLLLL  EEEEE   GGG G   SSS
-      //
-      namespace vector_legs {
-            template<class T>
-            bool no_duplicated(const std::vector<T>& legs) {
-                  return legs.size() == std::set<T>(legs.begin(), legs.end()).size();
-            }
-
-            template<class T>
-            void replace(std::vector<T>& legs, const std::vector<std::tuple<T, T>>& dict) {
-                  // it is allowed if i not in legs
-                  for (const auto& [i, j] : dict) {
-                        std::replace(legs.begin(), legs.end(), i, j);
-                  }
-            }
-
-            template<class T>
-            std::vector<T> filter_out_not_in(const std::vector<T>& new_legs, const std::vector<T>& legs) {
-                  std::vector<T> res;
-                  std::copy_if(new_legs.begin(), new_legs.end(), std::back_inserter(res), [&](const Legs& i) {
-                        return std::find(legs.begin(), legs.end(), i) != legs.end();
-                  });
-                  return res;
-            }
-
-            template<class T>
-            std::vector<T> filter_out_in(const std::vector<T>& new_legs, const std::vector<T>& legs) {
-                  std::vector<T> res;
-                  std::copy_if(new_legs.begin(), new_legs.end(), std::back_inserter(res), [&](const Legs& i) {
-                        return std::find(legs.begin(), legs.end(), i) == legs.end();
-                  });
-                  return res;
-            }
-
-            template<class T>
-            auto find_iter(const std::vector<T>& vec, const T& i) {
-                  return std::find(vec.begin(), vec.end(), i);
-            }
-
-            template<class T>
-            void append(std::vector<T>& a, const std::vector<T>& b) {
-                  a.insert(a.end(), b.begin(), b.end());
-            } // append
-      } // namespace vector_legs
-
-      //
       //      N    N   OOO   DDDDD   EEEEE
       //      N    N  O   O   D   D  E
       //      NN   N  O   O   D   D  E
@@ -673,7 +640,7 @@ namespace TAT {
                         // expect length of legs and dims is same
                         assert(legs.size() == tensor.dims.size());
                         // expect no same element in legs
-                        assert(vector_legs::no_duplicated(legs));
+                        assert(legs.size() == std::set<TAT::Legs>(legs.begin(), legs.end()).size());
                   }
                   explicit Node(Base num) : tensor(num), legs({}) {}
 
@@ -712,7 +679,9 @@ namespace TAT {
                    * rename the legs name of node inplace
                    */
                   Node<Base>& legs_rename(const std::vector<std::tuple<Legs, Legs>>& dict) & {
-                        vector_legs::replace(legs, dict);
+                        for (const auto& [i, j] : dict) {
+                              std::replace(legs.begin(), legs.end(), i, j);
+                        }
                         return *this;
                   }
                   Node<Base>&& legs_rename(const std::vector<std::tuple<Legs, Legs>>& dict) && {
@@ -913,7 +882,6 @@ namespace TAT {
       //      N    N   OOO   R   R  M     M
       //
       namespace data {
-
             namespace norm {
 #ifdef TAT_USE_VML
                   template<class Base>
@@ -1002,7 +970,7 @@ namespace TAT {
                   } // iamax<std::complex<double>>
 
                   template<class Base, int n>
-                  Base run(const Size& size, const Base* data) {
+                  Base run_with_vml(const Size& size, const Base* data) {
                         if constexpr (n == -2) {
                               auto i = iamax<Base>(size, data);
                               return std::abs(data[i]);
@@ -1021,9 +989,13 @@ namespace TAT {
                         auto res = asum<real_base_t<Base>>(size, tmp.data());
                         return std::pow(res, 1. / n);
                   } // run
-#else
+#endif // TAT_USE_VML
+
                   template<class Base, int n>
-                  Base run(const Size& size, const Base* data) {
+                  Base run_with_vml(const Size& size, const Base* data);
+
+                  template<class Base, int n>
+                  Base run_without_vml(const Size& size, const Base* data) {
                         if constexpr (n == -1) {
                               if (size == 0) {
                                     return 0;
@@ -1055,7 +1027,15 @@ namespace TAT {
                         }
                         return std::pow(sum, 1. / n);
                   } // run
-#endif // TAT_USE_VML
+
+                  template<class Base, int n>
+                  Base run(const Size& size, const Base* data) {
+                        if constexpr (vml_usable_v<Base>) {
+                              return run_with_vml<Base, n>(size, data);
+                        } else {
+                              return run_without_vml<Base, n>(size, data);
+                        }
+                  }
             } // namespace norm
 
             template<class Base>
@@ -1093,8 +1073,8 @@ namespace TAT {
       //      S   S  C   C  A    A  L      A    A  R  R          M     M  K   K   L
       //       SSS    CCC   A    A  LLLLL  A    A  R   R  _____  M     M  K    K  LLLLL
       //
-      namespace data {
 #ifdef TAT_USE_VML
+      namespace data {
             namespace scalar {
                   template<class Base>
                   void vLinearFrac(
@@ -1326,8 +1306,8 @@ namespace TAT {
                         vDiv<Base>(a.size, a.base.data(), b.base.data(), y.base.data());
                   } // Div
             } // namespace scalar
-#endif // TAT_USE_VML
       } // namespace data
+#endif // TAT_USE_VML
 
       //
       //       SSS    CCC     AA    L        AA    RRRR          DDDDD     AA    TTTTT    AA
@@ -1341,24 +1321,47 @@ namespace TAT {
       //       SSS    CCC   A    A  LLLLL  A    A  R   R  _____  DDDDD   A    A    T    A    A
       //
       namespace data {
+            namespace scalar {
+                  template<class Base>
+                  void LinearFrac(
+                        const Data<Base>& src,
+                        Data<Base>& dst,
+                        const Base& sa,
+                        const Base& oa,
+                        const Base& sb,
+                        const Base& ob);
+
+                  template<class Base>
+                  void Add(const Data<Base>& a, const Data<Base>& b, Data<Base>& y);
+
+                  template<class Base>
+                  void Sub(const Data<Base>& a, const Data<Base>& b, Data<Base>& y);
+
+                  template<class Base>
+                  void Mul(const Data<Base>& a, const Data<Base>& b, Data<Base>& y);
+
+                  template<class Base>
+                  void Div(const Data<Base>& a, const Data<Base>& b, Data<Base>& y);
+            } // namespace scalar
+
             template<class Base>
             Data<Base>& operator*=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, a, b.base[0], 0, 0, 1);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] *= b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, a, b.base[0], 0, 0, 1);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] *= b.base[0];
+                              }
                         }
-#endif
                   } else {
-#ifdef TAT_USE_VML
-                        scalar::Mul<Base>(a, b, a);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] *= b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::Mul<Base>(a, b, a);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] *= b.base[i];
+                              }
                         }
-#endif
                   } // if
                   return a;
             } // operator*=
@@ -1367,55 +1370,55 @@ namespace TAT {
             Data<Base> operator*(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(b, res, a.base[0], 0, 0, 1);
-#else
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] * b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(b, res, a.base[0], 0, 0, 1);
+                        } else {
+                              for (Size i = 0; i < b.size; i++) {
+                                    res.base[i] = a.base[0] * b.base[i];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   if (b.size == 1) {
                         auto res = Data<Base>(a.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, res, b.base[0], 0, 0, 1);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] * b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, res, b.base[0], 0, 0, 1);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    res.base[i] = a.base[i] * b.base[0];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   auto res = Data<Base>(a.size);
-#ifdef TAT_USE_VML
-                  scalar::Mul<Base>(a, b, res);
-#else
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] * b.base[i];
+                  if constexpr (vml_usable_v<Base>) {
+                        scalar::Mul<Base>(a, b, res);
+                  } else {
+                        for (Size i = 0; i < a.size; i++) {
+                              res.base[i] = a.base[i] * b.base[i];
+                        }
                   }
-#endif
                   return res;
             } // operator*
 
             template<class Base>
             Data<Base>& operator/=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, a, 1, 0, 0, *b.base.data());
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] /= b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, a, 1, 0, 0, *b.base.data());
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] /= b.base[0];
+                              }
                         }
-#endif
                   } else {
-#ifdef TAT_USE_VML
-                        scalar::Div<Base>(a, b, a);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] /= b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::Div<Base>(a, b, a);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] /= b.base[i];
+                              }
                         }
-#endif
                   } // if
                   return a;
             } // operator/=
@@ -1424,34 +1427,34 @@ namespace TAT {
             Data<Base> operator/(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(b, res, 0, *a.base.data(), 1, 0);
-#else
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] / b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(b, res, 0, *a.base.data(), 1, 0);
+                        } else {
+                              for (Size i = 0; i < b.size; i++) {
+                                    res.base[i] = a.base[0] / b.base[i];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   if (b.size == 1) {
                         Data<Base> res(a.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, res, 1, 0, 0, *b.base.data());
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] / b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, res, 1, 0, 0, *b.base.data());
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    res.base[i] = a.base[i] / b.base[0];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   Data<Base> res(a.size);
-#ifdef TAT_USE_VML
-                  scalar::Div<Base>(a, b, res);
-#else
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] / b.base[i];
+                  if constexpr (vml_usable_v<Base>) {
+                        scalar::Div<Base>(a, b, res);
+                  } else {
+                        for (Size i = 0; i < a.size; i++) {
+                              res.base[i] = a.base[i] / b.base[i];
+                        }
                   }
-#endif
                   return res;
             } // operator/
 
@@ -1468,21 +1471,21 @@ namespace TAT {
             template<class Base>
             Data<Base>& operator+=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, a, 1, *b.base.data(), 0, 1);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] += b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, a, 1, *b.base.data(), 0, 1);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] += b.base[0];
+                              }
                         }
-#endif
                   } else {
-#ifdef TAT_USE_VML
-                        scalar::Add<Base>(a, b, a);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] += b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::Add<Base>(a, b, a);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] += b.base[i];
+                              }
                         }
-#endif
                   } // if
                   return a;
             } // operator+=
@@ -1491,68 +1494,68 @@ namespace TAT {
             Data<Base> operator+(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(b, res, 1, *a.base.data(), 0, 1);
-#else
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] + b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(b, res, 1, *a.base.data(), 0, 1);
+                        } else {
+                              for (Size i = 0; i < b.size; i++) {
+                                    res.base[i] = a.base[0] + b.base[i];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   if (b.size == 1) {
                         Data<Base> res(a.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, res, 1, *b.base.data(), 0, 1);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] + b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, res, 1, *b.base.data(), 0, 1);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    res.base[i] = a.base[i] + b.base[0];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   Data<Base> res(a.size);
-#ifdef TAT_USE_VML
-                  scalar::Add<Base>(a, b, res);
-#else
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] + b.base[i];
+                  if constexpr (vml_usable_v<Base>) {
+                        scalar::Add<Base>(a, b, res);
+                  } else {
+                        for (Size i = 0; i < a.size; i++) {
+                              res.base[i] = a.base[i] + b.base[i];
+                        }
                   }
-#endif
                   return res;
             } // operator+
 
             template<class Base>
             Data<Base> operator-(const Data<Base>& a) {
                   auto res = Data<Base>(a.size);
-#ifdef TAT_USE_VML
-                  scalar::LinearFrac<Base>(a, res, -1, 0, 0, 1);
-#else
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = -a.base[i];
+                  if constexpr (vml_usable_v<Base>) {
+                        scalar::LinearFrac<Base>(a, res, -1, 0, 0, 1);
+                  } else {
+                        for (Size i = 0; i < a.size; i++) {
+                              res.base[i] = -a.base[i];
+                        }
                   }
-#endif
                   return res;
             } // operator-
 
             template<class Base>
             Data<Base>& operator-=(Data<Base>& a, const Data<Base>& b) {
                   if (b.size == 1) {
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, a, 1, -*b.base.data(), 0, 1);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] -= b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, a, 1, -*b.base.data(), 0, 1);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] -= b.base[0];
+                              }
                         }
-#endif
                   } else {
-#ifdef TAT_USE_VML
-                        scalar::Sub<Base>(a, b, a);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] -= b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::Sub<Base>(a, b, a);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    a.base[i] -= b.base[i];
+                              }
                         }
-#endif
                   } // if
                   return a;
             } // operator-=
@@ -1561,34 +1564,34 @@ namespace TAT {
             Data<Base> operator-(const Data<Base>& a, const Data<Base>& b) {
                   if (a.size == 1) {
                         auto res = Data<Base>(b.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(b, res, -1, *a.base.data(), 0, 1);
-#else
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] - b.base[i];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(b, res, -1, *a.base.data(), 0, 1);
+                        } else {
+                              for (Size i = 0; i < b.size; i++) {
+                                    res.base[i] = a.base[0] - b.base[i];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   if (b.size == 1) {
                         auto res = Data<Base>(a.size);
-#ifdef TAT_USE_VML
-                        scalar::LinearFrac<Base>(a, res, 1, -*b.base.data(), 0, 1);
-#else
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] - b.base[0];
+                        if constexpr (vml_usable_v<Base>) {
+                              scalar::LinearFrac<Base>(a, res, 1, -*b.base.data(), 0, 1);
+                        } else {
+                              for (Size i = 0; i < a.size; i++) {
+                                    res.base[i] = a.base[i] - b.base[0];
+                              }
                         }
-#endif
                         return res;
                   } // if
                   auto res = Data<Base>(a.size);
-#ifdef TAT_USE_VML
-                  scalar::Sub<Base>(a, b, res);
-#else
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] - b.base[i];
+                  if constexpr (vml_usable_v<Base>) {
+                        scalar::Sub<Base>(a, b, res);
+                  } else {
+                        for (Size i = 0; i < a.size; i++) {
+                              res.base[i] = a.base[i] - b.base[i];
+                        }
                   }
-#endif
                   return res;
             } // operator-
       } // namespace data
@@ -1784,23 +1787,27 @@ namespace TAT {
                   template<class Base>
                   void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
                         // currently use hptt only
-                        std::vector<int> int_plan(plan.begin(), plan.end());
-                        std::vector<int> int_dims(dims.begin(), dims.end());
-                        hptt::create_plan(
-                              int_plan.data(),
-                              int_plan.size(),
-                              1,
-                              src,
-                              int_dims.data(),
-                              NULL,
-                              0,
-                              dst,
-                              NULL,
-                              hptt::ESTIMATE,
-                              1,
-                              NULL,
-                              1)
-                              ->execute();
+                        if (dims.size() == 0) {
+                              *dst = *src;
+                        } else {
+                              std::vector<int> int_plan(plan.begin(), plan.end());
+                              std::vector<int> int_dims(dims.begin(), dims.end());
+                              hptt::create_plan(
+                                    int_plan.data(),
+                                    int_plan.size(),
+                                    1,
+                                    src,
+                                    int_dims.data(),
+                                    NULL,
+                                    0,
+                                    dst,
+                                    NULL,
+                                    hptt::ESTIMATE,
+                                    1,
+                                    NULL,
+                                    1)
+                                    ->execute();
+                        }
                   } // run
             } // namespace transpose
 
@@ -1838,7 +1845,7 @@ namespace TAT {
                   std::vector<Rank> generate_plan(const std::vector<Legs>& new_legs, const std::vector<Legs>& legs) {
                         std::vector<Rank> res;
                         for (const auto& i : new_legs) {
-                              res.push_back(std::distance(legs.begin(), vector_legs::find_iter(legs, i)));
+                              res.push_back(std::distance(legs.begin(), std::find(legs.begin(), legs.end(), i)));
                         } // for i
                         return res;
                   } // plan
@@ -1847,8 +1854,11 @@ namespace TAT {
             template<class Base>
             Node<Base> Node<Base>::transpose(const std::vector<Legs>& new_legs) const {
                   Node<Base> res;
-                  res.legs = vector_legs::filter_out_not_in(new_legs, legs);
-                  assert(vector_legs::no_duplicated(res.legs));
+                  std::copy_if(new_legs.begin(), new_legs.end(), std::back_inserter(res.legs), [&](const Legs& i) {
+                        return std::find(legs.begin(), legs.end(), i) != legs.end();
+                  });
+                  // remove legs not exist, but all existing legs should not ignore
+                  assert(res.legs.size() == std::set<TAT::Legs>(res.legs.begin(), res.legs.end()).size());
                   assert(res.legs.size() == legs.size());
                   std::vector<Rank> plan = transpose::generate_plan(res.legs, legs);
                   assert(plan.size() == legs.size());
@@ -2252,15 +2262,17 @@ namespace TAT {
                         std::vector<Legs> U_legs;
                         std::vector<Legs> V_legs;
                         std::vector<Legs> tmp_legs;
-                        Rank u_rank = u_legs.size();
+                        Rank u_rank = 0; // u_legs.size();
                         V_legs.push_back(new_v_legs);
                         for (const auto& i : total_legs) {
-                              if (vector_legs::find_iter(u_legs, i) != u_legs.end()) {
+                              if (std::find(u_legs.begin(), u_legs.end(), i) != u_legs.end()) {
                                     U_legs.push_back(i);
+                                    u_rank++;
                               } else {
                                     V_legs.push_back(i);
                               } // if
                         } // for
+                        U_legs.push_back(new_u_legs);
                         // std::copy_if(
                         //       total_legs.begin(), total_legs.end(), std::back_inserter(U_legs), [&](const Legs& i) {
                         //       return vector_legs::find_iter(u_legs, i)!=u_legs.end();
@@ -2269,7 +2281,6 @@ namespace TAT {
                         //       total_legs.begin(), total_legs.end(), std::back_inserter(V_legs), [&](const Legs& i) {
                         //       return vector_legs::find_iter(u_legs, i)==u_legs.end();
                         // });
-                        U_legs.push_back(new_u_legs);
                         tmp_legs.insert(tmp_legs.end(), U_legs.begin(), U_legs.end() - 1);
                         tmp_legs.insert(tmp_legs.end(), V_legs.begin() + 1, V_legs.end());
                         return std::tuple{U_legs, V_legs, tmp_legs, u_rank};
@@ -2282,9 +2293,8 @@ namespace TAT {
                   const Legs& new_u_legs,
                   const Legs& new_v_legs,
                   const Rank& cut) const {
-                  std::vector<Legs> u_legs = vector_legs::filter_out_not_in(legs, input_u_legs);
                   svd_res res;
-                  auto [U_legs, V_legs, tmp_legs, u_rank] = svd::plan(legs, u_legs, new_u_legs, new_v_legs);
+                  auto [U_legs, V_legs, tmp_legs, u_rank] = svd::plan(legs, input_u_legs, new_u_legs, new_v_legs);
                   res.U.legs = std::move(U_legs);
                   res.V.legs = std::move(V_legs);
                   std::vector<Rank> plan = transpose::generate_plan(tmp_legs, legs);
@@ -2508,9 +2518,8 @@ namespace TAT {
             typename Node<Base>::qr_res
             Node<Base>::qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs)
                   const {
-                  std::vector<Legs> q_legs = vector_legs::filter_out_not_in(legs, input_q_legs);
                   qr_res res;
-                  auto [Q_legs, R_legs, tmp_legs, q_rank] = svd::plan(legs, q_legs, new_q_legs, new_r_legs);
+                  auto [Q_legs, R_legs, tmp_legs, q_rank] = svd::plan(legs, input_q_legs, new_q_legs, new_r_legs);
                   res.Q.legs = std::move(Q_legs);
                   res.R.legs = std::move(R_legs);
                   std::vector<Rank> plan = transpose::generate_plan(tmp_legs, legs);
@@ -2720,28 +2729,52 @@ namespace TAT {
                        const std::vector<Legs>& legs2,
                        const std::vector<std::tuple<Legs, Legs>>& map1,
                        const std::vector<std::tuple<Legs, Legs>>& map2) {
+                        assert(legs1.size() == legs2.size());
+
                         std::vector<Legs> legs;
                         std::vector<Legs> new_legs1;
                         std::vector<Legs> new_legs2;
+                        Rank contract_num = 0;
 
-                        auto filt_legs1 = vector_legs::filter_out_in(total_legs1, legs1);
-                        vector_legs::append(new_legs1, filt_legs1);
-                        vector_legs::replace(filt_legs1, map1);
-                        vector_legs::append(legs, filt_legs1);
+                        // find the legs which need contract
+                        std::vector<Legs> legs1_contract;
+                        std::vector<Legs> legs2_contract;
+                        for (Size i = 0; i < legs1.size(); i++) {
+                              if (std::find(total_legs1.begin(), total_legs1.end(), legs1[i]) != total_legs1.end() &&
+                                  std::find(total_legs2.begin(), total_legs2.end(), legs2[i]) != total_legs2.end()) {
+                                    contract_num++;
+                                    legs1_contract.push_back(legs1[i]);
+                                    legs2_contract.push_back(legs2[i]);
+                              }
+                        }
+                        // new_legs1 append if not in contract
+                        int left_number = 0;
+                        for (const auto& i : total_legs1) {
+                              if (std::find(legs1_contract.begin(), legs1_contract.end(), i) == legs1_contract.end()) {
+                                    new_legs1.push_back(i);
+                                    legs.push_back(i);
+                                    left_number++;
+                              }
+                        }
+                        // new_legs1 append contract
+                        new_legs1.insert(new_legs1.end(), legs1_contract.begin(), legs1_contract.end());
+                        // new_legs2 append contract
+                        new_legs2.insert(new_legs2.end(), legs2_contract.begin(), legs2_contract.end());
+                        // new_legs2 append if not in contract
+                        for (const auto& i : total_legs2) {
+                              if (std::find(legs2_contract.begin(), legs2_contract.end(), i) == legs2_contract.end()) {
+                                    new_legs2.push_back(i);
+                                    legs.push_back(i);
+                              }
+                        }
+                        // legs append 2 total_legs if not in contract with map
+                        for (const auto& [i, j] : map1) {
+                              std::replace(legs.begin(), legs.begin() + left_number, i, j);
+                        }
+                        for (const auto& [i, j] : map2) {
+                              std::replace(legs.begin() + left_number, legs.end(), i, j);
+                        }
 
-                        auto tmp_legs1 = vector_legs::filter_out_not_in(legs1, total_legs1);
-                        vector_legs::append(new_legs1, tmp_legs1);
-
-                        auto tmp_legs2 = vector_legs::filter_out_not_in(legs2, total_legs2);
-                        vector_legs::append(new_legs2, tmp_legs2);
-
-                        auto filt_legs2 = vector_legs::filter_out_in(total_legs2, legs2);
-                        vector_legs::append(new_legs2, filt_legs2);
-                        vector_legs::replace(filt_legs2, map2);
-                        vector_legs::append(legs, filt_legs2);
-
-                        assert(tmp_legs1.size() == tmp_legs2.size());
-                        Rank contract_num = tmp_legs1.size();
                         return std::tuple{contract_num, legs, new_legs1, new_legs2};
                   } // plan
             } // namespace contract
@@ -2755,7 +2788,6 @@ namespace TAT {
                   const std::vector<std::tuple<Legs, Legs>>& map1,
                   const std::vector<std::tuple<Legs, Legs>>& map2) {
                   Node<Base> res;
-                  assert(legs1.size() == legs2.size());
                   auto [contract_num, res_legs, new_legs1, new_legs2] =
                         contract::plan(node1.legs, node2.legs, legs1, legs2, map1, map2);
                   res.legs = std::move(res_legs);
@@ -2765,6 +2797,7 @@ namespace TAT {
                   assert(plan1.size() == node1.legs.size());
                   assert(new_legs2.size() == node2.legs.size());
                   assert(plan2.size() == node2.legs.size());
+                  assert(res.legs.size() == std::set<TAT::Legs>(res.legs.begin(), res.legs.end()).size());
                   res.tensor = Tensor<Base>::contract(node1.tensor, node2.tensor, plan1, plan2, contract_num);
                   return res;
             } // contract
@@ -2845,7 +2878,7 @@ namespace TAT {
                   Node<Base> res;
                   assert(other.legs.size() == 1);
                   res.legs = legs;
-                  auto pos = vector_legs::find_iter(legs, position);
+                  auto pos = std::find(legs.begin(), legs.end(), position);
                   if (pos == legs.end()) {
                         return *this;
                   } // if not multiple
@@ -2870,16 +2903,31 @@ namespace TAT {
             // class LazyBase : public std::enable_shared_from_this<LazyBase> {
             class LazyCoreBase {
                public:
-                  bool value_flag = false; // own valid value
-                  bool func_flag = false; // initialized by function
-
                   std::set<LazyCoreBase*> downstream;
                   std::set<LazyCoreBase*> upstream; // this should be always valid because of func
 
-                  void reset(bool reset_itself = true) {
-                        if (value_flag) {
+                  virtual void reset(bool = true) = 0;
+                  virtual ~LazyCoreBase() = default;
+            };
+
+#ifdef TAT_USE_EAGER
+            static bool eager = false;
+#endif
+#ifdef TAT_USE_BACKTRACE
+            backward::Printer printer;
+#endif
+
+            template<class T>
+            class LazyCore : public LazyCoreBase {
+               public:
+                  void reset(bool reset_itself = true) override {
+                        if (value) {
                               if (reset_itself) {
-                                    value_flag = false;
+                                    if (own_flag) {
+                                          delete value;
+                                          own_flag = false;
+                                    }
+                                    value = nullptr;
                               }
                               for (const auto& ds : downstream) {
                                     ds->reset();
@@ -2887,37 +2935,58 @@ namespace TAT {
                         }
                   }
 
-                  std::set<LazyCoreBase*> dump_upstream() {
+                  ~LazyCore() {
+                        dump_upstream(); // this must be in derived class destructor
+                        if (value && own_flag) {
+                              delete value;
+                        }
+                  }
+
+                  const T* value = nullptr;
+                  bool own_flag = false;
+                  std::function<const T*()> func;
+#ifdef TAT_USE_BACKTRACE
+                  backward::StackTrace state;
+#endif
+
+                  void dump_upstream() {
                         for (const auto& us : upstream) {
                               us->downstream.erase(this); // if there is duplicated, it still work
                         }
-                        return std::move(upstream);
-                  }
-            };
-
-            template<class T>
-            class LazyCore : public LazyCoreBase {
-               public:
-                  T value;
-                  std::function<T()> func;
-
-                  ~LazyCore() {
-                        dump_upstream(); // this must be in derived class destructor
+                        upstream.clear();
                   }
 
-                  T& calc() {
-                        if (!value_flag) {
+                  const T& calc() {
+                        if (!value) {
+#ifdef TAT_USE_BACKTRACE
+                              try {
+                                    value = func();
+                              } catch (std::exception& e) {
+                                    printer.print(state);
+                                    throw;
+                              }
+#else
                               value = func();
-                              value_flag = true;
+#endif
                         }
-                        return value;
+                        return *value;
                   } // not mask as const because in qr, svd, it need move its member, namely change it
 
                   T pop() {
                         calc();
-                        T res = std::move(value);
+                        T res = std::move(*const_cast<T*>(value));
                         reset();
                         return res;
+                  }
+
+                  void set_point_value(const T* ptr) {
+                        reset();
+                        dump_upstream();
+                        func = std::function<T*()>();
+                        value = ptr;
+#ifdef TAT_USE_BACKTRACE
+                        state.load_here(32);
+#endif
                   }
 
                   // set to a func_flaged lazy is dangerous
@@ -2925,9 +2994,50 @@ namespace TAT {
                   void set_value(Args&&... args) {
                         reset();
                         dump_upstream();
-                        func_flag = false;
-                        value = T(std::forward<Args>(args)...);
-                        value_flag = true;
+                        func = std::function<T*()>();
+                        value = new T(std::forward<Args>(args)...);
+                        own_flag = true;
+#ifdef TAT_USE_BACKTRACE
+                        state.load_here(32);
+#endif
+                  }
+
+                  template<class Func, class... Args>
+                  void set_point_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
+                        reset();
+                        dump_upstream();
+                        (..., args->downstream.insert(this));
+                        (..., upstream.insert(args.get()));
+                        func = [args..., f(std::move(f))]() { return f(args->calc()...); };
+#ifdef TAT_USE_BACKTRACE
+                        state.load_here(32);
+#endif
+#ifdef TAT_USE_EAGER
+                        if (eager) {
+                              calc();
+                        }
+#endif // TAT_USE_EAGER
+                  }
+
+                  template<class Func, class... Args>
+                  void set_maybe_point_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
+                        reset();
+                        dump_upstream();
+                        (..., args->downstream.insert(this));
+                        (..., upstream.insert(args.get()));
+                        func = [args..., this, f(std::move(f))]() {
+                              auto res = f(args->calc()...);
+                              own_flag = res.own_flag;
+                              return res.value_point;
+                        };
+#ifdef TAT_USE_BACKTRACE
+                        state.load_here(32);
+#endif
+#ifdef TAT_USE_EAGER
+                        if (eager) {
+                              calc();
+                        }
+#endif // TAT_USE_EAGER
                   }
 
                   template<class Func, class... Args>
@@ -2936,8 +3046,19 @@ namespace TAT {
                         dump_upstream();
                         (..., args->downstream.insert(this));
                         (..., upstream.insert(args.get()));
-                        func = [=, f(std::move(f))]() { return f(args->calc()...); };
-                        func_flag = true;
+                        func = [args..., this, f(std::move(f))]() {
+                              auto res = new T(f(args->calc()...));
+                              own_flag = true;
+                              return res;
+                        };
+#ifdef TAT_USE_BACKTRACE
+                        state.load_here(32);
+#endif
+#ifdef TAT_USE_EAGER
+                        if (eager) {
+                              calc();
+                        }
+#endif // TAT_USE_EAGER
                   }
 
                   // update on a lazy with downstream is dangerous
@@ -2945,31 +3066,50 @@ namespace TAT {
                   void update(Func&& modify, std::shared_ptr<LazyCore<Args>>... args) {
                         (..., args->downstream.insert(this));
                         (..., upstream.insert(args.get()));
-                        reset();
-                        if (func_flag) {
-                              func = [=, f(std::move(func)), m(std::move(modify))]() {
-                                    auto current = f();
-                                    m(current, args->calc()...);
-                                    return current;
+                        if (func) {
+                              reset();
+                              func = [args..., f(std::move(func)), m(std::move(modify))]() {
+                                    auto res = const_cast<T*>(f()); // f返回的是自己拥有的指针
+                                    m(*res, args->calc()...);
+                                    return const_cast<const T*>(res);
                               };
-                        } else {
+                              // 别人的变量做inplace update有一点危险
+                        } else if (value) {
+                              // 虽然可能不own value, 但是考虑到直接是值, 很难出现忘记他被更改了的低级错误
+                              reset(false);
                               if constexpr (sizeof...(Args) == 0) {
-                                    modify(value);
-                                    value_flag = true;
+                                    modify(*const_cast<T*>(value));
                               } else {
-                                    func = [=, current(std::move(func)), m(std::move(modify))]() {
-                                          auto res = current; // copy happended here;
-                                          m(res, args->calc()...);
-                                          return res;
-                                    };
-                                    func_flag = true;
+                                    if (own_flag) {
+                                          auto tmp = std::move(*const_cast<T*>(value));
+                                          delete value;
+                                          own_flag = false;
+                                          func = [args..., this, current(std::move(tmp)), m(std::move(modify))]() {
+                                                auto res = new T(current); // copy happended here;
+                                                own_flag = true;
+                                                m(*res, args->calc()...);
+                                                return const_cast<const T*>(res);
+                                          }; // move value when call, copy value on calculate
+                                    } else {
+                                          func = [args..., this, current(value), m(std::move(modify))]() {
+                                                auto res = new T(*current); // copy happen here;
+                                                own_flag = true;
+                                                m(*res, args->calc()...);
+                                                return const_cast<const T*>(res);
+                                          }; // copy pointer when call, copy value on calculate
+                                    }
+                                    value = nullptr;
                               }
+                        } // if !func && !value, it is invalid
+#ifdef TAT_USE_BACKTRACE
+                        state.load_here(32);
+#endif
+#ifdef TAT_USE_EAGER
+                        if (eager) {
+                              calc();
                         }
+#endif // TAT_USE_EAGER
                   }
-
-                  void replace(std::shared_ptr<LazyCore<T>> src) {
-                        set_func([](const T& res) { return res; }, src);
-                  } // copy happen
             };
       } // namespace lazy
 
@@ -2997,12 +3137,29 @@ namespace TAT {
                    */
                   Lazy() : core(std::make_shared<LazyCore<T>>()) {}
 
+                  Lazy<T> set_point_value(const T* ptr) {
+                        core->set_point_value(ptr);
+                        return *this;
+                  }
+
                   /**
                    * set value, similar to constructor
                    */
                   template<class... Args>
                   Lazy<T> set_value(Args&&... args) {
                         core->set_value(std::forward<Args>(args)...);
+                        return *this;
+                  }
+
+                  template<class Func, class... Args>
+                  Lazy<T> set_point_func(Func&& f, Lazy<Args>... args) {
+                        core->set_point_func(std::move(f), args.core...);
+                        return *this;
+                  }
+
+                  template<class Func, class... Args>
+                  Lazy<T> set_maybe_point_func(Func&& f, Lazy<Args>... args) {
+                        core->set_maybe_point_func(std::move(f), args.core...);
                         return *this;
                   }
 
@@ -3024,11 +3181,6 @@ namespace TAT {
                         return *this;
                   }
 
-                  Lazy<T> replace(Lazy<T> src) {
-                        core->replace(src.core);
-                        return *this;
-                  }
-
                   /**
                    * get its value
                    */
@@ -3046,10 +3198,19 @@ namespace TAT {
                   explicit Lazy(T c) : core(std::make_shared<LazyCore<T>>()) {
                         set_value(c);
                   }
+                  explicit Lazy(T&& c) : core(std::make_shared<LazyCore<T>>()) {
+                        set_value(std::move(c));
+                  }
+                  explicit Lazy(const T* c) : core(std::make_shared<LazyCore<T>>()) {
+                        set_point_value(c);
+                  }
             };
 
             template<class T>
             Lazy(T)->Lazy<T>;
+
+            template<class T>
+            Lazy(T*)->Lazy<T>;
 
             template<class T>
             Lazy(std::shared_ptr<LazyCore<T>>)->Lazy<T>;
@@ -3153,10 +3314,12 @@ namespace TAT {
             template<class Base = double>
             class LazyNode : public Lazy<Node<Base>> {
                public:
+                  using Lazy<Node<Base>>::set_point_value;
                   using Lazy<Node<Base>>::set_value;
+                  using Lazy<Node<Base>>::set_point_func;
+                  using Lazy<Node<Base>>::set_maybe_point_func;
                   using Lazy<Node<Base>>::set_func;
                   using Lazy<Node<Base>>::update;
-                  using Lazy<Node<Base>>::replace;
                   using Lazy<Node<Base>>::value;
                   using Lazy<Node<Base>>::pop;
 
@@ -3168,6 +3331,9 @@ namespace TAT {
                   template<class Arg0, class... Args>
                   explicit LazyNode(Arg0&& arg0, Args&&... args) {
                         set_value(std::forward<Arg0>(arg0), std::forward<Args>(args)...);
+                  }
+                  explicit LazyNode(const Node<Base>* ptr) {
+                        set_point_value(ptr);
                   }
                   // explicit LazyNode(std::shared_ptr<LazyCore<Node<Base>>> src) : Lazy<Node<Base>>(src) {}
                   explicit LazyNode(Lazy<Node<Base>> src) : Lazy<Node<Base>>(src) {}
@@ -3236,9 +3402,9 @@ namespace TAT {
                               },
                               *this);
                         auto res = svd_res();
-                        res.U.set_func([](typename Node<Base>::svd_res& r) { return std::move(r.U); }, tmp);
-                        res.S.set_func([](typename Node<Base>::svd_res& r) { return std::move(r.S); }, tmp);
-                        res.V.set_func([](typename Node<Base>::svd_res& r) { return std::move(r.V); }, tmp);
+                        res.U.set_point_func([](const typename Node<Base>::svd_res& r) { return &r.U; }, tmp);
+                        res.S.set_point_func([](const typename Node<Base>::svd_res& r) { return &r.S; }, tmp);
+                        res.V.set_point_func([](const typename Node<Base>::svd_res& r) { return &r.V; }, tmp);
                         return res;
                   }
 
@@ -3255,8 +3421,8 @@ namespace TAT {
                               [=](const Node<Base>& node) { return node.qr(input_q_legs, new_q_legs, new_r_legs); },
                               *this);
                         auto res = qr_res();
-                        res.Q.set_func([](typename Node<Base>::qr_res& r) { return std::move(r.Q); }, tmp);
-                        res.R.set_func([](typename Node<Base>::qr_res& r) { return std::move(r.R); }, tmp);
+                        res.Q.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.Q; }, tmp);
+                        res.R.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.R; }, tmp);
                         return res;
                   }
 
@@ -3265,13 +3431,21 @@ namespace TAT {
                         auto tmp = Lazy<typename Node<Base>::qr_res>();
                         tmp.set_func(
                               [=](const Node<Base>& node) {
-                                    auto input_q_legs = vector_legs::filter_out_in(node.legs, input_r_legs);
+                                    std::vector<TAT::Legs> input_q_legs;
+                                    std::copy_if(
+                                          node.legs.begin(),
+                                          node.legs.end(),
+                                          std::back_inserter(input_q_legs),
+                                          [&](const Legs& i) {
+                                                return std::find(input_r_legs.begin(), input_r_legs.end(), i) ==
+                                                       input_r_legs.end();
+                                          });
                                     return node.qr(input_q_legs, new_q_legs, new_r_legs);
                               },
                               *this);
                         auto res = qr_res();
-                        res.Q.set_func([](typename Node<Base>::qr_res& r) { return std::move(r.Q); }, tmp);
-                        res.R.set_func([](typename Node<Base>::qr_res& r) { return std::move(r.R); }, tmp);
+                        res.Q.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.Q; }, tmp);
+                        res.R.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.R; }, tmp);
                         return res;
                   }
 
@@ -3285,7 +3459,6 @@ namespace TAT {
                         auto res = LazyNode<Base>();
                         res.set_func(
                               [=](const Node<Base>& node1, const Node<Base>& node2) {
-                                    // using Lazy<Node<Base>>::update_inplace;
                                     return Node<Base>::contract(node1, node2, legs1, legs2, map1, map2);
                               },
                               node1,
@@ -3295,9 +3468,18 @@ namespace TAT {
 
                   LazyNode<Base> multiple(const LazyNode<Base>& other, const Legs& position) const {
                         auto res = LazyNode<Base>();
-                        res.set_func(
+                        res.set_maybe_point_func(
                               [=](const Node<Base>& self, const Node<Base>& other) {
-                                    return self.multiple(other, position);
+                                    struct res {
+                                          bool own_flag;
+                                          const Node<Base>* value_point;
+                                    };
+                                    if (std::find(self.legs.begin(), self.legs.end(), position) == self.legs.end()) {
+                                          return res{false, &self};
+                                    } else {
+                                          return res{true, new Node<Base>(self.multiple(other, position))};
+                                    }
+                                    // maybe copy
                               },
                               *this,
                               other);
@@ -3336,14 +3518,16 @@ namespace TAT {
 
 #define DEF_OP(OP)                                                                                \
       template<class A, class B>                                                                  \
-      LazyNode<A> OP(LazyNode<A>& a, const LazyNode<B>& b) {                                      \
-            auto res = lazy::OP(TAT::Lazy<Node<A>>(a), TAT::Lazy<Node<A>>(b.template to<A>()));   \
-            return LazyNode<A>(res);                                                              \
+      LazyNode<A>& OP(LazyNode<A>& a, const LazyNode<B>& b) {                                     \
+            auto res = TAT::Lazy<Node<A>>(a);                                                     \
+            lazy::OP(res, TAT::Lazy<Node<A>>(b.template to<A>()));                                \
+            return a;                                                                             \
       }                                                                                           \
       template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
       LazyNode<T>& OP(LazyNode<T>& a, const B& b) {                                               \
-            auto res = lazy::OP(TAT::Lazy<Node<T>>(a), b);                                        \
-            return LazyNode<T>(res);                                                              \
+            auto res = TAT::Lazy<Node<T>>(a);                                                     \
+            lazy::OP(res, b);                                                                     \
+            return a;                                                                             \
       }
 
             DEF_OP(operator*=)
@@ -3354,18 +3538,18 @@ namespace TAT {
 
 #define DEF_OP(OP)                                                                                                     \
       template<class A, class B>                                                                                       \
-      LazyNode<std::common_type_t<A, B>> OP(LazyNode<A> a, LazyNode<B> b) {                                            \
+      LazyNode<std::common_type_t<A, B>> OP(const LazyNode<A>& a, const LazyNode<B>& b) {                              \
             using common = std::common_type_t<A, B>;                                                                   \
             auto res = lazy::OP(                                                                                       \
                   TAT::Lazy<Node<common>>(a.template to<common>()), TAT::Lazy<Node<common>>(b.template to<common>())); \
             return LazyNode<common>(res);                                                                              \
       }                                                                                                                \
       template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>>                      \
-      LazyNode<T> OP(LazyNode<T> a, const B& b) {                                                                      \
+      LazyNode<T> OP(const LazyNode<T>& a, const B& b) {                                                               \
             return LazyNode<T>(lazy::OP(TAT::Lazy<Node<T>>(a), b));                                                    \
       }                                                                                                                \
       template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>>                      \
-      LazyNode<T> OP(const B& a, LazyNode<T> b) {                                                                      \
+      LazyNode<T> OP(const B& a, const LazyNode<T>& b) {                                                               \
             return LazyNode<T>(lazy::OP(a, TAT::Lazy<Node<T>>(b)));                                                    \
       }
 
@@ -3377,19 +3561,179 @@ namespace TAT {
       } // namespace lazy_node
 
       /**
-       * define class Lattice.
+       * define several.
        */
-      namespace lattice {
-            template<int dimension>
-            class Dimension;
+      //
+      //       GGGG   RRRR     AA    PPPP   H    H
+      //      G    G  R   R   A  A   P   P  H    H
+      //      G       R   R  A    A  P   P  H    H
+      //      G       R   R  A    A  P   P  H    H
+      //      G       RRRR   A    A  PPPP   HHHHHH
+      //      G  GGG  RR     AAAAAA  P      H    H
+      //      G    G  R R    A    A  P      H    H
+      //      G   GG  R  R   A    A  P      H    H
+      //       GGG G  R   R  A    A  P      H    H
+      //
+      namespace graph {
+            template<class Base>
+            class QRCanonicalizationGraph {
+               public:
+                  LazyNode<Base> to_split;
+                  LazyNode<Base> to_absorb;
+                  LazyNode<Base> splited;
+                  LazyNode<Base> absorbed;
+                  QRCanonicalizationGraph(TAT::Legs split_leg, TAT::Legs absorb_leg) {
+                        auto qr = to_split.rq({split_leg}, absorb_leg, split_leg);
+                        splited = qr.Q;
+                        absorbed = LazyNode<Base>::contract(qr.R, to_absorb, {split_leg}, {absorb_leg});
+                  }
+                  void operator()(LazyNode<Base> split, LazyNode<Base> absorb) {
+                        to_split.set_value(split.pop());
+                        to_absorb.set_value(absorb.pop());
+                        split.set_value(splited.pop());
+                        absorb.set_value(absorbed.pop());
+                  }
+            };
 
-            /**
-             * Lattice use smart pointer and lambda lazy to maintain a lattice.
-             */
-            template<class Tags = Dimension<2>, class = double>
-            class Lattice;
-      } // namespace lattice
-      using lattice::Lattice;
+            template<class Base>
+            class Dim1SVDGraph {
+               public:
+                  LazyNode<Base> old_A;
+                  LazyNode<Base> old_B;
+                  LazyNode<Base> new_A;
+                  LazyNode<Base> new_B;
+                  Dim1SVDGraph(LazyNode<Base> H, int cut, bool left = true) {
+                        using namespace legs_name;
+                        auto big =
+                              LazyNode<Base>::contract(old_A, old_B, {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
+                        auto Big = LazyNode<Base>::contract(big, H, {Phy1, Phy2}, {Phy3, Phy4});
+                        Big = Big / Big.template norm<-1>();
+                        auto svd = Big.svd({Phy1, Left}, Right, Left, cut);
+                        new_A = svd.U.legs_rename({{Phy1, Phy}});
+                        new_B = svd.V.legs_rename({{Phy2, Phy}});
+                        if (left) {
+                              new_A = new_A.multiple(svd.S, Right);
+                        } else {
+                              new_B = new_B.multiple(svd.S, Left);
+                        }
+                  }
+                  void operator()(LazyNode<Base> A, LazyNode<Base> B) {
+                        old_A.set_value(A.pop());
+                        old_B.set_value(B.pop());
+                        A.set_value(new_A.pop());
+                        B.set_value(new_B.pop());
+                  }
+            };
+
+            template<class Base, int a_env, int b_env>
+            class Dim2SVDGraph {
+               public:
+                  LazyNode<Base> old_A;
+                  LazyNode<Base> old_B;
+                  LazyNode<Base> old_env;
+
+                  std::array<LazyNode<Base>, a_env> A_env;
+                  std::array<LazyNode<Base>, b_env> B_env;
+
+                  LazyNode<Base> new_A;
+                  LazyNode<Base> new_B;
+                  LazyNode<Base> new_env;
+
+                  LazyNode<Base> H;
+
+#ifdef TAT_USE_EAGER
+                  std::function<void()> setter;
+#endif // TAT_USE_EAGER
+
+                  Dim2SVDGraph(
+                        TAT::Legs a_leg,
+                        TAT::Legs b_leg,
+                        std::array<TAT::Legs, a_env> A_legs,
+                        std::array<TAT::Legs, b_env> B_legs,
+                        int cut) {
+#ifdef TAT_USE_EAGER
+                        if (lazy::eager) {
+                              setter = [=]() { set(a_leg, b_leg, A_legs, B_legs, cut); };
+                        } else {
+                              set(a_leg, b_leg, A_legs, B_legs, cut);
+                        }
+#else
+                        set(a_leg, b_leg, A_legs, B_legs, cut);
+#endif // TAT_USE_EAGER
+                  }
+
+                  void
+                  set(TAT::Legs a_leg,
+                      TAT::Legs b_leg,
+                      std::array<TAT::Legs, a_env> A_legs,
+                      std::array<TAT::Legs, b_env> B_legs,
+                      int cut) {
+                        using namespace legs_name;
+
+                        auto BigA = old_A;
+                        for (int i = 0; i < a_env; i++) {
+                              BigA = BigA.multiple(A_env[i], A_legs[i]);
+                        }
+
+                        auto BigB = old_B;
+                        for (int i = 0; i < b_env; i++) {
+                              BigB = BigB.multiple(B_env[i], B_legs[i]);
+                        }
+
+                        auto BigA_QR = BigA.rq({Phy, a_leg}, b_leg, a_leg);
+                        auto BigB_QR = BigB.rq({Phy, b_leg}, a_leg, b_leg);
+
+                        auto Big = BigA_QR.R.multiple(old_env, a_leg);
+                        Big = LazyNode<Base>::contract(Big, BigB_QR.R, {a_leg}, {b_leg}, {{Phy, Phy1}}, {{Phy, Phy2}});
+                        Big = LazyNode<Base>::contract(Big, H, {Phy1, Phy2}, {Phy3, Phy4});
+                        Big = Big / Big.template norm<-1>();
+
+                        auto svd = Big.svd({Phy1, b_leg}, a_leg, b_leg, cut);
+                        new_env = svd.S;
+                        new_A = LazyNode<Base>::contract(svd.U, BigA_QR.Q, {b_leg}, {a_leg});
+                        new_B = LazyNode<Base>::contract(svd.V, BigB_QR.Q, {a_leg}, {b_leg});
+
+                        for (int i = 0; i < a_env; i++) {
+                              new_A = new_A.multiple(1 / A_env[i], A_legs[i]);
+                        }
+                        for (int i = 0; i < b_env; i++) {
+                              new_B = new_B.multiple(1 / B_env[i], B_legs[i]);
+                        }
+
+                        new_A.legs_rename({{Phy1, Phy}});
+                        new_B.legs_rename({{Phy2, Phy}});
+                  }
+                  void operator()(
+                        LazyNode<Base> H_value,
+                        LazyNode<Base> A,
+                        LazyNode<Base> B,
+                        LazyNode<Base> env,
+                        std::array<LazyNode<Base>, a_env> A_env_value,
+                        std::array<LazyNode<Base>, b_env> B_env_value) {
+                        old_A.set_value(A.pop());
+                        old_B.set_value(B.pop());
+                        old_env.set_value(env.pop());
+                        H.set_point_value(&H_value.value());
+
+                        for (int i = 0; i < a_env; i++) {
+                              A_env[i].set_point_value(&A_env_value[i].value());
+                        }
+                        for (int i = 0; i < b_env; i++) {
+                              B_env[i].set_point_value(&B_env_value[i].value());
+                        }
+
+#ifdef TAT_USE_EAGER
+                        if (lazy::eager) {
+                              setter();
+                        }
+#endif // TAT_USE_EAGER
+
+                        A.set_value(new_A.pop());
+                        B.set_value(new_B.pop());
+                        env.set_value(new_env.pop());
+                  }
+            };
+      } // namespace graph
 } // namespace TAT
 
 #endif // TAT_HPP_

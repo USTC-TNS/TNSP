@@ -385,8 +385,8 @@ int main() {
                   std::cout << Node::contract(
                                      res.U.multiple(res.S.to<std::complex<double>>(), {Right}), res.V, {Right}, {Down})
                             << std::endl;
-                  std::cout << Node::contract(res.U, res.U, {Left}, {Left}) << std::endl;
-                  std::cout << Node::contract(res.V, res.V, {Right}, {Right}) << std::endl;
+                  std::cout << Node::contract(res.U, res.U, {Left}, {Left}, {{Right, Right1}}) << std::endl;
+                  std::cout << Node::contract(res.V, res.V, {Right}, {Right}, {{Down, Down1}}) << std::endl;
             }
             {
                   Node t1({Left, Right, Up, Down}, {2, 2, 3, 2});
@@ -416,8 +416,9 @@ int main() {
                                      {Down1})
                                      .transpose({Left, Right, Up, Down})
                             << std::endl;
-                  std::cout << Node::contract(res.U, res.U, {Left, Down}, {Left, Down}) << std::endl;
-                  std::cout << Node::contract(res.V, res.V, {Right, Up}, {Right, Up}) << std::endl;
+                  std::cout << Node::contract(res.U, res.U, {Left, Down}, {Left, Down}, {{Right1, Right2}})
+                            << std::endl;
+                  std::cout << Node::contract(res.V, res.V, {Right, Up}, {Right, Up}, {{Down1, Down2}}) << std::endl;
             }
             {
                   Node t1({Left, Right, Up, Down}, {2, 2, 3, 2});
@@ -477,7 +478,7 @@ int main() {
                   });
                   auto res = t1.qr({Right}, Up, Down);
                   std::cout << res.Q << std::endl << res.R << std::endl;
-                  std::cout << Node::contract(res.Q, res.Q, {Right}, {Right}) << std::endl;
+                  std::cout << Node::contract(res.Q, res.Q, {Right}, {Right}, {{Up, Up1}}) << std::endl;
                   std::cout << Node::contract(res.Q, res.R, {Up}, {Down}).transpose({Left, Right}) << std::endl;
                   std::cout << t1.at({{Left, 1}, {Right, 2}}) << std::endl;
             }
