@@ -1,4 +1,4 @@
-/* example/lazy.cpp
+/* example/lazy_test.cpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,13 +35,14 @@ int main() {
       auto c = a * b;
       auto d = c * 2;
       auto e = to_float(d) + 2.3;
+      auto f = e + a;
       // std::cout << a << " " << e << std::endl;
-      std::cout << a << "*" << b << "=" << c << " and *2 = " << d << " and +2.3 = " << e << std::endl;
+      std::cout << a << "\n" << b << "\n" << c << "\n" << d << "\n" << e << "\n" << f << "\n\n";
       a.set_value(TAT::Node<int>(4));
       // a.set_value(4);
-      std::cout << a << "*" << b << "=" << c << " and *2 = " << d << " and +2.3 = " << e << std::endl;
+      std::cout << a << "\n" << b << "\n" << c << "\n" << d << "\n" << e << "\n" << f << "\n\n";
       b.set_value(TAT::Node<int>(10));
       // b.set_value(10);
-      std::cout << a << "*" << b << "=" << c << " and *2 = " << d << " and +2.3 = " << e << std::endl;
+      std::cout << a << "\n" << b << "\n" << c << "\n" << d << "\n" << e << "\n" << f << "\n\n";
       return 0;
 }

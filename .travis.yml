@@ -1,94 +1,37 @@
 os: linux
-dist: xenial
+dist: bionic
 language: cpp
+addons:
+  apt:
+    update: true
+    packages:
+    - clang-7
+    - g++-7
+    - libomp-dev
+    - libopenblas-dev
+    - liblapacke-dev
 matrix:
   fast_finish: true
   include:
-  - addons:
-      apt:
-        update: true
-        sources:
-        - sourceline: deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main
-        - sourceline: deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-7 main
-        - sourceline: deb https://apt.repos.intel.com/mkl all main
-        packages:
-        - g++-9
-        - clang-7
-        - libomp-dev
-        - --allow-unauthenticated intel-mkl-2019.4-070
-    env:
-    - MATRIX_EVAL="CXX=\"clang++-7 -I/usr/include/c++/9\""
-  - addons:
-      apt:
-        update: true
-        sources:
-        - sourceline: deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main
-        - sourceline: deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main
-        - sourceline: deb https://apt.repos.intel.com/mkl all main
-        packages:
-        - g++-9
-        - clang-8
-        - libomp-dev
-        - --allow-unauthenticated intel-mkl-2019.4-070
-    env:
-    - MATRIX_EVAL="CXX=\"clang++-8 -I/usr/include/c++/9\""
-  - addons:
-      apt:
-        update: true
-        sources:
-        - sourceline: deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main
-        - sourceline: deb https://apt.repos.intel.com/mkl all main
-        packages:
-        - g++-7
-        - libomp-dev
-        - --allow-unauthenticated intel-mkl-2019.4-070
-    env:
+  - env:
+    - MATRIX_EVAL="CXX=clang++-7"
+  - env:
     - MATRIX_EVAL="CXX=g++-7"
-  - addons:
-      apt:
-        update: true
-        sources:
-        - sourceline: deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main
-        - sourceline: deb https://apt.repos.intel.com/mkl all main
-        packages:
-        - g++-8
-        - libomp-dev
-        - --allow-unauthenticated intel-mkl-2019.4-070
-    env:
-    - MATRIX_EVAL="CXX=g++-8"
-  - addons:
-      apt:
-        update: true
-        sources:
-        - sourceline: deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu xenial main
-        - sourceline: deb https://apt.repos.intel.com/mkl all main
-        packages:
-        - g++-9
-        - libomp-dev
-        - --allow-unauthenticated intel-mkl-2019.4-070
-    env:
-    - MATRIX_EVAL="CXX=g++-9"
 cache:
   directories:
   - deps/hptt
 before_install:
 - eval "${MATRIX_EVAL}"
 - cd deps/hptt
-- ls lib/libhptt.a || mkdir lib && cd lib && cmake .. && make && cd ..
+- ls lib/libhptt.a || mkdir lib && cmake -DHPTT_CXX_FLAGS=-Ofast -DENABLE_AVX=ON -H. -Blib && cmake --build lib --parallel
 - cd ../..
 install:
+- wget https://raw.githubusercontent.com/xianyi/OpenBLAS/66ac898f6441f0cb334f76d0c5603c37962bf368/cblas.h -O include/cblas.h
+- sed -i s/common.h/openblas_config.h/ include/cblas.h
 - mkdir -p build
-- cd build
-- cmake .. -DCMAKE_BUILD_TYPE=Debug
-- make VERBOSE=1
+- cmake .. -DCMAKE_BUILD_TYPE=Release -H. -Bbuild
+- cmake --build build --parallel
 script:
-- ./lazy.out
-- ./test.out
-- ./Heisenberg_MPS_SU.out -L4 -D4
-- ./Heisenberg_PEPS_SU.out
-env:
-  global:
-    - MAKEFLAGS=-j
-    - MKLROOT=/opt/intel/compilers_and_libraries/linux/mkl
+- cmake --build build --target test
 notifications:
   email: false

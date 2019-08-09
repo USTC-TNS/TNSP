@@ -140,15 +140,15 @@ class MPS {
 
       // qr to left
       void prepare() {
-            auto qr_graph = TAT::graph::QRCanonicalizationGraph<double>(Left, Right);
+            auto qr_graph = TAT::graph::QR_Canonicalization_Graph<double>(Left, Right);
             for (int i = L - 1; i > 1; i--) {
                   qr_graph(lattice[i], lattice[i - 1]);
             }
       }
 
       void update_once(Node updater) {
-            auto to_left = TAT::graph::Dim1SVDGraph<double>(updater, D, true);
-            auto to_right = TAT::graph::Dim1SVDGraph<double>(updater, D, false);
+            auto to_left = TAT::graph::SVD_Graph_without_Env<double>(updater, D, true);
+            auto to_right = TAT::graph::SVD_Graph_without_Env<double>(updater, D, false);
             for (int i = 0; i < L - 1; i++) {
                   to_right(lattice[i], lattice[i + 1]);
             }
@@ -187,8 +187,8 @@ int main(int argc, char** argv) {
             "Simple Update in MPS of Heisenberg Model.");
       args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
       args::Flag version(parser, "version", "Display the version", {'v', "version"});
-      args::ValueFlag<int> length(parser, "L", "system size [default: 100]", {'L', "length"}, 100);
-      args::ValueFlag<unsigned long> dimension(parser, "D", "bond dimension [default: 12]", {'D', "dimension"}, 12);
+      args::ValueFlag<int> length(parser, "L", "system size [default: 4]", {'L', "length"}, 4);
+      args::ValueFlag<unsigned long> dimension(parser, "D", "bond dimension [default: 4]", {'D', "dimension"}, 4);
       args::ValueFlag<unsigned> random_seed(parser, "S", "random seed [default: 42]", {'S', "random_seed"}, 42);
       args::ValueFlag<int> step_num(parser, "N", "total step to run [default: 100]", {'N', "step_num"}, 100);
       args::ValueFlag<int> print_interval(

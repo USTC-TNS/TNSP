@@ -13,7 +13,6 @@ TAT is A Tensor library
 | [![dependence](https://img.shields.io/badge/Taywee-args-blue.svg)](https://github.com/Taywee/args)               |
 | [![dependence](https://img.shields.io/badge/springer13-hptt-blue.svg)](https://github.com/springer13/hptt)       |
 | [![dependence](https://img.shields.io/badge/agauniyal-rang-blue.svg)](https://github.com/agauniyal/rang)         |
-| [![dependence](https://img.shields.io/badge/bombela-backward-blue.svg)](https://github.com/bombela/backward-cpp) |
 
 ---
 
@@ -26,7 +25,8 @@ TAT is A Tensor library
 - 转置不使用hptt，自己写也许更好，但是比较难                                     [比较重要]
 - contract中, 可能使用?dot, ?gemv,以及转置策略问题, 类似的lq问题     [比较重要]
 - multiple与contract的融合，pess中经常使用
-- 不同类型之间的直接scalar，contract等
+- 不同类型之间的直接scalar，contract等                              [scalar done]
 - doxygen
-- 缺腿后的稳定性
+- 缺腿后的稳定性                                                         [基本可以用]
 - lazynode
+- use it

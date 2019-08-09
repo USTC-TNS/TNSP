@@ -1,0 +1,7 @@
+#!/bin/bash
+if [ -z $TRAVIS ];
+then
+    diff <($1) $2
+else
+    $1
+fi

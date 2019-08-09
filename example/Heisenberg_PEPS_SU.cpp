@@ -219,9 +219,9 @@ class PEPS {
 
       void update_once(Node updater) {
             auto do_svd_right =
-                  TAT::graph::Dim2SVDGraph<double, 3, 3>(Right, Left, {Left, Up, Down}, {Right, Up, Down}, D);
+                  TAT::graph::SVD_Graph_with_Env<double, 3, 3>(Right, Left, {Left, Up, Down}, {Right, Up, Down}, D);
             auto do_svd_down =
-                  TAT::graph::Dim2SVDGraph<double, 3, 3>(Down, Up, {Up, Left, Right}, {Down, Left, Right}, D);
+                  TAT::graph::SVD_Graph_with_Env<double, 3, 3>(Down, Up, {Up, Left, Right}, {Down, Left, Right}, D);
             for (int i = 0; i < L1; i++) {
                   for (int j = 0; j < L2 - 1; j++) {
                         do_svd_right(
