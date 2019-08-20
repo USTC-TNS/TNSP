@@ -276,7 +276,7 @@ int main() {
                   });
                   std::cout << t1 << std::endl
                             << t2 << std::endl
-                            << Node::contract(t1, t2, {Up}, {Up}, {}, {{Down, Down1}}) << std::endl;
+                            << Node::contract(t1, t2.legs_rename({{Down, Down1}}), {Up}, {Up}) << std::endl;
             }
             {
                   Node t1({Down, Up, Left, Right, Phy}, {2, 3, 4, 5, 6});
@@ -291,7 +291,8 @@ int main() {
                   });
                   std::cout << t1 << std::endl
                             << t2 << std::endl
-                            << Node::contract(t1, t2, {Up, Right}, {Up, Down}, {}, {{Left, Left3}}) << std::endl;
+                            << Node::contract(t1, t2.legs_rename({{Left, Left3}}), {Up, Right}, {Up, Down})
+                            << std::endl;
             }
             {
                   Node t1({Down, Up, Left, Right, Phy}, {2, 3, 4, 5, 6});
@@ -307,12 +308,10 @@ int main() {
                   std::cout << t1 << std::endl
                             << t2 << std::endl
                             << Node::contract(
-                                     t1,
-                                     t2,
+                                     t1.legs_rename({{Left2, Right2}}),
+                                     t2.legs_rename({{Left, Left3}}),
                                      {Up, Right, Left3, Right3},
-                                     {Up, Down, Left4, Right4},
-                                     {{Left2, Right2}},
-                                     {{Left, Left3}})
+                                     {Up, Down, Left4, Right4})
                             << std::endl;
             }
             {
@@ -382,11 +381,9 @@ int main() {
                   std::cout << res.U << std::endl
                             << res.S.to<std::complex<double>>() << std::endl
                             << res.V << std::endl;
-                  std::cout << Node::contract(
-                                     res.U.multiple(res.S.to<std::complex<double>>(), {Right}), res.V, {Right}, {Down})
-                            << std::endl;
-                  std::cout << Node::contract(res.U, res.U, {Left}, {Left}, {{Right, Right1}}) << std::endl;
-                  std::cout << Node::contract(res.V, res.V, {Right}, {Right}, {{Down, Down1}}) << std::endl;
+                  std::cout << Node::contract(res.U.multiple(res.S, {Right}), res.V, {Right}, {Down}) << std::endl;
+                  std::cout << Node::contract(res.U.legs_rename({{Right, Right1}}), res.U, {Left}, {Left}) << std::endl;
+                  std::cout << Node::contract(res.V.legs_rename({{Down, Down1}}), res.V, {Right}, {Right}) << std::endl;
             }
             {
                   Node t1({Left, Right, Up, Down}, {2, 2, 3, 2});
@@ -409,16 +406,13 @@ int main() {
                   std::cout << res.U << std::endl
                             << res.S.to<std::complex<double>>() << std::endl
                             << res.V << std::endl;
-                  std::cout << Node::contract(
-                                     res.U.multiple(res.S.to<std::complex<double>>(), {Right1}),
-                                     res.V,
-                                     {Right1},
-                                     {Down1})
+                  std::cout << Node::contract(res.U.multiple(res.S, {Right1}), res.V, {Right1}, {Down1})
                                      .transpose({Left, Right, Up, Down})
                             << std::endl;
-                  std::cout << Node::contract(res.U, res.U, {Left, Down}, {Left, Down}, {{Right1, Right2}})
+                  std::cout << Node::contract(res.U.legs_rename({{Right1, Right2}}), res.U, {Left, Down}, {Left, Down})
                             << std::endl;
-                  std::cout << Node::contract(res.V, res.V, {Right, Up}, {Right, Up}, {{Down1, Down2}}) << std::endl;
+                  std::cout << Node::contract(res.V.legs_rename({{Down1, Down2}}), res.V, {Right, Up}, {Right, Up})
+                            << std::endl;
             }
             {
                   Node t1({Left, Right, Up, Down}, {2, 2, 3, 2});
@@ -478,10 +472,21 @@ int main() {
                   });
                   auto res = t1.qr({Right}, Up, Down);
                   std::cout << res.Q << std::endl << res.R << std::endl;
-                  std::cout << Node::contract(res.Q, res.Q, {Right}, {Right}, {{Up, Up1}}) << std::endl;
+                  std::cout << Node::contract(res.Q.legs_rename({{Up, Up1}}), res.Q, {Right}, {Right}) << std::endl;
                   std::cout << Node::contract(res.Q, res.R, {Up}, {Down}).transpose({Left, Right}) << std::endl;
                   std::cout << t1.at({{Left, 1}, {Right, 2}}) << std::endl;
             }
       } // qr
+      std::cout << "init\n";
+      {
+            // init
+            auto p1 = TAT::Node<double>({Up}, {100});
+            auto p2 = TAT::Node<std::string>({Up}, {10});
+            // std::cout << p1 << std::endl;
+            // should be different
+            p2.at({{Up, 0}}) = "hello";
+            p2.at({{Up, 1}}) = "world";
+            std::cout << p2 << std::endl;
+      }
       return 0;
 } // main

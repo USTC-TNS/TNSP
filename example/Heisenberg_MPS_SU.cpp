@@ -1,4 +1,4 @@
-/* example/Heisenberg_MPS_SU.cpp
+/** example/Heisenberg_MPS_SU.cpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,11 +26,14 @@
 #define TAT_DEFAULT
 #include <TAT.hpp>
 
-using Node = TAT::LazyNode<double>;
+#include "Heisenberg_MPS_SU.dir/QR_Canonicalization_Graph.hpp"
+#include "Heisenberg_MPS_SU.dir/SVD_Graph_without_Env.hpp"
+
 using namespace TAT::legs_name;
 
-class MPS {
-   public:
+struct MPS {
+      using Node = TAT::LazyNode<TAT::Node, double>;
+
       int L;
       TAT::Size D;
       TAT::Size d;
@@ -70,47 +73,39 @@ class MPS {
                   left_contract[i] = Node::contract(
                         left_contract[i - 1],
                         Node::contract(
-                              lattice[i],
-                              lattice[i],
+                              lattice[i].legs_rename({{Left, Left1}, {Right, Right1}}),
+                              lattice[i].legs_rename({{Left, Left2}, {Right, Right2}}),
                               {Phy},
-                              {Phy},
-                              {{Left, Left1}, {Right, Right1}},
-                              {{Left, Left2}, {Right, Right2}}),
+                              {Phy}),
                         {Right1, Right2},
-                        {Left1, Left2},
-                        {},
-                        {});
+                        {Left1, Left2});
             }
             for (int i = L - 1; i >= 0; i--) {
                   right_contract[i] = Node::contract(
                         right_contract[i + 1],
                         Node::contract(
-                              lattice[i],
-                              lattice[i],
+                              lattice[i].legs_rename({{Left, Left1}, {Right, Right1}}),
+                              lattice[i].legs_rename({{Left, Left2}, {Right, Right2}}),
                               {Phy},
-                              {Phy},
-                              {{Left, Left1}, {Right, Right1}},
-                              {{Left, Left2}, {Right, Right2}}),
+                              {Phy}),
                         {Left1, Left2},
-                        {Right1, Right2},
-                        {},
-                        {});
+                        {Right1, Right2});
             }
             energy = Node(0);
             for (int i = 0; i < L - 1; i++) {
-                  auto psi = Node::contract(lattice[i], lattice[i + 1], {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
-                  auto Hpsi = Node::contract(psi, hamiltonian, {Phy1, Phy2}, {Phy1, Phy2}, {}, {});
+                  auto psi = Node::contract(
+                        lattice[i].legs_rename({{Phy, Phy1}}),
+                        lattice[i + 1].legs_rename({{Phy, Phy2}}),
+                        {Right},
+                        {Left});
+                  auto Hpsi = Node::contract(psi, hamiltonian, {Phy1, Phy2}, {Phy1, Phy2});
                   auto psiHpsi = Node::contract(
-                        Hpsi,
-                        psi,
+                        Hpsi.legs_rename({{Left, Left1}, {Right, Right1}}),
+                        psi.legs_rename({{Left, Left2}, {Right, Right2}}),
                         {Phy3, Phy4},
-                        {Phy1, Phy2},
-                        {{Left, Left1}, {Right, Right1}},
-                        {{Left, Left2}, {Right, Right2}});
-                  auto leftpsiHpsi =
-                        Node::contract(psiHpsi, left_contract[i - 1], {Left1, Left2}, {Right1, Right2}, {}, {});
-                  auto res =
-                        Node::contract(leftpsiHpsi, right_contract[i + 2], {Right1, Right2}, {Left1, Left2}, {}, {});
+                        {Phy1, Phy2});
+                  auto leftpsiHpsi = Node::contract(psiHpsi, left_contract[i - 1], {Left1, Left2}, {Right1, Right2});
+                  auto res = Node::contract(leftpsiHpsi, right_contract[i + 2], {Right1, Right2}, {Left1, Left2});
                   energy = energy + res;
             }
             energy = energy / left_contract[L - 1] / L;
@@ -140,15 +135,15 @@ class MPS {
 
       // qr to left
       void prepare() {
-            auto qr_graph = TAT::graph::QR_Canonicalization_Graph<double>(Left, Right);
+            auto qr_graph = QR_Canonicalization_Graph<TAT::Node, double>(Left, Right);
             for (int i = L - 1; i > 1; i--) {
                   qr_graph(lattice[i], lattice[i - 1]);
             }
       }
 
       void update_once(Node updater) {
-            auto to_left = TAT::graph::SVD_Graph_without_Env<double>(updater, D, true);
-            auto to_right = TAT::graph::SVD_Graph_without_Env<double>(updater, D, false);
+            auto to_left = SVD_Graph_without_Env<TAT::Node, double>(updater, D, true);
+            auto to_right = SVD_Graph_without_Env<TAT::Node, double>(updater, D, false);
             for (int i = 0; i < L - 1; i++) {
                   to_right(lattice[i], lattice[i + 1]);
             }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019  Hao Zhang <zh970204@mail.ustc.edu.cn>
+ * Copyright (C) 2019  Hao Zhang <zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  */
 
 /**
- * @file
+ * @file TAT.hpp
  */
 
 #ifndef TAT_HPP_
@@ -42,7 +42,7 @@
 
 #ifndef TAT_VERSION
 /**
- * TAT_VERSION is usually generated from git tag
+ * TAT库的版本号, 通常由CMakeLists.txt设置, 虽然库本身不使用, 但在一些程序中会使用这个宏
  */
 #      define TAT_VERSION "unknown"
 #endif // TAT_VERSION
@@ -51,6 +51,9 @@
 #      if !defined TAT_DEFAULT
 #            warning use CPU by default
 #      endif
+/**
+ * 默认只使用CPU, 其实现在并没实现在诸如GPU等device上运行
+ */
 #      define TAT_USE_CPU
 #endif
 
@@ -60,11 +63,23 @@
 
 #ifdef TAT_USE_CPU
 #      ifdef TAT_USE_MKL
+/**
+ * MKL的头文件中, 需要使用宏来确定复数类型
+ */
 #            define MKL_Complex8 std::complex<float>
+/**
+ * MKL的头文件中, 需要使用宏来确定复数类型
+ */
 #            define MKL_Complex16 std::complex<double>
 #            include <mkl.h>
 #      else
+/**
+ * lapack的头文件中, 需要使用宏来确定复数类型
+ */
 #            define lapack_complex_float std::complex<float>
+/**
+ * lapack的头文件中, 需要使用宏来确定复数类型
+ */
 #            define lapack_complex_double std::complex<double>
 #            include <cblas.h>
 #            include <lapacke.h>
@@ -87,6 +102,9 @@
 #            if !defined TAT_DEFAULT
 #                  warning must use one of GESDD, GESVD and GESVDX, default use GESVD now
 #            endif
+/**
+ * 默认使用GESVD来计算SVD
+ */
 #            define TAT_USE_GESVD
 #      endif
 
@@ -98,6 +116,9 @@
 #            if !defined TAT_DEFAULT
 #                  warning must use one of GEQRF and GEQP3, default use GEQRF now
 #            endif
+/**
+ * 默认使用GEQRF来计算QR
+ */
 #            define TAT_USE_GEQRF
 #      endif
 
@@ -111,11 +132,12 @@
  */
 namespace TAT {
       /**
-       * used for dimensions value
+       * 用来表示张量的某个指标的维度, 张量的总大小也是用它, 因为总大小是维度的乘积
        */
       using Size = std::size_t;
+
       /**
-       * used for dimensions index
+       * 用来表示张量的阶, 指标的索引用的也是它
        */
       using Rank = unsigned int;
 
@@ -131,42 +153,48 @@ namespace TAT {
       //       SSS    CCC   A    A  LLLLL  A    A  R   R  _____    T     OOO    OOO   LLLLL   SSS
       //
       /**
-       * define is_scalar_v and real_base_t for complex operators.
+       * 标量类型的一些工具, 定义is_scalar_v和real_base_t, 主要是为了处理复数
        */
       namespace scalar_tools {
+            /**
+             * 判断一个类型是否是标量,对于大多数情况, 和std::is_scalar效果相同, 但是额外处理了复数情况
+             *
+             * \tparam T 被判断是否是标量的类型, 如果T是标量类型, 那么为true, 否者为false
+             */
             template<class T>
-            class is_scalar {
-               public:
-                  static constexpr bool value = std::is_scalar<T>::value;
-            };
-
-            template<class T>
-            class is_scalar<std::complex<T>> {
-               public:
-                  static constexpr bool value = std::is_scalar<T>::value;
-            };
+            struct is_scalar : std::is_scalar<T> {};
 
             /**
-             * check if T is a scalar type
+             * 但是如果输入是std::complex<T>的话, 那么按照T本身是否是标量来判断
              */
+            template<class T>
+            struct is_scalar<std::complex<T>> : std::is_scalar<T> {};
+
             template<class T>
             static constexpr bool is_scalar_v = is_scalar<T>::value;
 
+            /**
+             * c++20支持的type_identity
+             */
             template<class T>
-            class real_base {
-               public:
-                  using type = T;
-            };
-
-            template<class T>
-            class real_base<std::complex<T>> {
-               public:
+            struct type_identity {
                   using type = T;
             };
 
             /**
-             * return correspond real type if T is complex type, return itself else
+             * 判断复类型对应的实类型, 在SVD当中的S对角阵中会使用到
+             *
+             * \tparam T 被判断对应实类型的类型, 如果不是复类型, 那么给出自己
              */
+            template<class T>
+            struct real_base : type_identity<T> {};
+
+            /**
+             * 如果输入是一个std::complex<T>, 那么type设置为T
+             */
+            template<class T>
+            struct real_base<std::complex<T>> : type_identity<T> {};
+
             template<class T>
             using real_base_t = typename real_base<T>::type;
       } // namespace scalar_tools
@@ -185,26 +213,43 @@ namespace TAT {
       //      LLLLL  EEEEE   GGG G   SSS
       //
       /**
-       * define class Legs.
+       * 定义struct Legs
        */
       namespace legs {
-            /**
-             * class Legs is to identify a leg with its id.
-             *
-             * Legs(string) create new legs with next id,
-             * or return the legs created with same name.
-             * Legs(IdType) to specify its id directly,
-             * this method will NOT maintain id and name map.
-             */
             using IdType = int;
-            static IdType total = 0;
-            static std::map<std::string, IdType> name2id = {};
-            static std::map<IdType, std::string> id2name = {};
-            class Legs {
-               public:
+            /**
+             * 记录已使用的id号的全局变量, 每次新建一个id时通过读取它来判断下一个id是啥, 同时将这个全局变量增加一
+             */
+            IdType total = 0;
+            /**
+             * Legs的name到id的map, 之所以不放在类内, 是因为放在外面的话gdb中的调试信息要好看一些
+             */
+            std::map<std::string, IdType> name2id = {};
+            /**
+             * Legs的id到name的map, 之所以不放在类内, 是因为放在外面的话gdb中的调试信息要好看一些
+             */
+            std::map<IdType, std::string> id2name = {};
+
+            /**
+             * 使用id来唯一确定一个张量指标, 并通过map拥有一个字符串名字, 这样在做比较时比较快, 存储时也比较节省空间
+             */
+            struct Legs {
+                  /**
+                   * Legs仅保存自己的id, 不保存其他诸如name的东西
+                   */
                   IdType id = -1;
                   Legs() = default;
+                  /**
+                   * 返回直接给定id的Legs, 但是不保证此id真的有对应的name
+                   *
+                   * \param id 给定的id
+                   */
                   explicit Legs(IdType id) : id{id} {}
+                  /**
+                   * 返回给定name对应id的Legs, 如果该string没有对应id, 那么创建一个新的id用来对应此name
+                   *
+                   * \param name 给定的name
+                   */
                   explicit Legs(const std::string& name) {
                         try {
                               id = name2id.at(name);
@@ -212,20 +257,32 @@ namespace TAT {
                               id = total++;
                               name2id[name] = id;
                               id2name[id] = name;
-                        } // exsit name
+                        }
                   }
-            }; // class Legs
+            }; // struct Legs
 
+            /**
+             * 实现legs的==, 因为之后Legs需要作为map的key
+             */
             bool operator==(const Legs& a, const Legs& b) {
                   return a.id == b.id;
             }
+            /**
+             * 实现legs的!=, 因为之后Legs需要作为map的key
+             */
             bool operator!=(const Legs& a, const Legs& b) {
                   return a.id != b.id;
             }
+            /**
+             * 实现legs的<, 因为之后Legs需要作为map的key
+             */
             bool operator<(const Legs& a, const Legs& b) {
                   return a.id < b.id;
             }
 
+            /**
+             * 提供Legs的流输出, 有对应的name则输出name, 没有的话使用UserDefinedLeg{id}
+             */
             std::ostream& operator<<(std::ostream& out, const Legs& value) {
                   try {
                         return out << id2name.at(value.id);
@@ -248,13 +305,16 @@ namespace TAT {
       //      LLLLL  EEEEE   GGG G   SSS   _____  N    N  A    A  M     M  EEEEE
       //
       /**
-       * namespace legs_name containt 190 predefined legs.
-       *
-       * 190 predefined legs, including Tmp0~99,
-       * and (Phy, 8 direction) * 0~9 (90 totaly).
+       * 这个命名空间中包含着若干默认name的Legs, 包括(Phy, 8 个方向)*(,1,2,3,4), 一共有45个
        */
       namespace legs_name {
-#define TAT_DefineLeg(x) static const TAT::Legs x(#x)
+/**
+ * 定义一个name为#x的Legs
+ */
+#define TAT_DefineLeg(x) const TAT::Legs x(#x)
+/**
+ * 给定标号n, 定义9个Legs, 分别是Phy和8个方向
+ */
 #define TAT_DefineLegs(n)         \
       TAT_DefineLeg(Phy##n);      \
       TAT_DefineLeg(Left##n);     \
@@ -265,42 +325,15 @@ namespace TAT {
       TAT_DefineLeg(LeftDown##n); \
       TAT_DefineLeg(RightUp##n);  \
       TAT_DefineLeg(RightDown##n)
+/**
+ * 定义legs_name中的全部45个Legs
+ */
 #define TAT_Legs         \
       TAT_DefineLegs();  \
       TAT_DefineLegs(1); \
       TAT_DefineLegs(2); \
       TAT_DefineLegs(3); \
-      TAT_DefineLegs(4); \
-      TAT_DefineLegs(5); \
-      TAT_DefineLegs(6); \
-      TAT_DefineLegs(7); \
-      TAT_DefineLegs(8); \
-      TAT_DefineLegs(9)
-            TAT_Legs;
-#undef TAT_Legs
-#undef TAT_DefineLegs
-#define TAT_DefineLegs(n)       \
-      TAT_DefineLeg(Leg##n##0); \
-      TAT_DefineLeg(Leg##n##1); \
-      TAT_DefineLeg(Leg##n##2); \
-      TAT_DefineLeg(Leg##n##3); \
-      TAT_DefineLeg(Leg##n##4); \
-      TAT_DefineLeg(Leg##n##5); \
-      TAT_DefineLeg(Leg##n##6); \
-      TAT_DefineLeg(Leg##n##7); \
-      TAT_DefineLeg(Leg##n##8); \
-      TAT_DefineLeg(Leg##n##9)
-#define TAT_Legs         \
-      TAT_DefineLegs();  \
-      TAT_DefineLegs(1); \
-      TAT_DefineLegs(2); \
-      TAT_DefineLegs(3); \
-      TAT_DefineLegs(4); \
-      TAT_DefineLegs(5); \
-      TAT_DefineLegs(6); \
-      TAT_DefineLegs(7); \
-      TAT_DefineLegs(8); \
-      TAT_DefineLegs(9)
+      TAT_DefineLegs(4);
             TAT_Legs;
 #undef TAT_Legs
 #undef TAT_DefineLegs
@@ -319,36 +352,84 @@ namespace TAT {
       //      DDDDD   A    A    T    A    A
       //
       /**
-       * define class Data.
+       * 定义struct Data
        */
       namespace data {
             /**
-             * Data is wrap of container, with several tensor operator,
-             * but with no infomation about even tensor size.
+             * 每次新建一个Data都初始化内存太浪费时间了, 所以创建一个allocator, 他在条件允许的情况下不做初始化
+             *
+             * \tparam T 所allocate的类型
+             */
+            template<typename T>
+            struct no_init_allocator : std::allocator<T> {
+                  /**
+                   * allocator需要有rebind函数
+                   */
+                  template<typename U>
+                  struct rebind {
+                        using other = no_init_allocator<U>;
+                  };
+
+                  /**
+                   * 一个智能的construct, 对于标量类型的默认初始化, 直接不初始化
+                   */
+                  template<class U, class... Args>
+                  void construct(U* p, Args&&... args) {
+                        (void)p;
+                        if constexpr (!((sizeof...(args) == 0) && (is_scalar_v<U>))) {
+                              new (p) T(args...);
+                        }
+                  }
+            };
+
+            /**
+             * 对一段数据的封装, 并提供一些张量操作, 他不保存和张量维度相关的信息
+             *
+             * \tparam Base 张量的基类型
              */
             template<class Base = double>
-            class Data {
-               public:
+            struct Data {
                   using type = Base;
-                  std::vector<Base> base = {};
+                  /**
+                   * 存着具体数据的vector, 通过no_init_allocator, 使得对于标量类型并不会做初始化
+                   */
+                  std::vector<Base, no_init_allocator<Base>> base;
+                  /**
+                   * 这个vector的有效大小, 在一些特殊情况下, 他与数据vector的size不完全一样
+                   */
                   Size size = 0;
 
                   // constructors
+                  /**
+                   * 生成给定大小的Data, 内容并不会初始化
+                   *
+                   * \param size Data的数据大小
+                   */
                   explicit Data(Size size) : base(size), size(size) {}
+                  /**
+                   * 生成大小为1的Data, 直接初始化其中的数据, 用来将标量类型转为对应的无指标张量
+                   *
+                   * \param num 填入无指标的零阶张量中的唯一分量的值
+                   */
                   explicit Data(Base num) : base(1), size(1) {
                         base[0] = num;
                   }
 
                   // default contructors, write then only to warn when copy.
-                  ~Data() = default;
                   Data() = default;
                   Data(Data<Base>&& other) = default;
                   Data<Base>& operator=(Data<Base>&& other) = default;
+                  /**
+                   * 默认复制构造函数, 只是为了在复制时给出warning
+                   */
                   Data(const Data<Base>& other) : base(other.base), size(other.size) {
 #ifndef TAT_NOT_WARN_COPY
                         std::clog << "Copying Data..." << std::endl;
 #endif // TAT_NOT_WARN_COPY
                   }
+                  /**
+                   * 默认复制赋值函数, 只是为了在复制时给出warning
+                   */
                   Data<Base>& operator=(const Data<Base>& other) {
                         base = other.base;
                         size = other.size;
@@ -358,13 +439,20 @@ namespace TAT {
                   }
 
                   /**
-                   * set data content with a function as argument, which return data one by one.
+                   * 给定generator, 设置此Data
+                   *
+                   * \param setter 用来设置Data值的generator, 其将一次一次被调用并赋值给Data中的数据
                    */
                   template<class Generator>
                   Data<Base>& set(Generator&& setter) & {
                         std::generate(base.begin(), base.end(), std::forward<Generator>(setter));
                         return *this;
                   }
+                  /**
+                   * set的右值版本
+                   *
+                   * \see set(Generator&& setter) &
+                   */
                   template<class Generator>
                   Data<Base>&& set(Generator&& setter) && {
                         return std::move(set(std::forward<Generator>(setter)));
@@ -373,7 +461,9 @@ namespace TAT {
                   // operators
 
                   /**
-                   * convert value type to another.
+                   * 将本Data转换成另一个类型的Data
+                   *
+                   * \tparam Base2 目标Data的基类型
                    */
                   template<class Base2>
                   Data<Base2> to() const {
@@ -385,20 +475,39 @@ namespace TAT {
                   }
 
                   /**
-                   * get n-norm of this tensor, if n=-1, it means max norm.
+                   * 获得Data看作向量后的的n模, 如果n=-1, 那么意味着最大模
+                   *
+                   * \tparam n 模的种类
                    */
                   template<int n>
                   Data<Base> norm() const;
 
+                  /**
+                   * 张量转置
+                   *
+                   * \param dims 张量的维度信息, 需保证dims的乘积等于Data的size
+                   * \param plan 张量转置的方式, 如{0, 2, 1}表示对三阶张量的后两维进行转置
+                   */
                   Data<Base> transpose(const std::vector<Size>& dims, const std::vector<Rank>& plan) const;
 
-                  class svd_res {
-                     public:
+                  /**
+                   * SVD的结果, 包括U, S, V, 注意S的类型可能不一样, 如果自己是复数张量的话
+                   */
+                  struct svd_res {
                         Data<Base> U;
                         Data<real_base_t<Base>> S;
                         Data<Base> V;
-                  }; // class svd_res
+                  }; // struct svd_res
 
+                  /**
+                   * 对Data做SVD
+                   *
+                   * \param dims 张量的维度信息
+                   * \param plan 转置方式, 先将Data转置, 之后再做SVD
+                   * \param u_size, v_size 转置之后, 为了进行SVD, 将张量看作矩阵时, u边和v边的维度大小
+                   * \param min_mn u_size和v_size当中的较小值
+                   * \param cut S作为对角矩阵, 可以截断掉较小的奇异值, cut是截断后的长度, 如果cut=-1, 则代表不截断
+                   */
                   svd_res
                   svd(const std::vector<Size>& dims,
                       const std::vector<Rank>& plan,
@@ -407,12 +516,22 @@ namespace TAT {
                       const Size& min_mn,
                       const Size& cut) const;
 
-                  class qr_res {
-                     public:
+                  /**
+                   * QR的结果, 包括Q, R
+                   */
+                  struct qr_res {
                         Data<Base> Q;
                         Data<Base> R;
-                  }; // class qr_res
+                  }; // struct qr_res
 
+                  /**
+                   * 对Data做QR
+                   *
+                   * \param dims 张量的维度信息
+                   * \param plan 转置方式, 先将Data转置, 之后再做QR
+                   * \param q_size, r_size 转置之后, 进行QR时, 需将张量看作矩阵, q边和r边的的大小是q_size, r_size
+                   * \param min_mn q_size和r_size当中的较小值
+                   */
                   qr_res
                   qr(const std::vector<Size>& dims,
                      const std::vector<Rank>& plan,
@@ -420,6 +539,14 @@ namespace TAT {
                      const Size& r_size,
                      const Size& min_mn) const;
 
+                  /**
+                   * 张量的缩并
+                   *
+                   * \param data1, data2 两个张量的Data
+                   * \param dims1, dims2 两个张量的维度信息
+                   * \param plan1, plan2 两个张量的转置方式, 缩并需先转置再做乘积
+                   * \param m, k, n 两个张量转置后, 看作矩阵乘即可, 两个矩阵的维度便是m, k, n
+                   */
                   static Data<Base> contract(
                         const Data<Base>& data1,
                         const Data<Base>& data2,
@@ -431,9 +558,30 @@ namespace TAT {
                         const Size& k,
                         const Size& n);
 
-                  Data<Base> multiple(const Data<Base>& other, const Size& a, const Size& b, const Size& c) const;
+                  /**
+                   * 张量在一个指标上乘上对角阵
+                   *
+                   * \param other 存储对角阵的张量Data, 其阶数应该是1
+                   * \param a, b, c 相当于data[a,b,c]*other[b], 注意不求和, b为相乘的维度, a, c分别是前面和后面的总维度
+                   */
+                  template<class Base2>
+                  Data<Base> multiple(const Data<Base2>& other, const Size& a, const Size& b, const Size& c) const;
 
-                  Base at(Size pos) const {
+                  /**
+                   * 给出某个位置上的数据, 即对其中的数据取索引
+                   *
+                   * \param pos 索引位置, 就是数据数组的索引
+                   */
+                  const Base& at(Size pos) const {
+                        return base[pos];
+                  }
+
+                  /**
+                   * at的可变版本
+                   *
+                   * \see at(Size pos) const
+                   */
+                  Base& at(Size pos) {
                         return base[pos];
                   }
             };
@@ -452,47 +600,68 @@ namespace TAT {
       //      BBBBB   LLLLL   OOO    CCC   K    K
       //
       /**
-       * define class Block.
+       * 定义struct Block.
        */
       namespace block {
             /**
-             * Block record the dimension size of a tensor based on class Data.
+             * Block相比于Data还记录了每个指标的维度信息, 与常见的张量库中的张量是同一个层次的抽象
+             *
+             * \tparam Base 张量的基类型
              */
             template<class Base = double>
-            class Block {
-               public:
+            struct Block {
                   using type = Base;
-                  Data<Base> data = {};
-                  std::vector<Size> dims = {};
+                  /**
+                   * 存着一个没有维度结构的Data
+                   */
+                  Data<Base> data;
+                  /**
+                   * 记录着每个指标的维度信息, 有了维度信息, 便是一个正常的张量或者张量分块了
+                   */
+                  std::vector<Size> dims;
 
                   // constructors
-                  template<class S = std::vector<Size>>
+                  /**
+                   * 构造出对应维度的Block, 其中Data的size由维度求积得到
+                   *
+                   * \param dims Block的维度信息
+                   */
+                  template<class S = std::vector<Size>, class = std::enable_if_t<!std::is_same_v<S, Block<Base>>>>
                   explicit Block(S&& dims) :
                         data(std::accumulate(dims.begin(), dims.end(), Size(1), std::multiplies<Size>())),
                         dims(std::forward<S>(dims)) {}
-                  explicit Block(Base num) : data(num), dims({}) {}
+                  /**
+                   * 生成大小为1的Block, 直接初始化其中的数据, 用来将标量类型转为对应的无指标张量
+                   *
+                   * \param num 填入无指标的零阶张量中的唯一分量的值
+                   */
+                  explicit Block(Base num) : data(num), dims() {}
 
-                  // default contructors, I don't know why it should be written explicitly
-                  ~Block() = default;
+                  // default contructor
                   Block() = default;
-                  Block(Block<Base>&& other) = default;
-                  Block<Base>& operator=(Block<Base>&& other) = default;
-                  Block(const Block<Base>& other) = default;
-                  Block<Base>& operator=(const Block<Base>& other) = default;
 
-                  // data member
+                  /**
+                   * 获得Data的size
+                   */
                   const Size& size() const {
                         return data.size;
                   }
 
                   /**
-                   * set block content with a function as argument, which return data one by one.
+                   * 给定generator, 设置此Block
+                   *
+                   * \param setter 用来设置Block值的generator, 其将一次一次被调用并赋值给Block中的数据
                    */
                   template<class Generator>
                   Block<Base>& set(Generator&& setter) & {
                         data.set(std::forward<Generator>(setter));
                         return *this;
                   }
+                  /**
+                   * set的右值版本
+                   *
+                   * \see set(Generator&& setter) &
+                   */
                   template<class Generator>
                   Block<Base>&& set(Generator&& setter) && {
                         return std::move(set(std::forward<Generator>(setter)));
@@ -501,7 +670,9 @@ namespace TAT {
                   // operators
 
                   /**
-                   * convert value type to another
+                   * 将本Block转换成另一个类型的Block
+                   *
+                   * \tparam Base2 目标Block的基类型
                    */
                   template<class Base2>
                   Block<Base2> to() const {
@@ -512,30 +683,61 @@ namespace TAT {
                   }
 
                   /**
-                   * get n-norm of this block, if n=-1, it means max norm.
+                   * 获得Block看作向量后的的n模, 如果n=-1, 那么意味着最大模
+                   *
+                   * \tparam n 模的种类
                    */
                   template<int n>
                   Block<Base> norm() const;
 
+                  /**
+                   * 张量转置
+                   *
+                   * \param plan 张量转置的方式, 如{0, 2, 1}表示对三阶张量的后两维进行转置
+                   */
                   Block<Base> transpose(const std::vector<Rank>& plan) const;
 
-                  class svd_res {
-                     public:
+                  /**
+                   * SVD的结果, 包括U, S, V, 注意S的类型可能不一样, 如果自己是复数张量的话
+                   */
+                  struct svd_res {
                         Block<Base> U;
                         Block<real_base_t<Base>> S;
                         Block<Base> V;
-                  }; // class svd_res
+                  }; // struct svd_res
 
+                  /**
+                   * 对Block做SVD
+                   *
+                   * \param plan 转置方式, 先将Block转置, 之后再做SVD
+                   * \param u_rank 转置之后, 为了进行SVD, 将张量看作矩阵时, u边包含的原指标个数
+                   * \param cut S作为对角矩阵, 可以截断掉较小的奇异值, cut是截断后的长度, cut=-1代表不截断
+                   */
                   svd_res svd(const std::vector<Rank>& plan, const Rank& u_rank, const Size& cut) const;
 
-                  class qr_res {
-                     public:
+                  /**
+                   * QR的结果, 包括Q, R
+                   */
+                  struct qr_res {
                         Block<Base> Q;
                         Block<Base> R;
-                  }; // class qr_res
+                  }; // struct qr_res
 
+                  /**
+                   * 对Block做QR
+                   *
+                   * \param plan 转置方式, 先将Block转置, 之后再做QR
+                   * \param q_rank 转置之后, 为了进行QR, 将张量看作矩阵时, q边包含的原指标个数
+                   */
                   qr_res qr(const std::vector<Rank>& plan, const Rank& q_rank) const;
 
+                  /**
+                   * 张量的缩并
+                   *
+                   * \param block1, block2 两个张量的Block
+                   * \param plan1, plan2 两个张量的转置方式, 缩并需先转置再做乘积
+                   * \param contract_num 两个张量转置后, 看作矩阵乘时, 矩阵乘中所要乘掉的指标数目
+                   */
                   static Block<Base> contract(
                         const Block<Base>& block1,
                         const Block<Base>& block2,
@@ -543,34 +745,63 @@ namespace TAT {
                         const std::vector<Rank>& plan2,
                         const Rank& contract_num);
 
-                  Block<Base> multiple(const Block<Base>& other, const Rank& index) const;
+                  /**
+                   * 张量在一个指标上乘上对角阵
+                   *
+                   * \param other 存储对角阵的张量Data, 其阶数应该是1
+                   * \param index 所需乘上去的指标的索引
+                   */
+                  template<class Base2>
+                  Block<Base> multiple(const Block<Base2>& other, const Rank& index) const;
 
-                  Base at(const std::vector<Size>& pos) const {
+                  /**
+                   * 通过张量的索引获得在数据中的位置, 在at中使用
+                   *
+                   * \param index 张量的索引, 比如一个三阶张量, index={1, 2, 3}则代表着取Block[1, 2, 3]
+                   * \see at(const std::vector<Size>& index) const
+                   */
+                  Size get_position(const std::vector<Size>& index) const {
                         Size res = 0;
                         for (Rank i = 0; i < dims.size(); i++) {
-                              res = res * dims[i] + pos[i];
+                              res = res * dims[i] + index[i];
                         }
-                        return data.at(res);
+                        return res;
+                  }
+
+                  /**
+                   * 给出某个张量索引上的数据
+                   *
+                   * \param index 张量的索引, 比如一个三阶张量, index={1, 2, 3}则代表着取Block[1, 2, 3]
+                   * \see get_position(const std::vector<Size>& index) const
+                   */
+                  const Base& at(const std::vector<Size>& index) const {
+                        return data.at(get_position(index));
+                  }
+
+                  /**
+                   * at的可变版本
+                   *
+                   * \see at(const std::vector<Size>& index) const
+                   */
+                  Base& at(const std::vector<Size>& index) {
+                        return data.at(get_position(index));
                   }
             };
       } // namespace block
       using block::Block;
 
       /**
-       * define class Tensor.
+       * 定义struct Tensor
        *
-       * but not implemented,
-       * currently use dense tensor,
-       * namely block directly.
+       * 尚未实现, 现在直接通过alias使用Block
+       * 暂时不支持分块张量, 使用Block作为Tensor
        */
-      // namespace tensor {
-      //       template<class=double>
-      //       class Tensor;
-      // } // namespace tensor
-      // using tensor::Tensor;
       namespace tensor = block;
-      template<class Base = double>
-      using Tensor = Block<Base>;
+      namespace block {
+            template<class Base = double>
+            using Tensor = Block<Base>;
+      }
+      using tensor::Tensor;
 
       //
       //      N    N   OOO   DDDDD   EEEEE
@@ -584,56 +815,97 @@ namespace TAT {
       //      N    N   OOO   DDDDD   EEEEE
       //
       /**
-       * define class Node.
+       * 定义struct Node
        */
       namespace node {
             /**
-             * besides dimenion size, class Node also maintain Legs name of a tensor.
+             * 除了Tensor中的维度信息, struct Node还会额外保存指标的id, 用来在复杂的操作中方便地确定指标而不至于混乱
+             *
+             * \tparam Base 张量的基类型
              */
             template<class Base = double>
-            class Node {
-               public:
+            struct Node {
                   using type = Base;
-                  Tensor<Base> tensor = {};
-                  std::vector<Legs> legs = {};
+                  /**
+                   * 存一个Tensor保存维度信息和本身的内容, 为了让legs_rename不改变原node, 使用shared_ptr
+                   */
+                  std::shared_ptr<Tensor<Base>> tensor_ptr;
+
+                  /**
+                   * 记录Legs的vector用来识别指标
+                   */
+                  std::vector<Legs> legs;
+
+                  /**
+                   * 获得Tensor的值, 因为tensor为了legs_rename方便使用了shared_ptr
+                   */
+                  const Tensor<Base>& tensor() const {
+                        return *tensor_ptr;
+                  }
+                  /**
+                   * tensor的可变版本
+                   *
+                   * \see tensor() const
+                   */
+                  Tensor<Base>& tensor() {
+                        return *tensor_ptr;
+                  }
 
                   // constructors
-                  // this will rewrite after implement tensor
+                  /**
+                   * 通过指标name和维度信息构造一个Node, 这在分块张量实现后需要重写, 比较好的方式是传入一个config类
+                   *
+                   * \param legs 指标的name信息
+                   * \param dims Block的维度信息
+                   */
                   template<class T1 = std::vector<Legs>, class T2 = std::vector<Size>>
                   explicit Node(T1&& _legs, T2&& _dims) :
-                        tensor(std::forward<T2>(_dims)), legs(std::forward<T1>(_legs)) {
+                        tensor_ptr(std::make_shared<Tensor<Base>>(std::forward<T2>(_dims))),
+                        legs(std::forward<T1>(_legs)) {
                         // expect length of legs and dims is same
-                        assert(legs.size() == tensor.dims.size());
+                        assert(legs.size() == tensor().dims.size());
                         // expect no same element in legs
                         assert(legs.size() == std::set<TAT::Legs>(legs.begin(), legs.end()).size());
                   }
-                  explicit Node(Base num) : tensor(num), legs({}) {}
+                  /**
+                   * 生成大小为1的Node, 直接初始化其中的数据, 用来将标量类型转为对应的无指标张量
+                   *
+                   * \param num 填入无指标的零阶张量中的唯一分量的值
+                   */
+                  explicit Node(Base num) : tensor_ptr(std::make_shared<Tensor<Base>>(num)), legs() {}
 
-                  // default contructors, I don't know why it should be written explicitly
-                  ~Node() = default;
-                  Node() = default;
-                  Node(Node<Base>&& other) = default;
-                  Node<Base>& operator=(Node<Base>&& other) = default;
-                  Node(const Node<Base>& other) = default;
-                  Node<Base>& operator=(const Node<Base>& other) = default;
+                  // default contructor
+                  Node() : tensor_ptr(std::make_shared<Tensor<Base>>()), legs(){};
 
-                  // tensor member
+                  /**
+                   * 获得Data的size
+                   */
                   const Size& size() const {
-                        return tensor.size();
-                  }
-
-                  const std::vector<Size>& dims() const {
-                        return tensor.dims();
+                        return tensor().size();
                   }
 
                   /**
-                   * set node content with a function as argument, which return data one by one.
+                   * 获得Block的dims
+                   */
+                  const std::vector<Size>& dims() const {
+                        return tensor().dims();
+                  }
+
+                  /**
+                   * 给定generator, 设置此Node, 这是唯一的inplace操作
+                   *
+                   * \param setter 用来设置Node值的generator, 其将一次一次被调用并赋值给Node中的数据
                    */
                   template<class Generator>
                   Node<Base>& set(Generator&& setter) & {
-                        tensor.set(std::forward<Generator>(setter));
+                        tensor().set(std::forward<Generator>(setter));
                         return *this;
                   }
+                  /**
+                   * set的右值版本
+                   *
+                   * \see set(Generator&& setter) &
+                   */
                   template<class Generator>
                   Node<Base>&& set(Generator&& setter) && {
                         return std::move(set(std::forward<Generator>(setter)));
@@ -641,75 +913,146 @@ namespace TAT {
 
                   // operators
                   /**
-                   * rename the legs name of node inplace
+                   * 更改指标的name即legs
+                   *
+                   * \param dict 如何替换指标name的字典
                    */
-                  Node<Base>& legs_rename(const std::vector<std::tuple<Legs, Legs>>& dict) & {
-                        for (const auto& [i, j] : dict) {
-                              std::replace(legs.begin(), legs.end(), i, j);
-                        }
-                        return *this;
-                  }
-                  Node<Base>&& legs_rename(const std::vector<std::tuple<Legs, Legs>>& dict) && {
-                        return std::move(legs_rename(dict));
+                  Node<Base> legs_rename(const std::map<Legs, Legs>& dict) const {
+                        auto res = Node<Base>();
+                        res.tensor_ptr = tensor_ptr;
+                        std::transform(legs.begin(), legs.end(), std::back_inserter(res.legs), [&](Legs leg) {
+                              try {
+                                    return dict.at(leg);
+                              } catch (const std::out_of_range& e) {
+                                    return leg;
+                              }
+                        });
+                        return res;
                   }
 
                   /**
-                   * convert value type to another
+                   * 将本Node转换成另一个类型的Node
+                   *
+                   * \tparam Base2 目标Node的基类型
                    */
                   template<class Base2>
                   Node<Base2> to() const {
                         auto res = Node<Base2>{};
-                        res.tensor = tensor.template to<Base2>();
+                        res.tensor() = tensor().template to<Base2>();
                         res.legs = legs;
                         return res;
                   }
 
                   /**
-                   * get n-norm of this node, if n=-1, it means max norm.
+                   * 获得Node看作向量后的的n模, 如果n=-1, 那么意味着最大模
+                   *
+                   * \tparam n 模的种类
                    */
                   template<int n>
                   Node<Base> norm() const;
 
+                  /**
+                   * 张量转置
+                   *
+                   * \paran 转置后的目标legs
+                   */
                   Node<Base> transpose(const std::vector<Legs>& new_legs) const;
 
-                  class svd_res {
-                     public:
+                  /**
+                   * SVD的结果, 包括U, S, V, 注意S的类型可能不一样, 如果自己是复数张量的话
+                   */
+                  struct svd_res {
                         Node<Base> U;
                         Node<real_base_t<Base>> S;
                         Node<Base> V;
-                  };
+                  }; // struct svd_res
 
+                  /**
+                   * 对Node做SVD
+                   *
+                   * \param input_u_legs SVD后成为U边所包含的指标name
+                   * \param new_u_legs, new_v_legs SVD出来的U矩阵和V矩阵的两个新指标
+                   * \param cut S作为对角矩阵, 可以截断掉较小的奇异值, cut是截断后的长度, cut=-1代表不截断
+                   */
                   svd_res
                   svd(const std::vector<Legs>& input_u_legs,
                       const Legs& new_u_legs,
                       const Legs& new_v_legs,
                       const Rank& cut = -1) const;
 
-                  class qr_res {
-                     public:
+                  /**
+                   * QR的结果, 包括Q, R
+                   */
+                  struct qr_res {
                         Node<Base> Q;
                         Node<Base> R;
-                  }; // class qr_res
+                  }; // struct qr_res
 
+                  /**
+                   * 对Node做QR
+                   *
+                   * \param input_q_legs QR后成为Q边所包含的指标name
+                   * \param new_q_legs, new_r_legs QR出来的Q矩阵和R矩阵的两个新指标
+                   */
                   qr_res
                   qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const;
 
+                  /**
+                   * 对Node做QR
+                   *
+                   * \param input_r_legs QR后成为R边所包含的指标name
+                   * \param new_r_legs, new_q_legs QR出来的R矩阵和Q矩阵的两个新指标
+                   */
+                  qr_res
+                  rq(const std::vector<Legs>& input_r_legs, const Legs& new_r_legs, const Legs& new_q_legs) const {
+                        std::vector<TAT::Legs> input_q_legs;
+                        std::copy_if(legs.begin(), legs.end(), std::back_inserter(input_q_legs), [&](const Legs& i) {
+                              return std::find(input_r_legs.begin(), input_r_legs.end(), i) == input_r_legs.end();
+                        });
+                        return qr(input_q_legs, new_q_legs, new_r_legs);
+                  }
+
+                  /**
+                   * 张量的缩并
+                   *
+                   * \param node1, node2 两个张量的Node
+                   * \param legs1, legs2 两个张量所要缩并掉的指标name即legs
+                   */
                   static Node<Base> contract(
                         const Node<Base>& node1,
                         const Node<Base>& node2,
                         const std::vector<Legs>& legs1,
-                        const std::vector<Legs>& legs2,
-                        const std::vector<std::tuple<Legs, Legs>>& map1 = {},
-                        const std::vector<std::tuple<Legs, Legs>>& map2 = {});
+                        const std::vector<Legs>& legs2);
 
-                  Node<Base> multiple(const Node<Base>& other, const Legs& position) const;
+                  /**
+                   * 相当于在一个指标上乘上对角阵, Node层次给出相乘的指标的name
+                   */
+                  template<class Base2>
+                  Node<Base> multiple(const Node<Base2>& other, const Legs& position) const;
 
-                  Base at(const std::map<Legs, Size>& dict) const {
+                  /**
+                   * 通过指标字典获得索引, 在at中使用
+                   */
+                  std::vector<Size> get_index(const std::map<Legs, Size>& dict) const {
                         std::vector<Size> res;
                         std::transform(legs.begin(), legs.end(), std::back_inserter(res), [&dict](const Legs& l) {
                               return dict.at(l);
                         });
-                        return tensor.at(res);
+                        return res;
+                  }
+
+                  /**
+                   * 根据指标字典找到Node上的某个数据
+                   */
+                  const Base& at(const std::map<Legs, Size>& dict) const {
+                        return tensor().at(get_index(dict));
+                  }
+
+                  /**
+                   * at的可变版本
+                   */
+                  Base& at(const std::map<Legs, Size>& dict) {
+                        return tensor().at(get_index(dict));
                   }
             };
       } // namespace node
@@ -727,6 +1070,9 @@ namespace TAT {
       //      III   OOO
       //
       namespace data {
+            /**
+             * Data的流输出, 如果是cout, cerr, clog之一则输出文本, 否则输出二进制数据
+             */
             template<class Base>
             std::ostream& operator<<(std::ostream& out, const Data<Base>& value) {
                   if (&out == &std::cout || &out == &std::cerr || &out == &std::clog) {
@@ -747,10 +1093,13 @@ namespace TAT {
                   }
             } // operator<<
 
+            /**
+             * Data的流输入, 只支持二进制数据
+             */
             template<class Base>
             std::istream& operator>>(std::istream& in, Data<Base>& value) {
                   in.read(reinterpret_cast<char*>(&value.size), sizeof(Size));
-                  value.base = std::vector<Base>(value.size);
+                  value.base = std::vector<Base, no_init_allocator<Base>>(value.size);
                   in.read(reinterpret_cast<char*>(value.base.data()), value.size * sizeof(Base));
                   return in;
             } // operator<<
@@ -769,6 +1118,9 @@ namespace TAT {
                   return out;
             } // operator<<
 
+            /**
+             * Block的流输出, 如果是cout, cerr, clog之一则输出文本, 否则输出二进制数据
+             */
             template<class Base>
             std::ostream& operator<<(std::ostream& out, const Block<Base>& value) {
                   if (&out == &std::cout || &out == &std::cerr || &out == &std::clog) {
@@ -783,6 +1135,9 @@ namespace TAT {
                   }
             } // operator<<
 
+            /**
+             * Block的流输入, 只支持二进制数据
+             */
             template<class Base>
             std::istream& operator>>(std::istream& in, Block<Base>& value) {
                   Rank rank;
@@ -807,29 +1162,35 @@ namespace TAT {
                   return out;
             } // operator<<
 
+            /**
+             * Node的流输出, 如果是cout, cerr, clog之一则输出文本, 否则输出二进制数据
+             */
             template<class Base>
             std::ostream& operator<<(std::ostream& out, const Node<Base>& value) {
                   if (&out == &std::cout || &out == &std::cerr || &out == &std::clog) {
                         return out << "{" << rang::fgB::yellow << "\"rank\": " << value.legs.size() << rang::fg::reset
                                    << ", " << rang::fgB::blue << "\"legs\": " << value.legs << rang::fg::reset
-                                   << ", \"tensor\": " << value.tensor << "}";
+                                   << ", \"tensor\": " << value.tensor() << "}";
 
                   } else {
                         Rank rank = value.legs.size();
                         out.write(reinterpret_cast<const char*>(&rank), sizeof(Rank));
                         out.write(reinterpret_cast<const char*>(value.legs.data()), rank * sizeof(Legs));
-                        out << value.tensor;
+                        out << value.tensor();
                         return out;
                   }
             } // operator<<
 
+            /**
+             * Node的流输入, 只支持二进制数据
+             */
             template<class Base>
             std::istream& operator>>(std::istream& in, Node<Base>& value) {
                   Rank rank;
                   in.read(reinterpret_cast<char*>(&rank), sizeof(Rank));
                   value.legs = std::vector<Legs>(rank);
                   in.read(reinterpret_cast<char*>(value.legs.data()), rank * sizeof(Legs));
-                  in >> value.tensor;
+                  in >> value.tensor();
                   return in;
             } // operator<<
       } // namespace node
@@ -901,7 +1262,7 @@ namespace TAT {
             template<int n>
             Node<Base> Node<Base>::norm() const {
                   auto res = Node<Base>{};
-                  res.tensor = tensor.template norm<n>();
+                  res.tensor() = tensor().template norm<n>();
                   return res;
             } // norm
       } // namespace node
@@ -917,81 +1278,57 @@ namespace TAT {
       //       SSS    CCC   A    A  LLLLL  A    A  R   R  _____  DDDDD   A    A    T    A    A
       //
       namespace data {
-            template<class Base, class Base2>
-            Data<Base>& operator*=(Data<Base>& a, const Data<Base2>& b) {
-                  if (b.size == 1) {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] *= b.base[0];
-                        }
-                  } else {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] *= b.base[i];
-                        }
-                  } // if
-                  return a;
-            } // operator*=
+#define DEF_OP(OP, EVAL1, EVAL2)                            \
+      template<class Base, class Base2>                     \
+      Data<Base>& OP(Data<Base>& a, const Data<Base2>& b) { \
+            if (b.size == 1) {                              \
+                  for (Size i = 0; i < a.size; i++) {       \
+                        EVAL1;                              \
+                  }                                         \
+            } else {                                        \
+                  for (Size i = 0; i < a.size; i++) {       \
+                        EVAL2;                              \
+                  }                                         \
+            }                                               \
+            return a;                                       \
+      }
 
-            template<class Base1, class Base2>
-            auto operator*(const Data<Base1>& a, const Data<Base2>& b) {
-                  using Base = std::common_type_t<Base1, Base2>;
-                  if (a.size == 1) {
-                        auto res = Data<Base>(b.size);
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] * b.base[i];
-                        }
-                        return res;
-                  } // if
-                  if (b.size == 1) {
-                        auto res = Data<Base>(a.size);
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] * b.base[0];
-                        }
-                        return res;
-                  } // if
-                  auto res = Data<Base>(a.size);
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] * b.base[i];
-                  }
-                  return res;
-            } // operator*
+            DEF_OP(operator*=, a.base[i] *= b.base[0], a.base[i] *= b.base[i])
+            DEF_OP(operator/=, a.base[i] /= b.base[0], a.base[i] /= b.base[i])
+            DEF_OP(operator+=, a.base[i] += b.base[0], a.base[i] += b.base[i])
+            DEF_OP(operator-=, a.base[i] -= b.base[0], a.base[i] -= b.base[i])
+#undef DEF_OP
 
-            template<class Base, class Base2>
-            Data<Base>& operator/=(Data<Base>& a, const Data<Base2>& b) {
-                  if (b.size == 1) {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] /= b.base[0];
-                        }
-                  } else {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] /= b.base[i];
-                        }
-                  } // if
-                  return a;
-            } // operator/=
+#define DEF_OP(OP, EVAL1, EVAL2, EVAL3)                     \
+      template<class Base1, class Base2>                    \
+      auto OP(const Data<Base1>& a, const Data<Base2>& b) { \
+            using Base = std::common_type_t<Base1, Base2>;  \
+            if (a.size == 1) {                              \
+                  auto res = Data<Base>(b.size);            \
+                  for (Size i = 0; i < b.size; i++) {       \
+                        res.base[i] = EVAL1;                \
+                  }                                         \
+                  return res;                               \
+            }                                               \
+            if (b.size == 1) {                              \
+                  auto res = Data<Base>(a.size);            \
+                  for (Size i = 0; i < a.size; i++) {       \
+                        res.base[i] = EVAL2;                \
+                  }                                         \
+                  return res;                               \
+            }                                               \
+            auto res = Data<Base>(a.size);                  \
+            for (Size i = 0; i < a.size; i++) {             \
+                  res.base[i] = EVAL3;                      \
+            }                                               \
+            return res;                                     \
+      }
 
-            template<class Base1, class Base2>
-            auto operator/(const Data<Base1>& a, const Data<Base2>& b) {
-                  using Base = std::common_type_t<Base1, Base2>;
-                  if (a.size == 1) {
-                        auto res = Data<Base>(b.size);
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] / b.base[i];
-                        }
-                        return res;
-                  } // if
-                  if (b.size == 1) {
-                        Data<Base> res(a.size);
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] / b.base[0];
-                        }
-                        return res;
-                  } // if
-                  Data<Base> res(a.size);
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] / b.base[i];
-                  }
-                  return res;
-            } // operator/
+            DEF_OP(operator*, a.base[0]* b.base[i], a.base[i]* b.base[0], a.base[i]* b.base[i])
+            DEF_OP(operator/, a.base[0] / b.base[i], a.base[i] / b.base[0], a.base[i] / b.base[i])
+            DEF_OP(operator+, a.base[0] + b.base[i], a.base[i] + b.base[0], a.base[i] + b.base[i])
+            DEF_OP(operator-, a.base[0] - b.base[i], a.base[i] - b.base[0], a.base[i] - b.base[i])
+#undef DEF_OP
 
             template<class Base>
             const Data<Base>& operator+(const Data<Base>& a) {
@@ -1003,87 +1340,11 @@ namespace TAT {
                   return Data<Base>(std::move(a));
             } // operator+
 
-            template<class Base, class Base2>
-            Data<Base>& operator+=(Data<Base>& a, const Data<Base2>& b) {
-                  if (b.size == 1) {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] += b.base[0];
-                        }
-                  } else {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] += b.base[i];
-                        }
-                  } // if
-                  return a;
-            } // operator+=
-
-            template<class Base1, class Base2>
-            auto operator+(const Data<Base1>& a, const Data<Base2>& b) {
-                  using Base = std::common_type_t<Base1, Base2>;
-                  if (a.size == 1) {
-                        auto res = Data<Base>(b.size);
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] + b.base[i];
-                        }
-                        return res;
-                  } // if
-                  if (b.size == 1) {
-                        Data<Base> res(a.size);
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] + b.base[0];
-                        }
-                        return res;
-                  } // if
-                  Data<Base> res(a.size);
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] + b.base[i];
-                  }
-                  return res;
-            } // operator+
-
             template<class Base>
             Data<Base> operator-(const Data<Base>& a) {
                   auto res = Data<Base>(a.size);
                   for (Size i = 0; i < a.size; i++) {
                         res.base[i] = -a.base[i];
-                  }
-                  return res;
-            } // operator-
-
-            template<class Base, class Base2>
-            Data<Base>& operator-=(Data<Base>& a, const Data<Base2>& b) {
-                  if (b.size == 1) {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] -= b.base[0];
-                        }
-                  } else {
-                        for (Size i = 0; i < a.size; i++) {
-                              a.base[i] -= b.base[i];
-                        }
-                  } // if
-                  return a;
-            } // operator-=
-
-            template<class Base1, class Base2>
-            auto operator-(const Data<Base1>& a, const Data<Base2>& b) {
-                  using Base = std::common_type_t<Base1, Base2>;
-                  if (a.size == 1) {
-                        auto res = Data<Base>(b.size);
-                        for (Size i = 0; i < b.size; i++) {
-                              res.base[i] = a.base[0] - b.base[i];
-                        }
-                        return res;
-                  } // if
-                  if (b.size == 1) {
-                        auto res = Data<Base>(a.size);
-                        for (Size i = 0; i < a.size; i++) {
-                              res.base[i] = a.base[i] - b.base[0];
-                        }
-                        return res;
-                  } // if
-                  auto res = Data<Base>(a.size);
-                  for (Size i = 0; i < a.size; i++) {
-                        res.base[i] = a.base[i] - b.base[i];
                   }
                   return res;
             } // operator-
@@ -1200,7 +1461,7 @@ namespace TAT {
       template<class Base, class Base2>                     \
       Node<Base>& OP(Node<Base>& a, const Node<Base2>& b) { \
             assert(b.legs.size() == 0 || a.legs == b.legs); \
-            tensor::OP(a.tensor, b.tensor);                 \
+            tensor::OP(a.tensor(), b.tensor());             \
             return a;                                       \
       }                                                     \
       template<class Base, class B>                         \
@@ -1214,29 +1475,29 @@ namespace TAT {
             DEF_OP(operator-=)
 #undef DEF_OP
 
-#define DEF_OP(OP)                                          \
-      template<class Base1, class Base2>                    \
-      auto OP(const Node<Base1>& a, const Node<Base2>& b) { \
-            using Base = std::common_type_t<Base1, Base2>;  \
-            Node<Base> res;                                 \
-            if (b.legs.size() == 0) {                       \
-                  res.legs = a.legs;                        \
-            } else if (a.legs.size() == 0) {                \
-                  res.legs = b.legs;                        \
-            } else {                                        \
-                  res.legs = a.legs;                        \
-                  assert(a.legs == b.legs);                 \
-            }                                               \
-            res.tensor = tensor::OP(a.tensor, b.tensor);    \
-            return res;                                     \
-      }                                                     \
-      template<class Base, class B>                         \
-      Node<Base> OP(const Node<Base>& a, const B& b) {      \
-            return OP(a, Node<Base>(b));                    \
-      }                                                     \
-      template<class Base, class B>                         \
-      Node<Base> OP(const B& b, const Node<Base>& a) {      \
-            return OP(Node<Base>(b), a);                    \
+#define DEF_OP(OP)                                             \
+      template<class Base1, class Base2>                       \
+      auto OP(const Node<Base1>& a, const Node<Base2>& b) {    \
+            using Base = std::common_type_t<Base1, Base2>;     \
+            Node<Base> res;                                    \
+            if (b.legs.size() == 0) {                          \
+                  res.legs = a.legs;                           \
+            } else if (a.legs.size() == 0) {                   \
+                  res.legs = b.legs;                           \
+            } else {                                           \
+                  res.legs = a.legs;                           \
+                  assert(a.legs == b.legs);                    \
+            }                                                  \
+            res.tensor() = tensor::OP(a.tensor(), b.tensor()); \
+            return res;                                        \
+      }                                                        \
+      template<class Base, class B>                            \
+      Node<Base> OP(const Node<Base>& a, const B& b) {         \
+            return OP(a, Node<Base>(b));                       \
+      }                                                        \
+      template<class Base, class B>                            \
+      Node<Base> OP(const B& b, const Node<Base>& a) {         \
+            return OP(Node<Base>(b), a);                       \
       }
 
             DEF_OP(operator*)
@@ -1254,7 +1515,7 @@ namespace TAT {
             Node<Base> operator+(Node<Base>&& a) {
                   Node<Base> res;
                   res.legs = std::move(a.legs);
-                  res.tensor = +std::move(a.tensor);
+                  res.tensor() = +std::move(a.tensor());
                   return res;
             } // operator+
 
@@ -1262,7 +1523,7 @@ namespace TAT {
             Node<Base> operator-(const Node<Base>& a) {
                   Node<Base> res;
                   res.legs = a.legs;
-                  res.tensor = -a.tensor;
+                  res.tensor() = -a.tensor();
                   return res;
             } // operator-
       } // namespace node
@@ -1358,7 +1619,7 @@ namespace TAT {
                   std::vector<Rank> plan = transpose::generate_plan(res.legs, legs);
                   assert(plan.size() == legs.size());
                   assert(res.legs.size() == legs.size());
-                  res.tensor = tensor.transpose(plan);
+                  res.tensor() = tensor().transpose(plan);
                   return res;
             } // transpose
       } // namespace node
@@ -1793,11 +2054,11 @@ namespace TAT {
                   res.U.legs = std::move(U_legs);
                   res.V.legs = std::move(V_legs);
                   std::vector<Rank> plan = transpose::generate_plan(tmp_legs, legs);
-                  auto tensor_res = tensor.svd(plan, u_rank, cut);
+                  auto tensor_res = tensor().svd(plan, u_rank, cut);
                   res.S.legs = {new_u_legs}; // new_u_legs or new_v_legs
-                  res.U.tensor = std::move(tensor_res.U);
-                  res.S.tensor = std::move(tensor_res.S);
-                  res.V.tensor = std::move(tensor_res.V);
+                  res.U.tensor() = std::move(tensor_res.U);
+                  res.S.tensor() = std::move(tensor_res.S);
+                  res.V.tensor() = std::move(tensor_res.V);
                   return res;
             } // svd
       } // namespace node
@@ -2018,9 +2279,9 @@ namespace TAT {
                   res.Q.legs = std::move(Q_legs);
                   res.R.legs = std::move(R_legs);
                   std::vector<Rank> plan = transpose::generate_plan(tmp_legs, legs);
-                  auto tensor_res = tensor.qr(plan, q_rank);
-                  res.Q.tensor = std::move(tensor_res.Q);
-                  res.R.tensor = std::move(tensor_res.R);
+                  auto tensor_res = tensor().qr(plan, q_rank);
+                  res.Q.tensor() = std::move(tensor_res.Q);
+                  res.R.tensor() = std::move(tensor_res.R);
                   return res;
             } // qr
       } // namespace node
@@ -2222,9 +2483,7 @@ namespace TAT {
                   plan(const std::vector<Legs>& total_legs1,
                        const std::vector<Legs>& total_legs2,
                        const std::vector<Legs>& legs1,
-                       const std::vector<Legs>& legs2,
-                       const std::vector<std::tuple<Legs, Legs>>& map1,
-                       const std::vector<std::tuple<Legs, Legs>>& map2) {
+                       const std::vector<Legs>& legs2) {
                         assert(legs1.size() == legs2.size());
 
                         std::vector<Legs> legs;
@@ -2264,12 +2523,14 @@ namespace TAT {
                               }
                         }
                         // legs append 2 total_legs if not in contract with map
+                        /*
                         for (const auto& [i, j] : map1) {
                               std::replace(legs.begin(), legs.begin() + left_number, i, j);
                         }
                         for (const auto& [i, j] : map2) {
                               std::replace(legs.begin() + left_number, legs.end(), i, j);
                         }
+                        */
 
                         return std::tuple{contract_num, legs, new_legs1, new_legs2};
                   } // plan
@@ -2280,12 +2541,10 @@ namespace TAT {
                   const Node<Base>& node1,
                   const Node<Base>& node2,
                   const std::vector<Legs>& legs1,
-                  const std::vector<Legs>& legs2,
-                  const std::vector<std::tuple<Legs, Legs>>& map1,
-                  const std::vector<std::tuple<Legs, Legs>>& map2) {
+                  const std::vector<Legs>& legs2) {
                   Node<Base> res;
                   auto [contract_num, res_legs, new_legs1, new_legs2] =
-                        contract::plan(node1.legs, node2.legs, legs1, legs2, map1, map2);
+                        contract::plan(node1.legs, node2.legs, legs1, legs2);
                   res.legs = std::move(res_legs);
                   auto plan1 = transpose::generate_plan(new_legs1, node1.legs);
                   auto plan2 = transpose::generate_plan(new_legs2, node2.legs);
@@ -2294,7 +2553,7 @@ namespace TAT {
                   assert(new_legs2.size() == node2.legs.size());
                   assert(plan2.size() == node2.legs.size());
                   assert(res.legs.size() == std::set<TAT::Legs>(res.legs.begin(), res.legs.end()).size());
-                  res.tensor = Tensor<Base>::contract(node1.tensor, node2.tensor, plan1, plan2, contract_num);
+                  res.tensor() = Tensor<Base>::contract(node1.tensor(), node2.tensor(), plan1, plan2, contract_num);
                   return res;
             } // contract
       } // namespace node
@@ -2311,17 +2570,17 @@ namespace TAT {
       //
       namespace data {
             namespace multiple {
-                  template<class Base>
+                  template<class Base, class Base2>
                   void
                   run(Base* res_data,
                       const Base* src_data,
-                      const Base* other_data,
+                      const Base2* other_data,
                       const Size& a,
                       const Size& b,
                       const Size& c) {
                         for (Size i = 0; i < a; i++) {
                               for (Size j = 0; j < b; j++) {
-                                    Base v = other_data[j];
+                                    Base2 v = other_data[j];
                                     for (Size k = 0; k < c; k++) {
                                           *(res_data++) = *(src_data++) * v;
                                     } // for k
@@ -2331,12 +2590,13 @@ namespace TAT {
             } // namespace multiple
 
             template<class Base>
+            template<class Base2>
             Data<Base>
-            Data<Base>::multiple(const Data<Base>& other, const Size& a, const Size& b, const Size& c) const {
+            Data<Base>::multiple(const Data<Base2>& other, const Size& a, const Size& b, const Size& c) const {
                   Data<Base> res(size);
                   assert(b == other.size);
                   assert(a * b * c == size);
-                  multiple::run<Base>(res.base.data(), base.data(), other.base.data(), a, b, c);
+                  multiple::run<Base, Base2>(res.base.data(), base.data(), other.base.data(), a, b, c);
                   return res;
             } // multiple
       } // namespace data
@@ -2358,7 +2618,8 @@ namespace TAT {
             } // namespace multiple
 
             template<class Base>
-            Block<Base> Block<Base>::multiple(const Block<Base>& other, const Rank& index) const {
+            template<class Base2>
+            Block<Base> Block<Base>::multiple(const Block<Base2>& other, const Rank& index) const {
                   Block<Base> res;
                   res.dims = dims;
                   auto [a, b, c] = multiple::plan(dims, index);
@@ -2370,7 +2631,8 @@ namespace TAT {
       } // namespace block
       namespace node {
             template<class Base>
-            Node<Base> Node<Base>::multiple(const Node<Base>& other, const Legs& position) const {
+            template<class Base2>
+            Node<Base> Node<Base>::multiple(const Node<Base2>& other, const Legs& position) const {
                   Node<Base> res;
                   assert(other.legs.size() == 1);
                   res.legs = legs;
@@ -2379,7 +2641,7 @@ namespace TAT {
                         return *this;
                   } // if not multiple
                   Rank index = std::distance(legs.begin(), pos);
-                  res.tensor = tensor.multiple(other.tensor, index);
+                  res.tensor() = tensor().multiple(other.tensor(), index);
                   return res;
             } // multiple
       } // namespace node
@@ -2395,26 +2657,124 @@ namespace TAT {
       //      L      A    A  Z        Y           C   C  O   O  R  R   E
       //      LLLLL  A    A  ZZZZZ    Y    _____   CCC    OOO   R   R  EEEEE
       //
+      /**
+       * lazy框架
+       */
       namespace lazy {
-            // class LazyBase : public std::enable_shared_from_this<LazyBase> {
-            class LazyCoreBase {
-               public:
-                  virtual void reset(bool = true) = 0;
-                  virtual ~LazyCoreBase() = default;
+#ifndef NDEBUG
+            /**
+             * 用来记录lazy core在哪里创建的全局变量
+             */
+            std::vector<std::string> position;
+#endif
+            /**
+             * 在作用域中新建一个name_scope变量可将此作用域内所有创建的lazy core的position变量都append一个字符串
+             */
+            struct name_scope {
+                  /**
+                   * 根据str构造一个name_scope
+                   *
+                   * \param str 构造的name_scope的名字
+                   * \note 使用方式是 \code{.cpp}
+                   * {
+                   *    lazy::name_scope name_scope("some_name");
+                   *    // other operator
+                   * }
+                   * \endcode
+                   */
+                  template<class Str = std::string>
+                  name_scope(Str&& str) {
+                        (void)str;
+#ifndef NDEBUG
+                        position.push_back(std::forward<Str>(str));
+#endif
+                  }
 
-                  std::set<LazyCoreBase*> downstream;
-                  std::set<LazyCoreBase*> upstream; // this should be always valid because of func
-
-                  std::string name;
+                  ~name_scope() {
+#ifndef NDEBUG
+                        assert(position.size() != 0);
+                        position.pop_back();
+#endif
+                  }
             };
 
+            /**
+             * LazyCore的基类, 用来存储无类型信息的上下游信息
+             */
+            struct LazyCoreBase {
+                  /**
+                   * 重置或不重置本lazy core, 并重置所有下游的lazy core
+                   *
+                   * \param reset_itself 是否重置自身的flag
+                   */
+                  virtual void reset(bool reset_itself = true) = 0;
+                  /**
+                   * 析构lazy core, 只会在没有下游时调用, 调用时会将自己从上游的下游列表中去除
+                   */
+                  virtual ~LazyCoreBase() = default;
+
+                  /**
+                   * 引用了本lazy core的其他lazy core列表, 并没有所有权, 资源由子类中的func所拷贝的shared_ptr管理
+                   */
+                  std::set<LazyCoreBase*> downstream;
+                  /**
+                   * 本lazy core所引用的其他lazy core列表, 并没有所有权, 资源由子类中的func所拷贝的shared_ptr管理
+                   */
+                  std::set<LazyCoreBase*> upstream;
+
+#ifndef NDEBUG
+                  /**
+                   * lazy core创建时的位置信息, debug用
+                   */
+                  std::vector<std::string> local_position;
+#endif
+            };
+
+            /**
+             * 给std::unique_ptr用的deleter, 会根据可变的own_flag来判断是否真的delete指针
+             *
+             * \tparam T 被delete的类型
+             */
             template<class T>
-            class LazyCore : public LazyCoreBase {
-               public:
+            struct maybe_deleter {
+                  /**
+                   * 记录是否拥有所有权的flag, 如果为true的在调用operator()时真的会delte指针, 反之不会
+                   */
+                  bool own_flag = false;
+                  /**
+                   * std::unique_ptr的deleter会通过调用operator()来delete指针
+                   *
+                   * \param ptr 或将delete的指针
+                   */
+                  void operator()(const T* ptr) const {
+                        if (own_flag) {
+                              delete ptr;
+                        }
+                  }
+                  /**
+                   * 设定记录所有权的own_flag
+                   *
+                   * \param f 设定的值
+                   * \see own_flag
+                   */
+                  void set_own(bool f) {
+                        own_flag = f;
+                  }
+            };
+
+            /**
+             * LazyCore是一个类型Lazy化后的类型, 但是一会以shared_ptr<LazyCore<T>>的形式存在, 所以需要Lazy类型的包装
+             *
+             * \tparam T 被lazy化的类型
+             */
+            template<class T>
+            struct LazyCore : LazyCoreBase {
+                  using type = T;
+
                   void reset(bool reset_itself = true) override {
-                        if (value) {
+                        if (value_ptr) {
                               if (reset_itself) {
-                                    value.reset();
+                                    value_ptr.reset();
                               }
                               for (const auto& ds : downstream) {
                                     ds->reset();
@@ -2422,30 +2782,38 @@ namespace TAT {
                         }
                   }
 
-                  ~LazyCore() {
-                        dump_upstream(); // this must be in derived class destructor
+                  ~LazyCore() override {
+                        dump_upstream();
                   }
 
-                  class maybe_deleter {
-                     public:
-                        bool own_flag = false;
-                        void operator()(const T* ptr) const {
-                              if (own_flag) {
-                                    delete ptr;
-                              }
-                        }
-                        void set_own(bool f) {
-                              own_flag = f;
-                        }
-                  };
+                  /**
+                   * 设置本lazy core所存储的值, 包括设置指针和设置指针所有权
+                   */
                   void record_value(const T* ptr, bool own_flag) {
-                        value.reset(ptr);
-                        value.get_deleter().set_own(own_flag);
+                        value_ptr.reset(ptr);
+                        value_ptr.get_deleter().set_own(own_flag);
                   }
 
-                  std::unique_ptr<const T, maybe_deleter> value;
-                  std::function<void()> func; // func will put result into value
+                  /**
+                   * 一个所有权不确定的指针, 通过maybe_deleter实现
+                   *
+                   * \see maybe_deleter
+                   */
+                  std::unique_ptr<const T, maybe_deleter<T>> value_ptr;
+                  /**
+                   * 用来计算出value的函数, func没有返回值, 调用func时应自己将值通过record_value赋值给value
+                   *
+                   * \see record_value
+                   */
+                  std::function<void()> func;
 
+                  /**
+                   * 将自己从自己上游的下游列表中清除
+                   *
+                   * \note 此操作必须在子类中调用, 否则会出现先调用两个上下游对象的子类析构函数,
+                   * 再调用父类析构函数的情况, 使得下游的dump_upstream还没调用的时候, 上有对象便开始析构,
+                   * 无法保证下游先调用dump_upstream
+                   */
                   void dump_upstream() {
                         for (const auto& us : upstream) {
                               us->downstream.erase(this); // if there is duplicated, it still work
@@ -2453,42 +2821,73 @@ namespace TAT {
                         upstream.clear();
                   }
 
-                  const T& calc() {
-                        if (!value) {
+                  /**
+                   * 获得value的值, 如果不存在, 则通过func计算出
+                   */
+                  const T& value() {
+                        if (!value_ptr) {
                               try {
                                     func();
                               } catch (std::exception& e) {
-                                    // PASS
-                                    std::clog << "[LAZY ERROR] in " << name << std::endl;
+#ifndef NDEBUG
+                                    std::clog << " [LAZY ERROR] in" << std::endl;
+                                    for (const auto& i : local_position) {
+                                          std::clog << "  " << i << std::endl;
+                                    }
+#else
+                                    std::clog << " [LAZY ERROR compile debug mode to show position] " << std::endl;
+#endif
                                     throw;
                               }
                         }
-                        return *value;
-                  } // not mask as const because in qr, svd, it need move its member, namely change it
+                        return *value_ptr;
+                  }
 
+                  /**
+                   * 获得value的值, 并移动走, 如果本身没有所有权, 可能会有危险
+                   *
+                   * \note 如果本身是通过直接设置value的方式创建的, 那么pop后就难以找到原来的值了
+                   */
                   T pop() {
-                        calc();
-                        T res = std::move(*const_cast<T*>(value.get()));
+                        value();
+                        T res = std::move(*const_cast<T*>(value_ptr.get()));
                         reset();
                         return res;
                   }
 
+                  /**
+                   * 给定指针, 设置value, 不拥有所有权
+                   *
+                   * \param ptr 用来设置value的指针
+                   */
                   void set_point_value(const T* ptr) {
                         reset();
                         dump_upstream();
-                        func = std::function<T*()>();
+                        func = std::function<void()>();
                         record_value(ptr, false);
                   }
 
-                  // set to a func_flaged lazy is dangerous
+                  /**
+                   * 给定值, 设置value, 拥有所有权
+                   *
+                   * \param args 创建value的参数, 一般就是可移动的T类型本身
+                   */
                   template<class... Args>
                   void set_value(Args&&... args) {
                         reset();
                         dump_upstream();
-                        func = std::function<T*()>();
+                        func = std::function<void()>();
                         record_value(new T(std::forward<Args>(args)...), true);
                   }
 
+                  /**
+                   * 将func设定为调用f函数, 但是f的参数为其他几个lazy core
+                   *
+                   * \param f 用来设置value的函数, 参数为其他lazy core calc出来的值, 返回本lazy
+                   * core将调用record_value的参数, 包括指针value_point和所有权标志own_flag
+                   * \param args 可calc出f的参数的lazy core
+                   * \see maybe_res
+                   */
                   template<class Func, class... Args>
                   void set_maybe_point_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
                         reset();
@@ -2496,16 +2895,30 @@ namespace TAT {
                         (..., args->downstream.insert(this));
                         (..., upstream.insert(args.get()));
                         func = [args..., this, f = std::move(f)]() {
-                              auto res = f(args->calc()...);
+                              auto res = f(args->value()...);
                               record_value(res.value_point, res.own_flag);
                         };
+#ifndef NDEBUG
+                        local_position.assign(position.begin(), position.end());
+#endif
                   }
 
+                  /**
+                   * 被set_maybe_point_func使用的中间参数
+                   *
+                   * \see set_maybe_point_func
+                   */
                   struct maybe_res {
                         const T* value_point;
                         bool own_flag;
-                  };
+                  }; // struct maybe_res
 
+                  /**
+                   * 与set_maybe_point_func类似, 但是一定不拥有所有权
+                   *
+                   * \param f 返回的时类型为T*的值, 用来设置value
+                   * \see set_maybe_point_func
+                   */
                   template<class Func, class... Args>
                   void set_point_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
                         set_maybe_point_func(
@@ -2515,6 +2928,12 @@ namespace TAT {
                               args...);
                   }
 
+                  /**
+                   * 与set_maybe_point_func类似, 但是一定拥有所有权
+                   *
+                   * \param f 返回的时类型为T的值, 用来设置value
+                   * \see set_maybe_point_func
+                   */
                   template<class Func, class... Args>
                   void set_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
                         set_maybe_point_func(
@@ -2524,7 +2943,17 @@ namespace TAT {
                               args...);
                   }
 
-                  // update on a lazy with downstream is dangerous
+                  /**
+                   * inplace的更新一个lazy core
+                   *
+                   * \param modify 将调用modify来更新此lazy core, modify会将本lazy core的左值作为第一个参数1
+                   * \param args modify的其他lazy core参数
+                   * \note 对一个有下游的lazy core调用update可能会危险, 因为更新后可能已经不是被下游func所期待的值了
+                   * \note 无论本身有没有func, 拥有所有权的话时没问题的, 但是如果没有所有权, 会破坏他人的值
+                   * \note 如果本身没有func, 且args中含有暂时尚未calc的lazy core, 会因立即计算而crash, 如果不这么设计,
+                   * 不可避免T的复制, 这是不希望发生的, 当然也可以通过立即calc来实现, 但是那样的话, 违背了lazy的初衷,
+                   * 如果可以立即calc, 在这里尽量不用lazy
+                   */
                   template<class Func, class... Args>
                   void update(Func&& modify, std::shared_ptr<LazyCore<Args>>... args) {
                         (..., args->downstream.insert(this));
@@ -2532,18 +2961,16 @@ namespace TAT {
                         if (func) {
                               reset();
                               func = [args..., this, func = std::move(func), modify = std::move(modify)]() {
-                                    // auto res = const_cast<T*>(f()); // f返回的是自己拥有的指针
                                     func();
-                                    modify(*const_cast<T*>(value.get()), args->calc()...);
-                                    // return const_cast<const T*>(res);
+                                    modify(*const_cast<T*>(value_ptr.get()), args->value()...);
                               };
-                              // 别人的变量做inplace update有一点危险
+#ifndef NDEBUG
+                              local_position.assign(position.begin(), position.end());
+#endif
                         } else {
-                              // 虽然可能不own value, 但是考虑到直接是值, 很难出现忘记他被更改了的低级错误
-                              // if itself or args contain not calculating value, it will crash
                               reset(false);
-                              modify(*const_cast<T*>(value.get()), *(args->value)...);
-                        } // if !func && !value, it is invalid
+                              modify(*const_cast<T*>(value_ptr.get()), *(args->value_ptr)...);
+                        }
                   }
             };
       } // namespace lazy
@@ -2560,27 +2987,46 @@ namespace TAT {
       //      LLLLL  A    A  ZZZZZ    Y
       //
       namespace lazy {
-            class LazyBase {};
+            struct LazyBase {};
 
+            /**
+             * 将lazy core的指针封装为单独的类, 为了使用方便, 比如运算符重载
+             *
+             * \tparam T 被lazy化的类型
+             */
             template<class T>
-            class Lazy : LazyBase {
-               public:
+            struct Lazy : LazyBase {
                   using type = T;
 
+                  /**
+                   * 唯一的member, std::shared_ptr<LazyCore<T>>, 本身这个类就是对他的封装
+                   */
                   std::shared_ptr<LazyCore<T>> core;
 
                   /**
-                   * init invalid state
+                   * 无论如何, 这个指针不会为空的, 新建一个空的lazy core
                    */
                   Lazy() : core(std::make_shared<LazyCore<T>>()) {}
 
+                  /**
+                   * \see LazyCore<T>::reset
+                   *
+                   * \note 在set point value后变更value后可以调用reset来更新图
+                   */
+                  Lazy<T> reset(bool reset_itself=false) {
+                        core->reset(reset_itself);
+                        return *this;
+                  }
+                  /**
+                   * \see LazyCore<T>::set_point_value
+                   */
                   Lazy<T> set_point_value(const T* ptr) {
                         core->set_point_value(ptr);
                         return *this;
                   }
 
                   /**
-                   * set value, similar to constructor
+                   * \see LazyCore<T>::set_value
                    */
                   template<class... Args>
                   Lazy<T> set_value(Args&&... args) {
@@ -2588,12 +3034,18 @@ namespace TAT {
                         return *this;
                   }
 
+                  /**
+                   * \see LazyCore<T>::set_maybe_point_func
+                   */
                   template<class Func, class... Args>
                   Lazy<T> set_maybe_point_func(Func&& f, Lazy<Args>... args) {
                         core->set_maybe_point_func(std::move(f), args.core...);
                         return *this;
                   }
 
+                  /**
+                   * \see LazyCore<T>::set_point_func
+                   */
                   template<class Func, class... Args>
                   Lazy<T> set_point_func(Func&& f, Lazy<Args>... args) {
                         core->set_point_func(std::move(f), args.core...);
@@ -2601,7 +3053,7 @@ namespace TAT {
                   }
 
                   /**
-                   * set with a function, like make_lazy
+                   * \see LazyCore<T>::set_func
                    */
                   template<class Func, class... Args>
                   Lazy<T> set_func(Func&& f, Lazy<Args>... args) {
@@ -2610,7 +3062,7 @@ namespace TAT {
                   }
 
                   /**
-                   * inplace op
+                   * \see LazyCore<T>::update
                    */
                   template<class Func, class... Args>
                   Lazy<T> update(Func&& f, Lazy<Args>... args) {
@@ -2619,31 +3071,45 @@ namespace TAT {
                   }
 
                   /**
-                   * get its value
+                   * \see LazyCore<T>::value
                    */
                   const T& value() const {
-                        return core->calc();
+                        return core->value();
                   }
 
+                  /**
+                   * \see LazyCore<T>::pop
+                   */
                   T pop() const {
                         return core->pop();
                   }
 
+                  /**
+                   * 从Lazy<T>的唯一member构建Lazy
+                   */
                   explicit Lazy(std::shared_ptr<LazyCore<T>> c) : core(c) {}
+                  /**
+                   * 从Lazy<T>或者Lazy<T>的子类构建Lazy
+                   */
                   template<class C, class = std::enable_if_t<std::is_base_of_v<Lazy<T>, C>>>
                   explicit Lazy(C c) : core(c.core) {}
-                  explicit Lazy(T c) : core(std::make_shared<LazyCore<T>>()) {
+                  /**
+                   * 从value构建Lazy
+                   */
+                  explicit Lazy(const T& c) : core(std::make_shared<LazyCore<T>>()) {
                         set_value(c);
                   }
+                  /**
+                   * 从可移动的value构建Lazy
+                   */
                   explicit Lazy(T&& c) : core(std::make_shared<LazyCore<T>>()) {
                         set_value(std::move(c));
                   }
+                  /**
+                   * 从value的指针构建Lazy
+                   */
                   explicit Lazy(const T* c) : core(std::make_shared<LazyCore<T>>()) {
                         set_point_value(c);
-                  }
-
-                  void set_name(const std::string& str) {
-                        core->name = str;
                   }
             };
 
@@ -2755,176 +3221,190 @@ namespace TAT {
       //      LLLLL  A    A  ZZZZZ    Y    _____  N    N   OOO   DDDDD   EEEEE
       //
       namespace lazy_node {
-            template<class Base = double>
-            class LazyNode : public Lazy<Node<Base>> {
-               public:
-                  using Lazy<Node<Base>>::set_point_value;
-                  using Lazy<Node<Base>>::set_value;
-                  using Lazy<Node<Base>>::set_maybe_point_func;
-                  using Lazy<Node<Base>>::set_point_func;
-                  using Lazy<Node<Base>>::set_func;
-                  using Lazy<Node<Base>>::update;
-                  using Lazy<Node<Base>>::value;
-                  using Lazy<Node<Base>>::pop;
+            /**
+             * 对张量的lazy化
+             *
+             * \tparam N 张量的类型, 最简单的情况是N=Node, 但是也可以是高阶的lazy, 比如
+             * \code{.cpp}
+             * template<class Base>
+             * using N = LazyNode<Node, Base>;
+             *
+             * using ResultType = LazyNode<N, double>;
+             * \endcode
+             * \tparam Base 被lazy化的张量的基类
+             * \see node::Node
+             * \see lazy::Lazy
+             */
+            template<template<class> class N = Node, class Base = double>
+            struct LazyNode : Lazy<N<Base>> {
+                  using Lazy<N<Base>>::set_point_value;
+                  using Lazy<N<Base>>::set_value;
+                  using Lazy<N<Base>>::set_maybe_point_func;
+                  using Lazy<N<Base>>::set_point_func;
+                  using Lazy<N<Base>>::set_func;
+                  using Lazy<N<Base>>::update;
+                  using Lazy<N<Base>>::value;
+                  using Lazy<N<Base>>::pop;
 
-                  LazyNode() : Lazy<Node<Base>>() {}
+                  LazyNode() : Lazy<N<Base>>() {}
                   template<class T1 = std::vector<Legs>, class T2 = std::vector<Size>>
-                  explicit LazyNode(T1&& legs, T2&& dims) : Lazy<Node<Base>>() {
+                  explicit LazyNode(T1&& legs, T2&& dims) : Lazy<N<Base>>() {
                         set_value(std::forward<T1>(legs), std::forward<T2>(dims));
                   }
                   template<class Arg0, class... Args>
                   explicit LazyNode(Arg0&& arg0, Args&&... args) {
                         set_value(std::forward<Arg0>(arg0), std::forward<Args>(args)...);
                   }
-                  explicit LazyNode(Node<Base>* ptr) {
-                        // no const specified 不然会被决议到上面那个函数上
+                  /**
+                   * \note 需要没有const限定, 不然会被决议到上面那个函数上
+                   */
+                  explicit LazyNode(N<Base>* ptr) {
                         set_point_value(ptr);
                   }
-                  // explicit LazyNode(std::shared_ptr<LazyCore<Node<Base>>> src) : Lazy<Node<Base>>(src) {}
-                  explicit LazyNode(Lazy<Node<Base>> src) : Lazy<Node<Base>>(src) {}
+                  explicit LazyNode(Lazy<N<Base>> src) : Lazy<N<Base>>(src) {}
 
-                  // set op is valid only when lazy contain node
                   template<class Generator>
-                  LazyNode<Base>& set(Generator&& setter) & {
-                        update([setter(std::forward<Generator>(setter))](Node<Base>& node) { node.set(setter); });
+                  LazyNode<N, Base>& set(Generator&& setter) & {
+                        lazy::name_scope name_scope("set");
+                        update([setter(std::forward<Generator>(setter))](N<Base>& node) { node.set(setter); });
                         return *this;
                   }
 
                   template<class Generator>
-                  LazyNode<Base>&& set(Generator&& setter) && {
+                  LazyNode<N, Base>&& set(Generator&& setter) && {
                         return std::move(set(std::forward<Generator>(setter)));
                   }
 
-                  LazyNode<Base>& legs_rename(const std::vector<std::tuple<Legs, Legs>>& dict) & {
-                        update([=](Node<Base>& node) { node.legs_rename(dict); });
-                        return *this;
-                  }
-
-                  LazyNode<Base>&& legs_rename(const std::vector<std::tuple<Legs, Legs>>& dict) && {
-                        return std::move(legs_rename(dict));
+                  LazyNode<N, Base> legs_rename(const std::map<Legs, Legs>& dict) const {
+                        lazy::name_scope name_scope("legs_rename");
+                        auto res = LazyNode<N, Base>();
+                        res.set_func([=](const N<Base>& node) { return node.legs_rename(dict); }, *this);
+                        return res;
                   }
 
                   template<class Base2>
-                  LazyNode<Base2> to() const {
+                  LazyNode<N, Base2> to() const {
+                        lazy::name_scope name_scope("to");
                         if constexpr (std::is_same_v<Base, Base2>) {
                               return *this;
                         } else {
-                              auto res = LazyNode<Base2>();
-                              res.set_func([](const Node<Base>& node) { return node.template to<Base2>(); }, *this);
+                              auto res = LazyNode<N, Base2>();
+                              res.set_func([](const N<Base>& node) { return node.template to<Base2>(); }, *this);
                               return res;
                         }
                   }
 
                   template<int n>
-                  LazyNode<Base> norm() const {
-                        auto res = LazyNode<Base>();
-                        res.set_func([](const Node<Base>& node) { return node.template norm<n>(); }, *this);
+                  LazyNode<N, Base> norm() const {
+                        lazy::name_scope name_scope("norm");
+                        auto res = LazyNode<N, Base>();
+                        res.set_func([](const N<Base>& node) { return node.template norm<n>(); }, *this);
                         return res;
                   }
 
-                  LazyNode<Base> transpose(const std::vector<Legs>& new_legs) const {
-                        auto res = LazyNode<Base>();
-                        res.set_func([=](const Node<Base>& node) { return node.transpose(new_legs); }, *this);
+                  LazyNode<N, Base> transpose(const std::vector<Legs>& new_legs) const {
+                        lazy::name_scope name_scope("transpose");
+                        auto res = LazyNode<N, Base>();
+                        res.set_func([=](const N<Base>& node) { return node.transpose(new_legs); }, *this);
                         return res;
                   }
 
-                  class svd_res {
-                     public:
-                        LazyNode<Base> U;
-                        LazyNode<real_base_t<Base>> S;
-                        LazyNode<Base> V;
-                  };
+                  struct svd_res {
+                        LazyNode<N, Base> U;
+                        LazyNode<N, real_base_t<Base>> S;
+                        LazyNode<N, Base> V;
+                  }; // struct svd_res
 
                   svd_res
                   svd(const std::vector<Legs>& input_u_legs,
                       const Legs& new_u_legs,
                       const Legs& new_v_legs,
                       const Rank& cut = -1) const {
-                        auto tmp = Lazy<typename Node<Base>::svd_res>();
+                        lazy::name_scope name_scope("svd");
+                        auto tmp = Lazy<typename N<Base>::svd_res>();
                         tmp.set_func(
-                              [=](const Node<Base>& node) {
-                                    return node.svd(input_u_legs, new_u_legs, new_v_legs, cut);
-                              },
+                              [=](const N<Base>& node) { return node.svd(input_u_legs, new_u_legs, new_v_legs, cut); },
                               *this);
                         auto res = svd_res();
-                        res.U.set_point_func([](const typename Node<Base>::svd_res& r) { return &r.U; }, tmp);
-                        res.S.set_point_func([](const typename Node<Base>::svd_res& r) { return &r.S; }, tmp);
-                        res.V.set_point_func([](const typename Node<Base>::svd_res& r) { return &r.V; }, tmp);
+                        res.U.set_point_func([](const typename N<Base>::svd_res& r) { return &r.U; }, tmp);
+                        res.S.set_point_func([](const typename N<Base>::svd_res& r) { return &r.S; }, tmp);
+                        res.V.set_point_func([](const typename N<Base>::svd_res& r) { return &r.V; }, tmp);
                         return res;
                   }
 
-                  class qr_res {
-                     public:
-                        LazyNode<Base> Q;
-                        LazyNode<Base> R;
-                  }; // class qr_res
+                  struct qr_res {
+                        LazyNode<N, Base> Q;
+                        LazyNode<N, Base> R;
+                  }; // struct qr_res
 
                   qr_res
                   qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
-                        auto tmp = Lazy<typename Node<Base>::qr_res>();
+                        lazy::name_scope name_scope("qr");
+                        auto tmp = Lazy<typename N<Base>::qr_res>();
                         tmp.set_func(
-                              [=](const Node<Base>& node) { return node.qr(input_q_legs, new_q_legs, new_r_legs); },
+                              [=](const N<Base>& node) { return node.qr(input_q_legs, new_q_legs, new_r_legs); },
                               *this);
                         auto res = qr_res();
-                        res.Q.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.Q; }, tmp);
-                        res.R.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.R; }, tmp);
+                        res.Q.set_point_func([](const typename N<Base>::qr_res& r) { return &r.Q; }, tmp);
+                        res.R.set_point_func([](const typename N<Base>::qr_res& r) { return &r.R; }, tmp);
                         return res;
                   }
 
                   qr_res
                   rq(const std::vector<Legs>& input_r_legs, const Legs& new_r_legs, const Legs& new_q_legs) const {
-                        auto tmp = Lazy<typename Node<Base>::qr_res>();
+                        lazy::name_scope name_scope("rq");
+                        auto tmp = Lazy<typename N<Base>::qr_res>();
                         tmp.set_func(
-                              [=](const Node<Base>& node) {
-                                    std::vector<TAT::Legs> input_q_legs;
-                                    std::copy_if(
-                                          node.legs.begin(),
-                                          node.legs.end(),
-                                          std::back_inserter(input_q_legs),
-                                          [&](const Legs& i) {
-                                                return std::find(input_r_legs.begin(), input_r_legs.end(), i) ==
-                                                       input_r_legs.end();
-                                          });
-                                    return node.qr(input_q_legs, new_q_legs, new_r_legs);
-                              },
+                              [=](const N<Base>& node) { return node.rq(input_r_legs, new_r_legs, new_q_legs); },
                               *this);
                         auto res = qr_res();
-                        res.Q.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.Q; }, tmp);
-                        res.R.set_point_func([](const typename Node<Base>::qr_res& r) { return &r.R; }, tmp);
+                        res.Q.set_point_func([](const typename N<Base>::qr_res& r) { return &r.Q; }, tmp);
+                        res.R.set_point_func([](const typename N<Base>::qr_res& r) { return &r.R; }, tmp);
                         return res;
                   }
 
-                  static LazyNode<Base> contract(
-                        const LazyNode<Base>& node1,
-                        const LazyNode<Base>& node2,
+                  static LazyNode<N, Base> contract(
+                        const LazyNode<N, Base>& node1,
+                        const LazyNode<N, Base>& node2,
                         const std::vector<Legs>& legs1,
-                        const std::vector<Legs>& legs2,
-                        const std::vector<std::tuple<Legs, Legs>>& map1 = {},
-                        const std::vector<std::tuple<Legs, Legs>>& map2 = {}) {
-                        auto res = LazyNode<Base>();
+                        const std::vector<Legs>& legs2) {
+                        lazy::name_scope name_scope("contract");
+                        auto res = LazyNode<N, Base>();
                         res.set_func(
-                              [=](const Node<Base>& node1, const Node<Base>& node2) {
-                                    return Node<Base>::contract(node1, node2, legs1, legs2, map1, map2);
+                              [=](const N<Base>& node1, const N<Base>& node2) {
+                                    return N<Base>::contract(node1, node2, legs1, legs2);
                               },
                               node1,
                               node2);
                         return res;
                   }
 
-                  LazyNode<Base> multiple(const LazyNode<Base>& other, const Legs& position) const {
-                        auto res = LazyNode<Base>();
+                  LazyNode<N, Base> partial_contract(
+                        const N<Base>& node,
+                        const std::vector<Legs>& legs1,
+                        const std::vector<Legs>& legs2) {
+                        lazy::name_scope name_scope("partial_contract");
+                        auto res = LazyNode<N, Base>();
+                        res.set_func(
+                              [=, &node](const N<Base>& self) { return N<Base>::contract(self, node, legs1, legs2); },
+                              *this);
+                        return res;
+                  }
+
+                  LazyNode<N, Base> multiple(const LazyNode<N, Base>& other, const Legs& position) const {
+                        lazy::name_scope name_scope("multiple");
+                        auto res = LazyNode<N, Base>();
                         res.set_maybe_point_func(
-                              [=](const Node<Base>& self, const Node<Base>& other) {
+                              [=](const N<Base>& self, const N<Base>& other) {
                                     struct maybe_res {
-                                          const Node<Base>* value_point;
+                                          const N<Base>* value_point;
                                           bool own_flag;
                                     };
                                     if (std::find(self.legs.begin(), self.legs.end(), position) == self.legs.end()) {
                                           return maybe_res{&self, false};
                                     } else {
-                                          return maybe_res{new Node<Base>(self.multiple(other, position)), true};
+                                          return maybe_res{new N<Base>(self.multiple(other, position)), true};
                                     }
-                                    // maybe copy
                               },
                               *this,
                               other);
@@ -2932,42 +3412,56 @@ namespace TAT {
                   }
             };
 
-            template<class Base>
-            LazyNode(Node<Base>)->LazyNode<Base>;
+            template<template<class> class T, template<class> class U>
+            struct is_same_template : std::false_type {};
 
-            template<class Base>
-            LazyNode(Lazy<Node<Base>>)->LazyNode<Base>;
+            template<template<class> class T>
+            struct is_same_template<T, T> : std::true_type {};
 
-            template<class T>
-            std::ostream& operator<<(std::ostream& out, const LazyNode<T>& value) {
+            template<template<class> class N, class Base, class = std::enable_if_t<!is_same_template<N, Lazy>::value>>
+            LazyNode(N<Base>)->LazyNode<N, Base>;
+
+            template<template<class> class N, class Base>
+            LazyNode(Lazy<N<Base>>)->LazyNode<N, Base>;
+
+            template<template<class> class N, class Base>
+            LazyNode(LazyNode<N, Base>)->LazyNode<N, Base>;
+
+            template<template<class> class N, class T>
+            std::ostream& operator<<(std::ostream& out, const LazyNode<N, T>& value) {
                   return out << value.value();
             }
       } // namespace lazy_node
       using lazy_node::LazyNode;
 
       namespace lazy_node {
-            template<class T>
-            LazyNode<T> operator+(const LazyNode<T>& a) {
+            template<template<class> class N, class T>
+            LazyNode<N, T> operator+(const LazyNode<N, T>& a) {
                   return lazy::operator+(a);
             }
 
-            template<class T>
-            LazyNode<T> operator-(const LazyNode<T>& a) {
+            template<template<class> class N, class T>
+            LazyNode<N, T> operator-(const LazyNode<N, T>& a) {
                   return lazy::operator-(a);
             }
 
-#define DEF_OP(OP)                                                                                \
-      template<class A, class B>                                                                  \
-      LazyNode<A>& OP(LazyNode<A>& a, const LazyNode<B>& b) {                                     \
-            auto tmp = TAT::Lazy(a);                                                              \
-            lazy::OP(tmp, TAT::Lazy(b));                                                          \
-            return a;                                                                             \
-      }                                                                                           \
-      template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
-      LazyNode<T>& OP(LazyNode<T>& a, const B& b) {                                               \
-            auto tmp = TAT::Lazy(a);                                                              \
-            lazy::OP(tmp, b);                                                                     \
-            return a;                                                                             \
+#define DEF_OP(OP)                                                           \
+      template<template<class> class N, class A, class B>                    \
+      LazyNode<N, A>& OP(LazyNode<N, A>& a, const LazyNode<N, B>& b) {       \
+            auto tmp = TAT::Lazy(a);                                         \
+            lazy::OP(tmp, TAT::Lazy(b));                                     \
+            return a;                                                        \
+      }                                                                      \
+      template<                                                              \
+            template<class>                                                  \
+            class N,                                                         \
+            class T,                                                         \
+            class B,                                                         \
+            class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
+      LazyNode<N, T>& OP(LazyNode<N, T>& a, const B& b) {                    \
+            auto tmp = TAT::Lazy(a);                                         \
+            lazy::OP(tmp, b);                                                \
+            return a;                                                        \
       }
 
             DEF_OP(operator*=)
@@ -2976,19 +3470,29 @@ namespace TAT {
             DEF_OP(operator-=)
 #undef DEF_OP
 
-#define DEF_OP(OP)                                                                                \
-      template<class A, class B>                                                                  \
-      auto OP(const LazyNode<A>& a, const LazyNode<B>& b) {                                       \
-            auto res = lazy::OP(TAT::Lazy(a), TAT::Lazy(b));                                      \
-            return LazyNode(res);                                                                 \
-      }                                                                                           \
-      template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
-      auto OP(const LazyNode<T>& a, const B& b) {                                                 \
-            return LazyNode(lazy::OP(TAT::Lazy(a), b));                                           \
-      }                                                                                           \
-      template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
-      auto OP(const B& a, const LazyNode<T>& b) {                                                 \
-            return LazyNode(lazy::OP(a, TAT::Lazy(b)));                                           \
+#define DEF_OP(OP)                                                           \
+      template<template<class> class N, class A, class B>                    \
+      auto OP(const LazyNode<N, A>& a, const LazyNode<N, B>& b) {            \
+            auto res = lazy::OP(TAT::Lazy(a), TAT::Lazy(b));                 \
+            return LazyNode<N, std::common_type_t<A, B>>(res);               \
+      }                                                                      \
+      template<                                                              \
+            template<class>                                                  \
+            class N,                                                         \
+            class T,                                                         \
+            class B,                                                         \
+            class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
+      auto OP(const LazyNode<N, T>& a, const B& b) {                         \
+            return LazyNode<N, T>(lazy::OP(TAT::Lazy(a), b));                \
+      }                                                                      \
+      template<                                                              \
+            template<class>                                                  \
+            class N,                                                         \
+            class T,                                                         \
+            class B,                                                         \
+            class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
+      auto OP(const B& a, const LazyNode<N, T>& b) {                         \
+            return LazyNode<N, T>(lazy::OP(a, TAT::Lazy(b)));                \
       }
 
             DEF_OP(operator*)
@@ -2997,157 +3501,6 @@ namespace TAT {
             DEF_OP(operator-)
 #undef DEF_OP
       } // namespace lazy_node
-
-      /**
-       * define several.
-       */
-      //
-      //       GGGG   RRRR     AA    PPPP   H    H
-      //      G    G  R   R   A  A   P   P  H    H
-      //      G       R   R  A    A  P   P  H    H
-      //      G       R   R  A    A  P   P  H    H
-      //      G       RRRR   A    A  PPPP   HHHHHH
-      //      G  GGG  RR     AAAAAA  P      H    H
-      //      G    G  R R    A    A  P      H    H
-      //      G   GG  R  R   A    A  P      H    H
-      //       GGG G  R   R  A    A  P      H    H
-      //
-      namespace graph {
-            // QR正则化
-            template<class Base>
-            class QR_Canonicalization_Graph {
-               public:
-                  LazyNode<Base> to_split;
-                  LazyNode<Base> to_absorb;
-                  LazyNode<Base> splited;
-                  LazyNode<Base> absorbed;
-                  QR_Canonicalization_Graph(TAT::Legs split_leg, TAT::Legs absorb_leg) {
-                        auto qr = to_split.rq({split_leg}, absorb_leg, split_leg);
-                        splited = qr.Q;
-                        absorbed = LazyNode<Base>::contract(qr.R, to_absorb, {split_leg}, {absorb_leg});
-                  }
-                  void operator()(LazyNode<Base> split, LazyNode<Base> absorb) {
-                        to_split.set_value(split.pop());
-                        to_absorb.set_value(absorb.pop());
-                        split.set_value(splited.pop());
-                        absorb.set_value(absorbed.pop());
-                  }
-            };
-
-            // 无环境的svd
-            template<class Base>
-            class SVD_Graph_without_Env {
-               public:
-                  LazyNode<Base> old_A;
-                  LazyNode<Base> old_B;
-                  LazyNode<Base> new_A;
-                  LazyNode<Base> new_B;
-                  SVD_Graph_without_Env(LazyNode<Base> H, int cut, bool left = true) {
-                        using namespace legs_name;
-                        auto big =
-                              LazyNode<Base>::contract(old_A, old_B, {Right}, {Left}, {{Phy, Phy1}}, {{Phy, Phy2}});
-                        auto Big = LazyNode<Base>::contract(big, H, {Phy1, Phy2}, {Phy3, Phy4});
-                        Big = Big / Big.template norm<-1>();
-                        auto svd = Big.svd({Phy1, Left}, Right, Left, cut);
-                        new_A = svd.U.legs_rename({{Phy1, Phy}});
-                        new_B = svd.V.legs_rename({{Phy2, Phy}});
-                        if (left) {
-                              new_A = new_A.multiple(svd.S, Right);
-                        } else {
-                              new_B = new_B.multiple(svd.S, Left);
-                        }
-                  }
-                  void operator()(LazyNode<Base> A, LazyNode<Base> B) {
-                        old_A.set_value(A.pop());
-                        old_B.set_value(B.pop());
-                        A.set_value(new_A.pop());
-                        B.set_value(new_B.pop());
-                  }
-            };
-
-            // 有环境的svd
-            template<class Base, int a_env, int b_env>
-            class SVD_Graph_with_Env {
-               public:
-                  LazyNode<Base> old_A;
-                  LazyNode<Base> old_B;
-                  LazyNode<Base> old_env;
-
-                  std::array<LazyNode<Base>, a_env> A_env;
-                  std::array<LazyNode<Base>, b_env> B_env;
-
-                  LazyNode<Base> new_A;
-                  LazyNode<Base> new_B;
-                  LazyNode<Base> new_env;
-
-                  LazyNode<Base> H;
-
-                  SVD_Graph_with_Env(
-                        TAT::Legs a_leg,
-                        TAT::Legs b_leg,
-                        std::array<TAT::Legs, a_env> A_legs,
-                        std::array<TAT::Legs, b_env> B_legs,
-                        int cut) {
-                        using namespace legs_name;
-
-                        auto BigA = old_A;
-                        for (int i = 0; i < a_env; i++) {
-                              BigA = BigA.multiple(A_env[i], A_legs[i]);
-                        }
-
-                        auto BigB = old_B;
-                        for (int i = 0; i < b_env; i++) {
-                              BigB = BigB.multiple(B_env[i], B_legs[i]);
-                        }
-
-                        auto BigA_QR = BigA.rq({Phy, a_leg}, b_leg, a_leg);
-                        auto BigB_QR = BigB.rq({Phy, b_leg}, a_leg, b_leg);
-
-                        auto Big = BigA_QR.R.multiple(old_env, a_leg);
-                        Big = LazyNode<Base>::contract(Big, BigB_QR.R, {a_leg}, {b_leg}, {{Phy, Phy1}}, {{Phy, Phy2}});
-                        Big = LazyNode<Base>::contract(Big, H, {Phy1, Phy2}, {Phy3, Phy4});
-                        Big = Big / Big.template norm<-1>();
-
-                        auto svd = Big.svd({Phy1, b_leg}, a_leg, b_leg, cut);
-                        new_env = svd.S;
-                        new_A = LazyNode<Base>::contract(svd.U, BigA_QR.Q, {b_leg}, {a_leg});
-                        new_B = LazyNode<Base>::contract(svd.V, BigB_QR.Q, {a_leg}, {b_leg});
-
-                        for (int i = 0; i < a_env; i++) {
-                              new_A = new_A.multiple(1 / A_env[i], A_legs[i]);
-                        }
-                        for (int i = 0; i < b_env; i++) {
-                              new_B = new_B.multiple(1 / B_env[i], B_legs[i]);
-                        }
-
-                        new_A.legs_rename({{Phy1, Phy}});
-                        new_B.legs_rename({{Phy2, Phy}});
-                  }
-                  void operator()(
-                        LazyNode<Base> H_value,
-                        LazyNode<Base> A,
-                        LazyNode<Base> B,
-                        LazyNode<Base> env,
-                        std::array<LazyNode<Base>, a_env> A_env_value,
-                        std::array<LazyNode<Base>, b_env> B_env_value) {
-                        old_A.set_value(A.pop());
-                        old_B.set_value(B.pop());
-                        old_env.set_value(env.pop());
-                        H.set_point_value(&H_value.value());
-
-                        for (int i = 0; i < a_env; i++) {
-                              A_env[i].set_point_value(&A_env_value[i].value());
-                        }
-                        for (int i = 0; i < b_env; i++) {
-                              B_env[i].set_point_value(&B_env_value[i].value());
-                        }
-
-                        A.set_value(new_A.pop());
-                        B.set_value(new_B.pop());
-                        env.set_value(new_env.pop());
-                  }
-            };
-      } // namespace graph
 } // namespace TAT
 
 #endif // TAT_HPP_

@@ -26,11 +26,13 @@
 #define TAT_DEFAULT
 #include <TAT.hpp>
 
-using Node = TAT::LazyNode<double>;
+#include "Heisenberg_PEPS_SU.dir/SVD_Graph_with_Env.hpp"
+
 using namespace TAT::legs_name;
 
-class PEPS {
-   public:
+struct PEPS {
+      using Node = TAT::LazyNode<TAT::Node, double>;
+
       int L1;
       int L2;
       TAT::Size D;
@@ -146,22 +148,21 @@ class PEPS {
                         }
                         psi = Node::contract(
                               psi,
-                              lattice[{i, j}].multiple(env[{i, j, Down}], Down).multiple(env[{i, j, Right}], Right),
+                              lattice[{i, j}]
+                                    .multiple(env[{i, j, Down}], Down)
+                                    .multiple(env[{i, j, Right}], Right)
+                                    .legs_rename({{Down, down_leg(j)}, {Phy, phy_leg(i, j)}}),
                               {Right, down_leg(j)},
-                              {Left, Up},
-                              {},
-                              {{Down, down_leg(j)}, {Phy, phy_leg(i, j)}});
+                              {Left, Up});
                   }
             }
             psi = psi.transpose(total_leg);
             auto second = L2 == 1 ? phy_leg(1, 0) : phy_leg(0, 1);
             auto H_psi = Node::contract(
                                psi,
-                               hamiltonian,
+                               hamiltonian.legs_rename({{Phy3, phy_leg(0, 0)}, {Phy4, second}}),
                                {phy_leg(0, 0), second},
-                               {Phy1, Phy2},
-                               {},
-                               {{Phy3, phy_leg(0, 0)}, {Phy4, second}})
+                               {Phy1, Phy2})
                                .transpose(total_leg);
             for (int i = 0; i < L1; i++) {
                   for (int j = 0; j < L2 - 1; j++) {
@@ -170,11 +171,9 @@ class PEPS {
                         }
                         H_psi += Node::contract(
                                        psi,
-                                       hamiltonian,
+                                       hamiltonian.legs_rename({{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i, j + 1)}}),
                                        {phy_leg(i, j), phy_leg(i, j + 1)},
-                                       {Phy1, Phy2},
-                                       {},
-                                       {{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i, j + 1)}})
+                                       {Phy1, Phy2})
                                        .transpose(total_leg);
                   }
             }
@@ -185,11 +184,9 @@ class PEPS {
                         }
                         H_psi += Node::contract(
                                        psi,
-                                       hamiltonian,
+                                       hamiltonian.legs_rename({{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i + 1, j)}}),
                                        {phy_leg(i, j), phy_leg(i + 1, j)},
-                                       {Phy1, Phy2},
-                                       {},
-                                       {{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i + 1, j)}})
+                                       {Phy1, Phy2})
                                        .transpose(total_leg);
                   }
             }
@@ -219,9 +216,9 @@ class PEPS {
 
       void update_once(Node updater) {
             auto do_svd_right =
-                  TAT::graph::SVD_Graph_with_Env<double, 3, 3>(Right, Left, {Left, Up, Down}, {Right, Up, Down}, D);
+                  SVD_Graph_with_Env<TAT::Node, double, 3, 3>(Right, Left, {Left, Up, Down}, {Right, Up, Down}, D);
             auto do_svd_down =
-                  TAT::graph::SVD_Graph_with_Env<double, 3, 3>(Down, Up, {Up, Left, Right}, {Down, Left, Right}, D);
+                  SVD_Graph_with_Env<TAT::Node, double, 3, 3>(Down, Up, {Up, Left, Right}, {Down, Left, Right}, D);
             for (int i = 0; i < L1; i++) {
                   for (int j = 0; j < L2 - 1; j++) {
                         do_svd_right(

@@ -19,3 +19,5 @@
 {"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [82.3]}}}
 {"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [86.3]}}}
 
+{"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [12]}}}
+{"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [22]}}}

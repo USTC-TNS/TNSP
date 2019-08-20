@@ -67,7 +67,7 @@ else()
 endif()
 
 # Style
-add_custom_target(style COMMAND clang-format -style=file -i ${PROJECT_SOURCE_DIR}/example/*.cpp ${PROJECT_SOURCE_DIR}/include/TAT.hpp)
+add_custom_target(style COMMAND clang-format -style=file -i ${PROJECT_SOURCE_DIR}/example/*/*.hpp ${PROJECT_SOURCE_DIR}/example/*.cpp ${PROJECT_SOURCE_DIR}/include/TAT.hpp)
 add_custom_target(doc COMMAND cd ${PROJECT_SOURCE_DIR} && doxygen)
 add_custom_target(speed COMMAND time ${PROJECT_BINARY_DIR}/Heisenberg_MPS_SU -L100 -D12 1>&-)
 
