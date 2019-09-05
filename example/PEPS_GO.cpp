@@ -1,4 +1,6 @@
-/* example/Heisenberg_PEPS_GO.cpp
+/**
+ * \file example/PEPS_GO.cpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,10 +24,10 @@
 #define TAT_DEFAULT
 #include <TAT.hpp>
 
-#include "Heisenberg_PEPS_GO.dir/Configuration.hpp"
-#include "Heisenberg_PEPS_GO.dir/Markov.hpp"
-#include "Heisenberg_PEPS_GO.dir/PEPS.hpp"
-#include "Heisenberg_PEPS_GO.dir/gradient.hpp"
+#include "PEPS_GO.dir/Configuration.hpp"
+#include "PEPS_GO.dir/Markov.hpp"
+#include "PEPS_GO.dir/PEPS.hpp"
+#include "PEPS_GO.dir/gradient.hpp"
 
 int main() {
       std::ios_base::sync_with_stdio(false);

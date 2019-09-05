@@ -1,4 +1,6 @@
 /**
+ * \file TAT.hpp
+ *
  * Copyright (C) 2019  Hao Zhang <zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -13,10 +15,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
- * @file TAT.hpp
  */
 
 #ifndef TAT_HPP_
@@ -84,13 +82,6 @@
 #            include <cblas.h>
 #            include <lapacke.h>
 #      endif // TAT_USE_MKL
-#      include <hptt.h>
-#      ifdef TAT_EXTREME
-#            include <../src/hptt.cpp>
-#            include <../src/plan.cpp>
-#            include <../src/transpose.cpp>
-#            include <../src/utils.cpp>
-#      endif // TAT_EXTREME
 #      include <rang.hpp>
 
 // SVD
@@ -374,8 +365,7 @@ namespace TAT {
                    * 一个智能的construct, 对于标量类型的默认初始化, 直接不初始化
                    */
                   template<class U, class... Args>
-                  void construct(U* p, Args&&... args) {
-                        (void)p;
+                  void construct([[maybe_unused]] U* p, Args&&... args) {
                         if constexpr (!((sizeof...(args) == 0) && (is_scalar_v<U>))) {
                               new (p) T(args...);
                         }
@@ -626,10 +616,13 @@ namespace TAT {
                    *
                    * \param dims Block的维度信息
                    */
-                  template<class S = std::vector<Size>, class = std::enable_if_t<!std::is_same_v<S, Block<Base>>>>
-                  explicit Block(S&& dims) :
+                  template<
+                        class Dims = std::vector<Size>,
+                        class = std::enable_if_t<
+                              std::is_same_v<std::remove_cv_t<std::remove_reference_t<Dims>>, std::vector<Size>>>>
+                  explicit Block(Dims&& dims) :
                         data(std::accumulate(dims.begin(), dims.end(), Size(1), std::multiplies<Size>())),
-                        dims(std::forward<S>(dims)) {}
+                        dims(std::forward<Dims>(dims)) {}
                   /**
                    * 生成大小为1的Block, 直接初始化其中的数据, 用来将标量类型转为对应的无指标张量
                    *
@@ -858,7 +851,12 @@ namespace TAT {
                    * \param legs 指标的name信息
                    * \param dims Block的维度信息
                    */
-                  template<class T1 = std::vector<Legs>, class T2 = std::vector<Size>>
+                  template<
+                        class T1 = std::vector<Legs>,
+                        class T2 = std::vector<Size>,
+                        class = std::enable_if_t<
+                              std::is_same_v<std::remove_cv_t<std::remove_reference_t<T1>>, std::vector<Legs>> &&
+                              std::is_same_v<std::remove_cv_t<std::remove_reference_t<T2>>, std::vector<Size>>>>
                   explicit Node(T1&& _legs, T2&& _dims) :
                         tensor_ptr(std::make_shared<Tensor<Base>>(std::forward<T2>(_dims))),
                         legs(std::forward<T1>(_legs)) {
@@ -954,7 +952,7 @@ namespace TAT {
                   /**
                    * 张量转置
                    *
-                   * \paran 转置后的目标legs
+                   * \param 转置后的目标legs
                    */
                   Node<Base> transpose(const std::vector<Legs>& new_legs) const;
 
@@ -965,6 +963,16 @@ namespace TAT {
                         Node<Base> U;
                         Node<real_base_t<Base>> S;
                         Node<Base> V;
+
+                        auto& u() {
+                              return U;
+                        }
+                        auto& s() {
+                              return S;
+                        }
+                        auto& v() {
+                              return V;
+                        }
                   }; // struct svd_res
 
                   /**
@@ -986,6 +994,13 @@ namespace TAT {
                   struct qr_res {
                         Node<Base> Q;
                         Node<Base> R;
+
+                        auto& q() {
+                              return Q;
+                        }
+                        auto& r() {
+                              return R;
+                        }
                   }; // struct qr_res
 
                   /**
@@ -1540,29 +1555,234 @@ namespace TAT {
       //
       namespace data {
             namespace transpose {
+                  // 考虑张量足够大
+                  // 最后一维不同的话, 使用block_transpose, 只要张量足够大, 缓存是用满的
+                  // 最后一维相同, 则使用copy_transpose, 使用了一级缓存
+                  // 二级需把最后一列作为一个数据类型, 做类似block_transpose的操作
+                  // 但是实际情况是张量不足够大
+                  // 需要考虑倒数第二维的维度, 这个暂时先不考虑
+                  // 另外, 事先可以将可以fuse的维度先fuse, 上层svd和contract, 应做这样的适配, 使得尽可能可以fuse
                   template<class Base>
-                  void run(const std::vector<Rank>& plan, const std::vector<Size>& dims, const Base* src, Base* dst) {
-                        // currently use hptt only
+                  void matrix_transpose(int M, int N, const Base* src, int leading_src, Base* dst, int leading_dst) {
+                        for (int i = 0; i < M; i++) {
+                              for (int j = 0; j < N; j++) {
+                                    dst[j * leading_dst + i] = src[i * leading_src + j];
+                              }
+                        }
+                  }
+
+                  template<class Base>
+                  void stupid_transpose(
+                        const Base* src,
+                        Base* dst,
+                        const std::vector<Rank>& plan,
+                        const std::vector<Size>& dims,
+                        const Size& size,
+                        const Rank& rank) {
+                        // stupid transpose
+
+                        const std::vector<Size>& dims_src = dims;
+
+                        std::vector<Size> dims_dst(rank);
+                        for (Rank i = 0; i < rank; i++) {
+                              dims_dst[i] = dims_src[plan[i]];
+                        } // for i
+
+                        std::vector<Size> step_src(rank);
+                        step_src[rank - 1] = 1;
+                        for (Rank i = rank - 1; i > 0; i--) {
+                              step_src[i - 1] = step_src[i] * dims_src[i];
+                        }
+                        std::vector<Size> step_dst(rank);
+                        step_dst[rank - 1] = 1;
+                        for (Rank i = rank - 1; i > 0; i--) {
+                              step_dst[i - 1] = step_dst[i] * dims_dst[i];
+                        }
+
+                        std::vector<Size> index_list_src(rank);
+                        std::vector<Size> index_list_dst(rank);
+                        Size index_src = 0;
+                        Size index_dst = 0;
+
+                        while (1) {
+                              dst[index_dst] = src[index_src];
+
+                              Rank temp_rank = rank - 1;
+                              Rank plan_temp_rank = plan[temp_rank];
+
+                              index_list_src[plan_temp_rank] += 1;
+                              index_list_dst[temp_rank] += 1;
+                              index_src += step_src[plan_temp_rank];
+                              index_dst += step_dst[temp_rank];
+
+                              while (index_list_dst[temp_rank] == dims_dst[temp_rank]) {
+                                    if (temp_rank == 0) {
+                                          return;
+                                    }
+                                    index_list_src[plan_temp_rank] = 0;
+                                    index_src -= dims_src[plan_temp_rank] * step_src[plan_temp_rank];
+                                    index_list_dst[temp_rank] = 0;
+                                    index_dst -= dims_dst[temp_rank] * step_dst[temp_rank];
+                                    temp_rank -= 1;
+                                    plan_temp_rank = plan[temp_rank];
+                                    index_list_src[plan_temp_rank] += 1;
+                                    index_src += step_src[plan_temp_rank];
+                                    index_list_dst[temp_rank] += 1;
+                                    index_dst += step_dst[temp_rank];
+                              }
+                        }
+                  }
+
+                  template<class Base>
+                  void copy_transpose(
+                        const Base* src,
+                        Base* dst,
+                        const std::vector<Rank>& plan,
+                        const std::vector<Size>& dims,
+                        const Size& size,
+                        const Rank& rank) {
+                        // only work when last index not transposed
+
+                        const std::vector<Size>& dims_src = dims;
+
+                        std::vector<Size> dims_dst(rank);
+                        for (Rank i = 0; i < rank; i++) {
+                              dims_dst[i] = dims_src[plan[i]];
+                        } // for i
+
+                        std::vector<Size> step_src(rank);
+                        step_src[rank - 1] = 1;
+                        for (Rank i = rank - 1; i > 0; i--) {
+                              step_src[i - 1] = step_src[i] * dims_src[i];
+                        }
+                        std::vector<Size> step_dst(rank);
+                        step_dst[rank - 1] = 1;
+                        for (Rank i = rank - 1; i > 0; i--) {
+                              step_dst[i - 1] = step_dst[i] * dims_dst[i];
+                        }
+
+                        std::vector<Size> index_list_src(rank);
+                        std::vector<Size> index_list_dst(rank);
+                        Size index_src = 0;
+                        Size index_dst = 0;
+
+                        Size last_dims = dims_src[rank - 1];
+                        Size last_dims_base = last_dims * sizeof(Base);
+
+                        while (1) {
+                              std::memcpy(&dst[index_dst], &src[index_src], last_dims_base);
+
+                              Rank temp_rank = rank - 2;
+                              Rank plan_temp_rank = plan[temp_rank];
+
+                              index_list_src[plan_temp_rank] += 1;
+                              index_list_dst[temp_rank] += 1;
+                              index_src += step_src[plan_temp_rank];
+                              index_dst += step_dst[temp_rank];
+
+                              while (index_list_dst[temp_rank] == dims_dst[temp_rank]) {
+                                    if (temp_rank == 0) {
+                                          return;
+                                    }
+                                    index_list_src[plan_temp_rank] = 0;
+                                    index_src -= dims_src[plan_temp_rank] * step_src[plan_temp_rank];
+                                    index_list_dst[temp_rank] = 0;
+                                    index_dst -= dims_dst[temp_rank] * step_dst[temp_rank];
+                                    temp_rank -= 1;
+                                    plan_temp_rank = plan[temp_rank];
+                                    index_list_src[plan_temp_rank] += 1;
+                                    index_src += step_src[plan_temp_rank];
+                                    index_list_dst[temp_rank] += 1;
+                                    index_dst += step_dst[temp_rank];
+                              }
+                        }
+                  }
+
+                  template<class Base>
+                  void block_transpose(
+                        const Base* src,
+                        Base* dst,
+                        const std::vector<Rank>& plan,
+                        const std::vector<Size>& dims,
+                        const Size& size,
+                        const Rank& rank) {
+                        // only work when last index really transposed
+
+                        const std::vector<Size>& dims_src = dims;
+
+                        std::vector<Size> dims_dst(rank);
+                        for (Rank i = 0; i < rank; i++) {
+                              dims_dst[i] = dims_src[plan[i]];
+                        } // for i
+
+                        std::vector<Size> step_src(rank);
+                        step_src[rank - 1] = 1;
+                        for (Rank i = rank - 1; i > 0; i--) {
+                              step_src[i - 1] = step_src[i] * dims_src[i];
+                        }
+                        std::vector<Size> step_dst(rank);
+                        step_dst[rank - 1] = 1;
+                        for (Rank i = rank - 1; i > 0; i--) {
+                              step_dst[i - 1] = step_dst[i] * dims_dst[i];
+                        }
+
+                        std::vector<Size> index_list_src(rank);
+                        std::vector<Size> index_list_dst(rank);
+                        Size index_src = 0;
+                        Size index_dst = 0;
+
+                        Size last_dims_src = dims_src[rank - 1];
+                        Size last_dims_src_base = last_dims_src * sizeof(Base);
+                        Size last_dims_dst = dims_dst[rank - 1];
+                        Size last_dims_dst_base = last_dims_dst * sizeof(Base);
+
+                        while (1) {
+                              matrix_transpose(last_dims_dst, last_dims_src, src, leading_src, dst, leading_dst);
+
+                              Rank temp_rank = rank - 2;
+                              Rank plan_temp_rank = plan[temp_rank];
+
+                              index_list_src[plan_temp_rank] += 1;
+                              index_list_dst[temp_rank] += 1;
+                              index_src += step_src[plan_temp_rank];
+                              index_dst += step_dst[temp_rank];
+
+                              while (index_list_dst[temp_rank] == dims_dst[temp_rank]) {
+                                    if (temp_rank == 0) {
+                                          return;
+                                    }
+                                    index_list_src[plan_temp_rank] = 0;
+                                    index_src -= dims_src[plan_temp_rank] * step_src[plan_temp_rank];
+                                    index_list_dst[temp_rank] = 0;
+                                    index_dst -= dims_dst[temp_rank] * step_dst[temp_rank];
+                                    temp_rank -= 1;
+                                    plan_temp_rank = plan[temp_rank];
+                                    index_list_src[plan_temp_rank] += 1;
+                                    index_src += step_src[plan_temp_rank];
+                                    index_list_dst[temp_rank] += 1;
+                                    index_dst += step_dst[temp_rank];
+                              }
+                        }
+                  }
+
+                  template<class Base>
+                  void
+                  run(const Base* src,
+                      Base* dst,
+                      const std::vector<Rank>& plan,
+                      const std::vector<Size>& dims,
+                      const Size& size) {
                         if (dims.size() == 0) {
                               *dst = *src;
                         } else {
-                              std::vector<int> int_plan(plan.begin(), plan.end());
-                              std::vector<int> int_dims(dims.begin(), dims.end());
-                              hptt::create_plan(
-                                    int_plan.data(),
-                                    int_plan.size(),
-                                    1,
-                                    src,
-                                    int_dims.data(),
-                                    NULL,
-                                    0,
-                                    dst,
-                                    NULL,
-                                    hptt::ESTIMATE,
-                                    1,
-                                    NULL,
-                                    1)
-                                    ->execute();
+                              Rank rank = dims.size();
+                              if (plan[rank - 1] == rank - 1) {
+                                    // last index is same
+                                    copy_transpose(src, dst, plan, dims, size, rank);
+                              } else {
+                                    // last index is not same
+                                    block_transpose(src, dst, plan, dims, size, rank);
+                              }
                         }
                   } // run
             } // namespace transpose
@@ -1571,7 +1791,7 @@ namespace TAT {
             Data<Base> Data<Base>::transpose(const std::vector<Size>& dims, const std::vector<Rank>& plan) const {
                   assert(dims.size() == plan.size());
                   Data<Base> res(size);
-                  transpose::run(plan, dims, base.data(), res.base.data());
+                  transpose::run(base.data(), res.base.data(), plan, dims, size);
                   return res;
             } // transpose
       } // namespace data
@@ -1742,8 +1962,12 @@ namespace TAT {
                   } // run<std::complex<double>>
 
                   template<class Base>
-                  Data<Base> cut(Data<Base>&& other, const Size& m1, const Size& n1, const Size& m2, const Size& n2) {
-                        (void)m1; // avoid warning of unused when NDEBUG
+                  Data<Base>
+                  cut(Data<Base>&& other,
+                      [[maybe_unused]] const Size& m1,
+                      const Size& n1,
+                      const Size& m2,
+                      const Size& n2) {
                         assert(n2 <= n1);
                         assert(m2 <= m1);
                         if (n2 == n1) {
@@ -2633,874 +2857,18 @@ namespace TAT {
             template<class Base>
             template<class Base2>
             Node<Base> Node<Base>::multiple(const Node<Base2>& other, const Legs& position) const {
-                  Node<Base> res;
                   assert(other.legs.size() == 1);
-                  res.legs = legs;
                   auto pos = std::find(legs.begin(), legs.end(), position);
                   if (pos == legs.end()) {
                         return *this;
                   } // if not multiple
+                  Node<Base> res;
+                  res.legs = legs;
                   Rank index = std::distance(legs.begin(), pos);
                   res.tensor() = tensor().multiple(other.tensor(), index);
                   return res;
             } // multiple
       } // namespace node
-
-      //
-      //      L        AA    ZZZZZ  Y   Y          CCC    OOO   RRRR   EEEEE
-      //      L       A  A       Z  Y   Y         C   C  O   O  R   R  E
-      //      L      A    A     Z    Y Y          C      O   O  R   R  E
-      //      L      A    A     Z    Y Y          C      O   O  R   R  E
-      //      L      A    A    Z      Y           C      O   O  RRRR   EEEE
-      //      L      AAAAAA   Z       Y           C      O   O  RR     E
-      //      L      A    A   Z       Y           C      O   O  R R    E
-      //      L      A    A  Z        Y           C   C  O   O  R  R   E
-      //      LLLLL  A    A  ZZZZZ    Y    _____   CCC    OOO   R   R  EEEEE
-      //
-      /**
-       * lazy框架
-       */
-      namespace lazy {
-#ifndef NDEBUG
-            /**
-             * 用来记录lazy core在哪里创建的全局变量
-             */
-            std::vector<std::string> position;
-#endif
-            /**
-             * 在作用域中新建一个name_scope变量可将此作用域内所有创建的lazy core的position变量都append一个字符串
-             */
-            struct name_scope {
-                  /**
-                   * 根据str构造一个name_scope
-                   *
-                   * \param str 构造的name_scope的名字
-                   * \note 使用方式是 \code{.cpp}
-                   * {
-                   *    lazy::name_scope name_scope("some_name");
-                   *    // other operator
-                   * }
-                   * \endcode
-                   */
-                  template<class Str = std::string>
-                  name_scope(Str&& str) {
-                        (void)str;
-#ifndef NDEBUG
-                        position.push_back(std::forward<Str>(str));
-#endif
-                  }
-
-                  ~name_scope() {
-#ifndef NDEBUG
-                        assert(position.size() != 0);
-                        position.pop_back();
-#endif
-                  }
-            };
-
-            /**
-             * LazyCore的基类, 用来存储无类型信息的上下游信息
-             */
-            struct LazyCoreBase {
-                  /**
-                   * 重置或不重置本lazy core, 并重置所有下游的lazy core
-                   *
-                   * \param reset_itself 是否重置自身的flag
-                   */
-                  virtual void reset(bool reset_itself = true) = 0;
-                  /**
-                   * 析构lazy core, 只会在没有下游时调用, 调用时会将自己从上游的下游列表中去除
-                   */
-                  virtual ~LazyCoreBase() = default;
-
-                  /**
-                   * 引用了本lazy core的其他lazy core列表, 并没有所有权, 资源由子类中的func所拷贝的shared_ptr管理
-                   */
-                  std::set<LazyCoreBase*> downstream;
-                  /**
-                   * 本lazy core所引用的其他lazy core列表, 并没有所有权, 资源由子类中的func所拷贝的shared_ptr管理
-                   */
-                  std::set<LazyCoreBase*> upstream;
-
-#ifndef NDEBUG
-                  /**
-                   * lazy core创建时的位置信息, debug用
-                   */
-                  std::vector<std::string> local_position;
-#endif
-            };
-
-            /**
-             * 给std::unique_ptr用的deleter, 会根据可变的own_flag来判断是否真的delete指针
-             *
-             * \tparam T 被delete的类型
-             */
-            template<class T>
-            struct maybe_deleter {
-                  /**
-                   * 记录是否拥有所有权的flag, 如果为true的在调用operator()时真的会delte指针, 反之不会
-                   */
-                  bool own_flag = false;
-                  /**
-                   * std::unique_ptr的deleter会通过调用operator()来delete指针
-                   *
-                   * \param ptr 或将delete的指针
-                   */
-                  void operator()(const T* ptr) const {
-                        if (own_flag) {
-                              delete ptr;
-                        }
-                  }
-                  /**
-                   * 设定记录所有权的own_flag
-                   *
-                   * \param f 设定的值
-                   * \see own_flag
-                   */
-                  void set_own(bool f) {
-                        own_flag = f;
-                  }
-            };
-
-            /**
-             * LazyCore是一个类型Lazy化后的类型, 但是一会以shared_ptr<LazyCore<T>>的形式存在, 所以需要Lazy类型的包装
-             *
-             * \tparam T 被lazy化的类型
-             */
-            template<class T>
-            struct LazyCore : LazyCoreBase {
-                  using type = T;
-
-                  void reset(bool reset_itself = true) override {
-                        if (value_ptr) {
-                              if (reset_itself) {
-                                    value_ptr.reset();
-                              }
-                              for (const auto& ds : downstream) {
-                                    ds->reset();
-                              }
-                        }
-                  }
-
-                  ~LazyCore() override {
-                        dump_upstream();
-                  }
-
-                  /**
-                   * 设置本lazy core所存储的值, 包括设置指针和设置指针所有权
-                   */
-                  void record_value(const T* ptr, bool own_flag) {
-                        value_ptr.reset(ptr);
-                        value_ptr.get_deleter().set_own(own_flag);
-                  }
-
-                  /**
-                   * 一个所有权不确定的指针, 通过maybe_deleter实现
-                   *
-                   * \see maybe_deleter
-                   */
-                  std::unique_ptr<const T, maybe_deleter<T>> value_ptr;
-                  /**
-                   * 用来计算出value的函数, func没有返回值, 调用func时应自己将值通过record_value赋值给value
-                   *
-                   * \see record_value
-                   */
-                  std::function<void()> func;
-
-                  /**
-                   * 将自己从自己上游的下游列表中清除
-                   *
-                   * \note 此操作必须在子类中调用, 否则会出现先调用两个上下游对象的子类析构函数,
-                   * 再调用父类析构函数的情况, 使得下游的dump_upstream还没调用的时候, 上有对象便开始析构,
-                   * 无法保证下游先调用dump_upstream
-                   */
-                  void dump_upstream() {
-                        for (const auto& us : upstream) {
-                              us->downstream.erase(this); // if there is duplicated, it still work
-                        }
-                        upstream.clear();
-                  }
-
-                  /**
-                   * 获得value的值, 如果不存在, 则通过func计算出
-                   */
-                  const T& value() {
-                        if (!value_ptr) {
-                              try {
-                                    func();
-                              } catch (std::exception& e) {
-#ifndef NDEBUG
-                                    std::clog << " [LAZY ERROR] in" << std::endl;
-                                    for (const auto& i : local_position) {
-                                          std::clog << "  " << i << std::endl;
-                                    }
-#else
-                                    std::clog << " [LAZY ERROR compile debug mode to show position] " << std::endl;
-#endif
-                                    throw;
-                              }
-                        }
-                        return *value_ptr;
-                  }
-
-                  /**
-                   * 获得value的值, 并移动走, 如果本身没有所有权, 可能会有危险
-                   *
-                   * \note 如果本身是通过直接设置value的方式创建的, 那么pop后就难以找到原来的值了
-                   */
-                  T pop() {
-                        value();
-                        T res = std::move(*const_cast<T*>(value_ptr.get()));
-                        reset();
-                        return res;
-                  }
-
-                  /**
-                   * 给定指针, 设置value, 不拥有所有权
-                   *
-                   * \param ptr 用来设置value的指针
-                   */
-                  void set_point_value(const T* ptr) {
-                        reset();
-                        dump_upstream();
-                        func = std::function<void()>();
-                        record_value(ptr, false);
-                  }
-
-                  /**
-                   * 给定值, 设置value, 拥有所有权
-                   *
-                   * \param args 创建value的参数, 一般就是可移动的T类型本身
-                   */
-                  template<class... Args>
-                  void set_value(Args&&... args) {
-                        reset();
-                        dump_upstream();
-                        func = std::function<void()>();
-                        record_value(new T(std::forward<Args>(args)...), true);
-                  }
-
-                  /**
-                   * 将func设定为调用f函数, 但是f的参数为其他几个lazy core
-                   *
-                   * \param f 用来设置value的函数, 参数为其他lazy core calc出来的值, 返回本lazy
-                   * core将调用record_value的参数, 包括指针value_point和所有权标志own_flag
-                   * \param args 可calc出f的参数的lazy core
-                   * \see maybe_res
-                   */
-                  template<class Func, class... Args>
-                  void set_maybe_point_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
-                        reset();
-                        dump_upstream();
-                        (..., args->downstream.insert(this));
-                        (..., upstream.insert(args.get()));
-                        func = [args..., this, f = std::move(f)]() {
-                              auto res = f(args->value()...);
-                              record_value(res.value_point, res.own_flag);
-                        };
-#ifndef NDEBUG
-                        local_position.assign(position.begin(), position.end());
-#endif
-                  }
-
-                  /**
-                   * 被set_maybe_point_func使用的中间参数
-                   *
-                   * \see set_maybe_point_func
-                   */
-                  struct maybe_res {
-                        const T* value_point;
-                        bool own_flag;
-                  }; // struct maybe_res
-
-                  /**
-                   * 与set_maybe_point_func类似, 但是一定不拥有所有权
-                   *
-                   * \param f 返回的时类型为T*的值, 用来设置value
-                   * \see set_maybe_point_func
-                   */
-                  template<class Func, class... Args>
-                  void set_point_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
-                        set_maybe_point_func(
-                              [f = std::move(f)](const Args&... args_v) {
-                                    return maybe_res{f(args_v...), false};
-                              },
-                              args...);
-                  }
-
-                  /**
-                   * 与set_maybe_point_func类似, 但是一定拥有所有权
-                   *
-                   * \param f 返回的时类型为T的值, 用来设置value
-                   * \see set_maybe_point_func
-                   */
-                  template<class Func, class... Args>
-                  void set_func(Func&& f, std::shared_ptr<LazyCore<Args>>... args) {
-                        set_maybe_point_func(
-                              [f = std::move(f)](const Args&... args_v) {
-                                    return maybe_res{new T(f(args_v...)), true};
-                              },
-                              args...);
-                  }
-
-                  /**
-                   * inplace的更新一个lazy core
-                   *
-                   * \param modify 将调用modify来更新此lazy core, modify会将本lazy core的左值作为第一个参数1
-                   * \param args modify的其他lazy core参数
-                   * \note 对一个有下游的lazy core调用update可能会危险, 因为更新后可能已经不是被下游func所期待的值了
-                   * \note 无论本身有没有func, 拥有所有权的话时没问题的, 但是如果没有所有权, 会破坏他人的值
-                   * \note 如果本身没有func, 且args中含有暂时尚未calc的lazy core, 会因立即计算而crash, 如果不这么设计,
-                   * 不可避免T的复制, 这是不希望发生的, 当然也可以通过立即calc来实现, 但是那样的话, 违背了lazy的初衷,
-                   * 如果可以立即calc, 在这里尽量不用lazy
-                   */
-                  template<class Func, class... Args>
-                  void update(Func&& modify, std::shared_ptr<LazyCore<Args>>... args) {
-                        (..., args->downstream.insert(this));
-                        (..., upstream.insert(args.get()));
-                        if (func) {
-                              reset();
-                              func = [args..., this, func = std::move(func), modify = std::move(modify)]() {
-                                    func();
-                                    modify(*const_cast<T*>(value_ptr.get()), args->value()...);
-                              };
-#ifndef NDEBUG
-                              local_position.assign(position.begin(), position.end());
-#endif
-                        } else {
-                              reset(false);
-                              modify(*const_cast<T*>(value_ptr.get()), *(args->value_ptr)...);
-                        }
-                  }
-            };
-      } // namespace lazy
-
-      //
-      //      L        AA    ZZZZZ  Y   Y
-      //      L       A  A       Z  Y   Y
-      //      L      A    A     Z    Y Y
-      //      L      A    A     Z    Y Y
-      //      L      A    A    Z      Y
-      //      L      AAAAAA   Z       Y
-      //      L      A    A   Z       Y
-      //      L      A    A  Z        Y
-      //      LLLLL  A    A  ZZZZZ    Y
-      //
-      namespace lazy {
-            struct LazyBase {};
-
-            /**
-             * 将lazy core的指针封装为单独的类, 为了使用方便, 比如运算符重载
-             *
-             * \tparam T 被lazy化的类型
-             */
-            template<class T>
-            struct Lazy : LazyBase {
-                  using type = T;
-
-                  /**
-                   * 唯一的member, std::shared_ptr<LazyCore<T>>, 本身这个类就是对他的封装
-                   */
-                  std::shared_ptr<LazyCore<T>> core;
-
-                  /**
-                   * 无论如何, 这个指针不会为空的, 新建一个空的lazy core
-                   */
-                  Lazy() : core(std::make_shared<LazyCore<T>>()) {}
-
-                  /**
-                   * \see LazyCore<T>::reset
-                   *
-                   * \note 在set point value后变更value后可以调用reset来更新图
-                   */
-                  Lazy<T> reset(bool reset_itself=false) {
-                        core->reset(reset_itself);
-                        return *this;
-                  }
-                  /**
-                   * \see LazyCore<T>::set_point_value
-                   */
-                  Lazy<T> set_point_value(const T* ptr) {
-                        core->set_point_value(ptr);
-                        return *this;
-                  }
-
-                  /**
-                   * \see LazyCore<T>::set_value
-                   */
-                  template<class... Args>
-                  Lazy<T> set_value(Args&&... args) {
-                        core->set_value(std::forward<Args>(args)...);
-                        return *this;
-                  }
-
-                  /**
-                   * \see LazyCore<T>::set_maybe_point_func
-                   */
-                  template<class Func, class... Args>
-                  Lazy<T> set_maybe_point_func(Func&& f, Lazy<Args>... args) {
-                        core->set_maybe_point_func(std::move(f), args.core...);
-                        return *this;
-                  }
-
-                  /**
-                   * \see LazyCore<T>::set_point_func
-                   */
-                  template<class Func, class... Args>
-                  Lazy<T> set_point_func(Func&& f, Lazy<Args>... args) {
-                        core->set_point_func(std::move(f), args.core...);
-                        return *this;
-                  }
-
-                  /**
-                   * \see LazyCore<T>::set_func
-                   */
-                  template<class Func, class... Args>
-                  Lazy<T> set_func(Func&& f, Lazy<Args>... args) {
-                        core->set_func(std::move(f), args.core...);
-                        return *this;
-                  }
-
-                  /**
-                   * \see LazyCore<T>::update
-                   */
-                  template<class Func, class... Args>
-                  Lazy<T> update(Func&& f, Lazy<Args>... args) {
-                        core->update(std::move(f), args.core...);
-                        return *this;
-                  }
-
-                  /**
-                   * \see LazyCore<T>::value
-                   */
-                  const T& value() const {
-                        return core->value();
-                  }
-
-                  /**
-                   * \see LazyCore<T>::pop
-                   */
-                  T pop() const {
-                        return core->pop();
-                  }
-
-                  /**
-                   * 从Lazy<T>的唯一member构建Lazy
-                   */
-                  explicit Lazy(std::shared_ptr<LazyCore<T>> c) : core(c) {}
-                  /**
-                   * 从Lazy<T>或者Lazy<T>的子类构建Lazy
-                   */
-                  template<class C, class = std::enable_if_t<std::is_base_of_v<Lazy<T>, C>>>
-                  explicit Lazy(C c) : core(c.core) {}
-                  /**
-                   * 从value构建Lazy
-                   */
-                  explicit Lazy(const T& c) : core(std::make_shared<LazyCore<T>>()) {
-                        set_value(c);
-                  }
-                  /**
-                   * 从可移动的value构建Lazy
-                   */
-                  explicit Lazy(T&& c) : core(std::make_shared<LazyCore<T>>()) {
-                        set_value(std::move(c));
-                  }
-                  /**
-                   * 从value的指针构建Lazy
-                   */
-                  explicit Lazy(const T* c) : core(std::make_shared<LazyCore<T>>()) {
-                        set_point_value(c);
-                  }
-            };
-
-            template<class T, class = std::enable_if_t<!std::is_base_of_v<LazyBase, T>>>
-            Lazy(T)->Lazy<T>;
-
-            template<class T, class = std::enable_if_t<!std::is_base_of_v<LazyBase, T>>>
-            Lazy(T*)->Lazy<T>;
-
-            template<class T>
-            Lazy(std::shared_ptr<LazyCore<T>>)->Lazy<T>;
-
-            template<class T>
-            Lazy(Lazy<T>)->Lazy<T>;
-
-            template<class T, class = std::enable_if_t<std::is_base_of_v<LazyBase, T>>>
-            Lazy(T)->Lazy<typename T::type>;
-      } // namespace lazy
-      using lazy::Lazy;
-
-      //
-      //      L        AA    ZZZZZ  Y   Y          SSS    CCC     AA    L        AA    RRRR
-      //      L       A  A       Z  Y   Y         S   S  C   C   A  A   L       A  A   R   R
-      //      L      A    A     Z    Y Y          S      C      A    A  L      A    A  R   R
-      //      L      A    A     Z    Y Y          S      C      A    A  L      A    A  R   R
-      //      L      A    A    Z      Y            SSS   C      A    A  L      A    A  RRRR
-      //      L      AAAAAA   Z       Y               S  C      AAAAAA  L      AAAAAA  RR
-      //      L      A    A   Z       Y               S  C      A    A  L      A    A  R R
-      //      L      A    A  Z        Y           S   S  C   C  A    A  L      A    A  R  R
-      //      LLLLL  A    A  ZZZZZ    Y    _____   SSS    CCC   A    A  LLLLL  A    A  R   R
-      //
-      namespace lazy {
-            template<class T>
-            std::ostream& operator<<(std::ostream& out, const Lazy<T>& value) {
-                  return out << value.value();
-            }
-
-            template<class T>
-            auto operator+(const Lazy<T>& a) {
-                  auto res = Lazy<T>();
-                  res.set_func([](const T& a) { return +a; }, a);
-                  return res;
-            }
-
-            template<class T>
-            auto operator-(const Lazy<T>& a) {
-                  auto res = Lazy<T>();
-                  res.set_func([](const T& a) { return -a; }, a);
-                  return res;
-            }
-
-#define DEF_OP(OP, EVAL)                                                                    \
-      template<class A, class B>                                                            \
-      auto OP(Lazy<A>& a, const Lazy<B>& b) {                                               \
-            a.update([](A& a, const B& b) { EVAL; }, b);                                    \
-            return a;                                                                       \
-      }                                                                                     \
-      template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<LazyBase, B>>> \
-      auto OP(Lazy<T>& a, const B& b) {                                                     \
-            a.update([=](T& a) { EVAL; });                                                  \
-            return a;                                                                       \
-      }
-
-            DEF_OP(operator*=, a *= b)
-            DEF_OP(operator/=, a /= b)
-            DEF_OP(operator+=, a += b)
-            DEF_OP(operator-=, a -= b)
-#undef DEF_OP
-
-#define DEF_OP(OP, EVAL)                                                                    \
-      template<class A, class B>                                                            \
-      auto OP(const Lazy<A>& a, const Lazy<B>& b) {                                         \
-            auto func = [](const A& a, const B& b) { return EVAL; };                        \
-            auto res = Lazy<decltype(func(std::declval<A>(), std::declval<B>()))>();        \
-            res.set_func(std::move(func), a, b);                                            \
-            return res;                                                                     \
-      }                                                                                     \
-      template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<LazyBase, B>>> \
-      auto OP(const Lazy<T>& a, const B& b) {                                               \
-            auto func = [=](const T& a) { return EVAL; };                                   \
-            auto res = Lazy<decltype(func(std::declval<T>()))>();                           \
-            res.set_func(std::move(func), a);                                               \
-            return res;                                                                     \
-      }                                                                                     \
-      template<class T, class B, class = std::enable_if_t<!std::is_base_of_v<LazyBase, B>>> \
-      auto OP(const B& a, const Lazy<T>& b) {                                               \
-            auto func = [=](const T& b) { return EVAL; };                                   \
-            auto res = Lazy<decltype(func(std::declval<T>()))>();                           \
-            res.set_func(std::move(func), b);                                               \
-            return res;                                                                     \
-      }
-
-            DEF_OP(operator*, a* b)
-            DEF_OP(operator/, a / b)
-            DEF_OP(operator+, a + b)
-            DEF_OP(operator-, a - b)
-#undef DEF_OP
-      } // namespace lazy
-
-      //
-      //      L        AA    ZZZZZ  Y   Y         N    N   OOO   DDDDD   EEEEE
-      //      L       A  A       Z  Y   Y         N    N  O   O   D   D  E
-      //      L      A    A     Z    Y Y          NN   N  O   O   D   D  E
-      //      L      A    A     Z    Y Y          N N  N  O   O   D   D  E
-      //      L      A    A    Z      Y           N  N N  O   O   D   D  EEEE
-      //      L      AAAAAA   Z       Y           N   NN  O   O   D   D  E
-      //      L      A    A   Z       Y           N    N  O   O   D   D  E
-      //      L      A    A  Z        Y           N    N  O   O   D   D  E
-      //      LLLLL  A    A  ZZZZZ    Y    _____  N    N   OOO   DDDDD   EEEEE
-      //
-      namespace lazy_node {
-            /**
-             * 对张量的lazy化
-             *
-             * \tparam N 张量的类型, 最简单的情况是N=Node, 但是也可以是高阶的lazy, 比如
-             * \code{.cpp}
-             * template<class Base>
-             * using N = LazyNode<Node, Base>;
-             *
-             * using ResultType = LazyNode<N, double>;
-             * \endcode
-             * \tparam Base 被lazy化的张量的基类
-             * \see node::Node
-             * \see lazy::Lazy
-             */
-            template<template<class> class N = Node, class Base = double>
-            struct LazyNode : Lazy<N<Base>> {
-                  using Lazy<N<Base>>::set_point_value;
-                  using Lazy<N<Base>>::set_value;
-                  using Lazy<N<Base>>::set_maybe_point_func;
-                  using Lazy<N<Base>>::set_point_func;
-                  using Lazy<N<Base>>::set_func;
-                  using Lazy<N<Base>>::update;
-                  using Lazy<N<Base>>::value;
-                  using Lazy<N<Base>>::pop;
-
-                  LazyNode() : Lazy<N<Base>>() {}
-                  template<class T1 = std::vector<Legs>, class T2 = std::vector<Size>>
-                  explicit LazyNode(T1&& legs, T2&& dims) : Lazy<N<Base>>() {
-                        set_value(std::forward<T1>(legs), std::forward<T2>(dims));
-                  }
-                  template<class Arg0, class... Args>
-                  explicit LazyNode(Arg0&& arg0, Args&&... args) {
-                        set_value(std::forward<Arg0>(arg0), std::forward<Args>(args)...);
-                  }
-                  /**
-                   * \note 需要没有const限定, 不然会被决议到上面那个函数上
-                   */
-                  explicit LazyNode(N<Base>* ptr) {
-                        set_point_value(ptr);
-                  }
-                  explicit LazyNode(Lazy<N<Base>> src) : Lazy<N<Base>>(src) {}
-
-                  template<class Generator>
-                  LazyNode<N, Base>& set(Generator&& setter) & {
-                        lazy::name_scope name_scope("set");
-                        update([setter(std::forward<Generator>(setter))](N<Base>& node) { node.set(setter); });
-                        return *this;
-                  }
-
-                  template<class Generator>
-                  LazyNode<N, Base>&& set(Generator&& setter) && {
-                        return std::move(set(std::forward<Generator>(setter)));
-                  }
-
-                  LazyNode<N, Base> legs_rename(const std::map<Legs, Legs>& dict) const {
-                        lazy::name_scope name_scope("legs_rename");
-                        auto res = LazyNode<N, Base>();
-                        res.set_func([=](const N<Base>& node) { return node.legs_rename(dict); }, *this);
-                        return res;
-                  }
-
-                  template<class Base2>
-                  LazyNode<N, Base2> to() const {
-                        lazy::name_scope name_scope("to");
-                        if constexpr (std::is_same_v<Base, Base2>) {
-                              return *this;
-                        } else {
-                              auto res = LazyNode<N, Base2>();
-                              res.set_func([](const N<Base>& node) { return node.template to<Base2>(); }, *this);
-                              return res;
-                        }
-                  }
-
-                  template<int n>
-                  LazyNode<N, Base> norm() const {
-                        lazy::name_scope name_scope("norm");
-                        auto res = LazyNode<N, Base>();
-                        res.set_func([](const N<Base>& node) { return node.template norm<n>(); }, *this);
-                        return res;
-                  }
-
-                  LazyNode<N, Base> transpose(const std::vector<Legs>& new_legs) const {
-                        lazy::name_scope name_scope("transpose");
-                        auto res = LazyNode<N, Base>();
-                        res.set_func([=](const N<Base>& node) { return node.transpose(new_legs); }, *this);
-                        return res;
-                  }
-
-                  struct svd_res {
-                        LazyNode<N, Base> U;
-                        LazyNode<N, real_base_t<Base>> S;
-                        LazyNode<N, Base> V;
-                  }; // struct svd_res
-
-                  svd_res
-                  svd(const std::vector<Legs>& input_u_legs,
-                      const Legs& new_u_legs,
-                      const Legs& new_v_legs,
-                      const Rank& cut = -1) const {
-                        lazy::name_scope name_scope("svd");
-                        auto tmp = Lazy<typename N<Base>::svd_res>();
-                        tmp.set_func(
-                              [=](const N<Base>& node) { return node.svd(input_u_legs, new_u_legs, new_v_legs, cut); },
-                              *this);
-                        auto res = svd_res();
-                        res.U.set_point_func([](const typename N<Base>::svd_res& r) { return &r.U; }, tmp);
-                        res.S.set_point_func([](const typename N<Base>::svd_res& r) { return &r.S; }, tmp);
-                        res.V.set_point_func([](const typename N<Base>::svd_res& r) { return &r.V; }, tmp);
-                        return res;
-                  }
-
-                  struct qr_res {
-                        LazyNode<N, Base> Q;
-                        LazyNode<N, Base> R;
-                  }; // struct qr_res
-
-                  qr_res
-                  qr(const std::vector<Legs>& input_q_legs, const Legs& new_q_legs, const Legs& new_r_legs) const {
-                        lazy::name_scope name_scope("qr");
-                        auto tmp = Lazy<typename N<Base>::qr_res>();
-                        tmp.set_func(
-                              [=](const N<Base>& node) { return node.qr(input_q_legs, new_q_legs, new_r_legs); },
-                              *this);
-                        auto res = qr_res();
-                        res.Q.set_point_func([](const typename N<Base>::qr_res& r) { return &r.Q; }, tmp);
-                        res.R.set_point_func([](const typename N<Base>::qr_res& r) { return &r.R; }, tmp);
-                        return res;
-                  }
-
-                  qr_res
-                  rq(const std::vector<Legs>& input_r_legs, const Legs& new_r_legs, const Legs& new_q_legs) const {
-                        lazy::name_scope name_scope("rq");
-                        auto tmp = Lazy<typename N<Base>::qr_res>();
-                        tmp.set_func(
-                              [=](const N<Base>& node) { return node.rq(input_r_legs, new_r_legs, new_q_legs); },
-                              *this);
-                        auto res = qr_res();
-                        res.Q.set_point_func([](const typename N<Base>::qr_res& r) { return &r.Q; }, tmp);
-                        res.R.set_point_func([](const typename N<Base>::qr_res& r) { return &r.R; }, tmp);
-                        return res;
-                  }
-
-                  static LazyNode<N, Base> contract(
-                        const LazyNode<N, Base>& node1,
-                        const LazyNode<N, Base>& node2,
-                        const std::vector<Legs>& legs1,
-                        const std::vector<Legs>& legs2) {
-                        lazy::name_scope name_scope("contract");
-                        auto res = LazyNode<N, Base>();
-                        res.set_func(
-                              [=](const N<Base>& node1, const N<Base>& node2) {
-                                    return N<Base>::contract(node1, node2, legs1, legs2);
-                              },
-                              node1,
-                              node2);
-                        return res;
-                  }
-
-                  LazyNode<N, Base> partial_contract(
-                        const N<Base>& node,
-                        const std::vector<Legs>& legs1,
-                        const std::vector<Legs>& legs2) {
-                        lazy::name_scope name_scope("partial_contract");
-                        auto res = LazyNode<N, Base>();
-                        res.set_func(
-                              [=, &node](const N<Base>& self) { return N<Base>::contract(self, node, legs1, legs2); },
-                              *this);
-                        return res;
-                  }
-
-                  LazyNode<N, Base> multiple(const LazyNode<N, Base>& other, const Legs& position) const {
-                        lazy::name_scope name_scope("multiple");
-                        auto res = LazyNode<N, Base>();
-                        res.set_maybe_point_func(
-                              [=](const N<Base>& self, const N<Base>& other) {
-                                    struct maybe_res {
-                                          const N<Base>* value_point;
-                                          bool own_flag;
-                                    };
-                                    if (std::find(self.legs.begin(), self.legs.end(), position) == self.legs.end()) {
-                                          return maybe_res{&self, false};
-                                    } else {
-                                          return maybe_res{new N<Base>(self.multiple(other, position)), true};
-                                    }
-                              },
-                              *this,
-                              other);
-                        return res;
-                  }
-            };
-
-            template<template<class> class T, template<class> class U>
-            struct is_same_template : std::false_type {};
-
-            template<template<class> class T>
-            struct is_same_template<T, T> : std::true_type {};
-
-            template<template<class> class N, class Base, class = std::enable_if_t<!is_same_template<N, Lazy>::value>>
-            LazyNode(N<Base>)->LazyNode<N, Base>;
-
-            template<template<class> class N, class Base>
-            LazyNode(Lazy<N<Base>>)->LazyNode<N, Base>;
-
-            template<template<class> class N, class Base>
-            LazyNode(LazyNode<N, Base>)->LazyNode<N, Base>;
-
-            template<template<class> class N, class T>
-            std::ostream& operator<<(std::ostream& out, const LazyNode<N, T>& value) {
-                  return out << value.value();
-            }
-      } // namespace lazy_node
-      using lazy_node::LazyNode;
-
-      namespace lazy_node {
-            template<template<class> class N, class T>
-            LazyNode<N, T> operator+(const LazyNode<N, T>& a) {
-                  return lazy::operator+(a);
-            }
-
-            template<template<class> class N, class T>
-            LazyNode<N, T> operator-(const LazyNode<N, T>& a) {
-                  return lazy::operator-(a);
-            }
-
-#define DEF_OP(OP)                                                           \
-      template<template<class> class N, class A, class B>                    \
-      LazyNode<N, A>& OP(LazyNode<N, A>& a, const LazyNode<N, B>& b) {       \
-            auto tmp = TAT::Lazy(a);                                         \
-            lazy::OP(tmp, TAT::Lazy(b));                                     \
-            return a;                                                        \
-      }                                                                      \
-      template<                                                              \
-            template<class>                                                  \
-            class N,                                                         \
-            class T,                                                         \
-            class B,                                                         \
-            class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
-      LazyNode<N, T>& OP(LazyNode<N, T>& a, const B& b) {                    \
-            auto tmp = TAT::Lazy(a);                                         \
-            lazy::OP(tmp, b);                                                \
-            return a;                                                        \
-      }
-
-            DEF_OP(operator*=)
-            DEF_OP(operator/=)
-            DEF_OP(operator+=)
-            DEF_OP(operator-=)
-#undef DEF_OP
-
-#define DEF_OP(OP)                                                           \
-      template<template<class> class N, class A, class B>                    \
-      auto OP(const LazyNode<N, A>& a, const LazyNode<N, B>& b) {            \
-            auto res = lazy::OP(TAT::Lazy(a), TAT::Lazy(b));                 \
-            return LazyNode<N, std::common_type_t<A, B>>(res);               \
-      }                                                                      \
-      template<                                                              \
-            template<class>                                                  \
-            class N,                                                         \
-            class T,                                                         \
-            class B,                                                         \
-            class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
-      auto OP(const LazyNode<N, T>& a, const B& b) {                         \
-            return LazyNode<N, T>(lazy::OP(TAT::Lazy(a), b));                \
-      }                                                                      \
-      template<                                                              \
-            template<class>                                                  \
-            class N,                                                         \
-            class T,                                                         \
-            class B,                                                         \
-            class = std::enable_if_t<!std::is_base_of_v<lazy::LazyBase, B>>> \
-      auto OP(const B& a, const LazyNode<N, T>& b) {                         \
-            return LazyNode<N, T>(lazy::OP(a, TAT::Lazy(b)));                \
-      }
-
-            DEF_OP(operator*)
-            DEF_OP(operator/)
-            DEF_OP(operator+)
-            DEF_OP(operator-)
-#undef DEF_OP
-      } // namespace lazy_node
 } // namespace TAT
 
 #endif // TAT_HPP_

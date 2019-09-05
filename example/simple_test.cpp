@@ -1,4 +1,6 @@
-/* example/simple_test.cpp
+/**
+ * \file example/simple_test.cpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,7 +26,7 @@ using namespace TAT::legs_name;
 using Node = TAT::Node<std::complex<double>>;
 
 int main() {
-      std::ios_base::sync_with_stdio(false);
+      std::ios_base::sync_with_stdio(true);
       std::cout << "scalar\n";
       {
             // scalar

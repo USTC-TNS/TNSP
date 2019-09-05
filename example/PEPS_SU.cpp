@@ -1,4 +1,6 @@
-/* example/Heisenberg_PEPS_SU.cpp
+/**
+ * \file example/PEPS_SU.cpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,14 +26,14 @@
 #include <args.hxx>
 
 #define TAT_DEFAULT
-#include <TAT.hpp>
+#include <lazy_TAT.hpp>
 
-#include "Heisenberg_PEPS_SU.dir/SVD_Graph_with_Env.hpp"
+#include "PEPS_SU.dir/SVD_Graph_with_Env.hpp"
 
 using namespace TAT::legs_name;
 
 struct PEPS {
-      using Node = TAT::LazyNode<TAT::Node, double>;
+      using Node = TAT::LazyNode<double, 1>;
 
       int L1;
       int L2;
@@ -47,11 +49,11 @@ struct PEPS {
 
       PEPS(int L1, int L2, TAT::Size D, const std::vector<double>& hamiltonian_vector) :
             L1(L1), L2(L2), D(D), d(sqrt(sqrt(hamiltonian_vector.size()))) {
-            hamiltonian = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2}).set([&hamiltonian_vector]() {
+            (hamiltonian = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2})).value().set([&hamiltonian_vector]() {
                   static int pos = 0;
                   return hamiltonian_vector[pos++];
             });
-            identity = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2}).set([this]() {
+            (identity = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2})).value().set([this]() {
                   static int pos = 0;
                   return (pos++) % (d * d + 1) == 0;
             });
@@ -99,21 +101,21 @@ struct PEPS {
                   }
             }
             for (int i = 0; i < L1; i++) {
-                  env[{i, -1, Right}] = Node({Phy}, {1}).set([]() { return 1; });
-                  env[{i, L2 - 1, Right}] = Node({Phy}, {1}).set([]() { return 1; });
+                  (env[{i, -1, Right}] = Node({Phy}, {1})).value().set([]() { return 1; });
+                  (env[{i, L2 - 1, Right}] = Node({Phy}, {1})).value().set([]() { return 1; });
             }
             for (int i = 0; i < L1; i++) {
                   for (int j = 0; j < L2 - 1; j++) {
-                        env[{i, j, Right}] = Node({Phy}, {D}).set([]() { return 1; });
+                        (env[{i, j, Right}] = Node({Phy}, {D})).value().set([]() { return 1; });
                   }
             }
             for (int j = 0; j < L2; j++) {
-                  env[{-1, j, Down}] = Node({Phy}, {1}).set([]() { return 1; });
-                  env[{L1 - 1, j, Down}] = Node({Phy}, {1}).set([]() { return 1; });
+                  (env[{-1, j, Down}] = Node({Phy}, {1})).value().set([]() { return 1; });
+                  (env[{L1 - 1, j, Down}] = Node({Phy}, {1})).value().set([]() { return 1; });
             }
             for (int i = 0; i < L1 - 1; i++) {
                   for (int j = 0; j < L2; j++) {
-                        env[{i, j, Down}] = Node({Phy}, {D}).set([]() { return 1; });
+                        (env[{i, j, Down}] = Node({Phy}, {D})).value().set([]() { return 1; });
                   }
             }
       }
@@ -157,39 +159,41 @@ struct PEPS {
                   }
             }
             psi = psi.transpose(total_leg);
-            auto second = L2 == 1 ? phy_leg(1, 0) : phy_leg(0, 1);
-            auto H_psi = Node::contract(
-                               psi,
-                               hamiltonian.legs_rename({{Phy3, phy_leg(0, 0)}, {Phy4, second}}),
-                               {phy_leg(0, 0), second},
-                               {Phy1, Phy2})
-                               .transpose(total_leg);
-            for (int i = 0; i < L1; i++) {
-                  for (int j = 0; j < L2 - 1; j++) {
-                        if (i == 0 && j == 0) {
-                              continue;
+
+            auto H_psi_items = [&](int n) {
+                  for (int i = 0; i < L1; i++) {
+                        for (int j = 0; j < L2 - 1; j++) {
+                              if (!n--) {
+                                    return Node::contract(
+                                                 psi,
+                                                 hamiltonian.legs_rename(
+                                                       {{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i, j + 1)}}),
+                                                 {phy_leg(i, j), phy_leg(i, j + 1)},
+                                                 {Phy1, Phy2})
+                                          .transpose(total_leg);
+                              }
                         }
-                        H_psi += Node::contract(
-                                       psi,
-                                       hamiltonian.legs_rename({{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i, j + 1)}}),
-                                       {phy_leg(i, j), phy_leg(i, j + 1)},
-                                       {Phy1, Phy2})
-                                       .transpose(total_leg);
                   }
-            }
-            for (int i = 0; i < L1 - 1; i++) {
-                  for (int j = 0; j < L2; j++) {
-                        if (i == 0 && j == 0 && L2 == 1) {
-                              continue;
+                  for (int i = 0; i < L1 - 1; i++) {
+                        for (int j = 0; j < L2; j++) {
+                              if (!n--) {
+                                    return Node::contract(
+                                                 psi,
+                                                 hamiltonian.legs_rename(
+                                                       {{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i + 1, j)}}),
+                                                 {phy_leg(i, j), phy_leg(i + 1, j)},
+                                                 {Phy1, Phy2})
+                                          .transpose(total_leg);
+                              }
                         }
-                        H_psi += Node::contract(
-                                       psi,
-                                       hamiltonian.legs_rename({{Phy3, phy_leg(i, j)}, {Phy4, phy_leg(i + 1, j)}}),
-                                       {phy_leg(i, j), phy_leg(i + 1, j)},
-                                       {Phy1, Phy2})
-                                       .transpose(total_leg);
                   }
+                  return Node(); // 不会到达这里
+            };
+            auto H_psi = H_psi_items(0);
+            for (int i = 1; i < L1 * (L2 - 1) + (L1 - 1) * L2; i++) {
+                  H_psi = H_psi + H_psi_items(i);
             }
+
             energy = Node::contract(psi, H_psi, total_leg, total_leg) / Node::contract(psi, psi, total_leg, total_leg) /
                      L1 / L2;
       }
@@ -197,7 +201,8 @@ struct PEPS {
       void set_random_state(std::function<double()> setter) {
             for (int i = 0; i < L1; i++) {
                   for (int j = 0; j < L2; j++) {
-                        lattice[{i, j}].set(setter);
+                        lattice[{i, j}].value().set(setter);
+                        lattice[{i, j}].fresh();
                   }
             }
       }
@@ -216,9 +221,8 @@ struct PEPS {
 
       void update_once(Node updater) {
             auto do_svd_right =
-                  SVD_Graph_with_Env<TAT::Node, double, 3, 3>(Right, Left, {Left, Up, Down}, {Right, Up, Down}, D);
-            auto do_svd_down =
-                  SVD_Graph_with_Env<TAT::Node, double, 3, 3>(Down, Up, {Up, Left, Right}, {Down, Left, Right}, D);
+                  SVD_Graph_with_Env<double, 1, 3, 3>(Right, Left, {Left, Up, Down}, {Right, Up, Down}, D);
+            auto do_svd_down = SVD_Graph_with_Env<double, 1, 3, 3>(Down, Up, {Up, Left, Right}, {Down, Left, Right}, D);
             for (int i = 0; i < L1; i++) {
                   for (int j = 0; j < L2 - 1; j++) {
                         do_svd_right(
@@ -266,7 +270,7 @@ struct PEPS {
 int main(int argc, char** argv) {
       std::ios::sync_with_stdio(false);
       args::ArgumentParser parser(
-            "Heisenberg_PEPS_SU " TAT_VERSION " (compiled " __DATE__ " " __TIME__
+            "PEPS_SU " TAT_VERSION " (compiled " __DATE__ " " __TIME__
             ")\n"
             "Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
             "This program comes with ABSOLUTELY NO WARRANTY. "

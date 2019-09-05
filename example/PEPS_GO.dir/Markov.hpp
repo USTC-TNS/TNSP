@@ -1,4 +1,5 @@
-/* example/Heisenberg_PEPS_GO.dir/Marov.hpp
+/**
+ * \file example/PEPS_GO.dir/Marov.hpp
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -54,11 +55,11 @@ struct Markov_Engine {
       template<class Engine>
       void hop_next(Engine& engine) {
             auto total_hop_position = peps.metadata.M * (peps.metadata.N - 1) + (peps.metadata.M - 1) * peps.metadata.N;
-            auto get_position = std::uniform_int_distribution<int>(0, total_hop_position-1);
+            auto get_position = std::uniform_int_distribution<int>(0, total_hop_position - 1);
             auto position = get_position(engine);
             int x1, y1, x2, y2;
             TAT::Legs direction;
-            if (position < peps.metadata.M * (peps.metadata.N - 1)){
+            if (position < peps.metadata.M * (peps.metadata.N - 1)) {
                   // 横的
                   y1 = position / peps.metadata.M;
                   x1 = position % peps.metadata.M;
@@ -86,15 +87,15 @@ struct Markov_Engine {
 
             auto ws = configuration.ws().at({});
             auto wss = configuration.double_hole(x1, y1, direction, spin1, spin2).at({});
-            auto possibility = (wss*wss)/(ws*ws);
+            auto possibility = (wss * wss) / (ws * ws);
             auto target_possibility = 1;
             if (possibility < target_possibility) {
                   auto get_random = std::uniform_real_distribution<double>(0, 1);
                   target_possibility = get_random(engine);
             }
             if (possibility > target_possibility) {
-                  configuration.state[{x1,y1}].set_value(spin1);
-                  configuration.state[{x2,y2}].set_value(spin2);
+                  configuration.state[{x1, y1}].set_value(spin1);
+                  configuration.state[{x2, y2}].set_value(spin2);
             }
       }
 
@@ -148,7 +149,7 @@ struct Markov_Engine {
 
       template<class Engine>
       void chain(int length, Engine& engine, SaveConfig config = SaveConfig::SaveGradient) {
-            for(int i=0;i<length;i++) {
+            for (int i = 0; i < length; i++) {
                   hop_next(engine);
                   save_current(config);
             }

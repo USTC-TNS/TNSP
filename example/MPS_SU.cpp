@@ -1,4 +1,6 @@
-/** example/Heisenberg_MPS_SU.cpp
+/**
+ * \file example/MPS_SU.cpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,15 +26,15 @@
 #include <args.hxx>
 
 #define TAT_DEFAULT
-#include <TAT.hpp>
+#include <lazy_TAT.hpp>
 
-#include "Heisenberg_MPS_SU.dir/QR_Canonicalization_Graph.hpp"
-#include "Heisenberg_MPS_SU.dir/SVD_Graph_without_Env.hpp"
+#include "MPS_SU.dir/QR_Canonicalization_Graph.hpp"
+#include "MPS_SU.dir/SVD_Graph_without_Env.hpp"
 
 using namespace TAT::legs_name;
 
 struct MPS {
-      using Node = TAT::LazyNode<TAT::Node, double>;
+      using Node = TAT::LazyNode<double>;
 
       int L;
       TAT::Size D;
@@ -44,11 +46,11 @@ struct MPS {
 
       MPS(int L, TAT::Size D, const std::vector<double>& hamiltonian_vector) :
             L(L), D(D), d(sqrt(sqrt(hamiltonian_vector.size()))) {
-            hamiltonian = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2}).set([&hamiltonian_vector]() {
+            (hamiltonian = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2})).value().set([&hamiltonian_vector]() {
                   static int pos = 0;
                   return hamiltonian_vector[pos++];
             });
-            identity = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2}).set([this]() {
+            (identity = Node({Phy1, Phy2, Phy3, Phy4}, {2, 2, 2, 2})).value().set([this]() {
                   static int pos = 0;
                   return (pos++) % (d * d + 1) == 0;
             });
@@ -67,8 +69,8 @@ struct MPS {
       void calc_energy() {
             auto left_contract = std::map<int, Node>();
             auto right_contract = std::map<int, Node>();
-            left_contract[-1] = Node({Right1, Right2}, {1, 1}).set([]() { return 1; });
-            right_contract[L] = Node({Left1, Left2}, {1, 1}).set([]() { return 1; });
+            (left_contract[-1] = Node({Right1, Right2}, {1, 1})).value().set([]() { return 1; });
+            (right_contract[L] = Node({Left1, Left2}, {1, 1})).value().set([]() { return 1; });
             for (int i = 0; i <= L - 1; i++) {
                   left_contract[i] = Node::contract(
                         left_contract[i - 1],
@@ -113,7 +115,8 @@ struct MPS {
 
       void set_random_state(std::function<double()> setter) {
             for (auto& i : lattice) {
-                  i.set(setter);
+                  i.value().set(setter);
+                  i.fresh();
             }
       }
 
@@ -135,15 +138,15 @@ struct MPS {
 
       // qr to left
       void prepare() {
-            auto qr_graph = QR_Canonicalization_Graph<TAT::Node, double>(Left, Right);
+            auto qr_graph = QR_Canonicalization_Graph<double, 1>(Left, Right);
             for (int i = L - 1; i > 1; i--) {
                   qr_graph(lattice[i], lattice[i - 1]);
             }
       }
 
       void update_once(Node updater) {
-            auto to_left = SVD_Graph_without_Env<TAT::Node, double>(updater, D, true);
-            auto to_right = SVD_Graph_without_Env<TAT::Node, double>(updater, D, false);
+            auto to_left = SVD_Graph_without_Env<double, 1>(updater, D, true);
+            auto to_right = SVD_Graph_without_Env<double, 1>(updater, D, false);
             for (int i = 0; i < L - 1; i++) {
                   to_right(lattice[i], lattice[i + 1]);
             }
@@ -172,7 +175,7 @@ struct MPS {
 int main(int argc, char** argv) {
       std::ios::sync_with_stdio(false);
       args::ArgumentParser parser(
-            "Heisenberg_MPS_SU " TAT_VERSION " (compiled " __DATE__ " " __TIME__
+            "MPS_SU " TAT_VERSION " (compiled " __DATE__ " " __TIME__
             ")\n"
             "Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
             "This program comes with ABSOLUTELY NO WARRANTY. "

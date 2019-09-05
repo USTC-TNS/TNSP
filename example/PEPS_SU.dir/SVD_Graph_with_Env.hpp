@@ -1,4 +1,6 @@
-/* example/Heisenberg_PEPS_SU.dir/SVD_Graph_with_Env.hpp
+/**
+ * \file example/PEPS_SU.dir/SVD_Graph_with_Env.hpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,23 +20,23 @@
 #ifndef TAT_SVD_GRAPH_WITH_ENV_HPP_
 #define TAT_SVD_GRAPH_WITH_ENV_HPP_
 
-#include <TAT.hpp>
+#include <lazy_TAT.hpp>
 
 // 有环境的svd
-template<template<class> class N, class Base, int a_env, int b_env>
+template<class Base, int N, int a_env, int b_env>
 struct SVD_Graph_with_Env {
-      TAT::LazyNode<N, Base> old_A;
-      TAT::LazyNode<N, Base> old_B;
-      TAT::LazyNode<N, Base> old_env;
+      TAT::LazyNode<Base, N> old_A;
+      TAT::LazyNode<Base, N> old_B;
+      TAT::LazyNode<Base, N> old_env;
 
-      std::array<TAT::LazyNode<N, Base>, a_env> A_env;
-      std::array<TAT::LazyNode<N, Base>, b_env> B_env;
+      std::array<TAT::LazyNode<Base, N>, a_env> A_env;
+      std::array<TAT::LazyNode<Base, N>, b_env> B_env;
 
-      TAT::LazyNode<N, Base> new_A;
-      TAT::LazyNode<N, Base> new_B;
-      TAT::LazyNode<N, Base> new_env;
+      TAT::LazyNode<Base, N> new_A;
+      TAT::LazyNode<Base, N> new_B;
+      TAT::LazyNode<Base, N> new_env;
 
-      TAT::LazyNode<N, Base> H;
+      TAT::LazyNode<Base, N> H;
 
       SVD_Graph_with_Env(
             TAT::Legs a_leg,
@@ -58,15 +60,15 @@ struct SVD_Graph_with_Env {
             auto BigB_QR = BigB.rq({Phy, b_leg}, a_leg, b_leg);
 
             auto Big = BigA_QR.R.multiple(old_env, a_leg);
-            Big = TAT::LazyNode<N, Base>::contract(
+            Big = TAT::LazyNode<Base, N>::contract(
                   Big.legs_rename({{Phy, Phy1}}), BigB_QR.R.legs_rename({{Phy, Phy2}}), {a_leg}, {b_leg});
-            Big = TAT::LazyNode<N, Base>::contract(Big, H, {Phy1, Phy2}, {Phy3, Phy4});
+            Big = TAT::LazyNode<Base, N>::contract(Big, H, {Phy1, Phy2}, {Phy3, Phy4});
             Big = Big / Big.template norm<-1>();
 
             auto svd = Big.svd({Phy1, b_leg}, a_leg, b_leg, cut);
             new_env = svd.S;
-            new_A = TAT::LazyNode<N, Base>::contract(svd.U, BigA_QR.Q, {b_leg}, {a_leg});
-            new_B = TAT::LazyNode<N, Base>::contract(svd.V, BigB_QR.Q, {a_leg}, {b_leg});
+            new_A = TAT::LazyNode<Base, N>::contract(svd.U, BigA_QR.Q, {b_leg}, {a_leg});
+            new_B = TAT::LazyNode<Base, N>::contract(svd.V, BigB_QR.Q, {a_leg}, {b_leg});
 
             for (int i = 0; i < a_env; i++) {
                   new_A = new_A.multiple(1 / A_env[i], A_legs[i]);
@@ -79,27 +81,27 @@ struct SVD_Graph_with_Env {
             new_B = new_B.legs_rename({{Phy2, Phy}});
       }
       void operator()(
-            TAT::LazyNode<N, Base> H_value,
-            TAT::LazyNode<N, Base> A,
-            TAT::LazyNode<N, Base> B,
-            TAT::LazyNode<N, Base> env,
-            std::array<TAT::LazyNode<N, Base>, a_env> A_env_value,
-            std::array<TAT::LazyNode<N, Base>, b_env> B_env_value) {
-            old_A.set_value(A.pop());
-            old_B.set_value(B.pop());
-            old_env.set_value(env.pop());
-            H.set_point_value(&H_value.value());
+            TAT::LazyNode<Base, N> H_value,
+            TAT::LazyNode<Base, N> A,
+            TAT::LazyNode<Base, N> B,
+            TAT::LazyNode<Base, N> env,
+            std::array<TAT::LazyNode<Base, N>, a_env> A_env_value,
+            std::array<TAT::LazyNode<Base, N>, b_env> B_env_value) {
+            old_A == A.pop();
+            old_B == B.pop();
+            old_env == env.pop();
+            H == H_value.value();
 
             for (int i = 0; i < a_env; i++) {
-                  A_env[i].set_point_value(&A_env_value[i].value());
+                  A_env[i] == A_env_value[i].value();
             }
             for (int i = 0; i < b_env; i++) {
-                  B_env[i].set_point_value(&B_env_value[i].value());
+                  B_env[i] == B_env_value[i].value();
             }
 
-            A.set_value(new_A.pop());
-            B.set_value(new_B.pop());
-            env.set_value(new_env.pop());
+            A == new_A.pop();
+            B == new_B.pop();
+            env == new_env.pop();
       }
 };
 

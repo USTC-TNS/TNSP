@@ -20,4 +20,6 @@
 {"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [86.3]}}}
 
 {"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [12]}}}
-{"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [22]}}}
+{"rank": 0, "legs": [], "tensor": {"dims": [], "data": {"size": 1, "base": [60]}}}
+{"rank": 2, "legs": ["Left", "Right"], "tensor": {"dims": [2, 3], "data": {"size": 6, "base": [0, 1, 2, 3, 4, 5]}}}
+{"rank": 2, "legs": ["Left", "Left1"], "tensor": {"dims": [2, 3], "data": {"size": 6, "base": [0, 1, 2, 3, 4, 5]}}}

@@ -1,4 +1,6 @@
-/* example/Heisenberg_MPS_SU.dir/QR_Canonicalization_Graph.hpp
+/**
+ * \file example/MPS_SU.dir/QR_Canonicalization_Graph.hpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,26 +20,26 @@
 #ifndef TAT_QR_CANONICALIZATION_GRAPH_HPP_
 #define TAT_QR_CANONICALIZATION_GRAPH_HPP_
 
-#include <TAT.hpp>
+#include <lazy_TAT.hpp>
 
 // QR正则化
-template<template<class> class N, class Base>
+template<class Base, int N>
 struct QR_Canonicalization_Graph {
    public:
-      TAT::LazyNode<N, Base> to_split;
-      TAT::LazyNode<N, Base> to_absorb;
-      TAT::LazyNode<N, Base> splited;
-      TAT::LazyNode<N, Base> absorbed;
+      TAT::LazyNode<Base, N> to_split;
+      TAT::LazyNode<Base, N> to_absorb;
+      TAT::LazyNode<Base, N> splited;
+      TAT::LazyNode<Base, N> absorbed;
       QR_Canonicalization_Graph(TAT::Legs split_leg, TAT::Legs absorb_leg) {
             auto qr = to_split.rq({split_leg}, absorb_leg, split_leg);
             splited = qr.Q;
-            absorbed = TAT::LazyNode<N, Base>::contract(qr.R, to_absorb, {split_leg}, {absorb_leg});
+            absorbed = TAT::LazyNode<Base, N>::contract(qr.R, to_absorb, {split_leg}, {absorb_leg});
       }
-      void operator()(TAT::LazyNode<N, Base> split, TAT::LazyNode<N, Base> absorb) {
-            to_split.set_value(split.pop());
-            to_absorb.set_value(absorb.pop());
-            split.set_value(splited.pop());
-            absorb.set_value(absorbed.pop());
+      void operator()(TAT::LazyNode<Base, N> split, TAT::LazyNode<Base, N> absorb) {
+            to_split == split.pop();
+            to_absorb == absorb.pop();
+            split == splited.pop();
+            absorb == absorbed.pop();
       }
 };
 

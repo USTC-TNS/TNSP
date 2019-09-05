@@ -1,6 +1,3 @@
-[submodule "hptt"]
-	path = deps/hptt
-	url = https://github.com/springer13/hptt.git
 [submodule "args"]
 	path = deps/args
 	url = https://github.com/Taywee/args.git

@@ -1,4 +1,6 @@
-/* example/Heisenberg_MPS_SU.dir/SVD_Graph_without_Env.hpp
+/**
+ * \file example/MPS_SU.dir/SVD_Graph_without_Env.hpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,20 +20,20 @@
 #ifndef TAT_SVD_GRAPH_WITHOUT_ENV_HPP_
 #define TAT_SVD_GRAPH_WITHOUT_ENV_HPP_
 
-#include <TAT.hpp>
+#include <lazy_TAT.hpp>
 
 // 无环境的svd
-template<template<class> class N, class Base>
+template<class Base, int N>
 struct SVD_Graph_without_Env {
-      TAT::LazyNode<N, Base> old_A;
-      TAT::LazyNode<N, Base> old_B;
-      TAT::LazyNode<N, Base> new_A;
-      TAT::LazyNode<N, Base> new_B;
-      SVD_Graph_without_Env(TAT::LazyNode<N, Base> H, int cut, bool left = true) {
+      TAT::LazyNode<Base, N> old_A;
+      TAT::LazyNode<Base, N> old_B;
+      TAT::LazyNode<Base, N> new_A;
+      TAT::LazyNode<Base, N> new_B;
+      SVD_Graph_without_Env(TAT::LazyNode<Base, N> H, int cut, bool left = true) {
             using namespace TAT::legs_name;
-            auto big = TAT::LazyNode<N, Base>::contract(
+            auto big = TAT::LazyNode<Base, N>::contract(
                   old_A.legs_rename({{Phy, Phy1}}), old_B.legs_rename({{Phy, Phy2}}), {Right}, {Left});
-            auto Big = TAT::LazyNode<N, Base>::contract(big, H, {Phy1, Phy2}, {Phy3, Phy4});
+            auto Big = TAT::LazyNode<Base, N>::contract(big, H, {Phy1, Phy2}, {Phy3, Phy4});
             Big = Big / Big.template norm<-1>();
             auto svd = Big.svd({Phy1, Left}, Right, Left, cut);
             new_A = svd.U.legs_rename({{Phy1, Phy}});
@@ -42,11 +44,11 @@ struct SVD_Graph_without_Env {
                   new_B = new_B.multiple(svd.S, Left);
             }
       }
-      void operator()(TAT::LazyNode<N, Base> A, TAT::LazyNode<N, Base> B) {
-            old_A.set_value(A.pop());
-            old_B.set_value(B.pop());
-            A.set_value(new_A.pop());
-            B.set_value(new_B.pop());
+      void operator()(TAT::LazyNode<Base, N> A, TAT::LazyNode<Base, N> B) {
+            old_A == A.pop();
+            old_B == B.pop();
+            A == new_A.pop();
+            B == new_B.pop();
       }
 };
 

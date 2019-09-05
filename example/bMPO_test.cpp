@@ -1,4 +1,6 @@
-/* example/bMPO_test.cpp
+/**
+ * \file example/bMPO_test.cpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -20,9 +22,9 @@
 #define TAT_DEFAULT
 #include <TAT.hpp>
 
-#include "Heisenberg_PEPS_GO.dir/bMPO.hpp"
+#include "PEPS_GO.dir/bMPO.hpp"
 
-int main() {
+int main(int argc, char** argv) {
       using namespace TAT::legs_name;
 
       std::ios_base::sync_with_stdio(false);
@@ -33,10 +35,18 @@ int main() {
 
       int L = 4;
       int scan = 2;
+      if (argc > 1) {
+            std::istringstream(argv[1]) >> scan;
+            std::cout << "set scan time = " << scan << "\n";
+      }
       TAT::Size D = 4;
       TAT::Size Dc = 6;
+      if (argc > 2) {
+            std::istringstream(argv[2]) >> Dc;
+            std::cout << "set Dc = " << Dc << "\n";
+      }
 
-      auto bMPO = bounded_matrix_product_operator<TAT::Node>({L, scan, Left, Right, Up, Down, true});
+      auto bMPO = bounded_matrix_product_operator<0>({L, scan, Left, Right, Up, Down, true});
       auto former = std::vector<TAT::Node<double>>(L);
       auto current = std::vector<TAT::Node<double>>(L);
       auto initial = std::vector<TAT::Node<double>>(L);
@@ -59,5 +69,35 @@ int main() {
       for (int i = 0; i < L; i++) {
             std::cout << res[i] << std::endl;
       }
+
+      // check origin
+      auto dbllay = std::vector<TAT::Node<double>>(L);
+      for (int i = 0; i < L; i++) {
+            dbllay[i] = TAT::Node<double>::contract(
+                  former[i].legs_rename({{Left, Left1}, {Right, Right1}}),
+                  current[i].legs_rename({{Left, Left2}, {Right, Right2}}),
+                  {Down},
+                  {Up});
+      }
+      auto origin = TAT::Node<double>(1);
+      for (int i = 0; i < L; i++) {
+            origin = TAT::Node<double>::contract(
+                  origin,
+                  dbllay[i].legs_rename({{Down, TAT::Legs("Down_in_bMPO_test_" + std::to_string(i))}}),
+                  {Right1, Right2},
+                  {Left1, Left2});
+      }
+      std::cout << origin << "\n";
+      // check result
+      auto result = TAT::Node<double>(1);
+      for (int i = 0; i < L; i++) {
+            result = TAT::Node<double>::contract(
+                  result,
+                  res[i].legs_rename({{Down, TAT::Legs("Down_in_bMPO_test_" + std::to_string(i))}}),
+                  {Right},
+                  {Left});
+      }
+      std::cout << result << "\n";
+      std::cout << (origin - result).norm<-1>() / origin.norm<-1>() << "\n";
       return 0;
 }

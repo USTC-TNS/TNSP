@@ -1,0 +1,25 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: dependence
+      run: apt-get install libomp-dev libopenblas-dev liblapacke-dev
+    - name: hptt configure
+      run: cd deps/hptt && mkdir -p lib && cmake -DHPTT_CXX_FLAGS=-Ofast -DENABLE_AVX=ON -H. -Blib
+    - name: hptt make
+      run: cmake --build lib --parallel && cd ../..
+    - name: patch cblas
+      run: wget https://raw.githubusercontent.com/xianyi/OpenBLAS/66ac898f6441f0cb334f76d0c5603c37962bf368/cblas.h -O include/cblas.h && sed -i s/common.h/openblas_config.h/ include/cblas.h
+    - name: configure
+      run: mkdir -p build && cmake .. -DCMAKE_BUILD_TYPE=Release -H. -Bbuild
+    - name: make
+      run: cmake --build build --parallel
+    - name: make test
+      run: cmake --build build --target test

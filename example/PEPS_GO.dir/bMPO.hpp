@@ -1,4 +1,6 @@
-/* example/Heisenberg_PEPS_GO.dir/bMPO.hpp
+/**
+ * \file example/PEPS_GO.dir/bMPO.hpp
+ *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,15 +20,12 @@
 #ifndef TAT_BMPO_HPP_
 #define TAT_BMPO_HPP_
 
-#include <TAT.hpp>
+#include <lazy_TAT.hpp>
 
-template<class Base>
-using Default_Node_in_bMPO = TAT::LazyNode<TAT::Node, Base>;
-
-template<template<class> class N = Default_Node_in_bMPO>
+template<int N = 1>
 struct bounded_matrix_product_operator {
-      using Node = N<double>;
-      using HighNode = TAT::LazyNode<N, double>;
+      using Node = TAT::LazyNode<double, N>;
+      using HighNode = TAT::LazyNode<double, N + 1>;
 
       struct bMPO_config {
             int length;
@@ -51,9 +50,9 @@ struct bounded_matrix_product_operator {
             std::vector<HighNode> current(config.length);
             std::vector<HighNode> res(config.length);
             for (int i = 0; i < config.length; i++) {
-                  former[i].set_point_value(&former_node[i]);
-                  current[i].set_point_value(&current_node[i]);
-                  res[i].set_point_value(&initial_node[i]);
+                  former[i] == former_node[i];
+                  current[i] == current_node[i];
+                  res[i] == initial_node[i];
             }
             // canonicalization except 0
             if (config.need_initial_canonicalization) {
@@ -135,18 +134,18 @@ struct bounded_matrix_product_operator {
             for (int i = 0; i < config.qr_scan_time; i++) {
                   // status: canonical except 0
                   for (int j = 0; j < config.length - 1; j++) {
-                        res[j].set_value(target[j].pop());
-                        res[j].set_value(res[j].pop().rq({config.right}, config.left, config.right).Q);
+                        res[j] == target[j].pop();
+                        res[j] == res[j].pop().rq({config.right}, config.left, config.right).Q;
                         // R dropped
                   }
                   // status: canonical except L-1
                   for (int j = config.length - 1; j > 0; j--) {
-                        res[j].set_value(target[j].pop());
-                        res[j].set_value(res[j].pop().rq({config.left}, config.right, config.left).Q);
+                        res[j] == target[j].pop();
+                        res[j] == res[j].pop().rq({config.left}, config.right, config.left).Q;
                         // R dropped
                   }
             }
-            res[0].set_value(target[0].pop());
+            res[0] == target[0].pop();
             std::vector<Node> res_node(config.length);
             for (int i = 0; i < config.length; i++) {
                   res_node[i] = res[i].pop();
