@@ -1,0 +1,26 @@
+name: doxygen
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  doxygen:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout
+      uses: actions/checkout@v1
+    - name: install doxygen
+      run: sudo apt-get install doxygen -y
+    - name: create docs
+      run: doxygen
+    - name: publish
+      if: success()
+      uses: crazy-max/ghaction-github-pages@v1
+      with:
+        build_dir: docs
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
