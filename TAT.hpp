@@ -26,6 +26,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -441,7 +442,8 @@ namespace TAT {
       std::shared_ptr<TensorCore> core;
 
       bool is_valid_name() const {
-         return names.size() == core->edges.size();
+         return names.size() == std::set<Name>(names.begin(), names.end()).size() &&
+                names.size() == core->edges.size();
       }
 
       template<
