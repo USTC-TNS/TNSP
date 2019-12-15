@@ -56,13 +56,14 @@ void test_create_u1symmetry_tensor() {
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.set([]() { return 123; }) << "\n";
 }
 
-void test_create_tensor() {
-   RUN_TEST(test_create_nosymmetry_tensor);
-   RUN_TEST(test_create_z2symmetry_tensor);
-   RUN_TEST(test_create_u1symmetry_tensor);
-}
-
 void test_type_conversion() {
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
+                      .set([]() {
+                         static double i = 1;
+                         return i += 1;
+                      })
+                      .to<double>()
+             << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
                       .set([]() {
                          static double i = 1;
@@ -211,6 +212,14 @@ void test_transpose() {
                });
    std::cout << c << "\n";
    std::cout << c.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
+   auto d = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Down, TAT::Up, TAT::Left, TAT::Right},
+                                                 {2, 3, 4, 5}}
+                  .set([]() {
+                     static double i = 0;
+                     return i += 1;
+                  });
+   std::cout << d << "\n";
+   std::cout << d.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up}) << "\n";
 }
 
 int main(int argc, char** argv) {
@@ -219,7 +228,9 @@ int main(int argc, char** argv) {
    if (argc != 1) {
       std::cout.rdbuf(out.rdbuf());
    }
-   RUN_TEST(test_create_tensor);
+   RUN_TEST(test_create_nosymmetry_tensor);
+   RUN_TEST(test_create_z2symmetry_tensor);
+   RUN_TEST(test_create_u1symmetry_tensor);
    RUN_TEST(test_type_conversion);
    RUN_TEST(test_norm);
    RUN_TEST(test_edge_rename);

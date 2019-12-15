@@ -327,6 +327,7 @@ namespace TAT {
       return res;
    }
 
+   // TODO: transpose的优化
    // stupid_transpose
    // 最后一维相同
    // -- copy_transpose
@@ -355,11 +356,11 @@ namespace TAT {
    void stupid_transpose(
          const ScalarType* __restrict src,
          ScalarType* __restrict dst,
-         const vector<Rank>& plan_src_to_dst,
+         [[maybe_unused]] const vector<Rank>& plan_src_to_dst,
          const vector<Rank>& plan_dst_to_src,
          const vector<Size>& dims_src,
          const vector<Size>& dims_dst,
-         const Size& size,
+         [[maybe_unused]] const Size& size,
          const Rank& rank) {
       vector<Size> step_src(rank);
       step_src[rank - 1] = 1;
@@ -404,6 +405,32 @@ namespace TAT {
             index_dst += step_dst[temp_rank_dst];
          }
       }
+   }
+
+   template<class ScalarType>
+   void copy_transpose(
+         const ScalarType* __restrict src,
+         ScalarType* __restrict dst,
+         const vector<Rank>& plan_src_to_dst,
+         const vector<Rank>& plan_dst_to_src,
+         const vector<Size>& dims_src,
+         const vector<Size>& dims_dst,
+         const Size& size,
+         const Rank& rank) {
+      stupid_transpose(src, dst, plan_src_to_dst, plan_dst_to_src, dims_src, dims_dst, size, rank);
+   }
+
+   template<class ScalarType>
+   void block_transpose(
+         const ScalarType* __restrict src,
+         ScalarType* __restrict dst,
+         const vector<Rank>& plan_src_to_dst,
+         const vector<Rank>& plan_dst_to_src,
+         const vector<Size>& dims_src,
+         const vector<Size>& dims_dst,
+         const Size& size,
+         const Rank& rank) {
+      stupid_transpose(src, dst, plan_src_to_dst, plan_dst_to_src, dims_src, dims_dst, size, rank);
    }
 
    template<class Symmetry>
@@ -503,17 +530,29 @@ namespace TAT {
 
       template<class OtherScalarType>
       Tensor<OtherScalarType, Symmetry> to() const {
-         auto res = Tensor<OtherScalarType, Symmetry>{names, core->edges};
-         Nums blocks_num = core->blocks.size();
-         for (Nums i = 0; i < blocks_num; i++) {
-            Size block_size = core->blocks[i].size;
-            auto& dst = res.core->blocks[i].raw_data;
-            const auto& src = core->blocks[i].raw_data;
-            for (Size j = 0; j < block_size; j++) {
-               dst[j] = static_cast<OtherScalarType>(src[j]);
+         if constexpr (std::is_same_v<ScalarType, OtherScalarType>) {
+            auto res = Tensor<ScalarType, Symmetry>{};
+            res.names = names;
+            res.name_to_index = name_to_index;
+            res.core = core;
+            return res;
+         } else {
+            auto res = Tensor<OtherScalarType, Symmetry>{};
+            res.names = names;
+            res.name_to_index = name_to_index;
+            res.core = std::make_shared<typename Tensor<OtherScalarType, Symmetry>::TensorCore>(
+                  core->edges);
+            Nums blocks_num = core->blocks.size();
+            for (Nums i = 0; i < blocks_num; i++) {
+               Size block_size = core->blocks[i].size;
+               auto& dst = res.core->blocks[i].raw_data;
+               const auto& src = core->blocks[i].raw_data;
+               for (Size j = 0; j < block_size; j++) {
+                  dst[j] = static_cast<OtherScalarType>(src[j]);
+               }
             }
+            return res;
          }
-         return res;
       };
 
       template<int p = 2>
@@ -600,29 +639,31 @@ namespace TAT {
          res.core = std::make_shared<TensorCore>(std::move(res_edges));
 
          Nums block_number = core->blocks.size();
-         for (Nums i = 0; i < block_number; i++) {
-            Nums target_index = 0;
+         for (Nums index_src = 0; index_src < block_number; index_src++) {
+            Nums index_dst = 0;
             while (!check_same_symmetries(
-                  core->blocks[i].symmetries,
-                  res.core->blocks[target_index].symmetries,
+                  core->blocks[index_src].symmetries,
+                  res.core->blocks[index_dst].symmetries,
                   plan_src_to_dst)) {
-               target_index++;
+               index_dst++;
             }
-            Size block_size = core->blocks[i].size;
+            Size block_size = core->blocks[index_src].size;
             if (block_size == 1) {
-               res.core->blocks[target_index].raw_data[0] = core->blocks[i].raw_data[0];
+               res.core->blocks[index_dst].raw_data[0] = core->blocks[index_src].raw_data[0];
             } else {
                vector<Size> dims_src(rank);
                vector<Size> dims_dst(rank);
-               for (Rank j = 0; j < rank; j++) {
-                  dims_src[j] = core->edges[j].at(core->blocks[i].symmetries[j]);
-                  dims_dst[plan_src_to_dst[j]] = dims_src[j];
+               for (Rank i = 0; i < rank; i++) {
+                  dims_src[i] = core->edges[i].at(core->blocks[index_src].symmetries[i]);
+                  dims_dst[plan_src_to_dst[i]] = dims_src[i];
                }
                if (plan_src_to_dst[rank - 1] == rank - 1) {
-                  // copy_transpose
-                  stupid_transpose<ScalarType>(
-                        core->blocks[i].raw_data.data(),
-                        res.core->blocks[target_index].raw_data.data(),
+                  // if (dims_src[rank-1] < 4) {
+                  //   big_block_transpose();
+                  // } else
+                  copy_transpose<ScalarType>(
+                        core->blocks[index_src].raw_data.data(),
+                        res.core->blocks[index_dst].raw_data.data(),
                         plan_src_to_dst,
                         plan_dst_to_src,
                         dims_src,
@@ -630,10 +671,13 @@ namespace TAT {
                         block_size,
                         rank);
                } else {
-                  // block_transpose
-                  stupid_transpose<ScalarType>(
-                        core->blocks[i].raw_data.data(),
-                        res.core->blocks[target_index].raw_data.data(),
+                  // if (dims_src[rank-1] < 4 && dims_dst[rank-1] < 4) then ... difficult
+                  // else if (dims_src[rank-1] < 4) then 3 way transpose
+                  // else if (dims_dst[rank-1] < 4) then 3 way transpose
+                  // else
+                  block_transpose<ScalarType>(
+                        core->blocks[index_src].raw_data.data(),
+                        res.core->blocks[index_dst].raw_data.data(),
                         plan_src_to_dst,
                         plan_dst_to_src,
                         dims_src,
@@ -646,19 +690,50 @@ namespace TAT {
          return res;
       }
 
+      // TODO: contract
+      // 包括了multiple
       static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& t1,
             const Tensor<ScalarType, Symmetry>& t2,
             const vector<Name>& n1,
-            const vector<Name>& n2) {
+            const vector<Name>& n2,
+            const vector<Name>& common = {}) {
+         // 先确定一个基调就是先转置成矩阵
+         // 而不是直接做张量乘积，不然太复杂了
+         // A*B -> C
+         // 有2^3=8种转置情况，需要考虑哪种方式快捷，从而使用
+         // 所以还是需要把转置弄清楚啊， 不然都不知道如何转置快如何慢
+      }
+
+      struct svd_res {
+         Tensor<ScalarType, Symmetry> U;
+         Tensor<real_base_t<ScalarType>, Symmetry> S;
+         Tensor<ScalarType, Symmetry> V;
+      };
+
+      // TODO: SVD
+      // 根据情况选择转置方式
+      svd_res svd(const vector<Name>& u_edges, Name u_new_name, Name v_new_name) const {
          //
       }
 
-      // transpose
-      // contract (融合contract和multiple)
-      // qr 正交化
-      // svd
-      // 更美观的IO
+      struct orthogonalize_res {
+         Tensor<ScalarType, Symmetry> U;
+         Tensor<ScalarType, Symmetry> T;
+      };
+
+      // TODO: qr lq
+      // 除了svd的考虑外， 需要考虑使用lq还是qr等
+      orthogonalize_res orthogonalize(
+            const vector<Name>& given_edges,
+            Name given_new_name,
+            Name other_new_name,
+            bool u_edges_given = true) const {
+         //
+      }
+
+      // TODO: 代码review
+      // TODO: 更美观的IO
    };
 
    template<class ScalarType, class Symmetry>
@@ -742,7 +817,7 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry>& OP(                                                            \
          Tensor<ScalarType1, Symmetry>& t1, const Tensor<ScalarType2, Symmetry>& t2) {           \
       if (t1.core.use_count() != 1) {                                                            \
-         std::clog << "Set Tensor Shared" << std::endl;                                          \
+         TAT_WARNING("Inplace Operator on Tensor Shared");                                       \
       }                                                                                          \
       if (t2.names.size() == 0) {                                                                \
          const auto& y = t2.core->blocks[0].raw_data[0];                                         \
@@ -999,7 +1074,7 @@ namespace TAT {
       return in;
    }
 
-   // lazy framework
+   // TODO: lazy framework
    // 需要考虑深搜不可行的问题
    // 支持inplace操作
 
