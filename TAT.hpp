@@ -676,12 +676,18 @@ namespace TAT {
       Tensor<ScalarType, Symmetry> transpose(T&& target_names) const {
          auto res = Tensor<ScalarType, Symmetry>{};
          res.names = std::forward<T>(target_names);
+         if (res.names == names) {
+            res.name_to_index = name_to_index;
+            res.core = core;
+            return res;
+         }
          res.name_to_index = construct_name_to_index(res.names);
 
          Rank rank = names.size();
          vector<Rank> plan_src_to_dst(rank);
          vector<Rank> plan_dst_to_src(rank);
          vector<Edge<Symmetry>> res_edges(rank);
+         // TODO: fuse
          for (Rank i = 0; i < rank; i++) {
             plan_src_to_dst[i] = res.name_to_index.at(names[i]);
             plan_dst_to_src[plan_src_to_dst[i]] = i;
@@ -710,7 +716,7 @@ namespace TAT {
                }
                if (plan_src_to_dst[rank - 1] == rank - 1) {
                   // if (dims_src[rank-1] < 4) {
-                  //   big_block_transpose();
+                  //   block_copy_transpose();
                   // } else
                   copy_transpose<ScalarType>(
                         core->blocks[index_src].raw_data.data(),
