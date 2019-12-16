@@ -87,6 +87,7 @@ namespace TAT {
       NameIdType id = -1;
       Name() = default;
       Name(NameIdType id) : id{id} {}
+      Name(const char* s) : Name(std::string(s)) {}
       Name(const std::string& name) {
          auto pos = name_to_id.find(name);
          if (pos == name_to_id.end()) {
@@ -614,7 +615,7 @@ namespace TAT {
       }
 
       template<class Generator>
-      Tensor& set(Generator&& generator) & {
+      Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
          if (core.use_count() != 1) {
             TAT_WARNING("Set Tensor Shared");
          }
@@ -626,6 +627,13 @@ namespace TAT {
       template<class Generator>
       Tensor<ScalarType, Symmetry> set(Generator&& generator) && {
          return std::move(set(generator));
+      }
+
+      Tensor<ScalarType, Symmetry>& zero() & {
+         return set([]() { return 0; });
+      }
+      Tensor<ScalarType, Symmetry> zero() && {
+         return std::move(zero());
       }
 
       std::tuple<Nums, Size>

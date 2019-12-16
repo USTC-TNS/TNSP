@@ -242,6 +242,13 @@ void test_getitem() {
              << "\n";
    b.at({{TAT::Right, {0, 1}}, {TAT::Up, {1, 0}}, {TAT::Left, {-1, 1}}}) = 1234;
    std::cout << b << "\n";
+   auto c =
+         TAT::Tensor<double, TAT::U1Symmetry>{
+               {"I1", "I2", "O1", "O2"},
+               {{{0, 1}, {1, 1}}, {{0, 1}, {1, 1}}, {{0, 1}, {-1, 1}}, {{0, 1}, {-1, 1}}}}
+               .zero();
+   c.at({{"I1", {1, 0}}, {"I2", {1, 0}}, {"O1", {-1, 0}}, {"O2", {-1, 0}}}) = 1;
+   std::cout << c << "\n";
 }
 
 int main(int argc, char** argv) {
