@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cassert>
 #include <complex>
+#include <cstring>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -434,16 +435,12 @@ namespace TAT {
       Size index_dst = 0;
 
       if (rank == 1) {
-         for (Size i = 0; i < size; i++) {
-            dst[i] = src[i];
-         }
+         std::memcpy(dst, src, size * sizeof(ScalarType));
          return;
       }
       Size last_dim = dims_dst[rank - 1];
       while (1) {
-         for (Size i = 0; i < last_dim; i++) {
-            dst[index_dst + i] = src[index_src + i];
-         }
+         std::memcpy(dst + index_dst, src + index_src, last_dim * sizeof(ScalarType));
 
          Rank temp_rank_dst = rank - 2;
          Rank temp_rank_src = plan_dst_to_src[temp_rank_dst];
@@ -812,6 +809,54 @@ namespace TAT {
                for (Rank i = 0; i < fused_rank; i++) {
                   fused_dims_dst[fused_plan_src_to_dst[i]] = fused_dims_src[i];
                }
+               vector<bool> isone_src(fused_rank);
+               vector<bool> isone_dst(fused_rank);
+               for (Rank i = 0; i < fused_rank; i++) {
+                  isone_src[i] = fused_dims_src[i] == 1;
+               }
+               for (Rank i = 0; i < fused_rank; i++) {
+                  isone_dst[i] = fused_dims_dst[i] == 1;
+               }
+               vector<Rank> accum_src(fused_rank);
+               vector<Rank> accum_dst(fused_rank);
+               accum_src[0] = isone_src[0];
+               for (Rank i = 1; i < fused_rank; i++) {
+                  accum_src[i] = accum_src[i - 1] + isone_src[i];
+               }
+               accum_dst[0] = isone_dst[0];
+               for (Rank i = 1; i < fused_rank; i++) {
+                  accum_dst[i] = accum_dst[i - 1] + isone_dst[i];
+               }
+
+               vector<Rank> noone_fused_plan_src_to_dst;
+               vector<Rank> noone_fused_plan_dst_to_src;
+               for (Rank i = 0; i < fused_rank; i++) {
+                  if (!isone_src[i]) {
+                     noone_fused_plan_src_to_dst.push_back(
+                           fused_plan_src_to_dst[i] - accum_dst[fused_plan_src_to_dst[i]]);
+                  }
+               }
+               for (Rank i = 0; i < fused_rank; i++) {
+                  if (!isone_dst[i]) {
+                     noone_fused_plan_dst_to_src.push_back(
+                           fused_plan_dst_to_src[i] - accum_src[fused_plan_dst_to_src[i]]);
+                  }
+               }
+               Rank noone_fused_rank = noone_fused_plan_dst_to_src.size();
+
+               vector<Size> noone_fused_dims_src;
+               vector<Size> noone_fused_dims_dst;
+               for (Rank i = 0; i < fused_rank; i++) {
+                  if (fused_dims_src[i] != 1) {
+                     noone_fused_dims_src.push_back(fused_dims_src[i]);
+                  }
+               }
+               for (Rank i = 0; i < fused_rank; i++) {
+                  if (fused_dims_dst[i] != 1) {
+                     noone_fused_dims_dst.push_back(fused_dims_dst[i]);
+                  }
+               }
+
                if (plan_src_to_dst[rank - 1] == rank - 1) {
                   // if (dims_src[rank-1] < 4) {
                   //   block_copy_transpose();
@@ -819,12 +864,12 @@ namespace TAT {
                   copy_transpose<ScalarType>(
                         core->blocks[index_src].raw_data.data(),
                         res.core->blocks[index_dst].raw_data.data(),
-                        fused_plan_src_to_dst,
-                        fused_plan_dst_to_src,
-                        fused_dims_src,
-                        fused_dims_dst,
+                        noone_fused_plan_src_to_dst,
+                        noone_fused_plan_dst_to_src,
+                        noone_fused_dims_src,
+                        noone_fused_dims_dst,
                         block_size,
-                        fused_rank);
+                        noone_fused_rank);
                } else {
                   // if (dims_src[rank-1] < 4 && dims_dst[rank-1] < 4) then ... difficult
                   // else if (dims_src[rank-1] < 4) then 3 way transpose
@@ -833,12 +878,12 @@ namespace TAT {
                   block_transpose<ScalarType>(
                         core->blocks[index_src].raw_data.data(),
                         res.core->blocks[index_dst].raw_data.data(),
-                        fused_plan_src_to_dst,
-                        fused_plan_dst_to_src,
-                        fused_dims_src,
-                        fused_dims_dst,
+                        noone_fused_plan_src_to_dst,
+                        noone_fused_plan_dst_to_src,
+                        noone_fused_dims_src,
+                        noone_fused_dims_dst,
                         block_size,
-                        fused_rank);
+                        noone_fused_rank);
                }
             }
          }
