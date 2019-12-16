@@ -417,7 +417,58 @@ namespace TAT {
          const vector<Size>& dims_dst,
          const Size& size,
          const Rank& rank) {
-      stupid_transpose(src, dst, plan_src_to_dst, plan_dst_to_src, dims_src, dims_dst, size, rank);
+      vector<Size> step_src(rank);
+      step_src[rank - 1] = 1;
+      for (Rank i = rank - 1; i > 0; i--) {
+         step_src[i - 1] = step_src[i] * dims_src[i];
+      }
+      vector<Size> step_dst(rank);
+      step_dst[rank - 1] = 1;
+      for (Rank i = rank - 1; i > 0; i--) {
+         step_dst[i - 1] = step_dst[i] * dims_dst[i];
+      }
+
+      vector<Size> index_list_src(rank, 0);
+      vector<Size> index_list_dst(rank, 0);
+      Size index_src = 0;
+      Size index_dst = 0;
+
+      if (rank == 1) {
+         for (Size i = 0; i < size; i++) {
+            dst[i] = src[i];
+         }
+         return;
+      }
+      Size last_dim = dims_dst[rank - 1];
+      while (1) {
+         for (Size i = 0; i < last_dim; i++) {
+            dst[index_dst + i] = src[index_src + i];
+         }
+
+         Rank temp_rank_dst = rank - 2;
+         Rank temp_rank_src = plan_dst_to_src[temp_rank_dst];
+
+         index_list_src[temp_rank_src] += 1;
+         index_src += step_src[temp_rank_src];
+         index_list_dst[temp_rank_dst] += 1;
+         index_dst += step_dst[temp_rank_dst];
+
+         while (index_list_dst[temp_rank_dst] == dims_dst[temp_rank_dst]) {
+            if (temp_rank_dst == 0) {
+               return;
+            }
+            index_list_src[temp_rank_src] = 0;
+            index_src -= dims_src[temp_rank_src] * step_src[temp_rank_src];
+            index_list_dst[temp_rank_dst] = 0;
+            index_dst -= dims_dst[temp_rank_dst] * step_dst[temp_rank_dst];
+            temp_rank_dst -= 1;
+            temp_rank_src = plan_dst_to_src[temp_rank_dst];
+            index_list_src[temp_rank_src] += 1;
+            index_src += step_src[temp_rank_src];
+            index_list_dst[temp_rank_dst] += 1;
+            index_dst += step_dst[temp_rank_dst];
+         }
+      }
    }
 
    template<class ScalarType>
