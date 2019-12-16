@@ -175,6 +175,15 @@ namespace TAT {
    template<class Symmetry>
    std::istream& operator>>(std::istream& in, Edge<Symmetry>& edge);
 
+   template<class Symmetry>
+   struct EdgePosition {
+      Symmetry sym;
+      Size position;
+
+      EdgePosition(Size p) : sym(Symmetry()), position(p) {}
+      EdgePosition(Symmetry s, Size p) : sym(s), position(p) {}
+   };
+
    template<class ScalarType, class Symmetry>
    struct Block {
       const vector<Edge<Symmetry>>& edges;
@@ -615,8 +624,49 @@ namespace TAT {
          return *this;
       }
       template<class Generator>
-      Tensor<ScalarType, Symmetry>&& set(Generator&& generator) && {
+      Tensor<ScalarType, Symmetry> set(Generator&& generator) && {
          return std::move(set(generator));
+      }
+
+      std::tuple<Nums, Size>
+      get_pos_for_at(const std::map<Name, EdgePosition<Symmetry>>& position) const {
+         Rank rank = names.size();
+         vector<Symmetry> block_symmetries(rank);
+         vector<Size> scalar_position(rank);
+         vector<Size> dimensions(rank);
+         for (const auto& [name, res] : position) {
+            auto index = name_to_index.at(name);
+            block_symmetries[index] = res.sym;
+            scalar_position[index] = res.position;
+            dimensions[index] = core->edges[index].at(res.sym);
+         }
+         Size offset = 0;
+         for (Rank j = 0; j < rank; j++) {
+            offset *= dimensions[j];
+            offset += scalar_position[j];
+         }
+         for (Nums i = 0; i < core->blocks.size(); i++) {
+            if (block_symmetries == core->blocks[i].symmetries) {
+               return {i, offset};
+            }
+         }
+         TAT_WARNING("Cannot Find Correct Block When Get Item");
+         return {0, 0};
+      }
+
+      const ScalarType& at(const std::map<Name, EdgePosition<Symmetry>>& position) const& {
+         auto pos = get_pos_for_at(position);
+         return core->blocks[std::get<0>(pos)].raw_data[std::get<1>(pos)];
+      }
+
+      ScalarType& at(const std::map<Name, EdgePosition<Symmetry>>& position) & {
+         auto pos = get_pos_for_at(position);
+         return core->blocks[std::get<0>(pos)].raw_data[std::get<1>(pos)];
+      }
+
+      ScalarType at(const std::map<Name, EdgePosition<Symmetry>>& position) && {
+         auto pos = get_pos_for_at(position);
+         return core->blocks[std::get<0>(pos)].raw_data[std::get<1>(pos)];
       }
 
       template<class OtherScalarType>

@@ -222,6 +222,28 @@ void test_transpose() {
    std::cout << d.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up}) << "\n";
 }
 
+void test_getitem() {
+   const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
+      static double i = -1;
+      return i += 1;
+   });
+   std::cout << a.at({{TAT::Left, 1}, {TAT::Right, 2}}) << "\n";
+   auto b =
+         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+               {TAT::Left, TAT::Right, TAT::Up},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .set([]() {
+                  static double i = 0;
+                  return i += 1;
+               });
+   std::cout << b.at({{TAT::Right, {0, 1}}, {TAT::Up, {1, 0}}, {TAT::Left, {-1, 1}}}) << "\n";
+   std::cout << b.transpose({TAT::Right, TAT::Up, TAT::Left})
+                      .at({{TAT::Right, {0, 1}}, {TAT::Left, {-1, 1}}, {TAT::Up, {1, 0}}})
+             << "\n";
+   b.at({{TAT::Right, {0, 1}}, {TAT::Up, {1, 0}}, {TAT::Left, {-1, 1}}}) = 1234;
+   std::cout << b << "\n";
+}
+
 int main(int argc, char** argv) {
    std::stringstream out;
    auto coutbuf = std::cout.rdbuf();
@@ -236,6 +258,7 @@ int main(int argc, char** argv) {
    RUN_TEST(test_edge_rename);
    RUN_TEST(test_scalar);
    RUN_TEST(test_io);
+   RUN_TEST(test_getitem);
    RUN_TEST(test_transpose);
    if (argc != 1) {
       std::cout.rdbuf(coutbuf);
