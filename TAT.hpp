@@ -411,7 +411,7 @@ namespace TAT {
    void copy_transpose(
          const ScalarType* __restrict src,
          ScalarType* __restrict dst,
-         const vector<Rank>& plan_src_to_dst,
+         [[maybe_unused]] const vector<Rank>& plan_src_to_dst,
          const vector<Rank>& plan_dst_to_src,
          const vector<Size>& dims_src,
          const vector<Size>& dims_dst,
@@ -481,7 +481,50 @@ namespace TAT {
          const vector<Size>& dims_dst,
          const Size& size,
          const Rank& rank) {
-      stupid_transpose(src, dst, plan_src_to_dst, plan_dst_to_src, dims_src, dims_dst, size, rank);
+      // TODO: block transpose
+      vector<Size> step_src(rank);
+      step_src[rank - 1] = 1;
+      for (Rank i = rank - 1; i > 0; i--) {
+         step_src[i - 1] = step_src[i] * dims_src[i];
+      }
+      vector<Size> step_dst(rank);
+      step_dst[rank - 1] = 1;
+      for (Rank i = rank - 1; i > 0; i--) {
+         step_dst[i - 1] = step_dst[i] * dims_dst[i];
+      }
+
+      vector<Size> index_list_src(rank, 0);
+      vector<Size> index_list_dst(rank, 0);
+      Size index_src = 0;
+      Size index_dst = 0;
+
+      while (1) {
+         dst[index_dst] = src[index_src];
+
+         Rank temp_rank_dst = rank - 1;
+         Rank temp_rank_src = plan_dst_to_src[temp_rank_dst];
+
+         index_list_src[temp_rank_src] += 1;
+         index_list_dst[temp_rank_dst] += 1;
+         index_src += step_src[temp_rank_src];
+         index_dst += step_dst[temp_rank_dst];
+
+         while (index_list_dst[temp_rank_dst] == dims_dst[temp_rank_dst]) {
+            if (temp_rank_dst == 0) {
+               return;
+            }
+            index_list_src[temp_rank_src] = 0;
+            index_src -= dims_src[temp_rank_src] * step_src[temp_rank_src];
+            index_list_dst[temp_rank_dst] = 0;
+            index_dst -= dims_dst[temp_rank_dst] * step_dst[temp_rank_dst];
+            temp_rank_dst -= 1;
+            temp_rank_src = plan_dst_to_src[temp_rank_dst];
+            index_list_src[temp_rank_src] += 1;
+            index_src += step_src[temp_rank_src];
+            index_list_dst[temp_rank_dst] += 1;
+            index_dst += step_dst[temp_rank_dst];
+         }
+      }
    }
 
    template<class Symmetry>
@@ -686,11 +729,58 @@ namespace TAT {
          Rank rank = names.size();
          vector<Rank> plan_src_to_dst(rank);
          vector<Rank> plan_dst_to_src(rank);
-         vector<Edge<Symmetry>> res_edges(rank);
-         // TODO: fuse
          for (Rank i = 0; i < rank; i++) {
             plan_src_to_dst[i] = res.name_to_index.at(names[i]);
+         }
+         for (Rank i = 0; i < rank; i++) {
             plan_dst_to_src[plan_src_to_dst[i]] = i;
+         }
+         vector<bool> fused_src_to_dst(rank);
+         vector<bool> fused_dst_to_src(rank);
+         fused_src_to_dst[0] = false;
+         for (Rank i = 1; i < rank; i++) {
+            if (plan_src_to_dst[i] == plan_src_to_dst[i - 1] + 1) {
+               fused_src_to_dst[i] = true;
+            } else {
+               fused_src_to_dst[i] = false;
+            }
+         }
+         fused_dst_to_src[0] = false;
+         for (Rank i = 1; i < rank; i++) {
+            if (plan_dst_to_src[i] == plan_dst_to_src[i - 1] + 1) {
+               fused_dst_to_src[i] = true;
+            } else {
+               fused_dst_to_src[i] = false;
+            }
+         }
+         vector<Rank> accum_src_to_dst(rank);
+         vector<Rank> accum_dst_to_src(rank);
+         accum_src_to_dst[0] = 0;
+         for (Rank i = 1; i < rank; i++) {
+            accum_src_to_dst[i] = accum_src_to_dst[i - 1] + fused_src_to_dst[i];
+         }
+         accum_dst_to_src[0] = 0;
+         for (Rank i = 1; i < rank; i++) {
+            accum_dst_to_src[i] = accum_dst_to_src[i - 1] + fused_dst_to_src[i];
+         }
+         vector<Rank> fused_plan_src_to_dst;
+         vector<Rank> fused_plan_dst_to_src;
+         for (Rank i = 0; i < rank; i++) {
+            if (!fused_src_to_dst[i]) {
+               fused_plan_src_to_dst.push_back(
+                     plan_src_to_dst[i] - accum_dst_to_src[plan_src_to_dst[i]]);
+            }
+         }
+         for (Rank i = 0; i < rank; i++) {
+            if (!fused_dst_to_src[i]) {
+               fused_plan_dst_to_src.push_back(
+                     plan_dst_to_src[i] - accum_src_to_dst[plan_dst_to_src[i]]);
+            }
+         }
+         Rank fused_rank = fused_plan_src_to_dst.size();
+
+         vector<Edge<Symmetry>> res_edges(rank);
+         for (Rank i = 0; i < rank; i++) {
             res_edges[plan_src_to_dst[i]] = core->edges[i];
          }
          res.core = std::make_shared<TensorCore>(std::move(res_edges));
@@ -708,11 +798,19 @@ namespace TAT {
             if (block_size == 1) {
                res.core->blocks[index_dst].raw_data[0] = core->blocks[index_src].raw_data[0];
             } else {
-               vector<Size> dims_src(rank);
-               vector<Size> dims_dst(rank);
+               vector<Size> fused_dims_src(fused_rank);
+               vector<Size> fused_dims_dst(fused_rank);
+               Rank tmp_index = 0;
                for (Rank i = 0; i < rank; i++) {
-                  dims_src[i] = core->edges[i].at(core->blocks[index_src].symmetries[i]);
-                  dims_dst[plan_src_to_dst[i]] = dims_src[i];
+                  auto tmp_dim = core->edges[i].at(core->blocks[index_src].symmetries[i]);
+                  if (fused_src_to_dst[i]) {
+                     fused_dims_src[tmp_index - 1] *= tmp_dim;
+                  } else {
+                     fused_dims_src[tmp_index++] = tmp_dim;
+                  }
+               }
+               for (Rank i = 0; i < fused_rank; i++) {
+                  fused_dims_dst[fused_plan_src_to_dst[i]] = fused_dims_src[i];
                }
                if (plan_src_to_dst[rank - 1] == rank - 1) {
                   // if (dims_src[rank-1] < 4) {
@@ -721,12 +819,12 @@ namespace TAT {
                   copy_transpose<ScalarType>(
                         core->blocks[index_src].raw_data.data(),
                         res.core->blocks[index_dst].raw_data.data(),
-                        plan_src_to_dst,
-                        plan_dst_to_src,
-                        dims_src,
-                        dims_dst,
+                        fused_plan_src_to_dst,
+                        fused_plan_dst_to_src,
+                        fused_dims_src,
+                        fused_dims_dst,
                         block_size,
-                        rank);
+                        fused_rank);
                } else {
                   // if (dims_src[rank-1] < 4 && dims_dst[rank-1] < 4) then ... difficult
                   // else if (dims_src[rank-1] < 4) then 3 way transpose
@@ -735,12 +833,12 @@ namespace TAT {
                   block_transpose<ScalarType>(
                         core->blocks[index_src].raw_data.data(),
                         res.core->blocks[index_dst].raw_data.data(),
-                        plan_src_to_dst,
-                        plan_dst_to_src,
-                        dims_src,
-                        dims_dst,
+                        fused_plan_src_to_dst,
+                        fused_plan_dst_to_src,
+                        fused_dims_src,
+                        fused_dims_dst,
                         block_size,
-                        rank);
+                        fused_rank);
                }
             }
          }
