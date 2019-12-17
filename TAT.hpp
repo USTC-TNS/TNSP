@@ -107,12 +107,12 @@ namespace TAT {
    bool OP(const Name& a, const Name& b) { \
       return EXP;                          \
    }
-   TAT_DEF_NAME_OP(operator==, a.id == b.id);
-   TAT_DEF_NAME_OP(operator!=, a.id != b.id);
-   TAT_DEF_NAME_OP(operator>=, a.id >= b.id);
-   TAT_DEF_NAME_OP(operator<=, a.id <= b.id);
-   TAT_DEF_NAME_OP(operator>, a.id> b.id);
-   TAT_DEF_NAME_OP(operator<, a.id<b.id);
+   TAT_DEF_NAME_OP(operator==, a.id == b.id)
+   TAT_DEF_NAME_OP(operator!=, a.id != b.id)
+   TAT_DEF_NAME_OP(operator>=, a.id >= b.id)
+   TAT_DEF_NAME_OP(operator<=, a.id <= b.id)
+   TAT_DEF_NAME_OP(operator>, a.id> b.id)
+   TAT_DEF_NAME_OP(operator<, a.id<b.id)
 #undef TAT_DEF_NAME_OP
 
 #define TAT_DEF_NAME(x) const Name x(#x)
@@ -216,12 +216,12 @@ namespace TAT {
    bool OP(const NoSymmetry&, const NoSymmetry&) { \
       return EXP;                                  \
    }
-   TAT_DEF_SYM_OP(operator==, true);
-   TAT_DEF_SYM_OP(operator!=, false);
-   TAT_DEF_SYM_OP(operator>=, true);
-   TAT_DEF_SYM_OP(operator<=, true);
-   TAT_DEF_SYM_OP(operator>, false);
-   TAT_DEF_SYM_OP(operator<, false);
+   TAT_DEF_SYM_OP(operator==, true)
+   TAT_DEF_SYM_OP(operator!=, false)
+   TAT_DEF_SYM_OP(operator>=, true)
+   TAT_DEF_SYM_OP(operator<=, true)
+   TAT_DEF_SYM_OP(operator>, false)
+   TAT_DEF_SYM_OP(operator<, false)
 #undef TAT_DEF_SYM_OP
 
    struct Z2Symmetry {
@@ -243,12 +243,12 @@ namespace TAT {
    bool OP(const Z2Symmetry& a, const Z2Symmetry& b) { \
       return EXP;                                      \
    }
-   TAT_DEF_SYM_OP(operator==, a.z2 == b.z2);
-   TAT_DEF_SYM_OP(operator!=, a.z2 != b.z2);
-   TAT_DEF_SYM_OP(operator>=, a.z2 >= b.z2);
-   TAT_DEF_SYM_OP(operator<=, a.z2 <= b.z2);
-   TAT_DEF_SYM_OP(operator>, a.z2> b.z2);
-   TAT_DEF_SYM_OP(operator<, a.z2<b.z2);
+   TAT_DEF_SYM_OP(operator==, a.z2 == b.z2)
+   TAT_DEF_SYM_OP(operator!=, a.z2 != b.z2)
+   TAT_DEF_SYM_OP(operator>=, a.z2 >= b.z2)
+   TAT_DEF_SYM_OP(operator<=, a.z2 <= b.z2)
+   TAT_DEF_SYM_OP(operator>, a.z2> b.z2)
+   TAT_DEF_SYM_OP(operator<, a.z2<b.z2)
 #undef TAT_DEF_SYM_OP
 
    struct U1Symmetry {
@@ -271,12 +271,12 @@ namespace TAT {
    bool OP(const U1Symmetry& a, const U1Symmetry& b) { \
       return EXP;                                      \
    }
-   TAT_DEF_SYM_OP(operator==, a.u1 == b.u1);
-   TAT_DEF_SYM_OP(operator!=, a.u1 != b.u1);
-   TAT_DEF_SYM_OP(operator>=, a.u1 >= b.u1);
-   TAT_DEF_SYM_OP(operator<=, a.u1 <= b.u1);
-   TAT_DEF_SYM_OP(operator>, a.u1> b.u1);
-   TAT_DEF_SYM_OP(operator<, a.u1<b.u1);
+   TAT_DEF_SYM_OP(operator==, a.u1 == b.u1)
+   TAT_DEF_SYM_OP(operator!=, a.u1 != b.u1)
+   TAT_DEF_SYM_OP(operator>=, a.u1 >= b.u1)
+   TAT_DEF_SYM_OP(operator<=, a.u1 <= b.u1)
+   TAT_DEF_SYM_OP(operator>, a.u1> b.u1)
+   TAT_DEF_SYM_OP(operator<, a.u1<b.u1)
 #undef TAT_DEF_SYM_OP
 
    struct FermiSymmetry {
@@ -331,7 +331,7 @@ namespace TAT {
 
    std::map<Name, Rank> construct_name_to_index(const vector<Name>& names) {
       std::map<Name, Rank> res;
-      Rank rank = names.size();
+      Rank rank = Rank(names.size());
       for (Rank i = 0; i < rank; i++) {
          res[names[i]] = i;
       }
@@ -539,7 +539,7 @@ namespace TAT {
          const vector<Symmetry>& s1,
          const vector<Symmetry>& s2,
          const vector<Rank>& plan) {
-      Rank rank = plan.size();
+      Rank rank = Rank(plan.size());
       for (Rank i = 0; i < rank; i++) {
          if (s1[i] != s2[plan[i]]) {
             return false;
@@ -638,7 +638,7 @@ namespace TAT {
 
       std::tuple<Nums, Size>
       get_pos_for_at(const std::map<Name, EdgePosition<Symmetry>>& position) const {
-         Rank rank = names.size();
+         Rank rank = Rank(names.size());
          vector<Symmetry> block_symmetries(rank);
          vector<Size> scalar_position(rank);
          vector<Size> dimensions(rank);
@@ -663,18 +663,18 @@ namespace TAT {
       }
 
       const ScalarType& at(const std::map<Name, EdgePosition<Symmetry>>& position) const& {
-         auto pos = get_pos_for_at(position);
-         return core->blocks[std::get<0>(pos)].raw_data[std::get<1>(pos)];
+         auto [sym, pos] = get_pos_for_at(position);
+         return core->blocks[sym].raw_data[pos];
       }
 
       ScalarType& at(const std::map<Name, EdgePosition<Symmetry>>& position) & {
-         auto pos = get_pos_for_at(position);
-         return core->blocks[std::get<0>(pos)].raw_data[std::get<1>(pos)];
+         auto [sym, pos] = get_pos_for_at(position);
+         return core->blocks[sym].raw_data[pos];
       }
 
       ScalarType at(const std::map<Name, EdgePosition<Symmetry>>& position) && {
-         auto pos = get_pos_for_at(position);
-         return core->blocks[std::get<0>(pos)].raw_data[std::get<1>(pos)];
+         auto [sym, pos] = get_pos_for_at(position);
+         return core->blocks[sym].raw_data[pos];
       }
 
       template<class OtherScalarType>
@@ -691,7 +691,7 @@ namespace TAT {
             res.name_to_index = name_to_index;
             res.core = std::make_shared<typename Tensor<OtherScalarType, Symmetry>::TensorCore>(
                   core->edges);
-            Nums blocks_num = core->blocks.size();
+            Nums blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                Size block_size = core->blocks[i].size;
                auto& dst = res.core->blocks[i].raw_data;
@@ -702,13 +702,13 @@ namespace TAT {
             }
             return res;
          }
-      };
+      }
 
       template<int p = 2>
       Tensor<real_base_t<ScalarType>, Symmetry> norm() const {
          real_base_t<ScalarType> res = 0;
          if constexpr (p == -1) {
-            Nums blocks_num = core->blocks.size();
+            Nums blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                const auto& block = core->blocks[i];
                const auto& data = block.raw_data;
@@ -720,12 +720,12 @@ namespace TAT {
                }
             }
          } else if constexpr (p == 0) {
-            Nums blocks_num = core->blocks.size();
+            Nums blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
-               res += core->blocks[i].size;
+               res += real_base_t<ScalarType>(core->blocks[i].size);
             }
          } else {
-            Nums blocks_num = core->blocks.size();
+            Nums blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                const auto& block = core->blocks[i];
                const auto& data = block.raw_data;
@@ -781,7 +781,7 @@ namespace TAT {
          }
          res.name_to_index = construct_name_to_index(res.names);
 
-         Rank rank = names.size();
+         Rank rank = Rank(names.size());
          vector<Rank> plan_src_to_dst(rank);
          vector<Rank> plan_dst_to_src(rank);
          for (Rank i = 0; i < rank; i++) {
@@ -812,11 +812,11 @@ namespace TAT {
          vector<Rank> accum_dst_to_src(rank);
          accum_src_to_dst[0] = 0;
          for (Rank i = 1; i < rank; i++) {
-            accum_src_to_dst[i] = accum_src_to_dst[i - 1] + fused_src_to_dst[i];
+            accum_src_to_dst[i] = accum_src_to_dst[i - 1] + Rank(fused_src_to_dst[i]);
          }
          accum_dst_to_src[0] = 0;
          for (Rank i = 1; i < rank; i++) {
-            accum_dst_to_src[i] = accum_dst_to_src[i - 1] + fused_dst_to_src[i];
+            accum_dst_to_src[i] = accum_dst_to_src[i - 1] + Rank(fused_dst_to_src[i]);
          }
          vector<Rank> fused_plan_src_to_dst;
          vector<Rank> fused_plan_dst_to_src;
@@ -832,7 +832,7 @@ namespace TAT {
                      plan_dst_to_src[i] - accum_src_to_dst[plan_dst_to_src[i]]);
             }
          }
-         Rank fused_rank = fused_plan_src_to_dst.size();
+         Rank fused_rank = Rank(fused_plan_src_to_dst.size());
 
          vector<Edge<Symmetry>> res_edges(rank);
          for (Rank i = 0; i < rank; i++) {
@@ -840,7 +840,7 @@ namespace TAT {
          }
          res.core = std::make_shared<TensorCore>(std::move(res_edges));
 
-         Nums block_number = core->blocks.size();
+         Nums block_number = Nums(core->blocks.size());
          for (Nums index_src = 0; index_src < block_number; index_src++) {
             Nums index_dst = 0;
             while (!check_same_symmetries(
@@ -879,11 +879,11 @@ namespace TAT {
                vector<Rank> accum_dst(fused_rank);
                accum_src[0] = isone_src[0];
                for (Rank i = 1; i < fused_rank; i++) {
-                  accum_src[i] = accum_src[i - 1] + isone_src[i];
+                  accum_src[i] = accum_src[i - 1] + Rank(isone_src[i]);
                }
                accum_dst[0] = isone_dst[0];
                for (Rank i = 1; i < fused_rank; i++) {
-                  accum_dst[i] = accum_dst[i - 1] + isone_dst[i];
+                  accum_dst[i] = accum_dst[i - 1] + Rank(isone_dst[i]);
                }
 
                vector<Rank> noone_fused_plan_src_to_dst;
@@ -900,7 +900,7 @@ namespace TAT {
                            fused_plan_dst_to_src[i] - accum_src[fused_plan_dst_to_src[i]]);
                   }
                }
-               Rank noone_fused_rank = noone_fused_plan_dst_to_src.size();
+               Rank noone_fused_rank = Rank(noone_fused_plan_dst_to_src.size());
 
                vector<Size> noone_fused_dims_src;
                vector<Size> noone_fused_dims_dst;
@@ -915,7 +915,7 @@ namespace TAT {
                   }
                }
 
-               if (plan_src_to_dst[rank - 1] == rank - 1) {
+               if (noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
                   // if (dims_src[rank-1] < 4) {
                   //   block_copy_transpose();
                   // } else
@@ -1006,7 +1006,7 @@ namespace TAT {
       if (t1.names.size() == 0) {                                                              \
          const auto& x = t1.core->blocks[0].raw_data[0];                                       \
          auto res = Tensor<ScalarType, Symmetry>{t2.names, t2.core->edges};                    \
-         Nums blocks_number = res.core->blocks.size();                                         \
+         Nums blocks_number = Nums(res.core->blocks.size());                                   \
          for (Nums i = 0; i < blocks_number; i++) {                                            \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
@@ -1019,7 +1019,7 @@ namespace TAT {
       } else if (t2.names.size() == 0) {                                                       \
          const auto& y = t2.core->blocks[0].raw_data[0];                                       \
          auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         Nums blocks_number = res.core->blocks.size();                                         \
+         Nums blocks_number = Nums(res.core->blocks.size());                                   \
          for (Nums i = 0; i < blocks_number; i++) {                                            \
             const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
@@ -1034,7 +1034,7 @@ namespace TAT {
             TAT_WARNING("Scalar Operator in different Shape Tensor");                          \
          }                                                                                     \
          auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         Nums blocks_number = res.core->blocks.size();                                         \
+         Nums blocks_number = Nums(res.core->blocks.size());                                   \
          for (Nums i = 0; i < blocks_number; i++) {                                            \
             const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
@@ -1225,7 +1225,7 @@ namespace TAT {
          if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
             raw_write(out, &edge.at(NoSymmetry()));
          } else {
-            Nums nums = edge.size();
+            Nums nums = Nums(edge.size());
             raw_write(out, &nums);
             for (const auto& [sym, dim] : edge) {
                out << sym;
@@ -1304,7 +1304,7 @@ namespace TAT {
          }
          out << "}";
       } else {
-         Rank rank = tensor.names.size();
+         Rank rank = Rank(tensor.names.size());
          raw_write(out, &rank);
          out << tensor.names;
          out << tensor.core->edges;
