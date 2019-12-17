@@ -220,6 +220,17 @@ void test_transpose() {
                   });
    std::cout << d << "\n";
    std::cout << d.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up}) << "\n";
+   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.set([]() {
+      static double i = -1;
+      return i += 1;
+   });
+   std::cout << e << "\n";
+   std::cout << e.transpose({"l1", "l2", "l3"}) << "\n";
+   std::cout << e.transpose({"l1", "l3", "l2"}) << "\n";
+   std::cout << e.transpose({"l2", "l1", "l3"}) << "\n";
+   std::cout << e.transpose({"l2", "l3", "l1"}) << "\n";
+   std::cout << e.transpose({"l3", "l1", "l2"}) << "\n";
+   std::cout << e.transpose({"l3", "l2", "l1"}) << "\n";
 }
 
 void test_getitem() {

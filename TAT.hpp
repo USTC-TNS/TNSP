@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <complex>
 #include <cstring>
 #include <iostream>
@@ -338,33 +339,86 @@ namespace TAT {
       return res;
    }
 
-   // TODO: transpose的优化
-   // stupid_transpose
-   // 最后一维相同
-   // -- copy_transpose
-   // -- 如果最后一列太小, 需要考虑把一列作为一个数据类型然后相同的手段, block_copy_transpose
-   // 最后一维不同
-   // -- block_transpose 调用matrix_transpose
-   // -- 如果两个最后维之一的太小， 需要考虑小维度的上面一维， 如果都小， 都要考虑
-   // 注意：可以fuse的先fuse
-   // 注意: 如果不需要转置, 则返回shared_ptr相同的core
-   template<class ScalarType>
-   void stupid_matrix_transpose(
+   [[deprecated]] void stupid_matrix_transpose(
          Size M,
          Size N,
-         const ScalarType* __restrict src,
+         const void* __restrict src,
          Size leading_src,
-         ScalarType* __restrict dst,
-         Size leading_dst) {
+         void* __restrict dst,
+         Size leading_dst,
+         Size scalar_size) {
       for (Size i = 0; i < M; i++) {
          for (Size j = 0; j < N; j++) {
-            dst[j * leading_dst + i] = src[i * leading_src + j];
+            std::memcpy(
+                  (char*)dst + (j * leading_dst + i) * scalar_size,
+                  (char*)src + (i * leading_src + j) * scalar_size,
+                  scalar_size);
          }
       }
    }
 
+   void matrix_transpose_kernel(
+         Size M,
+         Size N,
+         const void* __restrict src,
+         Size leading_src,
+         void* __restrict dst,
+         Size leading_dst,
+         Size scalar_size) {
+      for (Size i = 0; i < M; i++) {
+         for (Size j = 0; j < N; j++) {
+            char* line_dst = (char*)dst + (j * leading_dst + i) * scalar_size;
+            const char* line_src = (char*)src + (i * leading_src + j) * scalar_size;
+            for (Size k = 0; k < scalar_size; k++) {
+               line_dst[k] = line_src[k];
+            }
+            // TODO: 向量化
+         }
+      }
+   }
+
+   template<Size cache_size, Size... other>
+   void matrix_transpose(
+         Size M,
+         Size N,
+         const void* __restrict src,
+         Size leading_src,
+         void* __restrict dst,
+         Size leading_dst,
+         Size scalar_size) {
+      Size block_size = 1;
+      // TODO: 是否应该乘以二做冗余？
+      while (block_size * block_size * scalar_size * 2 < cache_size) {
+         block_size <<= 1;
+      }
+      block_size >>= 1;
+      for (Size i = 0; i < M; i += block_size) {
+         for (Size j = 0; j < N; j += block_size) {
+            char* block_dst = (char*)dst + (j * leading_dst + i) * scalar_size;
+            const char* block_src = (char*)src + (i * leading_src + j) * scalar_size;
+            Size m = M - i;
+            Size n = N - j;
+            m = (block_size <= m) ? block_size : m;
+            n = (block_size <= n) ? block_size : n;
+
+            if constexpr (sizeof...(other) == 0) {
+               matrix_transpose_kernel(
+                     m, n, block_src, leading_src, block_dst, leading_dst, scalar_size);
+            } else {
+               matrix_transpose<other...>(
+                     m, n, block_src, leading_src, block_dst, leading_dst, scalar_size);
+            }
+         }
+      }
+   }
+
+   static constexpr Size l1_cache = 32768;
+   static constexpr Size l2_cache = 262144;
+   static constexpr Size l3_cache = 9437184;
+   // TODO: 如何确定系统cache
+
    template<class ScalarType>
-   void stupid_transpose(
+   [[deprecated]] void stupid_transpose(
          const ScalarType* __restrict src,
          ScalarType* __restrict dst,
          [[maybe_unused]] const vector<Rank>& plan_src_to_dst,
@@ -419,7 +473,7 @@ namespace TAT {
    }
 
    template<class ScalarType>
-   void copy_transpose(
+   [[deprecated]] void copy_transpose(
          const ScalarType* __restrict src,
          ScalarType* __restrict dst,
          [[maybe_unused]] const vector<Rank>& plan_src_to_dst,
@@ -478,17 +532,16 @@ namespace TAT {
       }
    }
 
-   template<class ScalarType>
    void block_transpose(
-         const ScalarType* __restrict src,
-         ScalarType* __restrict dst,
+         const void* __restrict src,
+         void* __restrict dst,
          const vector<Rank>& plan_src_to_dst,
          const vector<Rank>& plan_dst_to_src,
          const vector<Size>& dims_src,
          const vector<Size>& dims_dst,
-         const Size& size,
-         const Rank& rank) {
-      // TODO: block transpose
+         [[maybe_unused]] const Size& size,
+         const Rank& rank,
+         const Size& scalar_size) {
       vector<Size> step_src(rank);
       step_src[rank - 1] = 1;
       for (Rank i = rank - 1; i > 0; i--) {
@@ -513,8 +566,15 @@ namespace TAT {
       Size leading_N = step_dst[pos_N];
 
       while (1) {
-         stupid_matrix_transpose(
-               dim_M, dim_N, src + index_src, leading_M, dst + index_dst, leading_N);
+         // TODO: l3太大了, 所以只按着l2和l1来划分
+         matrix_transpose<l2_cache, l1_cache>(
+               dim_M,
+               dim_N,
+               (char*)src + index_src * scalar_size,
+               leading_M,
+               (char*)dst + index_dst * scalar_size,
+               leading_N,
+               scalar_size);
 
          Rank temp_rank_dst = rank - 2;
          Rank temp_rank_src = plan_dst_to_src[temp_rank_dst];
@@ -944,10 +1004,8 @@ namespace TAT {
                         block_size * sizeof(ScalarType));
                } else if (
                      noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
-                  // if (dims_src[rank-1] < 4) {
-                  //   block_copy_transpose();
-                  // } else
-                  copy_transpose<ScalarType>(
+                  // TODO: 需要考虑极端细致的情况
+                  block_transpose(
                         core->blocks[index_src].raw_data.data(),
                         res.core->blocks[index_dst].raw_data.data(),
                         noone_fused_plan_src_to_dst,
@@ -955,13 +1013,10 @@ namespace TAT {
                         noone_fused_dims_src,
                         noone_fused_dims_dst,
                         block_size,
-                        noone_fused_rank);
+                        noone_fused_rank - 1,
+                        sizeof(ScalarType) * noone_fused_dims_dst[noone_fused_rank - 1]);
                } else {
-                  // if (dims_src[rank-1] < 4 && dims_dst[rank-1] < 4) then ... difficult
-                  // else if (dims_src[rank-1] < 4) then 3 way transpose
-                  // else if (dims_dst[rank-1] < 4) then 3 way transpose
-                  // else
-                  block_transpose<ScalarType>(
+                  block_transpose(
                         core->blocks[index_src].raw_data.data(),
                         res.core->blocks[index_dst].raw_data.data(),
                         noone_fused_plan_src_to_dst,
@@ -969,7 +1024,8 @@ namespace TAT {
                         noone_fused_dims_src,
                         noone_fused_dims_dst,
                         block_size,
-                        noone_fused_rank);
+                        noone_fused_rank,
+                        sizeof(ScalarType));
                }
             }
          }
