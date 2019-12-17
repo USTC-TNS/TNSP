@@ -461,13 +461,13 @@ namespace TAT {
          index_dst += step_dst[temp_rank_dst];
 
          while (index_list_dst[temp_rank_dst] == dims_dst[temp_rank_dst]) {
-            if (temp_rank_dst == 0) {
-               return;
-            }
             index_list_src[temp_rank_src] = 0;
             index_src -= dims_src[temp_rank_src] * step_src[temp_rank_src];
             index_list_dst[temp_rank_dst] = 0;
             index_dst -= dims_dst[temp_rank_dst] * step_dst[temp_rank_dst];
+            if (temp_rank_dst == 0) {
+               return;
+            }
             temp_rank_dst -= 1;
             temp_rank_src = plan_dst_to_src[temp_rank_dst];
             index_list_src[temp_rank_src] += 1;
@@ -505,27 +505,49 @@ namespace TAT {
       Size index_src = 0;
       Size index_dst = 0;
 
+      Size dim_N = dims_src[rank - 1];
+      Size dim_M = dims_dst[rank - 1];
+      Rank pos_M = plan_dst_to_src[rank - 1];
+      Rank pos_N = plan_src_to_dst[rank - 1];
+      Size leading_M = step_src[pos_M];
+      Size leading_N = step_dst[pos_N];
+
       while (1) {
-         dst[index_dst] = src[index_src];
+         stupid_matrix_transpose(
+               dim_M, dim_N, src + index_src, leading_M, dst + index_dst, leading_N);
 
-         Rank temp_rank_dst = rank - 1;
+         Rank temp_rank_dst = rank - 2;
          Rank temp_rank_src = plan_dst_to_src[temp_rank_dst];
-
-         index_list_src[temp_rank_src] += 1;
-         index_list_dst[temp_rank_dst] += 1;
-         index_src += step_src[temp_rank_src];
-         index_dst += step_dst[temp_rank_dst];
-
-         while (index_list_dst[temp_rank_dst] == dims_dst[temp_rank_dst]) {
+         if (temp_rank_src == rank - 1) {
             if (temp_rank_dst == 0) {
                return;
             }
+            temp_rank_dst -= 1;
+            temp_rank_src = plan_dst_to_src[temp_rank_dst];
+         }
+
+         index_list_src[temp_rank_src] += 1;
+         index_src += step_src[temp_rank_src];
+         index_list_dst[temp_rank_dst] += 1;
+         index_dst += step_dst[temp_rank_dst];
+
+         while (index_list_dst[temp_rank_dst] == dims_dst[temp_rank_dst]) {
             index_list_src[temp_rank_src] = 0;
             index_src -= dims_src[temp_rank_src] * step_src[temp_rank_src];
             index_list_dst[temp_rank_dst] = 0;
             index_dst -= dims_dst[temp_rank_dst] * step_dst[temp_rank_dst];
+            if (temp_rank_dst == 0) {
+               return;
+            }
             temp_rank_dst -= 1;
             temp_rank_src = plan_dst_to_src[temp_rank_dst];
+            if (temp_rank_src == rank - 1) {
+               if (temp_rank_dst == 0) {
+                  return;
+               }
+               temp_rank_dst -= 1;
+               temp_rank_src = plan_dst_to_src[temp_rank_dst];
+            }
             index_list_src[temp_rank_src] += 1;
             index_src += step_src[temp_rank_src];
             index_list_dst[temp_rank_dst] += 1;
@@ -915,7 +937,13 @@ namespace TAT {
                   }
                }
 
-               if (noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
+               if (noone_fused_rank == 1) {
+                  std::memcpy(
+                        res.core->blocks[index_dst].raw_data.data(),
+                        core->blocks[index_src].raw_data.data(),
+                        block_size * sizeof(ScalarType));
+               } else if (
+                     noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
                   // if (dims_src[rank-1] < 4) {
                   //   block_copy_transpose();
                   // } else
@@ -1131,10 +1159,11 @@ namespace TAT {
 
    std::ostream& operator<<(std::ostream& out, const Name& name) {
       if (is_text_stream(out)) {
-         try {
-            return out << id_to_name.at(name.id);
-         } catch (const std::out_of_range& e) {
+         auto pos = id_to_name.find(name.id);
+         if (pos == id_to_name.end()) {
             return out << "UserDefinedName" << name.id;
+         } else {
+            return out << id_to_name.at(name.id);
          }
       } else {
          raw_write(out, &name.id);
