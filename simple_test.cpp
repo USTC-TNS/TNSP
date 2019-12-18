@@ -56,6 +56,25 @@ void test_create_u1symmetry_tensor() {
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.set([]() { return 123; }) << "\n";
 }
 
+void test_create_fermisymmetry_tensor() {
+   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
+                                                     {{{-1, 3}, {0, 1}, {1, 2}},
+                                                      {{-1, 1}, {0, 2}, {1, 3}},
+                                                      {{-1, 2}, {0, 3}, {1, 1}}}}
+                      .set([]() {
+                         static double i = 1;
+                         return i += 1;
+                      })
+             << "\n";
+   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
+                                                     {{},
+                                                      {{-1, 1}, {0, 2}, {1, 3}},
+                                                      {{-1, 2}, {0, 3}, {1, 1}}}}
+                      .set([]() { return 0; })
+             << "\n";
+   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{}, {}}.set([]() { return 123; }) << "\n";
+}
+
 void test_type_conversion() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
                       .set([]() {
@@ -212,25 +231,35 @@ void test_transpose() {
                });
    std::cout << c << "\n";
    std::cout << c.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
-   auto d = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Down, TAT::Up, TAT::Left, TAT::Right},
+   auto d =
+         TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
+               {TAT::Left, TAT::Right, TAT::Up},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .set([]() {
+                  static double i = 0;
+                  return i += 1;
+               });
+   std::cout << d << "\n";
+   std::cout << d.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
+   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Down, TAT::Up, TAT::Left, TAT::Right},
                                                  {2, 3, 4, 5}}
                   .set([]() {
                      static double i = 0;
                      return i += 1;
                   });
-   std::cout << d << "\n";
-   std::cout << d.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up}) << "\n";
-   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.set([]() {
+   std::cout << e << "\n";
+   std::cout << e.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up}) << "\n";
+   auto f = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.set([]() {
       static double i = -1;
       return i += 1;
    });
-   std::cout << e << "\n";
-   std::cout << e.transpose({"l1", "l2", "l3"}) << "\n";
-   std::cout << e.transpose({"l1", "l3", "l2"}) << "\n";
-   std::cout << e.transpose({"l2", "l1", "l3"}) << "\n";
-   std::cout << e.transpose({"l2", "l3", "l1"}) << "\n";
-   std::cout << e.transpose({"l3", "l1", "l2"}) << "\n";
-   std::cout << e.transpose({"l3", "l2", "l1"}) << "\n";
+   std::cout << f << "\n";
+   std::cout << f.transpose({"l1", "l2", "l3"}) << "\n";
+   std::cout << f.transpose({"l1", "l3", "l2"}) << "\n";
+   std::cout << f.transpose({"l2", "l1", "l3"}) << "\n";
+   std::cout << f.transpose({"l2", "l3", "l1"}) << "\n";
+   std::cout << f.transpose({"l3", "l1", "l2"}) << "\n";
+   std::cout << f.transpose({"l3", "l2", "l1"}) << "\n";
 }
 
 void test_getitem() {
@@ -271,6 +300,7 @@ int main(int argc, char** argv) {
    RUN_TEST(test_create_nosymmetry_tensor);
    RUN_TEST(test_create_z2symmetry_tensor);
    RUN_TEST(test_create_u1symmetry_tensor);
+   RUN_TEST(test_create_fermisymmetry_tensor);
    RUN_TEST(test_type_conversion);
    RUN_TEST(test_norm);
    RUN_TEST(test_edge_rename);

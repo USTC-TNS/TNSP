@@ -209,6 +209,10 @@ namespace TAT {
       static bool check_symmetry_satisfied(const vector<NoSymmetry>&) {
          return true;
       }
+
+      static bool get_parity(const vector<NoSymmetry>& syms, const vector<Rank>& plan) {
+         return false;
+      }
    };
 
    std::ostream& operator<<(std::ostream& out, const NoSymmetry&);
@@ -237,6 +241,10 @@ namespace TAT {
          }
          return !sum;
       };
+
+      static bool get_parity(const vector<Z2Symmetry>& syms, const vector<Rank>& plan) {
+         return false;
+      }
    };
    std::ostream& operator<<(std::ostream& out, const Z2Symmetry& s);
    std::istream& operator>>(std::istream& in, Z2Symmetry& s);
@@ -264,6 +272,10 @@ namespace TAT {
          }
          return !sum;
       }
+
+      static bool get_parity(const vector<U1Symmetry>& syms, const vector<Rank>& plan) {
+         return false;
+      }
    };
    std::ostream& operator<<(std::ostream& out, const U1Symmetry& s);
    std::istream& operator>>(std::istream& in, U1Symmetry& s);
@@ -282,7 +294,44 @@ namespace TAT {
 
    struct FermiSymmetry {
       Fermi fermi = 0;
+
+      FermiSymmetry(Fermi fermi = 0) : fermi(fermi) {}
+
+      static bool check_symmetry_satisfied(const vector<FermiSymmetry>& vec) {
+         Fermi sum = 0;
+         for (const auto& i : vec) {
+            sum += i.fermi;
+         }
+         return !sum;
+      }
+
+      static bool get_parity(const vector<FermiSymmetry>& syms, const vector<Rank>& plan) {
+         Rank rank = Rank(plan.size());
+         bool res = false;
+         for (Rank i = 0; i < rank; i++) {
+            for (Rank j = i + 1; j < rank; j++) {
+               if (plan[i] > plan[j]) {
+                  res ^= (bool(syms[i].fermi % 2) && bool(syms[j].fermi % 2));
+               }
+            }
+         }
+         return res;
+      }
    };
+   std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s);
+   std::istream& operator>>(std::istream& in, FermiSymmetry& s);
+
+#define TAT_DEF_SYM_OP(OP, EXP)                              \
+   bool OP(const FermiSymmetry& a, const FermiSymmetry& b) { \
+      return EXP;                                            \
+   }
+   TAT_DEF_SYM_OP(operator==, a.fermi == b.fermi)
+   TAT_DEF_SYM_OP(operator!=, a.fermi != b.fermi)
+   TAT_DEF_SYM_OP(operator>=, a.fermi >= b.fermi)
+   TAT_DEF_SYM_OP(operator<=, a.fermi <= b.fermi)
+   TAT_DEF_SYM_OP(operator>, a.fermi> b.fermi)
+   TAT_DEF_SYM_OP(operator<, a.fermi<b.fermi)
+#undef TAT_DEF_SYM_OP
 
    struct FermiZ2Symmetry {
       Fermi fermi = 0;
@@ -357,6 +406,7 @@ namespace TAT {
       }
    }
 
+   template<class ScalarType, bool parity>
    void matrix_transpose_kernel(
          Size M,
          Size N,
@@ -365,19 +415,25 @@ namespace TAT {
          void* __restrict dst,
          Size leading_dst,
          Size scalar_size) {
+      Size line_size = scalar_size / sizeof(ScalarType);
       for (Size i = 0; i < M; i++) {
          for (Size j = 0; j < N; j++) {
-            char* line_dst = (char*)dst + (j * leading_dst + i) * scalar_size;
-            const char* line_src = (char*)src + (i * leading_src + j) * scalar_size;
-            for (Size k = 0; k < scalar_size; k++) {
-               line_dst[k] = line_src[k];
+            ScalarType* line_dst = (ScalarType*)((char*)dst + (j * leading_dst + i) * scalar_size);
+            const ScalarType* line_src =
+                  (ScalarType*)((char*)src + (i * leading_src + j) * scalar_size);
+            for (Size k = 0; k < line_size; k++) {
+               if constexpr (parity) {
+                  line_dst[k] = -line_src[k];
+               } else {
+                  line_dst[k] = line_src[k];
+               }
             }
             // TODO: 向量化
          }
       }
    }
 
-   template<Size cache_size, Size... other>
+   template<class ScalarType, bool parity, Size cache_size, Size... other>
    void matrix_transpose(
          Size M,
          Size N,
@@ -402,10 +458,10 @@ namespace TAT {
             n = (block_size <= n) ? block_size : n;
 
             if constexpr (sizeof...(other) == 0) {
-               matrix_transpose_kernel(
+               matrix_transpose_kernel<ScalarType, parity>(
                      m, n, block_src, leading_src, block_dst, leading_dst, scalar_size);
             } else {
-               matrix_transpose<other...>(
+               matrix_transpose<ScalarType, parity, other...>(
                      m, n, block_src, leading_src, block_dst, leading_dst, scalar_size);
             }
          }
@@ -532,6 +588,7 @@ namespace TAT {
       }
    }
 
+   template<class ScalarType, bool parity>
    void block_transpose(
          const void* __restrict src,
          void* __restrict dst,
@@ -567,7 +624,7 @@ namespace TAT {
 
       while (1) {
          // TODO: l3太大了, 所以只按着l2和l1来划分
-         matrix_transpose<l2_cache, l1_cache>(
+         matrix_transpose<ScalarType, parity, l2_cache, l1_cache>(
                dim_M,
                dim_N,
                (char*)src + index_src * scalar_size,
@@ -931,9 +988,16 @@ namespace TAT {
                   plan_src_to_dst)) {
                index_dst++;
             }
+
+            bool parity = Symmetry::get_parity(core->blocks[index_src].symmetries, plan_src_to_dst);
+
             Size block_size = core->blocks[index_src].size;
             if (block_size == 1) {
-               res.core->blocks[index_dst].raw_data[0] = core->blocks[index_src].raw_data[0];
+               if (parity) {
+                  res.core->blocks[index_dst].raw_data[0] = -core->blocks[index_src].raw_data[0];
+               } else {
+                  res.core->blocks[index_dst].raw_data[0] = core->blocks[index_src].raw_data[0];
+               }
             } else {
                vector<Size> fused_dims_src(fused_rank);
                vector<Size> fused_dims_dst(fused_rank);
@@ -998,34 +1062,48 @@ namespace TAT {
                }
 
                if (noone_fused_rank == 1) {
-                  std::memcpy(
-                        res.core->blocks[index_dst].raw_data.data(),
-                        core->blocks[index_src].raw_data.data(),
-                        block_size * sizeof(ScalarType));
-               } else if (
-                     noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
-                  // TODO: 需要考虑极端细致的情况
-                  block_transpose(
-                        core->blocks[index_src].raw_data.data(),
-                        res.core->blocks[index_dst].raw_data.data(),
-                        noone_fused_plan_src_to_dst,
-                        noone_fused_plan_dst_to_src,
-                        noone_fused_dims_src,
-                        noone_fused_dims_dst,
-                        block_size,
-                        noone_fused_rank - 1,
-                        sizeof(ScalarType) * noone_fused_dims_dst[noone_fused_rank - 1]);
+                  ScalarType* dst = res.core->blocks[index_dst].raw_data.data();
+                  const ScalarType* src = core->blocks[index_src].raw_data.data();
+                  if (parity) {
+                     for (Size k = 0; k < block_size; k++) {
+                        dst[k] = -src[k];
+                     }
+                  } else {
+                     for (Size k = 0; k < block_size; k++) {
+                        dst[k] = src[k];
+                     }
+                  }
                } else {
-                  block_transpose(
-                        core->blocks[index_src].raw_data.data(),
-                        res.core->blocks[index_dst].raw_data.data(),
-                        noone_fused_plan_src_to_dst,
-                        noone_fused_plan_dst_to_src,
-                        noone_fused_dims_src,
-                        noone_fused_dims_dst,
-                        block_size,
-                        noone_fused_rank,
-                        sizeof(ScalarType));
+                  Rank effective_rank = noone_fused_rank;
+                  Size effective_size = sizeof(ScalarType);
+                  if (noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
+                     effective_rank--;
+                     effective_size *= noone_fused_dims_dst[noone_fused_rank - 1];
+                  }
+                  // TODO: 需要考虑极端细致的情况
+                  if (parity) {
+                     block_transpose<ScalarType, true>(
+                           core->blocks[index_src].raw_data.data(),
+                           res.core->blocks[index_dst].raw_data.data(),
+                           noone_fused_plan_src_to_dst,
+                           noone_fused_plan_dst_to_src,
+                           noone_fused_dims_src,
+                           noone_fused_dims_dst,
+                           block_size,
+                           effective_rank,
+                           effective_size);
+                  } else {
+                     block_transpose<ScalarType, false>(
+                           core->blocks[index_src].raw_data.data(),
+                           res.core->blocks[index_dst].raw_data.data(),
+                           noone_fused_plan_src_to_dst,
+                           noone_fused_plan_dst_to_src,
+                           noone_fused_dims_src,
+                           noone_fused_dims_dst,
+                           block_size,
+                           effective_rank,
+                           effective_size);
+                  }
                }
             }
          }
@@ -1033,18 +1111,28 @@ namespace TAT {
       }
 
       // TODO: contract
-      // 包括了multiple
       static Tensor<ScalarType, Symmetry> contract(
-            const Tensor<ScalarType, Symmetry>& t1,
-            const Tensor<ScalarType, Symmetry>& t2,
-            const vector<Name>& n1,
-            const vector<Name>& n2,
-            const vector<Name>& common = {}) {
+            const Tensor<ScalarType, Symmetry>& tensor1,
+            const Tensor<ScalarType, Symmetry>& tensor2,
+            const vector<Name>& names1,
+            const vector<Name>& names2) {
          // 先确定一个基调就是先转置成矩阵
          // 而不是直接做张量乘积，不然太复杂了
          // A*B -> C
          // 有2^3=8种转置情况，需要考虑哪种方式快捷，从而使用
          // 所以还是需要把转置弄清楚啊， 不然都不知道如何转置快如何慢
+      }
+
+      // TODO: merge
+      // multiple 的扩展版
+      static Tensor<ScalarType, Symmetry> converge(
+            const Tensor<ScalarType, Symmetry>& tensor1,
+            const Tensor<ScalarType, Symmetry>& tensor2,
+            const vector<Name>& names1,
+            const vector<Name>& names2,
+            const vector<Name>& names_res,
+            const Size order) {
+         //
       }
 
       struct svd_res {
@@ -1064,7 +1152,7 @@ namespace TAT {
          Tensor<ScalarType, Symmetry> T;
       };
 
-      // TODO: qr lq
+      // TODO: QR LQ
       // 除了svd的考虑外， 需要考虑使用lq还是qr等
       orthogonalize_res orthogonalize(
             const vector<Name>& given_edges,
@@ -1289,6 +1377,19 @@ namespace TAT {
       raw_read(in, &s.u1);
       return in;
    }
+   std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s) {
+      if (is_text_stream(out)) {
+         out << s.fermi;
+      } else {
+         raw_write(out, &s.fermi);
+      }
+      return out;
+   }
+   std::istream& operator>>(std::istream& in, FermiSymmetry& s) {
+      raw_read(in, &s.fermi);
+      return in;
+   }
+
    template<class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
       if (is_text_stream(out)) {
