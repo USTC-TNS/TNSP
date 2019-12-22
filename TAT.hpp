@@ -40,9 +40,9 @@
 #endif
 
 namespace TAT {
-   using Rank = unsigned short;
-   using Nums = unsigned int;
-   using Size = unsigned long;
+   using Rank = unsigned int;
+   using Nums = unsigned long;
+   using Size = unsigned long long;
    using Z2 = bool;
    using U1 = long;
    using Fermi = int;
@@ -133,6 +133,8 @@ namespace TAT {
    TAT_DEF_NAMES(3);
    TAT_DEF_NAMES(4);
 #undef TAT_DEF_NAMES
+   TAT_DEF_NAME(Contract1);
+   TAT_DEF_NAME(Contract2);
 #undef TAT_DEF_NAME
 
    template<class T>
@@ -210,7 +212,9 @@ namespace TAT {
          return true;
       }
 
-      static bool get_parity(const vector<NoSymmetry>& syms, const vector<Rank>& plan) {
+      static bool get_parity(
+            [[maybe_unused]] const vector<NoSymmetry>& syms,
+            [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
    };
@@ -242,7 +246,9 @@ namespace TAT {
          return !sum;
       };
 
-      static bool get_parity(const vector<Z2Symmetry>& syms, const vector<Rank>& plan) {
+      static bool get_parity(
+            [[maybe_unused]] const vector<Z2Symmetry>& syms,
+            [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
    };
@@ -273,7 +279,9 @@ namespace TAT {
          return !sum;
       }
 
-      static bool get_parity(const vector<U1Symmetry>& syms, const vector<Rank>& plan) {
+      static bool get_parity(
+            [[maybe_unused]] const vector<U1Symmetry>& syms,
+            [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
    };
@@ -432,8 +440,8 @@ namespace TAT {
       block_size >>= 1;
       for (Size i = 0; i < M; i += block_size) {
          for (Size j = 0; j < N; j += block_size) {
-            char* block_dst = (char*)dst + (j * leading_dst + i) * scalar_size;
-            const char* block_src = (char*)src + (i * leading_src + j) * scalar_size;
+            void* block_dst = (char*)dst + (j * leading_dst + i) * scalar_size;
+            const void* block_src = (char*)src + (i * leading_src + j) * scalar_size;
             Size m = M - i;
             Size n = N - j;
             m = (block_size <= m) ? block_size : m;
@@ -796,49 +804,49 @@ namespace TAT {
          for (Rank i = 0; i < rank; i++) {
             plan_dst_to_src[plan_src_to_dst[i]] = i;
          }
-         vector<bool> fused_src_to_dst(rank);
-         vector<bool> fused_dst_to_src(rank);
-         fused_src_to_dst[0] = false;
+         vector<bool> merged_src_to_dst(rank);
+         vector<bool> merged_dst_to_src(rank);
+         merged_src_to_dst[0] = false;
          for (Rank i = 1; i < rank; i++) {
             if (plan_src_to_dst[i] == plan_src_to_dst[i - 1] + 1) {
-               fused_src_to_dst[i] = true;
+               merged_src_to_dst[i] = true;
             } else {
-               fused_src_to_dst[i] = false;
+               merged_src_to_dst[i] = false;
             }
          }
-         fused_dst_to_src[0] = false;
+         merged_dst_to_src[0] = false;
          for (Rank i = 1; i < rank; i++) {
             if (plan_dst_to_src[i] == plan_dst_to_src[i - 1] + 1) {
-               fused_dst_to_src[i] = true;
+               merged_dst_to_src[i] = true;
             } else {
-               fused_dst_to_src[i] = false;
+               merged_dst_to_src[i] = false;
             }
          }
          vector<Rank> accum_src_to_dst(rank);
          vector<Rank> accum_dst_to_src(rank);
          accum_src_to_dst[0] = 0;
          for (Rank i = 1; i < rank; i++) {
-            accum_src_to_dst[i] = accum_src_to_dst[i - 1] + Rank(fused_src_to_dst[i]);
+            accum_src_to_dst[i] = accum_src_to_dst[i - 1] + Rank(merged_src_to_dst[i]);
          }
          accum_dst_to_src[0] = 0;
          for (Rank i = 1; i < rank; i++) {
-            accum_dst_to_src[i] = accum_dst_to_src[i - 1] + Rank(fused_dst_to_src[i]);
+            accum_dst_to_src[i] = accum_dst_to_src[i - 1] + Rank(merged_dst_to_src[i]);
          }
-         vector<Rank> fused_plan_src_to_dst;
-         vector<Rank> fused_plan_dst_to_src;
+         vector<Rank> merged_plan_src_to_dst;
+         vector<Rank> merged_plan_dst_to_src;
          for (Rank i = 0; i < rank; i++) {
-            if (!fused_src_to_dst[i]) {
-               fused_plan_src_to_dst.push_back(
+            if (!merged_src_to_dst[i]) {
+               merged_plan_src_to_dst.push_back(
                      plan_src_to_dst[i] - accum_dst_to_src[plan_src_to_dst[i]]);
             }
          }
          for (Rank i = 0; i < rank; i++) {
-            if (!fused_dst_to_src[i]) {
-               fused_plan_dst_to_src.push_back(
+            if (!merged_dst_to_src[i]) {
+               merged_plan_dst_to_src.push_back(
                      plan_dst_to_src[i] - accum_src_to_dst[plan_dst_to_src[i]]);
             }
          }
-         Rank fused_rank = Rank(fused_plan_src_to_dst.size());
+         Rank merged_rank = Rank(merged_plan_src_to_dst.size());
 
          vector<Edge<Symmetry>> res_edges(rank);
          for (Rank i = 0; i < rank; i++) {
@@ -866,69 +874,69 @@ namespace TAT {
                   res.core->blocks[index_dst].raw_data[0] = core->blocks[index_src].raw_data[0];
                }
             } else {
-               vector<Size> fused_dims_src(fused_rank);
-               vector<Size> fused_dims_dst(fused_rank);
+               vector<Size> merged_dims_src(merged_rank);
+               vector<Size> merged_dims_dst(merged_rank);
                Rank tmp_index = 0;
                for (Rank i = 0; i < rank; i++) {
                   auto tmp_dim = core->edges[i].at(core->blocks[index_src].symmetries[i]);
-                  if (fused_src_to_dst[i]) {
-                     fused_dims_src[tmp_index - 1] *= tmp_dim;
+                  if (merged_src_to_dst[i]) {
+                     merged_dims_src[tmp_index - 1] *= tmp_dim;
                   } else {
-                     fused_dims_src[tmp_index++] = tmp_dim;
+                     merged_dims_src[tmp_index++] = tmp_dim;
                   }
                }
-               for (Rank i = 0; i < fused_rank; i++) {
-                  fused_dims_dst[fused_plan_src_to_dst[i]] = fused_dims_src[i];
+               for (Rank i = 0; i < merged_rank; i++) {
+                  merged_dims_dst[merged_plan_src_to_dst[i]] = merged_dims_src[i];
                }
-               vector<bool> isone_src(fused_rank);
-               vector<bool> isone_dst(fused_rank);
-               for (Rank i = 0; i < fused_rank; i++) {
-                  isone_src[i] = fused_dims_src[i] == 1;
+               vector<bool> isone_src(merged_rank);
+               vector<bool> isone_dst(merged_rank);
+               for (Rank i = 0; i < merged_rank; i++) {
+                  isone_src[i] = merged_dims_src[i] == 1;
                }
-               for (Rank i = 0; i < fused_rank; i++) {
-                  isone_dst[i] = fused_dims_dst[i] == 1;
+               for (Rank i = 0; i < merged_rank; i++) {
+                  isone_dst[i] = merged_dims_dst[i] == 1;
                }
-               vector<Rank> accum_src(fused_rank);
-               vector<Rank> accum_dst(fused_rank);
+               vector<Rank> accum_src(merged_rank);
+               vector<Rank> accum_dst(merged_rank);
                accum_src[0] = isone_src[0];
-               for (Rank i = 1; i < fused_rank; i++) {
+               for (Rank i = 1; i < merged_rank; i++) {
                   accum_src[i] = accum_src[i - 1] + Rank(isone_src[i]);
                }
                accum_dst[0] = isone_dst[0];
-               for (Rank i = 1; i < fused_rank; i++) {
+               for (Rank i = 1; i < merged_rank; i++) {
                   accum_dst[i] = accum_dst[i - 1] + Rank(isone_dst[i]);
                }
 
-               vector<Rank> noone_fused_plan_src_to_dst;
-               vector<Rank> noone_fused_plan_dst_to_src;
-               for (Rank i = 0; i < fused_rank; i++) {
+               vector<Rank> noone_merged_plan_src_to_dst;
+               vector<Rank> noone_merged_plan_dst_to_src;
+               for (Rank i = 0; i < merged_rank; i++) {
                   if (!isone_src[i]) {
-                     noone_fused_plan_src_to_dst.push_back(
-                           fused_plan_src_to_dst[i] - accum_dst[fused_plan_src_to_dst[i]]);
+                     noone_merged_plan_src_to_dst.push_back(
+                           merged_plan_src_to_dst[i] - accum_dst[merged_plan_src_to_dst[i]]);
                   }
                }
-               for (Rank i = 0; i < fused_rank; i++) {
+               for (Rank i = 0; i < merged_rank; i++) {
                   if (!isone_dst[i]) {
-                     noone_fused_plan_dst_to_src.push_back(
-                           fused_plan_dst_to_src[i] - accum_src[fused_plan_dst_to_src[i]]);
+                     noone_merged_plan_dst_to_src.push_back(
+                           merged_plan_dst_to_src[i] - accum_src[merged_plan_dst_to_src[i]]);
                   }
                }
-               Rank noone_fused_rank = Rank(noone_fused_plan_dst_to_src.size());
+               Rank noone_merged_rank = Rank(noone_merged_plan_dst_to_src.size());
 
-               vector<Size> noone_fused_dims_src;
-               vector<Size> noone_fused_dims_dst;
-               for (Rank i = 0; i < fused_rank; i++) {
-                  if (fused_dims_src[i] != 1) {
-                     noone_fused_dims_src.push_back(fused_dims_src[i]);
+               vector<Size> noone_merged_dims_src;
+               vector<Size> noone_merged_dims_dst;
+               for (Rank i = 0; i < merged_rank; i++) {
+                  if (merged_dims_src[i] != 1) {
+                     noone_merged_dims_src.push_back(merged_dims_src[i]);
                   }
                }
-               for (Rank i = 0; i < fused_rank; i++) {
-                  if (fused_dims_dst[i] != 1) {
-                     noone_fused_dims_dst.push_back(fused_dims_dst[i]);
+               for (Rank i = 0; i < merged_rank; i++) {
+                  if (merged_dims_dst[i] != 1) {
+                     noone_merged_dims_dst.push_back(merged_dims_dst[i]);
                   }
                }
 
-               if (noone_fused_rank == 1) {
+               if (noone_merged_rank == 1) {
                   ScalarType* dst = res.core->blocks[index_dst].raw_data.data();
                   const ScalarType* src = core->blocks[index_src].raw_data.data();
                   if (parity) {
@@ -941,21 +949,22 @@ namespace TAT {
                      }
                   }
                } else {
-                  Rank effective_rank = noone_fused_rank;
+                  Rank effective_rank = noone_merged_rank;
                   Size effective_size = sizeof(ScalarType);
-                  if (noone_fused_plan_src_to_dst[noone_fused_rank - 1] == noone_fused_rank - 1) {
+                  if (noone_merged_plan_src_to_dst[noone_merged_rank - 1] ==
+                      noone_merged_rank - 1) {
                      effective_rank--;
-                     effective_size *= noone_fused_dims_dst[noone_fused_rank - 1];
+                     effective_size *= noone_merged_dims_dst[noone_merged_rank - 1];
                   }
                   // TODO: 需要考虑极端细致的情况
                   if (parity) {
                      block_transpose<ScalarType, true>(
                            core->blocks[index_src].raw_data.data(),
                            res.core->blocks[index_dst].raw_data.data(),
-                           noone_fused_plan_src_to_dst,
-                           noone_fused_plan_dst_to_src,
-                           noone_fused_dims_src,
-                           noone_fused_dims_dst,
+                           noone_merged_plan_src_to_dst,
+                           noone_merged_plan_dst_to_src,
+                           noone_merged_dims_src,
+                           noone_merged_dims_dst,
                            block_size,
                            effective_rank,
                            effective_size);
@@ -963,10 +972,10 @@ namespace TAT {
                      block_transpose<ScalarType, false>(
                            core->blocks[index_src].raw_data.data(),
                            res.core->blocks[index_dst].raw_data.data(),
-                           noone_fused_plan_src_to_dst,
-                           noone_fused_plan_dst_to_src,
-                           noone_fused_dims_src,
-                           noone_fused_dims_dst,
+                           noone_merged_plan_src_to_dst,
+                           noone_merged_plan_dst_to_src,
+                           noone_merged_dims_src,
+                           noone_merged_dims_dst,
                            block_size,
                            effective_rank,
                            effective_size);
@@ -977,21 +986,59 @@ namespace TAT {
          return res;
       }
 
+      // TODO: merge and split
+      // 原则上可以一边转置一边 merge split
+      // merge 的时候会产生半个parity符号
+      // 所以这个接口需要有个bool来确定是否处理符号
+      // contract 调用的时候， 两个张量一个带符号一个不带即可
+      struct merge_pair {
+         vector<TAT::Name> src;
+         TAT::Name dst;
+      };
+
+      Tensor<ScalarType, Symmetry> merge_edge(
+            const vector<merge_pair>& merge_pairs,
+            const bool& apply_parity = false,
+            const bool& side_preference = false) const {
+         // for
+         auto new_edges = core->edges;
+         // core->
+         // 确定Edge
+         // 转置, 如果是side, 需要处理到边上
+         // merge
+      }
+
+      struct split_pair {
+         TAT::Name src;
+         vector<TAT::Name> dst;
+         vector<Edge<Symmetry>> new_edges;
+      };
+
+      Tensor<ScalarType, Symmetry>
+      split_edge(const vector<split_pair>& split_pairs, const bool& apply_parity = false) const {
+         // 无法确定Edge， 所以需要输入
+         // split
+      }
+
       // TODO: contract
+      // 调用 merge ， 这样就不用考虑contract特有的符号问题了
       static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor1,
             const Tensor<ScalarType, Symmetry>& tensor2,
             const vector<Name>& names1,
             const vector<Name>& names2) {
-         // 先确定一个基调就是先转置成矩阵
-         // 而不是直接做张量乘积，不然太复杂了
-         // A*B -> C
-         // 有2^3=8种转置情况，需要考虑哪种方式快捷，从而使用
-         // 所以还是需要把转置弄清楚啊， 不然都不知道如何转置快如何慢
+         // TODO: 不转置成矩阵直接乘积的可能
+         // names1 names2 需要 check order, 这个无法再merge中判断
+         // merge 需要按照原样的顺序进行转置
+         auto merged_tensor1 = tensor1.merge_edge({{names1, Contract1}}, false, true);
+         auto merged_tensor2 = tensor2.merge_edge({{names2, Contract2}}, true, true);
+         // check which one in 8 and do matrix contract
       }
 
-      // TODO: merge
+      // TODO: converge
       // multiple 的扩展版
+      // 考虑到PESS可能和对称性不兼容, 那么还是恢复原来的multiple模式
+      // 因为这个东西唯一出现的地方就是svd了
       static Tensor<ScalarType, Symmetry> converge(
             const Tensor<ScalarType, Symmetry>& tensor1,
             const Tensor<ScalarType, Symmetry>& tensor2,
@@ -999,7 +1046,7 @@ namespace TAT {
             const vector<Name>& names2,
             const vector<Name>& names_res,
             const Size order) {
-         //
+         // 这个东西在svd写好后再弄
       }
 
       struct svd_res {
@@ -1010,8 +1057,12 @@ namespace TAT {
 
       // TODO: SVD
       // 根据情况选择转置方式
+      // 或许可以称作cutted orthogonalize
+      // 需要先merge再split, 不然不能保证分块依然分块
       svd_res svd(const vector<Name>& u_edges, Name u_new_name, Name v_new_name) const {
-         //
+         // auto merged_tensor = merge_edge({{u_edges, SVD1}, {v_edges, SVD2}});
+         // svd
+         // auto split...
       }
 
       struct orthogonalize_res {

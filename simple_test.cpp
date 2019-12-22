@@ -58,18 +58,18 @@ void test_create_u1symmetry_tensor() {
 
 void test_create_fermisymmetry_tensor() {
    std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                     {{{-1, 3}, {0, 1}, {1, 2}},
-                                                      {{-1, 1}, {0, 2}, {1, 3}},
-                                                      {{-1, 2}, {0, 3}, {1, 1}}}}
+                                                        {{{-1, 3}, {0, 1}, {1, 2}},
+                                                         {{-1, 1}, {0, 2}, {1, 3}},
+                                                         {{-1, 2}, {0, 3}, {1, 1}}}}
                       .set([]() {
                          static double i = 1;
                          return i += 1;
                       })
              << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                     {{},
-                                                      {{-1, 1}, {0, 2}, {1, 3}},
-                                                      {{-1, 2}, {0, 3}, {1, 1}}}}
+                                                        {{},
+                                                         {{-1, 1}, {0, 2}, {1, 3}},
+                                                         {{-1, 2}, {0, 3}, {1, 1}}}}
                       .set([]() { return 0; })
              << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{}, {}}.set([]() { return 123; }) << "\n";
@@ -291,6 +291,14 @@ void test_getitem() {
    std::cout << c << "\n";
 }
 
+void test_merge_edge() {
+   const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
+      static double i = -1;
+      return i += 1;
+   });
+   // std::cout << a.merge_edge({{"Left", "Right"}, "Merged"}) << "\n";
+}
+
 int main(int argc, char** argv) {
    std::stringstream out;
    auto coutbuf = std::cout.rdbuf();
@@ -308,6 +316,7 @@ int main(int argc, char** argv) {
    RUN_TEST(test_io);
    RUN_TEST(test_getitem);
    RUN_TEST(test_transpose);
+   // RUN_TEST(test_merge_edge);
    if (argc != 1) {
       std::cout.rdbuf(coutbuf);
       std::ifstream fout(argv[1]);
