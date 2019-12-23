@@ -208,16 +208,19 @@ namespace TAT {
    };
 
    struct NoSymmetry {
-      static bool check_symmetry_satisfied(const vector<NoSymmetry>&) {
-         return true;
-      }
-
       static bool get_parity(
             [[maybe_unused]] const vector<NoSymmetry>& syms,
             [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
    };
+   NoSymmetry
+   operator+([[maybe_unused]] const NoSymmetry& s1, [[maybe_unused]] const NoSymmetry& s2) {
+      return NoSymmetry();
+   }
+   NoSymmetry& operator+=(NoSymmetry& s1, [[maybe_unused]] const NoSymmetry& s2) {
+      return s1;
+   }
 
    std::ostream& operator<<(std::ostream& out, const NoSymmetry&);
    std::istream& operator>>(std::istream& in, NoSymmetry&);
@@ -238,20 +241,20 @@ namespace TAT {
 
       Z2Symmetry(Z2 z2 = 0) : z2(z2) {}
 
-      static bool check_symmetry_satisfied(const vector<Z2Symmetry>& vec) {
-         Z2 sum = 0;
-         for (const auto& i : vec) {
-            sum ^= i.z2;
-         }
-         return !sum;
-      };
-
       static bool get_parity(
             [[maybe_unused]] const vector<Z2Symmetry>& syms,
             [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
    };
+   Z2Symmetry operator+(const Z2Symmetry& s1, const Z2Symmetry& s2) {
+      return Z2Symmetry(s1.z2 ^ s2.z2);
+   }
+   Z2Symmetry& operator+=(Z2Symmetry& s1, const Z2Symmetry& s2) {
+      s1.z2 ^= s2.z2;
+      return s1;
+   }
+
    std::ostream& operator<<(std::ostream& out, const Z2Symmetry& s);
    std::istream& operator>>(std::istream& in, Z2Symmetry& s);
 #define TAT_DEF_SYM_OP(OP, EXP)                        \
@@ -271,20 +274,20 @@ namespace TAT {
 
       U1Symmetry(U1 u1 = 0) : u1(u1) {}
 
-      static bool check_symmetry_satisfied(const vector<U1Symmetry>& vec) {
-         U1 sum = 0;
-         for (const auto& i : vec) {
-            sum += i.u1;
-         }
-         return !sum;
-      }
-
       static bool get_parity(
             [[maybe_unused]] const vector<U1Symmetry>& syms,
             [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
    };
+   U1Symmetry operator+(const U1Symmetry& s1, const U1Symmetry& s2) {
+      return U1Symmetry(s1.u1 + s2.u1);
+   }
+   U1Symmetry& operator+=(U1Symmetry& s1, const U1Symmetry& s2) {
+      s1.u1 += s2.u1;
+      return s1;
+   }
+
    std::ostream& operator<<(std::ostream& out, const U1Symmetry& s);
    std::istream& operator>>(std::istream& in, U1Symmetry& s);
 
@@ -305,16 +308,8 @@ namespace TAT {
 
       FermiSymmetry(Fermi fermi = 0) : fermi(fermi) {}
 
-      static bool check_symmetry_satisfied(const vector<FermiSymmetry>& vec) {
-         Fermi sum = 0;
-         for (const auto& i : vec) {
-            sum += i.fermi;
-         }
-         return !sum;
-      }
-
       static bool get_parity(const vector<FermiSymmetry>& syms, const vector<Rank>& plan) {
-         Rank rank = Rank(plan.size());
+         auto rank = Rank(plan.size());
          bool res = false;
          for (Rank i = 0; i < rank; i++) {
             for (Rank j = i + 1; j < rank; j++) {
@@ -326,6 +321,14 @@ namespace TAT {
          return res;
       }
    };
+   FermiSymmetry operator+(const FermiSymmetry& s1, const FermiSymmetry& s2) {
+      return FermiSymmetry(s1.fermi + s2.fermi);
+   }
+   FermiSymmetry& operator+=(FermiSymmetry& s1, const FermiSymmetry& s2) {
+      s1.fermi += s2.fermi;
+      return s1;
+   }
+
    std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s);
    std::istream& operator>>(std::istream& in, FermiSymmetry& s);
 
@@ -345,11 +348,22 @@ namespace TAT {
       Fermi fermi = 0;
       Z2 z2 = 0;
    };
+   // TODO: FermiZ2Symmetry
 
    struct FermiU1Symmetry {
       Fermi fermi = 0;
       U1 u1 = 0;
    };
+   // TODO: FermiU1Symmetry
+
+   template<class Symmetry>
+   bool check_symmetry_satisfied(const vector<Symmetry>& sym) {
+      auto sum = Symmetry();
+      for (const auto& i : sym) {
+         sum += i;
+      }
+      return sum == Symmetry();
+   }
 
    template<class Symmetry>
    auto initialize_block_symmetries_with_check(const vector<Edge<Symmetry>>& edges) {
@@ -369,7 +383,7 @@ namespace TAT {
          vec.push_back(ptr->first);
       }
       while (true) {
-         if (Symmetry::check_symmetry_satisfied(vec)) {
+         if (check_symmetry_satisfied(vec)) {
             res.push_back(vec);
          }
          Rank ptr = 0;
@@ -389,7 +403,7 @@ namespace TAT {
 
    std::map<Name, Rank> construct_name_to_index(const vector<Name>& names) {
       std::map<Name, Rank> res;
-      Rank rank = Rank(names.size());
+      auto rank = Rank(names.size());
       for (Rank i = 0; i < rank; i++) {
          res[names[i]] = i;
       }
@@ -553,13 +567,132 @@ namespace TAT {
          const vector<Symmetry>& s1,
          const vector<Symmetry>& s2,
          const vector<Rank>& plan) {
-      Rank rank = Rank(plan.size());
+      auto rank = Rank(plan.size());
       for (Rank i = 0; i < rank; i++) {
          if (s1[i] != s2[plan[i]]) {
             return false;
          }
       }
       return true;
+   }
+
+   auto merge_in_transpose(
+         const Rank& rank,
+         const vector<Rank>& plan_src_to_dst,
+         const vector<Rank>& plan_dst_to_src) {
+      vector<bool> merged_src_to_dst(rank);
+      vector<bool> merged_dst_to_src(rank);
+      merged_src_to_dst[0] = false;
+      for (Rank i = 1; i < rank; i++) {
+         if (plan_src_to_dst[i] == plan_src_to_dst[i - 1] + 1) {
+            merged_src_to_dst[i] = true;
+         } else {
+            merged_src_to_dst[i] = false;
+         }
+      }
+      merged_dst_to_src[0] = false;
+      for (Rank i = 1; i < rank; i++) {
+         if (plan_dst_to_src[i] == plan_dst_to_src[i - 1] + 1) {
+            merged_dst_to_src[i] = true;
+         } else {
+            merged_dst_to_src[i] = false;
+         }
+      }
+      vector<Rank> accum_src_to_dst(rank);
+      vector<Rank> accum_dst_to_src(rank);
+      accum_src_to_dst[0] = 0;
+      for (Rank i = 1; i < rank; i++) {
+         accum_src_to_dst[i] = accum_src_to_dst[i - 1] + Rank(merged_src_to_dst[i]);
+      }
+      accum_dst_to_src[0] = 0;
+      for (Rank i = 1; i < rank; i++) {
+         accum_dst_to_src[i] = accum_dst_to_src[i - 1] + Rank(merged_dst_to_src[i]);
+      }
+      vector<Rank> merged_plan_src_to_dst;
+      vector<Rank> merged_plan_dst_to_src;
+      for (Rank i = 0; i < rank; i++) {
+         if (!merged_src_to_dst[i]) {
+            merged_plan_src_to_dst.push_back(
+                  plan_src_to_dst[i] - accum_dst_to_src[plan_src_to_dst[i]]);
+         }
+      }
+      for (Rank i = 0; i < rank; i++) {
+         if (!merged_dst_to_src[i]) {
+            merged_plan_dst_to_src.push_back(
+                  plan_dst_to_src[i] - accum_src_to_dst[plan_dst_to_src[i]]);
+         }
+      }
+      auto merged_rank = Rank(merged_plan_src_to_dst.size());
+      return std::tuple{merged_src_to_dst,
+                        merged_dst_to_src,
+                        merged_plan_src_to_dst,
+                        merged_plan_dst_to_src,
+                        merged_rank};
+   }
+
+   bool is_valid_name(const vector<Name>& names, const Rank& rank) {
+      return names.size() == std::set<Name>(names.begin(), names.end()).size() &&
+             names.size() == rank;
+   }
+
+   auto noone_in_transpose(
+         const vector<Size>& merged_dims_src,
+         const vector<Size>& merged_dims_dst,
+         const vector<Rank>& merged_plan_src_to_dst,
+         const vector<Rank>& merged_plan_dst_to_src,
+         const Rank& merged_rank) {
+      vector<bool> isone_src(merged_rank);
+      vector<bool> isone_dst(merged_rank);
+      for (Rank i = 0; i < merged_rank; i++) {
+         isone_src[i] = merged_dims_src[i] == 1;
+      }
+      for (Rank i = 0; i < merged_rank; i++) {
+         isone_dst[i] = merged_dims_dst[i] == 1;
+      }
+      vector<Rank> accum_src(merged_rank);
+      vector<Rank> accum_dst(merged_rank);
+      accum_src[0] = isone_src[0];
+      for (Rank i = 1; i < merged_rank; i++) {
+         accum_src[i] = accum_src[i - 1] + Rank(isone_src[i]);
+      }
+      accum_dst[0] = isone_dst[0];
+      for (Rank i = 1; i < merged_rank; i++) {
+         accum_dst[i] = accum_dst[i - 1] + Rank(isone_dst[i]);
+      }
+
+      vector<Rank> noone_merged_plan_src_to_dst;
+      vector<Rank> noone_merged_plan_dst_to_src;
+      for (Rank i = 0; i < merged_rank; i++) {
+         if (!isone_src[i]) {
+            noone_merged_plan_src_to_dst.push_back(
+                  merged_plan_src_to_dst[i] - accum_dst[merged_plan_src_to_dst[i]]);
+         }
+      }
+      for (Rank i = 0; i < merged_rank; i++) {
+         if (!isone_dst[i]) {
+            noone_merged_plan_dst_to_src.push_back(
+                  merged_plan_dst_to_src[i] - accum_src[merged_plan_dst_to_src[i]]);
+         }
+      }
+      auto noone_merged_rank = Rank(noone_merged_plan_dst_to_src.size());
+
+      vector<Size> noone_merged_dims_src;
+      vector<Size> noone_merged_dims_dst;
+      for (Rank i = 0; i < merged_rank; i++) {
+         if (merged_dims_src[i] != 1) {
+            noone_merged_dims_src.push_back(merged_dims_src[i]);
+         }
+      }
+      for (Rank i = 0; i < merged_rank; i++) {
+         if (merged_dims_dst[i] != 1) {
+            noone_merged_dims_dst.push_back(merged_dims_dst[i]);
+         }
+      }
+      return std::tuple{noone_merged_plan_src_to_dst,
+                        noone_merged_plan_dst_to_src,
+                        noone_merged_dims_src,
+                        noone_merged_dims_dst,
+                        noone_merged_rank};
    }
 
    template<class ScalarType = double, class Symmetry = NoSymmetry>
@@ -583,11 +716,6 @@ namespace TAT {
       std::map<Name, Rank> name_to_index;
       std::shared_ptr<TensorCore> core;
 
-      bool is_valid_name() const {
-         return names.size() == std::set<Name>(names.begin(), names.end()).size() &&
-                names.size() == core->edges.size();
-      }
-
       template<
             class U = vector<Name>,
             class T = vector<Edge<Symmetry>>,
@@ -596,7 +724,7 @@ namespace TAT {
       Tensor(U&& n, T&& e) :
             names(std::forward<U>(n)), name_to_index(construct_name_to_index(names)),
             core(std::make_shared<TensorCore>(std::forward<T>(e))) {
-         if (!is_valid_name()) {
+         if (!is_valid_name(names, core->edges.size())) {
             TAT_WARNING("Invalid Names");
          }
       }
@@ -652,7 +780,7 @@ namespace TAT {
 
       std::tuple<Nums, Size>
       get_pos_for_at(const std::map<Name, EdgePosition<Symmetry>>& position) const {
-         Rank rank = Rank(names.size());
+         auto rank = Rank(names.size());
          vector<Symmetry> block_symmetries(rank);
          vector<Size> scalar_position(rank);
          vector<Size> dimensions(rank);
@@ -705,7 +833,7 @@ namespace TAT {
             res.name_to_index = name_to_index;
             res.core = std::make_shared<typename Tensor<OtherScalarType, Symmetry>::TensorCore>(
                   core->edges);
-            Nums blocks_num = Nums(core->blocks.size());
+            auto blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                Size block_size = core->blocks[i].size;
                auto& dst = res.core->blocks[i].raw_data;
@@ -722,7 +850,7 @@ namespace TAT {
       Tensor<real_base_t<ScalarType>, Symmetry> norm() const {
          real_base_t<ScalarType> res = 0;
          if constexpr (p == -1) {
-            Nums blocks_num = Nums(core->blocks.size());
+            auto blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                const auto& block = core->blocks[i];
                const auto& data = block.raw_data;
@@ -734,12 +862,12 @@ namespace TAT {
                }
             }
          } else if constexpr (p == 0) {
-            Nums blocks_num = Nums(core->blocks.size());
+            auto blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                res += real_base_t<ScalarType>(core->blocks[i].size);
             }
          } else {
-            Nums blocks_num = Nums(core->blocks.size());
+            auto blocks_num = Nums(core->blocks.size());
             for (Nums i = 0; i < blocks_num; i++) {
                const auto& block = core->blocks[i];
                const auto& data = block.raw_data;
@@ -795,7 +923,7 @@ namespace TAT {
          }
          res.name_to_index = construct_name_to_index(res.names);
 
-         Rank rank = Rank(names.size());
+         auto rank = Rank(names.size());
          vector<Rank> plan_src_to_dst(rank);
          vector<Rank> plan_dst_to_src(rank);
          for (Rank i = 0; i < rank; i++) {
@@ -804,49 +932,6 @@ namespace TAT {
          for (Rank i = 0; i < rank; i++) {
             plan_dst_to_src[plan_src_to_dst[i]] = i;
          }
-         vector<bool> merged_src_to_dst(rank);
-         vector<bool> merged_dst_to_src(rank);
-         merged_src_to_dst[0] = false;
-         for (Rank i = 1; i < rank; i++) {
-            if (plan_src_to_dst[i] == plan_src_to_dst[i - 1] + 1) {
-               merged_src_to_dst[i] = true;
-            } else {
-               merged_src_to_dst[i] = false;
-            }
-         }
-         merged_dst_to_src[0] = false;
-         for (Rank i = 1; i < rank; i++) {
-            if (plan_dst_to_src[i] == plan_dst_to_src[i - 1] + 1) {
-               merged_dst_to_src[i] = true;
-            } else {
-               merged_dst_to_src[i] = false;
-            }
-         }
-         vector<Rank> accum_src_to_dst(rank);
-         vector<Rank> accum_dst_to_src(rank);
-         accum_src_to_dst[0] = 0;
-         for (Rank i = 1; i < rank; i++) {
-            accum_src_to_dst[i] = accum_src_to_dst[i - 1] + Rank(merged_src_to_dst[i]);
-         }
-         accum_dst_to_src[0] = 0;
-         for (Rank i = 1; i < rank; i++) {
-            accum_dst_to_src[i] = accum_dst_to_src[i - 1] + Rank(merged_dst_to_src[i]);
-         }
-         vector<Rank> merged_plan_src_to_dst;
-         vector<Rank> merged_plan_dst_to_src;
-         for (Rank i = 0; i < rank; i++) {
-            if (!merged_src_to_dst[i]) {
-               merged_plan_src_to_dst.push_back(
-                     plan_src_to_dst[i] - accum_dst_to_src[plan_src_to_dst[i]]);
-            }
-         }
-         for (Rank i = 0; i < rank; i++) {
-            if (!merged_dst_to_src[i]) {
-               merged_plan_dst_to_src.push_back(
-                     plan_dst_to_src[i] - accum_src_to_dst[plan_dst_to_src[i]]);
-            }
-         }
-         Rank merged_rank = Rank(merged_plan_src_to_dst.size());
 
          vector<Edge<Symmetry>> res_edges(rank);
          for (Rank i = 0; i < rank; i++) {
@@ -854,7 +939,13 @@ namespace TAT {
          }
          res.core = std::make_shared<TensorCore>(std::move(res_edges));
 
-         Nums block_number = Nums(core->blocks.size());
+         auto [merged_src_to_dst,
+               merged_dst_to_src,
+               merged_plan_src_to_dst,
+               merged_plan_dst_to_src,
+               merged_rank] = merge_in_transpose(rank, plan_src_to_dst, plan_dst_to_src);
+
+         auto block_number = Nums(core->blocks.size());
          for (Nums index_src = 0; index_src < block_number; index_src++) {
             Nums index_dst = 0;
             while (!check_same_symmetries(
@@ -888,53 +979,18 @@ namespace TAT {
                for (Rank i = 0; i < merged_rank; i++) {
                   merged_dims_dst[merged_plan_src_to_dst[i]] = merged_dims_src[i];
                }
-               vector<bool> isone_src(merged_rank);
-               vector<bool> isone_dst(merged_rank);
-               for (Rank i = 0; i < merged_rank; i++) {
-                  isone_src[i] = merged_dims_src[i] == 1;
-               }
-               for (Rank i = 0; i < merged_rank; i++) {
-                  isone_dst[i] = merged_dims_dst[i] == 1;
-               }
-               vector<Rank> accum_src(merged_rank);
-               vector<Rank> accum_dst(merged_rank);
-               accum_src[0] = isone_src[0];
-               for (Rank i = 1; i < merged_rank; i++) {
-                  accum_src[i] = accum_src[i - 1] + Rank(isone_src[i]);
-               }
-               accum_dst[0] = isone_dst[0];
-               for (Rank i = 1; i < merged_rank; i++) {
-                  accum_dst[i] = accum_dst[i - 1] + Rank(isone_dst[i]);
-               }
 
-               vector<Rank> noone_merged_plan_src_to_dst;
-               vector<Rank> noone_merged_plan_dst_to_src;
-               for (Rank i = 0; i < merged_rank; i++) {
-                  if (!isone_src[i]) {
-                     noone_merged_plan_src_to_dst.push_back(
-                           merged_plan_src_to_dst[i] - accum_dst[merged_plan_src_to_dst[i]]);
-                  }
-               }
-               for (Rank i = 0; i < merged_rank; i++) {
-                  if (!isone_dst[i]) {
-                     noone_merged_plan_dst_to_src.push_back(
-                           merged_plan_dst_to_src[i] - accum_src[merged_plan_dst_to_src[i]]);
-                  }
-               }
-               Rank noone_merged_rank = Rank(noone_merged_plan_dst_to_src.size());
-
-               vector<Size> noone_merged_dims_src;
-               vector<Size> noone_merged_dims_dst;
-               for (Rank i = 0; i < merged_rank; i++) {
-                  if (merged_dims_src[i] != 1) {
-                     noone_merged_dims_src.push_back(merged_dims_src[i]);
-                  }
-               }
-               for (Rank i = 0; i < merged_rank; i++) {
-                  if (merged_dims_dst[i] != 1) {
-                     noone_merged_dims_dst.push_back(merged_dims_dst[i]);
-                  }
-               }
+               auto [noone_merged_plan_src_to_dst,
+                     noone_merged_plan_dst_to_src,
+                     noone_merged_dims_src,
+                     noone_merged_dims_dst,
+                     noone_merged_rank] =
+                     noone_in_transpose(
+                           merged_dims_src,
+                           merged_dims_dst,
+                           merged_plan_src_to_dst,
+                           merged_plan_dst_to_src,
+                           merged_rank);
 
                if (noone_merged_rank == 1) {
                   ScalarType* dst = res.core->blocks[index_dst].raw_data.data();
@@ -991,17 +1047,72 @@ namespace TAT {
       // merge 的时候会产生半个parity符号
       // 所以这个接口需要有个bool来确定是否处理符号
       // contract 调用的时候， 两个张量一个带符号一个不带即可
-      struct merge_pair {
-         vector<TAT::Name> src;
-         TAT::Name dst;
-      };
 
-      Tensor<ScalarType, Symmetry> merge_edge(
-            const vector<merge_pair>& merge_pairs,
+      /*Tensor<ScalarType, Symmetry>*/ void merge_edge(
+            const vector<std::tuple<vector<TAT::Name>, TAT::Name>>& merge_pairs,
             const bool& apply_parity = false,
             const bool& side_preference = false) const {
-         // for
-         auto new_edges = core->edges;
+         // vector<Edge<Symmetry>> combined_edges;
+         vector<Edge<Symmetry>> res_edges;
+         for (const auto& [src, dst] : merge_pairs) {
+            // deal with single merge
+            auto edges_num = Rank(src.size());
+            if (!edges_num) {
+               // !! no edge to merge
+            }
+            auto edges_to_merge = vector<Edge<Symmetry>>(); // reference to use
+            for (const auto& s : src) {
+               edges_to_merge.push_back(core->edges[name_to_index.at(s)]);
+            }
+            auto pos = vector<typename std::map<Symmetry, Size>::const_iterator>();
+            auto sym = vector<Symmetry>();
+            auto dim = vector<Size>();
+            for (const auto& i : edges_to_merge) {
+               auto ptr = i.begin();
+               if (ptr == i.end()) {
+                  // !! edge have no block line (dimension=0)
+               }
+               pos.push_back(ptr);
+            }
+            for (Rank i = edges_num - 1; i < edges_num; i--) { // 依赖溢出?
+               const auto& ptr = pos[i];
+               if (i == edges_num - 1) {
+                  sym[i] = ptr->first;
+                  dim[i] = ptr->second;
+               } else {
+                  sym[i] = ptr->first + sym[i + 1];
+                  dim[i] = ptr->second * dim[i + 1];
+                  // do not check dim=0, because in constructor, i didn't check
+               }
+            }
+            auto res_edge = Edge<Symmetry>();
+            while (true) {
+               if (true) { // check really has block in core
+                  // edges_res[] = ...
+                  res_edge[sym[0]] += dim[0];
+               }
+               Rank ptr = 0;
+               pos[ptr]++;
+               while (pos[ptr] == edges_to_merge[ptr].end()) {
+                  pos[ptr] = edges_to_merge[ptr].begin();
+                  // update sym and dim
+                  ptr++;
+                  if (ptr == edges_num) {
+                     goto this_edge_merge_done;
+                  }
+                  pos[ptr]++;
+               }
+               // update sym and dim
+            }
+         this_edge_merge_done:
+            res_edges.push_back(std::move(res_edge));
+
+            // 穷举可能的量子数和
+            // 检查是否非存在这样的block
+
+            // combined_edges.push_back(std::move(combined_edge));
+         }
+         // auto new_edges = core->edges;
          // core->
          // 确定Edge
          // 转置, 如果是side, 需要处理到边上
@@ -1096,7 +1207,7 @@ namespace TAT {
       if (t1.names.size() == 0) {                                                              \
          const auto& x = t1.core->blocks[0].raw_data[0];                                       \
          auto res = Tensor<ScalarType, Symmetry>{t2.names, t2.core->edges};                    \
-         Nums blocks_number = Nums(res.core->blocks.size());                                   \
+         auto blocks_number = Nums(res.core->blocks.size());                                   \
          for (Nums i = 0; i < blocks_number; i++) {                                            \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
@@ -1109,7 +1220,7 @@ namespace TAT {
       } else if (t2.names.size() == 0) {                                                       \
          const auto& y = t2.core->blocks[0].raw_data[0];                                       \
          auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         Nums blocks_number = Nums(res.core->blocks.size());                                   \
+         auto blocks_number = Nums(res.core->blocks.size());                                   \
          for (Nums i = 0; i < blocks_number; i++) {                                            \
             const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
@@ -1124,7 +1235,7 @@ namespace TAT {
             TAT_WARNING("Scalar Operator in different Shape Tensor");                          \
          }                                                                                     \
          auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         Nums blocks_number = Nums(res.core->blocks.size());                                   \
+         auto blocks_number = Nums(res.core->blocks.size());                                   \
          for (Nums i = 0; i < blocks_number; i++) {                                            \
             const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
@@ -1329,7 +1440,7 @@ namespace TAT {
          if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
             raw_write(out, &edge.at(NoSymmetry()));
          } else {
-            Nums nums = Nums(edge.size());
+            auto nums = Nums(edge.size());
             raw_write(out, &nums);
             for (const auto& [sym, dim] : edge) {
                out << sym;
@@ -1408,7 +1519,7 @@ namespace TAT {
          }
          out << "}";
       } else {
-         Rank rank = Rank(tensor.names.size());
+         auto rank = Rank(tensor.names.size());
          raw_write(out, &rank);
          out << tensor.names;
          out << tensor.core->edges;
@@ -1430,6 +1541,9 @@ namespace TAT {
       in >> edges;
       tensor.core =
             std::make_shared<typename Tensor<ScalarType, Symmetry>::TensorCore>(std::move(edges));
+      if (!is_valid_name(tensor.names, tensor.core->edges.size())) {
+         TAT_WARNING("Invalid Names");
+      }
       for (auto& i : tensor.core->blocks) {
          raw_read(in, i.raw_data.data(), i.size);
       }

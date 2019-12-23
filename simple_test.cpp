@@ -296,6 +296,7 @@ void test_merge_edge() {
       static double i = -1;
       return i += 1;
    });
+   a.merge_edge({{{"Left", "Right"}, "Merged"}});
    // std::cout << a.merge_edge({{"Left", "Right"}, "Merged"}) << "\n";
 }
 
@@ -316,7 +317,7 @@ int main(int argc, char** argv) {
    RUN_TEST(test_io);
    RUN_TEST(test_getitem);
    RUN_TEST(test_transpose);
-   // RUN_TEST(test_merge_edge);
+   //RUN_TEST(test_merge_edge);
    if (argc != 1) {
       std::cout.rdbuf(coutbuf);
       std::ifstream fout(argv[1]);
