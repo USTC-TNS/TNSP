@@ -297,8 +297,26 @@ void test_merge_edge() {
       return i += 1;
    });
    a.merge_edge({{{"Left", "Right"}, "Merged"}});
+   auto b =
+         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+               {TAT::Left, TAT::Right, TAT::Up},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .set([]() {
+                  static double i = 0;
+                  return i += 1;
+               });
+   b.merge_edge({{{"Left", "Up"}, "Merged"}});
    // std::cout << a.merge_edge({{"Left", "Right"}, "Merged"}) << "\n";
 }
+
+/*
+void test_mpi() {
+   auto f = TAT::MPIFile("log");
+   f.seek(TAT::mpi.rank*20);
+   auto s = "Hello From " + std::to_string(TAT::mpi.rank) + "\n";
+   f.write(s.data(), s.size());
+}
+*/
 
 int main(int argc, char** argv) {
    std::stringstream out;
@@ -315,9 +333,10 @@ int main(int argc, char** argv) {
    RUN_TEST(test_edge_rename);
    RUN_TEST(test_scalar);
    RUN_TEST(test_io);
+   // RUN_TEST(test_mpi);
    RUN_TEST(test_getitem);
    RUN_TEST(test_transpose);
-   //RUN_TEST(test_merge_edge);
+   // RUN_TEST(test_merge_edge);
    if (argc != 1) {
       std::cout.rdbuf(coutbuf);
       std::ifstream fout(argv[1]);

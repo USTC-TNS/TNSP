@@ -10,6 +10,8 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v1
+    - name: dependence
+      run: sudo apt-get install -y mpi-default-dev liblapack-dev
     - name: directory
       run: cmake -E make_directory ${{runner.workspace}}/build
     - name: configure

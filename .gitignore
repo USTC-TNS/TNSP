@@ -1,9 +1,9 @@
 build
+out
 .idea
 .vs
 .vscode
 .ipynb_checkpoints
 old
-CMakeSettings.json
 docs
 
