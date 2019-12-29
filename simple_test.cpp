@@ -162,9 +162,9 @@ void test_io() {
             static double i = -1;
             return i += 1;
          });
-   ss << a;
+   ss <= a;
    auto b = TAT::Tensor<double, TAT::NoSymmetry>();
-   ss >> b;
+   ss >= b;
    std::cout << a << "\n";
    std::cout << b << "\n";
    auto c =
@@ -175,9 +175,9 @@ void test_io() {
                   static double i = 1;
                   return i += 1;
                });
-   ss << c;
+   ss <= c;
    auto d = TAT::Tensor<double, TAT::U1Symmetry>();
-   ss >> d;
+   ss >= d;
    std::cout << c << "\n";
    std::cout << d << "\n";
    auto e = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{TAT::Up, TAT::Left, TAT::Right},
@@ -187,9 +187,9 @@ void test_io() {
                      static int arr[6] = {0x12345, 0x23456, 0x34567, 0x45678, 0x56789, 0x6789a};
                      return arr[i++];
                   });
-   ss << e;
+   ss <= e;
    auto f = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>();
-   ss >> f;
+   ss >= f;
    std::cout << e << "\n";
    std::cout << f << "\n";
    auto g =
@@ -200,9 +200,9 @@ void test_io() {
                   static double i = 1;
                   return i += 1;
                });
-   ss << g;
+   ss <= g;
    auto h = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
-   ss >> h;
+   ss >= h;
    std::cout << g << "\n";
    std::cout << h << "\n";
 }
@@ -291,6 +291,7 @@ void test_getitem() {
    std::cout << c << "\n";
 }
 
+/*
 void test_merge_edge() {
    const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
       static double i = -1;
@@ -305,9 +306,10 @@ void test_merge_edge() {
                   static double i = 0;
                   return i += 1;
                });
-   b.merge_edge({{{"Left", "Up"}, "Merged"}});
+   b.merge_edge({{{TAT::Left, "Up"}, "Merged"}});
    // std::cout << a.merge_edge({{"Left", "Right"}, "Merged"}) << "\n";
 }
+*/
 
 /*
 void test_mpi() {
@@ -317,6 +319,31 @@ void test_mpi() {
    f.write(s.data(), s.size());
 }
 */
+
+void test_edge_operator() {
+   auto a =
+         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+               {TAT::Left, TAT::Right, TAT::Up, TAT::Down},
+               {{{-1, 3}, {0, 1}, {1, 2}},
+                {{-1, 1}, {0, 4}, {1, 2}},
+                {{-1, 2}, {0, 3}, {1, 1}},
+                {{-1, 1}, {0, 3}, {1, 2}}}}
+               .set([]() {
+                  static double i = 0;
+                  return i += 1;
+               });
+   auto b = a.edge_operator(
+         {{"Right", "Right1"}},
+         {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
+         {{"Left", {"Left", "Up"}}},
+         {"Down1", "Right1", "Down2", "Left"}); //.zero();
+   std::cout << a << "\n";
+   std::cout << b << "\n";
+   // auto f = TAT::vector<EdgeOp>{"Left", "Right", TAT::Up};
+   // auto g = TAT::vector<EdgeOp>{TAT::Left, TAT::Right, TAT::Left};
+   // b.modify_edge(TAT::vector<EdgeOp>{TAT::Left, TAT::Right, TAT::Up});
+   // b.modify_edge(TAT::vector<EdgeOp>{TAT::Left, TAT::Right, TAT::Up});
+}
 
 int main(int argc, char** argv) {
    std::stringstream out;
@@ -334,8 +361,9 @@ int main(int argc, char** argv) {
    RUN_TEST(test_scalar);
    RUN_TEST(test_io);
    // RUN_TEST(test_mpi);
-   RUN_TEST(test_getitem);
    RUN_TEST(test_transpose);
+   RUN_TEST(test_getitem);
+   // RUN_TEST(test_edge_operator);
    // RUN_TEST(test_merge_edge);
    if (argc != 1) {
       std::cout.rdbuf(coutbuf);
