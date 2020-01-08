@@ -18,27 +18,37 @@
  */
 
 #pragma once
-#ifndef TAT_MISC_HPP_
-#   define TAT_MISC_HPP_
-
-#define TAT_VERSION 0.0.4
-
-#ifdef NDEBUG
-#   define TAT_WARNING(msg) std::clog
-#else
-#   define TAT_WARNING(msg) std::clog << msg << std::endl
-#endif
+#ifndef TAT_MISC_HPP
+#define TAT_MISC_HPP
 
 #include <complex>
 #include <iostream>
+#include <map>
+#include <type_traits>
+#include <vector>
 
 namespace TAT {
-   using Rank = unsigned int;
-   using Nums = unsigned long;
-   using Size = unsigned long long;
+   const std::string TAT_VERSION = "0.0.4";
+
+   inline void TAT_WARNING([[maybe_unused]] const std::string& msg) {
+#ifndef NDEBUG
+      std::cerr << msg << std::endl;
+#endif
+   }
+
+   using Rank = unsigned short;
+   using Nums = unsigned int;
+   using Size = unsigned long;
    using Z2 = bool;
    using U1 = long;
    using Fermi = int;
+
+   template<class T>
+   struct is_symmetry {
+      static const bool value = true;
+   };
+   template<class T>
+   static constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
    template<class T>
    struct is_scalar : std::is_scalar<T> {};
@@ -60,16 +70,6 @@ namespace TAT {
    struct real_base<std::complex<T>> : type_identity<T> {};
    template<class T>
    using real_base_t = typename real_base<T>::type;
-
-   template<class T>
-   struct remove_cvref : std::remove_cv<typename std::remove_reference<T>::type> {};
-   template<class T>
-   using remove_cvref_t = typename remove_cvref<T>::type;
-
-   template<class T, class U>
-   struct is_same_nocvref : std::is_same<remove_cvref_t<T>, remove_cvref_t<U>> {};
-   template<class T, class U>
-   static constexpr bool is_same_nocvref_v = is_same_nocvref<T, U>::value;
 
    template<class T>
    struct allocator_without_initialize : std::allocator<T> {
@@ -101,6 +101,38 @@ namespace TAT {
    std::ostream& operator<=(std::ostream& out, const vector<T>& vec);
    template<class T>
    std::istream& operator>=(std::istream& in, vector<T>& vec);
+
+   template<class Key, class T>
+   struct map : public std::map<Key, T> {
+      using std::map<Key, T>::map;
+
+      map(const T s) : std::map<Key, T>({{Key(), s}}) {}
+   };
+
+   template<class Key, class T>
+   std::ostream& operator<<(std::ostream& out, const map<Key, T>& edge);
+   template<class Key, class T>
+   std::ostream& operator<=(std::ostream& out, const map<Key, T>& edge);
+   template<class Key, class T>
+   std::istream& operator>=(std::istream& in, map<Key, T>& edge);
+
+   template<class T>
+   auto std_begin(const T& v) {
+      if constexpr (std::is_pointer_v<T>) {
+         return std::begin(*v);
+      } else {
+         return std::begin(v);
+      }
+   }
+
+   template<class T>
+   auto std_end(const T& v) {
+      if constexpr (std::is_pointer_v<T>) {
+         return std::end(*v);
+      } else {
+         return std::end(v);
+      }
+   }
 } // namespace TAT
 
 #endif

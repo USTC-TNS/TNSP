@@ -18,24 +18,23 @@
  */
 
 #pragma once
-#ifndef TAT_IO_HPP_
-#   define TAT_IO_HPP_
+#ifndef TAT_IO_HPP
+#define TAT_IO_HPP
+
+#include "init.hpp"
 
 namespace TAT {
    template<class T>
-   void raw_write(std::ostream& out, const T* data, Size number = 1) {
+   void raw_write(std::ostream& out, const T* data, const Size number = 1) {
       out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
    }
    template<class T>
-   void raw_read(std::istream& in, T* data, Size number = 1) {
+   void raw_read(std::istream& in, T* data, const Size number = 1) {
       in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
    }
-   bool is_text_stream(const std::ostream& out) {
-      return &out == &std::cout || &out == &std::cerr || &out == &std::clog;
-   }
 
-   std::ostream& operator<<(std::ostream& out, const Name& name) {
-      auto pos = id_to_name.find(name.id);
+   inline std::ostream& operator<<(std::ostream& out, const Name& name) {
+      const auto pos = id_to_name.find(name.id);
       if (pos == id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
@@ -43,11 +42,11 @@ namespace TAT {
       }
       return out;
    }
-   std::ostream& operator<=(std::ostream& out, const Name& name) {
+   inline std::ostream& operator<=(std::ostream& out, const Name& name) {
       raw_write(out, &name.id);
       return out;
    }
-   std::istream& operator>=(std::istream& in, Name& name) {
+   inline std::istream& operator>=(std::istream& in, Name& name) {
       raw_read(in, &name.id);
       return in;
    }
@@ -55,12 +54,12 @@ namespace TAT {
    template<class T>
    std::ostream& operator<<(std::ostream& out, const vector<T>& vec) {
       out << "[";
-      bool notFirst = false;
+      auto not_first = false;
       for (const auto& i : vec) {
-         if (notFirst) {
+         if (not_first) {
             out << ",";
          }
-         notFirst = true;
+         not_first = true;
          out << i;
       }
       out << "]";
@@ -80,6 +79,59 @@ namespace TAT {
       }
       return in;
    }
+   template<class Key, class T>
+   std::ostream& operator<<(std::ostream& out, const map<Key, T>& edge) {
+      if constexpr (std::is_same_v<Key, NoSymmetry>) {
+         out << edge.at(NoSymmetry());
+      } else {
+         out << "{";
+         auto not_first = false;
+         for (const auto& [sym, dim] : edge) {
+            if (not_first) {
+               out << ",";
+            }
+            not_first = true;
+            out << sym << ":" << dim;
+         }
+         out << "}";
+      }
+      return out;
+   }
+   template<class Key, class T>
+   std::ostream& operator<=(std::ostream& out, const map<Key, T>& edge) {
+      if constexpr (std::is_same_v<Key, NoSymmetry>) {
+         raw_write(out, &edge.at(NoSymmetry()));
+      } else {
+         const Nums numbers = edge.size();
+         raw_write(out, &numbers);
+         for (const auto& [sym, dim] : edge) {
+            out <= sym;
+            raw_write(out, &dim);
+         }
+      }
+      return out;
+   }
+   template<class Key, class T>
+   std::istream& operator>=(std::istream& in, map<Key, T>& edge) {
+      if constexpr (std::is_same_v<Key, NoSymmetry>) {
+         Size dim;
+         raw_read(in, &dim);
+         edge[NoSymmetry()] = dim;
+      } else {
+         Nums numbers;
+         raw_read(in, &numbers);
+         edge.clear();
+         for (Nums i = 0; i < numbers; i++) {
+            Key sym;
+            Size dim;
+            in >= sym;
+            raw_read(in, &dim);
+            edge[sym] = dim;
+         }
+      }
+      return in;
+   }
+
    std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
       return out;
    }
@@ -125,57 +177,32 @@ namespace TAT {
       raw_read(in, &s.fermi);
       return in;
    }
-
-   template<class Symmetry>
-   std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         out << edge.at(NoSymmetry());
-      } else {
-         out << "{";
-         bool notFirst = false;
-         for (const auto& [sym, dim] : edge) {
-            if (notFirst) {
-               out << ",";
-            }
-            notFirst = true;
-            out << sym << ":" << dim;
-         }
-         out << "}";
-      }
+   std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s) {
+      out << "(" << s.fermi << "," << s.z2 << ")";
       return out;
    }
-   template<class Symmetry>
-   std::ostream& operator<=(std::ostream& out, const Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         raw_write(out, &edge.at(NoSymmetry()));
-      } else {
-         auto nums = Nums(edge.size());
-         raw_write(out, &nums);
-         for (const auto& [sym, dim] : edge) {
-            out <= sym;
-            raw_write(out, &dim);
-         }
-      }
+   std::ostream& operator<=(std::ostream& out, const FermiZ2Symmetry& s) {
+      raw_write(out, &s.fermi);
+      raw_write(out, &s.z2);
       return out;
    }
-   template<class Symmetry>
-   std::istream& operator>=(std::istream& in, Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         Size dim;
-         raw_read(in, &dim);
-         edge[NoSymmetry()] = dim;
-      } else {
-         Nums nums;
-         raw_read(in, &nums);
-         edge.clear();
-         for (Nums i = 0; i < nums; i++) {
-            Symmetry sym;
-            Size dim;
-            in >= sym;
-            raw_read(in, &dim);
-            edge[sym] = dim;
-         }
-      }
+   std::istream& operator>=(std::istream& in, FermiZ2Symmetry& s) {
+      raw_read(in, &s.fermi);
+      raw_read(in, &s.z2);
+      return in;
+   }
+   std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s) {
+      out << "(" << s.fermi << "," << s.u1 << ")";
+      return out;
+   }
+   std::ostream& operator<=(std::ostream& out, const FermiU1Symmetry& s) {
+      raw_write(out, &s.fermi);
+      raw_write(out, &s.u1);
+      return out;
+   }
+   std::istream& operator>=(std::istream& in, FermiU1Symmetry& s) {
+      raw_read(in, &s.fermi);
+      raw_read(in, &s.u1);
       return in;
    }
 
@@ -184,12 +211,12 @@ namespace TAT {
       out << "{";
       if constexpr (!std::is_same_v<Symmetry, NoSymmetry>) {
          out << "symmetry:[";
-         bool notFirst = false;
+         auto not_first = false;
          for (const auto& i : block.symmetries) {
-            if (notFirst) {
+            if (not_first) {
                out << ",";
             }
-            notFirst = true;
+            not_first = true;
             out << i;
          }
          out << "],";
@@ -197,12 +224,12 @@ namespace TAT {
       out << "size:";
       out << block.size;
       out << ",data:[";
-      bool notFirst = false;
+      auto not_first = false;
       for (Size i = 0; i < block.size; i++) {
-         if (notFirst) {
+         if (not_first) {
             out << ",";
          }
-         notFirst = true;
+         not_first = true;
          out << block.raw_data[i];
       }
       out << "]}";
@@ -257,7 +284,7 @@ namespace TAT {
       names.resize(rank);
       in >= names;
       name_to_index = construct_name_to_index(names);
-      vector<Edge<Symmetry>> edges(rank);
+      vector<map<Symmetry, Size>> edges(rank);
       in >= edges;
       core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
       if (!is_valid_name(names, core->edges.size())) {

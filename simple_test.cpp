@@ -1,3 +1,20 @@
+/**
+ * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -292,26 +309,6 @@ void test_getitem() {
 }
 
 /*
-void test_merge_edge() {
-   const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
-      static double i = -1;
-      return i += 1;
-   });
-   a.merge_edge({{{"Left", "Right"}, "Merged"}});
-   auto b =
-         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
-               {TAT::Left, TAT::Right, TAT::Up},
-               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 0;
-                  return i += 1;
-               });
-   b.merge_edge({{{TAT::Left, "Up"}, "Merged"}});
-   // std::cout << a.merge_edge({{"Left", "Right"}, "Merged"}) << "\n";
-}
-*/
-
-/*
 void test_mpi() {
    auto f = TAT::MPIFile("log");
    f.seek(TAT::mpi.rank*20);
@@ -320,34 +317,62 @@ void test_mpi() {
 }
 */
 
-void test_edge_operator() {
-   auto a =
+void test_merge_split() {
+   const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
+      static double i = -1;
+      return i += 1;
+   });
+   auto b = a.merge_edge({{"Merged", {"Left", "Right"}}});
+   auto c = a.merge_edge({{"Merged", {"Right", "Left"}}});
+   auto d = c.split_edge({{"Merged", {{"1", 3}, {"2", 2}}}});
+   std::cout << a << "\n";
+   std::cout << b << "\n";
+   std::cout << c << "\n";
+   std::cout << d << "\n";
+   auto e =
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
-               {TAT::Left, TAT::Right, TAT::Up, TAT::Down},
-               {{{-1, 3}, {0, 1}, {1, 2}},
-                {{-1, 1}, {0, 4}, {1, 2}},
-                {{-1, 2}, {0, 3}, {1, 1}},
-                {{-1, 1}, {0, 3}, {1, 2}}}}
+               {TAT::Left, TAT::Right, TAT::Up},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                .set([]() {
                   static double i = 0;
                   return i += 1;
                });
+   auto f = e.merge_edge({{"Merged", {TAT::Left, "Up"}}});
+   auto g = f.split_edge(
+         {{"Merged", {{"Left", {{-1, 3}, {0, 1}, {1, 2}}}, {"Up", {{-1, 2}, {0, 3}, {1, 1}}}}}});
+   std::cout << e << "\n";
+   std::cout << f << "\n";
+   std::cout << g << "\n";
+}
+
+void test_edge_operator() {
+   auto a = TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up, TAT::Down},
+                                                 {{{-1, 3}, {0, 1}, {1, 2}},
+                                                  {{-1, 1}, {0, 4}, {1, 2}},
+                                                  {{-1, 2}, {0, 3}, {1, 1}},
+                                                  {{-1, 1}, {0, 3}, {1, 2}}}}
+                  .set([]() {
+                     static double i = 0;
+                     return i += 1;
+                  });
+   std::cout << a << "\n";
    auto b = a.edge_operator(
          {{"Right", "Right1"}},
          {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
          {{"Left", {"Left", "Up"}}},
-         {"Down1", "Right1", "Down2", "Left"}); //.zero();
-   std::cout << a << "\n";
+         {"Down1", "Right1", "Down2", "Left"});
    std::cout << b << "\n";
-   // auto f = TAT::vector<EdgeOp>{"Left", "Right", TAT::Up};
-   // auto g = TAT::vector<EdgeOp>{TAT::Left, TAT::Right, TAT::Left};
-   // b.modify_edge(TAT::vector<EdgeOp>{TAT::Left, TAT::Right, TAT::Up});
-   // b.modify_edge(TAT::vector<EdgeOp>{TAT::Left, TAT::Right, TAT::Up});
+   auto c = a.edge_operator(
+         {{"Right", "Right1"}},
+         {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
+         {{"Left", {"Left", "Down2"}}},
+         {"Down1", "Right1", "Up", "Left"});
+   std::cout << c << "\n";
 }
 
-int main(int argc, char** argv) {
+int main(const int argc, char** argv) {
    std::stringstream out;
-   auto coutbuf = std::cout.rdbuf();
+   auto cout_buf = std::cout.rdbuf();
    if (argc != 1) {
       std::cout.rdbuf(out.rdbuf());
    }
@@ -363,13 +388,17 @@ int main(int argc, char** argv) {
    // RUN_TEST(test_mpi);
    RUN_TEST(test_transpose);
    RUN_TEST(test_getitem);
-   // RUN_TEST(test_edge_operator);
-   // RUN_TEST(test_merge_edge);
+   RUN_TEST(test_merge_split);
+   RUN_TEST(test_edge_operator);
    if (argc != 1) {
-      std::cout.rdbuf(coutbuf);
+      std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);
       std::string sout((std::istreambuf_iterator<char>(fout)), std::istreambuf_iterator<char>());
       return sout != out.str();
    }
    return 0;
+}
+
+int simple_test() {
+   return main(0, 0);
 }

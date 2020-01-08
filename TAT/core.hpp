@@ -1,8 +1,28 @@
-#pragma once
-#ifndef TAT_CORE_HPP_
-#   define TAT_CORE_HPP_
+/**
+ * \file core.hpp
+ *
+ * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
 
-#   include "edge.hpp"
+#pragma once
+#ifndef TAT_CORE_HPP
+#define TAT_CORE_HPP
+
+#include "edge.hpp"
+#include "name.hpp"
 
 namespace TAT {
    template<class ScalarType, class Symmetry>
@@ -13,8 +33,8 @@ namespace TAT {
 
       template<
             class T = vector<Symmetry>,
-            class = std::enable_if_t<is_same_nocvref_v<T, vector<Symmetry>>>>
-      Block(const vector<Edge<Symmetry>>& e, T&& s) : symmetries(std::forward<T>(s)) {
+            class = std::enable_if_t<std::is_convertible_v<T, vector<Symmetry>>>>
+      Block(const vector<map<Symmetry, Size>>& e, T&& s) : symmetries(std::forward<T>(s)) {
          size = 1;
          for (Rank i = 0; i < e.size(); i++) {
             size *= e[i].at(symmetries[i]);
@@ -24,28 +44,23 @@ namespace TAT {
    };
 
    template<class Symmetry>
-   auto initialize_block_symmetries_with_check(const vector<Edge<Symmetry>>& edges) {
+   auto initialize_block_symmetries_with_check(const vector<map<Symmetry, Size>>& edges) {
       auto res = vector<vector<Symmetry>>();
-      auto vec = vector<Symmetry>();
+      auto vec = vector<Symmetry>(edges.size());
       using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
       loop_edge(
             edges,
-            [&]() { res.push_back({}); },
-            [&](const PosType& pos) {
-               for (const auto& i : pos) {
-                  vec.push_back(i->first);
-               }
-            },
-            [&]([[maybe_unused]] const PosType& pos) {
+            [&res]() { res.push_back({}); },
+            []([[maybe_unused]] const PosType& pos) {
                auto sum = Symmetry();
-               for (const auto& i : vec) {
-                  sum += i;
+               for (const auto& i : pos) {
+                  sum += i->first;
                }
                return sum == Symmetry();
             },
-            [&]([[maybe_unused]] const PosType& pos) { res.push_back(vec); },
-            [&](const PosType& pos, Rank ptr) {
-               for (Rank i = ptr; i < pos.size(); i++) {
+            [&res, &vec]([[maybe_unused]] const PosType& pos) { res.push_back(vec); },
+            [&vec](const PosType& pos, const Rank ptr) {
+               for (auto i = ptr; i < pos.size(); i++) {
                   vec[i] = pos[i]->first;
                }
             });
@@ -54,12 +69,12 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    struct Core {
-      vector<Edge<Symmetry>> edges;
+      vector<map<Symmetry, Size>> edges;
       vector<Block<ScalarType, Symmetry>> blocks;
 
       template<
-            class T = vector<Edge<Symmetry>>,
-            class = std::enable_if_t<is_same_nocvref_v<T, vector<Edge<Symmetry>>>>>
+            class T = vector<map<Symmetry, Size>>,
+            class = std::enable_if_t<std::is_convertible_v<T, vector<map<Symmetry, Size>>>>>
       Core(T&& e) : edges(std::forward<T>(e)) {
          auto symmetries_list = initialize_block_symmetries_with_check(edges);
          for (auto& i : symmetries_list) {
@@ -67,13 +82,10 @@ namespace TAT {
          }
       }
 
-      using PosType = vector<typename Edge<Symmetry>::const_iterator>;
-
-      auto find_block(const vector<Symmetry>& syms) {
-         Rank rank = Rank(edges.size());
-         Nums number = Nums(blocks.size());
-         for (Nums i = 0; i<number; i++) {
-            if (syms == blocks[i].symmetries) {
+      Nums find_block(const vector<Symmetry>& symmetries) {
+         const auto number = blocks.size();
+         for (auto i = 0; i < number; i++) {
+            if (symmetries == blocks[i].symmetries) {
                return i;
             }
          }
@@ -81,5 +93,34 @@ namespace TAT {
          return number;
       }
    };
+
+   template<class ScalarType, class Symmetry>
+   [[nodiscard]] auto get_pos_for_at(
+         const std::map<Name, EdgePosition<Symmetry>>& position,
+         const std::map<Name, Rank>& name_to_index,
+         const Core<ScalarType, Symmetry>& core) {
+      auto rank = Rank(core.edges.size());
+      vector<Symmetry> block_symmetries(rank);
+      vector<Size> scalar_position(rank);
+      vector<Size> dimensions(rank);
+      for (const auto& [name, res] : position) {
+         auto index = name_to_index.at(name);
+         block_symmetries[index] = res.sym;
+         scalar_position[index] = res.position;
+         dimensions[index] = core.edges[index].at(res.sym);
+      }
+      Size offset = 0;
+      for (Rank j = 0; j < rank; j++) {
+         offset *= dimensions[j];
+         offset += scalar_position[j];
+      }
+      for (Nums i = 0; i < core.blocks.size(); i++) {
+         if (block_symmetries == core.blocks[i].symmetries) {
+            return std::make_tuple(i, offset);
+         }
+      }
+      TAT_WARNING("Cannot Find Correct Block When Get Item");
+      return std::make_tuple(Nums(0), Size(0));
+   }
 } // namespace TAT
 #endif

@@ -6,4 +6,4 @@ out
 .ipynb_checkpoints
 old
 docs
-
+*.gch

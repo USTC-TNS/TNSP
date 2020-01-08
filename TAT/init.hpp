@@ -18,25 +18,27 @@
  */
 
 #pragma once
-#ifndef TAT_HPP_
-#   define TAT_HPP_
+#ifndef TAT__INIT_HPP
+#define TAT_INIT_HPP
 
-#   ifndef __cplusplus
-#      error "only work for c++"
-#   else
-#      ifdef _MSVC_LANG
-#         if _MSVC_LANG < 201703L
-#            error require c++17 or later
-#         endif
-#      else
-#         if __cplusplus < 201703L
-#            error require c++17 or later
-#         endif
-#      endif
-#   endif
+#ifndef __cplusplus
+#error "only work for c++"
+#else
+#ifdef _MSVC_LANG
+#if _MSVC_LANG < 201703L
+#error require c++17 or later
+#endif
+#else
+#if __cplusplus < 201703L
+#error require c++17 or later
+#endif
+#endif
+#endif
 
-#   include "tensor.hpp"
+// clang-format off
+#include "tensor.hpp"
+#include "scalar.hpp"
+#include "io.hpp"
+// clang-format on
 
-#   include "io.hpp"
-
-#endif // TAT_HPP_
+#endif
