@@ -44,17 +44,22 @@ namespace TAT {
    using Fermi = int;
 
    struct symmetry_base {};
+   struct fermi_symmetry_base : symmetry_base {};
    template<class T>
    struct is_symmetry : std::is_base_of<symmetry_base, T> {};
    template<class T>
-   static constexpr bool is_symmetry_v = is_symmetry<T>::value;
+   constexpr bool is_symmetry_v = is_symmetry<T>::value;
+   template<class T>
+   struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
+   template<class T>
+   constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
 
    template<class T>
    struct is_scalar : std::is_scalar<T> {};
    template<class T>
    struct is_scalar<std::complex<T>> : std::is_scalar<T> {};
    template<class T>
-   static constexpr bool is_scalar_v = is_scalar<T>::value;
+   constexpr bool is_scalar_v = is_scalar<T>::value;
 
    template<class T>
    struct type_identity {

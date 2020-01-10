@@ -19,7 +19,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "TAT.hpp"
+#include <TAT/TAT.hpp>
 
 #define RUN_TEST(x)                 \
    do {                             \

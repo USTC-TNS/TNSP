@@ -1,5 +1,5 @@
 /**
- * \file init.hpp
+ * \file TAT.hpp
  *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#ifndef TAT__INIT_HPP
-#define TAT_INIT_HPP
+#ifndef TAT_HPP
+#define TAT_HPP
 
 #ifndef __cplusplus
 #error "only work for c++"
@@ -33,6 +33,19 @@
 #error require c++17 or later
 #endif
 #endif
+#endif
+
+#ifndef NDEBUG
+#include <iostream>
+namespace TAT {
+   struct Evil {
+      ~Evil() {
+         std::clog << "\n\nPremature optimization is the root of all evil!\n"
+                      "                                       --- Donald Knuth\n\n\n";
+      }
+   };
+   const Evil evil;
+} // namespace TAT
 #endif
 
 // clang-format off

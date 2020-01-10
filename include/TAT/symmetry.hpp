@@ -25,7 +25,7 @@
 
 namespace TAT {
    template<class Derived>
-   struct spin_symmetry_base : symmetry_base {
+   struct spin_symmetry : symmetry_base {
       static bool get_parity(
             [[maybe_unused]] const vector<Derived>& symmetries,
             [[maybe_unused]] const vector<Rank>& plan) {
@@ -39,7 +39,7 @@ namespace TAT {
    };
 
    template<class Derived>
-   struct fermi_symmetry_base : symmetry_base {
+   struct fermi_symmetry : fermi_symmetry_base {
       static bool get_parity(const vector<Derived>& symmetries, const vector<Rank>& plan) {
          auto res = false;
          for (auto i = 0; i < plan.size(); i++) {
@@ -69,7 +69,7 @@ namespace TAT {
       }
    };
 
-   struct NoSymmetry : spin_symmetry_base<NoSymmetry> {};
+   struct NoSymmetry : spin_symmetry<NoSymmetry> {};
    inline NoSymmetry
    operator+([[maybe_unused]] const NoSymmetry& s1, [[maybe_unused]] const NoSymmetry& s2) {
       return NoSymmetry();
@@ -93,7 +93,7 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<, false)
 #undef TAT_DEF_SYM_OP
 
-   struct Z2Symmetry : spin_symmetry_base<Z2Symmetry> {
+   struct Z2Symmetry : spin_symmetry<Z2Symmetry> {
       Z2 z2 = false;
 
       Z2Symmetry(const Z2 z2 = false) : z2(z2) {}
@@ -121,7 +121,7 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<, a.z2<b.z2)
 #undef TAT_DEF_SYM_OP
 
-   struct U1Symmetry : spin_symmetry_base<U1Symmetry> {
+   struct U1Symmetry : spin_symmetry<U1Symmetry> {
       U1 u1 = 0;
 
       U1Symmetry(const U1 u1 = 0) : u1(u1) {}
@@ -150,7 +150,7 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<, a.u1<b.u1)
 #undef TAT_DEF_SYM_OP
 
-   struct FermiSymmetry : fermi_symmetry_base<FermiSymmetry> {
+   struct FermiSymmetry : fermi_symmetry<FermiSymmetry> {
       Fermi fermi = 0;
 
       FermiSymmetry(const Fermi fermi = 0) : fermi(fermi) {}
@@ -179,7 +179,7 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<, a.fermi<b.fermi)
 #undef TAT_DEF_SYM_OP
 
-   struct FermiZ2Symmetry : fermi_symmetry_base<FermiZ2Symmetry> {
+   struct FermiZ2Symmetry : fermi_symmetry<FermiZ2Symmetry> {
       Fermi fermi = 0;
       Z2 z2 = false;
 
@@ -210,7 +210,7 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<,(a.fermi < b.fermi) || ((a.fermi == b.fermi) && (a.z2 < b.z2)))
 #undef TAT_DEF_SYM_OP
 
-   struct FermiU1Symmetry : fermi_symmetry_base<FermiU1Symmetry> {
+   struct FermiU1Symmetry : fermi_symmetry<FermiU1Symmetry> {
       Fermi fermi = 0;
       U1 u1 = 0;
 

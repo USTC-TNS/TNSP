@@ -1,6 +1,6 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required(VERSION 3.8)
 
-project (TAT VERSION 0.0.4 LANGUAGES CXX)
+project(TAT VERSION 0.0.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +13,8 @@ find_package(LAPACK REQUIRED)
 
 include_directories(${MPI_INCLUDE_PATH})
 link_libraries(${MPI_LIBRARIES} ${LAPACK_LIBRARIES})
+
+include_directories(${PROJECT_SOURCE_DIR}/include)
 
 add_executable (simple_test "simple_test.cpp")
 

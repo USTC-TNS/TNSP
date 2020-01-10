@@ -29,17 +29,16 @@ namespace TAT {
    struct Block {
       vector<Symmetry> symmetries;
       vector<ScalarType> raw_data;
-      Size size;
 
       template<
             class T = vector<Symmetry>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Symmetry>>>>
       Block(const vector<map<Symmetry, Size>>& e, T&& s) : symmetries(std::forward<T>(s)) {
-         size = 1;
+         Size size = 1;
          for (Rank i = 0; i < e.size(); i++) {
             size *= e[i].at(symmetries[i]);
          }
-         raw_data = vector<ScalarType>(size);
+         raw_data.resize(size);
       }
    };
 

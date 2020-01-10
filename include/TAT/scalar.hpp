@@ -35,7 +35,7 @@ namespace TAT {
          for (Nums i = 0; i < res.core->blocks.size(); i++) {                                  \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
-            for (Size j = 0; j < res.core->blocks[i].size; j++) {                              \
+            for (Size j = 0; j < res.core->blocks[i].raw_data.size(); j++) {                   \
                EVAL1;                                                                          \
             }                                                                                  \
          }                                                                                     \
@@ -46,7 +46,7 @@ namespace TAT {
          for (Nums i = 0; i < res.core->blocks.size(); i++) {                                  \
             const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
-            for (Size j = 0; j < res.core->blocks[i].size; j++) {                              \
+            for (Size j = 0; j < res.core->blocks[i].raw_data.size(); j++) {                   \
                EVAL2;                                                                          \
             }                                                                                  \
          }                                                                                     \
@@ -60,7 +60,7 @@ namespace TAT {
             const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
             ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
-            for (Size j = 0; j < res.core->blocks[i].size; j++) {                              \
+            for (Size j = 0; j < res.core->blocks[i].raw_data.size(); j++) {                   \
                EVAL3;                                                                          \
             }                                                                                  \
          }                                                                                     \
@@ -101,7 +101,7 @@ namespace TAT {
          const auto& y = t2.core->blocks[0].raw_data[0];                                         \
          for (Nums i = 0; i < t1.core->blocks.size(); i++) {                                     \
             ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();                      \
-            for (Size j = 0; j < t1.core->blocks[i].size; j++) {                                 \
+            for (Size j = 0; j < t1.core->blocks[i].raw_data.size(); j++) {                      \
                EVAL1;                                                                            \
             }                                                                                    \
          }                                                                                       \
@@ -112,7 +112,7 @@ namespace TAT {
          for (Nums i = 0; i < t1.core->blocks.size(); i++) {                                     \
             ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();                      \
             const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();                \
-            for (Size j = 0; j < t1.core->blocks[i].size; j++) {                                 \
+            for (Size j = 0; j < t1.core->blocks[i].raw_data.size(); j++) {                      \
                EVAL2;                                                                            \
             }                                                                                    \
          }                                                                                       \

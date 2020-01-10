@@ -92,7 +92,7 @@ namespace TAT {
             TAT_WARNING("Set Tensor Shared");
          }
          for (auto& i : core->blocks) {
-            std::generate(i.raw_data.begin(), i.raw_data.begin() + i.size, generator);
+            std::generate(i.raw_data.begin(), i.raw_data.end(), generator);
          }
          return *this;
       }
@@ -109,7 +109,6 @@ namespace TAT {
       }
 
       // get item
-      // TODO: 删除block.size, 这个东西应该放在raw_data里
       [[nodiscard]] const auto& at(const std::map<Name, Symmetry>& position) const& {
          using is_not_nosymmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
          auto sym = get_pos_for_at(position, name_to_index, *core);
@@ -167,7 +166,7 @@ namespace TAT {
             for (Nums i = 0; i < core->blocks.size(); i++) {
                auto& dst = res.core->blocks[i].raw_data;
                const auto& src = core->blocks[i].raw_data;
-               for (Size j = 0; j < core->blocks[i].size; j++) {
+               for (Size j = 0; j < src.size(); j++) {
                   dst[j] = static_cast<OtherScalarType>(src[j]);
                }
             }
@@ -181,9 +180,8 @@ namespace TAT {
          real_base_t<ScalarType> res = 0;
          if constexpr (p == -1) {
             for (const auto& block : core->blocks) {
-               const auto& data = block.raw_data;
-               for (Size j = 0; j < block.size; j++) {
-                  auto tmp = std::abs(data[j]);
+               for (const auto& j : block.raw_data) {
+                  auto tmp = std::abs(j);
                   if (tmp > res) {
                      res = tmp;
                   }
@@ -191,28 +189,27 @@ namespace TAT {
             }
          } else if constexpr (p == 0) {
             for (const auto& block : core->blocks) {
-               res += real_base_t<ScalarType>(block.size);
+               res += real_base_t<ScalarType>(block.raw_data.size());
             }
          } else {
             for (const auto& block : core->blocks) {
-               const auto& data = block.raw_data;
-               for (Size j = 0; j < block.size; j++) {
+               for (const auto& j : block.raw_data) {
                   if constexpr (p == 1) {
-                     res += std::abs(data[j]);
+                     res += std::abs(j);
                   } else if constexpr (p == 2) {
                      if constexpr (std::is_same_v<ScalarType, real_base_t<ScalarType>>) {
-                        auto tmp = data[j];
+                        auto tmp = j;
                         res += tmp * tmp;
                      } else {
-                        auto tmp = std::abs(data[j]);
+                        auto tmp = std::abs(j);
                         res += tmp * tmp;
                      }
                   } else {
                      if constexpr (
                            p % 2 == 0 && std::is_same_v<ScalarType, real_base_t<ScalarType>>) {
-                        res += std::pow(data[j], p);
+                        res += std::pow(j, p);
                      } else {
-                        res += std::pow(std::abs(data[j]), p);
+                        res += std::pow(std::abs(j), p);
                      }
                   }
                }
@@ -585,6 +582,13 @@ namespace TAT {
 
          return res;
       }
+      // TODO: symmetry的设计漏洞， 需要指定方向和symmetry
+      // 最后的一个edge应该是这样的 std::tuple<bool, std::map<Symmetry, Size>>
+      // 现在的参数是vector<Name>, vector<map<Symmetry, Size>>
+      // bool表示方向， 在逆转方向时， symmetry也会逆转， 但是对于fermi symmetry
+      // 还会多一个parity （一个边一个， 所以一个张量半个， 和merge时的效果一样）
+      // 方向应该由各个函数各自维护， 在edge operator中， 如果merge的方向不一样， 需要自行逆转
+      // 并通过apply parity判断是否应用
 
       // TODO: contract
       // 调用 merge ， 这样就不用考虑contract特有的符号问题了

@@ -21,7 +21,7 @@
 #ifndef TAT_IO_HPP
 #define TAT_IO_HPP
 
-#include "init.hpp"
+#include "TAT.hpp"
 
 namespace TAT {
    template<class T>
@@ -222,15 +222,15 @@ namespace TAT {
          out << "],";
       }
       out << "size:";
-      out << block.size;
+      out << block.raw_data.size();
       out << ",data:[";
       auto not_first = false;
-      for (Size i = 0; i < block.size; i++) {
+      for (const auto& i : block.raw_data) {
          if (not_first) {
             out << ",";
          }
          not_first = true;
-         out << block.raw_data[i];
+         out << i;
       }
       out << "]}";
       return out;
@@ -266,7 +266,7 @@ namespace TAT {
    const Tensor<ScalarType, Symmetry>&
    Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
       for (const auto& i : core->blocks) {
-         raw_write(out, i.raw_data.data(), i.size);
+         raw_write(out, i.raw_data.data(), i.raw_data.size());
       }
       return *this;
    }
@@ -296,7 +296,7 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_get(std::istream& in) {
       for (auto& i : core->blocks) {
-         raw_read(in, i.raw_data.data(), i.size);
+         raw_read(in, i.raw_data.data(), i.raw_data.size());
       }
       return *this;
    }
