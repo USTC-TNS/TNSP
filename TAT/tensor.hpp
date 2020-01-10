@@ -109,18 +109,43 @@ namespace TAT {
       }
 
       // get item
+      // TODO: 删除block.size, 这个东西应该放在raw_data里
+      [[nodiscard]] const auto& at(const std::map<Name, Symmetry>& position) const& {
+         using is_not_nosymmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
+         auto sym = get_pos_for_at(position, name_to_index, *core);
+         return core->blocks[sym].raw_data;
+      }
+
+      [[nodiscard]] const ScalarType& at(const std::map<Name, Size>& position) const& {
+         using is_nosymmetry = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>;
+         auto pos = get_pos_for_at(position, name_to_index, *core);
+         return core->blocks[0].raw_data[pos];
+      }
+
+      [[nodiscard]] ScalarType& at(const std::map<Name, Size>& position) & {
+         using is_nosymmetry = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>;
+         auto pos = get_pos_for_at(position, name_to_index, *core);
+         return core->blocks[0].raw_data[pos];
+      }
+
+      [[nodiscard]] ScalarType at(const std::map<Name, Size>& position) && {
+         using is_nosymmetry = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>;
+         auto pos = get_pos_for_at(position, name_to_index, *core);
+         return core->blocks[0].raw_data[pos];
+      }
+
       [[nodiscard]] const ScalarType&
-      at(const std::map<Name, EdgePosition<Symmetry>>& position) const& {
+      at(const std::map<Name, std::tuple<Symmetry, Size>>& position) const& {
          auto [sym, pos] = get_pos_for_at(position, name_to_index, *core);
          return core->blocks[sym].raw_data[pos];
       }
 
-      [[nodiscard]] ScalarType& at(const std::map<Name, EdgePosition<Symmetry>>& position) & {
+      [[nodiscard]] ScalarType& at(const std::map<Name, std::tuple<Symmetry, Size>>& position) & {
          auto [sym, pos] = get_pos_for_at(position, name_to_index, *core);
          return core->blocks[sym].raw_data[pos];
       }
 
-      [[nodiscard]] ScalarType at(const std::map<Name, EdgePosition<Symmetry>>& position) && {
+      [[nodiscard]] ScalarType at(const std::map<Name, std::tuple<Symmetry, Size>>& position) && {
          auto [sym, pos] = get_pos_for_at(position, name_to_index, *core);
          return core->blocks[sym].raw_data[pos];
       }

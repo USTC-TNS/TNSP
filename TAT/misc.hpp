@@ -43,10 +43,9 @@ namespace TAT {
    using U1 = long;
    using Fermi = int;
 
+   struct symmetry_base {};
    template<class T>
-   struct is_symmetry {
-      static const bool value = true;
-   };
+   struct is_symmetry : std::is_base_of<symmetry_base, T> {};
    template<class T>
    static constexpr bool is_symmetry_v = is_symmetry<T>::value;
 

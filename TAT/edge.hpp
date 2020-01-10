@@ -60,15 +60,6 @@ namespace TAT {
    }
 
    template<class Symmetry>
-   struct EdgePosition {
-      Symmetry sym;
-      Size position;
-
-      EdgePosition(const Size p) : sym(Symmetry()), position(p) {}
-      EdgePosition(Symmetry s, const Size p) : sym(s), position(p) {}
-   };
-
-   template<class Symmetry>
    [[nodiscard]] map<Symmetry, Size>
    get_merged_edge(const vector<const map<Symmetry, Size>*>& edges_to_merge) {
       auto res_edge = map<Symmetry, Size>();

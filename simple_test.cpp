@@ -346,28 +346,94 @@ void test_merge_split() {
 }
 
 void test_edge_operator() {
-   auto a = TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up, TAT::Down},
-                                                 {{{-1, 3}, {0, 1}, {1, 2}},
-                                                  {{-1, 1}, {0, 4}, {1, 2}},
-                                                  {{-1, 2}, {0, 3}, {1, 1}},
-                                                  {{-1, 1}, {0, 3}, {1, 2}}}}
-                  .set([]() {
-                     static double i = 0;
-                     return i += 1;
-                  });
-   std::cout << a << "\n";
+   do {
+      auto a = TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up, TAT::Down},
+                                                    {{{-1, 3}, {0, 1}, {1, 2}},
+                                                     {{-1, 1}, {0, 4}, {1, 2}},
+                                                     {{-1, 2}, {0, 3}, {1, 1}},
+                                                     {{-1, 1}, {0, 3}, {1, 2}}}}
+                     .set([]() {
+                        static double i = 0;
+                        return i += 1;
+                     });
+      std::cout << "origin = \n" << a << "\n";
+#if 0
    auto b = a.edge_operator(
          {{"Right", "Right1"}},
          {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
-         {{"Left", {"Left", "Up"}}},
-         {"Down1", "Right1", "Down2", "Left"});
-   std::cout << b << "\n";
+         {},
+         {"Left", "Right1", "Up", "Down1", "Down2"});
+#else
+      auto b = a.edge_rename({{"Right", "Right1"}})
+                     .split_edge(
+                           {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}});
+#endif
+      std::cout << "splitted = \n" << b << "\n";
+#if 0
    auto c = a.edge_operator(
+         {{"Right", "Right1"}},
+         {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
+         {},
+         {"Down1", "Right1", "Up", "Left", "Down2"});
+#else
+      auto c = b.transpose({"Down1", "Right1", "Up", "Left", "Down2"});
+#endif
+      std::cout << "transposed = \n" << c << "\n";
+#if 0
+   auto d = a.edge_operator(
          {{"Right", "Right1"}},
          {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
          {{"Left", {"Left", "Down2"}}},
          {"Down1", "Right1", "Up", "Left"});
-   std::cout << c << "\n";
+#else
+      auto d = c.merge_edge({{"Left", {"Left", "Down2"}}});
+#endif
+      std::cout << "merged = \n" << d << "\n";
+   } while (false);
+   do {
+      auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up, TAT::Down},
+                                                       {{{-1, 3}, {0, 1}, {1, 2}},
+                                                        {{-1, 1}, {0, 4}, {1, 2}},
+                                                        {{-1, 2}, {0, 3}, {1, 1}},
+                                                        {{-1, 1}, {0, 3}, {1, 2}}}}
+                     .set([]() {
+                        static double i = 0;
+                        return i += 1;
+                     });
+      std::cout << "origin = \n" << a << "\n";
+#if 0
+   auto b = a.edge_operator(
+         {{"Right", "Right1"}},
+         {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
+         {},
+         {"Left", "Right1", "Up", "Down1", "Down2"});
+#else
+      auto b = a.edge_rename({{"Right", "Right1"}})
+                     .split_edge(
+                           {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}});
+#endif
+      std::cout << "splitted = \n" << b << "\n";
+#if 0
+   auto c = a.edge_operator(
+         {{"Right", "Right1"}},
+         {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
+         {},
+         {"Down1", "Right1", "Up", "Left", "Down2"});
+#else
+      auto c = b.transpose({"Down1", "Right1", "Up", "Left", "Down2"});
+#endif
+      std::cout << "transposed = \n" << c << "\n";
+#if 0
+   auto d = a.edge_operator(
+         {{"Right", "Right1"}},
+         {{"Down", {{"Down1", {{0, 1}, {1, 2}}}, {"Down2", {{-1, 1}, {0, 1}}}}}},
+         {{"Left", {"Left", "Down2"}}},
+         {"Down1", "Right1", "Up", "Left"});
+#else
+      auto d = c.merge_edge({{"Left", {"Left", "Down2"}}});
+#endif
+      std::cout << "merged = \n" << d << "\n";
+   } while (false);
 }
 
 int main(const int argc, char** argv) {

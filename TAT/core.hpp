@@ -96,7 +96,48 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    [[nodiscard]] auto get_pos_for_at(
-         const std::map<Name, EdgePosition<Symmetry>>& position,
+         const std::map<Name, Symmetry>& position,
+         const std::map<Name, Rank>& name_to_index,
+         const Core<ScalarType, Symmetry>& core) {
+      auto rank = Rank(core.edges.size());
+      vector<Symmetry> block_symmetries(rank);
+      for (const auto& [name, sym] : position) {
+         auto index = name_to_index.at(name);
+         block_symmetries[index] = sym;
+      }
+      for (Nums i = 0; i < core.blocks.size(); i++) {
+         if (block_symmetries == core.blocks[i].symmetries) {
+            return i;
+         }
+      }
+      TAT_WARNING("Cannot Find Correct Block When Get Item");
+      return Nums(0);
+   }
+
+   template<class ScalarType, class Symmetry>
+   [[nodiscard]] auto get_pos_for_at(
+         const std::map<Name, Size>& position,
+         const std::map<Name, Rank>& name_to_index,
+         const Core<ScalarType, Symmetry>& core) {
+      auto rank = Rank(core.edges.size());
+      vector<Size> scalar_position(rank);
+      vector<Size> dimensions(rank);
+      for (const auto& [name, res] : position) {
+         auto index = name_to_index.at(name);
+         scalar_position[index] = res;
+         dimensions[index] = core.edges[index].at(Symmetry());
+      }
+      Size offset = 0;
+      for (Rank j = 0; j < rank; j++) {
+         offset *= dimensions[j];
+         offset += scalar_position[j];
+      }
+      return offset;
+   }
+
+   template<class ScalarType, class Symmetry>
+   [[nodiscard]] auto get_pos_for_at(
+         const std::map<Name, std::tuple<Symmetry, Size>>& position,
          const std::map<Name, Rank>& name_to_index,
          const Core<ScalarType, Symmetry>& core) {
       auto rank = Rank(core.edges.size());
@@ -105,9 +146,9 @@ namespace TAT {
       vector<Size> dimensions(rank);
       for (const auto& [name, res] : position) {
          auto index = name_to_index.at(name);
-         block_symmetries[index] = res.sym;
-         scalar_position[index] = res.position;
-         dimensions[index] = core.edges[index].at(res.sym);
+         block_symmetries[index] = std::get<0>(res);
+         scalar_position[index] = std::get<1>(res);
+         dimensions[index] = core.edges[index].at(std::get<0>(res));
       }
       Size offset = 0;
       for (Rank j = 0; j < rank; j++) {
