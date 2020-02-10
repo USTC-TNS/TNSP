@@ -23,6 +23,145 @@
 #include "misc.hpp"
 
 namespace TAT {
+   /**
+    * \see Edge
+    */
+   template<class Symmetry>
+   struct BoseEdge {
+      using const_iterator = typename std::map<Symmetry, Size>::const_iterator;
+
+      std::map<Symmetry, Size> map = {};
+
+      BoseEdge() = default;
+      BoseEdge(const BoseEdge&) = default;
+      BoseEdge(BoseEdge&&) = default;
+      BoseEdge& operator=(const BoseEdge&) = default;
+      BoseEdge& operator=(BoseEdge&&) = default;
+      ~BoseEdge() = default;
+
+      template<
+            class T = std::map<Symmetry, Size>,
+            class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      BoseEdge(T&& t) : map(std::forward<T>(t)) {}
+      BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> t) : map(t) {}
+
+      BoseEdge(const Size s) : map({{Symmetry(), s}}) {}
+
+      void possible_reverse() {}
+   };
+   template<class Symmetry>
+   bool operator==(const BoseEdge<Symmetry>& e1, const BoseEdge<Symmetry>& e2) {
+      return e1.map == e2.map;
+   }
+
+   /**
+    * \see Edge
+    */
+   template<class Symmetry>
+   struct FermiEdge {
+      using const_iterator = typename std::map<Symmetry, Size>::const_iterator;
+
+      Arrow arrow = false;
+      std::map<Symmetry, Size> map = {};
+
+      FermiEdge() = default;
+      FermiEdge(const FermiEdge&) = default;
+      FermiEdge(FermiEdge&&) = default;
+      FermiEdge& operator=(const FermiEdge&) = default;
+      FermiEdge& operator=(FermiEdge&&) = default;
+      ~FermiEdge() = default;
+
+      template<
+            class T = std::map<Symmetry, Size>,
+            class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      FermiEdge(T&& t) : map(std::forward<T>(t)) {}
+      FermiEdge(std::initializer_list<std::pair<const Symmetry, Size>> t) : map(t) {}
+
+      template<
+            class T = std::map<Symmetry, Size>,
+            class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      FermiEdge(const Arrow arrow, T&& boson) : arrow(arrow), map(std::forward<T>(boson)) {}
+
+      void possible_reverse() {
+         bool reverse = false;
+         for (const auto& [i, j] : map) {
+            if (i.fermi < 0) {
+               reverse = true;
+               break;
+            }
+         }
+         if (reverse) {
+            arrow = !arrow;
+            std::map<Symmetry, Size> new_obj;
+            for (const auto& [i, j] : map) {
+               new_obj[!i] = j;
+            }
+            map.swap(new_obj);
+         }
+      }
+   };
+   template<class Symmetry>
+   bool operator==(const FermiEdge<Symmetry>& e1, const FermiEdge<Symmetry>& e2) {
+      return e1.map == e2.map && e1.arrow == e2.arrow;
+   }
+
+   template<class Symmetry>
+   using EdgeBase =
+         std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry>, BoseEdge<Symmetry>>;
+   /**
+    * \brief 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
+    * \tparam Symmetry 张量所拥有的对称性
+    * \see BoseEdge, FermiEdge
+    */
+   template<class Symmetry, class = std::enable_if_t<is_symmetry_v<Symmetry>>>
+   struct Edge : public EdgeBase<Symmetry> {
+      using EdgeBase<Symmetry>::EdgeBase;
+   };
+
+   template<class Symmetry>
+   std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge);
+   template<class Symmetry>
+   std::ostream& operator<=(std::ostream& out, const Edge<Symmetry>& edge);
+   template<class Symmetry>
+   std::istream& operator>=(std::istream& in, Edge<Symmetry>& edge);
+
+   /**
+    * \brief std::begin的替代品, 有时程序中出现vector<Edge*>而不是vector<Edge>, 为了简单,
+    * 使用此std_begin获取v.map.begin()或者v->map.begin()
+    * \see loop_edge, std_end
+    */
+   template<class T>
+   auto std_begin(const T& v) {
+      if constexpr (std::is_pointer_v<T>) {
+         return std::begin(v->map);
+      } else {
+         return std::begin(v.map);
+      }
+   }
+
+   /**
+    * \see loop_edge, std_begin
+    */
+   template<class T>
+   auto std_end(const T& v) {
+      if constexpr (std::is_pointer_v<T>) {
+         return std::end(v->map);
+      } else {
+         return std::end(v.map);
+      }
+   }
+
+   /**
+    * \brief 对一个边的形状列表进行枚举分块, 并做一些其他操作
+    * \tparam T 应是vector<Edge>或者vector<Edge*>
+    * \param edges 即将要枚举的边列表
+    * \param rank0 如果边列表为空，则调用rank0后返回
+    * \param check 对于边列表划分的每个分块, 使用check进行检查, check的参数是Edge中map的iterator的列表
+    * \param append 如果check检查成功, 则运行append, append的参数与check相同
+    * \param update 每次append前将根据append的输入参数列表中, 变化了的元, 进行最小化的更新,
+    * 第一个参数与append相同, 第二个参数min_ptr表示仅需要更新从[min_ptr,rank)的元素
+    * \see std_begin, initialize_block_symmetries_with_check, get_merged_edge
+    */
    template<class T, class F1, class F2, class F3, class F4>
    void loop_edge(const T& edges, F1&& rank0, F2&& check, F3&& append, F4&& update) {
       const Rank rank = edges.size();
@@ -59,10 +198,56 @@ namespace TAT {
       }
    }
 
+   /**
+    * \brief 根据边的形状的列表, 得到所有满足对称性条件的张量分块
+    * \return 分块信息, 为一个vector, 元素为两个类型的tuple, 分别是子块的各个子边对称性值和子块的总大小
+    */
    template<class Symmetry>
-   [[nodiscard]] map<Symmetry, Size>
-   get_merged_edge(const vector<const map<Symmetry, Size>*>& edges_to_merge) {
-      auto res_edge = map<Symmetry, Size>();
+   auto initialize_block_symmetries_with_check(const vector<Edge<Symmetry>>& edges) {
+      auto res = vector<std::tuple<vector<Symmetry>, Size>>();
+      auto vec = vector<Symmetry>(edges.size());
+      auto size = vector<Size>(edges.size());
+      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
+      loop_edge(
+            edges,
+            [&res]() {
+               res.push_back({vector<Symmetry>{}, 1});
+            },
+            [&edges]([[maybe_unused]] const PosType& pos) {
+               auto sum = Symmetry();
+               if constexpr (is_bose_symmetry_v<Symmetry>) {
+                  for (const auto& i : pos) {
+                     sum += i->first;
+                  }
+               } else {
+                  for (auto i = 0; i < pos.size(); i++) {
+                     if (edges[i].arrow) {
+                        sum += !pos[i]->first;
+                     } else {
+                        sum += pos[i]->first;
+                     }
+                  }
+               }
+               return sum == Symmetry();
+            },
+            [&res, &vec, &size]([[maybe_unused]] const PosType& pos) {
+               res.push_back({vec, size.back()});
+            },
+            [&vec, &size](const PosType& pos, const Rank ptr) {
+               for (auto i = ptr; i < pos.size(); i++) {
+                  vec[i] = pos[i]->first;
+                  size[i] = pos[i]->second * (i ? size[i - 1] : 1);
+               }
+            });
+      return res;
+   }
+
+   // TODO: edge的辅助函数需要斟酌和注释
+   // TODO: 考虑转向的问题
+   template<class Symmetry>
+   [[nodiscard]] Edge<Symmetry>
+   get_merged_edge(const vector<const Edge<Symmetry>*>& edges_to_merge) {
+      auto res_edge = Edge<Symmetry>();
 
       auto sym = vector<Symmetry>(edges_to_merge.size());
       auto dim = vector<Size>(edges_to_merge.size());

@@ -21,7 +21,7 @@
 #ifndef TAT_IO_HPP
 #define TAT_IO_HPP
 
-#include "TAT.hpp"
+#include "tensor.hpp"
 
 namespace TAT {
    template<class T>
@@ -79,14 +79,19 @@ namespace TAT {
       }
       return in;
    }
-   template<class Key, class T>
-   std::ostream& operator<<(std::ostream& out, const map<Key, T>& edge) {
-      if constexpr (std::is_same_v<Key, NoSymmetry>) {
-         out << edge.at(NoSymmetry());
+   template<class Symmetry>
+   std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         out << edge.map.at(NoSymmetry());
       } else {
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            out << "{arrow:";
+            out << (edge.arrow ? "In" : "Out");
+            out << ",map:";
+         }
          out << "{";
          auto not_first = false;
-         for (const auto& [sym, dim] : edge) {
+         for (const auto& [sym, dim] : edge.map) {
             if (not_first) {
                out << ",";
             }
@@ -94,39 +99,48 @@ namespace TAT {
             out << sym << ":" << dim;
          }
          out << "}";
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            out << "}";
+         }
       }
       return out;
    }
-   template<class Key, class T>
-   std::ostream& operator<=(std::ostream& out, const map<Key, T>& edge) {
-      if constexpr (std::is_same_v<Key, NoSymmetry>) {
-         raw_write(out, &edge.at(NoSymmetry()));
+   template<class Symmetry>
+   std::ostream& operator<=(std::ostream& out, const Edge<Symmetry>& edge) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         raw_write(out, &edge.map.begin()->second);
       } else {
-         const Nums numbers = edge.size();
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            raw_write(out, &edge.arrow);
+         }
+         const Nums numbers = edge.map.size();
          raw_write(out, &numbers);
-         for (const auto& [sym, dim] : edge) {
+         for (const auto& [sym, dim] : edge.map) {
             out <= sym;
             raw_write(out, &dim);
          }
       }
       return out;
    }
-   template<class Key, class T>
-   std::istream& operator>=(std::istream& in, map<Key, T>& edge) {
-      if constexpr (std::is_same_v<Key, NoSymmetry>) {
+   template<class Symmetry>
+   std::istream& operator>=(std::istream& in, Edge<Symmetry>& edge) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          Size dim;
          raw_read(in, &dim);
-         edge[NoSymmetry()] = dim;
+         edge.map[NoSymmetry()] = dim;
       } else {
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            raw_read(in, &edge.arrow);
+         }
          Nums numbers;
          raw_read(in, &numbers);
-         edge.clear();
+         edge.map.clear();
          for (Nums i = 0; i < numbers; i++) {
-            Key sym;
+            Symmetry sym;
             Size dim;
             in >= sym;
             raw_read(in, &dim);
-            edge[sym] = dim;
+            edge.map[sym] = dim;
          }
       }
       return in;
@@ -207,36 +221,6 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   std::ostream& operator<<(std::ostream& out, const Block<ScalarType, Symmetry>& block) {
-      out << "{";
-      if constexpr (!std::is_same_v<Symmetry, NoSymmetry>) {
-         out << "symmetry:[";
-         auto not_first = false;
-         for (const auto& i : block.symmetries) {
-            if (not_first) {
-               out << ",";
-            }
-            not_first = true;
-            out << i;
-         }
-         out << "],";
-      }
-      out << "size:";
-      out << block.raw_data.size();
-      out << ",data:[";
-      auto not_first = false;
-      for (const auto& i : block.raw_data) {
-         if (not_first) {
-            out << ",";
-         }
-         not_first = true;
-         out << i;
-      }
-      out << "]}";
-      return out;
-   }
-
-   template<class ScalarType, class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
       out << "{names:";
       out << tensor.names;
@@ -244,9 +228,18 @@ namespace TAT {
       out << tensor.core->edges;
       out << ",blocks:";
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         out << tensor.core->blocks[0];
+         out << tensor.core->blocks.begin()->second;
       } else {
-         out << tensor.core->blocks;
+         out << "{";
+         auto not_first = false;
+         for (const auto& [i, j] : tensor.core->blocks) {
+            if (not_first) {
+               out << ",";
+            }
+            not_first = true;
+            out << i << ":" << j;
+         }
+         out << "}";
       }
       out << "}";
       return out;
@@ -265,8 +258,8 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    const Tensor<ScalarType, Symmetry>&
    Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
-      for (const auto& i : core->blocks) {
-         raw_write(out, i.raw_data.data(), i.raw_data.size());
+      for (const auto& [_, i] : core->blocks) {
+         raw_write(out, i.data(), i.size());
       }
       return *this;
    }
@@ -284,7 +277,7 @@ namespace TAT {
       names.resize(rank);
       in >= names;
       name_to_index = construct_name_to_index(names);
-      vector<map<Symmetry, Size>> edges(rank);
+      vector<Edge<Symmetry>> edges(rank);
       in >= edges;
       core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
       if (!is_valid_name(names, core->edges.size())) {
@@ -295,8 +288,9 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_get(std::istream& in) {
-      for (auto& i : core->blocks) {
-         raw_read(in, i.raw_data.data(), i.raw_data.size());
+      for (auto& [_, i] : core->blocks) {
+         raw_read(in, i.data(), i.size());
+         // TODO: 不同版本之间不兼容, 依赖于map内的less确定的顺序
       }
       return *this;
    }

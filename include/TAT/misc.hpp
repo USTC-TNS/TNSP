@@ -23,44 +23,133 @@
 
 #include <complex>
 #include <iostream>
-#include <map>
 #include <type_traits>
 #include <vector>
 
+/**
+ * \brief TAT is A Tensor library
+ */
 namespace TAT {
+   /**
+    * \brief TAT的版本号
+    */
    const std::string TAT_VERSION = "0.0.4";
 
+#ifndef NDEBUG
+   /**
+    * \brief Debug模式中, 将在程序末尾打印一行友情提示
+    */
+   struct Evil {
+      ~Evil() {
+         try {
+            std::clog << "\n\nPremature optimization is the root of all evil!\n"
+                         "                                       --- Donald Knuth\n\n\n";
+         } catch ([[maybe_unused]] const std::exception& e) {
+         }
+      }
+   };
+   const Evil evil;
+#endif
+
+   /**
+    * \brief 打印警告, 有时也可能是错误, 但在非debug模式中不做事
+    * \param msg 待打印的话
+    */
    inline void TAT_WARNING([[maybe_unused]] const std::string& msg) {
 #ifndef NDEBUG
       std::cerr << msg << std::endl;
 #endif
    }
 
+   /**
+    * \brief 张量的秩的大小的类型
+    */
    using Rank = unsigned short;
+   /**
+    * \brief 张量的分块的数目的类型
+    */
    using Nums = unsigned int;
+   /**
+    * \brief 张量的数据维度大小和数据本身大小的类型
+    */
    using Size = unsigned long;
+
+   /**
+    * \brief Z2对称性的表示的类型
+    */
    using Z2 = bool;
+   /**
+    * \brief U1对称性的表示的类型
+    */
    using U1 = long;
+   /**
+    * \brief 费米子数目的类型
+    */
    using Fermi = int;
 
+   /**
+    * \brief 费米箭头的方向的类型, false和true分别表示出入
+    */
+   using Arrow = bool;
+
+   /**
+    * \brief 所有对称性类型的基类, 用来判断一个类型是否是对称性类型
+    */
    struct symmetry_base {};
+   /**
+    * \brief 所有费米对称性的基类, 用来判断一个类型是否是玻色对称性
+    */
+   struct bose_symmetry_base : symmetry_base {};
+   /**
+    * \brief 所有费米对称性的基类, 用来判断一个类型是否是费米对称性
+    */
    struct fermi_symmetry_base : symmetry_base {};
+
+   /**
+    * \brief 判断一个类型是否是对称性类型
+    * \tparam T 如果T是对称性类型, 则value为true
+    */
    template<class T>
    struct is_symmetry : std::is_base_of<symmetry_base, T> {};
    template<class T>
    constexpr bool is_symmetry_v = is_symmetry<T>::value;
+
+   /**
+    * \brief 判断一个类型是否是玻色对称性类型
+    * \tparam T 如果T是玻色对称性类型, 则value为true
+    */
+   template<class T>
+   struct is_bose_symmetry : std::is_base_of<bose_symmetry_base, T> {};
+   template<class T>
+   constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
+
+   /**
+    * \brief 判断一个类型是否是费米对称性类型
+    * \tparam T 如果T是费米对称性类型, 则value为true
+    */
    template<class T>
    struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
    template<class T>
    constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
 
+   /**
+    * \brief 判断一个类型是否是标量类型, 修复了std::scalar不能判断std::complex的问题
+    * \tparam T 如果T是标量类型, 则value为true
+    */
    template<class T>
    struct is_scalar : std::is_scalar<T> {};
+   /**
+    * \brief 对std::complex的特殊处理
+    */
    template<class T>
    struct is_scalar<std::complex<T>> : std::is_scalar<T> {};
    template<class T>
    constexpr bool is_scalar_v = is_scalar<T>::value;
 
+   /**
+    * \brief c++20的type_identity
+    * \tparam T type的类型
+    */
    template<class T>
    struct type_identity {
       using type = T;
@@ -68,13 +157,32 @@ namespace TAT {
    template<class T>
    using type_identity_t = typename type_identity<T>::type;
 
+   /**
+    * \brief 取对应的实数类型, 在svd, norm等地方会用到
+    * \tparam T 如果T是std::complex<S>, 则type为S, 否则为T本身
+    */
    template<class T>
    struct real_base : type_identity<T> {};
+   /**
+    * \brief 对std::complex进行特化
+    */
    template<class T>
    struct real_base<std::complex<T>> : type_identity<T> {};
    template<class T>
    using real_base_t = typename real_base<T>::type;
 
+   template<class T>
+   struct is_complex : std::is_same<T, std::complex<real_base_t<T>>> {};
+   template<class T>
+   constexpr bool is_complex_v = is_complex<T>::value;
+   template<class T>
+   struct is_real : std::is_same<T, real_base_t<T>> {};
+   template<class T>
+   constexpr bool is_real_v = is_real<T>::value;
+
+   /**
+    * \brief 用于不初始化的vector的allocator
+    */
    template<class T>
    struct allocator_without_initialize : std::allocator<T> {
       template<class U>
@@ -82,6 +190,12 @@ namespace TAT {
          using other = allocator_without_initialize<U>;
       };
 
+      /**
+       * \brief 初始化函数, 如果没有参数, 且类型T可以被平凡的析构, 则不做任何初始化操作, 否则进行正常的就地初始化
+       * \tparam Args 初始化的参数类型
+       * \param p 被初始化的值的地址
+       * \param args 初始化的参数
+       */
       template<class... Args>
       void construct([[maybe_unused]] T* p, Args&&... args) {
          if constexpr (!((sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
@@ -94,10 +208,12 @@ namespace TAT {
       allocator_without_initialize(allocator_without_initialize<U>) {}
    };
 
+   /**
+    * \brief 尽可能不做初始化的vector容器
+    * \see allocator_without_initialize
+    */
    template<class T>
-   struct vector : public std::vector<T, allocator_without_initialize<T>> {
-      using std::vector<T, allocator_without_initialize<T>>::vector;
-   };
+   using vector = std::vector<T, allocator_without_initialize<T>>;
 
    template<class T>
    std::ostream& operator<<(std::ostream& out, const vector<T>& vec);
@@ -105,38 +221,6 @@ namespace TAT {
    std::ostream& operator<=(std::ostream& out, const vector<T>& vec);
    template<class T>
    std::istream& operator>=(std::istream& in, vector<T>& vec);
-
-   template<class Key, class T>
-   struct map : public std::map<Key, T> {
-      using std::map<Key, T>::map;
-
-      map(const T s) : std::map<Key, T>({{Key(), s}}) {}
-   };
-
-   template<class Key, class T>
-   std::ostream& operator<<(std::ostream& out, const map<Key, T>& edge);
-   template<class Key, class T>
-   std::ostream& operator<=(std::ostream& out, const map<Key, T>& edge);
-   template<class Key, class T>
-   std::istream& operator>=(std::istream& in, map<Key, T>& edge);
-
-   template<class T>
-   auto std_begin(const T& v) {
-      if constexpr (std::is_pointer_v<T>) {
-         return std::begin(*v);
-      } else {
-         return std::begin(v);
-      }
-   }
-
-   template<class T>
-   auto std_end(const T& v) {
-      if constexpr (std::is_pointer_v<T>) {
-         return std::end(*v);
-      } else {
-         return std::end(v);
-      }
-   }
 } // namespace TAT
 
 #endif

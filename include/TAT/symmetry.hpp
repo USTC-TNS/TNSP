@@ -24,8 +24,10 @@
 #include "misc.hpp"
 
 namespace TAT {
+   // TODO: 关于对称性的get parity需要完善接口， 以及需要注释
+   // 因为arrow的原因， symmetry可能需要operator-=等符号
    template<class Derived>
-   struct spin_symmetry : symmetry_base {
+   struct bose_symmetry : bose_symmetry_base {
       static bool get_parity(
             [[maybe_unused]] const vector<Derived>& symmetries,
             [[maybe_unused]] const vector<Rank>& plan) {
@@ -69,7 +71,7 @@ namespace TAT {
       }
    };
 
-   struct NoSymmetry : spin_symmetry<NoSymmetry> {};
+   struct NoSymmetry : bose_symmetry<NoSymmetry> {};
    inline NoSymmetry
    operator+([[maybe_unused]] const NoSymmetry& s1, [[maybe_unused]] const NoSymmetry& s2) {
       return NoSymmetry();
@@ -93,8 +95,8 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<, false)
 #undef TAT_DEF_SYM_OP
 
-   struct Z2Symmetry : spin_symmetry<Z2Symmetry> {
-      Z2 z2 = false;
+   struct Z2Symmetry : bose_symmetry<Z2Symmetry> {
+      Z2 z2;
 
       Z2Symmetry(const Z2 z2 = false) : z2(z2) {}
    };
@@ -121,8 +123,8 @@ namespace TAT {
    TAT_DEF_SYM_OP(operator<, a.z2<b.z2)
 #undef TAT_DEF_SYM_OP
 
-   struct U1Symmetry : spin_symmetry<U1Symmetry> {
-      U1 u1 = 0;
+   struct U1Symmetry : bose_symmetry<U1Symmetry> {
+      U1 u1;
 
       U1Symmetry(const U1 u1 = 0) : u1(u1) {}
    };
@@ -151,7 +153,7 @@ namespace TAT {
 #undef TAT_DEF_SYM_OP
 
    struct FermiSymmetry : fermi_symmetry<FermiSymmetry> {
-      Fermi fermi = 0;
+      Fermi fermi;
 
       FermiSymmetry(const Fermi fermi = 0) : fermi(fermi) {}
    };
@@ -161,6 +163,9 @@ namespace TAT {
    inline FermiSymmetry& operator+=(FermiSymmetry& s1, const FermiSymmetry& s2) {
       s1.fermi += s2.fermi;
       return s1;
+   }
+   inline FermiSymmetry operator!(const FermiSymmetry& s) {
+      return FermiSymmetry(-s.fermi);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s);
@@ -180,10 +185,10 @@ namespace TAT {
 #undef TAT_DEF_SYM_OP
 
    struct FermiZ2Symmetry : fermi_symmetry<FermiZ2Symmetry> {
-      Fermi fermi = 0;
-      Z2 z2 = false;
+      Fermi fermi;
+      Z2 z2;
 
-      FermiZ2Symmetry(const Fermi fermi = 0, const Z2 z2 = 0) : fermi(fermi), z2(z2) {}
+      FermiZ2Symmetry(const Fermi fermi = 0, const Z2 z2 = false) : fermi(fermi), z2(z2) {}
    };
    inline FermiZ2Symmetry operator+(const FermiZ2Symmetry& s1, const FermiZ2Symmetry& s2) {
       return FermiZ2Symmetry(s1.fermi + s2.fermi, s1.z2 ^ s2.z2);
@@ -192,6 +197,9 @@ namespace TAT {
       s1.fermi += s2.fermi;
       s1.z2 ^= s2.z2;
       return s1;
+   }
+   inline FermiZ2Symmetry operator!(const FermiZ2Symmetry& s) {
+      return FermiZ2Symmetry(-s.fermi, s.z2);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s);
@@ -211,18 +219,21 @@ namespace TAT {
 #undef TAT_DEF_SYM_OP
 
    struct FermiU1Symmetry : fermi_symmetry<FermiU1Symmetry> {
-      Fermi fermi = 0;
-      U1 u1 = 0;
+      Fermi fermi;
+      U1 u1;
 
       FermiU1Symmetry(const Fermi fermi = 0, const U1 u1 = 0) : fermi(fermi), u1(u1) {}
    };
    inline FermiU1Symmetry operator+(const FermiU1Symmetry& s1, const FermiU1Symmetry& s2) {
-      return FermiU1Symmetry(s1.fermi + s2.fermi, s1.u1 ^ s2.u1);
+      return FermiU1Symmetry(s1.fermi + s2.fermi, s1.u1 + s2.u1);
    }
    inline FermiU1Symmetry& operator+=(FermiU1Symmetry& s1, const FermiU1Symmetry& s2) {
       s1.fermi += s2.fermi;
-      s1.u1 ^= s2.u1;
+      s1.u1 += s2.u1;
       return s1;
+   }
+   inline FermiU1Symmetry operator!(const FermiU1Symmetry& s) {
+      return FermiU1Symmetry(-s.fermi, s.u1);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s);

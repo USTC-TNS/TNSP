@@ -25,106 +25,82 @@
 #include "name.hpp"
 
 namespace TAT {
-   template<class ScalarType, class Symmetry>
-   struct Block {
-      vector<Symmetry> symmetries;
-      vector<ScalarType> raw_data;
-
-      template<
-            class T = vector<Symmetry>,
-            class = std::enable_if_t<std::is_convertible_v<T, vector<Symmetry>>>>
-      Block(const vector<map<Symmetry, Size>>& e, T&& s) : symmetries(std::forward<T>(s)) {
-         Size size = 1;
-         for (Rank i = 0; i < e.size(); i++) {
-            size *= e[i].at(symmetries[i]);
-         }
-         raw_data.resize(size);
-      }
-   };
-
-   template<class Symmetry>
-   auto initialize_block_symmetries_with_check(const vector<map<Symmetry, Size>>& edges) {
-      auto res = vector<vector<Symmetry>>();
-      auto vec = vector<Symmetry>(edges.size());
-      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
-      loop_edge(
-            edges,
-            [&res]() { res.push_back({}); },
-            []([[maybe_unused]] const PosType& pos) {
-               auto sum = Symmetry();
-               for (const auto& i : pos) {
-                  sum += i->first;
-               }
-               return sum == Symmetry();
-            },
-            [&res, &vec]([[maybe_unused]] const PosType& pos) { res.push_back(vec); },
-            [&vec](const PosType& pos, const Rank ptr) {
-               for (auto i = ptr; i < pos.size(); i++) {
-                  vec[i] = pos[i]->first;
-               }
-            });
-      return res;
-   }
-
+   /**
+    * \brief 记录了张量的核心数据的类型, 核心数据指的是除了角标名称之外的信息, 包括边的形状,
+    * 以及张量内本身的数据
+    * \tparam ScalarType 张量内本身的数据的标量类型
+    * \tparam Symmetry 张量所拥有的对称性
+    */
    template<class ScalarType, class Symmetry>
    struct Core {
-      vector<map<Symmetry, Size>> edges;
-      vector<Block<ScalarType, Symmetry>> blocks;
+      /**
+       * \brief 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
+       * \see Edge
+       */
+      vector<Edge<Symmetry>> edges = {};
+      /**
+       * \brief 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
+       * 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
+       */
+      std::map<vector<Symmetry>, vector<ScalarType>> blocks = {};
 
+      /**
+       * \brief 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块
+       * \param edges_init 边的形状的列表
+       * \note 如果是费米对称性, 此构造函数将对含负的对称性值的边整个取反,
+       * 原则上构造时应该全正或全负
+       */
       template<
-            class T = vector<map<Symmetry, Size>>,
-            class = std::enable_if_t<std::is_convertible_v<T, vector<map<Symmetry, Size>>>>>
-      Core(T&& e) : edges(std::forward<T>(e)) {
+            class T = vector<Edge<Symmetry>>,
+            class = std::enable_if_t<std::is_convertible_v<T, vector<Edge<Symmetry>>>>>
+      Core(T&& edges_init) : edges(std::forward<T>(edges_init)) {
+         for (auto& i : edges) {
+            i.possible_reverse();
+         }
          auto symmetries_list = initialize_block_symmetries_with_check(edges);
-         for (auto& i : symmetries_list) {
-            blocks.push_back(Block<ScalarType, Symmetry>(edges, std::move(i)));
+         for (const auto& [i, j] : symmetries_list) {
+            blocks[i] = vector<ScalarType>(j);
          }
       }
 
-      Nums find_block(const vector<Symmetry>& symmetries) {
-         const auto number = blocks.size();
-         for (auto i = 0; i < number; i++) {
-            if (symmetries == blocks[i].symmetries) {
-               return i;
-            }
-         }
-         TAT_WARNING("Block Not Found");
-         return number;
-      }
+      Core() = default;
+      Core(const Core&) = default;
+      Core(Core&&) = default;
+      Core& operator=(const Core&) = default;
+      Core& operator=(Core&&) = default;
+      ~Core() = default;
    };
 
+   /**
+    * \brief 寻找有对称性张量中的某个子块
+    */
    template<class ScalarType, class Symmetry>
-   [[nodiscard]] auto get_pos_for_at(
+   [[nodiscard]] auto get_block_for_get_item(
          const std::map<Name, Symmetry>& position,
          const std::map<Name, Rank>& name_to_index,
          const Core<ScalarType, Symmetry>& core) {
-      auto rank = Rank(core.edges.size());
-      vector<Symmetry> block_symmetries(rank);
+      auto symmetries = vector<Symmetry>(core.edges.size());
       for (const auto& [name, sym] : position) {
-         auto index = name_to_index.at(name);
-         block_symmetries[index] = sym;
+         symmetries[name_to_index.at(name)] = sym;
       }
-      for (Nums i = 0; i < core.blocks.size(); i++) {
-         if (block_symmetries == core.blocks[i].symmetries) {
-            return i;
-         }
-      }
-      TAT_WARNING("Cannot Find Correct Block When Get Item");
-      return Nums(0);
+      return symmetries;
    }
 
+   /**
+    * \brief 寻找无对称性张量中每个元素
+    */
    template<class ScalarType, class Symmetry>
-   [[nodiscard]] auto get_pos_for_at(
+   [[nodiscard]] auto get_offset_for_get_item(
          const std::map<Name, Size>& position,
          const std::map<Name, Rank>& name_to_index,
          const Core<ScalarType, Symmetry>& core) {
-      auto rank = Rank(core.edges.size());
-      vector<Size> scalar_position(rank);
-      vector<Size> dimensions(rank);
+      const auto rank = Rank(core.edges.size());
+      auto scalar_position = vector<Size>(rank);
+      auto dimensions = vector<Size>(rank);
       for (const auto& [name, res] : position) {
          auto index = name_to_index.at(name);
          scalar_position[index] = res;
-         dimensions[index] = core.edges[index].at(Symmetry());
+         dimensions[index] = core.edges[index].map.begin()->second;
       }
       Size offset = 0;
       for (Rank j = 0; j < rank; j++) {
@@ -134,33 +110,31 @@ namespace TAT {
       return offset;
    }
 
+   /**
+    * \brief 寻找有对称性张量中的某个子块的某个元素
+    */
    template<class ScalarType, class Symmetry>
-   [[nodiscard]] auto get_pos_for_at(
+   [[nodiscard]] auto get_block_and_offset_for_get_item(
          const std::map<Name, std::tuple<Symmetry, Size>>& position,
          const std::map<Name, Rank>& name_to_index,
          const Core<ScalarType, Symmetry>& core) {
-      auto rank = Rank(core.edges.size());
-      vector<Symmetry> block_symmetries(rank);
-      vector<Size> scalar_position(rank);
-      vector<Size> dimensions(rank);
-      for (const auto& [name, res] : position) {
+      const auto rank = Rank(core.edges.size());
+      auto symmetries = vector<Symmetry>(rank);
+      auto scalar_position = vector<Size>(rank);
+      auto dimensions = vector<Size>(rank);
+      for (const auto& [name, _] : position) {
+         const auto& [sym, res] = _;
          auto index = name_to_index.at(name);
-         block_symmetries[index] = std::get<0>(res);
-         scalar_position[index] = std::get<1>(res);
-         dimensions[index] = core.edges[index].at(std::get<0>(res));
+         symmetries[index] = sym;
+         scalar_position[index] = res;
+         dimensions[index] = core.edges[index].map.begin()->second;
       }
       Size offset = 0;
       for (Rank j = 0; j < rank; j++) {
          offset *= dimensions[j];
          offset += scalar_position[j];
       }
-      for (Nums i = 0; i < core.blocks.size(); i++) {
-         if (block_symmetries == core.blocks[i].symmetries) {
-            return std::make_tuple(i, offset);
-         }
-      }
-      TAT_WARNING("Cannot Find Correct Block When Get Item");
-      return std::make_tuple(Nums(0), Size(0));
+      return std::make_tuple(symmetries, offset);
    }
 } // namespace TAT
 #endif

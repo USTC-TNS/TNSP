@@ -30,23 +30,23 @@ namespace TAT {
    auto OP(const Tensor<ScalarType1, Symmetry>& t1, const Tensor<ScalarType2, Symmetry>& t2) { \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                         \
       if (t1.names.empty()) {                                                                  \
-         const auto& x = t1.core->blocks[0].raw_data[0];                                       \
+         const auto& x = t1.at({});                                                            \
          auto res = Tensor<ScalarType, Symmetry>{t2.names, t2.core->edges};                    \
-         for (Nums i = 0; i < res.core->blocks.size(); i++) {                                  \
-            const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
-            ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
-            for (Size j = 0; j < res.core->blocks[i].raw_data.size(); j++) {                   \
+         for (auto& [sym, block] : res.core->blocks) {                                         \
+            const ScalarType2* __restrict b = t2.core->blocks[sym].data();                     \
+            ScalarType* __restrict c = block.data();                                           \
+            for (Size j = 0; j < block.size(); j++) {                                          \
                EVAL1;                                                                          \
             }                                                                                  \
          }                                                                                     \
          return res;                                                                           \
       } else if (t2.names.empty()) {                                                           \
-         const auto& y = t2.core->blocks[0].raw_data[0];                                       \
+         const auto& y = t2.at({});                                                            \
          auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         for (Nums i = 0; i < res.core->blocks.size(); i++) {                                  \
-            const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
-            ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
-            for (Size j = 0; j < res.core->blocks[i].raw_data.size(); j++) {                   \
+         for (auto& [sym, block] : res.core->blocks) {                                         \
+            const ScalarType1* __restrict a = t1.core->blocks[sym].data();                     \
+            ScalarType* __restrict c = block.data();                                           \
+            for (Size j = 0; j < block.size(); j++) {                                          \
                EVAL2;                                                                          \
             }                                                                                  \
          }                                                                                     \
@@ -56,11 +56,11 @@ namespace TAT {
             TAT_WARNING("Scalar Operator In Different Shape Tensor");                          \
          }                                                                                     \
          auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         for (Nums i = 0; i < res.core->blocks.size(); i++) {                                  \
-            const ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();              \
-            const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();              \
-            ScalarType* __restrict c = res.core->blocks[i].raw_data.data();                    \
-            for (Size j = 0; j < res.core->blocks[i].raw_data.size(); j++) {                   \
+         for (auto& [sym, block] : res.core->blocks) {                                         \
+            const ScalarType1* __restrict a = t1.core->blocks[sym].data();                     \
+            const ScalarType2* __restrict b = t2.core->blocks[sym].data();                     \
+            ScalarType* __restrict c = block.data();                                           \
+            for (Size j = 0; j < block.size(); j++) {                                          \
                EVAL3;                                                                          \
             }                                                                                  \
          }                                                                                     \
@@ -98,10 +98,10 @@ namespace TAT {
          TAT_WARNING("Inplace Operator On Tensor Shared");                                       \
       }                                                                                          \
       if (t2.names.empty()) {                                                                    \
-         const auto& y = t2.core->blocks[0].raw_data[0];                                         \
-         for (Nums i = 0; i < t1.core->blocks.size(); i++) {                                     \
-            ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();                      \
-            for (Size j = 0; j < t1.core->blocks[i].raw_data.size(); j++) {                      \
+         const auto& y = t2.at({});                                                              \
+         for (auto& [sym, block] : t1.core->blocks) {                                            \
+            ScalarType1* __restrict a = block.data();                                            \
+            for (Size j = 0; j < block.size(); j++) {                                            \
                EVAL1;                                                                            \
             }                                                                                    \
          }                                                                                       \
@@ -109,10 +109,10 @@ namespace TAT {
          if (!((t1.names == t2.names) && (t1.core->edges == t2.core->edges))) {                  \
             TAT_WARNING("Scalar Operator In Different Shape Tensor");                            \
          }                                                                                       \
-         for (Nums i = 0; i < t1.core->blocks.size(); i++) {                                     \
-            ScalarType1* __restrict a = t1.core->blocks[i].raw_data.data();                      \
-            const ScalarType2* __restrict b = t2.core->blocks[i].raw_data.data();                \
-            for (Size j = 0; j < t1.core->blocks[i].raw_data.size(); j++) {                      \
+         for (auto& [sym, block] : t1.core->blocks) {                                            \
+            ScalarType1* __restrict a = block.data();                                            \
+            const ScalarType2* __restrict b = t2.core->blocks[sym].data();                       \
+            for (Size j = 0; j < block.size(); j++) {                                            \
                EVAL2;                                                                            \
             }                                                                                    \
          }                                                                                       \
