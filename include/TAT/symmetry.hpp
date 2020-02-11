@@ -28,12 +28,17 @@ namespace TAT {
    // 因为arrow的原因， symmetry可能需要operator-=等符号
    template<class Derived>
    struct bose_symmetry : bose_symmetry_base {
-      static bool get_parity(
+      static bool get_reverse_parity(
+            [[maybe_unused]] const vector<Derived>& symmetries,
+            [[maybe_unused]] const vector<bool>& flag) {
+         return false;
+      }
+      static bool get_transpose_parity(
             [[maybe_unused]] const vector<Derived>& symmetries,
             [[maybe_unused]] const vector<Rank>& plan) {
          return false;
       }
-      static bool get_parity(
+      static bool get_split_merge_parity(
             [[maybe_unused]] const vector<Derived>& symmetries,
             [[maybe_unused]] const vector<std::tuple<Rank, Rank>>& sm_list) {
          return false;
@@ -42,7 +47,17 @@ namespace TAT {
 
    template<class Derived>
    struct fermi_symmetry : fermi_symmetry_base {
-      static bool get_parity(const vector<Derived>& symmetries, const vector<Rank>& plan) {
+      static bool get_reverse_parity(const vector<Derived>& symmetries, const vector<bool>& flag) {
+         auto res = false;
+         for (auto i = 0; i < flag.size(); i++) {
+            if (flag[i]) {
+               res ^= bool(symmetries[i].fermi % 2);
+            }
+         }
+         return res;
+      }
+      static bool
+      get_transpose_parity(const vector<Derived>& symmetries, const vector<Rank>& plan) {
          auto res = false;
          for (auto i = 0; i < plan.size(); i++) {
             for (auto j = i + 1; j < plan.size(); j++) {
@@ -53,19 +68,23 @@ namespace TAT {
          }
          return res;
       }
-      static bool get_parity(
+      static bool get_split_merge_parity(
             [[maybe_unused]] const vector<Derived>& symmetries,
-            [[maybe_unused]] const vector<std::tuple<Rank, Rank>>& sm_list) {
+            [[maybe_unused]] const vector<Rank>& flag) {
          auto res = false;
-         for (const auto& i : sm_list) {
-            auto s = 0;
-            auto s2 = 0;
-            for (auto j = std::get<0>(i); j < std::get<1>(i); j++) {
-               const auto t = symmetries[j].fermi;
-               s += t;
-               s2 += t * t;
+         auto s = 0;
+         auto s2 = 0;
+         auto tmp = 0;
+         for (auto i = 0; i < flag.size(); i++) {
+            if (tmp != flag[i]) {
+               res ^= bool(((s * s - s2) / 2) % 2);
+               s = 0;
+               s2 = 0;
+               tmp++;
             }
-            res ^= bool(((s * s - s2) / 2) % 2);
+            const auto t = symmetries[i].fermi;
+            s += t;
+            s2 += t * t;
          }
          return res;
       }

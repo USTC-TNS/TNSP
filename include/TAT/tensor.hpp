@@ -151,6 +151,22 @@ namespace TAT {
       }
 
       /**
+       * \brief 将张量内的数据设置为便于测试的值
+       * \return 张量自身
+       * \see set
+       */
+      Tensor<ScalarType, Symmetry>& test(ScalarType first = 0, ScalarType step = 1) & {
+         return set([&first, step]() {
+            auto res = first;
+            first += step;
+            return res;
+         });
+      }
+      Tensor<ScalarType, Symmetry> test(ScalarType first = 0, ScalarType step = 1) && {
+         return std::move(test(first, step));
+      }
+
+      /**
        * \brief 获取张量的某个分块
        * \param position 分块每个子边对应的对称性值
        * \return 一个不可变的一维数组
@@ -296,11 +312,6 @@ namespace TAT {
          return res;
       }
 
-      struct NameWithEdge {
-         Name name;
-         Edge<Symmetry> edge;
-      };
-
       /**
        * \brief 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
        * \param rename_map 重命名边的名称的映射表
@@ -312,14 +323,16 @@ namespace TAT {
        * \return 进行了一系列操作后的结果张量
        * \note 合法性并不保证, 特别是需要调用者确定完成merge操作前所需要的reverse操作
        * \note 因为费米箭头在取反和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
+       * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
        */
       template<
             class T = vector<Name>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry> edge_operator(
+            //void edge_operator(
             const std::map<Name, Name>& rename_map,
-            const std::map<Name, vector<NameWithEdge>>& split_map,
-            const std::vector<Name>& reversed_name,
+            const std::map<Name, vector<std::tuple<Name, Edge<Symmetry>>>>& split_map,
+            const std::set<Name>& reversed_name,
             const std::map<Name, vector<Name>>& merge_map,
             T&& new_names,
             const bool apply_parity = false) const;

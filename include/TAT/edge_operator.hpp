@@ -28,293 +28,208 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    template<class T, class>
    [[nodiscard]] Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::edge_operator(
+         //void Tensor<ScalarType, Symmetry>::edge_operator(
          const std::map<Name, Name>& rename_map,
-         const std::map<Name, vector<NameWithEdge>>& split_map,
-         const std::vector<Name>& reversed_name,
+         const std::map<Name, vector<std::tuple<Name, Edge<Symmetry>>>>& split_map,
+         const std::set<Name>& reversed_name,
          const std::map<Name, vector<Name>>& merge_map,
          T&& new_names,
          const bool apply_parity) const {
-#if 1
-#else
-      // merge split的过程中, 会产生半个符号, 所以需要限定这一个tensor是否拥有这个符号
-      vector<std::tuple<Rank, Rank>> split_list;
-      vector<std::tuple<Rank, Rank>> merge_list;
+      // step 1: rename
+      // step 2: split
+      // step 3: reverse
+      // step 4: transpose
+      // step 5: merge
+      // 前面三步是因果顺序往下推, 第四步转置需要根据merge和最后的name来确定转置方案
 
-      auto original_name = vector<Name>();
-      auto splitted_name = vector<Name>();
-      const vector<Edge<Symmetry>>& original_edge = core->edges;
-      auto splitted_edge = vector<const Edge<Symmetry>*>();
-      for (auto& i : names) {
-         auto renamed_name = i;
-         auto it1 = rename_map.find(i);
-         if (it1 != rename_map.end()) {
-            renamed_name = it1->second;
+      using ConstDataType = std::map<vector<Symmetry>, const ScalarType*>;
+      using DataType = std::map<vector<Symmetry>, ScalarType*>;
+
+      const auto rank_0 = names.size();
+      const auto& name_0 = names;
+      auto edge_0 = vector<PtrEdge<Symmetry>>();
+      for (const auto& e : core->edges) {
+         edge_0.push_back(convert_to_ptr_edge(e));
+      }
+      auto data_0 = ConstDataType();
+      for (const auto& [sym, vec] : core->blocks) {
+         data_0[sym] = vec.data();
+      };
+
+      const auto& rank_1 = rank_0;
+      const auto& edge_1 = edge_0;
+      const auto& data_1 = data_0;
+      auto name_1 = vector<Name>(rank_1);
+      for (auto i = 0; i < rank_1; i++) {
+         auto name = name_0[i];
+         auto pos = rename_map.find(name);
+         if (pos != rename_map.end()) {
+            name = pos->second;
          }
-         original_name.push_back(renamed_name);
+         name_1[i] = name;
+      }
 
-         const Edge<Symmetry>& e = core->edges[name_to_index.at(i)];
-         auto it2 = split_map.find(renamed_name);
-         if (it2 != split_map.end()) {
-            auto edge_list = vector<const Edge<Symmetry>*>();
-            Rank split_start = splitted_name.size();
-            for (const auto& k : it2->second) {
-               splitted_name.push_back(k.name);
-               splitted_edge.push_back(&k.edge);
-               edge_list.push_back(&k.edge);
+      auto split_flag = vector<Rank>();
+      Rank total_split_index = 0;
+      auto name_2 = vector<Name>();
+      auto edge_2 = vector<PtrEdge<Symmetry>>();
+      for (auto i = 0; i < rank_1; i++) {
+         auto pos = split_map.find(name_1[i]);
+         if (pos != split_map.end()) {
+            for (const auto& [n, e] : pos->second) {
+               name_2.push_back(n);
+               edge_2.push_back(convert_to_ptr_edge(e));
+               split_flag.push_back(total_split_index);
             }
-            Rank split_end = splitted_name.size();
-            split_list.push_back({split_start, split_end});
+            total_split_index++;
+         } else {
+            name_2.push_back(name_1[i]);
+            edge_2.push_back(edge_1[i]);
+            split_flag.push_back(total_split_index++);
+         }
+      }
+      const auto rank_2 = name_2.size();
+      auto data_2 = ConstDataType();
+      auto offset_src = data_1;
+      auto symmetries_src = initialize_block_symmetries_with_check(edge_2);
+      for (const auto& [sym, size] : symmetries_src) {
+         auto target_symmetry = vector<Symmetry>(rank_1);
+         for (auto i = 0; i < rank_1; i++) {
+            target_symmetry[i] = Symmetry();
+         }
+         for (auto i = 0; i < rank_2; i++) {
+            target_symmetry[split_flag[i]] += sym[i];
+         }
+         data_2[sym] = offset_src[target_symmetry];
+         offset_src[target_symmetry] += size;
+      }
 
-            auto expected_cover_edge = get_merged_edge(edge_list);
-            for (const auto& [key, value] : e) {
-               if (value != expected_cover_edge.at(key)) {
-                  TAT_WARNING("Invalid Edge Split");
+      [[maybe_unused]] auto reversed_flag = vector<bool>();
+      const auto& rank_3 = rank_2;
+      const auto& name_3 = name_2;
+      const auto& data_3 = data_2;
+      auto edge_3 = edge_2;
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if (apply_parity) {
+            reversed_flag.resize(rank_3);
+            for (auto i = 0; i < rank_3; i++) {
+               if (reversed_name.find(name_3[i]) != reversed_name.end()) {
+                  edge_3[i].arrow ^= true;
+                  reversed_flag[i] = true;
+               } else {
+                  reversed_flag[i] = false;
                }
             }
-         } else {
-            splitted_name.push_back(renamed_name);
-            splitted_edge.push_back(&e);
          }
       }
 
-      const Rank original_rank = names.size();
-      // const Rank splitted_rank = splitted_name.size();
-
-      auto splitted_name_to_index = construct_name_to_index(splitted_name);
-
-      vector<Rank> fine_plan_dst;
-      vector<Rank> plan_dst_to_src;
-
-      vector<Name> merged_name = std::forward<T>(new_names);
-      auto transposed_name = vector<Name>();
-      auto merged_edge = vector<Edge<Symmetry>>();
-      auto transposed_edge = vector<const Edge<Symmetry>*>();
-
-      Rank fine_dst_tmp = 0;
-      for (const auto& i : merged_name) {
-         auto it1 = merge_map.find(i);
-         if (it1 != merge_map.end()) {
-            auto edge_list = vector<const Edge<Symmetry>*>();
-            Rank merge_start = transposed_name.size();
-            for (const auto& k : it1->second) {
-               transposed_name.push_back(k);
-               auto idx = splitted_name_to_index.at(k);
-               plan_dst_to_src.push_back(idx);
-               fine_plan_dst.push_back(fine_dst_tmp);
-               auto ep = splitted_edge[idx];
-               transposed_edge.push_back(ep);
-               edge_list.push_back(ep);
+      const auto& tmp_name_5 = new_names;
+      const auto& rank_5 = tmp_name_5.size();
+      auto name_4 = vector<Name>();
+      auto merge_flag = vector<Rank>();
+      Rank total_merge_index = 0;
+      for (const auto& n : tmp_name_5) {
+         auto pos = merge_map.find(n);
+         if (pos != merge_map.end()) {
+            for (const auto& i : pos->second) {
+               name_4.push_back(i);
+               merge_flag.push_back(total_merge_index);
             }
-            Rank merge_end = transposed_name.size();
-            merge_list.push_back({merge_start, merge_end});
-            merged_edge.push_back(get_merged_edge(edge_list));
+            total_merge_index++;
          } else {
-            transposed_name.push_back(i);
-            auto idx = splitted_name_to_index.at(i);
-            plan_dst_to_src.push_back(idx);
-            fine_plan_dst.push_back(fine_dst_tmp);
-            auto ep = splitted_edge[idx];
-            transposed_edge.push_back(ep);
-            merged_edge.push_back(*ep);
+            name_4.push_back(n);
+            merge_flag.push_back(total_merge_index++);
          }
-         fine_dst_tmp++;
       }
+      auto rank_4 = name_4.size();
 
-      const Rank transposed_rank = transposed_name.size();
-      const Rank merged_rank = merged_name.size();
-
-      vector<Rank> fine_plan_src(transposed_rank);
-      vector<Rank> plan_src_to_dst(transposed_rank);
-
-      for (Rank i = 0; i < transposed_rank; i++) {
+      auto name_to_index_3 = construct_name_to_index(name_3);
+      auto plan_src_to_dst = vector<Rank>(rank_4);
+      auto plan_dst_to_src = vector<Rank>(rank_4);
+      auto edge_4 = vector<PtrEdge<Symmetry>>(rank_4);
+      for (auto i = 0; i < rank_4; i++) {
+         plan_dst_to_src[i] = name_to_index_3.at(name_4[i]);
          plan_src_to_dst[plan_dst_to_src[i]] = i;
+         edge_4[i] = edge_3[plan_dst_to_src[i]];
       }
 
-      Rank fine_src_tmp = 0;
-      for (const auto& i : original_name) {
-         auto it1 = split_map.find(i);
-         if (it1 != split_map.end()) {
-            for (const auto& j : it1->second) {
-               fine_plan_src[plan_src_to_dst[splitted_name_to_index.at(j.name)]] = fine_src_tmp;
-            }
+      auto res_edge = vector<Edge<Symmetry>>();
+      auto tmp_edge_list = vector<PtrEdge<Symmetry>>();
+      auto current_res_edge_index = 0;
+      for (auto i = 0; i < rank_4; i++) {
+         if (merge_flag[i] != current_res_edge_index) {
+            res_edge.push_back(get_merged_edge(tmp_edge_list));
+            tmp_edge_list.clear();
+            tmp_edge_list.push_back(edge_4[i]);
+            current_res_edge_index++;
          } else {
-            fine_plan_src[plan_src_to_dst[splitted_name_to_index.at(i)]] = fine_src_tmp;
-         }
-         fine_src_tmp++;
-      }
-
-      if (merged_rank == original_rank) {
-         auto need_operator = false;
-         for (Rank i = 0; i < merged_rank; i++) {
-            auto name1 = original_name[i];
-            auto it1 = split_map.find(name1);
-            if (it1 != split_map.end()) {
-               if (it1->second.size() != 1) {
-                  need_operator = true;
-                  break;
-               }
-               name1 = it1->second[0].name;
-            }
-            auto name2 = merged_name[i];
-            auto it2 = merge_map.find(name2);
-            if (it2 != merge_map.end()) {
-               if (it2->second.size() != 1) {
-                  need_operator = true;
-                  break;
-               }
-               name2 = it2->second[0];
-            }
-            if (name1 != name2) {
-               need_operator = true;
-               break;
-            }
-         }
-         if (!need_operator) {
-            auto res = Tensor<ScalarType, Symmetry>{};
-            res.names = std::move(merged_name);
-            res.name_to_index = construct_name_to_index(res.names);
-            res.core = core;
-            return res;
+            tmp_edge_list.push_back(edge_4[i]);
          }
       }
+      res_edge.push_back(get_merged_edge(tmp_edge_list));
 
-      auto res = Tensor<ScalarType, Symmetry>(std::move(merged_name), std::move(merged_edge));
+      auto res = Tensor<ScalarType, Symmetry>{std::forward<T>(new_names), std::move(res_edge)};
+      const auto name_5 = res.names;
+      const auto& edge_5 = res.core->edges;
 
-      auto src_rank = Rank(names.size());
-      auto dst_rank = Rank(res.names.size());
-      auto src_block_number = Nums(core->blocks.size());
-      auto dst_block_number = Nums(res.core->blocks.size());
-      vector<Size> src_offset(src_block_number, 0);
-      vector<Size> dst_offset(dst_block_number, 0);
+      auto data_5 = DataType();
+      for (auto& [sym, vec] : res.core->blocks) {
+         data_5[sym] = vec.data();
+      };
 
-      using PosType = vector<typename Edge<Symmetry>::const_iterator>;
+      auto data_4 = DataType();
+      auto offset_dst = data_5;
+      auto symmetries_dst = initialize_block_symmetries_with_check(edge_4);
+      for (const auto& [sym, size] : symmetries_dst) {
+         auto target_symmetry = vector<Symmetry>(rank_5);
+         for (auto i = 0; i < rank_5; i++) {
+            target_symmetry[i] = Symmetry();
+         }
+         for (auto i = 0; i < rank_4; i++) {
+            target_symmetry[merge_flag[i]] += sym[i];
+         }
+         data_4[sym] = offset_dst[target_symmetry];
+         offset_dst[target_symmetry] += size;
+      }
 
-      vector<std::tuple<PosType, Nums, Size, Size, bool>> src_position;
+      for (const auto& [sym_src, ptr_src] : data_3) {
+         auto sym_dst = vector<Symmetry>(rank_3);
+         auto dim_src = vector<Size>(rank_3);
+         auto dim_dst = vector<Size>(rank_3);
+         Size total_size = 1;
+         for (auto i = 0; i < rank_3; i++) {
+            auto dim = edge_3[i].map->at(sym_src[i]);
+            total_size *= dim;
+            dim_src[i] = dim;
+            dim_dst[plan_src_to_dst[i]] = dim;
+            sym_dst[plan_src_to_dst[i]] = sym_src[i];
+         }
+         auto ptr_dst = data_4.at(sym_dst);
 
-      vector<Size> total_size_list(transposed_rank);
+         bool parity = false;
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            parity = Symmetry::get_transpose_parity(sym_src, plan_src_to_dst);
 
-      loop_edge(
-            splitted_edge,
-            // rank0
-            []() {},
-            // check
-            []([[maybe_unused]] const PosType& pos) {
-               auto sum = Symmetry();
-               for (const auto& i : pos) {
-                  sum += i->first;
-               }
-               return sum == Symmetry();
-            },
-            // append
-            [&]([[maybe_unused]] const PosType& pos) {
-               vector<Symmetry> src_pos(src_rank, Symmetry());
-               for (Rank i = 0; i < pos.size(); i++) {
-                  src_pos[fine_plan_src[plan_src_to_dst[i]]] += pos[i]->first;
-               }
-               auto src_block_index = core->find_block(src_pos);
+            if (apply_parity) {
+               parity ^= Symmetry::get_reverse_parity(sym_src, reversed_flag);
+               parity ^= Symmetry::get_split_merge_parity(sym_src, split_flag);
+               parity ^= Symmetry::get_split_merge_parity(sym_dst, merge_flag);
+            }
+         }
 
-               auto total_size = total_size_list[pos.size() - 1];
-
-               auto src_parity = false;
-               if (apply_parity) {
-                  src_parity ^= Symmetry::get_parity(src_pos, split_list);
-               }
-
-               src_position.push_back(
-                     {pos, src_block_index, src_offset[src_block_index], total_size, src_parity});
-               src_offset[src_block_index] += total_size;
-            },
-            // update
-            [&total_size_list]([[maybe_unused]] const PosType& pos, [[maybe_unused]] Rank ptr) {
-               for (auto i = ptr; i < pos.size(); i++) {
-                  if (i == 0) {
-                     total_size_list[0] = pos[0]->second;
-                  } else {
-                     total_size_list[i] = total_size_list[i - 1] * pos[i]->second;
-                  }
-               }
-            });
-
-      vector<Size> dst_dim(transposed_rank);
-      vector<Size> src_dim(transposed_rank);
-
-      loop_edge(
-            transposed_edge,
-            // rank0
-            [&]() {
-               res.core->blocks[0].raw_data[0] = core->blocks[0].raw_data[0];
-               // rank=0则parity一定为1
-            },
-            // check
-            []([[maybe_unused]] const PosType& pos) {
-               auto sum = Symmetry();
-               for (const auto& i : pos) {
-                  sum += i->first;
-               }
-               return sum == Symmetry();
-            },
-            // append
-            [&]([[maybe_unused]] const PosType& pos) {
-               vector<Symmetry> dst_pos(dst_rank, Symmetry());
-               for (auto i = 0; i < transposed_rank; i++) {
-                  dst_pos[fine_plan_dst[i]] += pos[i]->first;
-               }
-               auto dst_block_index = res.core->find_block(dst_pos);
-               ScalarType* dst_data = res.core->blocks[dst_block_index].raw_data.data() +
-                                      dst_offset[dst_block_index];
-
-               const ScalarType* src_data;
-               Size total_size;
-               auto total_parity = Symmetry::get_parity(dst_pos, plan_dst_to_src);
-               if (apply_parity) {
-                  total_parity ^= Symmetry::get_parity(dst_pos, merge_list);
-               }
-
-               auto found_src = false;
-               for (const auto& [src_pos_info, src_index, src_offset, src_total_size, src_parity] :
-                    src_position) {
-                  auto difference = false;
-                  for (auto j = 0; j < pos.size(); j++) {
-                     if (src_pos_info[j]->first != pos[plan_src_to_dst[j]]->first) {
-                        difference = true;
-                        break;
-                     }
-                  }
-                  if (!difference) {
-                     src_data = core->blocks[src_index].raw_data.data() + src_offset;
-                     total_size = src_total_size;
-                     total_parity ^= src_parity;
-                     found_src = true;
-                     break;
-                  }
-               }
-               if (!found_src) {
-                  TAT_WARNING("Source Block Not Found");
-               }
-
-               do_transpose(
-                     plan_src_to_dst,
-                     plan_dst_to_src,
-                     src_data,
-                     dst_data,
-                     src_dim,
-                     dst_dim,
-                     total_size,
-                     transposed_rank,
-                     total_parity);
-
-               dst_offset[dst_block_index] += total_size;
-            },
-            // update
-            [&src_dim, &dst_dim, &plan_dst_to_src](
-                  [[maybe_unused]] const PosType& pos, [[maybe_unused]] Rank ptr) {
-               for (auto i = ptr; i < pos.size(); i++) {
-                  src_dim[plan_dst_to_src[i]] = dst_dim[i] = pos[i]->second;
-               }
-            });
+         do_transpose(
+               plan_src_to_dst,
+               plan_dst_to_src,
+               ptr_src,
+               ptr_dst,
+               dim_src,
+               dim_dst,
+               total_size,
+               rank_3,
+               parity);
+      }
 
       return res;
-#endif
-   }
+   } // namespace TAT
 } // namespace TAT
 #endif

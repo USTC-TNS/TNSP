@@ -30,10 +30,7 @@
 
 void test_create_tensor() {
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
-                      .set([]() {
-                         static int i = 0;
-                         return i++;
-                      })
+                      .test()
              << "\n";
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {0, 3}}
              << "\n";
@@ -41,10 +38,7 @@ void test_create_tensor() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{}, {}}.set([]() { return 10; }).at({})
              << "\n";
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
-                      .set([]() {
-                         static int i = 0;
-                         return i++;
-                      })
+                      .test()
                       .at({{TAT::Right, 2}, {TAT::Left, 1}})
              << "\n";
 }
@@ -53,21 +47,18 @@ void test_create_symmetry_tensor() {
                                                      {{{1, 3}, {0, 1}},
                                                       {{1, 1}, {0, 2}},
                                                       {{1, 2}, {0, 3}}}}
-                      .set([]() { return 0; })
+                      .zero()
              << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                      {{{-1, 3}, {0, 1}, {1, 2}},
                                                       {{-1, 1}, {0, 2}, {1, 3}},
                                                       {{-1, 2}, {0, 3}, {1, 1}}}}
-                      .set([]() {
-                         static double i = 1;
-                         return i += 1;
-                      })
+                      .test(2)
              << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry> {
       {TAT::Left, TAT::Right, TAT::Up},
 #ifdef _MSVC_LANG
-            // TODO: 这似乎是MSVC的一个bug, 如果用下面的写法, Edge的析构函数将会被调用两次
+            // 这似乎是MSVC的一个bug, 如果用下面的写法, Edge的析构函数将会被调用两次
             {std::map<TAT::U1Symmetry, TAT::Size>{},
 #else
       {
@@ -76,7 +67,7 @@ void test_create_symmetry_tensor() {
              {{-1, 1}, {0, 2}, {1, 3}},
              {{-1, 2}, {0, 3}, {1, 1}}}
    }
-   .set([]() { return 0; }) << "\n";
+   .zero() << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.set([]() { return 123; }) << "\n";
 }
 
@@ -85,30 +76,21 @@ void test_create_fermi_symmetry_tensor() {
                                                         {{{0, 1}, {1, 2}},
                                                          {{-1, 1}, {-2, 3}, {0, 2}},
                                                          {{0, 3}, {1, 1}}}}
-                      .set([]() {
-                         static double i = 1;
-                         return i += 1;
-                      })
+                      .test(2)
              << "\n";
    std::cout
          << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                       {{{{0, 0}, 1}, {{1, 1}, 2}},
                                                        {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
                                                        {{{0, 0}, 3}, {{1, 1}, 1}}}}
-                  .set([]() {
-                     static double i = 1;
-                     return i += 1;
-                  })
+                  .test(2)
          << "\n";
    std::cout
          << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                       {{{{0, 0}, 1}, {{1, 1}, 2}},
                                                        {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
                                                        {{{0, 0}, 3}, {{1, 1}, 1}}}}
-                  .set([]() {
-                     static double i = 1;
-                     return i += 1;
-                  })
+                  .test(2)
                   .block({{TAT::Left, {0, 0}}, {TAT::Up, {1, 1}}, {TAT::Right, {1, -1}}})
          << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{1234}.at({}) << "\n";
@@ -117,10 +99,7 @@ void test_create_fermi_symmetry_tensor() {
                                                       {{{{0, 0}, 1}, {{1, 1}, 2}},
                                                        {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
                                                        {{{0, 0}, 3}, {{1, 1}, 1}}}}
-                  .set([]() {
-                     static double i = 1;
-                     return i += 1;
-                  })
+                  .test(2)
                   .at({{TAT::Left, {{0, 0}, 0}}, {TAT::Up, {{0, 0}, 1}}, {TAT::Right, {{0, 0}, 1}}})
          << "\n";
 }
@@ -129,34 +108,22 @@ void test_type_conversion() {
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{123} << "\n";
    std::cout << double(TAT::Tensor<double, TAT::U1Symmetry>{123}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
-                      .set([]() {
-                         static double i = 1;
-                         return i += 1;
-                      })
+                      .test(2)
                       .to<double>()
              << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
-                      .set([]() {
-                         static double i = 1;
-                         return i += 1;
-                      })
+                      .test(2)
                       .to<std::complex<double>>()
              << "\n";
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}
-                      .set([]() {
-                         static double i = 1;
-                         return i += 1;
-                      })
+                      .test(2)
                       .to<double>()
              << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                      {{{-1, 3}, {0, 1}, {1, 2}},
                                                       {{-1, 1}, {0, 2}, {1, 3}},
                                                       {{-1, 2}, {0, 3}, {1, 1}}}}
-                      .set([]() {
-                         static double i = 1;
-                         return i += 1;
-                      })
+                      .test(2)
                       .to<std::complex<double>>()
              << "\n";
 }
@@ -166,10 +133,7 @@ void test_norm() {
          TAT::Tensor<double, TAT::U1Symmetry>{
                {TAT::Left, TAT::Right, TAT::Up},
                {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 1;
-                  return i += 1;
-               })
+               .test(2)
                .to<std::complex<double>>();
    std::cout << t.norm<-1>() << "\n";
    std::cout << t.norm<0>() << "\n";
@@ -180,21 +144,12 @@ void test_norm() {
 void test_scalar() {
    auto t = TAT::Tensor<double, TAT::Z2Symmetry>{
          {TAT::Left, TAT::Right, TAT::Phy}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}};
-   t.set([]() {
-      static int i = 0;
-      return i++;
-   });
+   t.test();
    std::cout << t + 1.0 << "\n";
    std::cout << 1.0 / t << "\n";
 
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.set([]() {
-      static double i = -1;
-      return i += 1;
-   });
-   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.set([]() {
-      static double i = -0.1;
-      return i += 0.1;
-   });
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test(0, 0.1);
    std::cout << a + b << "\n";
    std::cout << a - b << "\n";
    std::cout << a * b << "\n";
@@ -204,11 +159,8 @@ void test_scalar() {
 
 void test_io() {
    std::stringstream ss;
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right, TAT::Up}, {2, 3, 4}}.set(
-         []() {
-            static double i = -1;
-            return i += 1;
-         });
+   auto a =
+         TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right, TAT::Up}, {2, 3, 4}}.test();
    ss <= a;
    auto b = TAT::Tensor<double, TAT::NoSymmetry>();
    ss >= b;
@@ -218,10 +170,7 @@ void test_io() {
          TAT::Tensor<double, TAT::U1Symmetry>{
                {TAT::Left, TAT::Right, TAT::Up},
                {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 1;
-                  return i += 1;
-               });
+               .test(2);
    ss <= c;
    auto d = TAT::Tensor<double, TAT::U1Symmetry>();
    ss >= d;
@@ -243,10 +192,7 @@ void test_io() {
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
                {TAT::Left, TAT::Right, TAT::Up},
                {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 1;
-                  return i += 1;
-               });
+               .test(2);
    ss <= g;
    auto h = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
    ss >= h;
@@ -256,10 +202,7 @@ void test_io() {
          TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
                {TAT::Left, TAT::Right, TAT::Up},
                {{{-2, 3}, {0, 1}, {-1, 2}}, {{0, 2}, {1, 3}}, {{0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 1;
-                  return i += 1;
-               });
+               .test(2);
    ss <= i;
    auto j = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
    ss >= j;
@@ -271,14 +214,24 @@ void test_edge_rename() {
    auto t1 = TAT::Tensor<double, TAT::Z2Symmetry>{
          {TAT::Left, TAT::Right, TAT::Phy}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}};
    auto t2 = t1.edge_rename({{TAT::Left, TAT::Up}});
-   t1.set([]() {
-      static int i = 0;
-      return i++;
-   });
+   t1.test();
    std::cout << t1 << "\n";
    std::cout << t2 << "\n";
 }
 
+void test_edge_operator() {
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {8, 8}}.test() << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {8, 8}}.test().edge_operator(
+                      {{"A", "C"}},
+                      {{"C", {{"D", 4}, {"E", 2}}}, {"B", {{"F", 2}, {"G", 4}}}},
+                      {"D", "F"},
+                      {{"I", {"D", "F"}}, {"J", {"G", "E"}}},
+                      {"J", "I"})
+             << "\n";
+   std::cout << TAT::Tensor<>{{"A", "B", "C"}, {2, 3, 4}}.test().edge_operator(
+                      {}, {}, {}, {}, {"B", "C", "A"})
+             << '\n';
+}
 // TODO: 重新处理edge operator
 #if 0
 void test_transpose() {
@@ -479,12 +432,11 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_scalar);
    RUN_TEST(test_io);
    RUN_TEST(test_edge_rename);
+   RUN_TEST(test_edge_operator);
 #if 0
    // RUN_TEST(test_mpi);
    RUN_TEST(test_transpose);
-   RUN_TEST(test_getitem);
    RUN_TEST(test_merge_split);
-   RUN_TEST(test_edge_operator);
 #endif
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);

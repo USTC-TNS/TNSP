@@ -28,7 +28,7 @@ namespace TAT {
     */
    template<class Symmetry>
    struct BoseEdge {
-      using const_iterator = typename std::map<Symmetry, Size>::const_iterator;
+      using symmetry_type = Symmetry;
 
       std::map<Symmetry, Size> map = {};
 
@@ -59,8 +59,14 @@ namespace TAT {
     */
    template<class Symmetry>
    struct FermiEdge {
-      using const_iterator = typename std::map<Symmetry, Size>::const_iterator;
+      using symmetry_type = Symmetry;
 
+      /**
+       * \brief 费米箭头方向
+       * \note 当map中只含fermi=0的对称性值时, arrow无法定义,
+       * 这在get_merged_edge中和possible_reverse中得到体现
+       * \see get_merged_edge
+       */
       Arrow arrow = false;
       std::map<Symmetry, Size> map = {};
 
@@ -125,35 +131,64 @@ namespace TAT {
    template<class Symmetry>
    std::istream& operator>=(std::istream& in, Edge<Symmetry>& edge);
 
+   template<class Symmetry>
+   struct PtrBoseEdge {
+      using symmetry_type = Symmetry;
+
+      const std::map<Symmetry, Size>* map;
+
+      PtrBoseEdge(const std::map<Symmetry, Size>* m) : map(m) {}
+   };
+   template<class Symmetry>
+   struct PtrFermiEdge {
+      using symmetry_type = Symmetry;
+
+      Arrow arrow;
+      const std::map<Symmetry, Size>* map;
+
+      PtrFermiEdge(Arrow a, const std::map<Symmetry, Size>* m) : arrow(a), map(m) {}
+   };
+   template<class Symmetry>
+   using PtrEdgeBase = std::conditional_t<
+         is_fermi_symmetry_v<Symmetry>,
+         PtrFermiEdge<Symmetry>,
+         PtrBoseEdge<Symmetry>>;
    /**
-    * \brief std::begin的替代品, 有时程序中出现vector<Edge*>而不是vector<Edge>, 为了简单,
-    * 使用此std_begin获取v.map.begin()或者v->map.begin()
-    * \see loop_edge, std_end
+    * \brief 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
+    * \see Edge
     */
-   template<class T>
-   auto std_begin(const T& v) {
-      if constexpr (std::is_pointer_v<T>) {
-         return std::begin(v->map);
-      } else {
-         return std::begin(v.map);
-      }
-   }
+   template<class Symmetry>
+   struct PtrEdge : PtrEdgeBase<Symmetry> {
+      using PtrEdgeBase<Symmetry>::PtrEdgeBase;
+   };
 
    /**
-    * \see loop_edge, std_begin
+    * \brief PtrEdge的辅助函数, 将Edge转化为为PtrEdge
+    */
+   template<class Symmetry>
+   auto convert_to_ptr_edge(const Edge<Symmetry>& e) {
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         return PtrEdge<Symmetry>{e.arrow, &e.map};
+      } else {
+         return PtrEdge<Symmetry>{&e.map};
+      }
+   }
+   /**
+    * \brief PtrEdge的辅助函数, 用来提取其中的map
+    * \note 使用方式是remove_pointer(edge.map)
     */
    template<class T>
-   auto std_end(const T& v) {
+   const auto& remove_pointer(const T& v) {
       if constexpr (std::is_pointer_v<T>) {
-         return std::end(v->map);
+         return *v;
       } else {
-         return std::end(v.map);
+         return v;
       }
    }
 
    /**
     * \brief 对一个边的形状列表进行枚举分块, 并做一些其他操作
-    * \tparam T 应是vector<Edge>或者vector<Edge*>
+    * \tparam T 应是vector<Edge>或者vector<PtrEdge>
     * \param edges 即将要枚举的边列表
     * \param rank0 如果边列表为空，则调用rank0后返回
     * \param check 对于边列表划分的每个分块, 使用check进行检查, check的参数是Edge中map的iterator的列表
@@ -169,10 +204,13 @@ namespace TAT {
          rank0();
          return;
       }
-      auto pos = vector<typename std::remove_pointer_t<typename T::value_type>::const_iterator>();
+      using Symmetry = typename T::value_type::symmetry_type;
+      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
+      auto pos = PosType();
       for (const auto& i : edges) {
-         auto ptr = std_begin(i);
-         if (ptr == std_end(i)) {
+         const auto& map = remove_pointer(i.map);
+         auto ptr = map.begin();
+         if (ptr == map.end()) {
             return;
          }
          pos.push_back(ptr);
@@ -186,11 +224,11 @@ namespace TAT {
          }
          auto ptr = rank - 1;
          ++pos[ptr];
-         while (pos[ptr] == std_end(edges[ptr])) {
+         while (pos[ptr] == remove_pointer(edges[ptr].map).end()) {
             if (ptr == 0) {
                return;
             }
-            pos[ptr] = std_begin(edges[ptr]);
+            pos[ptr] = remove_pointer(edges[ptr].map).begin();
             --ptr;
             ++pos[ptr];
          }
@@ -201,13 +239,16 @@ namespace TAT {
    /**
     * \brief 根据边的形状的列表, 得到所有满足对称性条件的张量分块
     * \return 分块信息, 为一个vector, 元素为两个类型的tuple, 分别是子块的各个子边对称性值和子块的总大小
+    * \tparam T 为vector<Edge>或者vector<PtrEdge>
+    * \see loop_edge
     */
-   template<class Symmetry>
-   auto initialize_block_symmetries_with_check(const vector<Edge<Symmetry>>& edges) {
+   template<class T>
+   auto initialize_block_symmetries_with_check(const T& edges) {
+      using Symmetry = typename T::value_type::symmetry_type;
+      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
       auto res = vector<std::tuple<vector<Symmetry>, Size>>();
       auto vec = vector<Symmetry>(edges.size());
       auto size = vector<Size>(edges.size());
-      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
       loop_edge(
             edges,
             [&res]() {
@@ -242,40 +283,48 @@ namespace TAT {
       return res;
    }
 
-   // TODO: edge的辅助函数需要斟酌和注释
-   // TODO: 考虑转向的问题
-   template<class Symmetry>
-   [[nodiscard]] Edge<Symmetry>
-   get_merged_edge(const vector<const Edge<Symmetry>*>& edges_to_merge) {
+   /**
+    * \brief 获取一些已知形状的边合并之后的形状
+    * \param edges_to_merge 已知的边的形状列表
+    * \note 需要调用者保证费米箭头方向相同
+    * \note edges_to_merge为空的时候费米箭头无法确定
+    */
+   template<class T>
+   [[nodiscard]] auto get_merged_edge(const T& edges_to_merge) {
+      using Symmetry = typename T::value_type::symmetry_type;
+      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
+
       auto res_edge = Edge<Symmetry>();
 
       auto sym = vector<Symmetry>(edges_to_merge.size());
       auto dim = vector<Size>(edges_to_merge.size());
 
-      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
-
-      auto update_sym_and_dim = [&sym, &dim](const PosType& pos, const Rank start) {
-         for (auto i = start; i < pos.size(); i++) {
-            const auto& ptr = pos[i];
-            if (i == 0) {
-               sym[i] = ptr->first;
-               dim[i] = ptr->second;
-            } else {
-               sym[i] = ptr->first + sym[i - 1];
-               dim[i] = ptr->second * dim[i - 1];
-               // do not check dim=0, because in constructor, i didn't check
-            }
-         }
-      };
-
       loop_edge(
             edges_to_merge,
-            [&res_edge]() { res_edge[Symmetry()] = 1; },
+            [&res_edge]() { res_edge.map[Symmetry()] = 1; },
             []([[maybe_unused]] const PosType& pos) { return true; },
             [&res_edge, &sym, &dim]([[maybe_unused]] const PosType& pos) {
-               res_edge[sym[pos.size() - 1]] += dim[pos.size() - 1];
+               res_edge.map[sym[pos.size() - 1]] += dim[pos.size() - 1];
             },
-            update_sym_and_dim);
+            [&sym, &dim](const PosType& pos, const Rank start) {
+               for (auto i = start; i < pos.size(); i++) {
+                  const auto& ptr = pos[i];
+                  if (i == 0) {
+                     sym[i] = ptr->first;
+                     dim[i] = ptr->second;
+                  } else {
+                     sym[i] = ptr->first + sym[i - 1];
+                     dim[i] = ptr->second * dim[i - 1];
+                     // do not check dim=0, because in constructor, i didn't check
+                  }
+               }
+            });
+
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if (!edges_to_merge.empty()) {
+            res_edge.arrow = edges_to_merge[0].arrow;
+         }
+      }
 
       return res_edge;
    }
