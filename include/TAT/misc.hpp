@@ -217,10 +217,6 @@ namespace TAT {
 
    template<class T>
    std::ostream& operator<<(std::ostream& out, const vector<T>& vec);
-   template<class T>
-   std::ostream& operator<=(std::ostream& out, const vector<T>& vec);
-   template<class T>
-   std::istream& operator>=(std::istream& in, vector<T>& vec);
 } // namespace TAT
 
 #endif

@@ -321,32 +321,51 @@ namespace TAT {
        * \param new_names 最后进行的转置操作后的边的名称顺序列表
        * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上
        * \return 进行了一系列操作后的结果张量
-       * \note 合法性并不保证, 特别是需要调用者确定完成merge操作前所需要的reverse操作
-       * \note 因为费米箭头在取反和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
+       * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
+       * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
        * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
        */
       template<
             class T = vector<Name>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry> edge_operator(
-            //void edge_operator(
             const std::map<Name, Name>& rename_map,
-            const std::map<Name, vector<std::tuple<Name, Edge<Symmetry>>>>& split_map,
+            const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split_map,
             const std::set<Name>& reversed_name,
             const std::map<Name, vector<Name>>& merge_map,
             T&& new_names,
             const bool apply_parity = false) const;
 
-      // TODO: 下面需要再检查
-#if 0
-      // edge operators
+      /**
+       * \brief 对张量进行转置
+       * \param target_names 转置后的目标边的名称顺序
+       * \return 转置后的结果张量
+       */
       template<
             class T = vector<Name>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry> transpose(T&& target_names) const {
-         return edge_operator({}, {}, {}, std::forward<T>(target_names));
+         return edge_operator({}, {}, {}, {}, std::forward<T>(target_names));
       }
 
+      /**
+       * \brief 将费米张量的一些边进行反转
+       * \param reversed_name 反转的边的集合
+       * \param apply_parity 是否应用反转产生的符号
+       * \return 反转后的结果张量
+       */
+      [[nodiscard]] Tensor<ScalarType, Symmetry>
+      reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity = false) const {
+         return edge_operator({}, {}, reversed_name, {}, names, apply_parity);
+      }
+
+      /**
+       * \brief 合并张量的一些边
+       * \param merge 合并的边的名称的映射表
+       * \param apply_parity 是否应用合并边产生的符号
+       * \return 合并边后的结果张量
+       * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry>
       merge_edge(const std::map<Name, vector<Name>>& merge, const bool apply_parity = false) const {
          vector<Name> target_name;
@@ -372,11 +391,17 @@ namespace TAT {
             }
          }
          reverse(target_name.begin(), target_name.end());
-         return edge_operator({}, {}, merge, std::move(target_name), apply_parity);
+         return edge_operator({}, {}, {}, merge, std::move(target_name), apply_parity);
       }
 
+      /**
+       * \brief 分裂张量的一些边
+       * \param split 分裂的边的名称的映射表
+       * \param apply_parity 是否应用分裂边产生的符号
+       * \return 分裂边后的结果张量
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry> split_edge(
-            const std::map<Name, vector<NameWithEdge<Symmetry>>>& split,
+            const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split,
             const bool apply_parity = false) const {
          vector<Name> target_name;
          for (const auto& n : names) {
@@ -391,6 +416,9 @@ namespace TAT {
          }
          return edge_operator({}, split, {}, std::move(target_name), apply_parity);
       }
+
+      // TODO: 下面需要再检查
+#if 0
 
       // TODO: symmetry的设计漏洞， 需要指定方向和symmetry
       // 最后的一个edge应该是这样的 std::tuple<bool, std::map<Symmetry, Size>>

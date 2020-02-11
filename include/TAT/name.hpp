@@ -77,8 +77,6 @@ namespace TAT {
    };
 
    std::ostream& operator<<(std::ostream& out, const Name& name);
-   std::ostream& operator<=(std::ostream& out, const Name& name);
-   std::istream& operator>=(std::istream& in, Name& name);
 
 #define TAT_DEF_NAME_OP(OP, EXP)                  \
    inline bool OP(const Name& a, const Name& b) { \

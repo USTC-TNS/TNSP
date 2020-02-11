@@ -47,15 +47,20 @@ namespace TAT {
       /**
        * \brief 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块
        * \param edges_init 边的形状的列表
-       * \note 如果是费米对称性, 此构造函数将对含负的对称性值的边整个取反,
-       * 原则上构造时应该全正或全负
+       * \param auto_reverse 对于费米张量是否自动对含有负对称值的边整个取反
+       * 原则上构造时费米对称性值应该全正或全负, 如果不是这样, 结果会难以理解
        */
       template<
             class T = vector<Edge<Symmetry>>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Edge<Symmetry>>>>>
-      Core(T&& edges_init) : edges(std::forward<T>(edges_init)) {
-         for (auto& i : edges) {
-            i.possible_reverse();
+      Core(T&& edges_init, [[maybe_unused]] const bool auto_reverse = true) :
+            edges(std::forward<T>(edges_init)) {
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            if (auto_reverse) {
+               for (auto& i : edges) {
+                  i.possible_reverse();
+               }
+            }
          }
          auto symmetries_list = initialize_block_symmetries_with_check(edges);
          for (const auto& [i, j] : symmetries_list) {

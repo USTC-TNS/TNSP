@@ -219,6 +219,49 @@ void test_edge_rename() {
    std::cout << t2 << "\n";
 }
 
+void test_transpose() {
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.test();
+   std::cout << a << "\n";
+   std::cout << a.transpose({TAT::Right, TAT::Left}) << "\n";
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.test();
+   std::cout << b << "\n";
+   std::cout << b.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
+   auto c =
+         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+               {TAT::Left, TAT::Right, TAT::Up},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(1);
+   std::cout << c << "\n";
+   auto ct = c.transpose({TAT::Right, TAT::Up, TAT::Left});
+   std ::cout << ct << "\n";
+   std::cout << c.at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
+   std::cout << ct.at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
+   auto d =
+         TAT::Tensor<double, TAT::FermiSymmetry>{
+               {TAT::Left, TAT::Right, TAT::Up},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(1);
+   std::cout << d << "\n";
+   auto dt = d.transpose({TAT::Right, TAT::Up, TAT::Left});
+   std::cout << dt << "\n";
+   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Down, TAT::Up, TAT::Left, TAT::Right},
+                                                 {2, 3, 4, 5}}
+                  .test(1);
+   std::cout << e << "\n";
+   auto et = e.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up});
+   std::cout << et << "\n";
+   std::cout << e.at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
+   std::cout << et.at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
+   auto f = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.test();
+   std::cout << f << "\n";
+   std::cout << f.transpose({"l1", "l2", "l3"}) << "\n";
+   std::cout << f.transpose({"l1", "l3", "l2"}) << "\n";
+   std::cout << f.transpose({"l2", "l1", "l3"}) << "\n";
+   std::cout << f.transpose({"l2", "l3", "l1"}) << "\n";
+   std::cout << f.transpose({"l3", "l1", "l2"}) << "\n";
+   std::cout << f.transpose({"l3", "l2", "l1"}) << "\n";
+}
+
 void test_edge_operator() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {8, 8}}.test() << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {8, 8}}.test().edge_operator(
@@ -234,60 +277,6 @@ void test_edge_operator() {
 }
 // TODO: 重新处理edge operator
 #if 0
-void test_transpose() {
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
-      static double i = -1;
-      return i += 1;
-   });
-   std::cout << a << "\n";
-   std::cout << a.transpose({TAT::Right, TAT::Left}) << "\n";
-   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right, TAT::Up}, {2, 3, 4}}.set(
-         []() {
-            static double i = -1;
-            return i += 1;
-         });
-   std::cout << b << "\n";
-   std::cout << b.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
-   auto c =
-         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
-               {TAT::Left, TAT::Right, TAT::Up},
-               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 0;
-                  return i += 1;
-               });
-   std::cout << c << "\n";
-   std::cout << c.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
-   auto d =
-         TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
-               {TAT::Left, TAT::Right, TAT::Up},
-               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .set([]() {
-                  static double i = 0;
-                  return i += 1;
-               });
-   std::cout << d << "\n";
-   std::cout << d.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
-   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Down, TAT::Up, TAT::Left, TAT::Right},
-                                                 {2, 3, 4, 5}}
-                  .set([]() {
-                     static double i = 0;
-                     return i += 1;
-                  });
-   std::cout << e << "\n";
-   std::cout << e.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up}) << "\n";
-   auto f = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.set([]() {
-      static double i = -1;
-      return i += 1;
-   });
-   std::cout << f << "\n";
-   std::cout << f.transpose({"l1", "l2", "l3"}) << "\n";
-   std::cout << f.transpose({"l1", "l3", "l2"}) << "\n";
-   std::cout << f.transpose({"l2", "l1", "l3"}) << "\n";
-   std::cout << f.transpose({"l2", "l3", "l1"}) << "\n";
-   std::cout << f.transpose({"l3", "l1", "l2"}) << "\n";
-   std::cout << f.transpose({"l3", "l2", "l1"}) << "\n";
-}
 
 /*
 void test_mpi() {
@@ -432,10 +421,10 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_scalar);
    RUN_TEST(test_io);
    RUN_TEST(test_edge_rename);
-   RUN_TEST(test_edge_operator);
+   RUN_TEST(test_transpose);
+   // RUN_TEST(test_edge_operator);
 #if 0
    // RUN_TEST(test_mpi);
-   RUN_TEST(test_transpose);
    RUN_TEST(test_merge_split);
 #endif
    if (argc != 1) {

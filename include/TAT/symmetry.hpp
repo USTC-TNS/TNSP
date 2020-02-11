@@ -27,23 +27,7 @@ namespace TAT {
    // TODO: 关于对称性的get parity需要完善接口， 以及需要注释
    // 因为arrow的原因， symmetry可能需要operator-=等符号
    template<class Derived>
-   struct bose_symmetry : bose_symmetry_base {
-      static bool get_reverse_parity(
-            [[maybe_unused]] const vector<Derived>& symmetries,
-            [[maybe_unused]] const vector<bool>& flag) {
-         return false;
-      }
-      static bool get_transpose_parity(
-            [[maybe_unused]] const vector<Derived>& symmetries,
-            [[maybe_unused]] const vector<Rank>& plan) {
-         return false;
-      }
-      static bool get_split_merge_parity(
-            [[maybe_unused]] const vector<Derived>& symmetries,
-            [[maybe_unused]] const vector<std::tuple<Rank, Rank>>& sm_list) {
-         return false;
-      }
-   };
+   struct bose_symmetry : bose_symmetry_base {};
 
    template<class Derived>
    struct fermi_symmetry : fermi_symmetry_base {
@@ -100,8 +84,6 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&);
-   inline std::ostream& operator<=(std::ostream& out, const NoSymmetry&);
-   inline std::istream& operator>=(std::istream& in, NoSymmetry&);
 #define TAT_DEF_SYM_OP(OP, EXP)                           \
    inline bool OP(const NoSymmetry&, const NoSymmetry&) { \
       return EXP;                                         \
@@ -128,8 +110,6 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const Z2Symmetry& s);
-   inline std::ostream& operator<=(std::ostream& out, const Z2Symmetry& s);
-   inline std::istream& operator>=(std::istream& in, Z2Symmetry& s);
 #define TAT_DEF_SYM_OP(OP, EXP)                               \
    inline bool OP(const Z2Symmetry& a, const Z2Symmetry& b) { \
       return EXP;                                             \
@@ -156,9 +136,6 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const U1Symmetry& s);
-   inline std::ostream& operator<=(std::ostream& out, const U1Symmetry& s);
-   inline std::istream& operator>=(std::istream& in, U1Symmetry& s);
-
 #define TAT_DEF_SYM_OP(OP, EXP)                               \
    inline bool OP(const U1Symmetry& a, const U1Symmetry& b) { \
       return EXP;                                             \
@@ -188,9 +165,6 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s);
-   inline std::ostream& operator<=(std::ostream& out, const FermiSymmetry& s);
-   inline std::istream& operator>=(std::istream& in, FermiSymmetry& s);
-
 #define TAT_DEF_SYM_OP(OP, EXP)                                     \
    inline bool OP(const FermiSymmetry& a, const FermiSymmetry& b) { \
       return EXP;                                                   \
@@ -222,9 +196,6 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s);
-   inline std::ostream& operator<=(std::ostream& out, const FermiZ2Symmetry& s);
-   inline std::istream& operator>=(std::istream& in, FermiZ2Symmetry& s);
-
 #define TAT_DEF_SYM_OP(OP, EXP)                                         \
    inline bool OP(const FermiZ2Symmetry& a, const FermiZ2Symmetry& b) { \
       return EXP;                                                       \
@@ -256,9 +227,6 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s);
-   inline std::ostream& operator<=(std::ostream& out, const FermiU1Symmetry& s);
-   inline std::istream& operator>=(std::istream& in, FermiU1Symmetry& s);
-
 #define TAT_DEF_SYM_OP(OP, EXP)                                         \
    inline bool OP(const FermiU1Symmetry& a, const FermiU1Symmetry& b) { \
       return EXP;                                                       \

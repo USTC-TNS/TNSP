@@ -24,6 +24,28 @@
 #include "tensor.hpp"
 
 namespace TAT {
+   template<class ScalarType>
+   std::ostream& print_complex(std::ostream& out, const std::complex<ScalarType>& value) {
+      if (value.real() != 0) {
+         out << value.real();
+         if (value.imag() != 0) {
+            if (value.imag() > 0) {
+               out << '+';
+            }
+            out << value.imag();
+            out << 'i';
+         }
+      } else {
+         if (value.imag() == 0) {
+            out << '0';
+         } else {
+            out << value.imag();
+            out << 'i';
+         }
+      }
+      return out;
+   }
+
    template<class T>
    void raw_write(std::ostream& out, const T* data, const Size number = 1) {
       out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
@@ -42,14 +64,6 @@ namespace TAT {
       }
       return out;
    }
-   inline std::ostream& operator<=(std::ostream& out, const Name& name) {
-      raw_write(out, &name.id);
-      return out;
-   }
-   inline std::istream& operator>=(std::istream& in, Name& name) {
-      raw_read(in, &name.id);
-      return in;
-   }
 
    template<class T>
    std::ostream& operator<<(std::ostream& out, const vector<T>& vec) {
@@ -60,24 +74,27 @@ namespace TAT {
             out << ",";
          }
          not_first = true;
-         out << i;
+         if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+            print_complex(out, i);
+         } else {
+            out << i;
+         }
       }
       out << "]";
       return out;
    }
    template<class T>
-   std::ostream& operator<=(std::ostream& out, const vector<T>& vec) {
-      for (const auto& i : vec) {
-         out <= i;
-      }
-      return out;
+   void raw_write_vector(std::ostream& out, const vector<T>& vec) {
+      Size count = vec.size();
+      raw_write(out, &count);
+      raw_write(out, vec.data(), count);
    }
    template<class T>
-   std::istream& operator>=(std::istream& in, vector<T>& vec) {
-      for (auto& i : vec) {
-         in >= i;
-      }
-      return in;
+   void raw_read_vector(std::istream& in, vector<T>& vec) {
+      Size count;
+      raw_read(in, &count);
+      vec.resize(count);
+      raw_read(in, vec.data(), count);
    }
    template<class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
@@ -86,7 +103,7 @@ namespace TAT {
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             out << "{arrow:";
-            out << (edge.arrow ? "In" : "Out");
+            out << edge.arrow;
             out << ",map:";
          }
          out << "{";
@@ -116,7 +133,7 @@ namespace TAT {
          const Nums numbers = edge.map.size();
          raw_write(out, &numbers);
          for (const auto& [sym, dim] : edge.map) {
-            out <= sym;
+            raw_write(out, &sym);
             raw_write(out, &dim);
          }
       }
@@ -138,7 +155,7 @@ namespace TAT {
          for (Nums i = 0; i < numbers; i++) {
             Symmetry sym;
             Size dim;
-            in >= sym;
+            raw_read(in, &sym);
             raw_read(in, &dim);
             edge.map[sym] = dim;
          }
@@ -149,75 +166,25 @@ namespace TAT {
    std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
       return out;
    }
-   std::ostream& operator<=(std::ostream& out, const NoSymmetry&) {
-      return out;
-   }
-   std::istream& operator>=(std::istream& in, NoSymmetry&) {
-      return in;
-   }
    std::ostream& operator<<(std::ostream& out, const Z2Symmetry& s) {
       out << s.z2;
       return out;
-   }
-   std::ostream& operator<=(std::ostream& out, const Z2Symmetry& s) {
-      raw_write(out, &s.z2);
-      return out;
-   }
-   std::istream& operator>=(std::istream& in, Z2Symmetry& s) {
-      raw_read(in, &s.z2);
-      return in;
    }
    std::ostream& operator<<(std::ostream& out, const U1Symmetry& s) {
       out << s.u1;
       return out;
    }
-   std::ostream& operator<=(std::ostream& out, const U1Symmetry& s) {
-      raw_write(out, &s.u1);
-      return out;
-   }
-   std::istream& operator>=(std::istream& in, U1Symmetry& s) {
-      raw_read(in, &s.u1);
-      return in;
-   }
    std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s) {
       out << s.fermi;
       return out;
-   }
-   std::ostream& operator<=(std::ostream& out, const FermiSymmetry& s) {
-      raw_write(out, &s.fermi);
-      return out;
-   }
-   std::istream& operator>=(std::istream& in, FermiSymmetry& s) {
-      raw_read(in, &s.fermi);
-      return in;
    }
    std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s) {
       out << "(" << s.fermi << "," << s.z2 << ")";
       return out;
    }
-   std::ostream& operator<=(std::ostream& out, const FermiZ2Symmetry& s) {
-      raw_write(out, &s.fermi);
-      raw_write(out, &s.z2);
-      return out;
-   }
-   std::istream& operator>=(std::istream& in, FermiZ2Symmetry& s) {
-      raw_read(in, &s.fermi);
-      raw_read(in, &s.z2);
-      return in;
-   }
    std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s) {
       out << "(" << s.fermi << "," << s.u1 << ")";
       return out;
-   }
-   std::ostream& operator<=(std::ostream& out, const FermiU1Symmetry& s) {
-      raw_write(out, &s.fermi);
-      raw_write(out, &s.u1);
-      return out;
-   }
-   std::istream& operator>=(std::istream& in, FermiU1Symmetry& s) {
-      raw_read(in, &s.fermi);
-      raw_read(in, &s.u1);
-      return in;
    }
 
    template<class ScalarType, class Symmetry>
@@ -248,18 +215,21 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    const Tensor<ScalarType, Symmetry>&
    Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
-      auto rank = Rank(names.size());
-      raw_write(out, &rank);
-      out <= names;
-      out <= core->edges;
+      raw_write_vector(out, names);
+      for (const auto& edge : core->edges) {
+         out <= edge;
+      }
       return *this;
    }
 
    template<class ScalarType, class Symmetry>
    const Tensor<ScalarType, Symmetry>&
    Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
-      for (const auto& [_, i] : core->blocks) {
+      Size count = core->blocks.size();
+      raw_write(out, &count);
+      for (const auto& [i, j] : core->blocks) {
          raw_write(out, i.data(), i.size());
+         raw_write_vector(out, j);
       }
       return *this;
    }
@@ -272,14 +242,15 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_get(std::istream& in) {
-      Rank rank;
-      raw_read(in, &rank);
-      names.resize(rank);
-      in >= names;
+      raw_read_vector(in, names);
+      const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
       vector<Edge<Symmetry>> edges(rank);
-      in >= edges;
-      core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
+      for (auto& edge : edges) {
+         in >= edge;
+      }
+      core = std::make_shared<Core<ScalarType, Symmetry>>();
+      core->edges = std::move(edges);
       if (!is_valid_name(names, core->edges.size())) {
          TAT_WARNING("Invalid Names");
       }
@@ -288,9 +259,14 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_get(std::istream& in) {
-      for (auto& [_, i] : core->blocks) {
-         raw_read(in, i.data(), i.size());
-         // TODO: 不同版本之间不兼容, 依赖于map内的less确定的顺序
+      Rank rank = names.size();
+      Size count;
+      raw_read(in, &count);
+      core->blocks.clear();
+      for (auto i = 0; i < count; i++) {
+         auto symmetries = vector<Symmetry>(rank);
+         raw_read(in, symmetries.data(), symmetries.size());
+         raw_read_vector(in, core->blocks[std::move(symmetries)]);
       }
       return *this;
    }
@@ -299,6 +275,17 @@ namespace TAT {
    std::istream& operator>=(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
       tensor.meta_get(in).data_get(in);
       return in;
+   }
+
+   template<class T>
+   std::istream&& operator>=(std::istream&& in, T& v) {
+      in >= v;
+      return std::move(in);
+   }
+   template<class T>
+   std::ostream&& operator<=(std::ostream&& out, const T& v) {
+      out <= v;
+      return std::move(out);
    }
 } // namespace TAT
 #endif

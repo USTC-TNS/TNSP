@@ -46,8 +46,6 @@ namespace TAT {
       BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> t) : map(t) {}
 
       BoseEdge(const Size s) : map({{Symmetry(), s}}) {}
-
-      void possible_reverse() {}
    };
    template<class Symmetry>
    bool operator==(const BoseEdge<Symmetry>& e1, const BoseEdge<Symmetry>& e2) {
@@ -65,7 +63,7 @@ namespace TAT {
        * \brief 费米箭头方向
        * \note 当map中只含fermi=0的对称性值时, arrow无法定义,
        * 这在get_merged_edge中和possible_reverse中得到体现
-       * \see get_merged_edge
+       * \see get_merged_edge, arrow_valid
        */
       Arrow arrow = false;
       std::map<Symmetry, Size> map = {};
@@ -89,21 +87,34 @@ namespace TAT {
       FermiEdge(const Arrow arrow, T&& boson) : arrow(arrow), map(std::forward<T>(boson)) {}
 
       void possible_reverse() {
-         bool reverse = false;
+         bool do_reverse = false;
          for (const auto& [i, j] : map) {
             if (i.fermi < 0) {
-               reverse = true;
+               do_reverse = true;
                break;
             }
          }
-         if (reverse) {
-            arrow = !arrow;
-            std::map<Symmetry, Size> new_obj;
-            for (const auto& [i, j] : map) {
-               new_obj[!i] = j;
-            }
-            map.swap(new_obj);
+         if (do_reverse) {
+            reverse();
          }
+      }
+
+      void reverse() {
+         arrow ^= true;
+         std::map<Symmetry, Size> new_obj;
+         for (const auto& [i, j] : map) {
+            new_obj[!i] = j;
+         }
+         map.swap(new_obj);
+      }
+
+      [[nodiscard]] bool arrow_valid() const {
+         for (const auto& [i, j] : map) {
+            if (i.fermi != 0) {
+               return true;
+            }
+         }
+         return false;
       }
    };
    template<class Symmetry>
@@ -145,8 +156,21 @@ namespace TAT {
 
       Arrow arrow;
       const std::map<Symmetry, Size>* map;
+      /**
+       * \brief 当要做反转操作时, PtrEdge因为无法改变map, 使用这个reverse_mark作为标记, arrow和map中的key都应将取反
+       */
+      bool reverse_mark = false;
 
       PtrFermiEdge(Arrow a, const std::map<Symmetry, Size>* m) : arrow(a), map(m) {}
+
+      [[nodiscard]] bool arrow_valid() const {
+         for (const auto& [i, j] : *map) {
+            if (i.fermi != 0) {
+               return true;
+            }
+         }
+         return false;
+      }
    };
    template<class Symmetry>
    using PtrEdgeBase = std::conditional_t<
@@ -162,17 +186,6 @@ namespace TAT {
       using PtrEdgeBase<Symmetry>::PtrEdgeBase;
    };
 
-   /**
-    * \brief PtrEdge的辅助函数, 将Edge转化为为PtrEdge
-    */
-   template<class Symmetry>
-   auto convert_to_ptr_edge(const Edge<Symmetry>& e) {
-      if constexpr (is_fermi_symmetry_v<Symmetry>) {
-         return PtrEdge<Symmetry>{e.arrow, &e.map};
-      } else {
-         return PtrEdge<Symmetry>{&e.map};
-      }
-   }
    /**
     * \brief PtrEdge的辅助函数, 用来提取其中的map
     * \note 使用方式是remove_pointer(edge.map)
@@ -262,6 +275,7 @@ namespace TAT {
                   }
                } else {
                   for (auto i = 0; i < pos.size(); i++) {
+                     // 是否将要取反对此无影响
                      if (edges[i].arrow) {
                         sum += !pos[i]->first;
                      } else {
@@ -286,8 +300,8 @@ namespace TAT {
    /**
     * \brief 获取一些已知形状的边合并之后的形状
     * \param edges_to_merge 已知的边的形状列表
-    * \note 需要调用者保证费米箭头方向相同
-    * \note edges_to_merge为空的时候费米箭头无法确定
+    * \note 需要调用者保证输入费米箭头方向相同
+    * \note 且并不设定结果的费米箭头方向
     */
    template<class T>
    [[nodiscard]] auto get_merged_edge(const T& edges_to_merge) {
@@ -306,25 +320,39 @@ namespace TAT {
             [&res_edge, &sym, &dim]([[maybe_unused]] const PosType& pos) {
                res_edge.map[sym[pos.size() - 1]] += dim[pos.size() - 1];
             },
-            [&sym, &dim](const PosType& pos, const Rank start) {
+            [&sym, &dim, &edges_to_merge](const PosType& pos, const Rank start) {
                for (auto i = start; i < pos.size(); i++) {
                   const auto& ptr = pos[i];
                   if (i == 0) {
-                     sym[i] = ptr->first;
+                     if constexpr (
+                           std::is_same_v<typename T::value_type, PtrEdge<Symmetry>> &&
+                           is_fermi_symmetry_v<Symmetry>) {
+                        if (edges_to_merge[i].reverse_mark) {
+                           sym[i] = !ptr->first;
+                        } else {
+                           sym[i] = ptr->first;
+                        }
+                     } else {
+                        sym[i] = ptr->first;
+                     }
                      dim[i] = ptr->second;
                   } else {
-                     sym[i] = ptr->first + sym[i - 1];
+                     if constexpr (
+                           std::is_same_v<typename T::value_type, PtrEdge<Symmetry>> &&
+                           is_fermi_symmetry_v<Symmetry>) {
+                        if (edges_to_merge[i].reverse_mark) {
+                           sym[i] = !ptr->first + sym[i - 1];
+                        } else {
+                           sym[i] = ptr->first + sym[i - 1];
+                        }
+                     } else {
+                        sym[i] = ptr->first + sym[i - 1];
+                     }
                      dim[i] = ptr->second * dim[i - 1];
                      // do not check dim=0, because in constructor, i didn't check
                   }
                }
             });
-
-      if constexpr (is_fermi_symmetry_v<Symmetry>) {
-         if (!edges_to_merge.empty()) {
-            res_edge.arrow = edges_to_merge[0].arrow;
-         }
-      }
 
       return res_edge;
    }
