@@ -64,16 +64,20 @@ namespace TAT {
        * \brief 根据张量边的名称和形状构造张量, 分块将自动根据对称性进行处理
        * \param names_init 边的名称
        * \param edges_init 边的形状
+       * \param auto_reverse 费米对称性是否自动根据是否有负值整个反转
+       * \see Core
        */
       template<
             class U = vector<Name>,
             class T = vector<Edge<Symmetry>>,
             class = std::enable_if_t<std::is_convertible_v<U, vector<Name>>>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Edge<Symmetry>>>>>
-      Tensor(U&& names_init, T&& edges_init) :
+      Tensor(U&& names_init, T&& edges_init, const bool auto_reverse = false) :
             names(std::forward<U>(names_init)),
             name_to_index(construct_name_to_index(names)),
-            core(std::make_shared<Core<ScalarType, Symmetry>>(std::forward<T>(edges_init))) {
+            core(std::make_shared<Core<ScalarType, Symmetry>>(
+                  std::forward<T>(edges_init),
+                  auto_reverse)) {
          if (!is_valid_name(names, core->edges.size())) {
             TAT_WARNING("Invalid Names");
          }
@@ -408,13 +412,13 @@ namespace TAT {
             auto it = split.find(n);
             if (it != split.end()) {
                for (const auto& sn : it->second) {
-                  target_name.push_back(sn.name);
+                  target_name.push_back(std::get<0>(sn));
                }
             } else {
                target_name.push_back(n);
             }
          }
-         return edge_operator({}, split, {}, std::move(target_name), apply_parity);
+         return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity);
       }
 
       // TODO: 下面需要再检查

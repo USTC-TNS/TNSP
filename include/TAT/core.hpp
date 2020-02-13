@@ -53,7 +53,7 @@ namespace TAT {
       template<
             class T = vector<Edge<Symmetry>>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Edge<Symmetry>>>>>
-      Core(T&& edges_init, [[maybe_unused]] const bool auto_reverse = true) :
+      Core(T&& edges_init, [[maybe_unused]] const bool auto_reverse = false) :
             edges(std::forward<T>(edges_init)) {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             if (auto_reverse) {
@@ -66,6 +66,7 @@ namespace TAT {
          for (const auto& [i, j] : symmetries_list) {
             blocks[i] = vector<ScalarType>(j);
          }
+         // TODO: 删除不在block中的edge中的sym
       }
 
       Core() = default;

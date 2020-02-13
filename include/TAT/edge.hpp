@@ -46,6 +46,8 @@ namespace TAT {
       BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> t) : map(t) {}
 
       BoseEdge(const Size s) : map({{Symmetry(), s}}) {}
+
+      void reverse() {}
    };
    template<class Symmetry>
    bool operator==(const BoseEdge<Symmetry>& e1, const BoseEdge<Symmetry>& e2) {
