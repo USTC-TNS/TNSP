@@ -133,7 +133,7 @@ namespace TAT {
          auto index = name_to_index.at(name);
          symmetries[index] = sym;
          scalar_position[index] = res;
-         dimensions[index] = core.edges[index].map.begin()->second;
+         dimensions[index] = core.edges[index].map.at(sym);
       }
       Size offset = 0;
       for (Rank j = 0; j < rank; j++) {

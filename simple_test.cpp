@@ -83,7 +83,7 @@ void test_create_fermi_symmetry_tensor() {
          << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                       {{{{0, 0}, 1}, {{1, 1}, 2}},
                                                        {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
-                                                       {{{0, 0}, 3}, {{1, 1}, 1}}},
+                                                       {{{0, 0}, 3}, {{1, -1}, 1}}},
                                                       true}
                   .test(2)
          << "\n";
@@ -91,20 +91,22 @@ void test_create_fermi_symmetry_tensor() {
          << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                       {{{{0, 0}, 1}, {{1, 1}, 2}},
                                                        {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
-                                                       {{{0, 0}, 3}, {{1, 1}, 1}}},
+                                                       {{{0, 0}, 3}, {{1, -1}, 1}}},
                                                       true}
                   .test(2)
-                  .block({{TAT::Left, {0, 0}}, {TAT::Up, {1, 1}}, {TAT::Right, {1, -1}}})
+                  .block({{TAT::Left, {1, 1}}, {TAT::Up, {1, -1}}, {TAT::Right, {-2, 0}}})
          << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{1234}.at({}) << "\n";
    std::cout
          << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
                                                       {{{{0, 0}, 1}, {{1, 1}, 2}},
                                                        {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
-                                                       {{{0, 0}, 3}, {{1, 1}, 1}}},
+                                                       {{{0, 0}, 3}, {{1, -1}, 1}}},
                                                       true}
                   .test(2)
-                  .at({{TAT::Left, {{0, 0}, 0}}, {TAT::Up, {{0, 0}, 1}}, {TAT::Right, {{0, 0}, 1}}})
+                  .at({{TAT::Left, {{1, 1}, 1}},
+                       {TAT::Up, {{1, -1}, 0}},
+                       {TAT::Right, {{-2, 0}, 0}}})
          << "\n";
 }
 
@@ -377,7 +379,6 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_transpose);
    RUN_TEST(test_split_and_merge);
    RUN_TEST(test_edge_operator);
-   // RUN_TEST(test_mpi);
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);
