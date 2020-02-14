@@ -252,9 +252,8 @@ namespace TAT {
             for (auto j = start_of_merge; j < end_of_merge; j++) {
                if constexpr (is_fermi_symmetry_v<Symmetry>) {
                   if (edge_5[j].arrow_valid()) {
-                     auto this_arrow = edge_5[j].arrow;
                      if (arrow_fixed) {
-                        if (arrow == this_arrow) {
+                        if (arrow == edge_5[j].arrow) {
                            reversed_flag_dst.push_back(false);
                         } else {
                            edge_5[j].arrow ^= true;
@@ -262,7 +261,7 @@ namespace TAT {
                         }
                      } else {
                         arrow_fixed = true;
-                        arrow = this_arrow;
+                        arrow = edge_5[j].arrow;
                         reversed_flag_dst.push_back(false);
                      }
                   } else {
@@ -291,7 +290,7 @@ namespace TAT {
          }
       }
 
-      res.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(res_edge), false);
+      res.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(res_edge));
       if (!is_valid_name(res.names, res.core->edges.size())) {
          TAT_WARNING("Invalid Names");
       }

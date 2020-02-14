@@ -86,9 +86,9 @@ namespace TAT {
       }
    }
 
-   const Size l1_cache = 32768;
-   const Size l2_cache = 262144;
-   const Size l3_cache = 9437184;
+   inline const Size l1_cache = 32768;
+   inline const Size l2_cache = 262144;
+   inline const Size l3_cache = 9437184;
    // TODO: 如何确定系统cache
 
    template<class ScalarType, bool parity>

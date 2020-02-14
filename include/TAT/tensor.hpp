@@ -421,31 +421,24 @@ namespace TAT {
          return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity);
       }
 
-      // TODO: 下面需要再检查
-#if 0
-
-      // TODO: symmetry的设计漏洞， 需要指定方向和symmetry
-      // 最后的一个edge应该是这样的 std::tuple<bool, std::map<Symmetry, Size>>
-      // 现在的参数是vector<Name>, vector<map<Symmetry, Size>>
-      // bool表示方向， 在逆转方向时， symmetry也会逆转， 但是对于fermi symmetry
-      // 还会多一个parity （一个边一个， 所以一个张量半个， 和merge时的效果一样）
-      // 方向应该由各个函数各自维护， 在edge operator中， 如果merge的方向不一样， 需要自行逆转
-      // 并通过apply parity判断是否应用
-
       // TODO: contract
       // 调用 merge ， 这样就不用考虑contract特有的符号问题了
+#if 0
       static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor1,
             const Tensor<ScalarType, Symmetry>& tensor2,
             const vector<Name>& names1,
             const vector<Name>& names2) {
-         // TODO: 不转置成矩阵直接乘积的可能
+         // TODO: 不转置成矩阵直接乘积的可能, 当然， 这是几乎不可能的
          // names1 names2 需要 check order, 这个无法再merge中判断
          // merge 需要按照原样的顺序进行转置
          auto merged_tensor1 = tensor1.merge_edge({{names1, Contract1}}, false, true);
          auto merged_tensor2 = tensor2.merge_edge({{names2, Contract2}}, true, true);
          // check which one in 8 and do matrix contract
       }
+#endif
+#if 0
+
 
       // TODO: converge
       // multiple 的扩展版
@@ -492,9 +485,6 @@ namespace TAT {
          //
       }
 #endif
-
-      // TODO: 代码review
-      // TODO: 更美观的IO
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;

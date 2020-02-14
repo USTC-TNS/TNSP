@@ -23,6 +23,10 @@
 
 #include "tensor.hpp"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace TAT {
    template<class ScalarType>
    std::ostream& print_complex(std::ostream& out, const std::complex<ScalarType>& value) {
@@ -67,11 +71,11 @@ namespace TAT {
 
    template<class T>
    std::ostream& operator<<(std::ostream& out, const vector<T>& vec) {
-      out << "[";
+      out << '[';
       auto not_first = false;
       for (const auto& i : vec) {
          if (not_first) {
-            out << ",";
+            out << ',';
          }
          not_first = true;
          if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
@@ -80,7 +84,7 @@ namespace TAT {
             out << i;
          }
       }
-      out << "]";
+      out << ']';
       return out;
    }
    template<class T>
@@ -102,22 +106,22 @@ namespace TAT {
          out << edge.map.at(NoSymmetry());
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            out << "{arrow:";
+            out << '{' << "arrow" << ':';
             out << edge.arrow;
-            out << ",map:";
+            out << ',' << "map" << ':';
          }
-         out << "{";
+         out << '{';
          auto not_first = false;
          for (const auto& [sym, dim] : edge.map) {
             if (not_first) {
-               out << ",";
+               out << ',';
             }
             not_first = true;
-            out << sym << ":" << dim;
+            out << sym << ':' << dim;
          }
-         out << "}";
+         out << '}';
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            out << "}";
+            out << '}';
          }
       }
       return out;
@@ -179,36 +183,61 @@ namespace TAT {
       return out;
    }
    std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s) {
-      out << "(" << s.fermi << "," << s.z2 << ")";
+      out << '(' << s.fermi << ',' << s.z2 << ')';
       return out;
    }
    std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s) {
-      out << "(" << s.fermi << "," << s.u1 << ")";
+      out << '(' << s.fermi << ',' << s.u1 << ')';
       return out;
    }
 
+#ifdef _WIN32
+   inline const auto stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+   inline const auto stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
+   struct WindowsColorCode {
+      int color_code;
+   };
+   inline std::ostream& operator<<(std::ostream& out, const WindowsColorCode& value) {
+      if (out.rdbuf() == std::cout.rdbuf()) {
+         SetConsoleTextAttribute(stdout_handle, value.color_code);
+      } else if (out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
+         SetConsoleTextAttribute(stderr_handle, value.color_code);
+      }
+      return out;
+   }
+   inline const WindowsColorCode console_red = {4};
+   inline const WindowsColorCode console_green = {2};
+   inline const WindowsColorCode console_yellow = {6};
+   inline const WindowsColorCode console_origin = {7};
+#else
+   inline const std::string console_red = "\x1B[31m";
+   inline const std::string console_green = "\x1B[32m";
+   inline const std::string console_yellow = "\x1B[33m";
+   inline const std::string console_origin = "\x1B[0m";
+#endif
+
    template<class ScalarType, class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
-      out << "{names:";
+      out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names;
-      out << ",edges:";
+      out << ',' << console_green << "edges" << console_origin << ':';
       out << tensor.core->edges;
-      out << ",blocks:";
+      out << ',' << console_green << "blocks" << console_origin << ':';
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          out << tensor.core->blocks.begin()->second;
       } else {
-         out << "{";
+         out << '{';
          auto not_first = false;
          for (const auto& [i, j] : tensor.core->blocks) {
             if (not_first) {
-               out << ",";
+               out << ',';
             }
             not_first = true;
-            out << i << ":" << j;
+            out << console_yellow << i << console_origin << ':' << j;
          }
-         out << "}";
+         out << '}';
       }
-      out << "}";
+      out << '}';
       return out;
    }
 
@@ -286,6 +315,15 @@ namespace TAT {
    std::ostream&& operator<=(std::ostream&& out, const T& v) {
       out <= v;
       return std::move(out);
+   }
+
+   inline Evil::~Evil() {
+      try {
+         std::clog << console_red << "\n\nPremature optimization is the root of all evil!\n"
+                   << console_origin
+                   << "                                       --- Donald Knuth\n\n\n";
+      } catch ([[maybe_unused]] const std::exception& e) {
+      }
    }
 } // namespace TAT
 #endif

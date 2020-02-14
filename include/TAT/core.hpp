@@ -66,7 +66,7 @@ namespace TAT {
          for (const auto& [i, j] : symmetries_list) {
             blocks[i] = vector<ScalarType>(j);
          }
-         // TODO: 删除不在block中的edge中的sym
+         // TODO: 删除不在block中用到的sym
       }
 
       Core() = default;

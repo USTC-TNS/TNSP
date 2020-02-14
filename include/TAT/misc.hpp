@@ -35,20 +35,14 @@ namespace TAT {
     */
    const std::string TAT_VERSION = "0.0.4";
 
-#ifndef NDEBUG
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示
     */
    struct Evil {
-      ~Evil() {
-         try {
-            std::clog << "\n\nPremature optimization is the root of all evil!\n"
-                         "                                       --- Donald Knuth\n\n\n";
-         } catch ([[maybe_unused]] const std::exception& e) {
-         }
-      }
+      ~Evil();
    };
-   const Evil evil;
+#ifndef NDEBUG
+   inline const Evil evil;
 #endif
 
    /**
