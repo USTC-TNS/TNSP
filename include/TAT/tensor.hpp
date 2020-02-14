@@ -28,38 +28,66 @@
 #include <tuple>
 
 #include "core.hpp"
-#include "name.hpp"
 #include "symmetry.hpp"
-#include "transpose.hpp"
 
 // #include <mpi.h>
 // TODO: MPI 这个最后弄, 不然valgrind一大堆报错
 
 namespace TAT {
+   /**
+    * \brief TAT is A Tensor library!
+    * \tparam ScalarType 张量内的标量类型
+    * \tparam Symmetry 张量所满足的对称性
+    */
    template<class ScalarType = double, class Symmetry = NoSymmetry>
    struct Tensor {
       using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
 
-      // initialize
+      /**
+       * \brief 张量的边的名称
+       * \see Name
+       */
       vector<Name> names;
+      /**
+       * \brief 张量边名称到边的序号的映射表
+       */
       std::map<Name, Rank> name_to_index;
+      /**
+       * \brief 张量中出了边名称外的其他数据
+       * \see Core
+       * \note 因为重命名边的操作很常见, 为了避免复制, 使用shared_ptr封装Core
+       */
       std::shared_ptr<Core<ScalarType, Symmetry>> core;
 
+      /**
+       * \brief 根据张量边的名称和形状构造张量, 分块将自动根据对称性进行处理
+       * \param names_init 边的名称
+       * \param edges_init 边的形状
+       * \param auto_reverse 费米对称性是否自动根据是否有负值整个反转
+       * \see Core
+       */
       template<
             class U = vector<Name>,
-            class T = vector<map<Symmetry, Size>>,
+            class T = vector<Edge<Symmetry>>,
             class = std::enable_if_t<std::is_convertible_v<U, vector<Name>>>,
-            class = std::enable_if_t<std::is_convertible_v<T, vector<map<Symmetry, Size>>>>>
-      Tensor(U&& n, T&& e) :
-            names(std::forward<U>(n)),
+            class = std::enable_if_t<std::is_convertible_v<T, vector<Edge<Symmetry>>>>>
+      Tensor(U&& names_init, T&& edges_init, const bool auto_reverse = false) :
+            names(std::forward<U>(names_init)),
             name_to_index(construct_name_to_index(names)),
-            core(std::make_shared<Core<ScalarType, Symmetry>>(std::forward<T>(e))) {
+            core(std::make_shared<Core<ScalarType, Symmetry>>(
+                  std::forward<T>(edges_init),
+                  auto_reverse)) {
          if (!is_valid_name(names, core->edges.size())) {
             TAT_WARNING("Invalid Names");
          }
       }
 
+      /**
+       * \brief 张量的复制, 默认的赋值和复制初始化不会拷贝数据，而会共用core
+       * \return 复制的结果
+       * \see core
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry> copy() const {
          Tensor<ScalarType, Symmetry> res;
          res.names = names;
@@ -75,24 +103,37 @@ namespace TAT {
       Tensor& operator=(Tensor&& other) = default;
       ~Tensor() = default;
 
+      /**
+       * \brief 创建秩为零的张量
+       * \param num 秩为零的张量拥有的唯一一个元素的值
+       */
       Tensor(ScalarType num) : Tensor({}, {}) {
-         core->blocks[0].raw_data[0] = num;
+         core->blocks.begin()->second[0] = num;
       }
 
+      /**
+       * \brief 秩为一的张量转化为其中唯一一个元素的标量类型
+       */
       operator ScalarType() const {
          if (!names.empty()) {
             TAT_WARNING("Conversion From Multiple Rank Tensor To Scalar");
          }
-         return core->blocks[0].raw_data[0];
+         return core->blocks.begin()->second[0];
       }
 
+      /**
+       * \brief 通过一个生成器设置一个张量内的数据
+       * \param generator 生成器, 一般来说是一个无参数的函数, 返回值为标量, 多次调用填充张量
+       * \return 张量自身
+       * \note 参见std::generate
+       */
       template<class Generator>
       Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
          if (core.use_count() != 1) {
             TAT_WARNING("Set Tensor Shared");
          }
-         for (auto& i : core->blocks) {
-            std::generate(i.raw_data.begin(), i.raw_data.end(), generator);
+         for (auto& [_, i] : core->blocks) {
+            std::generate(i.begin(), i.end(), generator);
          }
          return *this;
       }
@@ -101,6 +142,11 @@ namespace TAT {
          return std::move(set(generator));
       }
 
+      /**
+       * \brief 将张量内的数据全部设置为零
+       * \return 张量自身
+       * \see set
+       */
       Tensor<ScalarType, Symmetry>& zero() & {
          return set([]() { return 0; });
       }
@@ -108,48 +154,66 @@ namespace TAT {
          return std::move(zero());
       }
 
-      // get item
-      [[nodiscard]] const auto& at(const std::map<Name, Symmetry>& position) const& {
-         using is_not_nosymmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
-         auto sym = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[sym].raw_data;
+      /**
+       * \brief 将张量内的数据设置为便于测试的值
+       * \return 张量自身
+       * \see set
+       */
+      Tensor<ScalarType, Symmetry>& test(ScalarType first = 0, ScalarType step = 1) & {
+         return set([&first, step]() {
+            auto res = first;
+            first += step;
+            return res;
+         });
+      }
+      Tensor<ScalarType, Symmetry> test(ScalarType first = 0, ScalarType step = 1) && {
+         return std::move(test(first, step));
       }
 
-      [[nodiscard]] const ScalarType& at(const std::map<Name, Size>& position) const& {
-         using is_nosymmetry = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>;
-         auto pos = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[0].raw_data[pos];
+      /**
+       * \brief 获取张量的某个分块
+       * \param position 分块每个子边对应的对称性值
+       * \return 一个不可变的一维数组
+       * \see get_block_for_get_item
+       */
+      [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position) const& {
+         using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
+         auto sym = get_block_for_get_item(position, name_to_index, *core);
+         return core->blocks.at(sym);
       }
 
-      [[nodiscard]] ScalarType& at(const std::map<Name, Size>& position) & {
-         using is_nosymmetry = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>;
-         auto pos = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[0].raw_data[pos];
+      using EdgeInfoForGetItem = std::
+            conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
+
+      /**
+       * \brief 获取张量中某个分块内的某个元素
+       * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
+       * \see get_offset_for_get_item, get_block_and_offset_for_get_item
+       */
+      [[nodiscard]] ScalarType at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+            auto pos = get_offset_for_get_item(position, name_to_index, *core);
+            return core->blocks.begin()->second[pos];
+         } else {
+            auto [sym, pos] = get_block_and_offset_for_get_item(position, name_to_index, *core);
+            return core->blocks.at(sym)[pos];
+         }
+      }
+      [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) & {
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+            auto pos = get_offset_for_get_item(position, name_to_index, *core);
+            return core->blocks.begin()->second[pos];
+         } else {
+            auto [sym, pos] = get_block_and_offset_for_get_item(position, name_to_index, *core);
+            return core->blocks.at(sym)[pos];
+         }
       }
 
-      [[nodiscard]] ScalarType at(const std::map<Name, Size>& position) && {
-         using is_nosymmetry = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>;
-         auto pos = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[0].raw_data[pos];
-      }
-
-      [[nodiscard]] const ScalarType&
-      at(const std::map<Name, std::tuple<Symmetry, Size>>& position) const& {
-         auto [sym, pos] = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[sym].raw_data[pos];
-      }
-
-      [[nodiscard]] ScalarType& at(const std::map<Name, std::tuple<Symmetry, Size>>& position) & {
-         auto [sym, pos] = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[sym].raw_data[pos];
-      }
-
-      [[nodiscard]] ScalarType at(const std::map<Name, std::tuple<Symmetry, Size>>& position) && {
-         auto [sym, pos] = get_pos_for_at(position, name_to_index, *core);
-         return core->blocks[sym].raw_data[pos];
-      }
-
-      // conversion
+      /**
+       * \brief 不同标量类型的张量之间的转换函数
+       * \tparam OtherScalarType 目标张量的基础标量类型 
+       * \return 转换后的张量
+       */
       template<class OtherScalarType, class = std::enable_if_t<is_scalar_v<OtherScalarType>>>
       [[nodiscard]] Tensor<OtherScalarType, Symmetry> to() const {
          if constexpr (std::is_same_v<ScalarType, OtherScalarType>) {
@@ -162,25 +226,34 @@ namespace TAT {
             auto res = Tensor<OtherScalarType, Symmetry>{};
             res.names = names;
             res.name_to_index = name_to_index;
-            res.core = std::make_shared<Core<OtherScalarType, Symmetry>>(core->edges);
-            for (Nums i = 0; i < core->blocks.size(); i++) {
-               auto& dst = res.core->blocks[i].raw_data;
-               const auto& src = core->blocks[i].raw_data;
-               for (Size j = 0; j < src.size(); j++) {
-                  dst[j] = static_cast<OtherScalarType>(src[j]);
+            res.core = std::make_shared<Core<OtherScalarType, Symmetry>>();
+            res.core->edges = core->edges;
+            for (const auto& [i, j] : core->blocks) {
+               auto tmp = vector<OtherScalarType>(j.size());
+               for (auto k = 0; k < j.size(); k++) {
+                  if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
+                     tmp[k] = static_cast<OtherScalarType>(j[k].real());
+                  } else {
+                     tmp[k] = static_cast<OtherScalarType>(j[k]);
+                  }
                }
+               res.core->blocks[i] = std::move(tmp);
             }
             return res;
          }
       }
 
-      // norm
+      /**
+       * \brief 求张量的模, 是拉平看作向量的模, 并不是矩阵模之类的东西
+       * \tparam p 所求的模是张量的p-模, 如果p=-1, 则意味着最大模即p=inf
+       * \return 标量类型的模
+       */
       template<int p = 2>
       [[nodiscard]] Tensor<real_base_t<ScalarType>, Symmetry> norm() const {
          real_base_t<ScalarType> res = 0;
          if constexpr (p == -1) {
-            for (const auto& block : core->blocks) {
-               for (const auto& j : block.raw_data) {
+            for (const auto& [_, block] : core->blocks) {
+               for (const auto& j : block) {
                   auto tmp = std::abs(j);
                   if (tmp > res) {
                      res = tmp;
@@ -188,12 +261,12 @@ namespace TAT {
                }
             }
          } else if constexpr (p == 0) {
-            for (const auto& block : core->blocks) {
-               res += real_base_t<ScalarType>(block.raw_data.size());
+            for (const auto& [_, block] : core->blocks) {
+               res += real_base_t<ScalarType>(block.size());
             }
          } else {
-            for (const auto& block : core->blocks) {
-               for (const auto& j : block.raw_data) {
+            for (const auto& [_, block] : core->blocks) {
+               for (const auto& j : block) {
                   if constexpr (p == 1) {
                      res += std::abs(j);
                   } else if constexpr (p == 2) {
@@ -219,7 +292,13 @@ namespace TAT {
          return res;
       }
 
-      // edge rename
+      /**
+       * \brief 对张量边的名称进行重命名
+       * \param dict 重命名方案的映射表
+       * \return 仅仅改变了边的名称的张量, 与原张量共享Core
+       * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator
+       * 而是实现一个小功能的edge_rename
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry>
       edge_rename(const std::map<Name, Name>& dict) const {
          auto res = Tensor<ScalarType, Symmetry>{};
@@ -237,14 +316,60 @@ namespace TAT {
          return res;
       }
 
-      // edge operators
+      /**
+       * \brief 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
+       * \param rename_map 重命名边的名称的映射表
+       * \param split_map 分裂一些边的数据, 需要包含分裂后边的形状, 不然分裂不唯一
+       * \param reversed_name 将要取反费米箭头的边的名称列表
+       * \param merge_map 合并一些边的名称列表
+       * \param new_names 最后进行的转置操作后的边的名称顺序列表
+       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上
+       * \return 进行了一系列操作后的结果张量
+       * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
+       * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
+       * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
+       */
+      template<
+            class T = vector<Name>,
+            class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry> edge_operator(
+            const std::map<Name, Name>& rename_map,
+            const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split_map,
+            const std::set<Name>& reversed_name,
+            const std::map<Name, vector<Name>>& merge_map,
+            T&& new_names,
+            const bool apply_parity = false) const;
+
+      /**
+       * \brief 对张量进行转置
+       * \param target_names 转置后的目标边的名称顺序
+       * \return 转置后的结果张量
+       */
       template<
             class T = vector<Name>,
             class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry> transpose(T&& target_names) const {
-         return edge_operator({}, {}, {}, std::forward<T>(target_names));
+         return edge_operator({}, {}, {}, {}, std::forward<T>(target_names));
       }
 
+      /**
+       * \brief 将费米张量的一些边进行反转
+       * \param reversed_name 反转的边的集合
+       * \param apply_parity 是否应用反转产生的符号
+       * \return 反转后的结果张量
+       */
+      [[nodiscard]] Tensor<ScalarType, Symmetry>
+      reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity = false) const {
+         return edge_operator({}, {}, reversed_name, {}, names, apply_parity);
+      }
+
+      /**
+       * \brief 合并张量的一些边
+       * \param merge 合并的边的名称的映射表
+       * \param apply_parity 是否应用合并边产生的符号
+       * \return 合并边后的结果张量
+       * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry>
       merge_edge(const std::map<Name, vector<Name>>& merge, const bool apply_parity = false) const {
          vector<Name> target_name;
@@ -270,318 +395,35 @@ namespace TAT {
             }
          }
          reverse(target_name.begin(), target_name.end());
-         return edge_operator({}, {}, merge, std::move(target_name), apply_parity);
+         return edge_operator({}, {}, {}, merge, std::move(target_name), apply_parity);
       }
 
+      /**
+       * \brief 分裂张量的一些边
+       * \param split 分裂的边的名称的映射表
+       * \param apply_parity 是否应用分裂边产生的符号
+       * \return 分裂边后的结果张量
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry> split_edge(
-            const std::map<Name, vector<NameWithEdge<Symmetry>>>& split,
+            const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split,
             const bool apply_parity = false) const {
          vector<Name> target_name;
          for (const auto& n : names) {
             auto it = split.find(n);
             if (it != split.end()) {
                for (const auto& sn : it->second) {
-                  target_name.push_back(sn.name);
+                  target_name.push_back(std::get<0>(sn));
                }
             } else {
                target_name.push_back(n);
             }
          }
-         return edge_operator({}, split, {}, std::move(target_name), apply_parity);
+         return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity);
       }
 
-      // edge operator core
-      template<
-            class T = vector<Name>,
-            class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry> edge_operator(
-            const std::map<Name, Name>& rename_map,
-            const std::map<Name, vector<NameWithEdge<Symmetry>>>& split_map,
-            const std::map<Name, vector<Name>>& merge_map,
-            T&& new_names,
-            const bool apply_parity = false) const {
-         // merge split的过程中, 会产生半个符号, 所以需要限定这一个tensor是否拥有这个符号
-         vector<std::tuple<Rank, Rank>> split_list;
-         vector<std::tuple<Rank, Rank>> merge_list;
+      // TODO: 下面需要再检查
+#if 0
 
-         auto original_name = vector<Name>();
-         auto splitted_name = vector<Name>();
-         const vector<map<Symmetry, Size>>& original_edge = core->edges;
-         auto splitted_edge = vector<const map<Symmetry, Size>*>();
-         for (auto& i : names) {
-            auto renamed_name = i;
-            auto it1 = rename_map.find(i);
-            if (it1 != rename_map.end()) {
-               renamed_name = it1->second;
-            }
-            original_name.push_back(renamed_name);
-
-            const map<Symmetry, Size>& e = core->edges[name_to_index.at(i)];
-            auto it2 = split_map.find(renamed_name);
-            if (it2 != split_map.end()) {
-               auto edge_list = vector<const map<Symmetry, Size>*>();
-               Rank split_start = splitted_name.size();
-               for (const auto& k : it2->second) {
-                  splitted_name.push_back(k.name);
-                  splitted_edge.push_back(&k.edge);
-                  edge_list.push_back(&k.edge);
-               }
-               Rank split_end = splitted_name.size();
-               split_list.push_back({split_start, split_end});
-
-               auto expected_cover_edge = get_merged_edge(edge_list);
-               for (const auto& [key, value] : e) {
-                  if (value != expected_cover_edge.at(key)) {
-                     TAT_WARNING("Invalid Edge Split");
-                  }
-               }
-            } else {
-               splitted_name.push_back(renamed_name);
-               splitted_edge.push_back(&e);
-            }
-         }
-
-         const Rank original_rank = names.size();
-         // const Rank splitted_rank = splitted_name.size();
-
-         auto splitted_name_to_index = construct_name_to_index(splitted_name);
-
-         vector<Rank> fine_plan_dst;
-         vector<Rank> plan_dst_to_src;
-
-         vector<Name> merged_name = std::forward<T>(new_names);
-         auto transposed_name = vector<Name>();
-         auto merged_edge = vector<map<Symmetry, Size>>();
-         auto transposed_edge = vector<const map<Symmetry, Size>*>();
-
-         Rank fine_dst_tmp = 0;
-         for (const auto& i : merged_name) {
-            auto it1 = merge_map.find(i);
-            if (it1 != merge_map.end()) {
-               auto edge_list = vector<const map<Symmetry, Size>*>();
-               Rank merge_start = transposed_name.size();
-               for (const auto& k : it1->second) {
-                  transposed_name.push_back(k);
-                  auto idx = splitted_name_to_index.at(k);
-                  plan_dst_to_src.push_back(idx);
-                  fine_plan_dst.push_back(fine_dst_tmp);
-                  auto ep = splitted_edge[idx];
-                  transposed_edge.push_back(ep);
-                  edge_list.push_back(ep);
-               }
-               Rank merge_end = transposed_name.size();
-               merge_list.push_back({merge_start, merge_end});
-               merged_edge.push_back(get_merged_edge(edge_list));
-            } else {
-               transposed_name.push_back(i);
-               auto idx = splitted_name_to_index.at(i);
-               plan_dst_to_src.push_back(idx);
-               fine_plan_dst.push_back(fine_dst_tmp);
-               auto ep = splitted_edge[idx];
-               transposed_edge.push_back(ep);
-               merged_edge.push_back(*ep);
-            }
-            fine_dst_tmp++;
-         }
-
-         const Rank transposed_rank = transposed_name.size();
-         const Rank merged_rank = merged_name.size();
-
-         vector<Rank> fine_plan_src(transposed_rank);
-         vector<Rank> plan_src_to_dst(transposed_rank);
-
-         for (Rank i = 0; i < transposed_rank; i++) {
-            plan_src_to_dst[plan_dst_to_src[i]] = i;
-         }
-
-         Rank fine_src_tmp = 0;
-         for (const auto& i : original_name) {
-            auto it1 = split_map.find(i);
-            if (it1 != split_map.end()) {
-               for (const auto& j : it1->second) {
-                  fine_plan_src[plan_src_to_dst[splitted_name_to_index.at(j.name)]] = fine_src_tmp;
-               }
-            } else {
-               fine_plan_src[plan_src_to_dst[splitted_name_to_index.at(i)]] = fine_src_tmp;
-            }
-            fine_src_tmp++;
-         }
-
-         if (merged_rank == original_rank) {
-            auto need_operator = false;
-            for (Rank i = 0; i < merged_rank; i++) {
-               auto name1 = original_name[i];
-               auto it1 = split_map.find(name1);
-               if (it1 != split_map.end()) {
-                  if (it1->second.size() != 1) {
-                     need_operator = true;
-                     break;
-                  }
-                  name1 = it1->second[0].name;
-               }
-               auto name2 = merged_name[i];
-               auto it2 = merge_map.find(name2);
-               if (it2 != merge_map.end()) {
-                  if (it2->second.size() != 1) {
-                     need_operator = true;
-                     break;
-                  }
-                  name2 = it2->second[0];
-               }
-               if (name1 != name2) {
-                  need_operator = true;
-                  break;
-               }
-            }
-            if (!need_operator) {
-               auto res = Tensor<ScalarType, Symmetry>{};
-               res.names = std::move(merged_name);
-               res.name_to_index = construct_name_to_index(res.names);
-               res.core = core;
-               return res;
-            }
-         }
-
-         auto res = Tensor<ScalarType, Symmetry>(std::move(merged_name), std::move(merged_edge));
-
-         auto src_rank = Rank(names.size());
-         auto dst_rank = Rank(res.names.size());
-         auto src_block_number = Nums(core->blocks.size());
-         auto dst_block_number = Nums(res.core->blocks.size());
-         vector<Size> src_offset(src_block_number, 0);
-         vector<Size> dst_offset(dst_block_number, 0);
-
-         using PosType = vector<typename map<Symmetry, Size>::const_iterator>;
-
-         vector<std::tuple<PosType, Nums, Size, Size, bool>> src_position;
-
-         vector<Size> total_size_list(transposed_rank);
-
-         loop_edge(
-               splitted_edge,
-               // rank0
-               []() {},
-               // check
-               []([[maybe_unused]] const PosType& pos) {
-                  auto sum = Symmetry();
-                  for (const auto& i : pos) {
-                     sum += i->first;
-                  }
-                  return sum == Symmetry();
-               },
-               // append
-               [&]([[maybe_unused]] const PosType& pos) {
-                  vector<Symmetry> src_pos(src_rank, Symmetry());
-                  for (Rank i = 0; i < pos.size(); i++) {
-                     src_pos[fine_plan_src[plan_src_to_dst[i]]] += pos[i]->first;
-                  }
-                  auto src_block_index = core->find_block(src_pos);
-
-                  auto total_size = total_size_list[pos.size() - 1];
-
-                  auto src_parity = false;
-                  if (apply_parity) {
-                     src_parity ^= Symmetry::get_parity(src_pos, split_list);
-                  }
-
-                  src_position.push_back({pos,
-                                          src_block_index,
-                                          src_offset[src_block_index],
-                                          total_size,
-                                          src_parity});
-                  src_offset[src_block_index] += total_size;
-               },
-               // update
-               [&total_size_list]([[maybe_unused]] const PosType& pos, [[maybe_unused]] Rank ptr) {
-                  for (auto i = ptr; i < pos.size(); i++) {
-                     if (i == 0) {
-                        total_size_list[0] = pos[0]->second;
-                     } else {
-                        total_size_list[i] = total_size_list[i - 1] * pos[i]->second;
-                     }
-                  }
-               });
-
-         vector<Size> dst_dim(transposed_rank);
-         vector<Size> src_dim(transposed_rank);
-
-         loop_edge(
-               transposed_edge,
-               // rank0
-               [&]() {
-                  res.core->blocks[0].raw_data[0] = core->blocks[0].raw_data[0];
-                  // rank=0则parity一定为1
-               },
-               // check
-               []([[maybe_unused]] const PosType& pos) {
-                  auto sum = Symmetry();
-                  for (const auto& i : pos) {
-                     sum += i->first;
-                  }
-                  return sum == Symmetry();
-               },
-               // append
-               [&]([[maybe_unused]] const PosType& pos) {
-                  vector<Symmetry> dst_pos(dst_rank, Symmetry());
-                  for (auto i = 0; i < transposed_rank; i++) {
-                     dst_pos[fine_plan_dst[i]] += pos[i]->first;
-                  }
-                  auto dst_block_index = res.core->find_block(dst_pos);
-                  ScalarType* dst_data = res.core->blocks[dst_block_index].raw_data.data() +
-                                         dst_offset[dst_block_index];
-
-                  const ScalarType* src_data;
-                  Size total_size;
-                  auto total_parity = Symmetry::get_parity(dst_pos, plan_dst_to_src);
-                  if (apply_parity) {
-                     total_parity ^= Symmetry::get_parity(dst_pos, merge_list);
-                  }
-
-                  auto found_src = false;
-                  for (const auto& [src_pos_info, src_index, src_offset, src_total_size, src_parity] :
-                       src_position) {
-                     auto difference = false;
-                     for (auto j = 0; j < pos.size(); j++) {
-                        if (src_pos_info[j]->first != pos[plan_src_to_dst[j]]->first) {
-                           difference = true;
-                           break;
-                        }
-                     }
-                     if (!difference) {
-                        src_data = core->blocks[src_index].raw_data.data() + src_offset;
-                        total_size = src_total_size;
-                        total_parity ^= src_parity;
-                        found_src = true;
-                        break;
-                     }
-                  }
-                  if (!found_src) {
-                     TAT_WARNING("Source Block Not Found");
-                  }
-
-                  do_transpose(
-                        plan_src_to_dst,
-                        plan_dst_to_src,
-                        src_data,
-                        dst_data,
-                        src_dim,
-                        dst_dim,
-                        total_size,
-                        transposed_rank,
-                        total_parity);
-
-                  dst_offset[dst_block_index] += total_size;
-               },
-               // update
-               [&src_dim, &dst_dim, &plan_dst_to_src](
-                     [[maybe_unused]] const PosType& pos, [[maybe_unused]] Rank ptr) {
-                  for (auto i = ptr; i < pos.size(); i++) {
-                     src_dim[plan_dst_to_src[i]] = dst_dim[i] = pos[i]->second;
-                  }
-               });
-
-         return res;
-      }
       // TODO: symmetry的设计漏洞， 需要指定方向和symmetry
       // 最后的一个edge应该是这样的 std::tuple<bool, std::map<Symmetry, Size>>
       // 现在的参数是vector<Name>, vector<map<Symmetry, Size>>
@@ -649,6 +491,7 @@ namespace TAT {
             bool u_edges_given = true) const {
          //
       }
+#endif
 
       // TODO: 代码review
       // TODO: 更美观的IO

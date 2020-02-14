@@ -28,13 +28,38 @@
 #include <string>
 
 namespace TAT {
+   /**
+    * \brief Name中用于标号的类型
+    */
    using NameIdType = int;
 
+   /**
+    * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
+    */
    inline NameIdType names_total = 0;
+   /**
+    * \brief Name的字符串到标号的映射表
+    */
    inline std::map<std::string, NameIdType> name_to_id = {};
+   /**
+    * \brief 标号到Name的字符串的映射表
+    */
    inline std::map<NameIdType, std::string> id_to_name = {};
 
+   /**
+    * \brief 用于给张量的脚标命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称,
+    * Name将自动保证标号和名称的一一对应
+    *
+    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字,
+    * 有全局变量names_total维护目前已分配的标号量,
+    * 新建一个字符串的Name时将递增names_total并获取一个唯一的标号
+    *
+    * \see names_total
+    */
    struct Name {
+      /**
+       * \brief Name的标号
+       */
       NameIdType id = -1;
       Name() = default;
       Name(const NameIdType id) : id(id) {}
@@ -52,8 +77,6 @@ namespace TAT {
    };
 
    std::ostream& operator<<(std::ostream& out, const Name& name);
-   std::ostream& operator<=(std::ostream& out, const Name& name);
-   std::istream& operator>=(std::istream& in, Name& name);
 
 #define TAT_DEF_NAME_OP(OP, EXP)                  \
    inline bool OP(const Name& a, const Name& b) { \
@@ -67,7 +90,7 @@ namespace TAT {
    TAT_DEF_NAME_OP(operator<, a.id<b.id)
 #undef TAT_DEF_NAME_OP
 
-#define TAT_DEF_NAME(x) const Name x(#x)
+#define TAT_DEF_NAME(x) inline const Name x(#x)
 #define TAT_DEF_NAMES(n)      \
    TAT_DEF_NAME(Phy##n);      \
    TAT_DEF_NAME(Left##n);     \
@@ -90,6 +113,9 @@ namespace TAT {
    TAT_DEF_NAME(Decomposition2);
 #undef TAT_DEF_NAME
 
+   /**
+    * \brief 由名字列表构造名字到需要的映射表
+    */
    inline std::map<Name, Rank> construct_name_to_index(const vector<Name>& names) {
       std::map<Name, Rank> res;
       for (auto i = 0; i < names.size(); i++) {
@@ -98,15 +124,12 @@ namespace TAT {
       return res;
    }
 
+   /**
+    * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
+    */
    inline bool is_valid_name(const vector<Name>& names, const Rank& rank) {
       return names.size() == std::set<Name>(names.begin(), names.end()).size() &&
              names.size() == rank;
    }
-
-   template<class Symmetry>
-   struct NameWithEdge {
-      Name name;
-      map<Symmetry, Size> edge;
-   };
 } // namespace TAT
 #endif

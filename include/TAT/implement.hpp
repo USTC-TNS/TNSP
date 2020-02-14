@@ -1,5 +1,5 @@
 /**
- * \file TAT.hpp
+ * \file implement.hpp
  *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,26 +18,11 @@
  */
 
 #pragma once
-#ifndef TAT_HPP
-#define TAT_HPP
+#ifndef TAT_IMPLEMENT_HPP
 
-#ifndef __cplusplus
-#error "only work for c++"
-#endif
-
-#ifdef _MSVC_LANG
-#if _MSVC_LANG < 201703L
-#error require c++17 or later
-#endif
-#else
-#if __cplusplus < 201703L
-#error require c++17 or later
-#endif
-#endif
-
-// clang-format off
-#include "tensor.hpp"
-#include "implement.hpp"
-// clang-format on
+#include "edge_operator.hpp"
+#include "io.hpp"
+#include "scalar.hpp"
+#include "transpose.hpp"
 
 #endif
