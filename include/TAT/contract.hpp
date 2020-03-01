@@ -329,9 +329,9 @@ namespace TAT {
                &k,
                &alpha,
                data2.data(),
-               &n,
+               put_right2 ? &k : &n,
                data1.data(),
-               &k,
+               put_right1 ? &k : &m,
                &beta,
                data.data(),
                &n);

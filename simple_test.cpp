@@ -371,6 +371,13 @@ void test_contract() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"A"}, {"D"}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"B"}, {"C"}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"B"}, {"D"}) << "\n";
+   std::cout
+         << TAT::Tensor<double, TAT::NoSymmetry>::contract(
+                  TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {1, 2, 3, 4}}.test(),
+                  TAT::Tensor<double, TAT::NoSymmetry>{{"E", "F", "G", "H"}, {3, 1, 2, 4}}.test(),
+                  {"B", "D"},
+                  {"G", "H"})
+         << "\n";
    // TODO: 对称性的测试, fermi的测试
 }
 

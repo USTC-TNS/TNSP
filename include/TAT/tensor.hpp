@@ -471,8 +471,8 @@ namespace TAT {
    // 看一下idris是如何做的
    // 需要考虑深搜不可行的问题
    // 支持inplace操作
+   // TODO: use it
 
-   // GPU and so on
 } // namespace TAT
 
 #endif
