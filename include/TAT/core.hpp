@@ -55,6 +55,7 @@ namespace TAT {
             class = std::enable_if_t<std::is_convertible_v<T, vector<Edge<Symmetry>>>>>
       Core(T&& edges_init, [[maybe_unused]] const bool auto_reverse = false) :
             edges(std::forward<T>(edges_init)) {
+         // 自动翻转边
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             if (auto_reverse) {
                for (auto& i : edges) {
@@ -62,11 +63,32 @@ namespace TAT {
                }
             }
          }
+         // 生成数据
          auto symmetries_list = initialize_block_symmetries_with_check(edges);
          for (const auto& [i, j] : symmetries_list) {
             blocks[i] = vector<ScalarType>(j);
          }
-         // TODO: 删除不在block中用到的sym
+         // 删除不在block中用到的sym
+         auto edge_mark = vector<std::map<Symmetry, bool>>();
+         for (const auto& e : edges) {
+            auto m = std::map<Symmetry, bool>();
+            for (const auto& [s, _] : e.map) {
+               m[s] = true;
+            }
+            edge_mark.push_back(std::move(m));
+         }
+         for (const auto& [s, b] : blocks) {
+            for (auto i = 0; i < edges.size(); i++) {
+               edge_mark[i].at(s[i]) = false;
+            }
+         }
+         for (auto i = 0; i < edges.size(); i++) {
+            for (const auto& [s, f] : edge_mark[i]) {
+               if (f) {
+                  edges[i].map.erase(s);
+               }
+            }
+         }
       }
 
       Core() = default;

@@ -24,8 +24,6 @@
 #include "misc.hpp"
 
 namespace TAT {
-   // TODO: 关于对称性的get parity需要完善接口， 以及需要注释
-   // 因为arrow的原因， symmetry可能需要operator-=等符号
    template<class Derived>
    struct bose_symmetry : bose_symmetry_base {};
 

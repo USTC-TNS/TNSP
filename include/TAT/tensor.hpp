@@ -445,54 +445,21 @@ namespace TAT {
             const Tensor<ScalarType, Symmetry>& tensor2,
             const vector<Name>& names1,
             const vector<Name>& names2);
-#if 0
 
-
-      // TODO: converge
-      // multiple 的扩展版
-      // 考虑到PESS可能和对称性不兼容, 那么还是恢复原来的multiple模式
-      // 因为这个东西唯一出现的地方就是svd了
-      static Tensor<ScalarType, Symmetry> converge(
-            const Tensor<ScalarType, Symmetry>& tensor1,
-            const Tensor<ScalarType, Symmetry>& tensor2,
-            const vector<Name>& names1,
-            const vector<Name>& names2,
-            const vector<Name>& names_res,
-            const Size order) {
-         // 这个东西在svd写好后再弄
-      }
-
+      // TODO: svd_res的S与张量的收缩
       struct svd_res {
          Tensor<ScalarType, Symmetry> U;
-         Tensor<real_base_t<ScalarType>, Symmetry> S;
+         std::map<Symmetry, real_base_t<ScalarType>> S;
+         // S的Symmetry是有方向的, 用来标注如何对齐, 向U对齐
          Tensor<ScalarType, Symmetry> V;
       };
 
       // TODO: SVD
-      // 根据情况选择转置方式
-      // 或许可以称作cutted orthogonalize
-      // 需要先merge再split, 不然不能保证分块依然分块
-      svd_res svd(const vector<Name>& u_edges, Name u_new_name, Name v_new_name) const {
+      svd_res svd(const std::set<Name>& u_edges, Name u_new_name, Name v_new_name) const {
          // auto merged_tensor = merge_edge({{u_edges, SVD1}, {v_edges, SVD2}});
          // svd
          // auto split...
       }
-
-      struct orthogonalize_res {
-         Tensor<ScalarType, Symmetry> U;
-         Tensor<ScalarType, Symmetry> T;
-      };
-
-      // TODO: QR LQ
-      // 除了svd的考虑外， 需要考虑使用lq还是qr等
-      orthogonalize_res orthogonalize(
-            const vector<Name>& given_edges,
-            Name given_new_name,
-            Name other_new_name,
-            bool u_edges_given = true) const {
-         //
-      }
-#endif
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;
