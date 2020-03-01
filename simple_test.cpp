@@ -362,6 +362,18 @@ void test_edge_operator() {
    } while (false);
 }
 
+void test_contract() {
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {2, 2}}.test();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"C", "D"}, {2, 2}}.test();
+   std::cout << a << "\n";
+   std::cout << b << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"A"}, {"C"}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"A"}, {"D"}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"B"}, {"C"}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"B"}, {"D"}) << "\n";
+   // TODO: 对称性的测试, fermi的测试
+}
+
 int main(const int argc, char** argv) {
    std::stringstream out;
    auto cout_buf = std::cout.rdbuf();
@@ -379,6 +391,7 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_transpose);
    RUN_TEST(test_split_and_merge);
    RUN_TEST(test_edge_operator);
+   RUN_TEST(test_contract);
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);

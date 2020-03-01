@@ -331,8 +331,8 @@ namespace TAT {
        * \param reversed_name 将要取反费米箭头的边的名称列表
        * \param merge_map 合并一些边的名称列表
        * \param new_names 最后进行的转置操作后的边的名称顺序列表
-       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上
-       * \param parity_exclude_name 如果apply_parity为真，仍然要让一部分操作不产生符号的边的名称
+       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上的默认行为
+       * \param parity_exclude_name 是否产生符号这个问题上行为与默认行为相反的操作的边的名称, 四部分分别是split, reverse, reverse_before_merge, merge
        * \return 进行了一系列操作后的结果张量
        * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
        * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
@@ -431,25 +431,20 @@ namespace TAT {
          return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity);
       }
 
-      // TODO: contract
-      // 调用 merge ， 这样就不用考虑contract特有的符号问题了
+      // TODO: 不转置成矩阵直接乘积的可能, 当然， 这是几乎不可能的
+      /**
+       * \brief 两个张量的缩并运算
+       * \param tensor1 参与缩并的第一个张量
+       * \param tensor2 参与缩并的第二个张量
+       * \param names1 第一个张量将要缩并掉的边的名称
+       * \param names2 第二个张量将要缩并掉的边的名称
+       * \return 缩并后的张量
+       */
       static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor1,
             const Tensor<ScalarType, Symmetry>& tensor2,
             const vector<Name>& names1,
-            const vector<Name>& names2) {
-         // TODO: 不转置成矩阵直接乘积的可能, 当然， 这是几乎不可能的
-         // names1 names2 需要 check order, 这个无法再merge中判断
-         // merge 需要按照原样的顺序进行转置
-         // auto merged_tensor1 = tensor1.merge_edge({{names1, Contract1}}, false, true);
-         // auto merged_tensor2 = tensor2.merge_edge({{names2, Contract2}}, true, true);
-         // check which one in 8 and do matrix contract
-
-         // tensor1.merge_edge(true).merge_edge(false);
-         // tensor2.merge_edgyge(false);
-         // for, gemm
-         // split(false)
-      }
+            const vector<Name>& names2);
 #if 0
 
 

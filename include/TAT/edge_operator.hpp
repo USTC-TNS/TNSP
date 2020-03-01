@@ -327,7 +327,7 @@ namespace TAT {
          TAT_WARNING("Invalid Names");
       }
       // edge_6
-      const auto& edge_6 = res.core->edges;
+      [[maybe_unused]] const auto& edge_6 = res.core->edges;
 
       // data
       // data_6
@@ -364,23 +364,42 @@ namespace TAT {
       auto reversed_flag_dst_mark = vector<bool>();
       auto merge_flag_mark = vector<bool>();
       if constexpr (is_fermi) {
+         // true => 应用parity
+         split_flag_mark.resize(rank_1);
+         reversed_flag_src_mark.resize(rank_2);
+         reversed_flag_dst_mark.resize(rank_5);
+         merge_flag_mark.resize(rank_6);
          if (apply_parity) {
-            split_flag_mark.resize(rank_1);
+            // 默认应用, 故应用需不在exclude中, 即find==end
+            for (auto i = 0; i < rank_1; i++) {
+               split_flag_mark[i] =
+                     parity_exclude_name[0].find(name_1[i]) == parity_exclude_name[0].end();
+            }
+            for (auto i = 0; i < rank_2; i++) {
+               reversed_flag_src_mark[i] =
+                     parity_exclude_name[1].find(name_2[i]) == parity_exclude_name[1].end();
+            }
+            for (auto i = 0; i < rank_5; i++) {
+               reversed_flag_dst_mark[i] =
+                     parity_exclude_name[2].find(name_5[i]) == parity_exclude_name[2].end();
+            }
+            for (auto i = 0; i < rank_6; i++) {
+               merge_flag_mark[i] =
+                     parity_exclude_name[3].find(name_6[i]) == parity_exclude_name[3].end();
+            }
+         } else {
             for (auto i = 0; i < rank_1; i++) {
                split_flag_mark[i] =
                      parity_exclude_name[0].find(name_1[i]) != parity_exclude_name[0].end();
             }
-            reversed_flag_src_mark.resize(rank_2);
             for (auto i = 0; i < rank_2; i++) {
                reversed_flag_src_mark[i] =
                      parity_exclude_name[1].find(name_2[i]) != parity_exclude_name[1].end();
             }
-            reversed_flag_dst_mark.resize(rank_5);
             for (auto i = 0; i < rank_5; i++) {
                reversed_flag_dst_mark[i] =
                      parity_exclude_name[2].find(name_5[i]) != parity_exclude_name[2].end();
             }
-            merge_flag_mark.resize(rank_6);
             for (auto i = 0; i < rank_6; i++) {
                merge_flag_mark[i] =
                      parity_exclude_name[3].find(name_6[i]) != parity_exclude_name[3].end();
@@ -406,14 +425,12 @@ namespace TAT {
          if constexpr (is_fermi) {
             parity = Symmetry::get_transpose_parity(sym_src, plan_src_to_dst);
 
-            if (apply_parity) {
-               parity ^= Symmetry::get_reverse_parity(
-                     sym_src, reversed_flag_src, reversed_flag_src_mark);
-               parity ^= Symmetry::get_split_merge_parity(sym_src, split_flag, split_flag_mark);
-               parity ^= Symmetry::get_reverse_parity(
-                     sym_dst, reversed_flag_dst, reversed_flag_dst_mark);
-               parity ^= Symmetry::get_split_merge_parity(sym_dst, merge_flag, merge_flag_mark);
-            }
+            parity ^=
+                  Symmetry::get_reverse_parity(sym_src, reversed_flag_src, reversed_flag_src_mark);
+            parity ^= Symmetry::get_split_merge_parity(sym_src, split_flag, split_flag_mark);
+            parity ^=
+                  Symmetry::get_reverse_parity(sym_dst, reversed_flag_dst, reversed_flag_dst_mark);
+            parity ^= Symmetry::get_split_merge_parity(sym_dst, merge_flag, merge_flag_mark);
          }
 
          do_transpose(

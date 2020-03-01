@@ -37,7 +37,7 @@ namespace TAT {
             const vector<bool>& mark) {
          auto res = false;
          for (auto i = 0; i < flag.size(); i++) {
-            if (flag[i] && !mark[i]) {
+            if (flag[i] && mark[i]) {
                res ^= bool(symmetries[i].fermi % 2);
             }
          }
@@ -65,7 +65,7 @@ namespace TAT {
          auto tmp = 0;
          for (auto i = 0; i < flag.size(); i++) {
             if (tmp != flag[i]) {
-               if (!mark[tmp]) {
+               if (mark[tmp]) {
                   res ^= bool(((s * s - s2) / 2) % 2);
                }
                s = 0;

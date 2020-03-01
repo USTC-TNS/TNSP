@@ -19,7 +19,9 @@
 
 #pragma once
 #ifndef TAT_IMPLEMENT_HPP
+#define TAT_IMPLEMENT_HPP
 
+#include "contract.hpp"
 #include "edge_operator.hpp"
 #include "io.hpp"
 #include "scalar.hpp"
