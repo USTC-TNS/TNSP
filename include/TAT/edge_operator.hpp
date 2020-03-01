@@ -32,7 +32,8 @@ namespace TAT {
          const std::set<Name>& reversed_name,
          const std::map<Name, vector<Name>>& merge_map,
          T&& new_names,
-         const bool apply_parity) const {
+         const bool apply_parity,
+         const std::array<std::set<Name>, 4>& parity_exclude_name) const {
       // step 1: rename
       // step 2: split
       // step 3: reverse
@@ -40,6 +41,9 @@ namespace TAT {
       // step 5: reverse before merge
       // step 6: merge
       // 前面三步是因果顺序往下推, 第四步转置需要根据merge和最后的name来确定转置方案
+
+      // parity_exclude_name的四部分分别是split, reverse, reverse_for_merge, merge
+      // name 均为rename后的名称，split取split前， merge取merge后
 
       using ConstDataType = std::map<vector<Symmetry>, const ScalarType*>;
       using DataType = std::map<vector<Symmetry>, ScalarType*>;
@@ -82,6 +86,7 @@ namespace TAT {
 
       // check no change
       if (name_1 == new_names && reversed_name.empty() && split_map.empty() && merge_map.empty()) {
+         // 共享核心
          auto res = Tensor<ScalarType, Symmetry>();
          res.names = std::forward<T>(new_names);
          res.name_to_index = construct_name_to_index(res.names);
@@ -148,8 +153,20 @@ namespace TAT {
       }
       const auto& data_2 = *ptr_data_2;
 
+      [[maybe_unused]] auto split_flag_mark = vector<bool>();
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if (apply_parity) {
+            for (auto i = 0; i < rank_1; i++) {
+               // 不相等 => 被exclude => 不要应用parity
+               split_flag_mark[i] =
+                     parity_exclude_name[0].find(name_1[i]) != parity_exclude_name[0].end();
+            }
+         }
+      }
+
       // status 3 reverse
       [[maybe_unused]] auto reversed_flag_src = vector<bool>();
+      [[maybe_unused]] auto reversed_flag_src_mark = vector<bool>();
       const auto& rank_3 = rank_2;
       const auto& name_3 = name_2;
       const auto& data_3 = data_2;
@@ -176,6 +193,15 @@ namespace TAT {
          }
       }
       const auto& edge_3 = *ptr_edge_3;
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if (apply_parity) {
+            for (auto i = 0; i < rank_2; i++) {
+               // 不相等 => 被exclude => 不要应用parity
+               reversed_flag_src_mark[i] =
+                     parity_exclude_name[1].find(name_2[i]) != parity_exclude_name[1].end();
+            }
+         }
+      }
 
       auto res = Tensor<ScalarType, Symmetry>();
       res.names = std::forward<T>(new_names);
@@ -187,6 +213,16 @@ namespace TAT {
       const auto& rank_6 = name_6.size();
 
       auto merge_flag = vector<Rank>();
+      auto merge_flag_mark = vector<bool>();
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if (apply_parity) {
+            for (auto i = 0; i < rank_6; i++) {
+               // 不相等 => 被exclude => 不要应用parity
+               merge_flag_mark[i] =
+                     parity_exclude_name[3].find(name_6[i]) != parity_exclude_name[3].end();
+            }
+         }
+      }
       Rank total_merge_index = 0;
       auto true_name_4 = vector<Name>();
       auto ptr_name_4 = &name_6;
@@ -228,6 +264,16 @@ namespace TAT {
       }
 
       [[maybe_unused]] auto reversed_flag_dst = vector<bool>();
+      [[maybe_unused]] auto reversed_flag_dst_mark = vector<bool>();
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if (apply_parity) {
+            for (auto i = 0; i < rank_5; i++) {
+               // 不相等 => 被exclude => 不要应用parity
+               reversed_flag_dst_mark[i] =
+                     parity_exclude_name[2].find(name_5[i]) != parity_exclude_name[2].end();
+            }
+         }
+      }
       auto res_edge = vector<Edge<Symmetry>>();
       auto start_of_merge = 0;
       auto end_of_merge = 0;
@@ -342,10 +388,12 @@ namespace TAT {
             parity = Symmetry::get_transpose_parity(sym_src, plan_src_to_dst);
 
             if (apply_parity) {
-               parity ^= Symmetry::get_reverse_parity(sym_src, reversed_flag_src);
-               parity ^= Symmetry::get_split_merge_parity(sym_src, split_flag);
-               parity ^= Symmetry::get_reverse_parity(sym_dst, reversed_flag_dst);
-               parity ^= Symmetry::get_split_merge_parity(sym_dst, merge_flag);
+               parity ^= Symmetry::get_reverse_parity(
+                     sym_src, reversed_flag_src, reversed_flag_src_mark);
+               parity ^= Symmetry::get_split_merge_parity(sym_src, split_flag, split_flag_mark);
+               parity ^= Symmetry::get_reverse_parity(
+                     sym_dst, reversed_flag_dst, reversed_flag_dst_mark);
+               parity ^= Symmetry::get_split_merge_parity(sym_dst, merge_flag, merge_flag_mark);
             }
          }
 

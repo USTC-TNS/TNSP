@@ -22,6 +22,7 @@
 #define TAT_TENSOR_HPP
 
 #include <algorithm>
+#include <array>
 #include <map>
 #include <memory>
 #include <set>
@@ -34,6 +35,13 @@
 // TODO: MPI 这个最后弄, 不然valgrind一大堆报错
 
 namespace TAT {
+
+   // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
+   // 因为contract的操作是这样的
+   // merge gemm split
+   // 上一次split可以和下一次的merge合并
+   // 优先级不高
+
    /**
     * \brief TAT is A Tensor library!
     * \tparam ScalarType 张量内的标量类型
@@ -324,6 +332,7 @@ namespace TAT {
        * \param merge_map 合并一些边的名称列表
        * \param new_names 最后进行的转置操作后的边的名称顺序列表
        * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上
+       * \param parity_exclude_name 如果apply_parity为真，仍然要让一部分操作不产生符号的边的名称
        * \return 进行了一系列操作后的结果张量
        * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
        * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
@@ -338,7 +347,8 @@ namespace TAT {
             const std::set<Name>& reversed_name,
             const std::map<Name, vector<Name>>& merge_map,
             T&& new_names,
-            const bool apply_parity = false) const;
+            const bool apply_parity = false,
+            const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}}) const;
 
       /**
        * \brief 对张量进行转置
@@ -423,7 +433,6 @@ namespace TAT {
 
       // TODO: contract
       // 调用 merge ， 这样就不用考虑contract特有的符号问题了
-#if 0
       static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor1,
             const Tensor<ScalarType, Symmetry>& tensor2,
@@ -432,11 +441,15 @@ namespace TAT {
          // TODO: 不转置成矩阵直接乘积的可能, 当然， 这是几乎不可能的
          // names1 names2 需要 check order, 这个无法再merge中判断
          // merge 需要按照原样的顺序进行转置
-         auto merged_tensor1 = tensor1.merge_edge({{names1, Contract1}}, false, true);
-         auto merged_tensor2 = tensor2.merge_edge({{names2, Contract2}}, true, true);
+         // auto merged_tensor1 = tensor1.merge_edge({{names1, Contract1}}, false, true);
+         // auto merged_tensor2 = tensor2.merge_edge({{names2, Contract2}}, true, true);
          // check which one in 8 and do matrix contract
+
+         // tensor1.merge_edge(true).merge_edge(false);
+         // tensor2.merge_edgyge(false);
+         // for, gemm
+         // split(false)
       }
-#endif
 #if 0
 
 
