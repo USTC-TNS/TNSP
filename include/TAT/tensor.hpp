@@ -492,15 +492,18 @@ namespace TAT {
 
       /**
        * \brief 对张量进行svd分解
-       * \param u_edges svd分解中u的边的名称集合
-       * \param u_new_name 分解后u新产生的边的名称
-       * \param v_new_name 分解后v新产生的边的名称
+       * \param u_free_names_set svd分解中u的边的名称集合
+       * \param u_common_name 分解后u新产生的边的名称
+       * \param v_common_name 分解后v新产生的边的名称
        * \param cut 需要截断的维度数目
        * \return svd的结果
        * \see svd_result
        */
       svd_result
-      svd(const std::set<Name>& u_edges, Name u_new_name, Name v_new_name, Size cut = -1) const;
+      svd(const std::set<Name>& u_free_names_set,
+          Name u_common_name,
+          Name v_common_name,
+          Size cut = -1) const;
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;

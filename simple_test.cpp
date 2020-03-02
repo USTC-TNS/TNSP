@@ -400,11 +400,24 @@ void test_contract() {
 
 void test_svd() {
    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
-   auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
    std::cout << a << "\n";
-   std::cout << u << "\n";
-   std::cout << v << "\n";
-   std::cout << s.begin()->second << "\n";
+   do {
+      auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
+      std::cout << u << "\n";
+      std::cout << v << "\n";
+      std::cout << s.begin()->second << "\n";
+   } while (false);
+   auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}
+                  .test();
+   do {
+      auto [u, s, v] = b.svd({"A", "D"}, "E", "F");
+      std::cout << u << "\n";
+      std::cout << v << "\n";
+      std::cout << s.begin()->second << "\n";
+      std::cout << decltype(v)::contract(v, v, {"B", "C"}, {"B", "C"}).transform([](auto i) {
+         return std::abs(i) > 1e-5 ? i : 0;
+      }) << "\n";
+   } while (false);
 }
 
 int main(const int argc, char** argv) {

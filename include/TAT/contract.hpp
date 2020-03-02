@@ -179,17 +179,17 @@ namespace TAT {
       constexpr bool is_no_sym = std::is_same_v<Symmetry, NoSymmetry>;
       auto rank1 = tensor1.names.size();
       auto rank2 = tensor2.names.size();
-      auto reversed_set1 = std::set<Name>();
-      auto reversed_set2 = std::set<Name>();
-      auto reversed_set = std::set<Name>();
-      auto res_name = vector<Name>();
       // 需要反转成 - + - -
       // 事后恢复两侧的边
-      auto res_edge = vector<Edge<Symmetry>>();
-      auto split_map = std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+      auto reversed_set1 = std::set<Name>(); // 第一个张量merge时反转表
+      auto reversed_set2 = std::set<Name>(); // 第二个张量merge时反转表
+      auto res_edge = vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      auto split_map = std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
+      auto reversed_set = std::set<Name>(); // 最后split时的反转标
+      auto res_name = vector<Name>();       // 最后split后的name
       split_map[Contract1];
       split_map[Contract2];
-      auto free_name1 = vector<Name>();
+      auto free_name1 = vector<Name>(); // 第一个张量的自由边, merge时使用
       for (auto i = 0; i < rank1; i++) {
          const auto& n = tensor1.names[i];
          if (std::find(names1.begin(), names1.end(), n) == names1.end()) {
@@ -215,7 +215,7 @@ namespace TAT {
          }
       }
       const auto free_rank1 = free_name1.size();
-      auto free_name2 = vector<Name>();
+      auto free_name2 = vector<Name>(); // 第二个张量的自由边, merge时使用
       for (auto i = 0; i < rank2; i++) {
          const auto& n = tensor2.names[i];
          if (std::find(names2.begin(), names2.end(), n) == names2.end()) {
@@ -242,8 +242,8 @@ namespace TAT {
       }
       const auto free_rank2 = free_name2.size();
       // 确定转置方案
-      auto common_name1 = vector<Name>();
-      auto common_name2 = vector<Name>();
+      auto common_name1 = vector<Name>(); // 第一个张量的公共边, merge时使用
+      auto common_name2 = vector<Name>(); // 第二个张量的公共边, merge时使用
       bool put_right1;
       bool put_right2;
       auto fit_tensor1 = [&]() {
