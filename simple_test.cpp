@@ -398,6 +398,15 @@ void test_contract() {
              << "\n";
 }
 
+void test_svd() {
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+   auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
+   std::cout << a << "\n";
+   std::cout << u << "\n";
+   std::cout << v << "\n";
+   std::cout << s.begin()->second << "\n";
+}
+
 int main(const int argc, char** argv) {
    std::stringstream out;
    auto cout_buf = std::cout.rdbuf();
@@ -416,6 +425,7 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_split_and_merge);
    RUN_TEST(test_edge_operator);
    RUN_TEST(test_contract);
+   RUN_TEST(test_svd);
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);

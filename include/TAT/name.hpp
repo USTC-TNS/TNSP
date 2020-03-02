@@ -109,8 +109,8 @@ namespace TAT {
 #undef TAT_DEF_NAMES
    TAT_DEF_NAME(Contract1);
    TAT_DEF_NAME(Contract2);
-   TAT_DEF_NAME(Decomposition1);
-   TAT_DEF_NAME(Decomposition2);
+   TAT_DEF_NAME(SVD1);
+   TAT_DEF_NAME(SVD2);
 #undef TAT_DEF_NAME
 
    /**

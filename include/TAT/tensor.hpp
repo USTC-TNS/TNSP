@@ -486,7 +486,7 @@ namespace TAT {
        */
       struct svd_result {
          Tensor<ScalarType, Symmetry> U;
-         std::map<Symmetry, real_base_t<ScalarType>> S;
+         std::map<Symmetry, vector<real_base_t<ScalarType>>> S;
          Tensor<ScalarType, Symmetry> V;
       };
 
@@ -495,10 +495,12 @@ namespace TAT {
        * \param u_edges svd分解中u的边的名称集合
        * \param u_new_name 分解后u新产生的边的名称
        * \param v_new_name 分解后v新产生的边的名称
+       * \param cut 需要截断的维度数目
        * \return svd的结果
        * \see svd_result
        */
-      svd_result svd(const std::set<Name>& u_edges, Name u_new_name, Name v_new_name) const;
+      svd_result
+      svd(const std::set<Name>& u_edges, Name u_new_name, Name v_new_name, Size cut = -1) const;
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;

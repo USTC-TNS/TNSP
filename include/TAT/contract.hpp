@@ -84,23 +84,23 @@ void zgemm_(
 
 namespace TAT {
    template<class ScalarType>
-   void
-   gemm(const char* transA,
-        const char* transB,
-        const int* m,
-        const int* n,
-        const int* k,
-        const ScalarType* alpha,
-        const ScalarType* a,
-        const int* lda,
-        const ScalarType* b,
-        const int* ldb,
-        const ScalarType* beta,
-        ScalarType* c,
-        const int* ldc);
+   void calculate_product(
+         const char* transA,
+         const char* transB,
+         const int* m,
+         const int* n,
+         const int* k,
+         const ScalarType* alpha,
+         const ScalarType* a,
+         const int* lda,
+         const ScalarType* b,
+         const int* ldb,
+         const ScalarType* beta,
+         ScalarType* c,
+         const int* ldc);
 
    template<>
-   inline void gemm<float>(
+   inline void calculate_product<float>(
          const char* transA,
          const char* transB,
          const int* m,
@@ -117,7 +117,7 @@ namespace TAT {
       sgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
-   inline void gemm<double>(
+   inline void calculate_product<double>(
          const char* transA,
          const char* transB,
          const int* m,
@@ -134,7 +134,7 @@ namespace TAT {
       dgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
-   inline void gemm<std::complex<float>>(
+   inline void calculate_product<std::complex<float>>(
          const char* transA,
          const char* transB,
          const int* m,
@@ -151,7 +151,7 @@ namespace TAT {
       cgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
-   inline void gemm<std::complex<double>>(
+   inline void calculate_product<std::complex<double>>(
          const char* transA,
          const char* transB,
          const int* m,
@@ -303,7 +303,7 @@ namespace TAT {
             reversed_set2,
             {{Contract2, free_name2}, {Contract1, common_name2}},
             put_right2 ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2});
-      // gemm
+      // calculate_product
       auto product_res = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},
             {std::move(tensor1_merged.core->edges[!put_right1]),
@@ -320,7 +320,7 @@ namespace TAT {
          const int k = common_edge.map.at(sym[1]);
          const ScalarType alpha = 1;
          const ScalarType beta = 0;
-         gemm<ScalarType>(
+         calculate_product<ScalarType>(
                put_right2 ? "C" : "N",
                put_right1 ? "N" : "C",
                &n,
