@@ -35,13 +35,6 @@
 // TODO: MPI 这个最后弄, 不然valgrind一大堆报错
 
 namespace TAT {
-
-   // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
-   // 因为contract的操作是这样的
-   // merge gemm split
-   // 上一次split可以和下一次的merge合并
-   // 优先级不高
-
    /**
     * \brief TAT is A Tensor library!
     * \tparam ScalarType 张量内的标量类型
@@ -130,19 +123,59 @@ namespace TAT {
       }
 
       /**
-       * \brief 通过一个生成器设置一个张量内的数据
-       * \param generator 生成器, 一般来说是一个无参数的函数, 返回值为标量, 多次调用填充张量
-       * \return 张量自身
-       * \note 参见std::generate
+       * \brief 产生一个与自己形状一样的张量
+       * \return 一个未初始化数据内容的张量
        */
-      template<class Generator>
-      Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> same_shape() const {
+         return Tensor<ScalarType, Symmetry>(names, core->edges);
+      }
+      /**
+       * \brief 对张量的每个数据元素做同样的非原地的变换
+       * \param func 变换的函数
+       * \return 张量自身
+       * \note 参见std::transform
+       * \see transform
+       */
+      template<class Transform>
+      [[nodiscard]] Tensor<ScalarType, Symmetry> map(Transform&& func) const {
+         auto res = same_shape();
+         for (auto& [sym, i] : core->blocks) {
+            std::transform(i.begin(), i.end(), res.core->blocks.at(sym).begin(), func);
+         }
+         return res;
+      }
+
+      /**
+       * \brief 对张量的每个数据元素做同样的原地的变换
+       * \param func 变换的函数
+       * \return 张量自身
+       * \note 参见std::transform
+       * \see map
+       */
+      template<class Transform>
+      Tensor<ScalarType, Symmetry>& transform(Transform&& func) & {
          if (core.use_count() != 1) {
             TAT_WARNING("Set Tensor Shared");
          }
          for (auto& [_, i] : core->blocks) {
-            std::generate(i.begin(), i.end(), generator);
+            std::transform(i.begin(), i.end(), i.begin(), func);
          }
+         return *this;
+      }
+      template<class Transform>
+      Tensor<ScalarType, Symmetry> transform(Transform&& func) && {
+         return std::move(transform(func));
+      }
+
+      /**
+       * \brief 通过一个生成器设置一个张量内的数据
+       * \param generator 生成器, 一般来说是一个无参数的函数, 返回值为标量, 多次调用填充张量
+       * \return 张量自身
+       * \see transform
+       */
+      template<class Generator>
+      Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
+         transform([&](ScalarType _) { return generator(); });
          return *this;
       }
       template<class Generator>
@@ -447,25 +480,74 @@ namespace TAT {
             const vector<Name>& names2);
 
       // TODO: svd_res的S与张量的收缩
-      struct svd_res {
+      /**
+       * \brief 张量svd的结果类型
+       * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
+       */
+      struct svd_result {
          Tensor<ScalarType, Symmetry> U;
          std::map<Symmetry, real_base_t<ScalarType>> S;
-         // S的Symmetry是有方向的, 用来标注如何对齐, 向U对齐
          Tensor<ScalarType, Symmetry> V;
       };
 
-      // TODO: SVD
-      svd_res svd(const std::set<Name>& u_edges, Name u_new_name, Name v_new_name) const {
-         // auto merged_tensor = merge_edge({{u_edges, SVD1}, {v_edges, SVD2}});
-         // svd
-         // auto split...
-      }
+      /**
+       * \brief 对张量进行svd分解
+       * \param u_edges svd分解中u的边的名称集合
+       * \param u_new_name 分解后u新产生的边的名称
+       * \param v_new_name 分解后v新产生的边的名称
+       * \return svd的结果
+       * \see svd_result
+       */
+      svd_result svd(const std::set<Name>& u_edges, Name u_new_name, Name v_new_name) const;
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;
       Tensor<ScalarType, Symmetry>& meta_get(std::istream&);
       Tensor<ScalarType, Symmetry>& data_get(std::istream&);
    }; // namespace TAT
+
+   // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
+   // 因为contract的操作是这样的
+   // merge gemm split
+   // 上一次split可以和下一次的merge合并
+   // 比较重要， 可以大幅减少对称性张量的分块
+   // 需要先把svd写出来
+   /*
+   template<class ScalarType, class Symmetry>
+   struct QuasiTensor {
+      Tensor<ScalarType, Symmetry> tensor;
+      std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>> split_map;
+      std::set<Name> reversed_set;
+      vector<Name> res_name;
+
+      QuasiTensor
+
+      operator Tensor<ScalarType, Symmetry>() && {
+         return tensor.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
+      }
+      operator Tensor<ScalarType, Symmetry>() const& {
+         return tensor.edge_operator({}, split_map, reversed_set, {}, res_name);
+      }
+
+      Tensor<ScalarType, Symmetry> merge_again(
+            const std::set<Name>& merge_reversed_set,
+            const std::map<Name, vector<Name>>& merge_map,
+            vector<Name>&& merge_res_name,
+            std::set<Name>& split_parity_mark,
+            std::set<Name>& merge_parity_mark) {
+         auto total_reversed_set = reversed_set; // merge_reversed_set
+         return tensor.edge_operator(
+               {},
+               split_map,
+               total_reversed_set,
+               merge_map,
+               merge_res_name,
+               false,
+               {{{}, split_parity_mark, {}, merge_parity_mark}});
+      }
+      QuasiTensor<ScalarType, Symmetry>
+   };
+   */
 
    // TODO: lazy framework
    // 看一下idris是如何做的

@@ -92,17 +92,19 @@ struct lattice {
             state = state / state.norm<-1>();
          }
       }
-      for (auto& i : state.core->blocks.begin()->second) {
-         if (std::abs(i) < 1e-10) {
-            i = 0;
+      state.transform([](double i) {
+         if (std::abs(i) > 1e-10) {
+            return i;
+         } else {
+            return double(0);
          }
-      }
-      std::clog << energy() << '\t' << state << "\n";
+      });
+      std::cout << energy() << '\t' << state << "\n";
    }
 
    double energy() {
       const auto psi_psi = Tensor::contract(state, state, state.names, state.names);
-      auto H_psi = Tensor{state.names, state.core->edges}.zero();
+      auto H_psi = state.same_shape().zero();
       for (const auto& [i, j] : link) {
          H_psi += Tensor::contract(
                         state, hamiltonian, {std::to_string(i), std::to_string(j)}, {"I0", "I1"})

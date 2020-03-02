@@ -21,6 +21,8 @@
 #ifndef TAT_CONTRACT_HPP
 #define TAT_CONTRACT_HPP
 
+#include "tensor.hpp"
+
 extern "C" {
 void sgemm_(
       const char* transA,
