@@ -175,7 +175,6 @@ namespace TAT {
       // 为未来split做准备
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_sym = std::is_same_v<Symmetry, NoSymmetry>;
-      auto common_rank = names1.size();
       auto rank1 = tensor1.names.size();
       auto rank2 = tensor2.names.size();
       auto reversed_set1 = std::set<Name>();
@@ -263,27 +262,28 @@ namespace TAT {
             }
          }
       };
-      if (free_name1[free_rank1 - 1] == tensor1.names[rank1 - 1]) {
-         if (free_name2[free_rank2 - 1] == tensor2.names[rank2 - 1]) {
-            // 缩并脚不含两个张量的最后一脚
-            // 缩并脚顺序对齐tensor1顺序, 两个缩并脚都放在左边
-            put_right1 = false;
-            put_right2 = false;
-            fit_tensor1();
-
-         } else {
-            // 缩并脚2含有tensor2最后一脚
-            // 缩并脚对齐tensor2，缩并脚2放在右边，缩并脚1检查是否正好把最后一脚放在最后
-            put_right2 = true;
-            fit_tensor2();
-            put_right1 = common_name1[common_rank - 1] == tensor1.names[rank1 - 1];
-         }
-      } else {
-         // 缩并脚1含有tensor1最后一脚
-         // 缩并脚对齐tensor1，缩并脚2放在右边，缩并脚1检查是否正好把最后一脚放在最后
+      // 确定方案
+      if (free_rank1 == 0) {
+         put_right1 = true;
+         fit_tensor2();
+         put_right2 = common_name2.back() == tensor2.names.back();
+      } else if (free_rank2 == 0) {
+         put_right2 = true;
+         fit_tensor1();
+         put_right1 = common_name1.back() == tensor1.names.back();
+      } else if (free_name1.back() != tensor1.names.back()) {
          put_right1 = true;
          fit_tensor1();
-         put_right2 = common_name2[common_rank - 1] == tensor2.names[rank2 - 1];
+         put_right2 = common_name2.back() == tensor2.names.back();
+      } else if (free_name2.back() != tensor2.names.back()) {
+         put_right2 = true;
+         fit_tensor2();
+         put_right1 = common_name1.back() == tensor1.names.back();
+      } else {
+         put_right1 = false;
+         put_right2 = false;
+         fit_tensor2();
+         // 所以尽量大张量放在后侧
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
@@ -306,25 +306,16 @@ namespace TAT {
             {Contract1, Contract2},
             {std::move(tensor1_merged.core->edges[!put_right1]),
              std::move(tensor2_merged.core->edges[!put_right2])});
+      auto common_edge = std::move(tensor1_merged.core->edges[put_right1]);
       for (auto& [sym, data] : product_res.core->blocks) {
          // m k n
          auto sym1 = put_right1 ? sym : vector<Symmetry>{sym[1], sym[0]};
          auto sym2 = put_right2 ? vector<Symmetry>{sym[1], sym[0]} : sym;
          const auto& data1 = tensor1_merged.core->blocks.at(sym1);
          const auto& data2 = tensor2_merged.core->blocks.at(sym2);
-         /*
-         const int m = tensor1_merged.core->edges[!put_right1].map.at(sym1[!put_right1]);
-         const int k = tensor1_merged.core->edges[put_right1].map.at(sym1[put_right1]);
-         const int n = tensor2_merged.core->edges[!put_right2].map.at(sym2[!put_right2]);
-         const int k_verify = tensor2_merged.core->edges[put_right2].map.at(sym2[put_right2]);
-         const int m_verify = product_res.core->edges[0].map.at(sym[0]);
-         const int n_verify = product_res.core->edges[1].map.at(sym[1]);
-         if (k != k_verify || m != m_verify || n != n_verify) {
-            TAT_WARNING("Matrix Size Not Correct");
-         }*/
          const int m = product_res.core->edges[0].map.at(sym[0]);
          const int n = product_res.core->edges[1].map.at(sym[1]);
-         const int k = data1.size() / m;
+         const int k = common_edge.map.at(sym[1]);
          const ScalarType alpha = 1;
          const ScalarType beta = 0;
          gemm<ScalarType>(

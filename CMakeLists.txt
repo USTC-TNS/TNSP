@@ -16,6 +16,10 @@ link_libraries(${MPI_LIBRARIES} ${LAPACK_LIBRARIES})
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-add_executable (simple_test "simple_test.cpp")
+file(GLOB CPP_SRC ${PROJECT_SOURCE_DIR}/*.cpp)
+foreach(FILE ${CPP_SRC})
+  get_filename_component(NAME ${FILE} NAME_WE)
+  add_executable(${NAME} ${FILE})
+endforeach(FILE)
 
 add_test(simple_test ${PROJECT_BINARY_DIR}/simple_test ${PROJECT_SOURCE_DIR}/simple_test.out)
