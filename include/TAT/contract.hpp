@@ -304,21 +304,27 @@ namespace TAT {
       // gemm
       auto product_res = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},
-            {tensor1_merged.core->edges[put_right1 ? 0 : 1],
-             tensor2_merged.core->edges[put_right2 ? 0 : 1]});
+            {std::move(tensor1_merged.core->edges[!put_right1]),
+             std::move(tensor2_merged.core->edges[!put_right2])});
       for (auto& [sym, data] : product_res.core->blocks) {
          // m k n
-         const auto& data1 = tensor1_merged.core->blocks.at(sym);
-         const auto& data2 = tensor2_merged.core->blocks.at(sym);
-         const int m = tensor1_merged.core->edges[put_right1 ? 0 : 1].map.at(sym[0]);
-         const int k = tensor1_merged.core->edges[put_right1 ? 1 : 0].map.at(sym[1]);
-         const int n = tensor2_merged.core->edges[put_right2 ? 0 : 1].map.at(sym[1]);
-         const int k_verify = tensor2_merged.core->edges[put_right2 ? 1 : 0].map.at(sym[0]);
+         auto sym1 = put_right1 ? sym : vector<Symmetry>{sym[1], sym[0]};
+         auto sym2 = put_right2 ? vector<Symmetry>{sym[1], sym[0]} : sym;
+         const auto& data1 = tensor1_merged.core->blocks.at(sym1);
+         const auto& data2 = tensor2_merged.core->blocks.at(sym2);
+         /*
+         const int m = tensor1_merged.core->edges[!put_right1].map.at(sym1[!put_right1]);
+         const int k = tensor1_merged.core->edges[put_right1].map.at(sym1[put_right1]);
+         const int n = tensor2_merged.core->edges[!put_right2].map.at(sym2[!put_right2]);
+         const int k_verify = tensor2_merged.core->edges[put_right2].map.at(sym2[put_right2]);
          const int m_verify = product_res.core->edges[0].map.at(sym[0]);
          const int n_verify = product_res.core->edges[1].map.at(sym[1]);
          if (k != k_verify || m != m_verify || n != n_verify) {
             TAT_WARNING("Matrix Size Not Correct");
-         }
+         }*/
+         const int m = product_res.core->edges[0].map.at(sym[0]);
+         const int n = product_res.core->edges[1].map.at(sym[1]);
+         const int k = data1.size() / m;
          const ScalarType alpha = 1;
          const ScalarType beta = 0;
          gemm<ScalarType>(
