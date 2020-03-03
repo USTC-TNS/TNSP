@@ -479,7 +479,6 @@ namespace TAT {
             const vector<Name>& names1,
             const vector<Name>& names2);
 
-      // TODO: svd_res的S与张量的收缩
       /**
        * \brief 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
@@ -489,6 +488,48 @@ namespace TAT {
          std::map<Symmetry, vector<real_base_t<ScalarType>>> S;
          Tensor<ScalarType, Symmetry> V;
       };
+
+      // TODO: multiple
+      template<class OtherScalarType>
+      Tensor<ScalarType, Symmetry>& multiple(
+            const std::map<Symmetry, vector<OtherScalarType>>& S,
+            const Name& name,
+            bool same_direction = true) {
+         if (core.use_count() != 1) {
+            TAT_WARNING("Set Tensor Shared");
+         }
+         auto index = name_to_index.at(name);
+         for (auto& [sym, block] : core->blocks) {
+            auto sym_in_s = sym[index];
+            if (!same_direction) {
+               sym_in_s = -sym_in_s;
+            }
+            const auto& vec = S.at(sym_in_s);
+            auto i = 0;
+            Size m = 1;
+            for (; i < index; i++) {
+               m *= core->edges[i].map.at(sym[i]);
+            }
+            Size k = core->edges[i].map.at(sym[i]);
+            Size n = 1;
+            for (i++; i < names.size(); i++) {
+               n *= core->edges[i].map.at(sym[i]);
+            }
+            if (vec.size() != k) {
+               TAT_WARNING("Vector Size Invalid in Multiple");
+            }
+            auto* data = block.data();
+            for (Size a = 0; a < m; a++) {
+               for (Size b = 0; b < k; b++) {
+                  OtherScalarType v = vec[b];
+                  for (Size c = 0; c < n; c++) {
+                     *(data++) *= v;
+                  }
+               }
+            }
+         }
+         return *this;
+      }
 
       /**
        * \brief 对张量进行svd分解

@@ -286,7 +286,7 @@ namespace TAT {
          auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
          calculate_svd<ScalarType>(m, n, k, data, u_data, s_data, v_data);
-         res_s[sym[!v_right]] = std::move(s);
+         res_s[sym[v_right]] = std::move(s);
       }
       const auto* u_tensor = &tensor_1;
       const auto* v_tensor = &tensor_2;

@@ -406,6 +406,9 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.begin()->second << "\n";
+      std::cout << decltype(v)::contract(u.multiple(s, "E"), v, {"E"}, {"F"})
+                         .transpose({"A", "B", "C", "D"})
+                << "\n";
    } while (false);
    auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}
                   .test();
@@ -417,6 +420,28 @@ void test_svd() {
       std::cout << decltype(v)::contract(v, v, {"B", "C"}, {"B", "C"}).transform([](auto i) {
          return std::abs(i) > 1e-5 ? i : 0;
       }) << "\n";
+      std::cout << decltype(v)::contract(u.multiple(s, "E"), v, {"E"}, {"F"})
+                         .transpose({"A", "B", "C", "D"})
+                << "\n";
+   } while (false);
+   auto c = TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "B", "C", "D"},
+                                                    {{{-1, 1}, {0, 1}, {-2, 1}},
+                                                     {{0, 1}, {1, 2}},
+                                                     {{0, 2}, {1, 2}},
+                                                     {{-2, 2}, {-1, 1}, {0, 2}}},
+                                                    true}
+                  .test();
+   do {
+      std::cout << c << "\n";
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
+      std::cout << u << "\n";
+      for (const auto& [sym, vec] : s) {
+         std::cout << sym << ":" << vec << "\n";
+      }
+      std::cout << v << "\n";
+      std::cout << decltype(v)::contract(u.multiple(s, "E"), v, {"E"}, {"F"})
+                         .transpose({"A", "B", "C", "D"})
+                << "\n";
    } while (false);
 }
 

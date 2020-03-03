@@ -86,6 +86,9 @@ namespace TAT {
    inline NoSymmetry& operator+=(NoSymmetry& s1, [[maybe_unused]] const NoSymmetry& s2) {
       return s1;
    }
+   inline NoSymmetry operator-([[maybe_unused]] const NoSymmetry& s) {
+      return NoSymmetry();
+   }
 
    inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&);
 #define TAT_DEF_SYM_OP(OP, EXP)                           \
@@ -111,6 +114,9 @@ namespace TAT {
    inline Z2Symmetry& operator+=(Z2Symmetry& s1, const Z2Symmetry& s2) {
       s1.z2 ^= s2.z2;
       return s1;
+   }
+   inline Z2Symmetry operator-(const Z2Symmetry& s) {
+      return Z2Symmetry(-s.z2);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const Z2Symmetry& s);
@@ -138,6 +144,9 @@ namespace TAT {
       s1.u1 += s2.u1;
       return s1;
    }
+   inline U1Symmetry operator-(const U1Symmetry& s) {
+      return U1Symmetry(-s.u1);
+   }
 
    inline std::ostream& operator<<(std::ostream& out, const U1Symmetry& s);
 #define TAT_DEF_SYM_OP(OP, EXP)                               \
@@ -163,6 +172,9 @@ namespace TAT {
    inline FermiSymmetry& operator+=(FermiSymmetry& s1, const FermiSymmetry& s2) {
       s1.fermi += s2.fermi;
       return s1;
+   }
+   inline FermiSymmetry operator-(const FermiSymmetry& s) {
+      return FermiSymmetry(-s.fermi);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s);
@@ -192,6 +204,9 @@ namespace TAT {
       s1.z2 ^= s2.z2;
       return s1;
    }
+   inline FermiZ2Symmetry operator-(const FermiZ2Symmetry& s) {
+      return FermiZ2Symmetry(-s.fermi, -s.z2);
+   }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s);
 #define TAT_DEF_SYM_OP(OP, EXP)                                         \
@@ -219,6 +234,9 @@ namespace TAT {
       s1.fermi += s2.fermi;
       s1.u1 += s2.u1;
       return s1;
+   }
+   inline FermiU1Symmetry operator-(const FermiU1Symmetry& s) {
+      return FermiU1Symmetry(-s.fermi, -s.u1);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s);
