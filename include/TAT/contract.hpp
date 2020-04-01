@@ -181,12 +181,12 @@ namespace TAT {
       auto rank2 = tensor2.names.size();
       // 需要反转成 - + - -
       // 事后恢复两侧的边
-      auto reversed_set1 = std::set<Name>(); // 第一个张量merge时反转表
-      auto reversed_set2 = std::set<Name>(); // 第二个张量merge时反转表
+      auto reversed_set1 = std::set<Name>();    // 第一个张量merge时反转表
+      auto reversed_set2 = std::set<Name>();    // 第二个张量merge时反转表
       auto res_edge = vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
       auto split_map = std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
-      auto reversed_set = std::set<Name>(); // 最后split时的反转标
-      auto res_name = vector<Name>();       // 最后split后的name
+      auto reversed_set = std::set<Name>();                                            // 最后split时的反转标
+      auto res_name = vector<Name>();                                                  // 最后split后的name
       split_map[Contract1];
       split_map[Contract2];
       auto free_name1 = vector<Name>(); // 第一个张量的自由边, merge时使用
@@ -305,9 +305,7 @@ namespace TAT {
             put_right2 ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2});
       // calculate_product
       auto product_res = Tensor<ScalarType, Symmetry>(
-            {Contract1, Contract2},
-            {std::move(tensor1_merged.core->edges[!put_right1]),
-             std::move(tensor2_merged.core->edges[!put_right2])});
+            {Contract1, Contract2}, {std::move(tensor1_merged.core->edges[!put_right1]), std::move(tensor2_merged.core->edges[!put_right2])});
       auto common_edge = std::move(tensor1_merged.core->edges[put_right1]);
       for (auto& [sym, data] : product_res.core->blocks) {
          // m k n
@@ -340,7 +338,8 @@ namespace TAT {
          res.core->blocks.begin()->second = std::move(product_res.core->blocks.begin()->second);
          return res;
       } else {
-         return product_res.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
+         auto res = product_res.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
+         return res;
       }
    }
 } // namespace TAT

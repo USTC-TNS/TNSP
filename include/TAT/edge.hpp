@@ -39,17 +39,15 @@ namespace TAT {
       BoseEdge& operator=(BoseEdge&&) = default;
       ~BoseEdge() = default;
 
-      template<
-            class T = std::map<Symmetry, Size>,
-            class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      BoseEdge(T&& t) : map(std::forward<T>(t)) {}
-      BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> t) : map(t) {}
+      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      BoseEdge(T&& map) : map(std::forward<T>(map)) {}
+      BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
 
-      BoseEdge(const Size s) : map({{Symmetry(), s}}) {}
+      BoseEdge(const Size size) : map({{Symmetry(), size}}) {}
    };
    template<class Symmetry>
-   bool operator==(const BoseEdge<Symmetry>& e1, const BoseEdge<Symmetry>& e2) {
-      return e1.map == e2.map;
+   bool operator==(const BoseEdge<Symmetry>& edge_1, const BoseEdge<Symmetry>& edge_2) {
+      return edge_1.map == edge_2.map;
    }
 
    /**
@@ -75,20 +73,19 @@ namespace TAT {
       FermiEdge& operator=(FermiEdge&&) = default;
       ~FermiEdge() = default;
 
-      template<
-            class T = std::map<Symmetry, Size>,
-            class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      FermiEdge(T&& t) : map(std::forward<T>(t)) {}
-      FermiEdge(std::initializer_list<std::pair<const Symmetry, Size>> t) : map(t) {}
+      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      FermiEdge(T&& map) : map(std::forward<T>(map)) {}
+      FermiEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
 
-      template<
-            class T = std::map<Symmetry, Size>,
-            class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      FermiEdge(const Arrow arrow, T&& boson) : arrow(arrow), map(std::forward<T>(boson)) {}
+      FermiEdge(const Size size) : map({{Symmetry(), size}}) {}
+
+      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(std::forward<T>(map)) {}
+      FermiEdge(const Arrow arrow, std::initializer_list<std::pair<const Symmetry, Size>> map) : arrow(arrow), map(map) {}
 
       void possible_reverse() {
-         for (const auto& [i, j] : map) {
-            if (i.fermi < 0) {
+         for (const auto& [symmetry, size] : map) {
+            if (symmetry.fermi < 0) {
                arrow ^= true;
                return;
             }
@@ -96,8 +93,8 @@ namespace TAT {
       }
 
       [[nodiscard]] bool arrow_valid() const {
-         for (const auto& [i, j] : map) {
-            if (i.fermi != 0) {
+         for (const auto& [symmetry, size] : map) {
+            if (symmetry.fermi != 0) {
                return true;
             }
          }
@@ -105,13 +102,12 @@ namespace TAT {
       }
    };
    template<class Symmetry>
-   bool operator==(const FermiEdge<Symmetry>& e1, const FermiEdge<Symmetry>& e2) {
-      return e1.map == e2.map && e1.arrow == e2.arrow;
+   bool operator==(const FermiEdge<Symmetry>& edge_1, const FermiEdge<Symmetry>& edge_2) {
+      return edge_1.map == edge_2.map && edge_1.arrow == edge_2.arrow;
    }
 
    template<class Symmetry>
-   using EdgeBase =
-         std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry>, BoseEdge<Symmetry>>;
+   using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry>, BoseEdge<Symmetry>>;
    /**
     * \brief 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
     * \tparam Symmetry 张量所拥有的对称性
@@ -121,13 +117,6 @@ namespace TAT {
    struct Edge : public EdgeBase<Symmetry> {
       using EdgeBase<Symmetry>::EdgeBase;
    };
-
-   template<class Symmetry>
-   std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge);
-   template<class Symmetry>
-   std::ostream& operator<=(std::ostream& out, const Edge<Symmetry>& edge);
-   template<class Symmetry>
-   std::istream& operator>=(std::istream& in, Edge<Symmetry>& edge);
 
    template<class Symmetry>
    struct PtrBoseEdge {
@@ -144,11 +133,11 @@ namespace TAT {
       Arrow arrow;
       const std::map<Symmetry, Size>* map;
 
-      PtrFermiEdge(Arrow a, const std::map<Symmetry, Size>* m) : arrow(a), map(m) {}
+      PtrFermiEdge(const Arrow arrow, const std::map<Symmetry, Size>* map) : arrow(arrow), map(map) {}
 
       [[nodiscard]] bool arrow_valid() const {
-         for (const auto& [i, j] : *map) {
-            if (i.fermi != 0) {
+         for (const auto& [symmetry, size] : *map) {
+            if (symmetry.fermi != 0) {
                return true;
             }
          }
@@ -156,10 +145,7 @@ namespace TAT {
       }
    };
    template<class Symmetry>
-   using PtrEdgeBase = std::conditional_t<
-         is_fermi_symmetry_v<Symmetry>,
-         PtrFermiEdge<Symmetry>,
-         PtrBoseEdge<Symmetry>>;
+   using PtrEdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, PtrFermiEdge<Symmetry>, PtrBoseEdge<Symmetry>>;
    /**
     * \brief 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
@@ -184,51 +170,47 @@ namespace TAT {
 
    /**
     * \brief 对一个边的形状列表进行枚举分块, 并做一些其他操作
-    * \tparam T 应是vector<Edge>或者vector<PtrEdge>
-    * \param edges 即将要枚举的边列表
+    * \tparam T 应是vector<Edge>或者vector<PtrEdge>的iterator
+    * \param edges 即将要枚举的边列表的开头指针
+    * \param rank 即将要枚举的边列表的大小
     * \param rank0 如果边列表为空，则调用rank0后返回
-    * \param check 对于边列表划分的每个分块, 使用check进行检查, check的参数是Edge中map的iterator的列表
-    * \param append 如果check检查成功, 则运行append, append的参数与check相同
-    * \param update 每次append前将根据append的输入参数列表中, 变化了的元, 进行最小化的更新,
-    * 第一个参数与append相同, 第二个参数min_ptr表示仅需要更新从[min_ptr,rank)的元素
-    * \see std_begin, initialize_block_symmetries_with_check, get_merged_edge
+    * \param dims0 如果边列表中存在零维的边，则调用dims0后返回
+    * \param operate 对枚举的每一个情况做操作
+    * \note operate输入两个参数, 一个是每个边所在的位置列表, 一个是需要更新信息的位置开头, 并返回操作后需要更新的位置开头
+    * \see initialize_block_symmetries_with_check, get_merged_edge
     */
-   template<class T, class F1, class F2, class F3, class F4>
-   void loop_edge(const T& edges, F1&& rank0, F2&& check, F3&& append, F4&& update) {
-      const Rank rank = edges.size();
-      if (!rank) {
+   template<class T, class F1, class F2, class F3>
+   void loop_edge(const T* edges, const Rank rank, F1&& rank0, F2&& dims0, F3&& operate) {
+      if (rank == 0) {
          rank0();
          return;
       }
-      using Symmetry = typename T::value_type::symmetry_type;
-      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
-      auto pos = PosType();
-      for (const auto& i : edges) {
-         const auto& map = remove_pointer(i.map);
-         auto ptr = map.begin();
-         if (ptr == map.end()) {
+      using Symmetry = typename T::symmetry_type;
+      using MapIteratorList = vector<typename std::map<Symmetry, Size>::const_iterator>;
+      auto symmetry_iterator_list = MapIteratorList();
+      for (auto i = 0; i != rank; ++i) {
+         const auto& map = remove_pointer(edges[i].map);
+         auto symmetry_iterator = map.begin();
+         if (symmetry_iterator == map.end()) {
+            dims0();
             return;
          }
-         pos.push_back(ptr);
+         symmetry_iterator_list.push_back(symmetry_iterator);
       }
-      auto min_ptr = 0;
+      Rank minimum_changed = 0;
       while (true) {
-         if (check(pos)) {
-            update(pos, min_ptr);
-            min_ptr = rank;
-            append(pos);
-         }
-         auto ptr = rank - 1;
-         ++pos[ptr];
-         while (pos[ptr] == remove_pointer(edges[ptr].map).end()) {
-            if (ptr == 0) {
+         minimum_changed = operate(symmetry_iterator_list, minimum_changed);
+         auto edge_position = rank - 1;
+         ++symmetry_iterator_list[edge_position];
+         while (symmetry_iterator_list[edge_position] == remove_pointer(edges[edge_position].map).end()) {
+            if (edge_position == 0) {
                return;
             }
-            pos[ptr] = remove_pointer(edges[ptr].map).begin();
-            --ptr;
-            ++pos[ptr];
+            symmetry_iterator_list[edge_position] = remove_pointer(edges[edge_position].map).begin();
+            --edge_position;
+            ++symmetry_iterator_list[edge_position];
          }
-         min_ptr = min_ptr < ptr ? min_ptr : ptr;
+         minimum_changed = minimum_changed < edge_position ? minimum_changed : edge_position;
       }
    }
 
@@ -239,74 +221,36 @@ namespace TAT {
     * \see loop_edge
     */
    template<class T>
-   auto initialize_block_symmetries_with_check(const T& edges) {
+   [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
-      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
-      auto res = vector<std::tuple<vector<Symmetry>, Size>>();
-      auto vec = vector<Symmetry>(edges.size());
-      auto size = vector<Size>(edges.size());
+      using MapIteratorList = vector<typename std::map<Symmetry, Size>::const_iterator>;
+      auto result = vector<std::tuple<vector<Symmetry>, Size>>();
+      auto symmetries = vector<Symmetry>(edges.size());
+      auto sizes = vector<Size>(edges.size());
+      Rank rank = edges.size();
       loop_edge(
-            edges,
-            [&res]() {
-               res.push_back({vector<Symmetry>{}, 1});
+            edges.data(),
+            rank,
+            [&result]() {
+               result.push_back({vector<Symmetry>{}, 1});
             },
-            []([[maybe_unused]] const PosType& pos) {
-               auto sum = Symmetry();
-               for (const auto& i : pos) {
-                  sum += i->first;
+            []() {},
+            [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
+               auto symmetry_summary = Symmetry();
+               for (const auto& symmetry_iterator : symmetry_iterator_list) {
+                  symmetry_summary += symmetry_iterator->first;
                }
-               return sum == Symmetry();
-            },
-            [&res, &vec, &size]([[maybe_unused]] const PosType& pos) {
-               res.push_back({vec, size.back()});
-            },
-            [&vec, &size](const PosType& pos, const Rank ptr) {
-               for (auto i = ptr; i < pos.size(); i++) {
-                  vec[i] = pos[i]->first;
-                  size[i] = pos[i]->second * (i ? size[i - 1] : 1);
-               }
-            });
-      return res;
-   }
-
-   /**
-    * \brief 获取一些已知形状的边合并之后的形状
-    * \param edges_to_merge 已知的边的形状列表
-    * \note 需要调用者保证输入费米箭头方向相同
-    * \note 且并不设定结果的费米箭头方向
-    */
-   template<class T>
-   [[nodiscard]] auto get_merged_edge(const T& edges_to_merge) {
-      using Symmetry = typename T::value_type::symmetry_type;
-      using PosType = vector<typename std::map<Symmetry, Size>::const_iterator>;
-
-      auto res_edge = Edge<Symmetry>();
-
-      auto sym = vector<Symmetry>(edges_to_merge.size());
-      auto dim = vector<Size>(edges_to_merge.size());
-
-      loop_edge(
-            edges_to_merge,
-            [&res_edge]() { res_edge.map[Symmetry()] = 1; },
-            []([[maybe_unused]] const PosType& pos) { return true; },
-            [&res_edge, &sym, &dim]([[maybe_unused]] const PosType& pos) {
-               res_edge.map[sym[pos.size() - 1]] += dim[pos.size() - 1];
-            },
-            [&sym, &dim](const PosType& pos, const Rank start) {
-               for (auto i = start; i < pos.size(); i++) {
-                  const auto& ptr = pos[i];
-                  if (i == 0) {
-                     sym[i] = ptr->first;
-                     dim[i] = ptr->second;
-                  } else {
-                     sym[i] = ptr->first + sym[i - 1];
-                     dim[i] = ptr->second * dim[i - 1];
-                     // do not check dim=0, because in constructor, i didn't check
+               if (symmetry_summary == Symmetry()) {
+                  for (Rank i = minimum_changed; i < symmetry_iterator_list.size(); i++) {
+                     symmetries[i] = symmetry_iterator_list[i]->first;
+                     sizes[i] = symmetry_iterator_list[i]->second * (i ? sizes[i - 1] : 1);
                   }
+                  result.push_back({symmetries, sizes.back()});
+                  return rank;
                }
+               return minimum_changed;
             });
-
-      return res_edge;
+      return result;
    }
 } // namespace TAT
 #endif

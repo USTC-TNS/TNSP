@@ -60,20 +60,19 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const Name& name) {
-      const auto pos = id_to_name.find(name.id);
-      if (pos == id_to_name.end()) {
+      if (const auto position = id_to_name.find(name.id); position == id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
-         return out << id_to_name.at(name.id);
+         return out << position->second;
       }
       return out;
    }
 
    template<class T>
-   std::ostream& operator<<(std::ostream& out, const vector<T>& vec) {
+   std::ostream& operator<<(std::ostream& out, const vector<T>& list) {
       out << '[';
       auto not_first = false;
-      for (const auto& i : vec) {
+      for (const auto& i : list) {
          if (not_first) {
             out << ',';
          }
@@ -88,17 +87,17 @@ namespace TAT {
       return out;
    }
    template<class T>
-   void raw_write_vector(std::ostream& out, const vector<T>& vec) {
-      Size count = vec.size();
+   void raw_write_vector(std::ostream& out, const vector<T>& list) {
+      Size count = list.size();
       raw_write(out, &count);
-      raw_write(out, vec.data(), count);
+      raw_write(out, list.data(), count);
    }
    template<class T>
-   void raw_read_vector(std::istream& in, vector<T>& vec) {
+   void raw_read_vector(std::istream& in, vector<T>& list) {
       Size count;
       raw_read(in, &count);
-      vec.resize(count);
-      raw_read(in, vec.data(), count);
+      list.resize(count);
+      raw_read(in, list.data(), count);
    }
    template<class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
@@ -112,12 +111,12 @@ namespace TAT {
          }
          out << '{';
          auto not_first = false;
-         for (const auto& [sym, dim] : edge.map) {
+         for (const auto& [symmetry, dimension] : edge.map) {
             if (not_first) {
                out << ',';
             }
             not_first = true;
-            out << sym << ':' << dim;
+            out << symmetry << ':' << dimension;
          }
          out << '}';
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
@@ -136,9 +135,9 @@ namespace TAT {
          }
          const Nums numbers = edge.map.size();
          raw_write(out, &numbers);
-         for (const auto& [sym, dim] : edge.map) {
-            raw_write(out, &sym);
-            raw_write(out, &dim);
+         for (const auto& [symmetry, dimension] : edge.map) {
+            raw_write(out, &symmetry);
+            raw_write(out, &dimension);
          }
       }
       return out;
@@ -157,37 +156,37 @@ namespace TAT {
          raw_read(in, &numbers);
          edge.map.clear();
          for (Nums i = 0; i < numbers; i++) {
-            Symmetry sym;
-            Size dim;
-            raw_read(in, &sym);
-            raw_read(in, &dim);
-            edge.map[sym] = dim;
+            Symmetry symmetry;
+            Size dimension;
+            raw_read(in, &symmetry);
+            raw_read(in, &dimension);
+            edge.map[symmetry] = dimension;
          }
       }
       return in;
    }
 
-   std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
+   inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
       return out;
    }
-   std::ostream& operator<<(std::ostream& out, const Z2Symmetry& s) {
-      out << s.z2;
+   inline std::ostream& operator<<(std::ostream& out, const Z2Symmetry& symmetry) {
+      out << symmetry.z2;
       return out;
    }
-   std::ostream& operator<<(std::ostream& out, const U1Symmetry& s) {
-      out << s.u1;
+   inline std::ostream& operator<<(std::ostream& out, const U1Symmetry& symmetry) {
+      out << symmetry.u1;
       return out;
    }
-   std::ostream& operator<<(std::ostream& out, const FermiSymmetry& s) {
-      out << s.fermi;
+   inline std::ostream& operator<<(std::ostream& out, const FermiSymmetry& symmetry) {
+      out << symmetry.fermi;
       return out;
    }
-   std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& s) {
-      out << '(' << s.fermi << ',' << s.z2 << ')';
+   inline std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& symmetry) {
+      out << '(' << symmetry.fermi << ',' << symmetry.z2 << ')';
       return out;
    }
-   std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& s) {
-      out << '(' << s.fermi << ',' << s.u1 << ')';
+   inline std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& symmetry) {
+      out << '(' << symmetry.fermi << ',' << symmetry.u1 << ')';
       return out;
    }
 
@@ -228,12 +227,12 @@ namespace TAT {
       } else {
          out << '{';
          auto not_first = false;
-         for (const auto& [i, j] : tensor.core->blocks) {
+         for (const auto& [symmetries, block] : tensor.core->blocks) {
             if (not_first) {
                out << ',';
             }
             not_first = true;
-            out << console_yellow << i << console_origin << ':' << j;
+            out << console_yellow << symmetries << console_origin << ':' << block;
          }
          out << '}';
       }
@@ -242,8 +241,7 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   const Tensor<ScalarType, Symmetry>&
-   Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
+   const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
       raw_write_vector(out, names);
       for (const auto& edge : core->edges) {
          out <= edge;
@@ -252,8 +250,7 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   const Tensor<ScalarType, Symmetry>&
-   Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
+   const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
       Size count = core->blocks.size();
       raw_write(out, &count);
       for (const auto& [i, j] : core->blocks) {
@@ -320,8 +317,7 @@ namespace TAT {
    inline Evil::~Evil() {
       try {
          std::clog << console_red << "\n\nPremature optimization is the root of all evil!\n"
-                   << console_origin
-                   << "                                       --- Donald Knuth\n\n\n";
+                   << console_origin << "                                       --- Donald Knuth\n\n\n";
       } catch ([[maybe_unused]] const std::exception& e) {
       }
    }

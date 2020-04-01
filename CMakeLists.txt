@@ -12,7 +12,7 @@ find_package(MPI REQUIRED)
 find_package(LAPACK REQUIRED)
 
 include_directories(${MPI_INCLUDE_PATH})
-link_libraries(${MPI_LIBRARIES} ${LAPACK_LIBRARIES})
+link_libraries(${MPI_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 

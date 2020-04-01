@@ -23,6 +23,7 @@
 
 #include "contract.hpp"
 #include "edge_operator.hpp"
+#include "get_item.hpp"
 #include "io.hpp"
 #include "scalar.hpp"
 #include "svd.hpp"
