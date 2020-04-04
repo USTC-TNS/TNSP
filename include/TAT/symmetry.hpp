@@ -69,15 +69,17 @@ namespace TAT {
             while (split_merge_end_position < symmetries.size() && split_merge_flag[split_merge_end_position] == split_merge_group_position) {
                split_merge_end_position++;
             }
-            auto sum_of_parity = 0;
-            auto sum_of_parity_square = 0;
-            for (Rank position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
-               auto this_parity = symmetries[position_in_group].fermi;
-               sum_of_parity += this_parity;
-               sum_of_parity_square += this_parity * this_parity;
+            if (valid_mark[split_merge_group_position]) {
+               auto sum_of_parity = 0;
+               auto sum_of_parity_square = 0;
+               for (Rank position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
+                  auto this_parity = symmetries[position_in_group].fermi;
+                  sum_of_parity += this_parity;
+                  sum_of_parity_square += this_parity * this_parity;
+               }
+               result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
+               split_merge_begin_position = split_merge_end_position;
             }
-            result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
-            split_merge_begin_position = split_merge_end_position;
          }
          return result;
       }
