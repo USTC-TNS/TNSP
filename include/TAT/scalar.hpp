@@ -1,4 +1,3 @@
-
 /**
  * \file scalar.hpp
  *
@@ -25,63 +24,55 @@
 #include "tensor.hpp"
 
 namespace TAT {
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2, EVAL3)                                                 \
-   template<class ScalarType1, class ScalarType2, class Symmetry>                              \
-   auto OP(const Tensor<ScalarType1, Symmetry>& t1, const Tensor<ScalarType2, Symmetry>& t2) { \
-      using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                         \
-      if (t1.names.empty()) {                                                                  \
-         const auto& x = t1.at({});                                                            \
-         auto res = Tensor<ScalarType, Symmetry>{t2.names, t2.core->edges};                    \
-         for (auto& [sym, block] : res.core->blocks) {                                         \
-            const ScalarType2* __restrict b = t2.core->blocks[sym].data();                     \
-            ScalarType* __restrict c = block.data();                                           \
-            for (Size j = 0; j < block.size(); j++) {                                          \
-               EVAL1;                                                                          \
-            }                                                                                  \
-         }                                                                                     \
-         return res;                                                                           \
-      } else if (t2.names.empty()) {                                                           \
-         const auto& y = t2.at({});                                                            \
-         auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         for (auto& [sym, block] : res.core->blocks) {                                         \
-            const ScalarType1* __restrict a = t1.core->blocks[sym].data();                     \
-            ScalarType* __restrict c = block.data();                                           \
-            for (Size j = 0; j < block.size(); j++) {                                          \
-               EVAL2;                                                                          \
-            }                                                                                  \
-         }                                                                                     \
-         return res;                                                                           \
-      } else {                                                                                 \
-         if (!((t1.names == t2.names) && (t1.core->edges == t2.core->edges))) {                \
-            TAT_WARNING("Scalar Operator In Different Shape Tensor");                          \
-         }                                                                                     \
-         auto res = Tensor<ScalarType, Symmetry>{t1.names, t1.core->edges};                    \
-         for (auto& [sym, block] : res.core->blocks) {                                         \
-            const ScalarType1* __restrict a = t1.core->blocks[sym].data();                     \
-            const ScalarType2* __restrict b = t2.core->blocks[sym].data();                     \
-            ScalarType* __restrict c = block.data();                                           \
-            for (Size j = 0; j < block.size(); j++) {                                          \
-               EVAL3;                                                                          \
-            }                                                                                  \
-         }                                                                                     \
-         return res;                                                                           \
-      }                                                                                        \
-   }                                                                                           \
-   template<                                                                                   \
-         class ScalarType1,                                                                    \
-         class ScalarType2,                                                                    \
-         class Symmetry,                                                                       \
-         class = std::enable_if_t<is_scalar_v<ScalarType2>>>                                   \
-   auto OP(const Tensor<ScalarType1, Symmetry>& t1, const ScalarType2& n2) {                   \
-      return OP(t1, Tensor<ScalarType2, Symmetry>{n2});                                        \
-   }                                                                                           \
-   template<                                                                                   \
-         class ScalarType1,                                                                    \
-         class ScalarType2,                                                                    \
-         class Symmetry,                                                                       \
-         class = std::enable_if_t<is_scalar_v<ScalarType1>>>                                   \
-   auto OP(const ScalarType1& n1, const Tensor<ScalarType2, Symmetry>& t2) {                   \
-      return OP(Tensor<ScalarType1, Symmetry>{n1}, t2);                                        \
+#define DEF_SCALAR_OP(OP, EVAL1, EVAL2, EVAL3)                                                                        \
+   template<class ScalarType1, class ScalarType2, class Symmetry>                                                     \
+   auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {            \
+      using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                \
+      if (tensor_1.names.empty()) {                                                                                   \
+         const auto& x = tensor_1.at({});                                                                             \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_2.names, tensor_2.core->edges};                            \
+         for (auto& [symmetries, block] : result.core->blocks) {                                                      \
+            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                               \
+            ScalarType* __restrict c = block.data();                                                                  \
+            for (Size j = 0; j < block.size(); j++) {                                                                 \
+               EVAL1;                                                                                                 \
+            }                                                                                                         \
+         }                                                                                                            \
+         return result;                                                                                               \
+      } else if (tensor_2.names.empty()) {                                                                            \
+         const auto& y = tensor_2.at({});                                                                             \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                            \
+         for (auto& [symmetries, block] : result.core->blocks) {                                                      \
+            const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                               \
+            ScalarType* __restrict c = block.data();                                                                  \
+            for (Size j = 0; j < block.size(); j++) {                                                                 \
+               EVAL2;                                                                                                 \
+            }                                                                                                         \
+         }                                                                                                            \
+         return result;                                                                                               \
+      } else {                                                                                                        \
+         if (!((tensor_1.names == tensor_2.names) && (tensor_1.core->edges == tensor_2.core->edges))) {               \
+            TAT_WARNING("Scalar Operator In Different Shape Tensor");                                                 \
+         }                                                                                                            \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                            \
+         for (auto& [symmetries, block] : result.core->blocks) {                                                      \
+            const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                               \
+            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                               \
+            ScalarType* __restrict c = block.data();                                                                  \
+            for (Size j = 0; j < block.size(); j++) {                                                                 \
+               EVAL3;                                                                                                 \
+            }                                                                                                         \
+         }                                                                                                            \
+         return result;                                                                                               \
+      }                                                                                                               \
+   }                                                                                                                  \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>> \
+   auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                              \
+      return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                   \
+   }                                                                                                                  \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType1>>> \
+   auto OP(const ScalarType1& number_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {                              \
+      return OP(Tensor<ScalarType1, Symmetry>{number_1}, tensor_2);                                                   \
    }
 
    DEF_SCALAR_OP(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
@@ -90,42 +81,37 @@ namespace TAT {
    DEF_SCALAR_OP(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
 #undef DEF_SCALAR_OP
 
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2)                                                          \
-   template<class ScalarType1, class ScalarType2, class Symmetry>                                \
-   Tensor<ScalarType1, Symmetry>& OP(                                                            \
-         Tensor<ScalarType1, Symmetry>& t1, const Tensor<ScalarType2, Symmetry>& t2) {           \
-      if (t1.core.use_count() != 1) {                                                            \
-         TAT_WARNING("Inplace Operator On Tensor Shared");                                       \
-      }                                                                                          \
-      if (t2.names.empty()) {                                                                    \
-         const auto& y = t2.at({});                                                              \
-         for (auto& [sym, block] : t1.core->blocks) {                                            \
-            ScalarType1* __restrict a = block.data();                                            \
-            for (Size j = 0; j < block.size(); j++) {                                            \
-               EVAL1;                                                                            \
-            }                                                                                    \
-         }                                                                                       \
-      } else {                                                                                   \
-         if (!((t1.names == t2.names) && (t1.core->edges == t2.core->edges))) {                  \
-            TAT_WARNING("Scalar Operator In Different Shape Tensor");                            \
-         }                                                                                       \
-         for (auto& [sym, block] : t1.core->blocks) {                                            \
-            ScalarType1* __restrict a = block.data();                                            \
-            const ScalarType2* __restrict b = t2.core->blocks[sym].data();                       \
-            for (Size j = 0; j < block.size(); j++) {                                            \
-               EVAL2;                                                                            \
-            }                                                                                    \
-         }                                                                                       \
-      }                                                                                          \
-      return t1;                                                                                 \
-   }                                                                                             \
-   template<                                                                                     \
-         class ScalarType1,                                                                      \
-         class ScalarType2,                                                                      \
-         class Symmetry,                                                                         \
-         class = std::enable_if_t<is_scalar_v<ScalarType2>>>                                     \
-   Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& t1, const ScalarType2& n2) { \
-      return OP(t1, Tensor<ScalarType2, Symmetry>{n2});                                          \
+#define DEF_SCALAR_OP(OP, EVAL1, EVAL2)                                                                                        \
+   template<class ScalarType1, class ScalarType2, class Symmetry>                                                              \
+   Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) { \
+      if (tensor_1.core.use_count() != 1) {                                                                                    \
+         TAT_WARNING("Inplace Operator On Tensor Shared");                                                                     \
+      }                                                                                                                        \
+      if (tensor_2.names.empty()) {                                                                                            \
+         const auto& y = tensor_2.at({});                                                                                      \
+         for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
+            ScalarType1* __restrict a = block.data();                                                                          \
+            for (Size j = 0; j < block.size(); j++) {                                                                          \
+               EVAL1;                                                                                                          \
+            }                                                                                                                  \
+         }                                                                                                                     \
+      } else {                                                                                                                 \
+         if (!((tensor_1.names == tensor_2.names) && (tensor_1.core->edges == tensor_2.core->edges))) {                        \
+            TAT_WARNING("Scalar Operator In Different Shape Tensor");                                                          \
+         }                                                                                                                     \
+         for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
+            ScalarType1* __restrict a = block.data();                                                                          \
+            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                                        \
+            for (Size j = 0; j < block.size(); j++) {                                                                          \
+               EVAL2;                                                                                                          \
+            }                                                                                                                  \
+         }                                                                                                                     \
+      }                                                                                                                        \
+      return tensor_1;                                                                                                         \
+   }                                                                                                                           \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>>          \
+   Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                   \
+      return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                            \
    }
    DEF_SCALAR_OP(operator+=, a[j] += y, a[j] += b[j])
    DEF_SCALAR_OP(operator-=, a[j] -= y, a[j] -= b[j])

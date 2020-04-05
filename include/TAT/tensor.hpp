@@ -22,6 +22,7 @@
 #define TAT_TENSOR_HPP
 
 #include <algorithm>
+#include <array>
 #include <map>
 #include <memory>
 #include <set>
@@ -75,9 +76,7 @@ namespace TAT {
       Tensor(U&& names_init, T&& edges_init, const bool auto_reverse = false) :
             names(std::forward<U>(names_init)),
             name_to_index(construct_name_to_index(names)),
-            core(std::make_shared<Core<ScalarType, Symmetry>>(
-                  std::forward<T>(edges_init),
-                  auto_reverse)) {
+            core(std::make_shared<Core<ScalarType, Symmetry>>(std::forward<T>(edges_init), auto_reverse)) {
          if (!is_valid_name(names, core->edges.size())) {
             TAT_WARNING("Invalid Names");
          }
@@ -89,11 +88,11 @@ namespace TAT {
        * \see core
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry> copy() const {
-         Tensor<ScalarType, Symmetry> res;
-         res.names = names;
-         res.name_to_index = name_to_index;
-         res.core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-         return res;
+         Tensor<ScalarType, Symmetry> result;
+         result.names = names;
+         result.name_to_index = name_to_index;
+         result.core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
+         return result;
       }
 
       Tensor() = default;
@@ -122,19 +121,59 @@ namespace TAT {
       }
 
       /**
-       * \brief 通过一个生成器设置一个张量内的数据
-       * \param generator 生成器, 一般来说是一个无参数的函数, 返回值为标量, 多次调用填充张量
-       * \return 张量自身
-       * \note 参见std::generate
+       * \brief 产生一个与自己形状一样的张量
+       * \return 一个未初始化数据内容的张量
        */
-      template<class Generator>
-      Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> same_shape() const {
+         return Tensor<ScalarType, Symmetry>(names, core->edges);
+      }
+      /**
+       * \brief 对张量的每个数据元素做同样的非原地的变换
+       * \param function 变换的函数
+       * \return 张量自身
+       * \note 参见std::transform
+       * \see transform
+       */
+      template<class Transform>
+      [[nodiscard]] Tensor<ScalarType, Symmetry> map(Transform&& function) const {
+         auto result = same_shape();
+         for (auto& [symmetries, block] : core->blocks) {
+            std::transform(block.begin(), block.end(), result.core->blocks.at(symmetries).begin(), function);
+         }
+         return result;
+      }
+
+      /**
+       * \brief 对张量的每个数据元素做同样的原地的变换
+       * \param function 变换的函数
+       * \return 张量自身
+       * \note 参见std::transform
+       * \see map
+       */
+      template<class Transform>
+      Tensor<ScalarType, Symmetry>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             TAT_WARNING("Set Tensor Shared");
          }
-         for (auto& [_, i] : core->blocks) {
-            std::generate(i.begin(), i.end(), generator);
+         for (auto& [_, block] : core->blocks) {
+            std::transform(block.begin(), block.end(), block.begin(), function);
          }
+         return *this;
+      }
+      template<class Transform>
+      Tensor<ScalarType, Symmetry> transform(Transform&& function) && {
+         return std::move(transform(function));
+      }
+
+      /**
+       * \brief 通过一个生成器设置一个张量内的数据
+       * \param generator 生成器, 一般来说是一个无参数的函数, 返回值为标量, 多次调用填充张量
+       * \return 张量自身
+       * \see transform
+       */
+      template<class Generator>
+      Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
+         transform([&](ScalarType _) { return generator(); });
          return *this;
       }
       template<class Generator>
@@ -161,9 +200,9 @@ namespace TAT {
        */
       Tensor<ScalarType, Symmetry>& test(ScalarType first = 0, ScalarType step = 1) & {
          return set([&first, step]() {
-            auto res = first;
+            auto result = first;
             first += step;
-            return res;
+            return result;
          });
       }
       Tensor<ScalarType, Symmetry> test(ScalarType first = 0, ScalarType step = 1) && {
@@ -176,38 +215,18 @@ namespace TAT {
        * \return 一个不可变的一维数组
        * \see get_block_for_get_item
        */
-      [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position) const& {
-         using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
-         auto sym = get_block_for_get_item(position, name_to_index, *core);
-         return core->blocks.at(sym);
-      }
+      [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position) const&;
 
-      using EdgeInfoForGetItem = std::
-            conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
+      using EdgeInfoForGetItem = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
 
       /**
        * \brief 获取张量中某个分块内的某个元素
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
        * \see get_offset_for_get_item, get_block_and_offset_for_get_item
        */
-      [[nodiscard]] ScalarType at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
-         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-            auto pos = get_offset_for_get_item(position, name_to_index, *core);
-            return core->blocks.begin()->second[pos];
-         } else {
-            auto [sym, pos] = get_block_and_offset_for_get_item(position, name_to_index, *core);
-            return core->blocks.at(sym)[pos];
-         }
-      }
-      [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) & {
-         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-            auto pos = get_offset_for_get_item(position, name_to_index, *core);
-            return core->blocks.begin()->second[pos];
-         } else {
-            auto [sym, pos] = get_block_and_offset_for_get_item(position, name_to_index, *core);
-            return core->blocks.at(sym)[pos];
-         }
-      }
+      [[nodiscard]] ScalarType at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
+
+      [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) &;
 
       /**
        * \brief 不同标量类型的张量之间的转换函数
@@ -217,29 +236,29 @@ namespace TAT {
       template<class OtherScalarType, class = std::enable_if_t<is_scalar_v<OtherScalarType>>>
       [[nodiscard]] Tensor<OtherScalarType, Symmetry> to() const {
          if constexpr (std::is_same_v<ScalarType, OtherScalarType>) {
-            auto res = Tensor<ScalarType, Symmetry>{};
-            res.names = names;
-            res.name_to_index = name_to_index;
-            res.core = core;
-            return res;
+            auto result = Tensor<ScalarType, Symmetry>{};
+            result.names = names;
+            result.name_to_index = name_to_index;
+            result.core = core;
+            return result;
          } else {
-            auto res = Tensor<OtherScalarType, Symmetry>{};
-            res.names = names;
-            res.name_to_index = name_to_index;
-            res.core = std::make_shared<Core<OtherScalarType, Symmetry>>();
-            res.core->edges = core->edges;
-            for (const auto& [i, j] : core->blocks) {
-               auto tmp = vector<OtherScalarType>(j.size());
-               for (auto k = 0; k < j.size(); k++) {
+            auto result = Tensor<OtherScalarType, Symmetry>{};
+            result.names = names;
+            result.name_to_index = name_to_index;
+            result.core = std::make_shared<Core<OtherScalarType, Symmetry>>();
+            result.core->edges = core->edges;
+            for (const auto& [symmetries, block] : core->blocks) {
+               auto [iterator, success] = result.core->blocks.emplace(symmetries, block.size());
+               auto& this_block = iterator->second;
+               for (auto i = 0; i < block.size(); i++) {
                   if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
-                     tmp[k] = static_cast<OtherScalarType>(j[k].real());
+                     this_block[i] = static_cast<OtherScalarType>(block[i].real());
                   } else {
-                     tmp[k] = static_cast<OtherScalarType>(j[k]);
+                     this_block[i] = static_cast<OtherScalarType>(block[i]);
                   }
                }
-               res.core->blocks[i] = std::move(tmp);
             }
-            return res;
+            return result;
          }
       }
 
@@ -250,70 +269,61 @@ namespace TAT {
        */
       template<int p = 2>
       [[nodiscard]] Tensor<real_base_t<ScalarType>, Symmetry> norm() const {
-         real_base_t<ScalarType> res = 0;
+         real_base_t<ScalarType> result = 0;
          if constexpr (p == -1) {
             for (const auto& [_, block] : core->blocks) {
-               for (const auto& j : block) {
-                  auto tmp = std::abs(j);
-                  if (tmp > res) {
-                     res = tmp;
+               for (const auto& number : block) {
+                  if (auto absolute_value = std::abs(number); absolute_value > result) {
+                     result = absolute_value;
                   }
                }
             }
          } else if constexpr (p == 0) {
             for (const auto& [_, block] : core->blocks) {
-               res += real_base_t<ScalarType>(block.size());
+               result += real_base_t<ScalarType>(block.size());
             }
          } else {
             for (const auto& [_, block] : core->blocks) {
-               for (const auto& j : block) {
+               for (const auto& number : block) {
                   if constexpr (p == 1) {
-                     res += std::abs(j);
+                     result += std::abs(number);
                   } else if constexpr (p == 2) {
-                     if constexpr (std::is_same_v<ScalarType, real_base_t<ScalarType>>) {
-                        auto tmp = j;
-                        res += tmp * tmp;
-                     } else {
-                        auto tmp = std::abs(j);
-                        res += tmp * tmp;
-                     }
+                     result += std::norm(number);
                   } else {
-                     if constexpr (
-                           p % 2 == 0 && std::is_same_v<ScalarType, real_base_t<ScalarType>>) {
-                        res += std::pow(j, p);
+                     if constexpr (p % 2 == 0 && is_real_v<ScalarType>) {
+                        result += std::pow(number, p);
                      } else {
-                        res += std::pow(std::abs(j), p);
+                        result += std::pow(std::abs(number), p);
                      }
                   }
                }
             }
-            return res = std::pow(res, 1. / p);
+            result = std::pow(result, 1. / p);
          }
-         return res;
+         return result;
       }
+
+      using MapIteratorList = vector<typename std::map<Symmetry, Size>::const_iterator>;
 
       /**
        * \brief 对张量边的名称进行重命名
-       * \param dict 重命名方案的映射表
+       * \param dictionary 重命名方案的映射表
        * \return 仅仅改变了边的名称的张量, 与原张量共享Core
        * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator
        * 而是实现一个小功能的edge_rename
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry>
-      edge_rename(const std::map<Name, Name>& dict) const {
-         auto res = Tensor<ScalarType, Symmetry>{};
-         res.core = core;
-         std::transform(
-               names.begin(), names.end(), std::back_inserter(res.names), [&dict](Name name) {
-                  auto pos = dict.find(name);
-                  if (pos == dict.end()) {
-                     return name;
-                  } else {
-                     return pos->second;
-                  }
-               });
-         res.name_to_index = construct_name_to_index(res.names);
-         return res;
+      [[nodiscard]] Tensor<ScalarType, Symmetry> edge_rename(const std::map<Name, Name>& dictionary) const {
+         auto result = Tensor<ScalarType, Symmetry>{};
+         result.core = core;
+         std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](Name name) {
+            if (auto position = dictionary.find(name); position == dictionary.end()) {
+               return name;
+            } else {
+               return position->second;
+            }
+         });
+         result.name_to_index = construct_name_to_index(result.names);
+         return result;
       }
 
       /**
@@ -323,31 +333,29 @@ namespace TAT {
        * \param reversed_name 将要取反费米箭头的边的名称列表
        * \param merge_map 合并一些边的名称列表
        * \param new_names 最后进行的转置操作后的边的名称顺序列表
-       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上
+       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上的默认行为
+       * \param parity_exclude_name 是否产生符号这个问题上行为与默认行为相反的操作的边的名称, 四部分分别是split, reverse, reverse_before_merge, merge
        * \return 进行了一系列操作后的结果张量
        * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
        * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
        * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
        */
-      template<
-            class T = vector<Name>,
-            class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
+      template<class T = vector<Name>, class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry> edge_operator(
             const std::map<Name, Name>& rename_map,
             const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split_map,
             const std::set<Name>& reversed_name,
             const std::map<Name, vector<Name>>& merge_map,
             T&& new_names,
-            const bool apply_parity = false) const;
+            const bool apply_parity = false,
+            const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}}) const;
 
       /**
        * \brief 对张量进行转置
        * \param target_names 转置后的目标边的名称顺序
        * \return 转置后的结果张量
        */
-      template<
-            class T = vector<Name>,
-            class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
+      template<class T = vector<Name>, class = std::enable_if_t<std::is_convertible_v<T, vector<Name>>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry> transpose(T&& target_names) const {
          return edge_operator({}, {}, {}, {}, std::forward<T>(target_names));
       }
@@ -358,8 +366,7 @@ namespace TAT {
        * \param apply_parity 是否应用反转产生的符号
        * \return 反转后的结果张量
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry>
-      reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity = false) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity = false) const {
          return edge_operator({}, {}, reversed_name, {}, names, apply_parity);
       }
 
@@ -370,8 +377,7 @@ namespace TAT {
        * \return 合并边后的结果张量
        * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry>
-      merge_edge(const std::map<Name, vector<Name>>& merge, const bool apply_parity = false) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> merge_edge(const std::map<Name, vector<Name>>& merge, const bool apply_parity = false) const {
          vector<Name> target_name;
          for (auto it = names.rbegin(); it != names.rend(); ++it) {
             auto found_in_merge = false;
@@ -404,9 +410,8 @@ namespace TAT {
        * \param apply_parity 是否应用分裂边产生的符号
        * \return 分裂边后的结果张量
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry> split_edge(
-            const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split,
-            const bool apply_parity = false) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry>
+      split_edge(const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split, const bool apply_parity = false) const {
          vector<Name> target_name;
          for (const auto& n : names) {
             auto it = split.find(n);
@@ -421,80 +426,81 @@ namespace TAT {
          return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity);
       }
 
-      // TODO: 下面需要再检查
-#if 0
-
-      // TODO: symmetry的设计漏洞， 需要指定方向和symmetry
-      // 最后的一个edge应该是这样的 std::tuple<bool, std::map<Symmetry, Size>>
-      // 现在的参数是vector<Name>, vector<map<Symmetry, Size>>
-      // bool表示方向， 在逆转方向时， symmetry也会逆转， 但是对于fermi symmetry
-      // 还会多一个parity （一个边一个， 所以一个张量半个， 和merge时的效果一样）
-      // 方向应该由各个函数各自维护， 在edge operator中， 如果merge的方向不一样， 需要自行逆转
-      // 并通过apply parity判断是否应用
-
-      // TODO: contract
-      // 调用 merge ， 这样就不用考虑contract特有的符号问题了
+      // TODO: 不转置成矩阵直接乘积的可能, 当然， 这是几乎不可能的
+      /**
+       * \brief 两个张量的缩并运算
+       * \param tensor1 参与缩并的第一个张量
+       * \param tensor2 参与缩并的第二个张量
+       * \param names1 第一个张量将要缩并掉的边的名称
+       * \param names2 第二个张量将要缩并掉的边的名称
+       * \return 缩并后的张量
+       */
       static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor1,
             const Tensor<ScalarType, Symmetry>& tensor2,
             const vector<Name>& names1,
-            const vector<Name>& names2) {
-         // TODO: 不转置成矩阵直接乘积的可能
-         // names1 names2 需要 check order, 这个无法再merge中判断
-         // merge 需要按照原样的顺序进行转置
-         auto merged_tensor1 = tensor1.merge_edge({{names1, Contract1}}, false, true);
-         auto merged_tensor2 = tensor2.merge_edge({{names2, Contract2}}, true, true);
-         // check which one in 8 and do matrix contract
-      }
+            const vector<Name>& names2);
 
-      // TODO: converge
-      // multiple 的扩展版
-      // 考虑到PESS可能和对称性不兼容, 那么还是恢复原来的multiple模式
-      // 因为这个东西唯一出现的地方就是svd了
-      static Tensor<ScalarType, Symmetry> converge(
-            const Tensor<ScalarType, Symmetry>& tensor1,
-            const Tensor<ScalarType, Symmetry>& tensor2,
-            const vector<Name>& names1,
-            const vector<Name>& names2,
-            const vector<Name>& names_res,
-            const Size order) {
-         // 这个东西在svd写好后再弄
-      }
-
-      struct svd_res {
+      /**
+       * \brief 张量svd的结果类型
+       * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
+       */
+      struct svd_result {
          Tensor<ScalarType, Symmetry> U;
-         Tensor<real_base_t<ScalarType>, Symmetry> S;
+         std::map<Symmetry, vector<real_base_t<ScalarType>>> S;
          Tensor<ScalarType, Symmetry> V;
       };
 
-      // TODO: SVD
-      // 根据情况选择转置方式
-      // 或许可以称作cutted orthogonalize
-      // 需要先merge再split, 不然不能保证分块依然分块
-      svd_res svd(const vector<Name>& u_edges, Name u_new_name, Name v_new_name) const {
-         // auto merged_tensor = merge_edge({{u_edges, SVD1}, {v_edges, SVD2}});
-         // svd
-         // auto split...
+      // TODO: multiple
+      template<class OtherScalarType>
+      Tensor<ScalarType, Symmetry>&
+      multiple(const std::map<Symmetry, vector<OtherScalarType>>& S, const Name& name, bool different_direction = false) {
+         if (core.use_count() != 1) {
+            TAT_WARNING("Set Tensor Shared");
+         }
+         auto index = name_to_index.at(name);
+         for (auto& [sym, block] : core->blocks) {
+            auto sym_in_s = sym[index];
+            if (different_direction) {
+               sym_in_s = -sym_in_s;
+            }
+            const auto& vec = S.at(sym_in_s);
+            auto i = 0;
+            Size m = 1;
+            for (; i < index; i++) {
+               m *= core->edges[i].map.at(sym[i]);
+            }
+            Size k = core->edges[i].map.at(sym[i]);
+            Size n = 1;
+            for (i++; i < names.size(); i++) {
+               n *= core->edges[i].map.at(sym[i]);
+            }
+            if (vec.size() != k) {
+               TAT_WARNING("Vector Size Invalid in Multiple");
+            }
+            auto* data = block.data();
+            for (Size a = 0; a < m; a++) {
+               for (Size b = 0; b < k; b++) {
+                  OtherScalarType v = vec[b];
+                  for (Size c = 0; c < n; c++) {
+                     *(data++) *= v;
+                  }
+               }
+            }
+         }
+         return *this;
       }
 
-      struct orthogonalize_res {
-         Tensor<ScalarType, Symmetry> U;
-         Tensor<ScalarType, Symmetry> T;
-      };
-
-      // TODO: QR LQ
-      // 除了svd的考虑外， 需要考虑使用lq还是qr等
-      orthogonalize_res orthogonalize(
-            const vector<Name>& given_edges,
-            Name given_new_name,
-            Name other_new_name,
-            bool u_edges_given = true) const {
-         //
-      }
-#endif
-
-      // TODO: 代码review
-      // TODO: 更美观的IO
+      /**
+       * \brief 对张量进行svd分解
+       * \param u_free_names_set svd分解中u的边的名称集合
+       * \param u_common_name 分解后u新产生的边的名称
+       * \param v_common_name 分解后v新产生的边的名称
+       * \param cut 需要截断的维度数目
+       * \return svd的结果
+       * \see svd_result
+       */
+      svd_result svd(const std::set<Name>& u_free_names_set, Name u_common_name, Name v_common_name, Size cut = -1) const;
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;
@@ -502,12 +508,56 @@ namespace TAT {
       Tensor<ScalarType, Symmetry>& data_get(std::istream&);
    }; // namespace TAT
 
+   // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
+   // 因为contract的操作是这样的
+   // merge gemm split
+   // 上一次split可以和下一次的merge合并
+   // 比较重要， 可以大幅减少对称性张量的分块
+   // 需要先把svd写出来
+   /*
+   template<class ScalarType, class Symmetry>
+   struct QuasiTensor {
+      Tensor<ScalarType, Symmetry> tensor;
+      std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>> split_map;
+      std::set<Name> reversed_set;
+      vector<Name> res_name;
+
+      QuasiTensor
+
+      operator Tensor<ScalarType, Symmetry>() && {
+         return tensor.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
+      }
+      operator Tensor<ScalarType, Symmetry>() const& {
+         return tensor.edge_operator({}, split_map, reversed_set, {}, res_name);
+      }
+
+      Tensor<ScalarType, Symmetry> merge_again(
+            const std::set<Name>& merge_reversed_set,
+            const std::map<Name, vector<Name>>& merge_map,
+            vector<Name>&& merge_res_name,
+            std::set<Name>& split_parity_mark,
+            std::set<Name>& merge_parity_mark) {
+         auto total_reversed_set = reversed_set; // merge_reversed_set
+         return tensor.edge_operator(
+               {},
+               split_map,
+               total_reversed_set,
+               merge_map,
+               merge_res_name,
+               false,
+               {{{}, split_parity_mark, {}, merge_parity_mark}});
+      }
+      QuasiTensor<ScalarType, Symmetry>
+   };
+   */
+
    // TODO: lazy framework
    // 看一下idris是如何做的
    // 需要考虑深搜不可行的问题
    // 支持inplace操作
+   // TODO: use it
+   // TODO: python bind
 
-   // GPU and so on
 } // namespace TAT
 
 #endif

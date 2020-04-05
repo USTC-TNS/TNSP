@@ -36,7 +36,7 @@ namespace TAT {
    /**
     * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
     */
-   inline NameIdType names_total = 0;
+   inline NameIdType names_total_index = 0;
    /**
     * \brief Name的字符串到标号的映射表
     */
@@ -54,7 +54,7 @@ namespace TAT {
     * 有全局变量names_total维护目前已分配的标号量,
     * 新建一个字符串的Name时将递增names_total并获取一个唯一的标号
     *
-    * \see names_total
+    * \see names_total_index
     */
    struct Name {
       /**
@@ -63,31 +63,28 @@ namespace TAT {
       NameIdType id = -1;
       Name() = default;
       Name(const NameIdType id) : id(id) {}
-      Name(const char* s) : Name(std::string(s)) {}
+      Name(const char* name) : Name(std::string(name)) {}
       Name(const std::string& name) {
-         const auto pos = name_to_id.find(name);
-         if (pos == name_to_id.end()) {
-            id = names_total++;
+         if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
+            id = names_total_index++;
             name_to_id[name] = id;
             id_to_name[id] = name;
          } else {
-            id = pos->second;
+            id = position->second;
          }
       }
    };
 
-   std::ostream& operator<<(std::ostream& out, const Name& name);
-
-#define TAT_DEF_NAME_OP(OP, EXP)                  \
-   inline bool OP(const Name& a, const Name& b) { \
-      return EXP;                                 \
+#define TAT_DEF_NAME_OP(OP, EXP)                            \
+   inline bool OP(const Name& name_1, const Name& name_2) { \
+      return EXP;                                           \
    }
-   TAT_DEF_NAME_OP(operator==, a.id == b.id)
-   TAT_DEF_NAME_OP(operator!=, a.id != b.id)
-   TAT_DEF_NAME_OP(operator>=, a.id >= b.id)
-   TAT_DEF_NAME_OP(operator<=, a.id <= b.id)
-   TAT_DEF_NAME_OP(operator>, a.id> b.id)
-   TAT_DEF_NAME_OP(operator<, a.id<b.id)
+   TAT_DEF_NAME_OP(operator==, name_1.id == name_2.id)
+   TAT_DEF_NAME_OP(operator!=, name_1.id != name_2.id)
+   TAT_DEF_NAME_OP(operator>=, name_1.id >= name_2.id)
+   TAT_DEF_NAME_OP(operator<=, name_1.id <= name_2.id)
+   TAT_DEF_NAME_OP(operator>, name_1.id> name_2.id)
+   TAT_DEF_NAME_OP(operator<, name_1.id<name_2.id)
 #undef TAT_DEF_NAME_OP
 
 #define TAT_DEF_NAME(x) inline const Name x(#x)
@@ -109,27 +106,26 @@ namespace TAT {
 #undef TAT_DEF_NAMES
    TAT_DEF_NAME(Contract1);
    TAT_DEF_NAME(Contract2);
-   TAT_DEF_NAME(Decomposition1);
-   TAT_DEF_NAME(Decomposition2);
+   TAT_DEF_NAME(SVD1);
+   TAT_DEF_NAME(SVD2);
 #undef TAT_DEF_NAME
 
    /**
     * \brief 由名字列表构造名字到需要的映射表
     */
    inline std::map<Name, Rank> construct_name_to_index(const vector<Name>& names) {
-      std::map<Name, Rank> res;
-      for (auto i = 0; i < names.size(); i++) {
-         res[names[i]] = i;
+      std::map<Name, Rank> result;
+      for (auto name_index = 0; name_index < names.size(); name_index++) {
+         result[names[name_index]] = name_index;
       }
-      return res;
+      return result;
    }
 
    /**
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
    inline bool is_valid_name(const vector<Name>& names, const Rank& rank) {
-      return names.size() == std::set<Name>(names.begin(), names.end()).size() &&
-             names.size() == rank;
+      return names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
    }
 } // namespace TAT
 #endif

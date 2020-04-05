@@ -32,7 +32,8 @@ namespace TAT {
          const std::set<Name>& reversed_name,
          const std::map<Name, vector<Name>>& merge_map,
          T&& new_names,
-         const bool apply_parity) const {
+         const bool apply_parity,
+         const std::array<std::set<Name>, 4>& parity_exclude_name) const {
       // step 1: rename
       // step 2: split
       // step 3: reverse
@@ -40,329 +41,462 @@ namespace TAT {
       // step 5: reverse before merge
       // step 6: merge
       // 前面三步是因果顺序往下推, 第四步转置需要根据merge和最后的name来确定转置方案
+      // 除了第一步, 剩下的步骤沿着transpose对称
 
-      using ConstDataType = std::map<vector<Symmetry>, const ScalarType*>;
-      using DataType = std::map<vector<Symmetry>, ScalarType*>;
+      // 先写一个无任何优化的版本
 
-      // status 0
-      const auto rank_0 = names.size();
-      const auto& name_0 = names;
-      auto edge_0 = vector<PtrEdge<Symmetry>>();
-      for (const auto& e : core->edges) {
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            edge_0.push_back({e.arrow, &e.map});
-         } else {
-            edge_0.push_back({&e.map});
-         }
-      }
-      auto data_0 = ConstDataType();
-      for (const auto& [sym, vec] : core->blocks) {
-         data_0[sym] = vec.data();
-      }
+      // parity_exclude_name的四部分分别是split, reverse, reverse_for_merge, merge
+      // name 均为rename后的名称，split取split前， merge取merge后
 
+      // is_fermi
+      constexpr auto is_fermi = is_fermi_symmetry_v<Symmetry>;
+
+      // 1. 先将rank, name, edge信息生成出来
+      //
+      // 1.1 先弄出来 status 0和status 1, 他们在关于transpose对称的操作之前
+      //
+      // 1.1.1 status 0
+      // status 0 origin
+      // rank_0 and name_0
+      // create edge 0
+
+      // 1.1.2 status 1
       // status 1 rename
-      const auto& rank_1 = rank_0;
-      const auto& edge_1 = edge_0;
-      const auto& data_1 = data_0;
-      auto true_name_1 = vector<Name>();
-      auto ptr_name_1 = &name_0;
-      if (!rename_map.empty()) {
-         true_name_1.resize(rank_1);
-         for (auto i = 0; i < rank_1; i++) {
-            auto name = name_0[i];
-            auto pos = rename_map.find(name);
-            if (pos != rename_map.end()) {
-               name = pos->second;
-            }
-            true_name_1[i] = name;
+      // rank_1 and edge_1
+      const Rank rank_before_split = names.size();
+      // create name_1
+      auto name_before_split = vector<Name>();
+      name_before_split.resize(rank_before_split);
+      for (Rank i = 0; i < rank_before_split; i++) {
+         auto name = names[i];
+         if (auto position = rename_map.find(name); position != rename_map.end()) {
+            name_before_split[i] = position->second;
+         } else {
+            name_before_split[i] = name;
          }
-         ptr_name_1 = &true_name_1;
       }
-      const auto& name_1 = *ptr_name_1;
 
+      // 1.2 检查是否不需要做任何操作
       // check no change
-      if (name_1 == new_names && reversed_name.empty() && split_map.empty() && merge_map.empty()) {
-         auto res = Tensor<ScalarType, Symmetry>();
-         res.names = std::forward<T>(new_names);
-         res.name_to_index = construct_name_to_index(res.names);
-         res.core = core;
-         return res;
+      if (name_before_split == new_names && reversed_name.empty() && split_map.empty() && merge_map.empty()) {
+         // share the core
+         auto result = Tensor<ScalarType, Symmetry>();
+         result.names = std::forward<T>(new_names);
+         result.name_to_index = construct_name_to_index(result.names);
+         result.core = core;
+         return result;
       }
 
+      const auto& edge_before_split = core->edges;
+
+      // 1.3 对称的几个操作中transpose之前的 rank, name, edge
       // status 2 split
+      // create name_2 and edge_2 and split_flag
       auto split_flag = vector<Rank>();
-      Rank total_split_index = 0;
-      auto true_name_2 = vector<Name>();
-      auto true_edge_2 = vector<PtrEdge<Symmetry>>();
-      auto ptr_name_2 = &name_1;
-      auto ptr_edge_2 = &edge_1;
-      if (!split_map.empty()) {
-         for (auto i = 0; i < rank_1; i++) {
-            auto pos = split_map.find(name_1[i]);
-            if (pos != split_map.end()) {
-               for (const auto& [n, e] : pos->second) {
-                  true_name_2.push_back(n);
-                  if constexpr (is_fermi_symmetry_v<Symmetry>) {
-                     true_edge_2.push_back({edge_1[i].arrow, &e.map});
-                  } else {
-                     true_edge_2.push_back({&e.map});
-                  }
-                  split_flag.push_back(total_split_index);
+      auto split_offset = vector<std::map<vector<Symmetry>, std::tuple<Symmetry, Size>>>();
+      auto name_after_split = vector<Name>();
+      auto edge_after_split = vector<PtrEdge<Symmetry>>();
+      for (Rank position_before_split = 0, total_split_index = 0; position_before_split < rank_before_split; position_before_split++) {
+         if (auto position = split_map.find(name_before_split[position_before_split]); position != split_map.end()) {
+            const auto& this_split_begin_position_in_edge_after_split = edge_after_split.size();
+            for (const auto& [splitted_name, splitted_edge] : position->second) {
+               name_after_split.push_back(splitted_name);
+               if constexpr (is_fermi) {
+                  edge_after_split.push_back({edge_before_split[position_before_split].arrow, &splitted_edge.map});
+               } else {
+                  edge_after_split.push_back({&splitted_edge.map});
                }
-               total_split_index++;
+               split_flag.push_back(total_split_index);
+            }
+            const auto edge_list_after_split = &edge_after_split[this_split_begin_position_in_edge_after_split];
+            const auto split_rank = edge_after_split.size() - this_split_begin_position_in_edge_after_split;
+            // loop between begin and end, get a map push_Back into split_offset
+            // this map is sym -> [sym] -> offset
+            auto& this_offset = split_offset.emplace_back();
+            auto offset_bank = std::map<Symmetry, Size>();
+            for (const auto& [sym, dim] : edge_before_split[position_before_split].map) {
+               offset_bank[sym] = 0;
+            }
+            auto accumulated_symmetries = vector<Symmetry>(split_rank);
+            auto accumulated_dimensions = vector<Size>(split_rank);
+            auto current_symmetries = vector<Symmetry>(split_rank);
+            loop_edge(
+                  edge_list_after_split,
+                  split_rank,
+                  []() {},
+                  []() {},
+                  [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
+                     for (auto i = minimum_changed; i < split_rank; i++) {
+                        const auto& symmetry_iterator = symmetry_iterator_list[i];
+                        accumulated_symmetries[i] = symmetry_iterator->first + (i ? accumulated_symmetries[i - 1] : Symmetry());
+                        accumulated_dimensions[i] = symmetry_iterator->second * (i ? accumulated_dimensions[i - 1] : 1);
+                        // do not check dim=0, because in constructor, i didn't check
+                        current_symmetries[i] = symmetry_iterator->first;
+                     }
+                     auto target_symmetry = accumulated_symmetries.back();
+                     auto target_dimension = accumulated_dimensions.back();
+                     // 这是可能不存在的, 不存在的情况是因为此target_symmetry没有有效block
+                     if (auto found = offset_bank.find(target_symmetry); found != offset_bank.end()) {
+                        this_offset[current_symmetries] = {target_symmetry, found->second};
+                        found->second += target_dimension;
+                     }
+                     return split_rank;
+                  });
+            total_split_index++;
+         } else {
+            name_after_split.push_back(name_before_split[position_before_split]);
+            if constexpr (is_fermi) {
+               edge_after_split.push_back({edge_before_split[position_before_split].arrow, &edge_before_split[position_before_split].map});
             } else {
-               true_name_2.push_back(name_1[i]);
-               true_edge_2.push_back(edge_1[i]);
-               split_flag.push_back(total_split_index++);
+               edge_after_split.push_back({&edge_before_split[position_before_split].map});
             }
-         }
-         ptr_name_2 = &true_name_2;
-         ptr_edge_2 = &true_edge_2;
-      } else {
-         split_flag.resize(rank_1);
-         for (auto i = 0; i < rank_1; i++) {
-            split_flag[i] = i;
+            split_flag.push_back(total_split_index++);
+            auto& this_offset = split_offset.emplace_back();
+            for (const auto& [symmetry, dimension] : edge_before_split[position_before_split].map) {
+               this_offset[{symmetry}] = {symmetry, 0};
+            }
          }
       }
-      const auto& name_2 = *ptr_name_2;
-      const auto& edge_2 = *ptr_edge_2;
-
-      const auto rank_2 = name_2.size();
-      auto true_data_2 = ConstDataType();
-      auto ptr_data_2 = &data_1;
-      if (!split_map.empty()) {
-         auto offset_src = data_1;
-         auto symmetries_src = initialize_block_symmetries_with_check(edge_2);
-         for (auto& [sym, size] : symmetries_src) {
-            auto target_symmetry = vector<Symmetry>(rank_1);
-            for (auto i = 0; i < rank_1; i++) {
-               target_symmetry[i] = Symmetry();
-            }
-            for (auto i = 0; i < rank_2; i++) {
-               target_symmetry[split_flag[i]] += sym[i];
-            }
-            true_data_2[std::move(sym)] = offset_src[target_symmetry];
-            offset_src[std::move(target_symmetry)] += size;
-         }
-         ptr_data_2 = &true_data_2;
-      }
-      const auto& data_2 = *ptr_data_2;
+      // rank_2
+      const Rank rank_at_transpose = name_after_split.size();
 
       // status 3 reverse
-      [[maybe_unused]] auto reversed_flag_src = vector<bool>();
-      const auto& rank_3 = rank_2;
-      const auto& name_3 = name_2;
-      const auto& data_3 = data_2;
-      auto ptr_edge_3 = &edge_2;
-      auto true_edge_3 = vector<PtrEdge<Symmetry>>();
-      if constexpr (is_fermi_symmetry_v<Symmetry>) {
-         if (!reversed_name.empty()) {
-            reversed_flag_src.resize(rank_3);
-            true_edge_3 = edge_2;
-            for (auto i = 0; i < rank_3; i++) {
-               if (reversed_name.find(name_3[i]) != reversed_name.end()) {
-                  true_edge_3[i].arrow ^= true;
-                  reversed_flag_src[i] = true;
-               } else {
-                  reversed_flag_src[i] = false;
-               }
-            }
-            ptr_edge_3 = &true_edge_3;
-         } else {
-            reversed_flag_src.resize(rank_3);
-            for (auto i = 0; i < rank_3; i++) {
+      // rank_3 and name_3
+      // create reversed_flag_src and edge_3
+      auto reversed_flag_src = vector<bool>();
+      auto fermi_edge_before_transpose = vector<PtrEdge<Symmetry>>();
+      if constexpr (is_fermi) {
+         reversed_flag_src.resize(rank_at_transpose);
+         fermi_edge_before_transpose = edge_after_split; // copy here
+         for (auto i = 0; i < rank_at_transpose; i++) {
+            if (reversed_name.find(name_after_split[i]) != reversed_name.end()) {
+               fermi_edge_before_transpose[i].arrow ^= true;
+               reversed_flag_src[i] = true;
+            } else {
                reversed_flag_src[i] = false;
             }
          }
       }
-      const auto& edge_3 = *ptr_edge_3;
+      const auto& edge_before_transpose = is_fermi ? fermi_edge_before_transpose : edge_after_split;
 
-      auto res = Tensor<ScalarType, Symmetry>();
-      res.names = std::forward<T>(new_names);
-      res.name_to_index = construct_name_to_index(res.names);
+      // create res names
+      auto result = Tensor<ScalarType, Symmetry>();
+      result.names = std::forward<T>(new_names);
+      result.name_to_index = construct_name_to_index(result.names);
+
+      // 1.4 transpose之后的rank, name
+
       // status 4 transpose and status 6 merge and status 5 reverse before merge
-      // 先根据merge何name_6确定name_4, 再确定根据edge_3确定edge_4
+      // 逆序确定name, 再顺序确定edge和data
       // name and rank
-      const auto& name_6 = res.names;
-      const auto& rank_6 = name_6.size();
-
+      // name_6 and rank_6
+      const auto& name_after_merge = result.names;
+      const Rank rank_after_merge = name_after_merge.size();
+      // create merge_flag and name_5
       auto merge_flag = vector<Rank>();
-      Rank total_merge_index = 0;
-      auto true_name_4 = vector<Name>();
-      auto ptr_name_4 = &name_6;
-      if (!merge_map.empty()) {
-         for (const auto& n : name_6) {
-            auto pos = merge_map.find(n);
-            if (pos != merge_map.end()) {
-               for (const auto& i : pos->second) {
-                  true_name_4.push_back(i);
-                  merge_flag.push_back(total_merge_index);
-               }
-               total_merge_index++;
-            } else {
-               true_name_4.push_back(n);
-               merge_flag.push_back(total_merge_index++);
+      auto name_before_merge = vector<Name>();
+      for (Rank position_after_merge = 0, total_merge_index = 0; position_after_merge < rank_after_merge; position_after_merge++) {
+         const auto& merged_name = name_after_merge[position_after_merge];
+         if (auto position = merge_map.find(merged_name); position != merge_map.end()) {
+            for (const auto& merging_names : position->second) {
+               name_before_merge.push_back(merging_names);
+               merge_flag.push_back(total_merge_index);
             }
-         }
-         ptr_name_4 = &true_name_4;
-      } else {
-         merge_flag.resize(rank_6);
-         for (auto i = 0; i < rank_6; i++) {
-            merge_flag[i] = i;
+            total_merge_index++;
+         } else {
+            name_before_merge.push_back(merged_name);
+            merge_flag.push_back(total_merge_index++);
          }
       }
-      const auto& name_4 = *ptr_name_4;
-      const auto rank_4 = name_4.size();
-      const auto& name_5 = name_4;
-      const auto& rank_5 = rank_4;
+      // rank_4 and name_5 and rank_5
+      if (rank_at_transpose != name_before_merge.size()) {
+         TAT_WARNING("Different Rank When Transpose");
+      }
+
+      // 1.5 转置方案
+      // to be easy, create name_to_index for name_3
+      auto name_to_index_after_split = construct_name_to_index(name_after_split);
+      // create plan of two way
+      auto plan_source_to_destination = vector<Rank>(rank_at_transpose);
+      auto plan_destination_to_source = vector<Rank>(rank_at_transpose);
 
       // edge
-      auto name_to_index_3 = construct_name_to_index(name_3);
-      auto plan_src_to_dst = vector<Rank>(rank_4);
-      auto plan_dst_to_src = vector<Rank>(rank_4);
-      auto edge_4 = vector<PtrEdge<Symmetry>>(rank_4);
-      for (auto i = 0; i < rank_4; i++) {
-         plan_dst_to_src[i] = name_to_index_3.at(name_4[i]);
-         plan_src_to_dst[plan_dst_to_src[i]] = i;
-         edge_4[i] = edge_3[plan_dst_to_src[i]];
+      // create edge_4
+      auto edge_after_transpose = vector<PtrEdge<Symmetry>>(rank_at_transpose);
+      for (auto i = 0; i < rank_at_transpose; i++) {
+         plan_destination_to_source[i] = name_to_index_after_split.at(name_before_merge[i]);
+         plan_source_to_destination[plan_destination_to_source[i]] = i;
+         edge_after_transpose[i] = edge_before_transpose[plan_destination_to_source[i]];
       }
+      // 1.6 考虑转置后的edge
+      // reverse 和 merge 需要放在一起考虑, 如果fermi, 那么reverse的edge在前一个edge基础上修改, 否则直接是上一个引用
 
-      [[maybe_unused]] auto reversed_flag_dst = vector<bool>();
-      auto res_edge = vector<Edge<Symmetry>>();
-      auto start_of_merge = 0;
-      auto end_of_merge = 0;
-      auto ptr_edge_5 = &edge_4;
-      auto true_edge_5 = vector<PtrEdge<Symmetry>>();
-      if (!merge_map.empty()) {
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            true_edge_5 = edge_4;
-            ptr_edge_5 = &true_edge_5;
+      // the following code is about merge
+      // dealing with edge_5 and res_edge and reversed_flag_dst
+
+      // prepare edge_5
+      // if no merge, edge_5 is reference of edge_4, else is copy of edge_4
+      auto fermi_edge_before_merge = vector<PtrEdge<Symmetry>>();
+      if constexpr (is_fermi) {
+         fermi_edge_before_merge = edge_after_transpose;
+      }
+      auto& edge_before_merge = is_fermi ? fermi_edge_before_merge : edge_after_transpose;
+
+      // prepare res_edge
+      // res_edge means edge_6 but type is different
+      auto result_edge = vector<Edge<Symmetry>>();
+      // prepare reversed_flag_dst
+      auto reversed_flag_dst = vector<bool>();
+
+      auto merge_offset = vector<std::map<vector<Symmetry>, std::tuple<Symmetry, Size>>>();
+
+      for (Rank position_after_merge = 0, start_of_merge = 0, end_of_merge = 0; position_after_merge < rank_after_merge; position_after_merge++) {
+         // [start, end) need be merged
+         while (end_of_merge < rank_at_transpose && merge_flag[end_of_merge] == position_after_merge) {
+            end_of_merge++;
          }
-      }
-      auto& edge_5 = *ptr_edge_5;
-
-      if (!merge_map.empty()) {
-         for (auto i = 0; i < rank_6; i++) {
-            while (end_of_merge < rank_4 && merge_flag[end_of_merge] == i) {
-               end_of_merge++;
-            }
-            [[maybe_unused]] Arrow arrow;
-            [[maybe_unused]] bool arrow_fixed = false;
-            auto edge_to_merge = vector<PtrEdge<Symmetry>>();
-            for (auto j = start_of_merge; j < end_of_merge; j++) {
-               if constexpr (is_fermi_symmetry_v<Symmetry>) {
-                  if (edge_5[j].arrow_valid()) {
-                     auto this_arrow = edge_5[j].arrow;
-                     if (arrow_fixed) {
-                        if (arrow == this_arrow) {
-                           reversed_flag_dst.push_back(false);
-                        } else {
-                           edge_5[j].arrow ^= true;
-                           reversed_flag_dst.push_back(true);
-                        }
-                     } else {
-                        arrow_fixed = true;
-                        arrow = this_arrow;
+         // arrow begin
+         Arrow arrow;
+         bool arrow_fixed = false;
+         for (auto merge_group_position = start_of_merge; merge_group_position < end_of_merge; merge_group_position++) {
+            if constexpr (is_fermi) {
+               if (edge_before_merge[merge_group_position].arrow_valid()) {
+                  if (arrow_fixed) {
+                     if (arrow == edge_before_merge[merge_group_position].arrow) {
                         reversed_flag_dst.push_back(false);
+                     } else {
+                        edge_before_merge[merge_group_position].arrow ^= true;
+                        reversed_flag_dst.push_back(true);
                      }
                   } else {
+                     arrow_fixed = true;
+                     arrow = edge_before_merge[merge_group_position].arrow;
                      reversed_flag_dst.push_back(false);
                   }
+               } else {
+                  reversed_flag_dst.push_back(false);
                }
-               edge_to_merge.push_back(edge_5[j]);
-            }
-            auto merged_edge = get_merged_edge(edge_to_merge);
-            if constexpr (is_fermi_symmetry_v<Symmetry>) {
-               merged_edge.arrow = arrow;
-            }
-            res_edge.push_back(std::move(merged_edge));
-            start_of_merge = end_of_merge;
-         }
-      } else {
-         res_edge.resize(rank_4);
-         reversed_flag_dst.resize(rank_4);
-         for (auto i = 0; i < rank_4; i++) {
-            reversed_flag_dst[i] = false;
-            if constexpr (is_fermi_symmetry_v<Symmetry>) {
-               res_edge[i] = {edge_4[i].arrow, *edge_4[i].map};
-            } else {
-               res_edge[i] = {*edge_4[i].map};
             }
          }
-      }
+         // arrow end
 
-      res.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(res_edge), false);
-      if (!is_valid_name(res.names, res.core->edges.size())) {
+         // merge edge begin
+         auto& merged_edge = result_edge.emplace_back();
+         auto& this_offset = merge_offset.emplace_back();
+
+         const Rank merge_rank = end_of_merge - start_of_merge;
+         auto accumulated_symmetries = vector<Symmetry>(merge_rank);
+         auto accumulated_dimensions = vector<Size>(merge_rank);
+         auto current_symmetries = vector<Symmetry>(merge_rank);
+
+         loop_edge(
+               &edge_before_merge[start_of_merge],
+               merge_rank,
+               [&merged_edge]() { merged_edge.map[Symmetry()] = 1; },
+               []() {},
+               [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
+                  for (auto i = minimum_changed; i < merge_rank; i++) {
+                     const auto& symmetry_iterator = symmetry_iterator_list[i];
+                     accumulated_symmetries[i] = symmetry_iterator->first + (i ? accumulated_symmetries[i - 1] : Symmetry());
+                     accumulated_dimensions[i] = symmetry_iterator->second * (i ? accumulated_dimensions[i - 1] : 1);
+                     // do not check dim=0, because in constructor, i didn't check
+                     current_symmetries[i] = symmetry_iterator->first;
+                  }
+                  auto target_symmetry = accumulated_symmetries[merge_rank - 1];
+                  this_offset[current_symmetries] = {target_symmetry, merged_edge.map[target_symmetry]};
+                  merged_edge.map[target_symmetry] += accumulated_dimensions[merge_rank - 1];
+                  return merge_rank;
+               });
+         // merge edge end
+
+         if constexpr (is_fermi) {
+            merged_edge.arrow = arrow;
+         }
+         start_of_merge = end_of_merge;
+      }
+      // the code above is dealing with edge_5 and res_Edge and reversed_flag_dst
+
+      // put res_edge into res
+      result.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(result_edge));
+      if (!is_valid_name(result.names, result.core->edges.size())) {
          TAT_WARNING("Invalid Names");
       }
-      const auto& edge_6 = res.core->edges;
+      // edge_6
+      [[maybe_unused]] const auto& edge_after_merge = result.core->edges;
+      // 2. 开始分析data如何移动
 
-      // data
-      auto data_6 = DataType();
-      for (auto& [sym, vec] : res.core->blocks) {
-         data_6[sym] = vec.data();
-      };
-
-      auto true_data_5 = DataType();
-      auto ptr_data_5 = &data_6;
-      if (!merge_map.empty()) {
-         auto offset_dst = data_6;
-         auto symmetries_dst = initialize_block_symmetries_with_check(edge_5);
-         for (auto& [sym, size] : symmetries_dst) {
-            auto target_symmetry = vector<Symmetry>(rank_6);
-            for (auto i = 0; i < rank_6; i++) {
-               target_symmetry[i] = Symmetry();
+      auto data_before_transpose_to_source = std::map<vector<Symmetry>, std::tuple<vector<Symmetry>, vector<Size>>>();
+      for (auto& [symmetries_before_transpose, size] : initialize_block_symmetries_with_check(edge_after_split)) {
+         // convert sym -> target_sym and offsets
+         // and add to map
+         auto [iterator, _] = data_before_transpose_to_source.emplace(symmetries_before_transpose, std::tuple{vector<Symmetry>{}, vector<Size>{}});
+         auto& symmetries = std::get<0>(iterator->second);
+         auto& offsets = std::get<1>(iterator->second);
+         for (Rank position_before_split = 0, position_after_split = 0; position_before_split < rank_before_split; position_before_split++) {
+            // [start, end) be merged
+            auto split_group_symmetries = vector<Symmetry>();
+            while (position_after_split < rank_at_transpose && split_flag[position_after_split] == position_before_split) {
+               split_group_symmetries.push_back(symmetries_before_transpose[position_after_split]);
+               position_after_split++;
             }
-            for (auto i = 0; i < rank_4; i++) {
-               target_symmetry[merge_flag[i]] += sym[i];
-            }
-            true_data_5[std::move(sym)] = offset_dst.at(target_symmetry);
-            offset_dst[std::move(target_symmetry)] += size;
+            auto [this_symmetry, this_offset] = split_offset[position_before_split].at(split_group_symmetries);
+            symmetries.push_back(this_symmetry);
+            offsets.push_back(this_offset);
          }
-         ptr_data_5 = &true_data_5;
       }
-      const auto& data_5 = *ptr_data_5;
-      const auto& data_4 = data_5;
-
-      for (const auto& [sym_src, ptr_src] : data_3) {
-         auto sym_dst = vector<Symmetry>(rank_3);
-         auto dim_src = vector<Size>(rank_3);
-         auto dim_dst = vector<Size>(rank_3);
-         Size total_size = 1;
-         for (auto i = 0; i < rank_3; i++) {
-            auto dim = edge_3[i].map->at(sym_src[i]);
-            total_size *= dim;
-            dim_src[i] = dim;
-            dim_dst[plan_src_to_dst[i]] = dim;
-            sym_dst[plan_src_to_dst[i]] = sym_src[i];
-         }
-         auto ptr_dst = data_4.at(sym_dst);
-
-         bool parity = false;
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            parity = Symmetry::get_transpose_parity(sym_src, plan_src_to_dst);
-
-            if (apply_parity) {
-               parity ^= Symmetry::get_reverse_parity(sym_src, reversed_flag_src);
-               parity ^= Symmetry::get_split_merge_parity(sym_src, split_flag);
-               parity ^= Symmetry::get_reverse_parity(sym_dst, reversed_flag_dst);
-               parity ^= Symmetry::get_split_merge_parity(sym_dst, merge_flag);
+      auto data_after_transpose_to_destination = std::map<vector<Symmetry>, std::tuple<vector<Symmetry>, vector<Size>>>();
+      for (auto& [symmetries_after_transpose, size] : initialize_block_symmetries_with_check(edge_before_merge)) {
+         // convert sym -> target_sym and offsets
+         // and add to map
+         auto [iterator, _] = data_after_transpose_to_destination.emplace(symmetries_after_transpose, std::tuple{vector<Symmetry>{}, vector<Size>{}});
+         auto& symmetries = std::get<0>(iterator->second);
+         auto& offsets = std::get<1>(iterator->second);
+         for (Rank position_after_merge = 0, position_before_merge = 0; position_after_merge < rank_after_merge; position_after_merge++) {
+            // [start, end) be merged
+            auto merge_group_symmetries = vector<Symmetry>();
+            while (position_before_merge < rank_at_transpose && merge_flag[position_before_merge] == position_after_merge) {
+               merge_group_symmetries.push_back(symmetries_after_transpose[position_before_merge]);
+               position_before_merge++;
             }
+            auto [this_symmetry, this_offset] = merge_offset[position_after_merge].at(merge_group_symmetries);
+            symmetries.push_back(this_symmetry);
+            offsets.push_back(this_offset);
+         }
+      }
+
+      // 3. 4 marks
+      auto split_flag_mark = vector<bool>();
+      auto reversed_flag_src_mark = vector<bool>();
+      auto reversed_flag_dst_mark = vector<bool>();
+      auto merge_flag_mark = vector<bool>();
+      if constexpr (is_fermi) {
+         // true => 应用parity
+         split_flag_mark.resize(rank_before_split);
+         reversed_flag_src_mark.resize(rank_at_transpose);
+         reversed_flag_dst_mark.resize(rank_at_transpose);
+         merge_flag_mark.resize(rank_after_merge);
+         if (apply_parity) {
+            // 默认应用, 故应用需不在exclude中, 即find==end
+            for (auto i = 0; i < rank_before_split; i++) {
+               split_flag_mark[i] = parity_exclude_name[0].find(name_before_split[i]) == parity_exclude_name[0].end();
+            }
+            for (auto i = 0; i < rank_at_transpose; i++) {
+               reversed_flag_src_mark[i] = parity_exclude_name[1].find(name_after_split[i]) == parity_exclude_name[1].end();
+            }
+            for (auto i = 0; i < rank_at_transpose; i++) {
+               reversed_flag_dst_mark[i] = parity_exclude_name[2].find(name_before_merge[i]) == parity_exclude_name[2].end();
+            }
+            for (auto i = 0; i < rank_after_merge; i++) {
+               merge_flag_mark[i] = parity_exclude_name[3].find(name_after_merge[i]) == parity_exclude_name[3].end();
+            }
+         } else {
+            for (auto i = 0; i < rank_before_split; i++) {
+               split_flag_mark[i] = parity_exclude_name[0].find(name_before_split[i]) != parity_exclude_name[0].end();
+            }
+            for (auto i = 0; i < rank_at_transpose; i++) {
+               reversed_flag_src_mark[i] = parity_exclude_name[1].find(name_after_split[i]) != parity_exclude_name[1].end();
+            }
+            for (auto i = 0; i < rank_at_transpose; i++) {
+               reversed_flag_dst_mark[i] = parity_exclude_name[2].find(name_before_merge[i]) != parity_exclude_name[2].end();
+            }
+            for (auto i = 0; i < rank_after_merge; i++) {
+               merge_flag_mark[i] = parity_exclude_name[3].find(name_after_merge[i]) != parity_exclude_name[3].end();
+            }
+         }
+      }
+      // 5. main copy loop
+      for (const auto& [symmetries_before_transpose, source_symmetries_and_offsets] : data_before_transpose_to_source) {
+         const auto& [source_symmetries, source_offsets] = source_symmetries_and_offsets;
+
+         auto symmetries_after_transpose = vector<Symmetry>(rank_at_transpose);
+         auto dimensions_before_transpose = vector<Size>(rank_at_transpose);
+         auto dimensions_after_transpose = vector<Size>(rank_at_transpose);
+         Size total_size = 1;
+         for (auto i = 0; i < rank_at_transpose; i++) {
+            auto dimension = edge_before_transpose[i].map->at(symmetries_before_transpose[i]);
+            dimensions_before_transpose[i] = dimension;
+            dimensions_after_transpose[plan_source_to_destination[i]] = dimension;
+            symmetries_after_transpose[plan_source_to_destination[i]] = symmetries_before_transpose[i];
+            total_size *= dimension;
+         }
+
+         const auto& [destination_symmetries, destination_offsets] = data_after_transpose_to_destination.at(symmetries_after_transpose);
+
+         const auto& source_block = core->blocks.at(source_symmetries);
+         auto& destination_block = result.core->blocks.at(destination_symmetries);
+
+         Size total_source_offset = 0;
+         for (auto i = 0; i < rank_before_split; i++) {
+            total_source_offset *= edge_before_split[i].map.at(source_symmetries[i]);
+            total_source_offset += source_offsets[i];
+         }
+         Size total_destination_offset = 0;
+         for (auto i = 0; i < rank_after_merge; i++) {
+            total_destination_offset *= edge_after_merge[i].map.at(destination_symmetries[i]);
+            total_destination_offset += destination_offsets[i];
+         }
+
+         auto leading_of_source = vector<Size>(rank_before_split);
+         for (auto i = rank_before_split; i-- > 0;) {
+            if (i == rank_before_split - 1) {
+               leading_of_source[i] = 1;
+            } else {
+               leading_of_source[i] = leading_of_source[i + 1] * edge_before_split[i + 1].map.at(source_symmetries[i + 1]);
+            }
+         }
+         auto leading_before_transpose = vector<Size>(rank_at_transpose);
+         for (auto i = rank_at_transpose; i-- > 0;) {
+            if (i != rank_at_transpose - 1 && split_flag[i] == split_flag[i + 1]) {
+               leading_before_transpose[i] =
+                     leading_before_transpose[i + 1] * edge_before_transpose[i + 1].map->at(symmetries_before_transpose[i + 1]);
+            } else {
+               leading_before_transpose[i] = leading_of_source[split_flag[i]];
+            }
+         }
+
+         auto leading_of_destination = vector<Size>(rank_after_merge);
+         for (auto i = rank_after_merge; i-- > 0;) {
+            if (i == rank_after_merge - 1) {
+               leading_of_destination[i] = 1;
+            } else {
+               leading_of_destination[i] = leading_of_destination[i + 1] * edge_after_merge[i + 1].map.at(destination_symmetries[i + 1]);
+            }
+         }
+         auto leading_after_transpose = vector<Size>(rank_at_transpose);
+         for (auto i = rank_at_transpose; i-- > 0;) {
+            if (i != rank_at_transpose - 1 && merge_flag[i] == merge_flag[i + 1]) {
+               leading_after_transpose[i] = leading_after_transpose[i + 1] * edge_after_transpose[i + 1].map->at(symmetries_after_transpose[i + 1]);
+            } else {
+               leading_after_transpose[i] = leading_of_destination[merge_flag[i]];
+            }
+         }
+
+         // parity
+         auto parity = false;
+         if constexpr (is_fermi) {
+            parity = Symmetry::get_transpose_parity(symmetries_before_transpose, plan_source_to_destination);
+
+            parity ^= Symmetry::get_reverse_parity(symmetries_before_transpose, reversed_flag_src, reversed_flag_src_mark);
+            parity ^= Symmetry::get_split_merge_parity(symmetries_before_transpose, split_flag, split_flag_mark);
+            parity ^= Symmetry::get_reverse_parity(symmetries_after_transpose, reversed_flag_dst, reversed_flag_dst_mark);
+            parity ^= Symmetry::get_split_merge_parity(symmetries_after_transpose, merge_flag, merge_flag_mark);
          }
 
          do_transpose(
-               plan_src_to_dst,
-               plan_dst_to_src,
-               ptr_src,
-               ptr_dst,
-               dim_src,
-               dim_dst,
+               source_block.data() + total_source_offset,
+               destination_block.data() + total_destination_offset,
+               plan_source_to_destination,
+               plan_destination_to_source,
+               dimensions_before_transpose,
+               dimensions_after_transpose,
+               leading_before_transpose,
+               leading_after_transpose,
+               rank_at_transpose,
                total_size,
-               rank_3,
                parity);
       }
 
-      return res;
+      return result;
    }
 } // namespace TAT
 #endif

@@ -35,29 +35,23 @@ namespace TAT {
     */
    const std::string TAT_VERSION = "0.0.4";
 
-#ifndef NDEBUG
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示
     */
    struct Evil {
-      ~Evil() {
-         try {
-            std::clog << "\n\nPremature optimization is the root of all evil!\n"
-                         "                                       --- Donald Knuth\n\n\n";
-         } catch ([[maybe_unused]] const std::exception& e) {
-         }
-      }
+      ~Evil();
    };
-   const Evil evil;
+#ifndef NDEBUG
+   inline const Evil evil;
 #endif
 
    /**
     * \brief 打印警告, 有时也可能是错误, 但在非debug模式中不做事
-    * \param msg 待打印的话
+    * \param message 待打印的话
     */
-   inline void TAT_WARNING([[maybe_unused]] const std::string& msg) {
+   inline void TAT_WARNING([[maybe_unused]] const std::string& message) {
 #ifndef NDEBUG
-      std::cerr << msg << std::endl;
+      std::cerr << message << std::endl;
 #endif
    }
 
@@ -193,13 +187,13 @@ namespace TAT {
       /**
        * \brief 初始化函数, 如果没有参数, 且类型T可以被平凡的析构, 则不做任何初始化操作, 否则进行正常的就地初始化
        * \tparam Args 初始化的参数类型
-       * \param p 被初始化的值的地址
-       * \param args 初始化的参数
+       * \param pointer 被初始化的值的地址
+       * \param arguments 初始化的参数
        */
       template<class... Args>
-      void construct([[maybe_unused]] T* p, Args&&... args) {
-         if constexpr (!((sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
-            new (p) T(args...);
+      void construct([[maybe_unused]] T* pointer, Args&&... arguments) {
+         if constexpr (!((sizeof...(arguments) == 0) && (std::is_trivially_destructible_v<T>))) {
+            new (pointer) T(arguments...);
          }
       }
 
@@ -214,9 +208,6 @@ namespace TAT {
     */
    template<class T>
    using vector = std::vector<T, allocator_without_initialize<T>>;
-
-   template<class T>
-   std::ostream& operator<<(std::ostream& out, const vector<T>& vec);
 } // namespace TAT
 
 #endif
