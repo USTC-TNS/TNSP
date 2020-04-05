@@ -233,7 +233,11 @@ namespace TAT {
          result_s[symmetries[put_v_right]] = std::move(s);
       }
 
-      if (cut != -1) {
+      Size total_dimension = 0;
+      for (const auto& [symmetry, vector_s] : result_s) {
+         total_dimension += vector_s.size();
+      }
+      if (cut != -1 && cut < total_dimension) {
          auto remain_dimension = std::map<Symmetry, Rank>();
          for (const auto& [symmetry, vector_s] : result_s) {
             remain_dimension[symmetry] = 0;

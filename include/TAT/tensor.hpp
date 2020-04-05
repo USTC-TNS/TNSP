@@ -96,9 +96,20 @@ namespace TAT {
       }
 
       Tensor() = default;
-      Tensor(const Tensor& other) = default;
+      Tensor(const Tensor& other) {
+         names = other.names;
+         name_to_index = other.name_to_index;
+         core = other.core;
+         TAT_WARNING("Why Copy");
+      };
       Tensor(Tensor&& other) = default;
-      Tensor& operator=(const Tensor& other) = default;
+      Tensor& operator=(const Tensor& other) {
+         names = other.names;
+         name_to_index = other.name_to_index;
+         core = other.core;
+         TAT_WARNING("Why Copy");
+         return *this;
+      };
       Tensor& operator=(Tensor&& other) = default;
       ~Tensor() = default;
 
@@ -440,6 +451,11 @@ namespace TAT {
             const vector<Name>& contract_names_1,
             const vector<Name>& contract_names_2);
 
+      Tensor<ScalarType, Symmetry>
+      contract(const Tensor<ScalarType, Symmetry>& tensor_2, const vector<Name>& contract_names_1, const vector<Name>& contract_names_2) const {
+         return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, contract_names_1, contract_names_2);
+      }
+
       /**
        * \brief 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
@@ -490,6 +506,7 @@ namespace TAT {
          return *this;
       }
 
+      // TODO: 各种api兼容其他容器
       /**
        * \brief 对张量进行svd分解
        * \param free_name_set_u svd分解中u的边的名称集合
@@ -498,7 +515,7 @@ namespace TAT {
        * \param cut 需要截断的维度数目
        * \return svd的结果
        * \see svd_result
-       * \note S朝向U
+       * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
       // TODO cut

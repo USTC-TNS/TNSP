@@ -266,19 +266,19 @@ namespace TAT {
       if (free_rank_1 == 0) {
          put_common_1_right = true;
          fit_tensor_2_common_edge();
-         put_common_2_right = common_name_2.back() == tensor_2.names.back();
+         put_common_2_right = common_name_2.empty() || common_name_2.back() == tensor_2.names.back();
       } else if (free_rank_2 == 0) {
          put_common_2_right = true;
          fit_tensor_1_common_edge();
-         put_common_1_right = common_name_1.back() == tensor_1.names.back();
+         put_common_1_right = common_name_1.empty() || common_name_1.back() == tensor_1.names.back();
       } else if (free_name_1.back() != tensor_1.names.back()) {
          put_common_1_right = true;
          fit_tensor_1_common_edge();
-         put_common_2_right = common_name_2.back() == tensor_2.names.back();
+         put_common_2_right = common_name_2.empty() || common_name_2.back() == tensor_2.names.back();
       } else if (free_name_2.back() != tensor_2.names.back()) {
          put_common_2_right = true;
          fit_tensor_2_common_edge();
-         put_common_1_right = common_name_1.back() == tensor_1.names.back();
+         put_common_1_right = common_name_1.empty() || common_name_1.back() == tensor_1.names.back();
       } else {
          put_common_1_right = false;
          put_common_2_right = false;

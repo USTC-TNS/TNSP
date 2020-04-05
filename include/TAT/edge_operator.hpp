@@ -292,7 +292,7 @@ namespace TAT {
          auto current_symmetries = vector<Symmetry>(merge_rank);
 
          loop_edge(
-               &edge_before_merge[start_of_merge],
+               edge_before_merge.data() + start_of_merge,
                merge_rank,
                [&merged_edge, &this_offset]() {
                   merged_edge.map[Symmetry()] = 1;
