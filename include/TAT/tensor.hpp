@@ -379,25 +379,25 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry> merge_edge(const std::map<Name, vector<Name>>& merge, const bool apply_parity = false) const {
          vector<Name> target_name;
-         for (auto it = names.rbegin(); it != names.rend(); ++it) {
+         for (auto iterator = names.rbegin(); iterator != names.rend(); ++iterator) {
             auto found_in_merge = false;
-            for (const auto& [key, value] : merge) {
-               auto vit = std::find(value.begin(), value.end(), *it);
-               if (vit != value.end()) {
-                  if (vit == value.end() - 1) {
-                     target_name.push_back(key);
+            for (const auto& [name_after_merge, names_before_merge] : merge) {
+               if (auto position_in_group = std::find(names_before_merge.begin(), names_before_merge.end(), *iterator);
+                   position_in_group != names_before_merge.end()) {
+                  if (position_in_group == names_before_merge.end() - 1) {
+                     target_name.push_back(name_after_merge);
                   }
                   found_in_merge = true;
                   break;
                }
             }
             if (!found_in_merge) {
-               target_name.push_back(*it);
+               target_name.push_back(*iterator);
             }
          }
-         for (const auto& [key, value] : merge) {
-            if (value.empty()) {
-               target_name.push_back(key);
+         for (const auto& [name_after_merge, names_before_merge] : merge) {
+            if (names_before_merge.empty()) {
+               target_name.push_back(name_after_merge);
             }
          }
          reverse(target_name.begin(), target_name.end());
@@ -414,10 +414,9 @@ namespace TAT {
       split_edge(const std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split, const bool apply_parity = false) const {
          vector<Name> target_name;
          for (const auto& n : names) {
-            auto it = split.find(n);
-            if (it != split.end()) {
-               for (const auto& sn : it->second) {
-                  target_name.push_back(std::get<0>(sn));
+            if (auto found = split.find(n); found != split.end()) {
+               for (const auto& edge_after_split : found->second) {
+                  target_name.push_back(std::get<0>(edge_after_split));
                }
             } else {
                target_name.push_back(n);
@@ -429,17 +428,17 @@ namespace TAT {
       // TODO: 不转置成矩阵直接乘积的可能, 当然， 这是几乎不可能的
       /**
        * \brief 两个张量的缩并运算
-       * \param tensor1 参与缩并的第一个张量
-       * \param tensor2 参与缩并的第二个张量
-       * \param names1 第一个张量将要缩并掉的边的名称
-       * \param names2 第二个张量将要缩并掉的边的名称
+       * \param tensor_1 参与缩并的第一个张量
+       * \param tensor_2 参与缩并的第二个张量
+       * \param contract_names_1 第一个张量将要缩并掉的边的名称
+       * \param contract_names_2 第二个张量将要缩并掉的边的名称
        * \return 缩并后的张量
        */
       static Tensor<ScalarType, Symmetry> contract(
-            const Tensor<ScalarType, Symmetry>& tensor1,
-            const Tensor<ScalarType, Symmetry>& tensor2,
-            const vector<Name>& names1,
-            const vector<Name>& names2);
+            const Tensor<ScalarType, Symmetry>& tensor_1,
+            const Tensor<ScalarType, Symmetry>& tensor_2,
+            const vector<Name>& contract_names_1,
+            const vector<Name>& contract_names_2);
 
       /**
        * \brief 张量svd的结果类型
@@ -451,37 +450,37 @@ namespace TAT {
          Tensor<ScalarType, Symmetry> V;
       };
 
-      // TODO: multiple
       template<class OtherScalarType>
       Tensor<ScalarType, Symmetry>&
       multiple(const std::map<Symmetry, vector<OtherScalarType>>& S, const Name& name, bool different_direction = false) {
          if (core.use_count() != 1) {
             TAT_WARNING("Set Tensor Shared");
+            TAT_WARNING("You Can Use tensor.copy().multiple(...)");
          }
          auto index = name_to_index.at(name);
-         for (auto& [sym, block] : core->blocks) {
-            auto sym_in_s = sym[index];
+         for (auto& [symmetries, block] : core->blocks) {
+            auto symmetry_of_s = symmetries[index];
             if (different_direction) {
-               sym_in_s = -sym_in_s;
+               symmetry_of_s = -symmetry_of_s;
             }
-            const auto& vec = S.at(sym_in_s);
+            const auto& vector_in_S = S.at(symmetry_of_s);
             auto i = 0;
             Size m = 1;
             for (; i < index; i++) {
-               m *= core->edges[i].map.at(sym[i]);
+               m *= core->edges[i].map.at(symmetries[i]);
             }
-            Size k = core->edges[i].map.at(sym[i]);
+            Size k = core->edges[i].map.at(symmetries[i]);
             Size n = 1;
             for (i++; i < names.size(); i++) {
-               n *= core->edges[i].map.at(sym[i]);
+               n *= core->edges[i].map.at(symmetries[i]);
             }
-            if (vec.size() != k) {
+            if (vector_in_S.size() != k) {
                TAT_WARNING("Vector Size Invalid in Multiple");
             }
             auto* data = block.data();
             for (Size a = 0; a < m; a++) {
                for (Size b = 0; b < k; b++) {
-                  OtherScalarType v = vec[b];
+                  OtherScalarType v = vector_in_S[b];
                   for (Size c = 0; c < n; c++) {
                      *(data++) *= v;
                   }
@@ -493,14 +492,16 @@ namespace TAT {
 
       /**
        * \brief 对张量进行svd分解
-       * \param u_free_names_set svd分解中u的边的名称集合
-       * \param u_common_name 分解后u新产生的边的名称
-       * \param v_common_name 分解后v新产生的边的名称
+       * \param free_name_set_u svd分解中u的边的名称集合
+       * \param common_name_u 分解后u新产生的边的名称
+       * \param common_name_v 分解后v新产生的边的名称
        * \param cut 需要截断的维度数目
        * \return svd的结果
        * \see svd_result
+       * \note S朝向U
        */
-      svd_result svd(const std::set<Name>& u_free_names_set, Name u_common_name, Name v_common_name, Size cut = -1) const;
+      svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
+      // TODO cut
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;

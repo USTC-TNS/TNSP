@@ -160,47 +160,51 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    typename Tensor<ScalarType, Symmetry>::svd_result
-   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& u_free_names_set, Name u_common_name, Name v_common_name, Size cut) const {
+   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) const {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       // merge
-      auto u_free_names = vector<Name>();
-      auto v_free_names = vector<Name>();
+      auto free_name_u = vector<Name>();
+      auto free_name_v = vector<Name>();
       auto reversed_set_u = std::set<Name>();
       auto reversed_set_v = std::set<Name>();
-      auto reversed_set = std::set<Name>();
-      auto res_u_names = vector<Name>();
-      auto res_v_names = vector<Name>();
-      auto u_free_names_and_edges = vector<std::tuple<Name, BoseEdge<Symmetry>>>();
-      auto v_free_names_and_edges = vector<std::tuple<Name, BoseEdge<Symmetry>>>();
-      res_v_names.push_back(v_common_name);
+      auto reversed_set_origin = std::set<Name>();
+      auto result_name_u = vector<Name>();
+      auto result_name_v = vector<Name>();
+      auto free_names_and_edges_u = vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      auto free_names_and_edges_v = vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      result_name_v.push_back(common_name_v);
       for (auto i = 0; i < names.size(); i++) {
          const auto& n = names[i];
-         if (u_free_names_set.find(n) != u_free_names_set.end()) {
-            u_free_names.push_back(n);
-            res_u_names.push_back(n);
-            u_free_names_and_edges.push_back({n, {core->edges[i].map}});
+         if (free_name_set_u.find(n) != free_name_set_u.end()) {
+            free_name_u.push_back(n);
+            result_name_u.push_back(n);
+            free_names_and_edges_u.push_back({n, {core->edges[i].map}});
             if constexpr (is_fermi) {
                if (core->edges[i].arrow) {
                   reversed_set_u.insert(n);
-                  reversed_set.insert(n);
+                  reversed_set_origin.insert(n);
                }
             }
          } else {
-            v_free_names.push_back(n);
-            res_v_names.push_back(n);
-            v_free_names_and_edges.push_back({n, {core->edges[i].map}});
+            free_name_v.push_back(n);
+            result_name_v.push_back(n);
+            free_names_and_edges_v.push_back({n, {core->edges[i].map}});
             if constexpr (is_fermi) {
                if (core->edges[i].arrow) {
                   reversed_set_v.insert(n);
-                  reversed_set.insert(n);
+                  reversed_set_origin.insert(n);
                }
             }
          }
       }
-      res_u_names.push_back(u_common_name);
-      const bool v_right = v_free_names.back() == names.back();
+      result_name_u.push_back(common_name_u);
+      const bool put_v_right = free_name_v.back() == names.back();
       auto tensor_merged = edge_operator(
-            {}, {}, reversed_set, {{SVD1, u_free_names}, {SVD2, v_free_names}}, v_right ? vector<Name>{SVD1, SVD2} : vector<Name>{SVD2, SVD1});
+            {},
+            {},
+            reversed_set_origin,
+            {{SVD1, free_name_u}, {SVD2, free_name_v}},
+            put_v_right ? vector<Name>{SVD1, SVD2} : vector<Name>{SVD2, SVD1});
       // gesvd
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
@@ -211,33 +215,29 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry>{v_right ? vector<Name>{SVD1, SVD2} : vector<Name>{SVD2, SVD1},
+      auto tensor_1 = Tensor<ScalarType, Symmetry>{put_v_right ? vector<Name>{SVD1, SVD2} : vector<Name>{SVD2, SVD1},
                                                    {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry>{v_right ? vector<Name>{SVD1, SVD2} : vector<Name>{SVD2, SVD1},
+      auto tensor_2 = Tensor<ScalarType, Symmetry>{put_v_right ? vector<Name>{SVD1, SVD2} : vector<Name>{SVD2, SVD1},
                                                    {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto res_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
-      for (const auto& [sym, vec] : tensor_merged.core->blocks) {
-         auto* u_data = tensor_1.core->blocks.at(sym).data();
-         auto* v_data = tensor_2.core->blocks.at(sym).data();
-         const auto* data = vec.data();
-         const int m = tensor_1.core->edges[0].map.at(sym[0]);
-         const int n = tensor_2.core->edges[1].map.at(sym[1]);
+      auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
+      for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
+         auto* data_u = tensor_1.core->blocks.at(symmetries).data();
+         auto* data_v = tensor_2.core->blocks.at(symmetries).data();
+         const auto* data = block.data();
+         const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
+         const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
          const int k = m > n ? n : m;
          auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
-         calculate_svd<ScalarType>(m, n, k, data, u_data, s_data, v_data);
-         res_s[sym[v_right]] = std::move(s);
+         calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
+         result_s[symmetries[put_v_right]] = std::move(s);
       }
-      const auto* u_tensor = &tensor_1;
-      const auto* v_tensor = &tensor_2;
-      if (!v_right) {
-         u_tensor = &tensor_2;
-         v_tensor = &tensor_1;
-      }
-      reversed_set_u.insert(u_common_name);
-      auto u = u_tensor->edge_operator({{SVD2, u_common_name}}, {{SVD1, u_free_names_and_edges}}, reversed_set_u, {}, res_u_names);
-      auto v = v_tensor->edge_operator({{SVD1, v_common_name}}, {{SVD2, v_free_names_and_edges}}, reversed_set_v, {}, res_v_names);
-      return {std::move(u), std::move(res_s), std::move(v)};
+      const auto& tensor_u = put_v_right ? tensor_1 : tensor_2;
+      const auto& tensor_v = put_v_right ? tensor_2 : tensor_1;
+      reversed_set_u.insert(common_name_u);
+      auto u = tensor_u.edge_operator({{SVD2, common_name_u}}, {{SVD1, free_names_and_edges_u}}, reversed_set_u, {}, result_name_u);
+      auto v = tensor_v.edge_operator({{SVD1, common_name_v}}, {{SVD2, free_names_and_edges_v}}, reversed_set_v, {}, result_name_v);
+      return {std::move(u), std::move(result_s), std::move(v)};
    }
 } // namespace TAT
 #endif
