@@ -123,7 +123,9 @@ namespace TAT {
             loop_edge(
                   edge_list_after_split,
                   split_rank,
-                  []() {},
+                  [&this_offset]() {
+                     this_offset[vector<Symmetry>{}] = {Symmetry(), 0};
+                  },
                   []() {},
                   [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
                      for (auto i = minimum_changed; i < split_rank; i++) {
@@ -292,7 +294,10 @@ namespace TAT {
          loop_edge(
                &edge_before_merge[start_of_merge],
                merge_rank,
-               [&merged_edge]() { merged_edge.map[Symmetry()] = 1; },
+               [&merged_edge, &this_offset]() {
+                  merged_edge.map[Symmetry()] = 1;
+                  this_offset[vector<Symmetry>{}] = {Symmetry(), 0};
+               },
                []() {},
                [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
                   for (auto i = minimum_changed; i < merge_rank; i++) {

@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
     - name: dependence
       run: sudo apt-get install -y mpi-default-dev liblapack-dev
     - name: directory
@@ -22,4 +22,4 @@ jobs:
       run: cmake --build .
     - name: test
       working-directory: ${{runner.workspace}}/build
-      run: ctest --verbose
+      run: ./simple_test
