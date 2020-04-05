@@ -73,8 +73,6 @@ namespace TAT {
             current_destination += scalar_leading_destination[current_position];
          }
       };
-
-      // TODO impl
       // TODO: line size特化
    }
 

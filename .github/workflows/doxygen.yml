@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v2
     - name: install doxygen
       run: sudo apt-get install doxygen -y
     - name: create docs

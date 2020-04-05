@@ -331,17 +331,18 @@ void test_contract() {
 }
 
 void test_svd() {
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
-   std::cout << a << "\n";
    do {
+      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      std::cout << a << "\n";
       auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.begin()->second << "\n";
       std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
-   auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
    do {
+      auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      std::cout << b << "\n";
       auto [u, s, v] = b.svd({"A", "D"}, "E", "F");
       std::cout << u << "\n";
       std::cout << v << "\n";
@@ -349,37 +350,54 @@ void test_svd() {
       std::cout << decltype(v)::contract(v, v, {"B", "C"}, {"B", "C"}).transform([](auto i) { return std::abs(i) > 1e-5 ? i : 0; }) << "\n";
       std::cout << decltype(v)::contract(v.multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
-   auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"A", "B", "C", "D"},
-                                                 {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
-                                                 true}
-                  .test();
    do {
-      std::cout << c << "\n";
+      auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"A", "B", "C", "D"},
+                                                    {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
+                                                    true}
+                     .test();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
       for (const auto& [sym, vec] : s) {
          std::cout << sym << ":" << vec << "\n";
       }
       std::cout << v << "\n";
-      auto vc = v.copy();
-      std::cout << decltype(v)::contract(u, v, {"E"}, {"F"}).transpose({"A", "B", "C", "D"}) << "\n";
-      std::cout << decltype(v)::contract(v, u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}) << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}) << "\n";
-      return;
-      auto cm = c.merge_edge({{"1", {"A", "C"}}, {"2", {"B", "D"}}});
-      std::cout << cm << "\n";
-      auto [um, sm, vm] = cm.svd({"1"}, "E", "F");
-      std::cout << um << "\n";
-      for (const auto& [sym, vec] : sm) {
+      std::cout << c << "\n";
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+   } while (false);
+   do {
+      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      std::cout << a << "\n";
+      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", 2);
+      std::cout << u << "\n";
+      std::cout << v << "\n";
+      std::cout << s.begin()->second << "\n";
+      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+   } while (false);
+   do {
+      auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"A", "B", "C", "D"},
+                                                    {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
+                                                    true}
+                     .test();
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", 7);
+      std::cout << u << "\n";
+      for (const auto& [sym, vec] : s) {
          std::cout << sym << ":" << vec << "\n";
       }
-      std::cout << vm << "\n";
-      auto vmc = vm.copy();
-      std::cout << decltype(vm)::contract(vm.multiple(sm, "F", true), um, {"F"}, {"E"}).transpose({"1", "2"}) << "\n";
-      std::cout << "\n\n";
-
-      std::cout << u.merge_edge({{"1", {"A", "C"}}}) - um << "\n";
-      std::cout << vc.merge_edge({{"2", {"B", "D"}}}) - vmc << "\n"; // TODO: error here
+      std::cout << v << "\n";
+      std::cout << c << "\n";
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
    } while (false);
 }
 
@@ -401,7 +419,7 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_split_and_merge);
    RUN_TEST(test_edge_operator);
    RUN_TEST(test_contract);
-   // RUN_TEST(test_svd);
+   RUN_TEST(test_svd);
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);
