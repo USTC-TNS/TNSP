@@ -25,8 +25,8 @@
 
 extern "C" {
 void sgemm_(
-      const char* transA,
-      const char* transB,
+      const char* transpose_A,
+      const char* transpose_B,
       const int* m,
       const int* n,
       const int* k,
@@ -39,8 +39,8 @@ void sgemm_(
       float* c,
       const int* ldc);
 void dgemm_(
-      const char* transA,
-      const char* transB,
+      const char* transpose_A,
+      const char* transpose_B,
       const int* m,
       const int* n,
       const int* k,
@@ -53,8 +53,8 @@ void dgemm_(
       double* c,
       const int* ldc);
 void cgemm_(
-      const char* transA,
-      const char* transB,
+      const char* transpose_A,
+      const char* transpose_B,
       const int* m,
       const int* n,
       const int* k,
@@ -67,8 +67,8 @@ void cgemm_(
       std::complex<float>* c,
       const int* ldc);
 void zgemm_(
-      const char* transA,
-      const char* transB,
+      const char* transpose_A,
+      const char* transpose_B,
       const int* m,
       const int* n,
       const int* k,
@@ -85,8 +85,8 @@ void zgemm_(
 namespace TAT {
    template<class ScalarType>
    void calculate_product(
-         const char* transA,
-         const char* transB,
+         const char* transpose_A,
+         const char* transpose_B,
          const int* m,
          const int* n,
          const int* k,
@@ -101,8 +101,8 @@ namespace TAT {
 
    template<>
    inline void calculate_product<float>(
-         const char* transA,
-         const char* transB,
+         const char* transpose_A,
+         const char* transpose_B,
          const int* m,
          const int* n,
          const int* k,
@@ -114,12 +114,12 @@ namespace TAT {
          const float* beta,
          float* c,
          const int* ldc) {
-      sgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      sgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
    inline void calculate_product<double>(
-         const char* transA,
-         const char* transB,
+         const char* transpose_A,
+         const char* transpose_B,
          const int* m,
          const int* n,
          const int* k,
@@ -131,12 +131,12 @@ namespace TAT {
          const double* beta,
          double* c,
          const int* ldc) {
-      dgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      dgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
    inline void calculate_product<std::complex<float>>(
-         const char* transA,
-         const char* transB,
+         const char* transpose_A,
+         const char* transpose_B,
          const int* m,
          const int* n,
          const int* k,
@@ -148,12 +148,12 @@ namespace TAT {
          const std::complex<float>* beta,
          std::complex<float>* c,
          const int* ldc) {
-      cgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      cgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
    inline void calculate_product<std::complex<double>>(
-         const char* transA,
-         const char* transB,
+         const char* transpose_A,
+         const char* transpose_B,
          const int* m,
          const int* n,
          const int* k,
@@ -165,181 +165,180 @@ namespace TAT {
          const std::complex<double>* beta,
          std::complex<double>* c,
          const int* ldc) {
-      zgemm_(transA, transB, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      zgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
 
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::contract(
-         const Tensor<ScalarType, Symmetry>& tensor1,
-         const Tensor<ScalarType, Symmetry>& tensor2,
-         const vector<Name>& names1,
-         const vector<Name>& names2) {
+         const Tensor<ScalarType, Symmetry>& tensor_1,
+         const Tensor<ScalarType, Symmetry>& tensor_2,
+         const vector<Name>& contract_names_1,
+         const vector<Name>& contract_names_2) {
       // 为未来split做准备
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
-      constexpr bool is_no_sym = std::is_same_v<Symmetry, NoSymmetry>;
-      auto rank1 = tensor1.names.size();
-      auto rank2 = tensor2.names.size();
+      constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
+      const Rank rank_1 = tensor_1.names.size();
+      const Rank rank_2 = tensor_2.names.size();
       // 需要反转成 - + - -
       // 事后恢复两侧的边
-      auto reversed_set1 = std::set<Name>();    // 第一个张量merge时反转表
-      auto reversed_set2 = std::set<Name>();    // 第二个张量merge时反转表
-      auto res_edge = vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
-      auto split_map = std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
-      auto reversed_set = std::set<Name>();                                            // 最后split时的反转标
-      auto res_name = vector<Name>();                                                  // 最后split后的name
-      split_map[Contract1];
-      split_map[Contract2];
-      auto free_name1 = vector<Name>(); // 第一个张量的自由边, merge时使用
-      for (auto i = 0; i < rank1; i++) {
-         const auto& n = tensor1.names[i];
-         if (std::find(names1.begin(), names1.end(), n) == names1.end()) {
-            free_name1.push_back(n);
-            if constexpr (is_no_sym) {
-               res_edge.push_back(tensor1.core->edges[i]);
+      auto reversed_set_1 = std::set<Name>();      // 第一个张量merge时反转表
+      auto reversed_set_2 = std::set<Name>();      // 第二个张量merge时反转表
+      auto edge_result = vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      auto split_map_result = std::map<Name, vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
+      auto reversed_set_result = std::set<Name>();                                            // 最后split时的反转标
+      auto name_result = vector<Name>();                                                      // 最后split后的name
+      split_map_result[Contract1];
+      split_map_result[Contract2];
+      auto free_name_1 = vector<Name>(); // 第一个张量的自由边, merge时使用
+      for (Rank i = 0; i < rank_1; i++) {
+         const auto& n = tensor_1.names[i];
+         if (std::find(contract_names_1.begin(), contract_names_1.end(), n) == contract_names_1.end()) {
+            free_name_1.push_back(n);
+            if constexpr (is_no_symmetry) {
+               edge_result.push_back(tensor_1.core->edges[i]);
             } else {
-               split_map.at(Contract1).push_back({n, {tensor1.core->edges[i].map}});
+               split_map_result.at(Contract1).push_back({n, {tensor_1.core->edges[i].map}});
             }
-            res_name.push_back(n);
+            name_result.push_back(n);
             if constexpr (is_fermi) {
-               if (tensor1.core->edges[i].arrow) {
-                  reversed_set1.insert(n);
-                  reversed_set.insert(n);
+               if (tensor_1.core->edges[i].arrow) {
+                  reversed_set_1.insert(n);
+                  reversed_set_result.insert(n);
                }
             }
          } else {
             if constexpr (is_fermi) {
-               if (!tensor1.core->edges[i].arrow) {
-                  reversed_set1.insert(n);
+               if (!tensor_1.core->edges[i].arrow) {
+                  reversed_set_1.insert(n);
                }
             }
          }
       }
-      const auto free_rank1 = free_name1.size();
-      auto free_name2 = vector<Name>(); // 第二个张量的自由边, merge时使用
-      for (auto i = 0; i < rank2; i++) {
-         const auto& n = tensor2.names[i];
-         if (std::find(names2.begin(), names2.end(), n) == names2.end()) {
-            free_name2.push_back(n);
-            if constexpr (is_no_sym) {
-               res_edge.push_back(tensor2.core->edges[i]);
+      const auto free_rank_1 = free_name_1.size();
+      auto free_name_2 = vector<Name>(); // 第二个张量的自由边, merge时使用
+      for (Rank i = 0; i < rank_2; i++) {
+         const auto& n = tensor_2.names[i];
+         if (std::find(contract_names_2.begin(), contract_names_2.end(), n) == contract_names_2.end()) {
+            free_name_2.push_back(n);
+            if constexpr (is_no_symmetry) {
+               edge_result.push_back(tensor_2.core->edges[i]);
             } else {
-               split_map.at(Contract2).push_back({n, {tensor2.core->edges[i].map}});
+               split_map_result.at(Contract2).push_back({n, {tensor_2.core->edges[i].map}});
             }
-            res_name.push_back(n);
+            name_result.push_back(n);
             if constexpr (is_fermi) {
-               if (tensor2.core->edges[i].arrow) {
-                  reversed_set2.insert(n);
-                  reversed_set.insert(n);
+               if (tensor_2.core->edges[i].arrow) {
+                  reversed_set_2.insert(n);
+                  reversed_set_result.insert(n);
                }
             }
          } else {
             if constexpr (is_fermi) {
-               if (tensor2.core->edges[i].arrow) {
-                  reversed_set2.insert(n);
+               if (tensor_2.core->edges[i].arrow) {
+                  reversed_set_2.insert(n);
                }
             }
          }
       }
-      const auto free_rank2 = free_name2.size();
+      const auto free_rank_2 = free_name_2.size();
       // 确定转置方案
-      auto common_name1 = vector<Name>(); // 第一个张量的公共边, merge时使用
-      auto common_name2 = vector<Name>(); // 第二个张量的公共边, merge时使用
-      bool put_right1;
-      bool put_right2;
-      auto fit_tensor1 = [&]() {
-         for (const auto& n : tensor1.names) {
-            auto pos = std::find(names1.begin(), names1.end(), n);
-            if (pos != names1.end()) {
-               common_name1.push_back(*pos);
-               common_name2.push_back(names2[pos - names1.begin()]);
+      auto common_name_1 = vector<Name>(); // 第一个张量的公共边, merge时使用
+      auto common_name_2 = vector<Name>(); // 第二个张量的公共边, merge时使用
+      bool put_common_1_right;
+      bool put_common_2_right;
+      auto fit_tensor_1_common_edge = [&]() {
+         for (const auto& n : tensor_1.names) {
+            if (auto position = std::find(contract_names_1.begin(), contract_names_1.end(), n); position != contract_names_1.end()) {
+               common_name_1.push_back(*position);
+               common_name_2.push_back(contract_names_2[position - contract_names_1.begin()]);
             }
          }
       };
-      auto fit_tensor2 = [&]() {
-         for (const auto& n : tensor2.names) {
-            auto pos = std::find(names2.begin(), names2.end(), n);
-            if (pos != names2.end()) {
-               common_name2.push_back(*pos);
-               common_name1.push_back(names1[pos - names2.begin()]);
+      auto fit_tensor_2_common_edge = [&]() {
+         for (const auto& n : tensor_2.names) {
+            if (auto position = std::find(contract_names_2.begin(), contract_names_2.end(), n); position != contract_names_2.end()) {
+               common_name_2.push_back(*position);
+               common_name_1.push_back(contract_names_1[position - contract_names_2.begin()]);
             }
          }
       };
       // 确定方案
-      if (free_rank1 == 0) {
-         put_right1 = true;
-         fit_tensor2();
-         put_right2 = common_name2.back() == tensor2.names.back();
-      } else if (free_rank2 == 0) {
-         put_right2 = true;
-         fit_tensor1();
-         put_right1 = common_name1.back() == tensor1.names.back();
-      } else if (free_name1.back() != tensor1.names.back()) {
-         put_right1 = true;
-         fit_tensor1();
-         put_right2 = common_name2.back() == tensor2.names.back();
-      } else if (free_name2.back() != tensor2.names.back()) {
-         put_right2 = true;
-         fit_tensor2();
-         put_right1 = common_name1.back() == tensor1.names.back();
+      if (free_rank_1 == 0) {
+         put_common_1_right = true;
+         fit_tensor_2_common_edge();
+         put_common_2_right = common_name_2.back() == tensor_2.names.back();
+      } else if (free_rank_2 == 0) {
+         put_common_2_right = true;
+         fit_tensor_1_common_edge();
+         put_common_1_right = common_name_1.back() == tensor_1.names.back();
+      } else if (free_name_1.back() != tensor_1.names.back()) {
+         put_common_1_right = true;
+         fit_tensor_1_common_edge();
+         put_common_2_right = common_name_2.back() == tensor_2.names.back();
+      } else if (free_name_2.back() != tensor_2.names.back()) {
+         put_common_2_right = true;
+         fit_tensor_2_common_edge();
+         put_common_1_right = common_name_1.back() == tensor_1.names.back();
       } else {
-         put_right1 = false;
-         put_right2 = false;
-         fit_tensor2();
+         put_common_1_right = false;
+         put_common_2_right = false;
+         fit_tensor_2_common_edge();
          // 所以尽量大张量放在后侧
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
-      auto tensor1_merged = tensor1.edge_operator(
+      auto tensor_1_merged = tensor_1.edge_operator(
             {},
             {},
-            reversed_set1,
-            {{Contract1, free_name1}, {Contract2, common_name1}},
-            put_right1 ? vector<Name>{Contract1, Contract2} : vector<Name>{Contract2, Contract1},
+            reversed_set_1,
+            {{Contract1, free_name_1}, {Contract2, common_name_1}},
+            put_common_1_right ? vector<Name>{Contract1, Contract2} : vector<Name>{Contract2, Contract1},
             false,
-            {{{}, std::set<Name>(common_name1.begin(), common_name1.end()), {}, {Contract2}}});
-      auto tensor2_merged = tensor2.edge_operator(
+            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {Contract2}}});
+      auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
-            reversed_set2,
-            {{Contract2, free_name2}, {Contract1, common_name2}},
-            put_right2 ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2});
+            reversed_set_2,
+            {{Contract2, free_name_2}, {Contract1, common_name_2}},
+            put_common_2_right ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2});
       // calculate_product
-      auto product_res = Tensor<ScalarType, Symmetry>(
-            {Contract1, Contract2}, {std::move(tensor1_merged.core->edges[!put_right1]), std::move(tensor2_merged.core->edges[!put_right2])});
-      auto common_edge = std::move(tensor1_merged.core->edges[put_right1]);
-      for (auto& [sym, data] : product_res.core->blocks) {
+      auto product_result = Tensor<ScalarType, Symmetry>(
+            {Contract1, Contract2},
+            {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
+      auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
+      for (auto& [symmetries, data] : product_result.core->blocks) {
          // m k n
-         auto sym1 = put_right1 ? sym : vector<Symmetry>{sym[1], sym[0]};
-         auto sym2 = put_right2 ? vector<Symmetry>{sym[1], sym[0]} : sym;
-         const auto& data1 = tensor1_merged.core->blocks.at(sym1);
-         const auto& data2 = tensor2_merged.core->blocks.at(sym2);
-         const int m = product_res.core->edges[0].map.at(sym[0]);
-         const int n = product_res.core->edges[1].map.at(sym[1]);
-         const int k = common_edge.map.at(sym[1]);
+         auto symmetries_1 = put_common_1_right ? symmetries : vector<Symmetry>{symmetries[1], symmetries[0]};
+         auto symmetries_2 = put_common_2_right ? vector<Symmetry>{symmetries[1], symmetries[0]} : symmetries;
+         const auto& data_1 = tensor_1_merged.core->blocks.at(symmetries_1);
+         const auto& data_2 = tensor_2_merged.core->blocks.at(symmetries_2);
+         const int m = product_result.core->edges[0].map.at(symmetries[0]);
+         const int n = product_result.core->edges[1].map.at(symmetries[1]);
+         const int k = common_edge.map.at(symmetries[1]);
          const ScalarType alpha = 1;
          const ScalarType beta = 0;
          calculate_product<ScalarType>(
-               put_right2 ? "C" : "N",
-               put_right1 ? "N" : "C",
+               put_common_2_right ? "C" : "N",
+               put_common_1_right ? "N" : "C",
                &n,
                &m,
                &k,
                &alpha,
-               data2.data(),
-               put_right2 ? &k : &n,
-               data1.data(),
-               put_right1 ? &k : &m,
+               data_2.data(),
+               put_common_2_right ? &k : &n,
+               data_1.data(),
+               put_common_1_right ? &k : &m,
                &beta,
                data.data(),
                &n);
       }
-      if constexpr (is_no_sym) {
-         auto res = Tensor<ScalarType, Symmetry>{std::move(res_name), std::move(res_edge)};
-         res.core->blocks.begin()->second = std::move(product_res.core->blocks.begin()->second);
-         return res;
+      if constexpr (is_no_symmetry) {
+         auto result = Tensor<ScalarType, Symmetry>{std::move(name_result), std::move(edge_result)};
+         result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
+         return result;
       } else {
-         auto res = product_res.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
-         return res;
+         auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
+         return result;
       }
    }
 } // namespace TAT

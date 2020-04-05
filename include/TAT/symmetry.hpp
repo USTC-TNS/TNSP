@@ -78,8 +78,8 @@ namespace TAT {
                   sum_of_parity_square += this_parity * this_parity;
                }
                result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
-               split_merge_begin_position = split_merge_end_position;
             }
+            split_merge_begin_position = split_merge_end_position;
          }
          return result;
       }
