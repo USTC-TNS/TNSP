@@ -369,6 +369,36 @@ void test_svd() {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
+   do {
+      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      std::cout << a << "\n";
+      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", 2);
+      std::cout << u << "\n";
+      std::cout << v << "\n";
+      std::cout << s.begin()->second << "\n";
+      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+   } while (false);
+   do {
+      auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"A", "B", "C", "D"},
+                                                    {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
+                                                    true}
+                     .test();
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", 7);
+      std::cout << u << "\n";
+      for (const auto& [sym, vec] : s) {
+         std::cout << sym << ":" << vec << "\n";
+      }
+      std::cout << v << "\n";
+      std::cout << c << "\n";
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+         return std::abs(i) < 0.01 ? 0 : i;
+      }) << "\n";
+   } while (false);
 }
 
 int main(const int argc, char** argv) {
