@@ -233,62 +233,67 @@ namespace TAT {
          result_s[symmetries[put_v_right]] = std::move(s);
       }
 
+      // 分析cut方案
       Size total_dimension = 0;
       for (const auto& [symmetry, vector_s] : result_s) {
          total_dimension += vector_s.size();
       }
+      auto remain_dimension_u = std::map<Symmetry, Size>();
+      auto remain_dimension_v = std::map<Symmetry, Size>();
       if (cut != -1 && cut < total_dimension) {
-         auto remain_dimension = std::map<Symmetry, Rank>();
+         // auto remain_dimension = std::map<Symmetry, Size>();
          for (const auto& [symmetry, vector_s] : result_s) {
-            remain_dimension[symmetry] = 0;
+            remain_dimension_u[symmetry] = 0;
+            remain_dimension_v[-symmetry] = 0;
          }
          for (Size i = 0; i < cut; i++) {
             Symmetry maximum_position;
             real_base_t<ScalarType> maximum_singular = 0;
             for (const auto& [symmetry, vector_s] : result_s) {
-               if (auto& this_remain = remain_dimension.at(symmetry); this_remain != vector_s.size()) {
+               if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
                   if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
                      maximum_singular = this_singular;
                      maximum_position = symmetry;
                   }
                }
             }
-            remain_dimension.at(maximum_position) += 1;
+            remain_dimension_u.at(maximum_position) += 1;
+            remain_dimension_v.at(-maximum_position) += 1;
          }
-         for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
-            const auto symmetry = symmetries[put_v_right];
-            const auto this_remain = remain_dimension.at(symmetry);
-            auto& this_vector = result_s.at(symmetry);
-            if (this_remain != this_vector.size()) {
-               const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
-               const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
-               const int k = m > n ? n : m;
-               // cutting u - move data
-               // m * k -> m * this_remain
-               auto* data_u = tensor_1.core->blocks.at(symmetries).data();
-               for (Size i = 0; i < m; i++) {
-                  for (Size j = 0; j < this_remain; j++) {
-                     data_u[i * this_remain + j] = data_u[i * k + j];
-                  }
+
+         for (const auto& [symmetry, this_remain] : remain_dimension_u) {
+            if (this_remain == 0) {
+               // need to delete zero, since remain_dimension = 0 will delete the symmetry itself in edge op
+               result_s.erase(symmetry);
+            } else {
+               if (auto& this_vector = result_s.at(symmetry); this_remain != this_vector.size()) {
+                  this_vector.resize(this_remain);
                }
-               // cutting s
-               this_vector.resize(this_remain);
-               // cutting u
-               tensor_1.core->edges[1].map.at(symmetries[1]) = this_remain;
-               tensor_1.core->blocks.at(symmetries).resize(m * this_remain);
-               // cutting v
-               tensor_2.core->edges[0].map.at(symmetries[0]) = this_remain;
-               tensor_2.core->blocks.at(symmetries).resize(this_remain * n);
             }
          }
       }
-      // TODO cut opt
 
       const auto& tensor_u = put_v_right ? tensor_1 : tensor_2;
       const auto& tensor_v = put_v_right ? tensor_2 : tensor_1;
       reversed_set_u.insert(common_name_u);
-      auto u = tensor_u.edge_operator({{SVD2, common_name_u}}, {{SVD1, free_names_and_edges_u}}, reversed_set_u, {}, result_name_u);
-      auto v = tensor_v.edge_operator({{SVD1, common_name_v}}, {{SVD2, free_names_and_edges_v}}, reversed_set_v, {}, result_name_v);
+      auto u = tensor_u.edge_operator(
+            {{SVD2, common_name_u}},
+            {{SVD1, free_names_and_edges_u}},
+            reversed_set_u,
+            {},
+            result_name_u,
+            false,
+            {{{}, {}, {}, {}}},
+            {{SVD2, remain_dimension_u}});
+      auto v = tensor_v.edge_operator(
+            {{SVD1, common_name_v}},
+            {{SVD2, free_names_and_edges_v}},
+            reversed_set_v,
+            {},
+            result_name_v,
+            false,
+            {{{}, {}, {}, {}}},
+            {{SVD1, remain_dimension_v}});
       return {std::move(u), std::move(result_s), std::move(v)};
    }
 } // namespace TAT

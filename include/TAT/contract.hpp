@@ -301,6 +301,11 @@ namespace TAT {
             reversed_set_2,
             {{Contract2, free_name_2}, {Contract1, common_name_2}},
             put_common_2_right ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2});
+      // std::cout << "merged_1 : " << tensor_1_merged << "\n";
+      // std::cout << "merged_2 : " << tensor_2_merged << "\n";
+      // TODO: 公共对称性不一致时会出问题
+      // TODO: 类似的，对称性不一致时应该自动添加block
+      // TODO: 对称性不一致时会要求在edge op中删除block， 必须在edge op中留空，不如顺便把svd的cut问题也实现了
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},

@@ -361,7 +361,8 @@ namespace TAT {
             const std::map<Name, vector<Name>>& merge_map,
             T&& new_names,
             const bool apply_parity = false,
-            const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}}) const;
+            const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}},
+            const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_delete_or_cut_before_all = {}) const;
 
       /**
        * \brief 对张量进行转置
