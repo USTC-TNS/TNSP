@@ -49,7 +49,7 @@ namespace TAT {
     * \brief 打印警告, 有时也可能是错误, 但在非debug模式中不做事
     * \param message 待打印的话
     */
-   inline void TAT_WARNING([[maybe_unused]] const std::string& message) {
+   inline void warning_or_error([[maybe_unused]] const std::string& message) {
       std::cerr << message << std::endl;
 #ifdef NDEBUG
       std::exit(1);
@@ -212,7 +212,7 @@ namespace TAT {
       using std::vector<T, allocator_without_initialize<T>>::vector;
 
       vector<T>(const std::vector<T>& origin_vector) : vector(origin_vector.begin(), origin_vector.end()) {
-         TAT_WARNING("Converting std::vector to TAT::vector Will Copy Data");
+         warning_or_error("Converting std::vector to TAT::vector Will Copy Data");
       }
       vector<T>(std::vector<T>&& origin_vector) : vector(reinterpret_cast<TAT::vector<T>&&>(std::move(origin_vector))) {}
    };

@@ -78,7 +78,7 @@ namespace TAT {
             name_to_index(construct_name_to_index(names)),
             core(std::make_shared<Core<ScalarType, Symmetry>>(std::forward<T>(edges_init), auto_reverse)) {
          if (!is_valid_name(names, core->edges.size())) {
-            TAT_WARNING("Invalid Names");
+            warning_or_error("Invalid Names");
          }
       }
 
@@ -100,14 +100,14 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = other.core;
-         TAT_WARNING("Why Copy");
+         warning_or_error("Why Copy");
       };
       Tensor(Tensor&& other) = default;
       Tensor& operator=(const Tensor& other) {
          names = other.names;
          name_to_index = other.name_to_index;
          core = other.core;
-         TAT_WARNING("Why Copy");
+         warning_or_error("Why Copy");
          return *this;
       };
       Tensor& operator=(Tensor&& other) = default;
@@ -126,7 +126,7 @@ namespace TAT {
        */
       operator ScalarType() const {
          if (!names.empty()) {
-            TAT_WARNING("Conversion From Multiple Rank Tensor To Scalar");
+            warning_or_error("Conversion From Multiple Rank Tensor To Scalar");
          }
          return core->blocks.begin()->second[0];
       }
@@ -164,7 +164,7 @@ namespace TAT {
       template<class Transform>
       Tensor<ScalarType, Symmetry>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
-            TAT_WARNING("Set Tensor Shared");
+            warning_or_error("Set Tensor Shared");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
@@ -514,8 +514,8 @@ namespace TAT {
       Tensor<ScalarType, Symmetry>&
       multiple(const std::map<Symmetry, vector<OtherScalarType>>& S, const Name& name, bool different_direction = false) {
          if (core.use_count() != 1) {
-            TAT_WARNING("Set Tensor Shared");
-            TAT_WARNING("You Can Use tensor.copy().multiple(...)");
+            warning_or_error("Set Tensor Shared");
+            warning_or_error("You Can Use tensor.copy().multiple(...)");
          }
          auto index = name_to_index.at(name);
          for (auto& [symmetries, block] : core->blocks) {
@@ -535,7 +535,7 @@ namespace TAT {
                n *= core->edges[i].map.at(symmetries[i]);
             }
             if (vector_in_S.size() != k) {
-               TAT_WARNING("Vector Size Invalid in Multiple");
+               warning_or_error("Vector Size Invalid in Multiple");
             }
             auto* data = block.data();
             for (Size a = 0; a < m; a++) {

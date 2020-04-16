@@ -109,8 +109,7 @@ struct lattice {
       auto H_psi = state.same_shape().zero();
       for (const auto& [i, j] : link) {
          H_psi += Tensor::contract(state, hamiltonian, {std::to_string(i), std::to_string(j)}, {"I0", "I1"})
-                        .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}})
-                        .transpose(state.names);
+                        .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}});
       }
       const auto psi_H_psi = Tensor::contract(state, H_psi, state.names, state.names);
       return double(psi_H_psi) / double(psi_psi);

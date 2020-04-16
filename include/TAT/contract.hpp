@@ -303,7 +303,7 @@ namespace TAT {
             if (found != edge_2.map.end()) {
                // found
                if (found->second != dimension_1) {
-                  TAT_WARNING("Different Dimension to Contract");
+                  warning_or_error("Different Dimension to Contract");
                }
             } else {
                // not found
@@ -320,7 +320,7 @@ namespace TAT {
             if (found != edge_1.map.end()) {
                // found
                if (found->second != dimension_2) {
-                  TAT_WARNING("Different Dimension to Contract");
+                  warning_or_error("Different Dimension to Contract");
                }
             } else {
                // not found
@@ -383,7 +383,7 @@ namespace TAT {
                   data.data(),
                   &n);
          } else if (m * n != 0) {
-            std::fill(data.begin(),data.end(), 0);
+            std::fill(data.begin(), data.end(), 0);
          }
       }
       // std::cout << "\nC1: " << tensor_1 << "\nC2: " << tensor_2 << "\n\n";

@@ -51,13 +51,19 @@ namespace TAT {
          }                                                                                                            \
          return result;                                                                                               \
       } else {                                                                                                        \
-         if (!((tensor_1.names == tensor_2.names) && (tensor_1.core->edges == tensor_2.core->edges))) {               \
-            TAT_WARNING("Scalar Operator In Different Shape Tensor");                                                 \
+         auto real_tensor_2 = &tensor_2;                                                                              \
+         auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                         \
+         if (tensor_1.names != tensor_2.names) {                                                                      \
+            new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                        \
+            real_tensor_2 = &new_tensor_2;                                                                            \
+         }                                                                                                            \
+         if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
+            warning_or_error("Scalar Operator In Different Shape Tensor");                                            \
          }                                                                                                            \
          auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                            \
          for (auto& [symmetries, block] : result.core->blocks) {                                                      \
             const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                               \
-            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                               \
+            const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                         \
             ScalarType* __restrict c = block.data();                                                                  \
             for (Size j = 0; j < block.size(); j++) {                                                                 \
                EVAL3;                                                                                                 \
@@ -85,7 +91,7 @@ namespace TAT {
    template<class ScalarType1, class ScalarType2, class Symmetry>                                                              \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) { \
       if (tensor_1.core.use_count() != 1) {                                                                                    \
-         TAT_WARNING("Inplace Operator On Tensor Shared");                                                                     \
+         warning_or_error("Inplace Operator On Tensor Shared");                                                                \
       }                                                                                                                        \
       if (tensor_2.names.empty()) {                                                                                            \
          const auto& y = tensor_2.at({});                                                                                      \
@@ -96,12 +102,18 @@ namespace TAT {
             }                                                                                                                  \
          }                                                                                                                     \
       } else {                                                                                                                 \
-         if (!((tensor_1.names == tensor_2.names) && (tensor_1.core->edges == tensor_2.core->edges))) {                        \
-            TAT_WARNING("Scalar Operator In Different Shape Tensor");                                                          \
+         auto real_tensor_2 = &tensor_2;                                                                                       \
+         auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                                  \
+         if (tensor_1.names != tensor_2.names) {                                                                               \
+            new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                                 \
+            real_tensor_2 = &new_tensor_2;                                                                                     \
+         }                                                                                                                     \
+         if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                             \
+            warning_or_error("Scalar Operator In Different Shape Tensor");                                                     \
          }                                                                                                                     \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
             ScalarType1* __restrict a = block.data();                                                                          \
-            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                                        \
+            const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                                  \
             for (Size j = 0; j < block.size(); j++) {                                                                          \
                EVAL2;                                                                                                          \
             }                                                                                                                  \

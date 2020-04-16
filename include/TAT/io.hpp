@@ -278,7 +278,7 @@ namespace TAT {
       core = std::make_shared<Core<ScalarType, Symmetry>>();
       core->edges = std::move(edges);
       if (!is_valid_name(names, core->edges.size())) {
-         TAT_WARNING("Invalid Names");
+         warning_or_error("Invalid Names");
       }
       return *this;
    }

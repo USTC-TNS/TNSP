@@ -234,7 +234,7 @@ namespace TAT {
       }
       // rank_4 and name_5 and rank_5
       if (rank_at_transpose != name_before_merge.size()) {
-         TAT_WARNING("Different Rank When Transpose");
+         warning_or_error("Different Rank When Transpose");
       }
 
       // 1.5 转置方案
@@ -346,7 +346,7 @@ namespace TAT {
       // put res_edge into res
       result.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(result_edge));
       if (!is_valid_name(result.names, result.core->edges.size())) {
-         TAT_WARNING("Invalid Names");
+         warning_or_error("Invalid Names");
       }
       // edge_6
       [[maybe_unused]] const auto& edge_after_merge = result.core->edges;

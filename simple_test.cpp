@@ -127,7 +127,7 @@ void test_scalar() {
    std::cout << a - b << "\n";
    std::cout << a * b << "\n";
    std::cout << a / b << "\n";
-   std::cout << a + b.edge_rename({{TAT::Left, TAT::Up}}) << "\n";
+   std::cout << a + b.transpose({"Right", "Left"}) << "\n";
 }
 
 void test_io() {
