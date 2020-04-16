@@ -57,16 +57,48 @@ namespace TAT {
             new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                        \
             real_tensor_2 = &new_tensor_2;                                                                            \
          }                                                                                                            \
+         auto real_result_edge = &tensor_1.core->edges;                                                               \
+         auto new_result_edge = vector<Edge<Symmetry>>();                                                             \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
-            warning_or_error("Scalar Operator In Different Shape Tensor");                                            \
+            for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
+               new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
+               for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                 \
+                  new_result_edge[i].map[symmetry] = dimension;                                                       \
+               }                                                                                                      \
+            }                                                                                                         \
+            real_result_edge = &new_result_edge;                                                                      \
          }                                                                                                            \
-         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                            \
+         const ScalarType x = 0;                                                                                      \
+         const ScalarType y = 0;                                                                                      \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, *real_result_edge};                               \
          for (auto& [symmetries, block] : result.core->blocks) {                                                      \
-            const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                               \
-            const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                         \
-            ScalarType* __restrict c = block.data();                                                                  \
-            for (Size j = 0; j < block.size(); j++) {                                                                 \
-               EVAL3;                                                                                                 \
+            auto found_1 = tensor_1.core->blocks.find(symmetries);                                                    \
+            auto found_2 = real_tensor_2->core->blocks.find(symmetries);                                              \
+            if (found_1 != tensor_1.core->blocks.end()) {                                                             \
+               if (found_2 != real_tensor_2->core->blocks.end()) {                                                    \
+                  const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                         \
+                  const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                   \
+                  ScalarType* __restrict c = block.data();                                                            \
+                  for (Size j = 0; j < block.size(); j++) {                                                           \
+                     EVAL3;                                                                                           \
+                  }                                                                                                   \
+               } else {                                                                                               \
+                  const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                         \
+                  ScalarType* __restrict c = block.data();                                                            \
+                  for (Size j = 0; j < block.size(); j++) {                                                           \
+                     EVAL2;                                                                                           \
+                  }                                                                                                   \
+               }                                                                                                      \
+            } else {                                                                                                  \
+               if (found_2 != real_tensor_2->core->blocks.end()) {                                                    \
+                  const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                   \
+                  ScalarType* __restrict c = block.data();                                                            \
+                  for (Size j = 0; j < block.size(); j++) {                                                           \
+                     EVAL1;                                                                                           \
+                  }                                                                                                   \
+               } else {                                                                                               \
+                  std::fill(block.begin(), block.end(), 0);                                                           \
+               }                                                                                                      \
             }                                                                                                         \
          }                                                                                                            \
          return result;                                                                                               \
@@ -110,6 +142,7 @@ namespace TAT {
          }                                                                                                                     \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                             \
             warning_or_error("Scalar Operator In Different Shape Tensor");                                                     \
+            warning_or_error("Maybe You Need Outplace Operator");                                                              \
          }                                                                                                                     \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
             ScalarType1* __restrict a = block.data();                                                                          \
