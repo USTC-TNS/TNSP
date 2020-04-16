@@ -430,5 +430,5 @@ int main(const int argc, char** argv) {
 }
 
 int simple_test() {
-   return main(0, 0);
+   return main(1, 0);
 }

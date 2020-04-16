@@ -16,15 +16,15 @@
  */
 
 #include <cstdlib>
-#include <fstream>
 #include <functional>
-#include <iostream>
 #include <random>
-#include <sstream>
 
 #include <TAT/TAT.hpp>
 
-using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
+using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
+
+// 无自旋
+// H = t c_i^+ c_{i+1} + h.c.
 
 struct MPS {
    std::vector<Tensor> chain;
@@ -32,35 +32,37 @@ struct MPS {
    int dimension;
 
    template<class G>
-   MPS(int n, int d, G&& g, const std::vector<double>& h) : dimension(d) {
+   MPS(int n, int d, G&& g) : dimension(d) {
       for (int i = 0; i < n; i++) {
          if (i == 0) {
-            chain.push_back(Tensor({"Phy", "Right"}, {2, d}).set(g));
-         } else if (i == n - 1) {
-            chain.push_back(Tensor({"Phy", "Left"}, {2, d}).set(g));
+            chain.push_back(Tensor({"Total", "Phy", "Right"}, {{-1}, {0, 1}, {1, 0}}, true).set(g));
+            //}
+            //if (i == 1) {
+            //   chain.push_back(Tensor({"Left", "Phy", "Right"}, {{{-2, 1}, {-1, 1}}, {{0, 1}, {1, 1}}, {{2, 1}, {1, 2}, {0, 1}}}, true).set(g));
+            //} else if (i == 2) {
+            //   chain.push_back(Tensor({"Left", "Phy", "Right"}, {{{-2, 1}, {-1, 2}, {0, 1}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 1}}}, true).set(g));
          } else {
-            chain.push_back(Tensor({"Phy", "Left", "Right"}, {2, d, d}).set(g));
+            chain.push_back(Tensor({"Left", "Phy"}, {{-1, 0}, {0, 1}}, true).set(g));
          }
       }
-      hamiltonian = Tensor({"I0", "I1", "O0", "O1"}, {2, 2, 2, 2}).set([&h]() {
-         static int i = 0;
-         return h[i++];
-      });
+      hamiltonian = Tensor({"I0", "I1", "O0", "O1"}, {{{0, 1}, {-1, 1}}, {{0, 1}, {-1, 1}}, {{0, 1}, {1, 1}}, {{0, 1}, {1, 1}}}, true).zero();
+      hamiltonian.block({{"I0", 0}, {"O0", 1}, {"I1", -1}, {"O1", 0}})[0] = 1;
+      hamiltonian.block({{"I1", 0}, {"O1", 1}, {"I0", -1}, {"O0", 0}})[0] = 1;
    }
 
    void update(int time, double delta_t, int step) {
-      static const auto identity = Tensor(hamiltonian.names, hamiltonian.core->edges).set([]() {
-         // clang-format off
-         static const std::vector<double> id = {
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1};
-         // clang-format on
-         static int i = 0;
-         return id[i++];
-      });
+      static const auto identity = [&]() {
+         auto res = hamiltonian.same_shape().zero();
+         for (TAT::Fermi i = 0; i < 2; i++) {
+            for (TAT::Fermi j = 0; j < 2; j++) {
+               res.block({{"I0", -i}, {"O0", i}, {"I1", -j}, {"O1", j}})[0] = 1;
+            }
+         }
+         return res;
+      }();
       const auto updater = identity - delta_t * hamiltonian;
+
+      show();
       std::cout << "step = -1\nEnergy = " << energy() << '\n';
       show();
       for (int i = 0; i < time; i++) {
@@ -96,6 +98,12 @@ struct MPS {
    }
 
    double energy() const {
+      auto conjugate_chain = std::vector<Tensor>();
+      for (const auto& tensor : chain) {
+         conjugate_chain.push_back(tensor.conjugate());
+      }
+      conjugate_chain[0] = conjugate_chain[0].edge_rename({{"Total", "Total_Conjugate"}});
+
       auto left_pool = std::map<int, Tensor>();
       auto right_pool = std::map<int, Tensor>();
       std::function<Tensor(int)> get_left = [&](int i) {
@@ -109,7 +117,7 @@ struct MPS {
          return get_left(i - 1)
                .contract(chain[i], {"Right1"}, {"Left"})
                .edge_rename({{"Right", "Right1"}})
-               .contract(chain[i], {"Right2", "Phy"}, {"Left", "Phy"})
+               .contract(conjugate_chain[i], {"Right2", "Phy"}, {"Left", "Phy"})
                .edge_rename({{"Right", "Right2"}});
       };
       std::function<Tensor(int)> get_right = [&](int i) {
@@ -123,9 +131,27 @@ struct MPS {
          return get_right(i + 1)
                .contract(chain[i], {"Left1"}, {"Right"})
                .edge_rename({{"Left", "Left1"}})
-               .contract(chain[i], {"Left2", "Phy"}, {"Right", "Phy"})
+               .contract(conjugate_chain[i], {"Left2", "Phy"}, {"Right", "Phy"})
                .edge_rename({{"Left", "Left2"}});
       };
+
+      std::cout << "\nSTART\n";
+      for (const auto& i : chain) {
+         std::cout << i << "\n";
+      }
+      for (const auto& i : conjugate_chain) {
+         std::cout << i << "\n";
+      }
+      std::cout << "CONTRACT\n";
+      std::cout << get_left(-1) << "\n";
+      std::cout << get_left(0) << "\n";
+      std::cout << get_left(1) << "\n";
+      std::cout << get_right(2) << "\n";
+      std::cout << get_right(1) << "\n";
+      std::cout << get_right(0) << "\n";
+      std::cout << get_left(0).contract(get_right(1), {"Right1", "Right2"}, {"Left1", "Left2"}) << "\n";
+      std::cout << "END\n\n";
+
       double energy = 0;
       for (int i = 0; i < chain.size() - 1; i++) {
          energy += get_left(i - 1)
@@ -134,9 +160,9 @@ struct MPS {
                          .contract(chain[i + 1], {"Right1"}, {"Left"})
                          .edge_rename({{"Right", "Right1"}, {"Phy", "PhyB"}})
                          .contract(hamiltonian, {"PhyA", "PhyB"}, {"I0", "I1"})
-                         .contract(chain[i], {"Right2", "O0"}, {"Left", "Phy"})
+                         .contract(conjugate_chain[i], {"Right2", "O0"}, {"Left", "Phy"})
                          .edge_rename({{"Right", "Right2"}})
-                         .contract(chain[i + 1], {"Right2", "O1"}, {"Left", "Phy"})
+                         .contract(conjugate_chain[i], {"Right2", "O1"}, {"Left", "Phy"})
                          .edge_rename({{"Right", "Right2"}})
                          .contract(get_right(i + 2), {"Right1", "Right2"}, {"Left1", "Left2"});
       }
@@ -152,23 +178,11 @@ struct MPS {
 };
 
 int main(int argc, char** argv) {
-   std::stringstream out;
-   auto cout_buf = std::cout.rdbuf();
-   if (argc != 6) {
-      std::cout.rdbuf(out.rdbuf());
-   }
-
    std::mt19937 engine(0);
    std::uniform_real_distribution<double> dis(-1, 1);
    auto gen = [&]() { return dis(engine); };
-   auto mps = MPS(std::atoi(argv[1]), std::atoi(argv[2]), gen, {1 / 4., 0, 0, 0, 0, -1 / 4., 2 / 4., 0, 0, 2 / 4., -1 / 4., 0, 0, 0, 0, 1 / 4.});
-   mps.update(std::atoi(argv[3]), std::atof(argv[4]), std::atoi(argv[5]));
-
-   if (argc != 6) {
-      std::cout.rdbuf(cout_buf);
-      std::ifstream fout(argv[6]);
-      std::string sout((std::istreambuf_iterator<char>(fout)), std::istreambuf_iterator<char>());
-      return sout != out.str();
-   }
+   auto mps = MPS(2, 2, gen);
+   //mps.update(std::atoi(argv[3]), std::atof(argv[4]), std::atoi(argv[5]));
+   mps.update(10, 0.1, 1);
    return 0;
 }

@@ -108,7 +108,7 @@ namespace TAT {
                }
                split_flag.push_back(total_split_index);
             }
-            const auto edge_list_after_split = &edge_after_split[this_split_begin_position_in_edge_after_split];
+            const auto edge_list_after_split = edge_after_split.data() + this_split_begin_position_in_edge_after_split;
             const auto split_rank = edge_after_split.size() - this_split_begin_position_in_edge_after_split;
             // loop between begin and end, get a map push_Back into split_offset
             // this map is sym -> [sym] -> offset

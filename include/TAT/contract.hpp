@@ -332,6 +332,7 @@ namespace TAT {
                data.data(),
                &n);
       }
+      // std::cout << "\nC1: " << tensor_1 << "\nC2: " << tensor_2 << "\n\n";
       if constexpr (is_no_symmetry) {
          auto result = Tensor<ScalarType, Symmetry>{std::move(name_result), std::move(edge_result)};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);

@@ -228,6 +228,8 @@ namespace TAT {
        */
       [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position) const&;
 
+      [[nodiscard]] auto& block(const std::map<Name, Symmetry>& position) &;
+
       using EdgeInfoForGetItem = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
 
       /**
@@ -457,6 +459,47 @@ namespace TAT {
       }
 
       /**
+       * \brief 生成张量的共轭张量
+       * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
+       */
+      Tensor<ScalarType, Symmetry> conjugate() const {
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
+            return *this;
+         }
+         auto result_edges = vector<Edge<Symmetry>>();
+         for (const auto& edge : core->edges) {
+            auto& result_edge = result_edges.emplace_back();
+            if constexpr (is_fermi_symmetry_v<Symmetry>) {
+               result_edge.arrow = !edge.arrow;
+            }
+            for (const auto& [symmetry, dimension] : edge.map) {
+               result_edge.map[-symmetry] = dimension;
+            }
+         }
+         auto result = Tensor<ScalarType, Symmetry>(names, result_edges);
+         for (const auto& [symmetries, block] : core->blocks) {
+            auto result_symmetries = vector<Symmetry>();
+            for (const auto& symmetry : symmetries) {
+               result_symmetries.push_back(-symmetry);
+            }
+            // result.core->blocks.at(result_symmetries) <- block
+            Size total_size = block.size();
+            ScalarType* destination = result.core->blocks.at(result_symmetries).data();
+            const ScalarType* source = block.data();
+            if constexpr (is_complex_v<ScalarType>) {
+               for (Size i = 0; i < total_size; i++) {
+                  destination[i] = std::conj(source[i]);
+               }
+            } else {
+               for (Size i = 0; i < total_size; i++) {
+                  destination[i] = source[i];
+               }
+            }
+         }
+         return result;
+      }
+
+      /**
        * \brief 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
@@ -506,7 +549,6 @@ namespace TAT {
          return *this;
       }
 
-      // TODO: 各种api兼容其他容器
       /**
        * \brief 对张量进行svd分解
        * \param free_name_set_u svd分解中u的边的名称集合
@@ -518,7 +560,6 @@ namespace TAT {
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
-      // TODO cut
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;

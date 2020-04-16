@@ -50,8 +50,9 @@ namespace TAT {
     * \param message 待打印的话
     */
    inline void TAT_WARNING([[maybe_unused]] const std::string& message) {
-#ifndef NDEBUG
       std::cerr << message << std::endl;
+#ifdef NDEBUG
+      std::exit(1);
 #endif
    }
 
@@ -207,7 +208,14 @@ namespace TAT {
     * \see allocator_without_initialize
     */
    template<class T>
-   using vector = std::vector<T, allocator_without_initialize<T>>;
+   struct vector : std::vector<T, allocator_without_initialize<T>> {
+      using std::vector<T, allocator_without_initialize<T>>::vector;
+
+      vector<T>(const std::vector<T>& origin_vector) : vector(origin_vector.begin(), origin_vector.end()) {
+         TAT_WARNING("Converting std::vector to TAT::vector Will Copy Data");
+      }
+      vector<T>(std::vector<T>&& origin_vector) : vector(reinterpret_cast<TAT::vector<T>&&>(std::move(origin_vector))) {}
+   };
 } // namespace TAT
 
 #endif
