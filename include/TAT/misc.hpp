@@ -214,7 +214,7 @@ namespace TAT {
       vector<T>(const std::vector<T>& origin_vector) : vector(origin_vector.begin(), origin_vector.end()) {
          warning_or_error("Converting std::vector to TAT::vector Will Copy Data");
       }
-      vector<T>(std::vector<T>&& origin_vector) : vector(reinterpret_cast<TAT::vector<T>&&>(std::move(origin_vector))) {}
+      vector<T>(std::vector<T>&& origin_vector) : vector(std::move(reinterpret_cast<TAT::vector<T>&>(origin_vector))) {}
    };
 } // namespace TAT
 

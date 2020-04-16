@@ -356,9 +356,9 @@ namespace TAT {
       for (auto& [symmetries_before_transpose, size] : initialize_block_symmetries_with_check(edge_after_split)) {
          // convert sym -> target_sym and offsets
          // and add to map
-         auto [iterator, _] = data_before_transpose_to_source.emplace(symmetries_before_transpose, std::tuple{vector<Symmetry>{}, vector<Size>{}});
-         auto& symmetries = std::get<0>(iterator->second);
-         auto& offsets = std::get<1>(iterator->second);
+         auto symmetries = vector<Symmetry>();
+         auto offsets = vector<Size>();
+         bool success = true;
          for (Rank position_before_split = 0, position_after_split = 0; position_before_split < rank_before_split; position_before_split++) {
             // [start, end) be merged
             auto split_group_symmetries = vector<Symmetry>();
@@ -366,18 +366,26 @@ namespace TAT {
                split_group_symmetries.push_back(symmetries_before_transpose[position_after_split]);
                position_after_split++;
             }
-            auto [this_symmetry, this_offset] = split_offset[position_before_split].at(split_group_symmetries);
-            symmetries.push_back(this_symmetry);
-            offsets.push_back(this_offset);
+            if (auto found = split_offset[position_before_split].find(split_group_symmetries); found != split_offset[position_before_split].end()) {
+               const auto& [this_symmetry, this_offset] = found->second;
+               symmetries.push_back(this_symmetry);
+               offsets.push_back(this_offset);
+            } else {
+               success = false;
+               break;
+            }
+         }
+         if (success) {
+            data_before_transpose_to_source[symmetries_before_transpose] = {std::move(symmetries), std::move(offsets)};
          }
       }
       auto data_after_transpose_to_destination = std::map<vector<Symmetry>, std::tuple<vector<Symmetry>, vector<Size>>>();
       for (auto& [symmetries_after_transpose, size] : initialize_block_symmetries_with_check(edge_before_merge)) {
          // convert sym -> target_sym and offsets
          // and add to map
-         auto [iterator, _] = data_after_transpose_to_destination.emplace(symmetries_after_transpose, std::tuple{vector<Symmetry>{}, vector<Size>{}});
-         auto& symmetries = std::get<0>(iterator->second);
-         auto& offsets = std::get<1>(iterator->second);
+         auto symmetries = vector<Symmetry>();
+         auto offsets = vector<Size>();
+         bool success = true;
          for (Rank position_after_merge = 0, position_before_merge = 0; position_after_merge < rank_after_merge; position_after_merge++) {
             // [start, end) be merged
             auto merge_group_symmetries = vector<Symmetry>();
@@ -385,9 +393,17 @@ namespace TAT {
                merge_group_symmetries.push_back(symmetries_after_transpose[position_before_merge]);
                position_before_merge++;
             }
-            auto [this_symmetry, this_offset] = merge_offset[position_after_merge].at(merge_group_symmetries);
-            symmetries.push_back(this_symmetry);
-            offsets.push_back(this_offset);
+            if (auto found = merge_offset[position_after_merge].find(merge_group_symmetries); found != merge_offset[position_after_merge].end()) {
+               const auto& [this_symmetry, this_offset] = found->second;
+               symmetries.push_back(this_symmetry);
+               offsets.push_back(this_offset);
+            } else {
+               success = false;
+               break;
+            }
+         }
+         if (success) {
+            data_after_transpose_to_destination[symmetries_after_transpose] = {std::move(symmetries), std::move(offsets)};
          }
       }
 
@@ -431,6 +447,10 @@ namespace TAT {
             }
          }
       }
+      // 可能会产生空的无源分块
+      result.zero();
+      // 缩并时在这里产生无源分块是很正常的事, 这正是对称性ansatz所假设的, 每个张量都是对称守恒的
+      // 但是缩并后, 他便可以表示两个对称性不守恒的张量的乘积, 或者说缩并后表达能力变强了, 所以会产生多余的0
       // 5. main copy loop
       for (const auto& [symmetries_before_transpose, source_symmetries_and_offsets] : data_before_transpose_to_source) {
          const auto& [source_symmetries, source_offsets] = source_symmetries_and_offsets;
