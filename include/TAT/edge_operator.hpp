@@ -34,7 +34,7 @@ namespace TAT {
          T&& new_names,
          const bool apply_parity,
          const std::array<std::set<Name>, 4>& parity_exclude_name,
-         const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_delete_or_cut_before_all) const {
+         const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all) const {
       // step 1: rename
       // step 2: split
       // step 3: reverse
@@ -91,8 +91,7 @@ namespace TAT {
       auto edge_before_split = vector<Edge<Symmetry>>();
       for (auto i = 0; i < rank_before_split; i++) {
          // 这里应该是rename前的名称
-         if (auto found = edge_and_symmetries_to_delete_or_cut_before_all.find(names[i]);
-             found != edge_and_symmetries_to_delete_or_cut_before_all.end()) {
+         if (auto found = edge_and_symmetries_to_cut_before_all.find(names[i]); found != edge_and_symmetries_to_cut_before_all.end()) {
             const auto& symmetry_to_cut_dimension = found->second;
             auto& this_edge = edge_before_split.emplace_back();
             if constexpr (is_fermi) {
@@ -100,19 +99,9 @@ namespace TAT {
             }
             for (const auto& [symmetry, dimension] : core->edges[i].map) {
                if (auto cut_iterator = symmetry_to_cut_dimension.find(symmetry); cut_iterator != symmetry_to_cut_dimension.end()) {
-                  auto new_dimension = cut_iterator->second;
-                  if (new_dimension == 0) {
-                     // record delete
-                     // 删除一个对称性并不需要做任何记录
-                  } else {
-                     if (new_dimension < dimension) {
-                        this_edge.map[symmetry] = new_dimension;
-                        // record cut
-                        // 这个会影响leading, 故只需修改原来算offset处的代码即可, 替换回core->edges
-                     } else {
-                        this_edge.map[symmetry] = dimension;
-                     }
-                  }
+                  this_edge.map[symmetry] = cut_iterator->second;
+                  // 这个会影响leading, 故只需修改原来算offset处的代码即可, 替换回core->edges
+                  // 这里不检查是否new_dimension < dimension
                } else {
                   this_edge.map[symmetry] = dimension;
                }
@@ -121,10 +110,6 @@ namespace TAT {
             edge_before_split.push_back(core->edges[i]);
          }
       }
-
-      // TODO:
-      // delete some symmetries for contract use
-      // maybe somecut is also needed for svd use
 
       // 1.3 对称的几个操作中transpose之前的 rank, name, edge
       // status 2 split
@@ -469,7 +454,7 @@ namespace TAT {
 
          Size total_source_offset = 0;
          for (auto i = 0; i < rank_before_split; i++) {
-            // 这里将edge_becore_split换为core->edges
+            // 这里将edge_before_split换为core->edges
             total_source_offset *= core->edges[i].map.at(source_symmetries[i]);
             total_source_offset += source_offsets[i];
          }
@@ -484,7 +469,7 @@ namespace TAT {
             if (i == rank_before_split - 1) {
                leading_of_source[i] = 1;
             } else {
-               // 这里将edge_becore_split换为core->edges
+               // 这里将edge_before_split换为core->edges
                leading_of_source[i] = leading_of_source[i + 1] * core->edges[i + 1].map.at(source_symmetries[i + 1]);
             }
          }

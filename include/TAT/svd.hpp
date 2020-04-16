@@ -229,7 +229,9 @@ namespace TAT {
          const int k = m > n ? n : m;
          auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
-         calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
+         if (m * n != 0) {
+            calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
+         }
          result_s[symmetries[put_v_right]] = std::move(s);
       }
 
@@ -262,14 +264,7 @@ namespace TAT {
          }
 
          for (const auto& [symmetry, this_remain] : remain_dimension_u) {
-            if (this_remain == 0) {
-               // need to delete zero, since remain_dimension = 0 will delete the symmetry itself in edge op
-               result_s.erase(symmetry);
-            } else {
-               if (auto& this_vector = result_s.at(symmetry); this_remain != this_vector.size()) {
-                  this_vector.resize(this_remain);
-               }
-            }
+            result_s.at(symmetry).resize(this_remain);
          }
       }
 

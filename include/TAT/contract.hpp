@@ -242,6 +242,7 @@ namespace TAT {
       }
       const auto free_rank_2 = free_name_2.size();
       // 确定转置方案
+      Rank common_rank = 0;
       auto common_name_1 = vector<Name>(); // 第一个张量的公共边, merge时使用
       auto common_name_2 = vector<Name>(); // 第二个张量的公共边, merge时使用
       bool put_common_1_right;
@@ -251,6 +252,7 @@ namespace TAT {
             if (auto position = std::find(contract_names_1.begin(), contract_names_1.end(), n); position != contract_names_1.end()) {
                common_name_1.push_back(*position);
                common_name_2.push_back(contract_names_2[position - contract_names_1.begin()]);
+               common_rank++;
             }
          }
       };
@@ -259,6 +261,7 @@ namespace TAT {
             if (auto position = std::find(contract_names_2.begin(), contract_names_2.end(), n); position != contract_names_2.end()) {
                common_name_2.push_back(*position);
                common_name_1.push_back(contract_names_1[position - contract_names_2.begin()]);
+               common_rank++;
             }
          }
       };
@@ -285,6 +288,49 @@ namespace TAT {
          fit_tensor_2_common_edge();
          // 所以尽量大张量放在后侧
       }
+      // 确定交错的对称性
+      auto delete_1 = std::map<Name, std::map<Symmetry, Size>>();
+      auto delete_2 = std::map<Name, std::map<Symmetry, Size>>();
+      for (Rank i = 0; i < common_rank; i++) {
+         auto name_1 = common_name_1[i];
+         auto name_2 = common_name_2[i];
+         auto edge_1 = tensor_1.core->edges[tensor_1.name_to_index.at(name_1)];
+         auto edge_2 = tensor_2.core->edges[tensor_2.name_to_index.at(name_2)];
+         auto this_delete_1 = std::map<Symmetry, Size>();
+         for (const auto& [symmetry_1, dimension_1] : edge_1.map) {
+            auto symmetry_2 = -symmetry_1;
+            auto found = edge_2.map.find(symmetry_2);
+            if (found != edge_2.map.end()) {
+               // found
+               if (found->second != dimension_1) {
+                  TAT_WARNING("Different Dimension to Contract");
+               }
+            } else {
+               // not found
+               this_delete_1[symmetry_1] = 0;
+            }
+         }
+         if (!this_delete_1.empty()) {
+            delete_1[name_1] = std::move(this_delete_1);
+         }
+         auto this_delete_2 = std::map<Symmetry, Size>();
+         for (const auto& [symmetry_2, dimension_2] : edge_2.map) {
+            auto symmetry_1 = -symmetry_2;
+            auto found = edge_1.map.find(symmetry_1);
+            if (found != edge_1.map.end()) {
+               // found
+               if (found->second != dimension_2) {
+                  TAT_WARNING("Different Dimension to Contract");
+               }
+            } else {
+               // not found
+               this_delete_2[symmetry_2] = 0;
+            }
+         }
+         if (!this_delete_2.empty()) {
+            delete_2[name_2] = std::move(this_delete_2);
+         }
+      }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
       auto tensor_1_merged = tensor_1.edge_operator(
@@ -294,18 +340,17 @@ namespace TAT {
             {{Contract1, free_name_1}, {Contract2, common_name_1}},
             put_common_1_right ? vector<Name>{Contract1, Contract2} : vector<Name>{Contract2, Contract1},
             false,
-            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {Contract2}}});
+            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {Contract2}}},
+            delete_1);
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             reversed_set_2,
             {{Contract2, free_name_2}, {Contract1, common_name_2}},
-            put_common_2_right ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2});
-      // std::cout << "merged_1 : " << tensor_1_merged << "\n";
-      // std::cout << "merged_2 : " << tensor_2_merged << "\n";
-      // TODO: 公共对称性不一致时会出问题
-      // TODO: 类似的，对称性不一致时应该自动添加block
-      // TODO: 对称性不一致时会要求在edge op中删除block， 必须在edge op中留空，不如顺便把svd的cut问题也实现了
+            put_common_2_right ? vector<Name>{Contract2, Contract1} : vector<Name>{Contract1, Contract2},
+            false,
+            {{{}, {}, {}, {}}},
+            delete_2);
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},
@@ -322,20 +367,24 @@ namespace TAT {
          const int k = common_edge.map.at(symmetries[1]);
          const ScalarType alpha = 1;
          const ScalarType beta = 0;
-         calculate_product<ScalarType>(
-               put_common_2_right ? "C" : "N",
-               put_common_1_right ? "N" : "C",
-               &n,
-               &m,
-               &k,
-               &alpha,
-               data_2.data(),
-               put_common_2_right ? &k : &n,
-               data_1.data(),
-               put_common_1_right ? &k : &m,
-               &beta,
-               data.data(),
-               &n);
+         if (m * n * k != 0) {
+            calculate_product<ScalarType>(
+                  put_common_2_right ? "C" : "N",
+                  put_common_1_right ? "N" : "C",
+                  &n,
+                  &m,
+                  &k,
+                  &alpha,
+                  data_2.data(),
+                  put_common_2_right ? &k : &n,
+                  data_1.data(),
+                  put_common_1_right ? &k : &m,
+                  &beta,
+                  data.data(),
+                  &n);
+         } else if (m * n != 0) {
+            std::fill(data.begin(),data.end(), 0);
+         }
       }
       // std::cout << "\nC1: " << tensor_1 << "\nC2: " << tensor_2 << "\n\n";
       if constexpr (is_no_symmetry) {
