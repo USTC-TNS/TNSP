@@ -32,7 +32,7 @@ struct MPS {
    int dimension;
 
    template<class G>
-   MPS(int n, int d, G&& g, const std::vector<double>& h) : dimension(d) {
+   MPS(int n, unsigned int d, G&& g, const std::vector<double>& h) : dimension(d) {
       for (int i = 0; i < n; i++) {
          if (i == 0) {
             chain.push_back(Tensor({"Phy", "Right"}, {2, d}).set(g));
@@ -75,8 +75,8 @@ struct MPS {
    void update_once(const Tensor& updater) {
       for (int i = 0; i < chain.size() - 1; i++) {
          // i and i+1
-         auto AB = Tensor::contract(chain[i].edge_rename({{"Phy", "PhyA"}}), chain[i + 1].edge_rename({{"Phy", "PhyB"}}), {"Right"}, {"Left"});
-         auto ABH = Tensor::contract(AB, updater, {"PhyA", "PhyB"}, {"I0", "I1"});
+         auto AB = Tensor::contract(chain[i].edge_rename({{"Phy", "PhyA"}}), chain[i + 1].edge_rename({{"Phy", "PhyB"}}), {{"Right", "Left"}});
+         auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
          auto [u, s, v] = ABH.svd({"Left", "O0"}, "Right", "Left", dimension);
          chain[i] = std::move(u).edge_rename({{"O0", "Phy"}});
          chain[i + 1] = std::move(v.multiple(s, "Left", true)).edge_rename({{"O1", "Phy"}});
@@ -85,8 +85,8 @@ struct MPS {
       }
       for (int i = chain.size() - 1; i-- > 0;) {
          // i+1 and i
-         auto AB = Tensor::contract(chain[i + 1].edge_rename({{"Phy", "PhyA"}}), chain[i].edge_rename({{"Phy", "PhyB"}}), {"Left"}, {"Right"});
-         auto ABH = Tensor::contract(AB, updater, {"PhyA", "PhyB"}, {"I0", "I1"});
+         auto AB = Tensor::contract(chain[i + 1].edge_rename({{"Phy", "PhyA"}}), chain[i].edge_rename({{"Phy", "PhyB"}}), {{"Left", "Right"}});
+         auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
          auto [u, s, v] = ABH.svd({"Right", "O0"}, "Left", "Right", dimension);
          chain[i + 1] = std::move(u).edge_rename({{"O0", "Phy"}});
          chain[i] = std::move(v.multiple(s, "Right", true)).edge_rename({{"O1", "Phy"}});
@@ -107,9 +107,9 @@ struct MPS {
             return Tensor(1);
          }
          return get_left(i - 1)
-               .contract(chain[i], {"Right1"}, {"Left"})
+               .contract(chain[i], {{"Right1", "Left"}})
                .edge_rename({{"Right", "Right1"}})
-               .contract(chain[i], {"Right2", "Phy"}, {"Left", "Phy"})
+               .contract(chain[i], {{"Right2", "Left"}, {"Phy", "Phy"}})
                .edge_rename({{"Right", "Right2"}});
       };
       std::function<Tensor(int)> get_right = [&](int i) {
@@ -121,24 +121,24 @@ struct MPS {
             return Tensor(1);
          }
          return get_right(i + 1)
-               .contract(chain[i], {"Left1"}, {"Right"})
+               .contract(chain[i], {{"Left1", "Right"}})
                .edge_rename({{"Left", "Left1"}})
-               .contract(chain[i], {"Left2", "Phy"}, {"Right", "Phy"})
+               .contract(chain[i], {{"Left2", "Right"}, {"Phy", "Phy"}})
                .edge_rename({{"Left", "Left2"}});
       };
       double energy = 0;
       for (int i = 0; i < chain.size() - 1; i++) {
          energy += get_left(i - 1)
-                         .contract(chain[i], {"Right1"}, {"Left"})
+                         .contract(chain[i], {{"Right1", "Left"}})
                          .edge_rename({{"Right", "Right1"}, {"Phy", "PhyA"}})
-                         .contract(chain[i + 1], {"Right1"}, {"Left"})
+                         .contract(chain[i + 1], {{"Right1", "Left"}})
                          .edge_rename({{"Right", "Right1"}, {"Phy", "PhyB"}})
-                         .contract(hamiltonian, {"PhyA", "PhyB"}, {"I0", "I1"})
-                         .contract(chain[i], {"Right2", "O0"}, {"Left", "Phy"})
+                         .contract(hamiltonian, {{"PhyA", "I0"}, {"PhyB", "I1"}})
+                         .contract(chain[i], {{"Right2", "Left"}, {"O0", "Phy"}})
                          .edge_rename({{"Right", "Right2"}})
-                         .contract(chain[i + 1], {"Right2", "O1"}, {"Left", "Phy"})
+                         .contract(chain[i + 1], {{"Right2", "Left"}, {"O1", "Phy"}})
                          .edge_rename({{"Right", "Right2"}})
-                         .contract(get_right(i + 2), {"Right1", "Right2"}, {"Left1", "Left2"});
+                         .contract(get_right(i + 2), {{"Right1", "Left1"}, {"Right2", "Left2"}});
       }
       energy /= get_right(0);
       return energy / chain.size();

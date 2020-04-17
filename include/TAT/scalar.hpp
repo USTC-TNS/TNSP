@@ -58,7 +58,7 @@ namespace TAT {
             real_tensor_2 = &new_tensor_2;                                                                            \
          }                                                                                                            \
          auto real_result_edge = &tensor_1.core->edges;                                                               \
-         auto new_result_edge = vector<Edge<Symmetry>>();                                                             \
+         auto new_result_edge = std::vector<Edge<Symmetry>>();                                                        \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
             for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
                new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
@@ -115,7 +115,7 @@ namespace TAT {
 
    DEF_SCALAR_OP(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
    DEF_SCALAR_OP(operator-, c[j] = x - b[j], c[j] = a[j] - y, c[j] = a[j] - b[j])
-   DEF_SCALAR_OP(operator*, c[j] = x* b[j], c[j] = a[j]* y, c[j] = a[j]* b[j])
+   DEF_SCALAR_OP(operator*, c[j] = x * b[j], c[j] = a[j] * y, c[j] = a[j] * b[j])
    DEF_SCALAR_OP(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
 #undef DEF_SCALAR_OP
 

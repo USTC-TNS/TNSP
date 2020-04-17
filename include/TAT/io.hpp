@@ -21,11 +21,12 @@
 #ifndef TAT_IO_HPP
 #define TAT_IO_HPP
 
-#include "tensor.hpp"
-
+#include <iostream>
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+#include "tensor.hpp"
 
 namespace TAT {
    template<class ScalarType>
@@ -68,8 +69,8 @@ namespace TAT {
       return out;
    }
 
-   template<class T>
-   std::ostream& operator<<(std::ostream& out, const vector<T>& list) {
+   template<class T, class A>
+   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
       for (const auto& i : list) {
@@ -86,14 +87,14 @@ namespace TAT {
       out << ']';
       return out;
    }
-   template<class T>
-   void raw_write_vector(std::ostream& out, const vector<T>& list) {
+   template<class T, class A>
+   void raw_write_vector(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
       raw_write(out, &count);
       raw_write(out, list.data(), count);
    }
-   template<class T>
-   void raw_read_vector(std::istream& in, vector<T>& list) {
+   template<class T, class A>
+   void raw_read_vector(std::istream& in, std::vector<T, A>& list) {
       Size count;
       raw_read(in, &count);
       list.resize(count);
@@ -207,12 +208,23 @@ namespace TAT {
    inline const WindowsColorCode console_red = {4};
    inline const WindowsColorCode console_green = {2};
    inline const WindowsColorCode console_yellow = {6};
+   inline const WindowsColorCode console_blue = {1};
    inline const WindowsColorCode console_origin = {7};
 #else
-   inline const std::string console_red = "\x1B[31m";
-   inline const std::string console_green = "\x1B[32m";
-   inline const std::string console_yellow = "\x1B[33m";
-   inline const std::string console_origin = "\x1B[0m";
+   struct UnixColorCode {
+      std::string color_code;
+   };
+   inline const UnixColorCode console_red = {"\x1B[31m"};
+   inline const UnixColorCode console_green = {"\x1B[32m"};
+   inline const UnixColorCode console_yellow = {"\x1B[33m"};
+   inline const UnixColorCode console_blue = {"\x1B[34m"};
+   inline const UnixColorCode console_origin = {"\x1B[0m"};
+   inline std::ostream& operator<<(std::ostream& out, const UnixColorCode& value) {
+      if (out.rdbuf() == std::cout.rdbuf() || out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
+         out << value.color_code;
+      }
+      return out;
+   }
 #endif
 
    template<class ScalarType, class Symmetry>
@@ -271,15 +283,13 @@ namespace TAT {
       raw_read_vector(in, names);
       const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
-      vector<Edge<Symmetry>> edges(rank);
+      std::vector<Edge<Symmetry>> edges(rank);
       for (auto& edge : edges) {
          in >= edge;
       }
       core = std::make_shared<Core<ScalarType, Symmetry>>();
       core->edges = std::move(edges);
-      if (!is_valid_name(names, core->edges.size())) {
-         warning_or_error("Invalid Names");
-      }
+      check_valid_name(names, core->edges.size());
       return *this;
    }
 
@@ -290,7 +300,7 @@ namespace TAT {
       raw_read(in, &count);
       core->blocks.clear();
       for (auto i = 0; i < count; i++) {
-         auto symmetries = vector<Symmetry>(rank);
+         auto symmetries = std::vector<Symmetry>(rank);
          raw_read(in, symmetries.data(), symmetries.size());
          raw_read_vector(in, core->blocks[std::move(symmetries)]);
       }
@@ -315,11 +325,19 @@ namespace TAT {
    }
 
    inline Evil::~Evil() {
+#ifndef NDEUBG
       try {
-         std::clog << console_red << "\n\nPremature optimization is the root of all evil!\n"
+         std::clog << console_blue << "\n\nPremature optimization is the root of all evil!\n"
                    << console_origin << "                                       --- Donald Knuth\n\n\n";
       } catch ([[maybe_unused]] const std::exception& e) {
       }
+#endif
+   }
+
+   inline void warning_or_error([[maybe_unused]] const std::string& message) {
+#ifndef NDEBUG
+      std::cerr << console_red << message << console_origin << std::endl;
+#endif
    }
 } // namespace TAT
 #endif

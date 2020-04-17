@@ -32,7 +32,7 @@ namespace TAT {
          const std::map<Name, Symmetry>& position,
          const std::map<Name, Rank>& name_to_index,
          const Core<ScalarType, Symmetry>& core) {
-      auto symmetries = vector<Symmetry>(core.edges.size());
+      auto symmetries = std::vector<Symmetry>(core.edges.size());
       for (const auto& [name, symmetry] : position) {
          symmetries[name_to_index.at(name)] = symmetry;
       }
@@ -46,8 +46,8 @@ namespace TAT {
    [[nodiscard]] auto
    get_offset_for_get_item(const std::map<Name, Size>& position, const std::map<Name, Rank>& name_to_index, const Core<ScalarType, Symmetry>& core) {
       const auto rank = Rank(core.edges.size());
-      auto scalar_position = vector<Size>(rank);
-      auto dimensions = vector<Size>(rank);
+      auto scalar_position = std::vector<Size>(rank);
+      auto dimensions = std::vector<Size>(rank);
       for (const auto& [name, position] : position) {
          auto index = name_to_index.at(name);
          scalar_position[index] = position;
@@ -70,9 +70,9 @@ namespace TAT {
          const std::map<Name, Rank>& name_to_index,
          const Core<ScalarType, Symmetry>& core) {
       const auto rank = Rank(core.edges.size());
-      auto symmetries = vector<Symmetry>(rank);
-      auto scalar_position = vector<Size>(rank);
-      auto dimensions = vector<Size>(rank);
+      auto symmetries = std::vector<Symmetry>(rank);
+      auto scalar_position = std::vector<Size>(rank);
+      auto dimensions = std::vector<Size>(rank);
       for (const auto& [name, _] : position) {
          const auto& [symmetry, position] = _;
          auto index = name_to_index.at(name);

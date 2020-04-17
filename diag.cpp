@@ -89,7 +89,7 @@ struct lattice {
       const auto updater = identity - delta_t * hamiltonian;
       for (auto t = 0; t < n; t++) {
          for (const auto& [i, j] : link) {
-            state = Tensor::contract(state, updater, {std::to_string(i), std::to_string(j)}, {"I0", "I1"})
+            state = Tensor::contract(state, updater, {{std::to_string(i), "I0"}, {std::to_string(j), "I1"}})
                           .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}});
             state = state / state.norm<-1>();
          }
@@ -105,13 +105,13 @@ struct lattice {
    }
 
    double energy() {
-      const auto psi_psi = Tensor::contract(state, state, state.names, state.names);
+      const auto psi_psi = state.contract_all_edge();
       auto H_psi = state.same_shape().zero();
       for (const auto& [i, j] : link) {
-         H_psi += Tensor::contract(state, hamiltonian, {std::to_string(i), std::to_string(j)}, {"I0", "I1"})
+         H_psi += Tensor::contract(state, hamiltonian, {{std::to_string(i), "I0"}, {std::to_string(j), "I1"}})
                         .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}});
       }
-      const auto psi_H_psi = Tensor::contract(state, H_psi, state.names, state.names);
+      const auto psi_H_psi = state.contract_all_edge(H_psi);
       return double(psi_H_psi) / double(psi_psi);
    }
 };
