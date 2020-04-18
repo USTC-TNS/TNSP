@@ -22,6 +22,7 @@
 #define TAT_IMPLEMENT_HPP
 
 #include "contract.hpp"
+#include "edge_misc.hpp"
 #include "edge_operator.hpp"
 #include "get_item.hpp"
 #include "io.hpp"

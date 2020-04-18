@@ -22,7 +22,6 @@
 #define TAT_MISC_HPP
 
 #include <complex>
-#include <iostream>
 #include <type_traits>
 #include <vector>
 
@@ -41,19 +40,13 @@ namespace TAT {
    struct Evil {
       ~Evil();
    };
-#ifndef NDEBUG
-   inline const Evil evil;
-#endif
+   const Evil evil;
 
    /**
     * \brief 打印警告, 有时也可能是错误, 但在非debug模式中不做事
     * \param message 待打印的话
     */
-   inline void TAT_WARNING([[maybe_unused]] const std::string& message) {
-#ifndef NDEBUG
-      std::cerr << message << std::endl;
-#endif
-   }
+   inline void warning_or_error([[maybe_unused]] const std::string& message);
 
    /**
     * \brief 张量的秩的大小的类型
@@ -205,9 +198,9 @@ namespace TAT {
    /**
     * \brief 尽可能不做初始化的vector容器
     * \see allocator_without_initialize
+    * \note 为了兼容性, 仅在张量的数据处使用
     */
    template<class T>
    using vector = std::vector<T, allocator_without_initialize<T>>;
 } // namespace TAT
-
 #endif

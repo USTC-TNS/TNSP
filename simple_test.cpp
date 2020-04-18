@@ -28,23 +28,41 @@
       std::cout << "\n";            \
    } while (false)
 
+template<class T>
+std::ostream& operator<<(std::ostream& out, const std::vector<T>& list) {
+   out << '[';
+   auto not_first = false;
+   for (const auto& i : list) {
+      if (not_first) {
+         out << ',';
+      }
+      not_first = true;
+      if constexpr (std::is_same_v<T, std::complex<TAT::real_base_t<T>>>) {
+         TAT::print_complex(out, i);
+      } else {
+         out << i;
+      }
+   }
+   out << ']';
+   return out;
+}
+
 void test_create_tensor() {
-   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test() << "\n";
-   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {0, 3}} << "\n";
+   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test() << "\n";
+   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {0, 3}} << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{}, {}}.set([]() { return 10; }) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{}, {}}.set([]() { return 10; }).at({}) << "\n";
-   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test().at({{TAT::Right, 2}, {TAT::Left, 1}})
-             << "\n";
+   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test().at({{"Right", 2}, {"Left", 1}}) << "\n";
 }
 void test_create_symmetry_tensor() {
-   std::cout << TAT::Tensor<double, TAT::Z2Symmetry>{{TAT::Left, TAT::Right, TAT::Up}, {{{1, 3}, {0, 1}}, {{1, 1}, {0, 2}}, {{1, 2}, {0, 3}}}}.zero()
-             << "\n";
-   std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                     {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+   std::cout << TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Up"}, {{{1, 3}, {0, 1}}, {{1, 1}, {0, 2}}, {{1, 2}, {0, 3}}}}.zero() << "\n";
+   std::cout << TAT::Tensor<
+                      double,
+                      TAT::U1Symmetry>{{"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                       .test(2)
              << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry> {
-      {TAT::Left, TAT::Right, TAT::Up},
+      {"Left", "Right", "Up"},
 #ifdef _MSVC_LANG
             // 这似乎是MSVC的一个bug, 如果用下面的写法, Edge的析构函数将会被调用两次
             {std::map<TAT::U1Symmetry, TAT::Size>{},
@@ -60,55 +78,53 @@ void test_create_symmetry_tensor() {
 }
 
 void test_create_fermi_symmetry_tensor() {
-   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                        {{{0, 1}, {1, 2}}, {{-1, 1}, {-2, 3}, {0, 2}}, {{0, 3}, {1, 1}}},
-                                                        true}
-                      .test(2)
-             << "\n";
-   std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                          {{{{0, 0}, 1}, {{1, 1}, 2}},
-                                                           {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
-                                                           {{{0, 0}, 3}, {{1, -1}, 1}}},
-                                                          true}
-                      .test(2)
-             << "\n";
-   std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                          {{{{0, 0}, 1}, {{1, 1}, 2}},
-                                                           {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
-                                                           {{{0, 0}, 3}, {{1, -1}, 1}}},
-                                                          true}
-                      .test(2)
-                      .block({{TAT::Left, {1, 1}}, {TAT::Up, {1, -1}}, {TAT::Right, {-2, 0}}})
-             << "\n";
+   std::cout
+         << TAT::Tensor<double, TAT::FermiSymmetry>{{"Left", "Right", "Up"}, {{{0, 1}, {1, 2}}, {{-1, 1}, {-2, 3}, {0, 2}}, {{0, 3}, {1, 1}}}, true}
+                  .test(2)
+         << "\n";
+   std::cout
+         << TAT::Tensor<
+                  double,
+                  TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
+                  .test(2)
+         << "\n";
+   std::cout
+         << TAT::Tensor<
+                  double,
+                  TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
+                  .test(2)
+                  .block({{"Left", {1, 1}}, {"Up", {1, -1}}, {"Right", {-2, 0}}})
+         << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{1234}.at({}) << "\n";
-   std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                          {{{{0, 0}, 1}, {{1, 1}, 2}},
-                                                           {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}},
-                                                           {{{0, 0}, 3}, {{1, -1}, 1}}},
-                                                          true}
-                      .test(2)
-                      .at({{TAT::Left, {{1, 1}, 1}}, {TAT::Up, {{1, -1}, 0}}, {TAT::Right, {{-2, 0}, 0}}})
-             << "\n";
+   std::cout
+         << TAT::Tensor<
+                  double,
+                  TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
+                  .test(2)
+                  .at({{"Left", {{1, 1}, 1}}, {"Up", {{1, -1}, 0}}, {"Right", {{-2, 0}, 0}}})
+         << "\n";
 }
 
 void test_type_conversion() {
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{123} << "\n";
    std::cout << double(TAT::Tensor<double, TAT::U1Symmetry>{123}) << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test(2).to<double>() << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test(2).to<std::complex<double>>() << "\n";
-   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test(2).to<double>() << "\n";
-   std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                     {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(2).to<double>() << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(2).to<std::complex<double>>() << "\n";
+   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(2).to<double>() << "\n";
+   std::cout << TAT::Tensor<
+                      double,
+                      TAT::U1Symmetry>{{"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                       .test(2)
                       .to<std::complex<double>>()
              << "\n";
 }
 
 void test_norm() {
-   auto t = TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                 {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                  .test(2)
-                  .to<std::complex<double>>();
+   auto t =
+         TAT::Tensor<double, TAT::U1Symmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(2)
+               .to<std::complex<double>>();
    std::cout << t.norm<-1>() << "\n";
    std::cout << t.norm<0>() << "\n";
    std::cout << t.norm<1>() << "\n";
@@ -116,37 +132,38 @@ void test_norm() {
 }
 
 void test_scalar() {
-   auto t = TAT::Tensor<double, TAT::Z2Symmetry>{{TAT::Left, TAT::Right, TAT::Phy}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}};
+   auto t = TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}};
    t.test();
    std::cout << t + 1.0 << "\n";
    std::cout << 1.0 / t << "\n";
 
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test();
-   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {3, 4}}.test(0, 0.1);
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(0, 0.1);
    std::cout << a + b << "\n";
    std::cout << a - b << "\n";
    std::cout << a * b << "\n";
    std::cout << a / b << "\n";
-   std::cout << a + b.edge_rename({{TAT::Left, TAT::Up}}) << "\n";
+   std::cout << a + b.transpose({"Right", "Left"}) << "\n";
 }
 
 void test_io() {
    std::stringstream ss;
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right, TAT::Up}, {2, 3, 4}}.test();
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.test();
    ss <= a;
    auto b = TAT::Tensor<double, TAT::NoSymmetry>();
    ss >= b;
    std::cout << a << "\n";
    std::cout << b << "\n";
-   auto c = TAT::Tensor<double, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                 {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                  .test(2);
+   auto c =
+         TAT::Tensor<double, TAT::U1Symmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(2);
    ss <= c;
    auto d = TAT::Tensor<double, TAT::U1Symmetry>();
    ss >= d;
    std::cout << c << "\n";
    std::cout << d << "\n";
-   auto e = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{TAT::Up, TAT::Left, TAT::Right}, {1, 2, 3}}.set([]() {
+   auto e = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{"Up", "Left", "Right"}, {1, 2, 3}}.set([]() {
       static int i = 0;
       static int arr[6] = {0x12345, 0x23456, 0x34567, 0x45678, 0x56789, 0x6789a};
       return arr[i++];
@@ -156,18 +173,19 @@ void test_io() {
    ss >= f;
    std::cout << e << "\n";
    std::cout << f << "\n";
-   auto g = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                  .test(2);
+   auto g =
+         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(2);
    ss <= g;
    auto h = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
    ss >= h;
    std::cout << g << "\n";
    std::cout << h << "\n";
-   auto i = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                                  {{{-2, 3}, {0, 1}, {-1, 2}}, {{0, 2}, {1, 3}}, {{0, 3}, {1, 1}}},
-                                                                  true}
-                  .test(2);
+   auto i =
+         TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
+               {"Left", "Right", "Up"}, {{{-2, 3}, {0, 1}, {-1, 2}}, {{0, 2}, {1, 3}}, {{0, 3}, {1, 1}}}, true}
+               .test(2);
    ss <= i;
    auto j = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
    ss >= j;
@@ -176,38 +194,39 @@ void test_io() {
 }
 
 void test_edge_rename() {
-   auto t1 = TAT::Tensor<double, TAT::Z2Symmetry>{{TAT::Left, TAT::Right, TAT::Phy}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}};
-   auto t2 = t1.edge_rename({{TAT::Left, TAT::Up}});
+   auto t1 = TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}};
+   auto t2 = t1.edge_rename({{"Left", "Up"}});
    t1.test();
    std::cout << t1 << "\n";
    std::cout << t2 << "\n";
 }
 
 void test_transpose() {
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.test();
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.test();
    std::cout << a << "\n";
-   std::cout << a.transpose({TAT::Right, TAT::Left}) << "\n";
+   std::cout << a.transpose({"Right", "Left"}) << "\n";
    auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.test();
    std::cout << b << "\n";
-   std::cout << b.transpose({TAT::Right, TAT::Up, TAT::Left}) << "\n";
-   auto c = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                  .test(1);
+   std::cout << b.transpose({"Right", "Up", "Left"}) << "\n";
+   auto c =
+         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(1);
    std::cout << c << "\n";
-   auto ct = c.transpose({TAT::Right, TAT::Up, TAT::Left});
+   auto ct = c.transpose({"Right", "Up", "Left"});
    std ::cout << ct << "\n";
    std::cout << c.at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
    std::cout << ct.at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
-   auto d = TAT::Tensor<double, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                    {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}},
-                                                    true}
-                  .test(1);
+   auto d =
+         TAT::Tensor<double, TAT::FermiSymmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}, true}
+               .test(1);
    std::cout << d << "\n";
-   auto dt = d.transpose({TAT::Right, TAT::Up, TAT::Left});
+   auto dt = d.transpose({"Right", "Up", "Left"});
    std::cout << dt << "\n";
-   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Down, TAT::Up, TAT::Left, TAT::Right}, {2, 3, 4, 5}}.test(1);
+   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{"Down", "Up", "Left", "Right"}, {2, 3, 4, 5}}.test(1);
    std::cout << e << "\n";
-   auto et = e.transpose({TAT::Left, TAT::Down, TAT::Right, TAT::Up});
+   auto et = e.transpose({"Left", "Down", "Right", "Up"});
    std::cout << et << "\n";
    std::cout << e.at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
    std::cout << et.at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
@@ -222,7 +241,7 @@ void test_transpose() {
 }
 
 void test_split_and_merge() {
-   const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{TAT::Left, TAT::Right}, {2, 3}}.set([]() {
+   const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.set([]() {
       static double i = -1;
       return i += 1;
    });
@@ -233,14 +252,15 @@ void test_split_and_merge() {
    std::cout << b << "\n";
    std::cout << c << "\n";
    std::cout << d << "\n";
-   auto e = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{{TAT::Left, TAT::Right, TAT::Up},
-                                                                  {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                  .set([]() {
-                     static double i = 0;
-                     return i += 1;
-                  });
+   auto e =
+         TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .set([]() {
+                  static double i = 0;
+                  return i += 1;
+               });
    std::cout << e << "\n";
-   auto f = e.merge_edge({{"Merged", {TAT::Left, "Up"}}});
+   auto f = e.merge_edge({{"Merged", {"Left", "Up"}}});
    std::cout << f << "\n";
    auto g = f.split_edge({{"Merged", {{"Left", {{-1, 3}, {0, 1}, {1, 2}}}, {"Up", {{-1, 2}, {0, 3}, {1, 1}}}}}});
    std::cout << g << "\n";
@@ -261,7 +281,7 @@ void test_edge_operator() {
    do {
       auto a =
             TAT::Tensor<double, TAT::U1Symmetry>{
-                  {TAT::Left, TAT::Right, TAT::Up, TAT::Down},
+                  {"Left", "Right", "Up", "Down"},
                   {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 4}, {1, 2}}, {{-1, 2}, {0, 3}, {1, 1}}, {{-1, 1}, {0, 3}, {1, 2}}}}
                   .set([]() {
                      static double i = 0;
@@ -281,7 +301,7 @@ void test_edge_operator() {
    do {
       auto a =
             TAT::Tensor<double, TAT::FermiSymmetry>{
-                  {TAT::Left, TAT::Right, TAT::Up, TAT::Down},
+                  {"Left", "Right", "Up", "Down"},
                   {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 4}, {1, 2}}, {{-1, 2}, {0, 3}, {1, 1}}, {{-1, 1}, {0, 3}, {1, 2}}}}
                   .set([]() {
                      static double i = 0;
@@ -307,27 +327,26 @@ void test_contract() {
    auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"C", "D"}, {2, 2}}.test();
    std::cout << a << "\n";
    std::cout << b << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"A"}, {"C"}) << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"A"}, {"D"}) << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"B"}, {"C"}) << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {"B"}, {"D"}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"A", "C"}}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"A", "D"}}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"B", "C"}}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"B", "D"}}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(
                       TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {1, 2, 3, 4}}.test(),
                       TAT::Tensor<double, TAT::NoSymmetry>{{"E", "F", "G", "H"}, {3, 1, 2, 4}}.test(),
-                      {"B", "D"},
-                      {"G", "H"})
+                      {{"B", "G"}, {"D", "H"}})
              << "\n";
-   auto c = TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "B", "C", "D"},
-                                                    {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
-                                                    true}
-                  .test();
-   auto d = TAT::Tensor<double, TAT::FermiSymmetry>{{"E", "F", "G", "H"},
-                                                    {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}},
-                                                    true}
-                  .test();
+   auto c =
+         TAT::Tensor<double, TAT::FermiSymmetry>{
+               {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+               .test();
+   auto d =
+         TAT::Tensor<double, TAT::FermiSymmetry>{
+               {"E", "F", "G", "H"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}}, true}
+               .test();
    std::cout << c << "\n";
    std::cout << d << "\n";
-   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {"B", "D"}, {"G", "H"}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";
 }
 
 void test_svd() {
@@ -338,7 +357,7 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.begin()->second << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}) << "\n";
+      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {
       auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
@@ -347,14 +366,14 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.begin()->second << "\n";
-      std::cout << decltype(v)::contract(v, v, {"B", "C"}, {"B", "C"}).transform([](auto i) { return std::abs(i) > 1e-5 ? i : 0; }) << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}) << "\n";
+      std::cout << decltype(v)::contract(v, v, {{"B", "B"}, {"C", "C"}}).transform([](auto i) { return std::abs(i) > 1e-5 ? i : 0; }) << "\n";
+      std::cout << decltype(v)::contract(v.multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {
-      auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"A", "B", "C", "D"},
-                                                    {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
-                                                    true}
-                     .test();
+      auto c =
+            TAT::Tensor<double, TAT::U1Symmetry>{
+                  {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+                  .test();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
       for (const auto& [sym, vec] : s) {
@@ -362,10 +381,10 @@ void test_svd() {
       }
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
-      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
@@ -376,15 +395,15 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.begin()->second << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
    do {
-      auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"A", "B", "C", "D"},
-                                                    {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
-                                                    true}
-                     .test();
+      auto c =
+            TAT::Tensor<double, TAT::U1Symmetry>{
+                  {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+                  .test();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F", 7);
       std::cout << u << "\n";
       for (const auto& [sym, vec] : s) {
@@ -392,10 +411,10 @@ void test_svd() {
       }
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
-      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {"F"}, {"E"}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
@@ -430,5 +449,5 @@ int main(const int argc, char** argv) {
 }
 
 int simple_test() {
-   return main(0, 0);
+   return main(1, 0);
 }

@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #pragma once
 #ifndef TAT_EDGE_HPP
 #define TAT_EDGE_HPP
@@ -43,7 +44,13 @@ namespace TAT {
       BoseEdge(T&& map) : map(std::forward<T>(map)) {}
       BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
 
-      BoseEdge(const Size size) : map({{Symmetry(), size}}) {}
+      BoseEdge(const std::vector<Symmetry>& symmetries) {
+         for (const auto& symmetry : symmetries) {
+            map[symmetry] = 1;
+         }
+      }
+      BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::vector<Symmetry>(symmetries)) {}
+      BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
    template<class Symmetry>
    bool operator==(const BoseEdge<Symmetry>& edge_1, const BoseEdge<Symmetry>& edge_2) {
@@ -77,7 +84,13 @@ namespace TAT {
       FermiEdge(T&& map) : map(std::forward<T>(map)) {}
       FermiEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
 
-      FermiEdge(const Size size) : map({{Symmetry(), size}}) {}
+      FermiEdge(const std::vector<Symmetry>& symmetries) {
+         for (const auto& symmetry : symmetries) {
+            map[symmetry] = 1;
+         }
+      }
+      FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::vector<Symmetry>(symmetries)) {}
+      FermiEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
 
       template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
       FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(std::forward<T>(map)) {}
@@ -124,6 +137,13 @@ namespace TAT {
 
       const std::map<Symmetry, Size>* map;
 
+      PtrBoseEdge() = default;
+      PtrBoseEdge(const PtrBoseEdge&) = default;
+      PtrBoseEdge(PtrBoseEdge&&) = default;
+      PtrBoseEdge& operator=(const PtrBoseEdge&) = default;
+      PtrBoseEdge& operator=(PtrBoseEdge&&) = default;
+      ~PtrBoseEdge() = default;
+
       PtrBoseEdge(const std::map<Symmetry, Size>* m) : map(m) {}
    };
    template<class Symmetry>
@@ -132,6 +152,13 @@ namespace TAT {
 
       Arrow arrow;
       const std::map<Symmetry, Size>* map;
+
+      PtrFermiEdge() = default;
+      PtrFermiEdge(const PtrFermiEdge&) = default;
+      PtrFermiEdge(PtrFermiEdge&&) = default;
+      PtrFermiEdge& operator=(const PtrFermiEdge&) = default;
+      PtrFermiEdge& operator=(PtrFermiEdge&&) = default;
+      ~PtrFermiEdge() = default;
 
       PtrFermiEdge(const Arrow arrow, const std::map<Symmetry, Size>* map) : arrow(arrow), map(map) {}
 
@@ -186,7 +213,7 @@ namespace TAT {
          return;
       }
       using Symmetry = typename T::symmetry_type;
-      using MapIteratorList = vector<typename std::map<Symmetry, Size>::const_iterator>;
+      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
       auto symmetry_iterator_list = MapIteratorList();
       for (auto i = 0; i != rank; ++i) {
          const auto& map = remove_pointer(edges[i].map);
@@ -223,16 +250,16 @@ namespace TAT {
    template<class T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
-      using MapIteratorList = vector<typename std::map<Symmetry, Size>::const_iterator>;
-      auto result = vector<std::tuple<vector<Symmetry>, Size>>();
-      auto symmetries = vector<Symmetry>(edges.size());
-      auto sizes = vector<Size>(edges.size());
+      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
+      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
+      auto symmetries = std::vector<Symmetry>(edges.size());
+      auto sizes = std::vector<Size>(edges.size());
       Rank rank = edges.size();
       loop_edge(
             edges.data(),
             rank,
             [&result]() {
-               result.push_back({vector<Symmetry>{}, 1});
+               result.push_back({std::vector<Symmetry>{}, 1});
             },
             []() {},
             [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {

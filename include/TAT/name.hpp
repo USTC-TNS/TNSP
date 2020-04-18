@@ -75,6 +75,7 @@ namespace TAT {
       }
    };
 
+   // 此处将可被c++20的operator<=>替换
 #define TAT_DEF_NAME_OP(OP, EXP)                            \
    inline bool OP(const Name& name_1, const Name& name_2) { \
       return EXP;                                           \
@@ -87,23 +88,8 @@ namespace TAT {
    TAT_DEF_NAME_OP(operator<, name_1.id<name_2.id)
 #undef TAT_DEF_NAME_OP
 
+   // 保留名称
 #define TAT_DEF_NAME(x) inline const Name x(#x)
-#define TAT_DEF_NAMES(n)      \
-   TAT_DEF_NAME(Phy##n);      \
-   TAT_DEF_NAME(Left##n);     \
-   TAT_DEF_NAME(Right##n);    \
-   TAT_DEF_NAME(Up##n);       \
-   TAT_DEF_NAME(Down##n);     \
-   TAT_DEF_NAME(LeftUp##n);   \
-   TAT_DEF_NAME(LeftDown##n); \
-   TAT_DEF_NAME(RightUp##n);  \
-   TAT_DEF_NAME(RightDown##n)
-   TAT_DEF_NAMES();
-   TAT_DEF_NAMES(1);
-   TAT_DEF_NAMES(2);
-   TAT_DEF_NAMES(3);
-   TAT_DEF_NAMES(4);
-#undef TAT_DEF_NAMES
    TAT_DEF_NAME(Contract1);
    TAT_DEF_NAME(Contract2);
    TAT_DEF_NAME(SVD1);
@@ -113,7 +99,7 @@ namespace TAT {
    /**
     * \brief 由名字列表构造名字到需要的映射表
     */
-   inline std::map<Name, Rank> construct_name_to_index(const vector<Name>& names) {
+   inline std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
       std::map<Name, Rank> result;
       for (auto name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
@@ -124,8 +110,12 @@ namespace TAT {
    /**
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
-   inline bool is_valid_name(const vector<Name>& names, const Rank& rank) {
-      return names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
+   inline bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
+      auto result = names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
+      if (!result) {
+         warning_or_error("Wrong Name Number or Duplicated Name");
+      }
+      return result;
    }
 } // namespace TAT
 #endif

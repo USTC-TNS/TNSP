@@ -15,7 +15,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iostream>
 #include <random>
+#include <sstream>
 
 #include <TAT/TAT.hpp>
 
@@ -23,12 +26,12 @@ using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 struct lattice {
    Tensor state;
-   TAT::vector<std::pair<int, int>> link;
+   std::vector<std::pair<int, int>> link;
    Tensor hamiltonian;
 
    lattice& create_vector(int n) & {
-      auto name = TAT::vector<TAT::Name>();
-      auto edge = TAT::vector<TAT::Edge<TAT::NoSymmetry>>();
+      auto name = std::vector<TAT::Name>();
+      auto edge = std::vector<TAT::Edge<TAT::NoSymmetry>>();
       for (auto i = 0; i < n; i++) {
          name.emplace_back(std::to_string(i));
          edge.emplace_back(2);
@@ -40,22 +43,22 @@ struct lattice {
       return std::move(create_vector(n));
    }
 
-   lattice& set_link(TAT::vector<std::pair<int, int>>&& l) & {
+   lattice& set_link(std::vector<std::pair<int, int>>&& l) & {
       link = std::move(l);
       return *this;
    }
-   lattice set_link(TAT::vector<std::pair<int, int>>&& l) && {
+   lattice set_link(std::vector<std::pair<int, int>>&& l) && {
       return std::move(set_link(std::move(l)));
    }
 
-   lattice& set_h(const TAT::vector<double>& h) & {
+   lattice& set_h(const std::vector<double>& h) & {
       hamiltonian = Tensor({"I0", "I1", "O0", "O1"}, {2, 2, 2, 2}).set([&h]() {
          static int i = 0;
          return h[i++];
       });
       return *this;
    }
-   lattice set_h(const TAT::vector<double>& h) && {
+   lattice set_h(const std::vector<double>& h) && {
       return std::move(set_h(h));
    }
 
@@ -73,7 +76,7 @@ struct lattice {
    void update(double delta_t, int n) {
       static const auto identity = Tensor(hamiltonian.names, hamiltonian.core->edges).set([]() {
          // clang-format off
-         static const TAT::vector<double> id = {
+         static const std::vector<double> id = {
             1, 0, 0, 0,
             0, 1, 0, 0,
             0, 0, 1, 0,
@@ -86,8 +89,7 @@ struct lattice {
       const auto updater = identity - delta_t * hamiltonian;
       for (auto t = 0; t < n; t++) {
          for (const auto& [i, j] : link) {
-            state = Tensor::contract(
-                          state, updater, {std::to_string(i), std::to_string(j)}, {"I0", "I1"})
+            state = Tensor::contract(state, updater, {{std::to_string(i), "I0"}, {std::to_string(j), "I1"}})
                           .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}});
             state = state / state.norm<-1>();
          }
@@ -103,20 +105,24 @@ struct lattice {
    }
 
    double energy() {
-      const auto psi_psi = Tensor::contract(state, state, state.names, state.names);
+      const auto psi_psi = state.contract_all_edge();
       auto H_psi = state.same_shape().zero();
       for (const auto& [i, j] : link) {
-         H_psi += Tensor::contract(
-                        state, hamiltonian, {std::to_string(i), std::to_string(j)}, {"I0", "I1"})
-                        .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}})
-                        .transpose(state.names);
+         H_psi += Tensor::contract(state, hamiltonian, {{std::to_string(i), "I0"}, {std::to_string(j), "I1"}})
+                        .edge_rename({{"O0", std::to_string(i)}, {"O1", std::to_string(j)}});
       }
-      const auto psi_H_psi = Tensor::contract(state, H_psi, state.names, state.names);
+      const auto psi_H_psi = state.contract_all_edge(H_psi);
       return double(psi_H_psi) / double(psi_psi);
    }
 };
 
-int main() {
+int main(int argc, char** argv) {
+   std::stringstream out;
+   auto cout_buf = std::cout.rdbuf();
+   if (argc != 1) {
+      std::cout.rdbuf(out.rdbuf());
+   }
+
    std::mt19937 engine(0);
    std::uniform_real_distribution<double> dis(-1, 1);
    auto gen = [&]() { return dis(engine); };
@@ -137,5 +143,12 @@ int main() {
    l.update(0.02, 100);
    l.update(0.01, 100);
    l.update(0.005, 100);
+
+   if (argc != 1) {
+      std::cout.rdbuf(cout_buf);
+      std::ifstream fout(argv[1]);
+      std::string sout((std::istreambuf_iterator<char>(fout)), std::istreambuf_iterator<char>());
+      return sout != out.str();
+   }
    return 0;
 }
