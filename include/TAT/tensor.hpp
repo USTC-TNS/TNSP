@@ -399,10 +399,10 @@ namespace TAT {
             std::set<std::tuple<Name, Name>> contract_names);
 
       Tensor<ScalarType, Symmetry> contract(const Tensor<ScalarType, Symmetry>& tensor_2, std::set<std::tuple<Name, Name>> contract_names) const {
-         return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, contract_names);
+         return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, std::move(contract_names));
       }
 
-      ScalarType contract_all_edge(const Tensor<ScalarType, Symmetry> other) const {
+      ScalarType contract_all_edge(const Tensor<ScalarType, Symmetry>& other) const {
          auto contract_names = std::set<std::tuple<Name, Name>>();
          for (const auto& i : names) {
             contract_names.insert({i, i});
@@ -417,8 +417,8 @@ namespace TAT {
       [[deprecated]] static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor_1,
             const Tensor<ScalarType, Symmetry>& tensor_2,
-            std::vector<Name> contract_names_1,
-            std::vector<Name> contract_names_2) {
+            const std::vector<Name>& contract_names_1,
+            const std::vector<Name>& contract_names_2) {
          auto contract_names = std::set<std::tuple<Name, Name>>();
          for (int i = 0; i < contract_names_1.size(); i++) {
             contract_names.insert({contract_names_1[i], contract_names_2[i]});
@@ -426,8 +426,10 @@ namespace TAT {
          return contract(tensor_1, tensor_2, contract_names);
       }
 
-      [[deprecated]] Tensor<ScalarType, Symmetry>
-      contract(const Tensor<ScalarType, Symmetry>& tensor_2, std::vector<Name> contract_names_1, std::vector<Name> contract_names_2) const {
+      [[deprecated]] Tensor<ScalarType, Symmetry> contract(
+            const Tensor<ScalarType, Symmetry>& tensor_2,
+            const std::vector<Name>& contract_names_1,
+            const std::vector<Name>& contract_names_2) const {
          return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, std::move(contract_names_1), std::move(contract_names_2));
       }
 
