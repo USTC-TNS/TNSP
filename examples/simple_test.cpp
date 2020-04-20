@@ -356,7 +356,7 @@ void test_svd() {
       auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
       std::cout << v << "\n";
-      std::cout << s.begin()->second << "\n";
+      std::cout << s.value.begin()->second << "\n";
       std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {
@@ -365,7 +365,7 @@ void test_svd() {
       auto [u, s, v] = b.svd({"A", "D"}, "E", "F");
       std::cout << u << "\n";
       std::cout << v << "\n";
-      std::cout << s.begin()->second << "\n";
+      std::cout << s.value.begin()->second << "\n";
       std::cout << decltype(v)::contract(v, v, {{"B", "B"}, {"C", "C"}}).transform([](auto i) { return std::abs(i) > 1e-5 ? i : 0; }) << "\n";
       std::cout << decltype(v)::contract(v.multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
@@ -376,7 +376,7 @@ void test_svd() {
                   .test();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
-      for (const auto& [sym, vec] : s) {
+      for (const auto& [sym, vec] : s.value) {
          std::cout << sym << ":" << vec << "\n";
       }
       std::cout << v << "\n";
@@ -394,7 +394,7 @@ void test_svd() {
       auto [u, s, v] = a.svd({"C", "A"}, "E", "F", 2);
       std::cout << u << "\n";
       std::cout << v << "\n";
-      std::cout << s.begin()->second << "\n";
+      std::cout << s.value.begin()->second << "\n";
       std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
@@ -406,7 +406,7 @@ void test_svd() {
                   .test();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F", 7);
       std::cout << u << "\n";
-      for (const auto& [sym, vec] : s) {
+      for (const auto& [sym, vec] : s.value) {
          std::cout << sym << ":" << vec << "\n";
       }
       std::cout << v << "\n";

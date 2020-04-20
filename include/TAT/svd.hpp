@@ -222,7 +222,7 @@ namespace TAT {
       auto tensor_2 = Tensor<ScalarType, Symmetry>{
             put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = std::map<Symmetry, std::vector<real_base_t<ScalarType>>>();
+      auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.core->blocks.at(symmetries).data();
          auto* data_v = tensor_2.core->blocks.at(symmetries).data();
@@ -230,7 +230,7 @@ namespace TAT {
          const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
          const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
          const int k = m > n ? n : m;
-         auto s = std::vector<real_base_t<ScalarType>>(k);
+         auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
@@ -292,7 +292,7 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             {{SVD1, remain_dimension_v}});
-      return {std::move(u), std::move(result_s), std::move(v)};
+      return {std::move(u), {std::move(result_s)}, std::move(v)};
    }
 } // namespace TAT
 #endif

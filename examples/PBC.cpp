@@ -30,10 +30,19 @@ auto right = get_name("right");
 auto up = get_name("up");
 auto down = get_name("down");
 
+struct MPO {
+   // TODO 化简两行变一行的程序
+   MPO(std::array<TAT::Name, 4> udlr_name, std::vector<const Tensor*> line_1, std::vector<const Tensor*> line_2) {
+      // here
+   }
+};
+
 struct PBC {
    int L;
-   int D;
+   unsigned int D;
    std::map<int, std::map<int, Tensor>> lattice;
+   std::map<std::set<std::tuple<int, int>>, std::map<TAT::NoSymmetry, std::vector<float>>> environment;
+
    PBC(int L, unsigned int D, std::function<float()> generator) : L(L), D(D) {
       for (int i = 0; i < L; i++) {
          for (int j = 0; j < L; j++) {
@@ -46,7 +55,14 @@ struct PBC {
       auto result = Tensor(1);
       for (int i = 0; i < L; i++) {
          for (int j = 0; j < L; j++) {
-            result = result.contract(lattice[i][j], {{right(i), left(i)}, {down(j), up(j)}});
+            auto contract_names = std::set<std::tuple<TAT::Name, TAT::Name>>{{right(i), left(i)}, {down(j), up(j)}};
+            if (j == L - 1) {
+               contract_names.insert({left(i), right(i)});
+            }
+            if (i == L - 1) {
+               contract_names.insert({up(j), down(j)});
+            }
+            result = result.contract(lattice[i][j], contract_names);
          }
       }
       std::cout << result << "\n";

@@ -40,11 +40,23 @@ int main() {
       // i and i+1
       auto this_hamiltonian = TAT::Tensor<double, TAT::FermiSymmetry>(1);
       for (int current = 0; current < i; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {})
+                                  .merge_edge({{"In", {"In", "in"}}})
+                                  .conjugate()
+                                  .merge_edge({{"Out", {"Out", "out"}}}, true)
+                                  .conjugate();
       }
-      this_hamiltonian = this_hamiltonian.contract(h_t, {}).merge_edge({{"In", {"in2", "in1", "In"}}, {"Out", {"Out", "out1", "out2"}}});
+      this_hamiltonian = this_hamiltonian.contract(h_t, {})
+                               .merge_edge({{"In", {"In", "in1", "in2"}}})
+                               .conjugate()
+                               .merge_edge({{"Out", {"Out", "out1", "out2"}}}, true)
+                               .conjugate();
       for (int current = i + 2; current < L; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {})
+                                  .merge_edge({{"In", {"In", "in"}}})
+                                  .conjugate()
+                                  .merge_edge({{"Out", {"Out", "out"}}}, true)
+                                  .conjugate();
       }
       return this_hamiltonian;
    };
@@ -52,15 +64,31 @@ int main() {
       // i and i+1
       auto this_hamiltonian = TAT::Tensor<double, TAT::FermiSymmetry>(1);
       for (int current = 0; current < i; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {})
+                                  .merge_edge({{"In", {"In", "in"}}})
+                                  .conjugate()
+                                  .merge_edge({{"Out", {"Out", "out"}}}, true)
+                                  .conjugate();
       }
-      this_hamiltonian = this_hamiltonian.contract(number, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+      this_hamiltonian = this_hamiltonian.contract(number, {})
+                               .merge_edge({{"In", {"In", "in"}}})
+                               .conjugate()
+                               .merge_edge({{"Out", {"Out", "out"}}}, true)
+                               .conjugate();
       // TODO: 为什么这里的merge不应该加符号？ 难道哈密顿量就是这样的规则么？
       // 可能事因为收缩方向反了的原因， 但是为什么收缩方向反了呢， 这可能是一个bug
       // 可用L=2, i.e. n_1 * n_2这个哈密顿量做研究
-      this_hamiltonian = this_hamiltonian.contract(number, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+      this_hamiltonian = this_hamiltonian.contract(number, {})
+                               .merge_edge({{"In", {"In", "in"}}})
+                               .conjugate()
+                               .merge_edge({{"Out", {"Out", "out"}}}, true)
+                               .conjugate();
       for (int current = i + 2; current < L; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {})
+                                  .merge_edge({{"In", {"In", "in"}}})
+                                  .conjugate()
+                                  .merge_edge({{"Out", {"Out", "out"}}}, true)
+                                  .conjugate();
       }
       return this_hamiltonian;
    };
@@ -72,6 +100,8 @@ int main() {
    for (auto i = 1; i < L - 1; i++) {
       V = V + get_hamiltonian_U(i);
    }
-   std::cout << 8 * V - T << "\n";
+   std::cout << (8 * V - T).transform([](float i) { return i == -0 ? 0 : i; }) << "\n";
+   // TODO: 确实是这个原因导致的
+   // 需要给edge operator加一个merge split方向
    return 0;
 }
