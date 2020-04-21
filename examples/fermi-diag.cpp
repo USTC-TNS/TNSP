@@ -16,14 +16,15 @@
  */
 
 #include <fstream>
+#include <iostream>
 
 #include <TAT/TAT.hpp>
 
 int main(int argc, char** argv) {
    auto number = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1}, {1}}, true).test(1, 0) +
                  TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).test(0, 0);
-   auto more_and_less = TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1}, {1}, {0}}, true).test(1, 0) +
-                        TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1, 0}, {0, 1}, {0, 0}}, true).test(0, 0);
+
+   auto more_and_less = TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1}, {1}, {0}}, true).test(1, 0);
    auto identity = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).test(1, 0);
    auto more_1 = identity.edge_rename({{"out", "out2"}, {"in", "in2"}}).contract(more_and_less, {}).edge_rename({{"more", "out1"}, {"less", "in1"}});
    auto more_2 = identity.edge_rename({{"out", "out1"}, {"in", "in1"}}).contract(more_and_less, {}).edge_rename({{"more", "out2"}, {"less", "in2"}});

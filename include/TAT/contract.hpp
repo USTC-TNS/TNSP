@@ -375,10 +375,17 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             delete_2);
+      /*
+      std::cout << "T1:" << tensor_1 << "\n";
+      std::cout << "M1:" << tensor_1_merged << "\n";
+      std::cout << "T2:" << tensor_2 << "\n";
+      std::cout << "M2:" << tensor_2_merged << "\n";
+      */
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
+      // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
       auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
       for (auto& [symmetries, data] : product_result.core->blocks) {
          // m k n
@@ -389,7 +396,16 @@ namespace TAT {
          const int m = product_result.core->edges[0].map.at(symmetries[0]);
          const int n = product_result.core->edges[1].map.at(symmetries[1]);
          const int k = common_edge.map.at(symmetries[1]);
-         const ScalarType alpha = 1;
+         ScalarType alpha = 1;
+         if constexpr (is_fermi) {
+            if ((put_common_2_right ^ !put_common_1_right) && bool(symmetries[0].fermi % 2)) {
+               //std::cout << "R\n";
+               alpha = -1;
+            }
+            //else {
+            //   std::cout << "N\n";
+            //}
+         }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
             calculate_product<ScalarType>(
@@ -417,6 +433,8 @@ namespace TAT {
          return result;
       } else {
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
+         //std::cout << "R:" << product_result << "\n";
+         //std::cout << "S:" << result << "\n";
          return result;
       }
    }

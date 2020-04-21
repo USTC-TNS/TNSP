@@ -267,7 +267,11 @@ namespace TAT {
          }
 
          for (const auto& [symmetry, this_remain] : remain_dimension_u) {
-            result_s.at(symmetry).resize(this_remain);
+            if (this_remain == 0) {
+               result_s.erase(symmetry);
+            } else {
+               result_s.at(symmetry).resize(this_remain);
+            }
          }
       }
 

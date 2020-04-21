@@ -347,6 +347,9 @@ void test_contract() {
    std::cout << c << "\n";
    std::cout << d << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(
+                      c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {{"B", "G"}, {"D", "H"}})
+             << "\n";
 }
 
 void test_svd() {
