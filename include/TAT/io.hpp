@@ -23,7 +23,9 @@
 
 #include <iostream>
 #ifdef _WIN32
+extern "C" {
 #include <windows.h>
+}
 #endif
 
 #include "tensor.hpp"

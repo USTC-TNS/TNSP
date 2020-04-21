@@ -30,13 +30,6 @@ auto right = get_name("right");
 auto up = get_name("up");
 auto down = get_name("down");
 
-struct MPO {
-   // TODO 化简两行变一行的程序
-   MPO(std::array<TAT::Name, 4> udlr_name, std::vector<const Tensor*> line_1, std::vector<const Tensor*> line_2) {
-      // here
-   }
-};
-
 struct PBC {
    int L;
    unsigned int D;

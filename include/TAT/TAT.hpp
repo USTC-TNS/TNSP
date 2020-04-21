@@ -38,6 +38,7 @@
 // clang-format off
 #include "tensor.hpp"
 #include "implement.hpp"
+#include "tools.hpp"
 // clang-format on
 
 #endif

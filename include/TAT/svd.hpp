@@ -199,7 +199,7 @@ namespace TAT {
          }
       }
       result_name_u.push_back(common_name_u);
-      const bool put_v_right = free_name_v.back() == names.back();
+      const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
       auto tensor_merged = edge_operator(
             {},
             {},
