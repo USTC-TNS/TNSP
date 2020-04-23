@@ -24,7 +24,7 @@
 #include "tensor.hpp"
 
 extern "C" {
-void sgemm_(
+int sgemm_(
       const char* transpose_A,
       const char* transpose_B,
       const int* m,
@@ -38,7 +38,7 @@ void sgemm_(
       const float* beta,
       float* c,
       const int* ldc);
-void dgemm_(
+int dgemm_(
       const char* transpose_A,
       const char* transpose_B,
       const int* m,
@@ -52,7 +52,7 @@ void dgemm_(
       const double* beta,
       double* c,
       const int* ldc);
-void cgemm_(
+int cgemm_(
       const char* transpose_A,
       const char* transpose_B,
       const int* m,
@@ -66,7 +66,7 @@ void cgemm_(
       const std::complex<float>* beta,
       std::complex<float>* c,
       const int* ldc);
-void zgemm_(
+int zgemm_(
       const char* transpose_A,
       const char* transpose_B,
       const int* m,

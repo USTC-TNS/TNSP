@@ -1,9 +1,8 @@
-build
-out
 .idea
 .vs
 .vscode
 .ipynb_checkpoints
-old
+build
+out
 docs
-*.gch
+emscripten/lib*

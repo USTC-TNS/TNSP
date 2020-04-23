@@ -26,9 +26,15 @@
 namespace TAT {
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
+      auto traced_names = std::vector<Name>();
+      for (const auto& [name_1, name_2] : trace_names) {
+      }
+      // auto merged_tensor = edge_operator({}, {}, reversed_name, merge_map, new_names, false, {{{}, {}, {}, {}}});
       // 对于fermi的情况, 应是一进一出才合法
       // TODO trace
+      // TODO slice
       warning_or_error("Not Implement Yet");
+      return *this;
    }
 } // namespace TAT
 #endif

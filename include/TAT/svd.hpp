@@ -29,7 +29,7 @@ using lapack_complex_double = std::complex<double>;
 //#include "lapacke.h"
 
 extern "C" {
-void sgesvd_(
+int sgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -44,7 +44,7 @@ void sgesvd_(
       float* work,
       const int* lwork,
       int* info);
-void dgesvd_(
+int dgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -59,7 +59,7 @@ void dgesvd_(
       double* work,
       const int* lwork,
       int* info);
-void cgesvd_(
+int cgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -75,7 +75,7 @@ void cgesvd_(
       const int* lwork,
       float* rwork,
       int* info);
-void zgesvd_(
+int zgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
