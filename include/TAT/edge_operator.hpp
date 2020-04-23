@@ -125,12 +125,12 @@ namespace TAT {
       for (Rank position_before_split = 0, total_split_index = 0; position_before_split < rank_before_split; position_before_split++) {
          if (auto position = split_map.find(name_before_split[position_before_split]); position != split_map.end()) {
             const auto& this_split_begin_position_in_edge_after_split = edge_after_split.size();
-            for (const auto& [splitted_name, splitted_edge] : position->second) {
-               name_after_split.push_back(splitted_name);
+            for (const auto& [split_name, split_edge] : position->second) {
+               name_after_split.push_back(split_name);
                if constexpr (is_fermi) {
-                  edge_after_split.push_back({edge_before_split[position_before_split].arrow, &splitted_edge.map});
+                  edge_after_split.push_back({edge_before_split[position_before_split].arrow, &split_edge.map});
                } else {
-                  edge_after_split.push_back({&splitted_edge.map});
+                  edge_after_split.push_back({&split_edge.map});
                }
                split_flag.push_back(total_split_index);
             }

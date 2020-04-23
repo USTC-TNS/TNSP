@@ -119,8 +119,8 @@ namespace TAT {
                for (Size j = 0; j < dimension_of_N; j++) {
                   auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
                   auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                  for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
-                       i++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
+                  for (Rank k = 0, source_index = 0, destination_index = 0; k < scalar_line_size[0];
+                       k++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
                      line_destination[destination_index] = -line_source[source_index];
                   }
                }
@@ -130,8 +130,8 @@ namespace TAT {
                for (Size j = 0; j < dimension_of_N; j++) {
                   auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
                   auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                  for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
-                       i++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
+                  for (Rank k = 0, source_index = 0, destination_index = 0; k < scalar_line_size[0];
+                       k++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
                      line_destination[destination_index] = line_source[source_index];
                   }
                }
@@ -387,9 +387,9 @@ namespace TAT {
       std::vector<bool> merging_source_to_destination(rank);
       std::vector<bool> merging_destination_to_source(rank);
       for (Rank i = 1; i < rank; i++) {
-         if (Rank j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
-                                                     leading_source[i - 1] == leading_source[i] * dimensions_source[i] &&
-                                                     leading_destination[j - 1] == leading_destination[j] * dimensions_destination[j]) {
+         if (const auto j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
+                                                           leading_source[i - 1] == leading_source[i] * dimensions_source[i] &&
+                                                           leading_destination[j - 1] == leading_destination[j] * dimensions_destination[j]) {
             merging_source_to_destination[i] = true;
             merging_destination_to_source[plan_source_to_destination[i]] = true;
          } else {

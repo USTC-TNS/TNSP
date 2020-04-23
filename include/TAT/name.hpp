@@ -90,6 +90,10 @@ namespace TAT {
    TAT_DEF_NAME(Contract2);
    TAT_DEF_NAME(SVD1);
    TAT_DEF_NAME(SVD2);
+   TAT_DEF_NAME(Up);
+   TAT_DEF_NAME(Down);
+   TAT_DEF_NAME(Left);
+   TAT_DEF_NAME(Right);
 #undef TAT_DEF_NAME
 
    /**
@@ -107,7 +111,7 @@ namespace TAT {
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
    inline bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      auto result = names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
+      const auto result = names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
       if (!result) {
          warning_or_error("Wrong Name Number or Duplicated Name");
       }

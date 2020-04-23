@@ -192,7 +192,7 @@ namespace TAT {
 
       allocator_without_initialize() = default;
       template<class U>
-      allocator_without_initialize(allocator_without_initialize<U>) {}
+      explicit allocator_without_initialize(allocator_without_initialize<U>) {}
    };
 
    /**

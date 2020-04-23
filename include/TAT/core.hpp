@@ -72,12 +72,13 @@ namespace TAT {
                this_mark[symmetry] = true;
             }
          }
+         const Rank rank = edges.size();
          for (const auto& [symmetries, _] : blocks) {
-            for (auto i = 0; i < edges.size(); i++) {
+            for (Rank i = 0; i < rank; i++) {
                edge_mark[i].at(symmetries[i]) = false;
             }
          }
-         for (auto i = 0; i < edges.size(); i++) {
+         for (Rank i = 0; i < rank; i++) {
             for (const auto& [symmetry, flag] : edge_mark[i]) {
                if (flag) {
                   edges[i].map.erase(symmetry);

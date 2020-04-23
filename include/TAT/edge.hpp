@@ -150,8 +150,8 @@ namespace TAT {
    struct PtrFermiEdge {
       using symmetry_type = Symmetry;
 
-      Arrow arrow;
-      const std::map<Symmetry, Size>* map;
+      Arrow arrow = false;
+      const std::map<Symmetry, Size>* map = nullptr;
 
       PtrFermiEdge() = default;
       PtrFermiEdge(const PtrFermiEdge&) = default;
@@ -268,7 +268,7 @@ namespace TAT {
                   symmetry_summary += symmetry_iterator->first;
                }
                if (symmetry_summary == Symmetry()) {
-                  for (Rank i = minimum_changed; i < symmetry_iterator_list.size(); i++) {
+                  for (auto i = minimum_changed; i < rank; i++) {
                      symmetries[i] = symmetry_iterator_list[i]->first;
                      sizes[i] = symmetry_iterator_list[i]->second * (i ? sizes[i - 1] : 1);
                   }

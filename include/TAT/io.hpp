@@ -68,7 +68,6 @@ namespace TAT {
       } else {
          return out << position->second;
       }
-      return out;
    }
 
    template<class T, class A>
