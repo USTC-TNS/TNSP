@@ -44,12 +44,12 @@ namespace TAT {
       BoseEdge(T&& map) : map(std::forward<T>(map)) {}
       BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
 
-      BoseEdge(const std::vector<Symmetry>& symmetries) {
+      BoseEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
             map[symmetry] = 1;
          }
       }
-      BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::vector<Symmetry>(symmetries)) {}
+      BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::set<Symmetry>(symmetries)) {}
       BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
    template<class Symmetry>
@@ -84,12 +84,12 @@ namespace TAT {
       FermiEdge(T&& map) : map(std::forward<T>(map)) {}
       FermiEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
 
-      FermiEdge(const std::vector<Symmetry>& symmetries) {
+      FermiEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
             map[symmetry] = 1;
          }
       }
-      FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::vector<Symmetry>(symmetries)) {}
+      FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::set<Symmetry>(symmetries)) {}
       FermiEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
 
       template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>

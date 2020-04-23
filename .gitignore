@@ -6,3 +6,4 @@ build
 out
 docs
 emscripten/lib*
+pybind11

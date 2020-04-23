@@ -167,6 +167,7 @@ struct MPS {
       }
       energy /= get_right(0);
       return energy / chain.size();
+      // TODO: problem, write u1 mps first
    }
 
    void show() const {

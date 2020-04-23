@@ -42,3 +42,11 @@ add_test(diag ${PROJECT_BINARY_DIR}/diag ${PROJECT_SOURCE_DIR}/examples/diag.out
 add_test(mps ${PROJECT_BINARY_DIR}/mps 4 4 100 0.1 10 ${PROJECT_SOURCE_DIR}/examples/mps.out)
 add_test(fermi-diag ${PROJECT_BINARY_DIR}/fermi-diag ${PROJECT_SOURCE_DIR}/examples/fermi-diag.out)
 add_test(OBC ${PROJECT_BINARY_DIR}/OBC ${PROJECT_SOURCE_DIR}/examples/OBC.out)
+
+find_package(pybind11)
+if(pybind11_FOUND)
+   pybind11_add_module(TAT ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
+elseif(EXISTS ${PROJECT_SOURCE_DIR}/pybind11)
+   add_subdirectory(pybind11)
+   pybind11_add_module(TAT ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
+endif()
