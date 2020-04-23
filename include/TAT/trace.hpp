@@ -1,5 +1,5 @@
 /**
- * \file TAT.hpp
+ * \file trace.hpp
  *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,27 +18,23 @@
  */
 
 #pragma once
-#ifndef TAT_HPP
-#define TAT_HPP
+#ifndef TAT_TRACE_HPP
+#define TAT_TRACE_HPP
 
-#ifndef __cplusplus
-#error "only work for c++"
-#endif
-
-#ifdef _MSVC_LANG
-#if _MSVC_LANG < 201703L
-#error require c++17 or later
-#endif
-#else
-#if __cplusplus < 201703L
-#error require c++17 or later
-#endif
-#endif
-
-// clang-format off
 #include "tensor.hpp"
-#include "implement.hpp"
-#include "tools.hpp"
-// clang-format on
 
+namespace TAT {
+   template<class ScalarType, class Symmetry>
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
+      auto traced_names = std::vector<Name>();
+      for (const auto& [name_1, name_2] : trace_names) {
+      }
+      // auto merged_tensor = edge_operator({}, {}, reversed_name, merge_map, new_names, false, {{{}, {}, {}, {}}});
+      // 对于fermi的情况, 应是一进一出才合法
+      // TODO trace
+      // TODO slice
+      warning_or_error("Not Implement Yet");
+      return *this;
+   }
+} // namespace TAT
 #endif

@@ -29,7 +29,7 @@ using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 struct MPS {
    std::vector<Tensor> chain;
    Tensor hamiltonian;
-   int dimension;
+   unsigned int dimension;
 
    template<class G>
    MPS(int n, unsigned int d, G&& g, const std::vector<double>& h) : dimension(d) {

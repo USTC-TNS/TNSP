@@ -28,6 +28,7 @@
 #include "io.hpp"
 #include "scalar.hpp"
 #include "svd.hpp"
+#include "trace.hpp"
 #include "transpose.hpp"
 
 #endif

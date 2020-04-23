@@ -101,9 +101,11 @@ namespace TAT {
             }
             for (const auto& [symmetry, dimension] : core->edges[i].map) {
                if (auto cut_iterator = symmetry_to_cut_dimension.find(symmetry); cut_iterator != symmetry_to_cut_dimension.end()) {
-                  this_edge.map[symmetry] = cut_iterator->second;
+                  if (auto new_dimension = cut_iterator->second; new_dimension != 0) {
+                     //auto new_dimension = cut_iterator->second;
+                     this_edge.map[symmetry] = new_dimension < dimension ? new_dimension : dimension;
+                  }
                   // 这个会影响leading, 故只需修改原来算offset处的代码即可, 替换回core->edges
-                  // 这里不检查是否new_dimension < dimension
                } else {
                   this_edge.map[symmetry] = dimension;
                }
@@ -336,9 +338,9 @@ namespace TAT {
                      // do not check dim=0, because in constructor, i didn't check
                      current_symmetries[i] = symmetry_iterator->first;
                   }
-                  auto target_symmetry = accumulated_symmetries[merge_rank - 1];
+                  auto target_symmetry = accumulated_symmetries.back();
                   this_offset[current_symmetries] = {target_symmetry, merged_edge.map[target_symmetry]};
-                  merged_edge.map[target_symmetry] += accumulated_dimensions[merge_rank - 1];
+                  merged_edge.map[target_symmetry] += accumulated_dimensions.back();
                   return merge_rank;
                });
          // merge edge end

@@ -15,13 +15,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <fstream>
+#include <iostream>
+
 #include <TAT/TAT.hpp>
 
-int main() {
+int main(int argc, char** argv) {
    auto number = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1}, {1}}, true).test(1, 0) +
                  TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).test(0, 0);
-   auto more_and_less = TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1}, {1}, {0}}, true).test(1, 0) +
-                        TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1, 0}, {0, 1}, {0, 0}}, true).test(0, 0);
+
+   auto more_and_less = TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1}, {1}, {0}}, true).test(1, 0);
    auto identity = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).test(1, 0);
    auto more_1 = identity.edge_rename({{"out", "out2"}, {"in", "in2"}}).contract(more_and_less, {}).edge_rename({{"more", "out1"}, {"less", "in1"}});
    auto more_2 = identity.edge_rename({{"out", "out1"}, {"in", "in1"}}).contract(more_and_less, {}).edge_rename({{"more", "out2"}, {"less", "in2"}});
@@ -40,11 +43,14 @@ int main() {
       // i and i+1
       auto this_hamiltonian = TAT::Tensor<double, TAT::FermiSymmetry>(1);
       for (int current = 0; current < i; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
+         // 有时候需要逆向merge, 现在只能通过两个conjugate来完成
+         // 当block中只含一个元素时, 这实际上和反向merge不加符号时一样的
+         // 反向不反向相差一个merge的符号, 而现在反向加个符号就相当于, 不反向不加符号
       }
-      this_hamiltonian = this_hamiltonian.contract(h_t, {}).merge_edge({{"In", {"in2", "in1", "In"}}, {"Out", {"Out", "out1", "out2"}}});
+      this_hamiltonian = this_hamiltonian.contract(h_t, {}).merge_edge({{"In", {"In", "in1", "in2"}}, {"Out", {"out2", "out1", "Out"}}});
       for (int current = i + 2; current < L; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
       }
       return this_hamiltonian;
    };
@@ -52,15 +58,12 @@ int main() {
       // i and i+1
       auto this_hamiltonian = TAT::Tensor<double, TAT::FermiSymmetry>(1);
       for (int current = 0; current < i; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
       }
-      this_hamiltonian = this_hamiltonian.contract(number, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
-      // TODO: 为什么这里的merge不应该加符号？ 难道哈密顿量就是这样的规则么？
-      // 可能事因为收缩方向反了的原因， 但是为什么收缩方向反了呢， 这可能是一个bug
-      // 可用L=2, i.e. n_1 * n_2这个哈密顿量做研究
-      this_hamiltonian = this_hamiltonian.contract(number, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+      this_hamiltonian = this_hamiltonian.contract(number, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
+      this_hamiltonian = this_hamiltonian.contract(number, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
       for (int current = i + 2; current < L; current++) {
-         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"in", "In"}}, {"Out", {"Out", "out"}}});
+         this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
       }
       return this_hamiltonian;
    };
@@ -72,6 +75,18 @@ int main() {
    for (auto i = 1; i < L - 1; i++) {
       V = V + get_hamiltonian_U(i);
    }
-   std::cout << 8 * V - T << "\n";
+
+   std::stringstream out;
+   auto cout_buf = std::cout.rdbuf();
+   if (argc != 1) {
+      std::cout.rdbuf(out.rdbuf());
+   }
+   std::cout << (8 * V - T).transpose({"In", "Out"}).transform([](float i) { return i == -0 ? 0 : i; }) << "\n";
+   if (argc != 1) {
+      std::cout.rdbuf(cout_buf);
+      std::ifstream fout(argv[1]);
+      std::string sout((std::istreambuf_iterator<char>(fout)), std::istreambuf_iterator<char>());
+      return sout != out.str();
+   }
    return 0;
 }

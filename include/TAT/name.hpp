@@ -47,13 +47,9 @@ namespace TAT {
    inline std::map<NameIdType, std::string> id_to_name = {};
 
    /**
-    * \brief 用于给张量的脚标命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称,
-    * Name将自动保证标号和名称的一一对应
-    *
-    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字,
-    * 有全局变量names_total维护目前已分配的标号量,
+    * \brief 用于给张量的脚标命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
+    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有全局变量names_total维护目前已分配的标号量,
     * 新建一个字符串的Name时将递增names_total并获取一个唯一的标号
-    *
     * \see names_total_index
     */
    struct Name {

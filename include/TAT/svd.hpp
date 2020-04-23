@@ -29,7 +29,7 @@ using lapack_complex_double = std::complex<double>;
 //#include "lapacke.h"
 
 extern "C" {
-void sgesvd_(
+int sgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -44,7 +44,7 @@ void sgesvd_(
       float* work,
       const int* lwork,
       int* info);
-void dgesvd_(
+int dgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -59,7 +59,7 @@ void dgesvd_(
       double* work,
       const int* lwork,
       int* info);
-void cgesvd_(
+int cgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -75,7 +75,7 @@ void cgesvd_(
       const int* lwork,
       float* rwork,
       int* info);
-void zgesvd_(
+int zgesvd_(
       const char* jobu,
       const char* jobvt,
       const int* m,
@@ -199,7 +199,7 @@ namespace TAT {
          }
       }
       result_name_u.push_back(common_name_u);
-      const bool put_v_right = free_name_v.back() == names.back();
+      const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
       auto tensor_merged = edge_operator(
             {},
             {},
@@ -222,7 +222,7 @@ namespace TAT {
       auto tensor_2 = Tensor<ScalarType, Symmetry>{
             put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = std::map<Symmetry, std::vector<real_base_t<ScalarType>>>();
+      auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.core->blocks.at(symmetries).data();
          auto* data_v = tensor_2.core->blocks.at(symmetries).data();
@@ -230,7 +230,7 @@ namespace TAT {
          const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
          const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
          const int k = m > n ? n : m;
-         auto s = std::vector<real_base_t<ScalarType>>(k);
+         auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
@@ -267,7 +267,11 @@ namespace TAT {
          }
 
          for (const auto& [symmetry, this_remain] : remain_dimension_u) {
-            result_s.at(symmetry).resize(this_remain);
+            if (this_remain == 0) {
+               result_s.erase(symmetry);
+            } else {
+               result_s.at(symmetry).resize(this_remain);
+            }
          }
       }
 
@@ -292,7 +296,7 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             {{SVD1, remain_dimension_v}});
-      return {std::move(u), std::move(result_s), std::move(v)};
+      return {std::move(u), {std::move(result_s)}, std::move(v)};
    }
 } // namespace TAT
 #endif

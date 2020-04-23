@@ -97,14 +97,17 @@ namespace TAT {
       Tensor(const Tensor& other) {
          names = other.names;
          name_to_index = other.name_to_index;
-         core = other.core;
+         core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
          warning_or_error("Why Copy");
       };
       Tensor(Tensor&& other) = default;
       Tensor& operator=(const Tensor& other) {
+         if (&other == this) {
+            return *this;
+         }
          names = other.names;
          name_to_index = other.name_to_index;
-         core = other.core;
+         core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
          warning_or_error("Why Copy");
          return *this;
       };
@@ -346,8 +349,7 @@ namespace TAT {
        * \brief 对张量边的名称进行重命名
        * \param dictionary 重命名方案的映射表
        * \return 仅仅改变了边的名称的张量, 与原张量共享Core
-       * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator
-       * 而是实现一个小功能的edge_rename
+       * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator, 而是实现一个小功能的edge_rename
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry> edge_rename(const std::map<Name, Name>& dictionary) const;
 
@@ -393,16 +395,17 @@ namespace TAT {
        * \param contract_names 两个张量将要缩并掉的边的名称
        * \return 缩并后的张量
        */
-      static Tensor<ScalarType, Symmetry> contract(
+      [[nodiscard]] static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor_1,
             const Tensor<ScalarType, Symmetry>& tensor_2,
             std::set<std::tuple<Name, Name>> contract_names);
 
-      Tensor<ScalarType, Symmetry> contract(const Tensor<ScalarType, Symmetry>& tensor_2, std::set<std::tuple<Name, Name>> contract_names) const {
-         return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, contract_names);
+      [[nodiscard]] Tensor<ScalarType, Symmetry>
+      contract(const Tensor<ScalarType, Symmetry>& tensor_2, std::set<std::tuple<Name, Name>> contract_names) const {
+         return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, std::move(contract_names));
       }
 
-      ScalarType contract_all_edge(const Tensor<ScalarType, Symmetry> other) const {
+      [[nodiscard]] ScalarType contract_all_edge(const Tensor<ScalarType, Symmetry>& other) const {
          auto contract_names = std::set<std::tuple<Name, Name>>();
          for (const auto& i : names) {
             contract_names.insert({i, i});
@@ -410,15 +413,15 @@ namespace TAT {
          return contract(other, contract_names);
       }
 
-      ScalarType contract_all_edge() const {
+      [[nodiscard]] ScalarType contract_all_edge() const {
          return contract_all_edge(*this);
       }
 
-      [[deprecated]] static Tensor<ScalarType, Symmetry> contract(
+      [[deprecated, nodiscard]] static Tensor<ScalarType, Symmetry> contract(
             const Tensor<ScalarType, Symmetry>& tensor_1,
             const Tensor<ScalarType, Symmetry>& tensor_2,
-            std::vector<Name> contract_names_1,
-            std::vector<Name> contract_names_2) {
+            const std::vector<Name>& contract_names_1,
+            const std::vector<Name>& contract_names_2) {
          auto contract_names = std::set<std::tuple<Name, Name>>();
          for (int i = 0; i < contract_names_1.size(); i++) {
             contract_names.insert({contract_names_1[i], contract_names_2[i]});
@@ -426,16 +429,20 @@ namespace TAT {
          return contract(tensor_1, tensor_2, contract_names);
       }
 
-      [[deprecated]] Tensor<ScalarType, Symmetry>
-      contract(const Tensor<ScalarType, Symmetry>& tensor_2, std::vector<Name> contract_names_1, std::vector<Name> contract_names_2) const {
+      [[deprecated, nodiscard]] Tensor<ScalarType, Symmetry> contract(
+            const Tensor<ScalarType, Symmetry>& tensor_2,
+            const std::vector<Name>& contract_names_1,
+            const std::vector<Name>& contract_names_2) const {
          return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, std::move(contract_names_1), std::move(contract_names_2));
       }
+
+      [[nodiscard]] Tensor<ScalarType, Symmetry> trace(const std::set<std::tuple<Name, Name>>& trace_names) const;
 
       /**
        * \brief 生成张量的共轭张量
        * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
        */
-      Tensor<ScalarType, Symmetry> conjugate() const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> conjugate() const {
          if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
             return *this;
          }
@@ -472,19 +479,21 @@ namespace TAT {
          return result;
       }
 
+      struct Singular {
+         std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
+      };
+
       /**
        * \brief 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
       struct svd_result {
          Tensor<ScalarType, Symmetry> U;
-         std::map<Symmetry, std::vector<real_base_t<ScalarType>>> S;
+         Singular S;
          Tensor<ScalarType, Symmetry> V;
       };
 
-      template<class OtherScalarType>
-      Tensor<ScalarType, Symmetry>&
-      multiple(const std::map<Symmetry, std::vector<OtherScalarType>>& S, const Name& name, bool different_direction = false) {
+      Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, bool different_direction = false) & {
          if (core.use_count() != 1) {
             warning_or_error("Set Tensor Shared");
             warning_or_error("You Can Use tensor.copy().multiple(...)");
@@ -499,7 +508,7 @@ namespace TAT {
             if (different_direction) {
                symmetry_of_s = -symmetry_of_s;
             }
-            const auto& vector_in_S = S.at(symmetry_of_s);
+            const auto& vector_in_S = S.value.at(symmetry_of_s);
             auto i = 0;
             Size m = 1;
             for (; i < index; i++) {
@@ -516,7 +525,7 @@ namespace TAT {
             auto* data = block.data();
             for (Size a = 0; a < m; a++) {
                for (Size b = 0; b < k; b++) {
-                  OtherScalarType v = vector_in_S[b];
+                  auto v = vector_in_S[b];
                   for (Size c = 0; c < n; c++) {
                      *(data++) *= v;
                   }
@@ -524,6 +533,10 @@ namespace TAT {
             }
          }
          return *this;
+      }
+
+      Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, bool different_direction = false) && {
+         return std::move(this->multiple(S, name, different_direction));
       }
 
       /**
