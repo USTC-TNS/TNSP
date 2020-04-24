@@ -221,7 +221,7 @@ namespace TAT {
    inline const UnixColorCode console_blue = {"\x1B[34m"};
    inline const UnixColorCode console_origin = {"\x1B[0m"};
    inline std::ostream& operator<<(std::ostream& out, const UnixColorCode& value) {
-      if (out.rdbuf() == std::cout.rdbuf() || out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
+      if (always_color || out.rdbuf() == std::cout.rdbuf() || out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
          out << value.color_code;
       }
       return out;

@@ -30,6 +30,18 @@
  */
 namespace TAT {
    /**
+    * \brief 是否在非windows系统中始终输出有颜色的文本
+    */
+#ifdef TAT_ALWAYS_COLOR
+   constexpr bool always_color = true;
+#ifdef _WIN32
+#warning Cannot Always Output Color in Windows
+#endif
+#else
+   constexpr bool always_color = false;
+#endif
+
+   /**
     * \brief TAT的版本号
     */
    const std::string TAT_VERSION = "0.0.4";
