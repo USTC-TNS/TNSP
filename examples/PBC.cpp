@@ -95,10 +95,12 @@ struct PBC {
       for (int j = 0; j < L; j++) {
          std::clog << up_to_down_aux[L - 1][j] << "\n";
          result = result.contract(up_to_down_aux[L - 1][j].trace({{"up", "down"}}), {{"right", "left"}});
-         // TODO: trace
          //std::clog << result << "\n";
       }
       // std::cout << result << "\n";
+      std::clog << result << "\n";
+      std::clog << result.trace({{"left", "right"}}) << "\n";
+      // TODO here rank 0 issue
       return result.trace({{"left", "right"}});
    }
 };

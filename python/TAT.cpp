@@ -5,6 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#define TAT_ALWAYS_COLOR
 #include "TAT/TAT.hpp"
 
 namespace TAT {
@@ -73,7 +74,6 @@ namespace TAT {
             .def(py::init<const std::vector<Name>&, const std::vector<E>&>())
             .def(implicit_init<T, std::pair<std::vector<Name>, std::vector<E>>>([](const std::pair<std::vector<Name>, std::vector<E>>& p) {
                return std::make_unique<T>(p.first, p.second);
-               ;
             }))
             // TODO problem: `TAT.TensorDoubleU1Symmetry(list("AB"),[{0:2},{0:2}])` not work
             // https://github.com/pybind/pybind11/issues/2182

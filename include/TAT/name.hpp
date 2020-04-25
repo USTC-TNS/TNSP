@@ -90,6 +90,9 @@ namespace TAT {
    TAT_DEF_NAME(Contract2);
    TAT_DEF_NAME(SVD1);
    TAT_DEF_NAME(SVD2);
+   TAT_DEF_NAME(Trace1);
+   TAT_DEF_NAME(Trace2);
+   TAT_DEF_NAME(Trace3);
    TAT_DEF_NAME(Up);
    TAT_DEF_NAME(Down);
    TAT_DEF_NAME(Left);
