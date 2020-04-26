@@ -7,3 +7,4 @@ out
 docs
 emscripten/lib*
 pybind11
+__pycache__

@@ -559,12 +559,14 @@ namespace TAT {
       Tensor<ScalarType, Symmetry>& data_get(std::istream&);
 
       std::string show() const;
+#ifdef __CLING__
       std::string __repr__() const {
-         return show();
+         return "Tensor" + show();
       }
       std::string __str__() const {
          return show();
       }
+#endif
    }; // namespace TAT
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
