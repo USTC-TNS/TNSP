@@ -21,6 +21,9 @@
 #ifndef TAT_EDGE_HPP
 #define TAT_EDGE_HPP
 
+#include <map>
+#include <set>
+
 #include "misc.hpp"
 
 namespace TAT {

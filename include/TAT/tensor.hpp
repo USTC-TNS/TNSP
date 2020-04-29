@@ -31,9 +31,6 @@
 #include "core.hpp"
 #include "symmetry.hpp"
 
-// #include <mpi.h>
-// TODO: MPI 这个最后弄, 不然valgrind一大堆报错
-
 namespace TAT {
    /**
     * \brief TAT is A Tensor library!

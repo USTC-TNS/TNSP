@@ -89,13 +89,13 @@ namespace TAT {
     * \brief 无对称性
     */
    struct NoSymmetry : bose_symmetry<NoSymmetry> {};
-   inline NoSymmetry operator+([[maybe_unused]] const NoSymmetry&, [[maybe_unused]] const NoSymmetry&) {
+   inline NoSymmetry operator+(const NoSymmetry&, const NoSymmetry&) {
       return NoSymmetry();
    }
-   inline NoSymmetry& operator+=(NoSymmetry& symmetry, [[maybe_unused]] const NoSymmetry&) {
+   inline NoSymmetry& operator+=(NoSymmetry& symmetry, const NoSymmetry&) {
       return symmetry;
    }
-   inline NoSymmetry operator-([[maybe_unused]] const NoSymmetry&) {
+   inline NoSymmetry operator-(const NoSymmetry&) {
       return NoSymmetry();
    }
 

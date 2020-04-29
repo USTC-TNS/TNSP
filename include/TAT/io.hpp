@@ -335,21 +335,5 @@ namespace TAT {
       out <= v;
       return std::move(out);
    }
-
-   inline Evil::~Evil() {
-#ifndef NDEUBG
-      try {
-         std::clog << console_blue << "\n\nPremature optimization is the root of all evil!\n"
-                   << console_origin << "                                       --- Donald Knuth\n\n\n";
-      } catch ([[maybe_unused]] const std::exception& e) {
-      }
-#endif
-   }
-
-   inline void warning_or_error([[maybe_unused]] const std::string& message) {
-#ifndef NDEBUG
-      std::cerr << console_red << message << console_origin << std::endl;
-#endif
-   }
 } // namespace TAT
 #endif
