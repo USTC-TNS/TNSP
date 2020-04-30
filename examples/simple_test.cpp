@@ -423,6 +423,87 @@ void test_svd() {
    } while (false);
 }
 
+void test_trace() {
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C", "D", "E"}, {2, 3, 2, 3, 4}).test().trace({{"A", "C"}, {"B", "D"}}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {2, 2, 3}).test().trace({{"A", "B"}}) << "\n";
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {4, 3, 5}).test();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>({"D", "E", "F"}, {5, 4, 6}).test();
+   std::cout << a.contract(b, {{"A", "E"}, {"C", "D"}}) - a.contract(b, {}).trace({{"A", "E"}, {"C", "D"}});
+
+   do {
+      auto c =
+            TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "B", "C"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}}, true}.test();
+      auto d =
+            TAT::Tensor<double, TAT::FermiSymmetry>{{"E", "F", "G"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}}, true}.test();
+      std::cout << c << "\n";
+      std::cout << d << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c.transpose({"A", "C", "B"}), d.transpose({"G", "E", "F"}), {{"B", "G"}})
+                << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {}).trace({{"B", "G"}}) << "\n";
+      std::cout
+            << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c.transpose({"A", "C", "B"}), d.transpose({"G", "E", "F"}), {}).trace({{"B", "G"}})
+            << "\n";
+   } while (false);
+   do {
+      auto c =
+            TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+                  .test();
+      auto d =
+            TAT::Tensor<double, TAT::FermiSymmetry>{{"E", "F", "H"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 2}, {1, 1}, {2, 2}}}, true}
+                  .test();
+      std::cout << c << "\n";
+      std::cout << d << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"D", "H"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c.transpose({"A", "C", "D"}), d.transpose({"H", "E", "F"}), {{"D", "H"}})
+                << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {}).trace({{"D", "H"}}) << "\n";
+      std::cout
+            << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c.transpose({"A", "C", "D"}), d.transpose({"H", "E", "F"}), {}).trace({{"D", "H"}})
+            << "\n";
+   } while (false);
+   do {
+      auto c =
+            TAT::Tensor<double, TAT::U1Symmetry>{
+                  {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+                  .test();
+      auto d =
+            TAT::Tensor<double, TAT::U1Symmetry>{
+                  {"E", "F", "G", "H"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}}, true}
+                  .test();
+      std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(
+                         c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {{"B", "G"}, {"D", "H"}})
+                << "\n";
+      std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c, d, {}).trace({{"B", "G"}}).trace({{"D", "H"}}) << "\n";
+      // TODO U1这里也有问题
+      std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c, d, {}).trace({{"B", "G"}, {"D", "H"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {})
+                         .trace({{"B", "G"}, {"D", "H"}})
+                << "\n";
+   } while (false);
+   do {
+      auto c =
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+                  .test();
+      auto d =
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"E", "F", "G", "H"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}}, true}
+                  .test();
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(
+                         c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {{"B", "G"}, {"D", "H"}})
+                << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {}).trace({{"B", "G"}}).trace({{"D", "H"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {}).trace({{"B", "G"}, {"D", "H"}}) << "\n";
+      std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {})
+                         .trace({{"B", "G"}, {"D", "H"}})
+                << "\n";
+      // TODO 这里问题有点大
+   } while (false);
+}
+
 int main(const int argc, char** argv) {
    std::stringstream out;
    auto cout_buf = std::cout.rdbuf();
@@ -442,6 +523,7 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_edge_operator);
    RUN_TEST(test_contract);
    RUN_TEST(test_svd);
+   RUN_TEST(test_trace);
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);

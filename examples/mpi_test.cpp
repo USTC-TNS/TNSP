@@ -1,6 +1,4 @@
 /**
- * \file TAT.hpp
- *
  * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,29 +15,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#pragma once
-#ifndef TAT_HPP
-#define TAT_HPP
+#define TAT_USE_MPI
+#include <TAT/TAT.hpp>
 
-#ifndef __cplusplus
-#error "only work for c++"
-#endif
+using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
-#ifdef _MSVC_LANG
-#if _MSVC_LANG < 201703L
-#error require c++17 or later
-#endif
-#else
-#if __cplusplus < 201703L
-#error require c++17 or later
-#endif
-#endif
+namespace mpi = TAT::mpi;
 
-// clang-format off
-#include "tensor.hpp"
-#include "implement.hpp"
-#include "tools.hpp"
-#include "mpi.hpp"
-// clang-format on
-
-#endif
+int main() {
+   auto input = Tensor(mpi::mpi.rank);
+   auto result = mpi::summary(input, 0);
+   result = mpi::broadcast(result, 0);
+   mpi::barrier();
+   std::cout << result << "\n";
+   // TODO cannot use endl
+   return 0;
+}

@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
       auto this_hamiltonian = TAT::Tensor<double, TAT::FermiSymmetry>(1);
       for (int current = 0; current < i; current++) {
          this_hamiltonian = this_hamiltonian.contract(identity, {}).merge_edge({{"In", {"In", "in"}}, {"Out", {"out", "Out"}}});
-         // 有时候需要逆向merge, 现在只能通过两个conjugate来完成
+         // TODO 有时候需要逆向merge, 现在只能通过两个conjugate来完成
          // 当block中只含一个元素时, 这实际上和反向merge不加符号时一样的
          // 反向不反向相差一个merge的符号, 而现在反向加个符号就相当于, 不反向不加符号
       }

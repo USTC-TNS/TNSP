@@ -90,14 +90,14 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    const auto& Tensor<ScalarType, Symmetry>::block(const std::map<Name, Symmetry>& position) const& {
-      using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
+      // using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
       auto symmetry = get_block_for_get_item(position, name_to_index, *core);
       return core->blocks.at(symmetry);
    }
 
    template<class ScalarType, class Symmetry>
    auto& Tensor<ScalarType, Symmetry>::block(const std::map<Name, Symmetry>& position) & {
-      using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
+      // using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
       auto symmetry = get_block_for_get_item(position, name_to_index, *core);
       return core->blocks.at(symmetry);
    }

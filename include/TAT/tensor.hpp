@@ -31,9 +31,6 @@
 #include "core.hpp"
 #include "symmetry.hpp"
 
-// #include <mpi.h>
-// TODO: MPI 这个最后弄, 不然valgrind一大堆报错
-
 namespace TAT {
    /**
     * \brief TAT is A Tensor library!
@@ -551,10 +548,22 @@ namespace TAT {
        */
       svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
 
+      // TODO slice
+
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;
       Tensor<ScalarType, Symmetry>& meta_get(std::istream&);
       Tensor<ScalarType, Symmetry>& data_get(std::istream&);
+
+      std::string show() const;
+#ifdef __CLING__
+      std::string __repr__() const {
+         return "Tensor" + show();
+      }
+      std::string __str__() const {
+         return show();
+      }
+#endif
    }; // namespace TAT
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到

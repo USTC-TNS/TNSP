@@ -68,7 +68,6 @@ namespace TAT {
       } else {
          return out << position->second;
       }
-      return out;
    }
 
    template<class T, class A>
@@ -222,9 +221,13 @@ namespace TAT {
    inline const UnixColorCode console_blue = {"\x1B[34m"};
    inline const UnixColorCode console_origin = {"\x1B[0m"};
    inline std::ostream& operator<<(std::ostream& out, const UnixColorCode& value) {
+#ifdef TAT_ALWAYS_COLOR
+      out << value.color_code;
+#else
       if (out.rdbuf() == std::cout.rdbuf() || out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
          out << value.color_code;
       }
+#endif
       return out;
    }
 #endif
@@ -252,6 +255,13 @@ namespace TAT {
       }
       out << '}';
       return out;
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::string Tensor<ScalarType, Symmetry>::show() const {
+      std::stringstream out;
+      out << *this;
+      return out.str();
    }
 
    template<class ScalarType, class Symmetry>
@@ -324,22 +334,6 @@ namespace TAT {
    std::ostream&& operator<=(std::ostream&& out, const T& v) {
       out <= v;
       return std::move(out);
-   }
-
-   inline Evil::~Evil() {
-#ifndef NDEUBG
-      try {
-         std::clog << console_blue << "\n\nPremature optimization is the root of all evil!\n"
-                   << console_origin << "                                       --- Donald Knuth\n\n\n";
-      } catch ([[maybe_unused]] const std::exception& e) {
-      }
-#endif
-   }
-
-   inline void warning_or_error([[maybe_unused]] const std::string& message) {
-#ifndef NDEBUG
-      std::cerr << console_red << message << console_origin << std::endl;
-#endif
    }
 } // namespace TAT
 #endif

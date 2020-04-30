@@ -26,15 +26,81 @@
 namespace TAT {
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
-      auto traced_names = std::vector<Name>();
-      for (const auto& [name_1, name_2] : trace_names) {
-      }
-      // auto merged_tensor = edge_operator({}, {}, reversed_name, merge_map, new_names, false, {{{}, {}, {}, {}}});
+      constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       // 对于fermi的情况, 应是一进一出才合法
-      // TODO trace
-      // TODO slice
-      warning_or_error("Not Implement Yet");
-      return *this;
+      auto traced_names = std::set<Name>();
+      // TODO trace order maybe optimized
+      auto trace_1_names = std::vector<Name>();
+      auto trace_2_names = std::vector<Name>();
+      for (const auto& i : trace_names) {
+         // 对于费米子进行转向
+         if constexpr (is_fermi) {
+            if (core->edges[name_to_index.at(std::get<0>(i))].arrow) {
+               trace_1_names.push_back(std::get<0>(i));
+               trace_2_names.push_back(std::get<1>(i));
+            } else {
+               trace_1_names.push_back(std::get<1>(i));
+               trace_2_names.push_back(std::get<0>(i));
+            }
+         } else {
+            trace_1_names.push_back(std::get<0>(i));
+            trace_2_names.push_back(std::get<1>(i));
+         }
+         // 统计traced names
+         traced_names.insert(std::get<0>(i));
+         traced_names.insert(std::get<1>(i));
+      }
+      // 寻找自由脚
+      auto result_names = std::vector<Name>();
+      auto reverse_names = std::set<Name>();
+      auto split_plan = std::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      for (const auto& name : names) {
+         if (auto found = traced_names.find(name); found == traced_names.end()) {
+            const auto& this_edge = core->edges[name_to_index.at(name)];
+            result_names.push_back(name);
+            split_plan.push_back({name, {this_edge.map}});
+            if constexpr (is_fermi) {
+               if (this_edge.arrow) {
+                  reverse_names.insert(name);
+               }
+            }
+         }
+      }
+      auto merged_tensor = edge_operator(
+            {},
+            {},
+            reverse_names,
+            {{Trace1, trace_1_names}, {Trace2, trace_2_names}, {Trace3, result_names}},
+            {Trace1, Trace2, Trace3},
+            false,
+            {{{}, {}, {}, {Trace1}}});
+      auto traced_tensor = Tensor<ScalarType, Symmetry>({Trace3}, {merged_tensor.core->edges[2]}).zero();
+      auto& destination_block = traced_tensor.core->blocks.begin()->second;
+      const Size line_size = destination_block.size();
+
+#if 0
+      std::cout << merged_tensor << "\n";
+#endif
+
+      for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
+         auto symmetry_2 = -symmetry_1;
+         auto source_block = merged_tensor.core->blocks.at({symmetry_1, symmetry_2, Symmetry()});
+         for (Size i = 0; i < dimension; i++) {
+            const ScalarType* __restrict source_data = source_block.data() + (dimension + 1) * i * line_size;
+            ScalarType* __restrict destination_data = destination_block.data();
+            for (Size j = 0; j < line_size; j++) {
+               destination_data[j] += source_data[j];
+            }
+         }
+      }
+#if 0
+       std::cout << merged_tensor << "\n";
+       std::cout << line_size << "\n";
+       std::cout << traced_tensor << "\n";
+       std::cout << traced_tensor << "\n";
+#endif
+      auto result = traced_tensor.edge_operator({}, {{Trace3, split_plan}}, reverse_names, {}, result_names);
+      return result;
    }
 } // namespace TAT
 #endif

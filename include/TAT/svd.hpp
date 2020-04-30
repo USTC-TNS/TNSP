@@ -23,73 +23,75 @@
 
 #include "tensor.hpp"
 
+#if 0
 #define LAPACK_COMPLEX_CUSTOM
 using lapack_complex_float = std::complex<float>;
 using lapack_complex_double = std::complex<double>;
-//#include "lapacke.h"
+#include "lapacke.h"
+#endif
 
 extern "C" {
 int sgesvd_(
-      const char* jobu,
-      const char* jobvt,
+      const char* job_u,
+      const char* job_vt,
       const int* m,
       const int* n,
       const float* a,
-      const int* lda,
+      const int* ld_a,
       float* s,
       float* u,
-      const int* ldu,
+      const int* ld_u,
       float* vt,
-      const int* ldvt,
+      const int* ld_vt,
       float* work,
-      const int* lwork,
+      const int* l_work,
       int* info);
 int dgesvd_(
-      const char* jobu,
-      const char* jobvt,
+      const char* job_u,
+      const char* job_vt,
       const int* m,
       const int* n,
       const double* a,
-      const int* lda,
+      const int* ld_a,
       double* s,
       double* u,
-      const int* ldu,
+      const int* ld_u,
       double* vt,
-      const int* ldvt,
+      const int* ld_vt,
       double* work,
-      const int* lwork,
+      const int* l_work,
       int* info);
 int cgesvd_(
-      const char* jobu,
-      const char* jobvt,
+      const char* job_u,
+      const char* job_vt,
       const int* m,
       const int* n,
       const std::complex<float>* a,
-      const int* lda,
+      const int* ld_a,
       float* s,
       std::complex<float>* u,
-      const int* ldu,
+      const int* ld_u,
       std::complex<float>* vt,
-      const int* ldvt,
+      const int* ld_vt,
       std::complex<float>* work,
-      const int* lwork,
-      float* rwork,
+      const int* l_work,
+      float* r_work,
       int* info);
 int zgesvd_(
-      const char* jobu,
-      const char* jobvt,
+      const char* job_u,
+      const char* job_vt,
       const int* m,
       const int* n,
       const std::complex<double>* a,
-      const int* lda,
+      const int* ld_a,
       double* s,
       std::complex<double>* u,
-      const int* ldu,
+      const int* ld_u,
       std::complex<double>* vt,
-      const int* ldvt,
+      const int* ld_vt,
       std::complex<double>* work,
-      const int* lwork,
-      double* rwork,
+      const int* l_work,
+      double* r_work,
       int* info);
 }
 
@@ -98,29 +100,29 @@ namespace TAT {
    void calculate_svd(const int& m, const int& n, const int& min, const ScalarType* a, ScalarType* u, real_base_t<ScalarType>* s, ScalarType* vt);
 
    template<>
-   void calculate_svd<float>(const int& m, const int& n, const int& min, const float* a, float* u, float* s, float* vt) {
+   inline void calculate_svd<float>(const int& m, const int& n, const int& min, const float* a, float* u, float* s, float* vt) {
       int result;
-      int max = m > n ? m : n;
-      int lwork = 2 * (5 * min + max);
-      auto work = std::vector<float>(lwork);
-      sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
+      const int max = m > n ? m : n;
+      const int l_work = 2 * (5 * min + max);
+      auto work = std::vector<float>(l_work);
+      sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
       }
    }
    template<>
-   void calculate_svd<double>(const int& m, const int& n, const int& min, const double* a, double* u, double* s, double* vt) {
+   inline void calculate_svd<double>(const int& m, const int& n, const int& min, const double* a, double* u, double* s, double* vt) {
       int result;
-      int max = m > n ? m : n;
-      int lwork = 2 * (5 * min + max);
-      auto work = std::vector<double>(lwork);
-      dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
+      const int max = m > n ? m : n;
+      const int l_work = 2 * (5 * min + max);
+      auto work = std::vector<double>(l_work);
+      dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
       }
    }
    template<>
-   void calculate_svd<std::complex<float>>(
+   inline void calculate_svd<std::complex<float>>(
          const int& m,
          const int& n,
          const int& min,
@@ -129,17 +131,17 @@ namespace TAT {
          float* s,
          std::complex<float>* vt) {
       int result;
-      int max = m > n ? m : n;
-      int lwork = 2 * (5 * min + max);
-      auto work = std::vector<std::complex<float>>(lwork);
-      auto rwork = std::vector<float>(5 * min);
-      cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
+      const int max = m > n ? m : n;
+      const int l_work = 2 * (5 * min + max);
+      auto work = std::vector<std::complex<float>>(l_work);
+      auto r_work = std::vector<float>(5 * min);
+      cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
       }
    }
    template<>
-   void calculate_svd<std::complex<double>>(
+   inline void calculate_svd<std::complex<double>>(
          const int& m,
          const int& n,
          const int& min,
@@ -148,11 +150,11 @@ namespace TAT {
          double* s,
          std::complex<double>* vt) {
       int result;
-      int max = m > n ? m : n;
-      int lwork = 2 * (5 * min + max);
-      auto work = std::vector<std::complex<double>>(lwork);
-      auto rwork = std::vector<double>(5 * min);
-      zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
+      const int max = m > n ? m : n;
+      const int l_work = 2 * (5 * min + max);
+      auto work = std::vector<std::complex<double>>(l_work);
+      auto r_work = std::vector<double>(5 * min);
+      zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
       }
@@ -206,7 +208,7 @@ namespace TAT {
             reversed_set_origin,
             {{SVD1, free_name_u}, {SVD2, free_name_v}},
             put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1});
-      // gesvd
+      // call GESVD
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
       for (const auto& [sym, _] : tensor_merged.core->blocks) {

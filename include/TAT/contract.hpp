@@ -25,8 +25,8 @@
 
 extern "C" {
 int sgemm_(
-      const char* transpose_A,
-      const char* transpose_B,
+      const char* transpose_a,
+      const char* transpose_b,
       const int* m,
       const int* n,
       const int* k,
@@ -39,8 +39,8 @@ int sgemm_(
       float* c,
       const int* ldc);
 int dgemm_(
-      const char* transpose_A,
-      const char* transpose_B,
+      const char* transpose_a,
+      const char* transpose_b,
       const int* m,
       const int* n,
       const int* k,
@@ -53,8 +53,8 @@ int dgemm_(
       double* c,
       const int* ldc);
 int cgemm_(
-      const char* transpose_A,
-      const char* transpose_B,
+      const char* transpose_a,
+      const char* transpose_b,
       const int* m,
       const int* n,
       const int* k,
@@ -67,8 +67,8 @@ int cgemm_(
       std::complex<float>* c,
       const int* ldc);
 int zgemm_(
-      const char* transpose_A,
-      const char* transpose_B,
+      const char* transpose_a,
+      const char* transpose_b,
       const int* m,
       const int* n,
       const int* k,
@@ -85,8 +85,8 @@ int zgemm_(
 namespace TAT {
    template<class ScalarType>
    void calculate_product(
-         const char* transpose_A,
-         const char* transpose_B,
+         const char* transpose_a,
+         const char* transpose_b,
          const int* m,
          const int* n,
          const int* k,
@@ -101,8 +101,8 @@ namespace TAT {
 
    template<>
    inline void calculate_product<float>(
-         const char* transpose_A,
-         const char* transpose_B,
+         const char* transpose_a,
+         const char* transpose_b,
          const int* m,
          const int* n,
          const int* k,
@@ -114,12 +114,12 @@ namespace TAT {
          const float* beta,
          float* c,
          const int* ldc) {
-      sgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      sgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
    inline void calculate_product<double>(
-         const char* transpose_A,
-         const char* transpose_B,
+         const char* transpose_a,
+         const char* transpose_b,
          const int* m,
          const int* n,
          const int* k,
@@ -131,12 +131,12 @@ namespace TAT {
          const double* beta,
          double* c,
          const int* ldc) {
-      dgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      dgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
    inline void calculate_product<std::complex<float>>(
-         const char* transpose_A,
-         const char* transpose_B,
+         const char* transpose_a,
+         const char* transpose_b,
          const int* m,
          const int* n,
          const int* k,
@@ -148,12 +148,12 @@ namespace TAT {
          const std::complex<float>* beta,
          std::complex<float>* c,
          const int* ldc) {
-      cgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      cgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
    inline void calculate_product<std::complex<double>>(
-         const char* transpose_A,
-         const char* transpose_B,
+         const char* transpose_a,
+         const char* transpose_b,
          const int* m,
          const int* n,
          const int* k,
@@ -165,7 +165,7 @@ namespace TAT {
          const std::complex<double>* beta,
          std::complex<double>* c,
          const int* ldc) {
-      zgemm_(transpose_A, transpose_B, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
+      zgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
 
    template<int i>
@@ -375,12 +375,12 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             delete_2);
-      /*
+#if 0
       std::cout << "T1:" << tensor_1 << "\n";
       std::cout << "M1:" << tensor_1_merged << "\n";
       std::cout << "T2:" << tensor_2 << "\n";
       std::cout << "M2:" << tensor_2_merged << "\n";
-      */
+#endif
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},
@@ -399,12 +399,16 @@ namespace TAT {
          ScalarType alpha = 1;
          if constexpr (is_fermi) {
             if ((put_common_2_right ^ !put_common_1_right) && bool(symmetries[0].fermi % 2)) {
-               //std::cout << "R\n";
+#if 0
+               std::cout << "R\n";
+#endif
                alpha = -1;
             }
-            //else {
-            //   std::cout << "N\n";
-            //}
+#if 0
+            else {
+               std::cout << "N\n";
+            }
+#endif
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
@@ -426,15 +430,16 @@ namespace TAT {
             std::fill(data.begin(), data.end(), 0);
          }
       }
-      // std::cout << "\nC1: " << tensor_1 << "\nC2: " << tensor_2 << "\n\n";
       if constexpr (is_no_symmetry) {
          auto result = Tensor<ScalarType, Symmetry>{std::move(name_result), std::move(edge_result)};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
-         //std::cout << "R:" << product_result << "\n";
-         //std::cout << "S:" << result << "\n";
+#if 0
+         std::cout << "R:" << product_result << "\n";
+         std::cout << "S:" << result << "\n";
+#endif
          return result;
       }
    }
