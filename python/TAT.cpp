@@ -28,18 +28,45 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    void declare_mpi(py::module& m) {
       using T = Tensor<ScalarType, Symmetry>;
-      m.def("send", mpi::send<ScalarType, Symmetry>);
-      m.def("receive", mpi::receive<ScalarType, Symmetry>);
-      m.def("send_receive", mpi::send_receive<ScalarType, Symmetry>);
-      m.def("broadcast", mpi::broadcast<ScalarType, Symmetry>);
+      m.def("send", &mpi::send<ScalarType, Symmetry>);
+      m.def("receive", &mpi::receive<ScalarType, Symmetry>);
+      m.def("send_receive", &mpi::send_receive<ScalarType, Symmetry>);
+      m.def("broadcast", &mpi::broadcast<ScalarType, Symmetry>);
       m.def("reduce", [](const T& tensor, const int root, std::function<T(T, T)> op) { return mpi::reduce(tensor, root, op); });
-      m.def("summary", mpi::summary<ScalarType, Symmetry>);
+      m.def("summary", &mpi::summary<ScalarType, Symmetry>);
    }
 
    template<class ScalarType, class Symmetry>
-   auto declare_tensor(py::module& m, const char* name) {
+   auto singular_to_string(const typename Tensor<ScalarType, Symmetry>::Singular& s) {
+      const auto& value = s.value; //std::map<Symmetry, vector<real_base_t<ScalarType>>>
+      std::stringstream out;
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         out << value.begin()->second;
+      } else {
+         out << '{';
+         bool first = true;
+         for (const auto& [key, value] : value) {
+            if (!first) {
+               out << ',';
+            } else {
+               first = false;
+            }
+            out << key << ':' << value;
+         }
+         out << '}';
+      }
+      return out.str();
+   }
+
+   template<class ScalarType, class Symmetry>
+   auto declare_tensor(py::module& m, py::module& s, const char* name) {
       using T = Tensor<ScalarType, Symmetry>;
+      using S = typename T::Singular;
       using E = Edge<Symmetry>;
+      py::class_<S>(s, name)
+            .def_readonly("value", &S::value)
+            .def("__str__", [](const S& s) { return singular_to_string<ScalarType, Symmetry>(s); })
+            .def("__repr__", [](const S& s) { return "Singular" + singular_to_string<ScalarType, Symmetry>(s); });
       return py::class_<T>(m, name)
             .def(py::self + py::self)
             .def(ScalarType() + py::self)
@@ -127,7 +154,34 @@ namespace TAT {
             .def("contract_all_edge", [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); })
             .def("trace", &T::trace)
             .def("conjugate", &T::conjugate)
-            // TODO multiple svd slice
+            .def(
+                  "svd",
+                  [](const T& tensor, const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) {
+                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, cut);
+                     return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
+                  },
+                  py::arg("free_name_set_u"),
+                  py::arg("common_name_u"),
+                  py::arg("common_name_v"),
+                  py::arg("cut"))
+            .def(
+                  "svd",
+                  [](const T& tensor, const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v) {
+                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, -1);
+                     return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
+                  },
+                  py::arg("free_name_set_u"),
+                  py::arg("common_name_u"),
+                  py::arg("common_name_v"))
+            .def(
+                  "multiple",
+                  [](T& tensor, const typename T::Singular& S, const Name& name, bool different_direction) -> T& {
+                     return tensor.multiple(S, name, different_direction);
+                  },
+                  py::arg("S"),
+                  py::arg("name"),
+                  py::arg("different_direction") = false)
+            // TODO slice
             ;
    }
 
@@ -205,6 +259,7 @@ namespace TAT {
                  [=](const Symmetry& symmetry) {
                     auto out = std::stringstream();
                     out << name;
+                    out << "Symmetry";
                     out << "[";
                     out << symmetry;
                     out << "]";
@@ -255,7 +310,8 @@ namespace TAT {
       declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true>(edge_m, "FermiU1");
       // tensor
       auto tensor_m = m.def_submodule("Tensor", "tensors for TAT");
-#define DECLARE_TENSOR(SCALAR, SCALARNAME, SYMMETRY) declare_tensor<SCALAR, SYMMETRY##Symmetry>(tensor_m, SCALARNAME #SYMMETRY)
+      auto singular_m = m.def_submodule("Singular", "singulars for TAT");
+#define DECLARE_TENSOR(SCALAR, SCALARNAME, SYMMETRY) declare_tensor<SCALAR, SYMMETRY##Symmetry>(tensor_m, singular_m, SCALARNAME #SYMMETRY)
 #define DECLARE_TENSOR_WITH_SAME_SCALAR(SCALAR, SCALARNAME) \
    do {                                                     \
       DECLARE_TENSOR(SCALAR, SCALARNAME, No);               \
@@ -272,7 +328,7 @@ namespace TAT {
 #undef DECLARE_TENSOR_WITH_SAME_SCALAR
 #undef DECLARE_TENSOR
       auto mpi_m = m.def_submodule("mpi", "mpi support for TAT");
-      mpi_m.def("barrier", mpi::barrier);
+      mpi_m.def("barrier", &mpi::barrier);
 #define DECLARE_MPI(SCALARTYPE)                        \
    do {                                                \
       declare_mpi<SCALARTYPE, NoSymmetry>(mpi_m);      \
