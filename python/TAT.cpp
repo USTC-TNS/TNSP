@@ -228,51 +228,47 @@ namespace TAT {
             .def_property_readonly("name", [](const Name& name) { return id_to_name.at(name.id); });
 
       // symmetry
-      m.attr("Symmetry") = py::dict(
-            py::arg("NoSymmetry") = declare_symmetry<NoSymmetry>(m, "NoSymmetry").def(py::init<>()),
-            py::arg("Z2Symmetry") =
-                  declare_symmetry<Z2Symmetry>(m, "Z2Symmetry").def(implicit_init<Z2Symmetry, Z2>()).def_readwrite("z2", &Z2Symmetry::z2),
-            py::arg("U1Symmetry") =
-                  declare_symmetry<U1Symmetry>(m, "U1Symmetry").def(implicit_init<U1Symmetry, U1>()).def_readwrite("u1", &U1Symmetry::u1),
-            py::arg("FermiSymmmetry") = declare_symmetry<FermiSymmetry>(m, "FermiSymmetry")
-                                              .def(implicit_init<FermiSymmetry, Fermi>())
-                                              .def_readwrite("fermi", &FermiSymmetry::fermi),
-            py::arg("FermiZ2Symmmetry") = declare_symmetry<FermiZ2Symmetry>(m, "FermiZ2Symmetry")
-                                                .def(py::init<Fermi, Z2>())
-                                                .def(implicit_init<FermiZ2Symmetry, const std::tuple<Fermi, Z2>&>(
-                                                      [](const std::tuple<Fermi, Z2>& p) { return std::make_from_tuple<FermiZ2Symmetry>(p); }))
-                                                .def_readwrite("fermi", &FermiZ2Symmetry::fermi)
-                                                .def_readwrite("z2", &FermiZ2Symmetry::z2),
-            py::arg("FermiU1Symmmetry") = declare_symmetry<FermiU1Symmetry>(m, "FermiU1Symmetry")
-                                                .def(py::init<Fermi, U1>())
-                                                .def(implicit_init<FermiU1Symmetry, const std::tuple<Fermi, U1>&>(
-                                                      [](const std::tuple<Fermi, U1>& p) { return std::make_from_tuple<FermiU1Symmetry>(p); }))
-                                                .def_readwrite("fermi", &FermiU1Symmetry::fermi)
-                                                .def_readwrite("u1", &FermiU1Symmetry::u1));
+      auto symmetry_m = m.def_submodule("Symmetry", "symmetries for TAT");
+      declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
+      declare_symmetry<Z2Symmetry>(symmetry_m, "Z2").def(implicit_init<Z2Symmetry, Z2>()).def_readwrite("z2", &Z2Symmetry::z2);
+      declare_symmetry<U1Symmetry>(symmetry_m, "U1").def(implicit_init<U1Symmetry, U1>()).def_readwrite("u1", &U1Symmetry::u1);
+      declare_symmetry<FermiSymmetry>(symmetry_m, "Fermi").def(implicit_init<FermiSymmetry, Fermi>()).def_readwrite("fermi", &FermiSymmetry::fermi);
+      declare_symmetry<FermiZ2Symmetry>(symmetry_m, "FermiZ2")
+            .def(py::init<Fermi, Z2>())
+            .def(implicit_init<FermiZ2Symmetry, const std::tuple<Fermi, Z2>&>(
+                  [](const std::tuple<Fermi, Z2>& p) { return std::make_from_tuple<FermiZ2Symmetry>(p); }))
+            .def_readwrite("fermi", &FermiZ2Symmetry::fermi)
+            .def_readwrite("z2", &FermiZ2Symmetry::z2);
+      declare_symmetry<FermiU1Symmetry>(symmetry_m, "FermiU1")
+            .def(py::init<Fermi, U1>())
+            .def(implicit_init<FermiU1Symmetry, const std::tuple<Fermi, U1>&>(
+                  [](const std::tuple<Fermi, U1>& p) { return std::make_from_tuple<FermiU1Symmetry>(p); }))
+            .def_readwrite("fermi", &FermiU1Symmetry::fermi)
+            .def_readwrite("u1", &FermiU1Symmetry::u1);
       // edge
-      m.attr("Edge") = py::dict(
-            py::arg("NoSymmetry") = declare_edge<NoSymmetry, void, false>(m, "EdgeNoSymmetry"),
-            py::arg("Z2Symmetry") = declare_edge<Z2Symmetry, Z2, false>(m, "EdgeZ2Symmetry"),
-            py::arg("U1Symmetry") = declare_edge<U1Symmetry, U1, false>(m, "EdgeU1Symmetry"),
-            py::arg("FermiSymmetry") = declare_edge<FermiSymmetry, Fermi, false>(m, "EdgeFermiSymmetry"),
-            py::arg("FermiZ2Symmetry") = declare_edge<FermiZ2Symmetry, std::tuple<Fermi, Z2>, true>(m, "EdgeFermiZ2Symmetry"),
-            py::arg("FermiU1Symmetry") = declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true>(m, "EdgeFermiU1Symmetry"));
+      auto edge_m = m.def_submodule("Edge", "edges for TAT");
+      declare_edge<NoSymmetry, void, false>(edge_m, "No");
+      declare_edge<Z2Symmetry, Z2, false>(edge_m, "Z2");
+      declare_edge<U1Symmetry, U1, false>(edge_m, "U1");
+      declare_edge<FermiSymmetry, Fermi, false>(edge_m, "Fermi");
+      declare_edge<FermiZ2Symmetry, std::tuple<Fermi, Z2>, true>(edge_m, "FermiZ2");
+      declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true>(edge_m, "FermiU1");
       // tensor
-#define DECLARE_TENSOR(SCALAR, SCALARNAME, SYMMETRY) py::arg(#SYMMETRY) = declare_tensor<SCALAR, SYMMETRY>(m, "Tensor" SCALARNAME #SYMMETRY)
-#define DECLARE_TENSOR_WITH_SAME_SCALAR(SCALAR, SCALARNAME)   \
-   py::dict(                                                  \
-         DECLARE_TENSOR(SCALAR, SCALARNAME, NoSymmetry),      \
-         DECLARE_TENSOR(SCALAR, SCALARNAME, Z2Symmetry),      \
-         DECLARE_TENSOR(SCALAR, SCALARNAME, U1Symmetry),      \
-         DECLARE_TENSOR(SCALAR, SCALARNAME, FermiSymmetry),   \
-         DECLARE_TENSOR(SCALAR, SCALARNAME, FermiZ2Symmetry), \
-         DECLARE_TENSOR(SCALAR, SCALARNAME, FermiU1Symmetry))
-#define DECLARE_TENSOR_DICT(SCALAR, SCALARNAME) py::arg(#SCALAR) = DECLARE_TENSOR_WITH_SAME_SCALAR(SCALAR, SCALARNAME)
-      m.attr("Tensor") = py::dict(
-            DECLARE_TENSOR_DICT(float, "S"),
-            DECLARE_TENSOR_DICT(double, "D"),
-            DECLARE_TENSOR_DICT(std::complex<float>, "C"),
-            DECLARE_TENSOR_DICT(std::complex<double>, "Z"));
+      auto tensor_m = m.def_submodule("Tensor", "tensors for TAT");
+#define DECLARE_TENSOR(SCALAR, SCALARNAME, SYMMETRY) declare_tensor<SCALAR, SYMMETRY##Symmetry>(tensor_m, SCALARNAME #SYMMETRY)
+#define DECLARE_TENSOR_WITH_SAME_SCALAR(SCALAR, SCALARNAME) \
+   do {                                                     \
+      DECLARE_TENSOR(SCALAR, SCALARNAME, No);               \
+      DECLARE_TENSOR(SCALAR, SCALARNAME, Z2);               \
+      DECLARE_TENSOR(SCALAR, SCALARNAME, U1);               \
+      DECLARE_TENSOR(SCALAR, SCALARNAME, Fermi);            \
+      DECLARE_TENSOR(SCALAR, SCALARNAME, FermiZ2);          \
+      DECLARE_TENSOR(SCALAR, SCALARNAME, FermiU1);          \
+   } while (false)
+      DECLARE_TENSOR_WITH_SAME_SCALAR(float, "S");
+      DECLARE_TENSOR_WITH_SAME_SCALAR(double, "D");
+      DECLARE_TENSOR_WITH_SAME_SCALAR(std::complex<float>, "C");
+      DECLARE_TENSOR_WITH_SAME_SCALAR(std::complex<double>, "Z");
 #undef DECLARE_TENSOR_WITH_SAME_SCALAR
 #undef DECLARE_TENSOR
       auto mpi_m = m.def_submodule("mpi", "mpi support for TAT");
@@ -295,7 +291,7 @@ namespace TAT {
       mpi_m.attr("size") = mpi::mpi.size;
       mpi_m.def("print", [](py::args args, py::kwargs kwargs) {
          if (mpi::mpi.rank == 0) {
-            py::print(args, kwargs);
+            py::print(*args, **kwargs);
          }
       });
    }
