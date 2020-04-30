@@ -7,6 +7,7 @@
 #include <pybind11/stl.h>
 
 #define TAT_ALWAYS_COLOR
+#define TAT_USE_MPI
 #include "TAT/TAT.hpp"
 
 namespace TAT {
@@ -22,6 +23,17 @@ namespace TAT {
    auto implicit_init(Func&& func) {
       py::implicitly_convertible<Args, Type>();
       return py::init(func);
+   }
+
+   template<class ScalarType, class Symmetry>
+   void declare_mpi(py::module& m) {
+      using T = Tensor<ScalarType, Symmetry>;
+      m.def("send", mpi::send<ScalarType, Symmetry>);
+      m.def("receive", mpi::receive<ScalarType, Symmetry>);
+      m.def("send_receive", mpi::send_receive<ScalarType, Symmetry>);
+      m.def("broadcast", mpi::broadcast<ScalarType, Symmetry>);
+      m.def("reduce", [](const T& tensor, const int root, std::function<T(T, T)> op) { return mpi::reduce(tensor, root, op); });
+      m.def("summary", mpi::summary<ScalarType, Symmetry>);
    }
 
    template<class ScalarType, class Symmetry>
@@ -115,7 +127,7 @@ namespace TAT {
             .def("contract_all_edge", [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); })
             .def("trace", &T::trace)
             .def("conjugate", &T::conjugate)
-            // multiple svd slice
+            // TODO multiple svd slice
             ;
    }
 
@@ -263,5 +275,28 @@ namespace TAT {
             DECLARE_TENSOR_DICT(std::complex<double>, "Z"));
 #undef DECLARE_TENSOR_WITH_SAME_SCALAR
 #undef DECLARE_TENSOR
+      auto mpi_m = m.def_submodule("mpi", "mpi support for TAT");
+      mpi_m.def("barrier", mpi::barrier);
+#define DECLARE_MPI(SCALARTYPE)                        \
+   do {                                                \
+      declare_mpi<SCALARTYPE, NoSymmetry>(mpi_m);      \
+      declare_mpi<SCALARTYPE, Z2Symmetry>(mpi_m);      \
+      declare_mpi<SCALARTYPE, U1Symmetry>(mpi_m);      \
+      declare_mpi<SCALARTYPE, FermiSymmetry>(mpi_m);   \
+      declare_mpi<SCALARTYPE, FermiZ2Symmetry>(mpi_m); \
+      declare_mpi<SCALARTYPE, FermiU1Symmetry>(mpi_m); \
+   } while (false)
+      DECLARE_MPI(float);
+      DECLARE_MPI(double);
+      DECLARE_MPI(std::complex<float>);
+      DECLARE_MPI(std::complex<double>);
+#undef DECLARE_MPI
+      mpi_m.attr("rank") = mpi::mpi.rank;
+      mpi_m.attr("size") = mpi::mpi.size;
+      mpi_m.def("print", [](py::args args, py::kwargs kwargs) {
+         if (mpi::mpi.rank == 0) {
+            py::print(args, kwargs);
+         }
+      });
    }
 } // namespace TAT
