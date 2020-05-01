@@ -21,6 +21,8 @@
 #ifndef TAT_SYMMETRY_HPP
 #define TAT_SYMMETRY_HPP
 
+#include <tuple>
+
 #include "misc.hpp"
 
 namespace TAT {
@@ -201,76 +203,55 @@ namespace TAT {
    }
 
    // 此处将可被c++20的operator<=>替换
+#define TAT_DEF_ALL_SYM_OP(expression_1, expression_2)      \
+   TAT_DEF_SYM_OP(operator==, expression_1 == expression_2) \
+   TAT_DEF_SYM_OP(operator!=, expression_1 != expression_2) \
+   TAT_DEF_SYM_OP(operator>=, expression_1 >= expression_2) \
+   TAT_DEF_SYM_OP(operator<=, expression_1 <= expression_2) \
+   TAT_DEF_SYM_OP(operator>, expression_1> expression_2)    \
+   TAT_DEF_SYM_OP(operator<, expression_1<expression_2)
+
 #define TAT_DEF_SYM_OP(OP, EXP)                           \
    inline bool OP(const NoSymmetry&, const NoSymmetry&) { \
       return EXP;                                         \
    }
-   TAT_DEF_SYM_OP(operator==, true)
-   TAT_DEF_SYM_OP(operator!=, false)
-   TAT_DEF_SYM_OP(operator>=, true)
-   TAT_DEF_SYM_OP(operator<=, true)
-   TAT_DEF_SYM_OP(operator>, false)
-   TAT_DEF_SYM_OP(operator<, false)
+   TAT_DEF_ALL_SYM_OP(0, 0)
 #undef TAT_DEF_SYM_OP
 
 #define TAT_DEF_SYM_OP(OP, EXP)                                                 \
    inline bool OP(const Z2Symmetry& symmetry_1, const Z2Symmetry& symmetry_2) { \
       return EXP;                                                               \
    }
-   TAT_DEF_SYM_OP(operator==, symmetry_1.z2 == symmetry_2.z2)
-   TAT_DEF_SYM_OP(operator!=, symmetry_1.z2 != symmetry_2.z2)
-   TAT_DEF_SYM_OP(operator>=, symmetry_1.z2 >= symmetry_2.z2)
-   TAT_DEF_SYM_OP(operator<=, symmetry_1.z2 <= symmetry_2.z2)
-   TAT_DEF_SYM_OP(operator>, symmetry_1.z2> symmetry_2.z2)
-   TAT_DEF_SYM_OP(operator<, symmetry_1.z2<symmetry_2.z2)
+   TAT_DEF_ALL_SYM_OP(symmetry_1.z2, symmetry_2.z2)
 #undef TAT_DEF_SYM_OP
 
 #define TAT_DEF_SYM_OP(OP, EXP)                                                 \
    inline bool OP(const U1Symmetry& symmetry_1, const U1Symmetry& symmetry_2) { \
       return EXP;                                                               \
    }
-   TAT_DEF_SYM_OP(operator==, symmetry_1.u1 == symmetry_2.u1)
-   TAT_DEF_SYM_OP(operator!=, symmetry_1.u1 != symmetry_2.u1)
-   TAT_DEF_SYM_OP(operator>=, symmetry_1.u1 >= symmetry_2.u1)
-   TAT_DEF_SYM_OP(operator<=, symmetry_1.u1 <= symmetry_2.u1)
-   TAT_DEF_SYM_OP(operator>, symmetry_1.u1> symmetry_2.u1)
-   TAT_DEF_SYM_OP(operator<, symmetry_1.u1<symmetry_2.u1)
+   TAT_DEF_ALL_SYM_OP(symmetry_1.u1, symmetry_2.u1)
 #undef TAT_DEF_SYM_OP
 
 #define TAT_DEF_SYM_OP(OP, EXP)                                                       \
    inline bool OP(const FermiSymmetry& symmetry_1, const FermiSymmetry& symmetry_2) { \
       return EXP;                                                                     \
    }
-   TAT_DEF_SYM_OP(operator==, symmetry_1.fermi == symmetry_2.fermi)
-   TAT_DEF_SYM_OP(operator!=, symmetry_1.fermi != symmetry_2.fermi)
-   TAT_DEF_SYM_OP(operator>=, symmetry_1.fermi >= symmetry_2.fermi)
-   TAT_DEF_SYM_OP(operator<=, symmetry_1.fermi <= symmetry_2.fermi)
-   TAT_DEF_SYM_OP(operator>, symmetry_1.fermi> symmetry_2.fermi)
-   TAT_DEF_SYM_OP(operator<, symmetry_1.fermi<symmetry_2.fermi)
+   TAT_DEF_ALL_SYM_OP(symmetry_1.fermi, symmetry_2.fermi)
 #undef TAT_DEF_SYM_OP
 
 #define TAT_DEF_SYM_OP(OP, EXP)                                                           \
    inline bool OP(const FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) { \
       return EXP;                                                                         \
    }
-   TAT_DEF_SYM_OP(operator==,(symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.z2 == symmetry_2.z2))
-   TAT_DEF_SYM_OP(operator!=,(symmetry_1.fermi != symmetry_2.fermi) || (symmetry_1.z2 != symmetry_2.z2))
-   TAT_DEF_SYM_OP(operator>=,(symmetry_1.fermi > symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.z2 >= symmetry_2.z2)))
-   TAT_DEF_SYM_OP(operator<=,(symmetry_1.fermi < symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.z2 <= symmetry_2.z2)))
-   TAT_DEF_SYM_OP(operator>,(symmetry_1.fermi > symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.z2 > symmetry_2.z2)))
-   TAT_DEF_SYM_OP(operator<,(symmetry_1.fermi < symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.z2 < symmetry_2.z2)))
+   TAT_DEF_ALL_SYM_OP(std::tie(symmetry_1.fermi, symmetry_1.z2), std::tie(symmetry_2.fermi, symmetry_2.z2))
 #undef TAT_DEF_SYM_OP
 
 #define TAT_DEF_SYM_OP(OP, EXP)                                                           \
    inline bool OP(const FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) { \
       return EXP;                                                                         \
    }
-   TAT_DEF_SYM_OP(operator==,(symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.u1 == symmetry_2.u1))
-   TAT_DEF_SYM_OP(operator!=,(symmetry_1.fermi != symmetry_2.fermi) || (symmetry_1.u1 != symmetry_2.u1))
-   TAT_DEF_SYM_OP(operator>=,(symmetry_1.fermi > symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.u1 >= symmetry_2.u1)))
-   TAT_DEF_SYM_OP(operator<=,(symmetry_1.fermi < symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.u1 <= symmetry_2.u1)))
-   TAT_DEF_SYM_OP(operator>,(symmetry_1.fermi > symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.u1 > symmetry_2.u1)))
-   TAT_DEF_SYM_OP(operator<,(symmetry_1.fermi < symmetry_2.fermi) || ((symmetry_1.fermi == symmetry_2.fermi) && (symmetry_1.u1 < symmetry_2.u1)))
+   TAT_DEF_ALL_SYM_OP(std::tie(symmetry_1.fermi, symmetry_1.u1), std::tie(symmetry_2.fermi, symmetry_2.u1))
 #undef TAT_DEF_SYM_OP
+#undef TAT_DEF_ALL_SYM_OP
 } // namespace TAT
 #endif

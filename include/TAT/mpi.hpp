@@ -190,7 +190,7 @@ namespace TAT {
 #endif
 
    inline Evil::~Evil() {
-#ifndef NDEUBG
+#ifndef NDEBUG
       try {
 #ifdef TAT_USE_MPI
          mpi::root_log

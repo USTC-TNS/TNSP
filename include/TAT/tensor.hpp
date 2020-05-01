@@ -466,7 +466,7 @@ namespace TAT {
             ScalarType* destination = result.core->blocks.at(result_symmetries).data();
             const ScalarType* source = block.data();
             bool parity = false;
-            if constexpr (is_fermi_v<Symmetry>) {
+            if constexpr (is_fermi_symmetry_v<Symmetry>) {
                parity = Symmetry::get_split_merge_parity(symmetries, transpose_flag, valid_flag);
             }
             if constexpr (is_complex_v<ScalarType>) {
