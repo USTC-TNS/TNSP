@@ -7,7 +7,7 @@
 - mpi
 - blas/lapack or mkl
 
-## Install
+## Installation
 - mkdir build
 - cd build
 - cmake ..

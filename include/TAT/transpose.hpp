@@ -41,9 +41,16 @@ namespace TAT {
       }
       // leading[0] may not be 1
       if (rank == 1) {
-         for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
-              i++, source_index += scalar_leading_source[0], destination_index += scalar_leading_destination[0]) {
-            data_destination[destination_index] = parity ? -data_source[source_index] : data_source[source_index];
+         if (parity) {
+            for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
+                 i++, source_index += scalar_leading_source[0], destination_index += scalar_leading_destination[0]) {
+               data_destination[destination_index] = -data_source[source_index];
+            }
+         } else {
+            for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
+                 i++, source_index += scalar_leading_source[0], destination_index += scalar_leading_destination[0]) {
+               data_destination[destination_index] = data_source[source_index];
+            }
          }
          return;
       }
@@ -51,9 +58,16 @@ namespace TAT {
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
       while (true) {
-         for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
-              i++, source_index += scalar_leading_source[0], destination_index += scalar_leading_destination[0]) {
-            current_destination[destination_index] = parity ? -current_source[source_index] : current_source[source_index];
+         if (parity) {
+            for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
+                 i++, source_index += scalar_leading_source[0], destination_index += scalar_leading_destination[0]) {
+               current_destination[destination_index] = -current_source[source_index];
+            }
+         } else {
+            for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size[0];
+                 i++, source_index += scalar_leading_source[0], destination_index += scalar_leading_destination[0]) {
+               current_destination[destination_index] = current_source[source_index];
+            }
          }
          auto current_position = 1;
          index_list[current_position]++;

@@ -441,7 +441,7 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry> conjugate() const {
          if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
-            return *this;
+            return copy();
          }
          auto result_edges = std::vector<Edge<Symmetry>>();
          for (const auto& edge : core->edges) {
@@ -453,6 +453,8 @@ namespace TAT {
                result_edge.map[-symmetry] = dimension;
             }
          }
+         auto transpose_flag = std::vector<Rank>(names.size(), 0);
+         auto valid_flag = std::vector<bool>(1, true);
          auto result = Tensor<ScalarType, Symmetry>(names, result_edges);
          for (const auto& [symmetries, block] : core->blocks) {
             auto result_symmetries = std::vector<Symmetry>();
@@ -463,13 +465,29 @@ namespace TAT {
             Size total_size = block.size();
             ScalarType* destination = result.core->blocks.at(result_symmetries).data();
             const ScalarType* source = block.data();
+            bool parity = false;
+            if constexpr (is_fermi_v<Symmetry>) {
+               parity = Symmetry::get_split_merge_parity(symmetries, transpose_flag, valid_flag);
+            }
             if constexpr (is_complex_v<ScalarType>) {
-               for (Size i = 0; i < total_size; i++) {
-                  destination[i] = std::conj(source[i]);
+               if (parity) {
+                  for (Size i = 0; i < total_size; i++) {
+                     destination[i] = -std::conj(source[i]);
+                  }
+               } else {
+                  for (Size i = 0; i < total_size; i++) {
+                     destination[i] = std::conj(source[i]);
+                  }
                }
             } else {
-               for (Size i = 0; i < total_size; i++) {
-                  destination[i] = source[i];
+               if (parity) {
+                  for (Size i = 0; i < total_size; i++) {
+                     destination[i] = -source[i];
+                  }
+               } else {
+                  for (Size i = 0; i < total_size; i++) {
+                     destination[i] = source[i];
+                  }
                }
             }
          }

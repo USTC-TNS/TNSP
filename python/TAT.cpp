@@ -11,7 +11,7 @@
 #include "TAT/TAT.hpp"
 
 namespace TAT {
-   namespace py = pybind11;
+   namespace py = ::pybind11;
 
    template<class Type, class Args>
    auto implicit_init() {
