@@ -24,93 +24,93 @@
 #include "tensor.hpp"
 
 namespace TAT {
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2, EVAL3)                                                                        \
-   template<class ScalarType1, class ScalarType2, class Symmetry>                                                     \
-   auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {            \
-      using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                \
-      if (tensor_1.names.empty()) {                                                                                   \
-         const auto& x = tensor_1.at({});                                                                             \
-         auto result = Tensor<ScalarType, Symmetry>{tensor_2.names, tensor_2.core->edges};                            \
-         for (auto& [symmetries, block] : result.core->blocks) {                                                      \
-            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                               \
-            ScalarType* __restrict c = block.data();                                                                  \
-            for (Size j = 0; j < block.size(); j++) {                                                                 \
-               EVAL1;                                                                                                 \
-            }                                                                                                         \
-         }                                                                                                            \
-         return result;                                                                                               \
-      } else if (tensor_2.names.empty()) {                                                                            \
-         const auto& y = tensor_2.at({});                                                                             \
-         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                            \
-         for (auto& [symmetries, block] : result.core->blocks) {                                                      \
-            const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                               \
-            ScalarType* __restrict c = block.data();                                                                  \
-            for (Size j = 0; j < block.size(); j++) {                                                                 \
-               EVAL2;                                                                                                 \
-            }                                                                                                         \
-         }                                                                                                            \
-         return result;                                                                                               \
-      } else {                                                                                                        \
-         auto real_tensor_2 = &tensor_2;                                                                              \
-         auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                         \
-         if (tensor_1.names != tensor_2.names) {                                                                      \
-            new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                        \
-            real_tensor_2 = &new_tensor_2;                                                                            \
-         }                                                                                                            \
-         auto real_result_edge = &tensor_1.core->edges;                                                               \
-         auto new_result_edge = std::vector<Edge<Symmetry>>();                                                        \
-         if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
-            for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
-               new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
-               for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                 \
-                  new_result_edge[i].map[symmetry] = dimension;                                                       \
-               }                                                                                                      \
-            }                                                                                                         \
-            real_result_edge = &new_result_edge;                                                                      \
-         }                                                                                                            \
-         const ScalarType x = 0;                                                                                      \
-         const ScalarType y = 0;                                                                                      \
-         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, *real_result_edge};                               \
-         for (auto& [symmetries, block] : result.core->blocks) {                                                      \
-            auto found_1 = tensor_1.core->blocks.find(symmetries);                                                    \
-            auto found_2 = real_tensor_2->core->blocks.find(symmetries);                                              \
-            if (found_1 != tensor_1.core->blocks.end()) {                                                             \
-               if (found_2 != real_tensor_2->core->blocks.end()) {                                                    \
-                  const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                         \
-                  const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                   \
-                  ScalarType* __restrict c = block.data();                                                            \
-                  for (Size j = 0; j < block.size(); j++) {                                                           \
-                     EVAL3;                                                                                           \
-                  }                                                                                                   \
-               } else {                                                                                               \
-                  const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                         \
-                  ScalarType* __restrict c = block.data();                                                            \
-                  for (Size j = 0; j < block.size(); j++) {                                                           \
-                     EVAL2;                                                                                           \
-                  }                                                                                                   \
-               }                                                                                                      \
-            } else {                                                                                                  \
-               if (found_2 != real_tensor_2->core->blocks.end()) {                                                    \
-                  const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                   \
-                  ScalarType* __restrict c = block.data();                                                            \
-                  for (Size j = 0; j < block.size(); j++) {                                                           \
-                     EVAL1;                                                                                           \
-                  }                                                                                                   \
-               } else {                                                                                               \
-                  std::fill(block.begin(), block.end(), 0);                                                           \
-               }                                                                                                      \
-            }                                                                                                         \
-         }                                                                                                            \
-         return result;                                                                                               \
-      }                                                                                                               \
-   }                                                                                                                  \
-   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>> \
-   auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                              \
-      return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                   \
-   }                                                                                                                  \
-   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType1>>> \
-   auto OP(const ScalarType1& number_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {                              \
-      return OP(Tensor<ScalarType1, Symmetry>{number_1}, tensor_2);                                                   \
+#define DEF_SCALAR_OP(OP, EVAL1, EVAL2, EVAL3)                                                                          \
+   template<class ScalarType1, class ScalarType2, class Symmetry>                                                       \
+   auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {              \
+      using ScalarType = ::std::common_type_t<ScalarType1, ScalarType2>;                                                \
+      if (tensor_1.names.empty()) {                                                                                     \
+         const auto& x = tensor_1.at({});                                                                               \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_2.names, tensor_2.core->edges};                              \
+         for (auto& [symmetries, block] : result.core->blocks) {                                                        \
+            const ScalarType2* __restrict b = tensor_2.core->blocks[symmetries].data();                                 \
+            ScalarType* __restrict c = block.data();                                                                    \
+            for (Size j = 0; j < block.size(); j++) {                                                                   \
+               EVAL1;                                                                                                   \
+            }                                                                                                           \
+         }                                                                                                              \
+         return result;                                                                                                 \
+      } else if (tensor_2.names.empty()) {                                                                              \
+         const auto& y = tensor_2.at({});                                                                               \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                              \
+         for (auto& [symmetries, block] : result.core->blocks) {                                                        \
+            const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                                 \
+            ScalarType* __restrict c = block.data();                                                                    \
+            for (Size j = 0; j < block.size(); j++) {                                                                   \
+               EVAL2;                                                                                                   \
+            }                                                                                                           \
+         }                                                                                                              \
+         return result;                                                                                                 \
+      } else {                                                                                                          \
+         auto real_tensor_2 = &tensor_2;                                                                                \
+         auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                           \
+         if (tensor_1.names != tensor_2.names) {                                                                        \
+            new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                          \
+            real_tensor_2 = &new_tensor_2;                                                                              \
+         }                                                                                                              \
+         auto real_result_edge = &tensor_1.core->edges;                                                                 \
+         auto new_result_edge = ::std::vector<Edge<Symmetry>>();                                                        \
+         if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                      \
+            for (auto i = 0; i < tensor_1.names.size(); i++) {                                                          \
+               new_result_edge.push_back(tensor_1.core->edges[i]);                                                      \
+               for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                   \
+                  new_result_edge[i].map[symmetry] = dimension;                                                         \
+               }                                                                                                        \
+            }                                                                                                           \
+            real_result_edge = &new_result_edge;                                                                        \
+         }                                                                                                              \
+         const ScalarType x = 0;                                                                                        \
+         const ScalarType y = 0;                                                                                        \
+         auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, *real_result_edge};                                 \
+         for (auto& [symmetries, block] : result.core->blocks) {                                                        \
+            auto found_1 = tensor_1.core->blocks.find(symmetries);                                                      \
+            auto found_2 = real_tensor_2->core->blocks.find(symmetries);                                                \
+            if (found_1 != tensor_1.core->blocks.end()) {                                                               \
+               if (found_2 != real_tensor_2->core->blocks.end()) {                                                      \
+                  const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                           \
+                  const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                     \
+                  ScalarType* __restrict c = block.data();                                                              \
+                  for (Size j = 0; j < block.size(); j++) {                                                             \
+                     EVAL3;                                                                                             \
+                  }                                                                                                     \
+               } else {                                                                                                 \
+                  const ScalarType1* __restrict a = tensor_1.core->blocks[symmetries].data();                           \
+                  ScalarType* __restrict c = block.data();                                                              \
+                  for (Size j = 0; j < block.size(); j++) {                                                             \
+                     EVAL2;                                                                                             \
+                  }                                                                                                     \
+               }                                                                                                        \
+            } else {                                                                                                    \
+               if (found_2 != real_tensor_2->core->blocks.end()) {                                                      \
+                  const ScalarType2* __restrict b = real_tensor_2->core->blocks[symmetries].data();                     \
+                  ScalarType* __restrict c = block.data();                                                              \
+                  for (Size j = 0; j < block.size(); j++) {                                                             \
+                     EVAL1;                                                                                             \
+                  }                                                                                                     \
+               } else {                                                                                                 \
+                  ::std::fill(block.begin(), block.end(), 0);                                                           \
+               }                                                                                                        \
+            }                                                                                                           \
+         }                                                                                                              \
+         return result;                                                                                                 \
+      }                                                                                                                 \
+   }                                                                                                                    \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = ::std::enable_if_t<is_scalar_v<ScalarType2>>> \
+   auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                                \
+      return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                     \
+   }                                                                                                                    \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = ::std::enable_if_t<is_scalar_v<ScalarType1>>> \
+   auto OP(const ScalarType1& number_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {                                \
+      return OP(Tensor<ScalarType1, Symmetry>{number_1}, tensor_2);                                                     \
    }
 
    DEF_SCALAR_OP(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
@@ -154,7 +154,7 @@ namespace TAT {
       }                                                                                                                        \
       return tensor_1;                                                                                                         \
    }                                                                                                                           \
-   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>>          \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = ::std::enable_if_t<is_scalar_v<ScalarType2>>>        \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                   \
       return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                            \
    }

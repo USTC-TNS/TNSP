@@ -36,11 +36,11 @@ namespace TAT {
        * \brief 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
        * \see Edge
        */
-      std::vector<Edge<Symmetry>> edges = {};
+      ::std::vector<Edge<Symmetry>> edges = {};
       /**
        * \brief 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据, 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
        */
-      std::map<std::vector<Symmetry>, vector<ScalarType>> blocks = {};
+      ::std::map<::std::vector<Symmetry>, vector<ScalarType>> blocks = {};
 
       /**
        * \brief 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块
@@ -49,8 +49,8 @@ namespace TAT {
        * \note 使用auto_reverse时, 原则上构造时费米对称性值应该全正或全负, 如果不是这样, 结果会难以理解
        * \note 将会自动删除不出现于数据中的对称性
        */
-      template<class T = std::vector<Edge<Symmetry>>, class = std::enable_if_t<std::is_convertible_v<T, std::vector<Edge<Symmetry>>>>>
-      Core(T&& initial_edge, [[maybe_unused]] const bool auto_reverse = false) : edges(std::forward<T>(initial_edge)) {
+      template<class T = ::std::vector<Edge<Symmetry>>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::vector<Edge<Symmetry>>>>>
+      Core(T&& initial_edge, [[maybe_unused]] const bool auto_reverse = false) : edges(::std::forward<T>(initial_edge)) {
          // 自动翻转边
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             if (auto_reverse) {
@@ -65,7 +65,7 @@ namespace TAT {
             blocks[symmetries] = vector<ScalarType>(size);
          }
          // 删除不在block中用到的sym
-         auto edge_mark = std::vector<std::map<Symmetry, bool>>();
+         auto edge_mark = ::std::vector<::std::map<Symmetry, bool>>();
          for (const auto& edge : edges) {
             auto& this_mark = edge_mark.emplace_back();
             for (const auto& [symmetry, _] : edge.map) {

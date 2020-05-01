@@ -32,7 +32,7 @@ namespace TAT {
    /**
     * \brief TAT的版本号
     */
-   const std::string TAT_VERSION = "0.0.4";
+   const ::std::string TAT_VERSION = "0.0.4";
 
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示
@@ -46,7 +46,7 @@ namespace TAT {
     * \brief 打印警告, 有时也可能是错误, 但在非debug模式中不做事
     * \param message 待打印的话
     */
-   inline void warning_or_error([[maybe_unused]] const std::string& message);
+   inline void warning_or_error([[maybe_unused]] const ::std::string& message);
 
    /**
     * \brief 张量的秩的大小的类型
@@ -97,7 +97,7 @@ namespace TAT {
     * \tparam T 如果T是对称性类型, 则value为true
     */
    template<class T>
-   struct is_symmetry : std::is_base_of<symmetry_base, T> {};
+   struct is_symmetry : ::std::is_base_of<symmetry_base, T> {};
    template<class T>
    constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
@@ -106,7 +106,7 @@ namespace TAT {
     * \tparam T 如果T是玻色对称性类型, 则value为true
     */
    template<class T>
-   struct is_bose_symmetry : std::is_base_of<bose_symmetry_base, T> {};
+   struct is_bose_symmetry : ::std::is_base_of<bose_symmetry_base, T> {};
    template<class T>
    constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
 
@@ -115,21 +115,21 @@ namespace TAT {
     * \tparam T 如果T是费米对称性类型, 则value为true
     */
    template<class T>
-   struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
+   struct is_fermi_symmetry : ::std::is_base_of<fermi_symmetry_base, T> {};
    template<class T>
    constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
 
    /**
-    * \brief 判断一个类型是否是标量类型, 修复了std::scalar不能判断std::complex的问题
+    * \brief 判断一个类型是否是标量类型, 修复了::std::scalar不能判断::std::complex的问题
     * \tparam T 如果T是标量类型, 则value为true
     */
    template<class T>
-   struct is_scalar : std::is_scalar<T> {};
+   struct is_scalar : ::std::is_scalar<T> {};
    /**
-    * \brief 对std::complex的特殊处理
+    * \brief 对::std::complex的特殊处理
     */
    template<class T>
-   struct is_scalar<std::complex<T>> : std::is_scalar<T> {};
+   struct is_scalar<::std::complex<T>> : ::std::is_scalar<T> {};
    template<class T>
    constexpr bool is_scalar_v = is_scalar<T>::value;
 
@@ -146,24 +146,24 @@ namespace TAT {
 
    /**
     * \brief 取对应的实数类型, 在svd, norm等地方会用到
-    * \tparam T 如果T是std::complex<S>, 则type为S, 否则为T本身
+    * \tparam T 如果T是::std::complex<S>, 则type为S, 否则为T本身
     */
    template<class T>
    struct real_base : type_identity<T> {};
    /**
-    * \brief 对std::complex进行特化
+    * \brief 对::std::complex进行特化
     */
    template<class T>
-   struct real_base<std::complex<T>> : type_identity<T> {};
+   struct real_base<::std::complex<T>> : type_identity<T> {};
    template<class T>
    using real_base_t = typename real_base<T>::type;
 
    template<class T>
-   struct is_complex : std::is_same<T, std::complex<real_base_t<T>>> {};
+   struct is_complex : ::std::is_same<T, ::std::complex<real_base_t<T>>> {};
    template<class T>
    constexpr bool is_complex_v = is_complex<T>::value;
    template<class T>
-   struct is_real : std::is_same<T, real_base_t<T>> {};
+   struct is_real : ::std::is_same<T, real_base_t<T>> {};
    template<class T>
    constexpr bool is_real_v = is_real<T>::value;
 
@@ -171,7 +171,7 @@ namespace TAT {
     * \brief 用于不初始化的vector的allocator
     */
    template<class T>
-   struct allocator_without_initialize : std::allocator<T> {
+   struct allocator_without_initialize : ::std::allocator<T> {
       template<class U>
       struct rebind {
          using other = allocator_without_initialize<U>;
@@ -185,7 +185,7 @@ namespace TAT {
        */
       template<class... Args>
       void construct([[maybe_unused]] T* pointer, Args&&... arguments) {
-         if constexpr (!((sizeof...(arguments) == 0) && (std::is_trivially_destructible_v<T>))) {
+         if constexpr (!((sizeof...(arguments) == 0) && (::std::is_trivially_destructible_v<T>))) {
             new (pointer) T(arguments...);
          }
       }
@@ -201,6 +201,6 @@ namespace TAT {
     * \note 为了兼容性, 仅在张量的数据处使用
     */
    template<class T>
-   using vector = std::vector<T, allocator_without_initialize<T>>;
+   using vector = ::std::vector<T, allocator_without_initialize<T>>;
 } // namespace TAT
 #endif

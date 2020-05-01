@@ -28,9 +28,9 @@ namespace TAT {
       // default: up to down
       template<class ScalarType, class Symmetry>
       auto two_line_to_one_line(
-            const std::array<Name, 4>& udlr_name,
-            std::vector<const Tensor<ScalarType, Symmetry>*> line_1,
-            std::vector<const Tensor<ScalarType, Symmetry>*> line_2,
+            const ::std::array<Name, 4>& udlr_name,
+            ::std::vector<const Tensor<ScalarType, Symmetry>*> line_1,
+            ::std::vector<const Tensor<ScalarType, Symmetry>*> line_2,
             Size cut) {
          const auto& [up, down, left, right] = udlr_name;
          const Name up1 = id_to_name.at(up.id) + "_1";
@@ -46,15 +46,15 @@ namespace TAT {
          if (length != line_2.size()) {
             warning_or_error("Different Length When Do Two Line to One Line");
          }
-         //std::clog << "Two Line to One Line Start\n";
+         //::std::clog << "Two Line to One Line Start\n";
 
          // product
-         std::vector<Tensor<ScalarType, Symmetry>> double_line;
-         //std::clog << "double line:\n";
+         ::std::vector<Tensor<ScalarType, Symmetry>> double_line;
+         //::std::clog << "double line:\n";
          for (int i = 0; i < length; i++) {
             double_line.push_back(Tensor<ScalarType, Symmetry>::contract(
                   line_1[i]->edge_rename({{left, left1}, {right, right1}}), line_2[i]->edge_rename({{left, left2}, {right, right2}}), {{down, up}}));
-            //std::clog << double_line[i] << "\n";
+            //::std::clog << double_line[i] << "\n";
          }
 
          // left canonicalize
@@ -62,12 +62,12 @@ namespace TAT {
             // lattice: 0 ~ L-1
             // 0 ... L-2
             auto [u, s, v] = double_line[i].svd({right1, right2}, left, right);
-            double_line[i] = std::move(v);
+            double_line[i] = ::std::move(v);
             double_line[i + 1] = double_line[i + 1].contract(u, {{left1, right1}, {left2, right2}}).multiple(s, left, false);
          }
-         //std::clog << "double line:\n";
+         //::std::clog << "double line:\n";
          //for (int i = 0; i < length; i++) {
-         //   std::clog << double_line[i] << "\n";
+         //   ::std::clog << double_line[i] << "\n";
          //}
 
          // right svd
@@ -75,7 +75,7 @@ namespace TAT {
             // L-2 and L-1, ... 0 and 1
             // i and i+1
             // get name of double_line[i]
-            auto u_names = std::set<Name>(double_line[i].names.begin(), double_line[i].names.end());
+            auto u_names = ::std::set<Name>(double_line[i].names.begin(), double_line[i].names.end());
             u_names.erase(right);
             u_names.erase(up);
             u_names.erase(down);
@@ -90,15 +90,15 @@ namespace TAT {
             double_line[i] = u.multiple(s, right, false).edge_rename({{up1, up}, {down1, down}});
          }
 
-         //std::clog << "Two Line to One Line End\n";
+         //::std::clog << "Two Line to One Line End\n";
          return double_line;
       }
 
       template<class ScalarType, class Symmetry, class Key>
       struct network {
-         std::map<Key, Tensor<ScalarType, Symmetry>> site;
+         ::std::map<Key, Tensor<ScalarType, Symmetry>> site;
          // Singular is map<Symmetry, vector>, it there is no environment, the map is empty
-         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, typename Tensor<ScalarType, Symmetry>::Singular>> bond;
+         ::std::map<::std::tuple<Key, Key>, ::std::map<::std::tuple<Name, Name>, typename Tensor<ScalarType, Symmetry>::Singular>> bond;
          // TODO: network
       };
    } // namespace tools

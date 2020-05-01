@@ -25,35 +25,35 @@
 
 namespace TAT {
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const ::std::set<::std::tuple<Name, Name>>& trace_names) const {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       // 对于fermi的情况, 应是一进一出才合法
-      auto traced_names = std::set<Name>();
+      auto traced_names = ::std::set<Name>();
       // TODO trace order maybe optimized
-      auto trace_1_names = std::vector<Name>();
-      auto trace_2_names = std::vector<Name>();
+      auto trace_1_names = ::std::vector<Name>();
+      auto trace_2_names = ::std::vector<Name>();
       for (const auto& i : trace_names) {
          // 对于费米子进行转向
          if constexpr (is_fermi) {
-            if (core->edges[name_to_index.at(std::get<0>(i))].arrow) {
-               trace_1_names.push_back(std::get<0>(i));
-               trace_2_names.push_back(std::get<1>(i));
+            if (core->edges[name_to_index.at(::std::get<0>(i))].arrow) {
+               trace_1_names.push_back(::std::get<0>(i));
+               trace_2_names.push_back(::std::get<1>(i));
             } else {
-               trace_1_names.push_back(std::get<1>(i));
-               trace_2_names.push_back(std::get<0>(i));
+               trace_1_names.push_back(::std::get<1>(i));
+               trace_2_names.push_back(::std::get<0>(i));
             }
          } else {
-            trace_1_names.push_back(std::get<0>(i));
-            trace_2_names.push_back(std::get<1>(i));
+            trace_1_names.push_back(::std::get<0>(i));
+            trace_2_names.push_back(::std::get<1>(i));
          }
          // 统计traced names
-         traced_names.insert(std::get<0>(i));
-         traced_names.insert(std::get<1>(i));
+         traced_names.insert(::std::get<0>(i));
+         traced_names.insert(::std::get<1>(i));
       }
       // 寻找自由脚
-      auto result_names = std::vector<Name>();
-      auto reverse_names = std::set<Name>();
-      auto split_plan = std::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      auto result_names = ::std::vector<Name>();
+      auto reverse_names = ::std::set<Name>();
+      auto split_plan = ::std::vector<::std::tuple<Name, BoseEdge<Symmetry>>>();
       for (const auto& name : names) {
          if (auto found = traced_names.find(name); found == traced_names.end()) {
             const auto& this_edge = core->edges[name_to_index.at(name)];
@@ -79,7 +79,7 @@ namespace TAT {
       const Size line_size = destination_block.size();
 
 #if 0
-      std::cout << merged_tensor << "\n";
+      ::std::cout << merged_tensor << "\n";
 #endif
 
       for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
@@ -94,10 +94,10 @@ namespace TAT {
          }
       }
 #if 0
-       std::cout << merged_tensor << "\n";
-       std::cout << line_size << "\n";
-       std::cout << traced_tensor << "\n";
-       std::cout << traced_tensor << "\n";
+       ::std::cout << merged_tensor << "\n";
+       ::std::cout << line_size << "\n";
+       ::std::cout << traced_tensor << "\n";
+       ::std::cout << traced_tensor << "\n";
 #endif
       auto result = traced_tensor.edge_operator({}, {{Trace3, split_plan}}, reverse_names, {}, result_names);
       return result;
