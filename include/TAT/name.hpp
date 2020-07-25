@@ -40,11 +40,11 @@ namespace TAT {
    /**
     * \brief Name的字符串到标号的映射表
     */
-   inline ::std::map<::std::string, NameIdType> name_to_id = {};
+   inline std::map<std::string, NameIdType> name_to_id = {};
    /**
     * \brief 标号到Name的字符串的映射表
     */
-   inline ::std::map<NameIdType, ::std::string> id_to_name = {};
+   inline std::map<NameIdType, std::string> id_to_name = {};
 
    /**
     * \brief 用于给张量的脚标命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
@@ -59,8 +59,8 @@ namespace TAT {
       NameIdType id = -1;
       Name() = default;
       Name(const NameIdType id) : id(id) {}
-      Name(const char* name) : Name(::std::string(name)) {}
-      Name(const ::std::string& name) {
+      Name(const char* name) : Name(std::string(name)) {}
+      Name(const std::string& name) {
          if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
             id = names_total_index++;
             name_to_id[name] = id;
@@ -102,8 +102,8 @@ namespace TAT {
    /**
     * \brief 由名字列表构造名字到需要的映射表
     */
-   inline ::std::map<Name, Rank> construct_name_to_index(const ::std::vector<Name>& names) {
-      ::std::map<Name, Rank> result;
+   inline std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
+      std::map<Name, Rank> result;
       for (auto name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
       }
@@ -113,8 +113,8 @@ namespace TAT {
    /**
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
-   inline bool check_valid_name(const ::std::vector<Name>& names, const Rank& rank) {
-      const auto result = names.size() == ::std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
+   inline bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
+      const auto result = names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
       if (!result) {
          warning_or_error("Wrong Name Number or Duplicated Name");
       }

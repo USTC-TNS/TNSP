@@ -35,7 +35,7 @@ namespace TAT {
        * \brief 根据对称性列表和边需要翻转的情况和parity有效性给出总的parity
        */
       [[nodiscard]] static bool
-      get_reverse_parity(const ::std::vector<Derived>& symmetries, const ::std::vector<bool>& reverse_flag, const ::std::vector<bool>& valid_mark) {
+      get_reverse_parity(const std::vector<Derived>& symmetries, const std::vector<bool>& reverse_flag, const std::vector<bool>& valid_mark) {
          auto result = false;
          for (auto i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
@@ -47,7 +47,7 @@ namespace TAT {
       /**
        * \brief 根据对称性列表和边的转置情况给出总parity, 转置的parity总是有效的, 因为这是张量内部操作
        */
-      [[nodiscard]] static bool get_transpose_parity(const ::std::vector<Derived>& symmetries, const ::std::vector<Rank>& transpose_plan) {
+      [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
          auto result = false;
          for (auto i = 0; i < symmetries.size(); i++) {
             for (auto j = i + 1; j < symmetries.size(); j++) {
@@ -63,9 +63,9 @@ namespace TAT {
        * \note sum_{i!=j} s_i s_j = ((sum s_i)^2 - sum s_i^2)/2
        */
       [[nodiscard]] static bool get_split_merge_parity(
-            const ::std::vector<Derived>& symmetries,    // before merge length
-            const ::std::vector<Rank>& split_merge_flag, // before merge length
-            const ::std::vector<bool>& valid_mark) {     // after merge length
+            const std::vector<Derived>& symmetries,    // before merge length
+            const std::vector<Rank>& split_merge_flag, // before merge length
+            const std::vector<bool>& valid_mark) {     // after merge length
          auto result = false;
          for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();
@@ -245,14 +245,14 @@ namespace TAT {
    inline bool OP(const FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) { \
       return EXP;                                                                         \
    }
-   TAT_DEF_ALL_SYM_OP(::std::tie(symmetry_1.fermi, symmetry_1.z2), ::std::tie(symmetry_2.fermi, symmetry_2.z2))
+   TAT_DEF_ALL_SYM_OP(std::tie(symmetry_1.fermi, symmetry_1.z2), std::tie(symmetry_2.fermi, symmetry_2.z2))
 #undef TAT_DEF_SYM_OP
 
 #define TAT_DEF_SYM_OP(OP, EXP)                                                           \
    inline bool OP(const FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) { \
       return EXP;                                                                         \
    }
-   TAT_DEF_ALL_SYM_OP(::std::tie(symmetry_1.fermi, symmetry_1.u1), ::std::tie(symmetry_2.fermi, symmetry_2.u1))
+   TAT_DEF_ALL_SYM_OP(std::tie(symmetry_1.fermi, symmetry_1.u1), std::tie(symmetry_2.fermi, symmetry_2.u1))
 #undef TAT_DEF_SYM_OP
 #undef TAT_DEF_ALL_SYM_OP
 } // namespace TAT

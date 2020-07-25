@@ -65,7 +65,7 @@ namespace TAT {
       // TODO 可以优化
       template<class ScalarType, class Symmetry>
       void send(const Tensor<ScalarType, Symmetry>& tensor, const int source, const int destination) {
-         auto out = ::std::stringstream();
+         auto out = std::stringstream();
          out <= tensor;
          auto data = out.str(); // 不需复制
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, 0, MPI_COMM_WORLD);
@@ -77,9 +77,9 @@ namespace TAT {
          MPI_Probe(source, 0, MPI_COMM_WORLD, &status);
          int length;
          MPI_Get_count(&status, MPI_BYTE, &length);
-         auto data = ::std::string(length, '\0'); // 不需初始化
+         auto data = std::string(length, '\0'); // 不需初始化
          MPI_Recv(data.data(), length, MPI_BYTE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-         auto in = ::std::stringstream(data); // 不需复制
+         auto in = std::stringstream(data); // 不需复制
          auto result = Tensor<ScalarType, Symmetry>();
          in >= result;
          // TODO STATUS?
@@ -103,20 +103,20 @@ namespace TAT {
             return tensor.copy();
          }
          int length;
-         auto data = ::std::string();
-         // ::std::cout << mpi.rank << "rank\n";
+         auto data = std::string();
+         // std::cout << mpi.rank << "rank\n";
          if (mpi.rank == root) {
-            auto out = ::std::stringstream();
+            auto out = std::stringstream();
             out <= tensor;
             data = out.str();
             length = data.length();
          }
-         // ::std::cout << mpi.rank << " " << length << "\n";
+         // std::cout << mpi.rank << " " << length << "\n";
          MPI_Bcast(&length, 1, MPI_INT, root, MPI_COMM_WORLD);
-         // ::std::cout << mpi.rank << " " << length << "\n";
+         // std::cout << mpi.rank << " " << length << "\n";
          data.resize(length);
          MPI_Bcast(data.data(), length, MPI_BYTE, root, MPI_COMM_WORLD);
-         auto in = ::std::stringstream(data);
+         auto in = std::stringstream(data);
          auto result = Tensor<ScalarType, Symmetry>();
          in >= result;
          return result;
@@ -134,26 +134,26 @@ namespace TAT {
          int this_right_son_rank = this_rank * 2 + 2;
          if (this_left_son_rank < mpi.size) {
             int left_son_rank = (this_left_son_rank + root) % mpi.size;
-            // ::std::cout << "receiving from " << left_son_rank << " to " << mpi.rank << "\n";
+            // std::cout << "receiving from " << left_son_rank << " to " << mpi.rank << "\n";
             result = function(tensor, receive(tensor, left_son_rank, mpi.rank));
-            // ::std::cout << "received from " << left_son_rank << " to " << mpi.rank << "\n";
+            // std::cout << "received from " << left_son_rank << " to " << mpi.rank << "\n";
          }
          if (this_right_son_rank < mpi.size) {
             int right_son_rank = (this_right_son_rank + root) % mpi.size;
-            // ::std::cout << "receiving from " << right_son_rank << " to " << mpi.rank << "\n";
+            // std::cout << "receiving from " << right_son_rank << " to " << mpi.rank << "\n";
             result = function(result, receive(tensor, right_son_rank, mpi.rank));
-            // ::std::cout << "received from " << right_son_rank << " to " << mpi.rank << "\n";
+            // std::cout << "received from " << right_son_rank << " to " << mpi.rank << "\n";
          }
          // pass to father
          int father_rank = ((this_rank - 1) / 2 + mpi.size) % mpi.size;
          if (this_rank != 0) {
-            // ::std::cout << "sending from " << mpi.rank << " to " << father_rank << "\n";
+            // std::cout << "sending from " << mpi.rank << " to " << father_rank << "\n";
             if (this_right_son_rank > mpi.size) {
                send(tensor, mpi.rank, father_rank);
             } else {
                send(result, mpi.rank, father_rank);
             }
-            // ::std::cout << "sent from " << mpi.rank << " to " << father_rank << "\n";
+            // std::cout << "sent from " << mpi.rank << " to " << father_rank << "\n";
          }
          return result;
       }
@@ -170,9 +170,9 @@ namespace TAT {
       }
 
       struct mpi_output_stream {
-         ::std::ostream* out;
+         std::ostream* out;
          int rank;
-         mpi_output_stream(::std::ostream* out, int rank = 0) : out(out), rank(rank) {}
+         mpi_output_stream(std::ostream* out, int rank = 0) : out(out), rank(rank) {}
 
          template<class Type>
          mpi_output_stream& operator<<(const Type& value) {
@@ -183,9 +183,9 @@ namespace TAT {
          }
       };
 
-      inline auto root_out = mpi_output_stream(&::std::cout, 0);
-      inline auto root_log = mpi_output_stream(&::std::clog, 0);
-      inline auto root_err = mpi_output_stream(&::std::cerr, 0);
+      inline auto root_out = mpi_output_stream(&std::cout, 0);
+      inline auto root_log = mpi_output_stream(&std::clog, 0);
+      inline auto root_err = mpi_output_stream(&std::cerr, 0);
    } // namespace mpi
 #endif
 
@@ -195,22 +195,22 @@ namespace TAT {
 #ifdef TAT_USE_MPI
          mpi::root_log
 #else
-         ::std::clog
+         std::clog
 #endif
                << console_blue << "\n\nPremature optimization is the root of all evil!\n"
                << console_origin << "                                       --- Donald Knuth\n\n\n";
-      } catch (const ::std::exception&) {
+      } catch (const std::exception&) {
       }
 #endif
    }
 
-   inline void warning_or_error([[maybe_unused]] const ::std::string& message) {
+   inline void warning_or_error([[maybe_unused]] const std::string& message) {
 #ifndef NDEBUG
-      ::std::cerr << console_red
+      std::cerr << console_red
 #ifdef TAT_USE_MPI
-                  << "rank " << mpi::mpi.rank << " : "
+                << "rank " << mpi::mpi.rank << " : "
 #endif
-                  << message << console_origin << ::std::endl;
+                << message << console_origin << std::endl;
 #endif
    }
 } // namespace TAT

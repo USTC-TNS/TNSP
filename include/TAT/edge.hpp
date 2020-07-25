@@ -34,7 +34,7 @@ namespace TAT {
    struct BoseEdge {
       using symmetry_type = Symmetry;
 
-      ::std::map<Symmetry, Size> map = {};
+      std::map<Symmetry, Size> map = {};
 
       BoseEdge() = default;
       BoseEdge(const BoseEdge&) = default;
@@ -43,16 +43,16 @@ namespace TAT {
       BoseEdge& operator=(BoseEdge&&) = default;
       ~BoseEdge() = default;
 
-      template<class T = ::std::map<Symmetry, Size>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::map<Symmetry, Size>>>>
-      BoseEdge(T&& map) : map(::std::forward<T>(map)) {}
-      BoseEdge(const ::std::initializer_list<::std::pair<const Symmetry, Size>>& map) : map(map) {}
+      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      BoseEdge(T&& map) : map(std::forward<T>(map)) {}
+      BoseEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
-      BoseEdge(const ::std::set<Symmetry>& symmetries) {
+      BoseEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
             map[symmetry] = 1;
          }
       }
-      BoseEdge(const ::std::initializer_list<Symmetry>& symmetries) : BoseEdge(::std::set<Symmetry>(symmetries)) {}
+      BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::set<Symmetry>(symmetries)) {}
       BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
    template<class Symmetry>
@@ -74,7 +74,7 @@ namespace TAT {
        * \see arrow_valid
        */
       Arrow arrow = false;
-      ::std::map<Symmetry, Size> map = {};
+      std::map<Symmetry, Size> map = {};
 
       FermiEdge() = default;
       FermiEdge(const FermiEdge&) = default;
@@ -83,21 +83,21 @@ namespace TAT {
       FermiEdge& operator=(FermiEdge&&) = default;
       ~FermiEdge() = default;
 
-      template<class T = ::std::map<Symmetry, Size>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::map<Symmetry, Size>>>>
-      FermiEdge(T&& map) : map(::std::forward<T>(map)) {}
-      FermiEdge(const ::std::initializer_list<::std::pair<const Symmetry, Size>>& map) : map(map) {}
+      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      FermiEdge(T&& map) : map(std::forward<T>(map)) {}
+      FermiEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
-      FermiEdge(const ::std::set<Symmetry>& symmetries) {
+      FermiEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
             map[symmetry] = 1;
          }
       }
-      FermiEdge(const ::std::initializer_list<Symmetry>& symmetries) : FermiEdge(::std::set<Symmetry>(symmetries)) {}
+      FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::set<Symmetry>(symmetries)) {}
       FermiEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
 
-      template<class T = ::std::map<Symmetry, Size>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::map<Symmetry, Size>>>>
-      FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(::std::forward<T>(map)) {}
-      FermiEdge(const Arrow arrow, const ::std::initializer_list<::std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
+      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
+      FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(std::forward<T>(map)) {}
+      FermiEdge(const Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
 
       void possible_reverse() {
          for (const auto& [symmetry, size] : map) {
@@ -123,13 +123,13 @@ namespace TAT {
    }
 
    template<class Symmetry>
-   using EdgeBase = ::std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry>, BoseEdge<Symmetry>>;
+   using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry>, BoseEdge<Symmetry>>;
    /**
     * \brief 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
     * \tparam Symmetry 张量所拥有的对称性
     * \see BoseEdge, FermiEdge
     */
-   template<class Symmetry, class = ::std::enable_if_t<is_symmetry_v<Symmetry>>>
+   template<class Symmetry, class = std::enable_if_t<is_symmetry_v<Symmetry>>>
    struct Edge : public EdgeBase<Symmetry> {
       using EdgeBase<Symmetry>::EdgeBase;
    };
@@ -138,7 +138,7 @@ namespace TAT {
    struct PtrBoseEdge {
       using symmetry_type = Symmetry;
 
-      const ::std::map<Symmetry, Size>* map;
+      const std::map<Symmetry, Size>* map;
 
       PtrBoseEdge() = default;
       PtrBoseEdge(const PtrBoseEdge&) = default;
@@ -147,14 +147,14 @@ namespace TAT {
       PtrBoseEdge& operator=(PtrBoseEdge&&) = default;
       ~PtrBoseEdge() = default;
 
-      PtrBoseEdge(const ::std::map<Symmetry, Size>* m) : map(m) {}
+      PtrBoseEdge(const std::map<Symmetry, Size>* m) : map(m) {}
    };
    template<class Symmetry>
    struct PtrFermiEdge {
       using symmetry_type = Symmetry;
 
       Arrow arrow = false;
-      const ::std::map<Symmetry, Size>* map = nullptr;
+      const std::map<Symmetry, Size>* map = nullptr;
 
       PtrFermiEdge() = default;
       PtrFermiEdge(const PtrFermiEdge&) = default;
@@ -163,7 +163,7 @@ namespace TAT {
       PtrFermiEdge& operator=(PtrFermiEdge&&) = default;
       ~PtrFermiEdge() = default;
 
-      PtrFermiEdge(const Arrow arrow, const ::std::map<Symmetry, Size>* map) : arrow(arrow), map(map) {}
+      PtrFermiEdge(const Arrow arrow, const std::map<Symmetry, Size>* map) : arrow(arrow), map(map) {}
 
       [[nodiscard]] bool arrow_valid() const {
          for (const auto& [symmetry, size] : *map) {
@@ -175,7 +175,7 @@ namespace TAT {
       }
    };
    template<class Symmetry>
-   using PtrEdgeBase = ::std::conditional_t<is_fermi_symmetry_v<Symmetry>, PtrFermiEdge<Symmetry>, PtrBoseEdge<Symmetry>>;
+   using PtrEdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, PtrFermiEdge<Symmetry>, PtrBoseEdge<Symmetry>>;
    /**
     * \brief 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
@@ -191,7 +191,7 @@ namespace TAT {
     */
    template<class T>
    const auto& remove_pointer(const T& v) {
-      if constexpr (::std::is_pointer_v<T>) {
+      if constexpr (std::is_pointer_v<T>) {
          return *v;
       } else {
          return v;
@@ -216,7 +216,7 @@ namespace TAT {
          return;
       }
       using Symmetry = typename T::symmetry_type;
-      using MapIteratorList = ::std::vector<typename ::std::map<Symmetry, Size>::const_iterator>;
+      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
       auto symmetry_iterator_list = MapIteratorList();
       for (auto i = 0; i != rank; ++i) {
          const auto& map = remove_pointer(edges[i].map);
@@ -253,16 +253,16 @@ namespace TAT {
    template<class T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
-      using MapIteratorList = ::std::vector<typename ::std::map<Symmetry, Size>::const_iterator>;
-      auto result = ::std::vector<::std::tuple<::std::vector<Symmetry>, Size>>();
-      auto symmetries = ::std::vector<Symmetry>(edges.size());
-      auto sizes = ::std::vector<Size>(edges.size());
+      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
+      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
+      auto symmetries = std::vector<Symmetry>(edges.size());
+      auto sizes = std::vector<Size>(edges.size());
       Rank rank = edges.size();
       loop_edge(
             edges.data(),
             rank,
             [&result]() {
-               result.push_back({::std::vector<Symmetry>{}, 1});
+               result.push_back({std::vector<Symmetry>{}, 1});
             },
             []() {},
             [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
