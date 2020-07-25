@@ -45,7 +45,7 @@ namespace TAT {
 
       template<class T = ::std::map<Symmetry, Size>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::map<Symmetry, Size>>>>
       BoseEdge(T&& map) : map(::std::forward<T>(map)) {}
-      BoseEdge(::std::initializer_list<::std::pair<const Symmetry, Size>> map) : map(map) {}
+      BoseEdge(const ::std::initializer_list<::std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       BoseEdge(const ::std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
@@ -85,7 +85,7 @@ namespace TAT {
 
       template<class T = ::std::map<Symmetry, Size>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::map<Symmetry, Size>>>>
       FermiEdge(T&& map) : map(::std::forward<T>(map)) {}
-      FermiEdge(::std::initializer_list<::std::pair<const Symmetry, Size>> map) : map(map) {}
+      FermiEdge(const ::std::initializer_list<::std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       FermiEdge(const ::std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
@@ -97,7 +97,7 @@ namespace TAT {
 
       template<class T = ::std::map<Symmetry, Size>, class = ::std::enable_if_t<::std::is_convertible_v<T, ::std::map<Symmetry, Size>>>>
       FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(::std::forward<T>(map)) {}
-      FermiEdge(const Arrow arrow, ::std::initializer_list<::std::pair<const Symmetry, Size>> map) : arrow(arrow), map(map) {}
+      FermiEdge(const Arrow arrow, const ::std::initializer_list<::std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
 
       void possible_reverse() {
          for (const auto& [symmetry, size] : map) {

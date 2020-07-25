@@ -64,7 +64,7 @@ namespace TAT {
          for (const auto& [symmetries, size] : symmetries_list) {
             blocks[symmetries] = vector<ScalarType>(size);
          }
-         // 删除不在block中用到的sym
+         // 删除不在block中用到的symmetry
          auto edge_mark = ::std::vector<::std::map<Symmetry, bool>>();
          for (const auto& edge : edges) {
             auto& this_mark = edge_mark.emplace_back();

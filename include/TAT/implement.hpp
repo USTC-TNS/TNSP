@@ -26,6 +26,7 @@
 #include "edge_operator.hpp"
 #include "get_item.hpp"
 #include "io.hpp"
+#include "mpi.hpp"
 #include "scalar.hpp"
 #include "svd.hpp"
 #include "trace.hpp"

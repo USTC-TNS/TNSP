@@ -39,7 +39,6 @@
 #include "tensor.hpp"
 #include "implement.hpp"
 #include "tools.hpp"
-#include "mpi.hpp"
 // clang-format on
 
 #endif
