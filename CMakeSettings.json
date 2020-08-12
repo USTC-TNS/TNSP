@@ -1,15 +1,15 @@
-{
+﻿{
   "configurations": [
     {
-      "name": "x64-Clang-Debug",
-      "generator": "Ninja",
-      "configurationType": "Debug",
+      "buildCommandArgs": "",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
-      "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-D_BLAS_MKLROOT_LIB_DIR=D:\\\\IntelSWTools\\\\compilers_and_libraries\\\\windows\\\\mkl\\\\lib\\\\intel64 -DBLA_STATIC=ON",
-      "buildCommandArgs": "-v",
+      "cmakeCommandArgs": "",
+      "configurationType": "Debug",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "clang_cl_x64" ],
+      "generator": "Ninja",
+      "inheritEnvironments": [ "clang_cl_x64_x64" ],
+      "installRoot": "${projectDir}\\out\\install\\${name}",
+      "name": "x64-Clang-Debug",
       "variables": []
     },
     {
@@ -18,10 +18,10 @@
       "configurationType": "RelWithDebInfo",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-D_BLAS_MKLROOT_LIB_DIR=D:\\\\IntelSWTools\\\\compilers_and_libraries\\\\windows\\\\mkl\\\\lib\\\\intel64 -DBLA_STATIC=ON",
-      "buildCommandArgs": "-v",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "inheritEnvironments": [ "clang_cl_x64" ],
+      "inheritEnvironments": [ "clang_cl_x64_x64" ],
       "variables": []
     },
     {
@@ -30,8 +30,8 @@
       "configurationType": "Debug",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-D_BLAS_MKLROOT_LIB_DIR=D:\\\\IntelSWTools\\\\compilers_and_libraries\\\\windows\\\\mkl\\\\lib\\\\intel64 -DBLA_STATIC=ON",
-      "buildCommandArgs": "-v",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "variables": []
@@ -42,11 +42,18 @@
       "configurationType": "RelWithDebInfo",
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "-D_BLAS_MKLROOT_LIB_DIR=D:\\\\IntelSWTools\\\\compilers_and_libraries\\\\windows\\\\mkl\\\\lib\\\\intel64 -DBLA_STATIC=ON",
-      "buildCommandArgs": "-v",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "variables": []
+    }
+  ],
+  "environments": [
+    {
+      "BLA_STATIC": "ON",
+      "BLA_VENDOR": "Intel10_64lp_seq",
+      "MKLROOT": "C:\\\\Program Files (x86)\\\\IntelSWTools\\\\compilers_and_libraries\\\\windows\\\\mkl"
     }
   ]
 }
