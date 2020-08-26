@@ -7,8 +7,11 @@
 #include <pybind11/stl.h>
 
 #define TAT_ALWAYS_COLOR
-#define TAT_USE_MPI
+//#define TAT_USE_MPI
 #include "TAT/TAT.hpp"
+
+// TODO: mpi使用cmake进行设置， 其他macro也可以， 比如always show color等
+// TODO: 设置各种member object
 
 namespace TAT {
    namespace py = ::pybind11;
@@ -327,6 +330,7 @@ namespace TAT {
       DECLARE_TENSOR_WITH_SAME_SCALAR(std::complex<double>, "Z");
 #undef DECLARE_TENSOR_WITH_SAME_SCALAR
 #undef DECLARE_TENSOR
+#ifdef TAT_USE_MPI
       auto mpi_m = m.def_submodule("mpi", "mpi support for TAT");
       mpi_m.def("barrier", &mpi::barrier);
 #define DECLARE_MPI(SCALARTYPE)                        \
@@ -350,5 +354,6 @@ namespace TAT {
             py::print(*args, **kwargs);
          }
       });
+#endif
    }
 } // namespace TAT

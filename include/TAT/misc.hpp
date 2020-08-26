@@ -32,7 +32,7 @@ namespace TAT {
    /**
     * \brief TAT的版本号
     */
-   const std::string TAT_VERSION = "0.0.4";
+   const std::string Version = "0.0.4";
 
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示
