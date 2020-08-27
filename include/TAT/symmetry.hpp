@@ -1,7 +1,7 @@
 /**
  * \file symmetry.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,36 +23,74 @@
 
 #include <tuple>
 
-#include "misc.hpp"
-
 namespace TAT {
+   /**
+    * \brief 所有对称性类型的基类, 用来判断一个类型是否是对称性类型
+    */
+   struct symmetry_base {};
+   /**
+    * \brief 所有费米对称性的基类, 用来判断一个类型是否是玻色对称性
+    */
+   struct bose_symmetry_base : symmetry_base {};
+   /**
+    * \brief 所有费米对称性的基类, 用来判断一个类型是否是费米对称性
+    */
+   struct fermi_symmetry_base : symmetry_base {};
+
+   /**
+    * \brief 判断一个类型是否是对称性类型
+    * \tparam T 如果T是对称性类型, 则value为true
+    */
+   template<class T>
+   struct is_symmetry : std::is_base_of<symmetry_base, T> {};
+   template<class T>
+   constexpr bool is_symmetry_v = is_symmetry<T>::value;
+
+   /**
+    * \brief 判断一个类型是否是玻色对称性类型
+    * \tparam T 如果T是玻色对称性类型, 则value为true
+    */
+   template<class T>
+   struct is_bose_symmetry : std::is_base_of<bose_symmetry_base, T> {};
+   template<class T>
+   constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
+
+   /**
+    * \brief 判断一个类型是否是费米对称性类型
+    * \tparam T 如果T是费米对称性类型, 则value为true
+    */
+   template<class T>
+   struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
+   template<class T>
+   constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
+
    template<class Derived>
    struct bose_symmetry : bose_symmetry_base {};
 
    template<class Derived>
    struct fermi_symmetry : fermi_symmetry_base {
       /**
-       * \brief 根据对称性列表和边需要翻转的情况和parity有效性给出总的parity
+       * \brief 根据对称性列表和各边是否需要翻转的情况和parity有效性给出总的parity
        */
       [[nodiscard]] static bool
       get_reverse_parity(const std::vector<Derived>& symmetries, const std::vector<bool>& reverse_flag, const std::vector<bool>& valid_mark) {
          auto result = false;
          for (auto i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
-               result ^= bool(symmetries[i].fermi % 2);
+               result ^= static_cast<bool>(symmetries[i].fermi % 2);
             }
          }
          return result;
       }
       /**
-       * \brief 根据对称性列表和边的转置情况给出总parity, 转置的parity总是有效的, 因为这是张量内部操作
+       * \brief 根据对称性列表和各边的转置方案给出总parity, 转置的parity总是有效的, 不像翻转和split, merge只会有一侧的张量有效, 毕竟这是单个张量的操作
        */
       [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
          auto result = false;
          for (auto i = 0; i < symmetries.size(); i++) {
             for (auto j = i + 1; j < symmetries.size(); j++) {
                if (transpose_plan[i] > transpose_plan[j]) {
-                  result ^= (bool(symmetries[i].fermi % 2) && bool(symmetries[j].fermi % 2));
+                  result ^= (static_cast<bool>(symmetries[i].fermi % 2) && static_cast<bool>(symmetries[j].fermi % 2));
                }
             }
          }
@@ -60,6 +98,7 @@ namespace TAT {
       }
       /**
        * \brief 根据对称性列表和split或merge的方案以及parity有效性给出总的parity
+       *
        * \note sum_{i!=j} s_i s_j = ((sum s_i)^2 - sum s_i^2)/2
        */
       [[nodiscard]] static bool get_split_merge_parity(
@@ -83,7 +122,7 @@ namespace TAT {
                   sum_of_parity += this_parity;
                   sum_of_parity_square += this_parity * this_parity;
                }
-               result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
+               result ^= static_cast<bool>(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
             }
             split_merge_begin_position = split_merge_end_position;
          }

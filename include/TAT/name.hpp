@@ -1,7 +1,7 @@
 /**
  * \file name.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
-#include "misc.hpp"
-
 #include <map>
 #include <set>
 #include <string>
@@ -39,6 +37,8 @@ namespace TAT {
    inline NameIdType names_total_index = 0;
    /**
     * \brief Name的字符串到标号的映射表
+    *
+    * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
     */
    inline std::map<std::string, NameIdType> name_to_id = {};
    /**
@@ -47,9 +47,9 @@ namespace TAT {
    inline std::map<NameIdType, std::string> id_to_name = {};
 
    /**
-    * \brief 用于给张量的脚标命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
-    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有全局变量names_total维护目前已分配的标号量,
-    * 新建一个字符串的Name时将递增names_total并获取一个唯一的标号
+    * \brief 用于给张量的边命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
+    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有全局变量names_total_index维护目前已分配的标号量,
+    * 新建一个字符串的Name时将递增names_total_index并获取一个唯一的标号
     * \see names_total_index
     */
    struct Name {
@@ -84,7 +84,7 @@ namespace TAT {
    TAT_DEF_NAME_OP(operator<, name_1.id<name_2.id)
 #undef TAT_DEF_NAME_OP
 
-   // 保留名称
+   // 保留名称, 在一些张量运算内部使用
 #define TAT_DEF_NAME(x) inline const Name x(#x)
    TAT_DEF_NAME(Contract1);
    TAT_DEF_NAME(Contract2);
@@ -100,7 +100,7 @@ namespace TAT {
 #undef TAT_DEF_NAME
 
    /**
-    * \brief 由名字列表构造名字到需要的映射表
+    * \brief 由名字列表构造名字到序号的映射表
     */
    inline std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
       std::map<Name, Rank> result;

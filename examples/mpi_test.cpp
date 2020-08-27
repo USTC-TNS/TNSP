@@ -15,7 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TAT_USE_MPI
+#ifndef TAT_USE_MPI
+#error testing mpi but mpi not enabled
+#endif
 #include <TAT/TAT.hpp>
 
 using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;

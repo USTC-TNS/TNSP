@@ -54,6 +54,7 @@ void test_create_tensor() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{}, {}}.set([]() { return 10; }).at({}) << "\n";
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test().at({{"Right", 2}, {"Left", 1}}) << "\n";
 }
+
 void test_create_symmetry_tensor() {
    std::cout << TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Up"}, {{{1, 3}, {0, 1}}, {{1, 1}, {0, 2}}, {{1, 2}, {0, 3}}}}.zero() << "\n";
    std::cout << TAT::Tensor<
@@ -61,19 +62,16 @@ void test_create_symmetry_tensor() {
                       TAT::U1Symmetry>{{"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                       .test(2)
              << "\n";
-   std::cout << TAT::Tensor<double, TAT::U1Symmetry> {
-      {"Left", "Right", "Up"},
+   std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{"Left", "Right", "Up"}, {
 #ifdef _MSVC_LANG
-            // 这似乎是MSVC的一个bug, 如果用下面的写法, Edge的析构函数将会被调用两次
-            {std::map<TAT::U1Symmetry, TAT::Size>{},
+                     // 这似乎是MSVC的一个bug, 如果用下面的写法, Edge的析构函数将会被调用两次
+                     std::map<TAT::U1Symmetry, TAT::Size>{},
 #else
-      {
-         {},
+                     {},
 #endif
-             {{-1, 1}, {0, 2}, {1, 3}},
-             {{-1, 2}, {0, 3}, {1, 1}}}
-   }
-   .zero() << "\n";
+                     {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+                      .zero()
+             << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.set([]() { return 123; }) << "\n";
 }
 
@@ -149,18 +147,18 @@ void test_scalar() {
 void test_io() {
    std::stringstream ss;
    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.test();
-   ss <= a;
+   ss < a;
    auto b = TAT::Tensor<double, TAT::NoSymmetry>();
-   ss >= b;
+   ss > b;
    std::cout << a << "\n";
    std::cout << b << "\n";
    auto c =
          TAT::Tensor<double, TAT::U1Symmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                .test(2);
-   ss <= c;
+   ss < c;
    auto d = TAT::Tensor<double, TAT::U1Symmetry>();
-   ss >= d;
+   ss > d;
    std::cout << c << "\n";
    std::cout << d << "\n";
    auto e = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{"Up", "Left", "Right"}, {1, 2, 3}}.set([]() {
@@ -168,27 +166,27 @@ void test_io() {
       static int arr[6] = {0x12345, 0x23456, 0x34567, 0x45678, 0x56789, 0x6789a};
       return arr[i++];
    });
-   ss <= e;
+   ss < e;
    auto f = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>();
-   ss >= f;
+   ss > f;
    std::cout << e << "\n";
    std::cout << f << "\n";
    auto g =
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                .test(2);
-   ss <= g;
+   ss < g;
    auto h = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
-   ss >= h;
+   ss > h;
    std::cout << g << "\n";
    std::cout << h << "\n";
    auto i =
          TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
                {"Left", "Right", "Up"}, {{{-2, 3}, {0, 1}, {-1, 2}}, {{0, 2}, {1, 3}}, {{0, 3}, {1, 1}}}, true}
                .test(2);
-   ss <= i;
+   ss < i;
    auto j = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
-   ss >= j;
+   ss > j;
    std::cout << i << "\n";
    std::cout << j << "\n";
 }
@@ -523,7 +521,7 @@ int main(const int argc, char** argv) {
    RUN_TEST(test_edge_operator);
    RUN_TEST(test_contract);
    RUN_TEST(test_svd);
-   RUN_TEST(test_trace);
+   // RUN_TEST(test_trace);
    if (argc != 1) {
       std::cout.rdbuf(cout_buf);
       std::ifstream fout(argv[1]);

@@ -1,7 +1,7 @@
 /**
  * \file get_item.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -90,14 +90,18 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    const auto& Tensor<ScalarType, Symmetry>::block(const std::map<Name, Symmetry>& position) const& {
-      // using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         return core->blocks.begin()->second;
+      }
       auto symmetry = get_block_for_get_item(position, name_to_index, *core);
       return core->blocks.at(symmetry);
    }
 
    template<class ScalarType, class Symmetry>
    auto& Tensor<ScalarType, Symmetry>::block(const std::map<Name, Symmetry>& position) & {
-      // using has_symmetry = std::enable_if_t<!std::is_same_v<Symmetry, NoSymmetry>>;
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         return core->blocks.begin()->second;
+      }
       auto symmetry = get_block_for_get_item(position, name_to_index, *core);
       return core->blocks.at(symmetry);
    }

@@ -1,7 +1,7 @@
 /**
  * \file svd.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,13 +22,6 @@
 #define TAT_SVD_HPP
 
 #include "tensor.hpp"
-
-#if 0
-#define LAPACK_COMPLEX_CUSTOM
-using lapack_complex_float = std::complex<float>;
-using lapack_complex_double = std::complex<double>;
-#include "lapacke.h"
-#endif
 
 extern "C" {
 int sgesvd_(

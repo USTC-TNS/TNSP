@@ -1,7 +1,7 @@
 /**
  * \file transpose.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 #include <tuple>
 
-#include "misc.hpp"
+#include "basic_type.hpp"
 
 namespace TAT {
    template<class ScalarType>

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 
-project(TAT VERSION 0.0.4 LANGUAGES CXX)
+project(TAT VERSION 0.0.5 LANGUAGES CXX)
 
 # linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
 # blas, lapack和mkl都没有问题
@@ -17,12 +17,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # 尝试启用mpi, 如果无法启用, 也没关系
 if(CMAKE_CXX_COMPILER MATCHES "mpi")
    message("-- Using mpi compiler directly")
+   add_compile_definitions(TAT_USE_MPI)
 else()
    find_package(MPI)
    if(MPI_FOUND)
       include_directories(${MPI_INCLUDE_PATH})
       link_libraries(${MPI_LIBRARIES})
       message("-- Using mpi by linking mpi libraries")
+      add_compile_definitions(TAT_USE_MPI)
    else()
       message("-- No mpi support")
    endif()

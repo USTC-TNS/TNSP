@@ -1,7 +1,7 @@
 /**
  * \file io.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,9 +23,7 @@
 
 #include <iostream>
 #ifdef _WIN32
-extern "C" {
 #include <windows.h>
-}
 #endif
 
 #include "tensor.hpp"
@@ -128,7 +126,7 @@ namespace TAT {
       return out;
    }
    template<class Symmetry>
-   std::ostream& operator<=(std::ostream& out, const Edge<Symmetry>& edge) {
+   void raw_write_edge(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          raw_write(out, &edge.map.begin()->second);
       } else {
@@ -142,10 +140,9 @@ namespace TAT {
             raw_write(out, &dimension);
          }
       }
-      return out;
    }
    template<class Symmetry>
-   std::istream& operator>=(std::istream& in, Edge<Symmetry>& edge) {
+   void raw_read_edge(std::istream& in, Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          Size dim;
          raw_read(in, &dim);
@@ -165,7 +162,6 @@ namespace TAT {
             edge.map[symmetry] = dimension;
          }
       }
-      return in;
    }
 
    inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
@@ -221,13 +217,7 @@ namespace TAT {
    inline const UnixColorCode console_blue = {"\x1B[34m"};
    inline const UnixColorCode console_origin = {"\x1B[0m"};
    inline std::ostream& operator<<(std::ostream& out, const UnixColorCode& value) {
-#ifdef TAT_ALWAYS_COLOR
       out << value.color_code;
-#else
-      if (out.rdbuf() == std::cout.rdbuf() || out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
-         out << value.color_code;
-      }
-#endif
       return out;
    }
 #endif
@@ -268,7 +258,7 @@ namespace TAT {
    const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
       raw_write_vector(out, names);
       for (const auto& edge : core->edges) {
-         out <= edge;
+         raw_write_edge(out, edge);
       }
       return *this;
    }
@@ -285,7 +275,7 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   std::ostream& operator<=(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
+   std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
       tensor.meta_put(out).data_put(out);
       return out;
    }
@@ -297,7 +287,7 @@ namespace TAT {
       name_to_index = construct_name_to_index(names);
       std::vector<Edge<Symmetry>> edges(rank);
       for (auto& edge : edges) {
-         in >= edge;
+         raw_read_edge(in, edge);
       }
       core = std::make_shared<Core<ScalarType, Symmetry>>();
       core->edges = std::move(edges);
@@ -320,19 +310,19 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   std::istream& operator>=(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
+   std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
       tensor.meta_get(in).data_get(in);
       return in;
    }
 
    template<class T>
-   std::istream&& operator>=(std::istream&& in, T& v) {
-      in >= v;
+   std::istream&& operator>(std::istream&& in, T& v) {
+      in > v;
       return std::move(in);
    }
    template<class T>
-   std::ostream&& operator<=(std::ostream&& out, const T& v) {
-      out <= v;
+   std::ostream&& operator<(std::ostream&& out, const T& v) {
+      out < v;
       return std::move(out);
    }
 } // namespace TAT

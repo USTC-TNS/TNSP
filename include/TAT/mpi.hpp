@@ -1,7 +1,7 @@
 /**
  * \file mpi.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -66,7 +66,7 @@ namespace TAT {
       template<class ScalarType, class Symmetry>
       void send(const Tensor<ScalarType, Symmetry>& tensor, const int source, const int destination) {
          auto out = std::stringstream();
-         out <= tensor;
+         out < tensor;
          auto data = out.str(); // 不需复制
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, 0, MPI_COMM_WORLD);
       }
@@ -81,7 +81,7 @@ namespace TAT {
          MPI_Recv(data.data(), length, MPI_BYTE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
          auto in = std::stringstream(data); // 不需复制
          auto result = Tensor<ScalarType, Symmetry>();
-         in >= result;
+         in > result;
          // TODO STATUS?
          return result;
       }
@@ -107,7 +107,7 @@ namespace TAT {
          // std::cout << mpi.rank << "rank\n";
          if (mpi.rank == root) {
             auto out = std::stringstream();
-            out <= tensor;
+            out < tensor;
             data = out.str();
             length = data.length();
          }
@@ -118,7 +118,7 @@ namespace TAT {
          MPI_Bcast(data.data(), length, MPI_BYTE, root, MPI_COMM_WORLD);
          auto in = std::stringstream(data);
          auto result = Tensor<ScalarType, Symmetry>();
-         in >= result;
+         in > result;
          return result;
       }
 
@@ -204,7 +204,7 @@ namespace TAT {
 #endif
    }
 
-   inline void warning_or_error([[maybe_unused]] const std::string& message) {
+   inline void warning_or_error([[maybe_unused]] const char* message) {
 #ifndef NDEBUG
       std::cerr << console_red
 #ifdef TAT_USE_MPI

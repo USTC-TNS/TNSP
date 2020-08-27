@@ -1,7 +1,7 @@
 /**
  * \file scalar.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ namespace TAT {
             for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
                new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
                for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                 \
-                  new_result_edge[i].map[symmetry] = dimension;                                                       \
+                  new_result_edge.back().map[symmetry] = dimension;                                                   \
                }                                                                                                      \
             }                                                                                                         \
             real_result_edge = &new_result_edge;                                                                      \
@@ -141,8 +141,7 @@ namespace TAT {
             real_tensor_2 = &new_tensor_2;                                                                                     \
          }                                                                                                                     \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                             \
-            warning_or_error("Scalar Operator In Different Shape Tensor");                                                     \
-            warning_or_error("Maybe You Need Outplace Operator");                                                              \
+            warning_or_error("Scalar Operator In Different Shape Tensor, Maybe You Need Outplace Operator");                   \
          }                                                                                                                     \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
             ScalarType1* __restrict a = block.data();                                                                          \
