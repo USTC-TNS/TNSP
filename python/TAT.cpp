@@ -22,9 +22,43 @@
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/stl_bind.h>
 
 //#define TAT_USE_MPI
 #include "TAT/TAT.hpp"
+
+PYBIND11_MAKE_OPAQUE(std::vector<TAT::Name>);
+#define BIND_ALL_SYMMETRY(SYM)                                    \
+   PYBIND11_MAKE_OPAQUE(std::map<TAT::SYM##Symmetry, TAT::Size>); \
+   PYBIND11_MAKE_OPAQUE(std::vector<TAT::SYM##Symmetry>);         \
+   PYBIND11_MAKE_OPAQUE(std::vector<TAT::Edge<TAT::SYM##Symmetry>>);
+BIND_ALL_SYMMETRY(No);
+BIND_ALL_SYMMETRY(Z2);
+BIND_ALL_SYMMETRY(U1);
+BIND_ALL_SYMMETRY(Fermi);
+BIND_ALL_SYMMETRY(FermiZ2);
+BIND_ALL_SYMMETRY(FermiU1);
+#undef BIND_ALL_SYMMETRY
+#define BIND_ALL_SCALAR(SCALAR, SCALARSHORT) PYBIND11_MAKE_OPAQUE(TAT::vector<SCALAR>);
+BIND_ALL_SCALAR(float, S);
+BIND_ALL_SCALAR(double, D);
+BIND_ALL_SCALAR(std::complex<float>, C);
+BIND_ALL_SCALAR(std::complex<double>, Z);
+#undef BIND_ALL_SCALAR
+#define BIND_ALL_SYMMETRY_SCALAR(SCALAR, SYM) PYBIND11_MAKE_OPAQUE(std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>)
+#define BIND_ALL_SYMMETRY(SYM)                         \
+   BIND_ALL_SYMMETRY_SCALAR(float, SYM);               \
+   BIND_ALL_SYMMETRY_SCALAR(double, SYM);              \
+   BIND_ALL_SYMMETRY_SCALAR(std::complex<float>, SYM); \
+   BIND_ALL_SYMMETRY_SCALAR(std::complex<double>, SYM);
+BIND_ALL_SYMMETRY(No);
+BIND_ALL_SYMMETRY(Z2);
+BIND_ALL_SYMMETRY(U1);
+BIND_ALL_SYMMETRY(Fermi);
+BIND_ALL_SYMMETRY(FermiZ2);
+BIND_ALL_SYMMETRY(FermiU1);
+#undef BIND_ALL_SYMMETRY
+#undef BIND_ALL_SYMMETRY_SCALAR
 
 namespace TAT {
    namespace py = ::pybind11;
@@ -56,14 +90,14 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   void declare_mpi(py::module& m) {
+   void declare_mpi(py::module& mpi_m) {
       using T = Tensor<ScalarType, Symmetry>;
-      m.def("send", &mpi::send<ScalarType, Symmetry>);
-      m.def("receive", &mpi::receive<ScalarType, Symmetry>);
-      m.def("send_receive", &mpi::send_receive<ScalarType, Symmetry>);
-      m.def("broadcast", &mpi::broadcast<ScalarType, Symmetry>);
-      m.def("reduce", [](const T& tensor, const int root, std::function<T(T, T)> op) { return mpi::reduce(tensor, root, op); });
-      m.def("summary", &mpi::summary<ScalarType, Symmetry>);
+      mpi_m.def("send", &mpi::send<ScalarType, Symmetry>);
+      mpi_m.def("receive", &mpi::receive<ScalarType, Symmetry>);
+      mpi_m.def("send_receive", &mpi::send_receive<ScalarType, Symmetry>);
+      mpi_m.def("broadcast", &mpi::broadcast<ScalarType, Symmetry>);
+      mpi_m.def("reduce", [](const T& tensor, const int root, std::function<T(T, T)> op) { return mpi::reduce(tensor, root, op); });
+      mpi_m.def("summary", &mpi::summary<ScalarType, Symmetry>);
    }
 
    template<class ScalarType, class Symmetry>
@@ -95,14 +129,25 @@ namespace TAT {
    };
 
    template<class ScalarType, class Symmetry>
-   void
-   declare_tensor(py::module& m, py::module& s, py::module& b, const char* name, const std::string& scalar_name, const std::string& symmetry_name) {
+   void declare_tensor(
+         py::module& tensor_m,
+         py::module& singular_m,
+         py::module& block_m,
+         py::module& edge_m,
+         py::module& tat_m,
+         const std::string& scalar_short_name,
+         const std::string& scalar_name,
+         const std::string& symmetry_short_name) {
       using T = Tensor<ScalarType, Symmetry>;
       using S = typename T::Singular;
       using E = Edge<Symmetry>;
       using B = block_of_tensor<ScalarType, Symmetry>;
+      std::string tensor_name = scalar_short_name + symmetry_short_name;
       py::class_<B>(
-            b, name, ("Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_name).c_str(), py::buffer_protocol())
+            block_m,
+            tensor_name.c_str(),
+            ("Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
+            py::buffer_protocol())
             .def_buffer([](B& b) {
                auto& block = b.tensor->block(b.position);
                const Rank rank = b.tensor->names.size();
@@ -121,24 +166,23 @@ namespace TAT {
                return py::buffer_info{
                      block.data(), sizeof(ScalarType), py::format_descriptor<ScalarType>::format(), rank, std::move(dimensions), std::move(leadings)};
             });
-      py::class_<S>(s, name, ("Singulars in tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_name).c_str())
+      py::class_<S>(
+            singular_m,
+            tensor_name.c_str(),
+            ("Singulars in tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def_readonly("value", &S::value, "singular value dictionary")
             .def("__str__", [](const S& s) { return singular_to_string<ScalarType, Symmetry>(s); })
             .def("__repr__", [](const S& s) { return "Singular" + singular_to_string<ScalarType, Symmetry>(s); });
-      py::class_<T>(m, name, ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_name).c_str())
+      py::class_<T>(
+            tensor_m,
+            tensor_name.c_str(),
+            ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def_readonly("name", &T::names, "Names of all edge of the tensor")
             .def_property_readonly(
-                  "edge", [](T& tensor) { return tensor.core->edges; }, "Edges of tensor")
+                  "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
             .def_property_readonly(
                   "data",
-                  [](T& tensor) {
-                     auto blocks = tensor.core->blocks;
-                     auto result = py::list();
-                     for (const auto& [symmetries, block] : blocks) {
-                        result.append(py::make_tuple(symmetries, block));
-                     }
-                     return result;
-                  },
+                  [](T& tensor) -> std::map<std::vector<Symmetry>, vector<ScalarType>>& { return tensor.core->blocks; },
                   "All block data of the tensor")
             .def(py::self + py::self)
             .def(ScalarType() + py::self)
@@ -185,15 +229,21 @@ namespace TAT {
                      return out.str();
                   },
                   "The shape of this tensor")
-            .def(py::init<const std::vector<Name>&, const std::vector<E>&, bool>(),
+            .def(py::init<>([=](py::list names, py::list edges, bool auto_reverse) {
+                    auto tensor_names = std::vector<Name>();
+                    for (const auto& this_name : names) {
+                       tensor_names.push_back(py::cast<Name>(tat_m.attr("Name")(this_name)));
+                    }
+                    auto tensor_edges = std::vector<E>();
+                    for (const auto& this_edge : edges) {
+                       tensor_edges.push_back(py::cast<E>(edge_m.attr(symmetry_short_name.c_str())(this_edge)));
+                    }
+                    return T(std::move(tensor_names), std::move(tensor_edges), auto_reverse);
+                 }),
                  py::arg("names"),
                  py::arg("edges"),
                  py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
-            .def(implicit_init<T, std::tuple<std::vector<Name>, std::vector<E>>>(
-                       [](const std::tuple<std::vector<Name>, std::vector<E>>& p) { return std::make_from_tuple<T>(p); }),
-                 py::arg("names_and_edges"),
-                 "Construct tensor with edge names and edge shape")
             .def(implicit_init<T, ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
             .def(
                   "value", [](const T& tensor) -> ScalarType { return tensor; }, "Get the only one element of a rank 0 tensor")
@@ -228,9 +278,12 @@ namespace TAT {
             .def(
                   "block",
                   [](T& tensor, const std::map<Name, Symmetry>& position) {
-                     auto numpy = py::module::import("numpy");
                      auto block = block_of_tensor<ScalarType, Symmetry>{&tensor, position};
-                     return numpy.attr("array")(block, py::arg("copy") = false);
+                     try {
+                        return py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
+                     } catch (const py::error_already_set&) {
+                        return py::cast(block);
+                     }
                   },
                   py::arg("dictionary_from_name_to_symmetry") = py::dict(),
                   "Get specified block data as a one dimension list",
@@ -330,8 +383,8 @@ namespace TAT {
    }
 
    template<class Symmetry, class Element, bool IsTuple>
-   auto declare_edge(py::module& m, const char* name) {
-      auto result = py::class_<Edge<Symmetry>>(m, name, ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
+   auto declare_edge(py::module& edge_m, const char* name) {
+      auto result = py::class_<Edge<Symmetry>>(edge_m, name, ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def_readonly("map", &Edge<Symmetry>::map)
                           .def(implicit_init<Edge<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one symmetry")
                           .def(implicit_init<Edge<Symmetry>, std::map<Symmetry, Size>>(),
@@ -389,7 +442,7 @@ namespace TAT {
       }
       if constexpr (is_fermi_symmetry_v<Symmetry>) {
          // is fermi symmetry
-         result = result.def_readonly("arrow", &Edge<Symmetry>::arrow, "Fermi Arrow of the edge")
+         result = result.def_readwrite("arrow", &Edge<Symmetry>::arrow, "Fermi Arrow of the edge")
                         .def(py::init<Arrow, std::map<Symmetry, Size>>(),
                              py::arg("arrow"),
                              py::arg("dictionary_from_symmetry_to_dimension"),
@@ -435,8 +488,8 @@ namespace TAT {
    }
 
    template<class Symmetry>
-   auto declare_symmetry(py::module& m, const char* name) {
-      return py::class_<Symmetry>(m, name, (std::string(name) + "Symmetry").c_str())
+   auto declare_symmetry(py::module& symmetry_m, const char* name) {
+      return py::class_<Symmetry>(symmetry_m, name, (std::string(name) + "Symmetry").c_str())
             .def(py::self < py::self)
             .def(py::self > py::self)
             .def(py::self <= py::self)
@@ -464,12 +517,12 @@ namespace TAT {
             });
    }
 
-   PYBIND11_MODULE(TAT, m) {
-      m.doc() = "TAT is A Tensor library!";
-      m.attr("version") = version;
+   PYBIND11_MODULE(TAT, tat_m) {
+      tat_m.doc() = "TAT is A Tensor library!";
+      tat_m.attr("version") = version;
       // name
-      py::class_<Name>(m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
-            .def(implicit_init<Name, const std::string&>(), py::arg("name"), "Name with specified name")
+      py::class_<Name>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
+            .def(implicit_init<Name, char*>(), py::arg("name"), "Name with specified name")
             .def(py::init<int>(), py::arg("id"), "Name with specified id directly")
             .def("__repr__", [](const Name& name) { return "Name[" + id_to_name.at(name.id) + "]"; })
             .def("__str__", [](const Name& name) { return id_to_name.at(name.id); })
@@ -478,7 +531,7 @@ namespace TAT {
             .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.id)); });
 
       // symmetry
-      auto symmetry_m = m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
+      auto symmetry_m = tat_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
       declare_symmetry<Z2Symmetry>(symmetry_m, "Z2").def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2")).def_readonly("z2", &Z2Symmetry::z2);
       declare_symmetry<U1Symmetry>(symmetry_m, "U1").def(implicit_init<U1Symmetry, U1>(), py::arg("u1")).def_readonly("u1", &U1Symmetry::u1);
@@ -500,7 +553,7 @@ namespace TAT {
             .def_readonly("fermi", &FermiU1Symmetry::fermi)
             .def_readonly("u1", &FermiU1Symmetry::u1);
       // edge
-      auto edge_m = m.def_submodule("Edge", "Edges of all kinds of symmetries for TAT");
+      auto edge_m = tat_m.def_submodule("Edge", "Edges of all kinds of symmetries for TAT");
       declare_edge<NoSymmetry, void, false>(edge_m, "No");
       declare_edge<Z2Symmetry, Z2, false>(edge_m, "Z2");
       declare_edge<U1Symmetry, U1, false>(edge_m, "U1");
@@ -508,19 +561,19 @@ namespace TAT {
       declare_edge<FermiZ2Symmetry, std::tuple<Fermi, Z2>, true>(edge_m, "FermiZ2");
       declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true>(edge_m, "FermiU1");
       // tensor
-      auto tensor_m = m.def_submodule("Tensor", "Tensors for TAT");
-      auto singular_m = m.def_submodule("Singular", "Singulars for TAT, used in svd");
-      auto block_m = m.def_submodule("Block", "Block of Tensor for TAT");
-#define DECLARE_TENSOR(SCALAR, SCALARNAME, SYMMETRY) \
-   declare_tensor<SCALAR, SYMMETRY##Symmetry>(tensor_m, singular_m, block_m, SCALARNAME #SYMMETRY, #SCALAR, #SYMMETRY "Symmetry");
-#define DECLARE_TENSOR_WITH_SAME_SCALAR(SCALAR, SCALARNAME) \
-   do {                                                     \
-      DECLARE_TENSOR(SCALAR, SCALARNAME, No);               \
-      DECLARE_TENSOR(SCALAR, SCALARNAME, Z2);               \
-      DECLARE_TENSOR(SCALAR, SCALARNAME, U1);               \
-      DECLARE_TENSOR(SCALAR, SCALARNAME, Fermi);            \
-      DECLARE_TENSOR(SCALAR, SCALARNAME, FermiZ2);          \
-      DECLARE_TENSOR(SCALAR, SCALARNAME, FermiU1);          \
+      auto tensor_m = tat_m.def_submodule("Tensor", "Tensors for TAT");
+      auto singular_m = tat_m.def_submodule("Singular", "Singulars for TAT, used in svd");
+      auto block_m = tat_m.def_submodule("Block", "Block of Tensor for TAT");
+#define DECLARE_TENSOR(SCALAR, SCALARSHORT, SYMMETRYSHORT) \
+   declare_tensor<SCALAR, SYMMETRYSHORT##Symmetry>(tensor_m, singular_m, block_m, edge_m, tat_m, SCALARSHORT, #SCALAR, #SYMMETRYSHORT);
+#define DECLARE_TENSOR_WITH_SAME_SCALAR(SCALAR, SCALARSHORT) \
+   do {                                                      \
+      DECLARE_TENSOR(SCALAR, SCALARSHORT, No);               \
+      DECLARE_TENSOR(SCALAR, SCALARSHORT, Z2);               \
+      DECLARE_TENSOR(SCALAR, SCALARSHORT, U1);               \
+      DECLARE_TENSOR(SCALAR, SCALARSHORT, Fermi);            \
+      DECLARE_TENSOR(SCALAR, SCALARSHORT, FermiZ2);          \
+      DECLARE_TENSOR(SCALAR, SCALARSHORT, FermiU1);          \
    } while (false)
       DECLARE_TENSOR_WITH_SAME_SCALAR(float, "S");
       DECLARE_TENSOR_WITH_SAME_SCALAR(double, "D");
@@ -530,7 +583,7 @@ namespace TAT {
 #undef DECLARE_TENSOR
       // mpi
 #ifdef TAT_USE_MPI
-      auto mpi_m = m.def_submodule("mpi", "mpi support for TAT");
+      auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
       mpi_m.def("barrier", &mpi::barrier);
 #define DECLARE_MPI(SCALARTYPE)                        \
    do {                                                \
@@ -554,6 +607,40 @@ namespace TAT {
          }
       });
 #endif
+      auto stl_m = tat_m.def_submodule("stl", "STL bindings");
+      py::bind_vector<std::vector<Name>>(stl_m, "NameList");
+#define BIND_ALL_SYMMETRY(SYM)                                                 \
+   py::bind_map<std::map<SYM##Symmetry, Size>>(stl_m, #SYM "SymmetryEdgeMap"); \
+   py::bind_vector<std::vector<SYM##Symmetry>>(stl_m, #SYM "SymmetryList");    \
+   py::bind_vector<std::vector<Edge<SYM##Symmetry>>>(stl_m, #SYM "SymmetryEdgeList");
+      BIND_ALL_SYMMETRY(No);
+      BIND_ALL_SYMMETRY(Z2);
+      BIND_ALL_SYMMETRY(U1);
+      BIND_ALL_SYMMETRY(Fermi);
+      BIND_ALL_SYMMETRY(FermiZ2);
+      BIND_ALL_SYMMETRY(FermiU1);
+#undef BIND_ALL_SYMMETRY
+#define BIND_ALL_SCALAR(SCALAR, SCALARSHORT) py::bind_vector<vector<SCALAR>>(stl_m, #SCALARSHORT "Data");
+      BIND_ALL_SCALAR(float, S);
+      BIND_ALL_SCALAR(double, D);
+      BIND_ALL_SCALAR(std::complex<float>, C);
+      BIND_ALL_SCALAR(std::complex<double>, Z);
+#undef BIND_ALL_SCALAR
+#define BIND_ALL_SYMMETRY_SCALAR(SCALAR, SCALARSHORT, SYM) \
+   py::bind_map<std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>(stl_m, #SCALARSHORT #SYM "TensorDataMap")
+#define BIND_ALL_SYMMETRY(SYM)                            \
+   BIND_ALL_SYMMETRY_SCALAR(float, S, SYM);               \
+   BIND_ALL_SYMMETRY_SCALAR(double, D, SYM);              \
+   BIND_ALL_SYMMETRY_SCALAR(std::complex<float>, C, SYM); \
+   BIND_ALL_SYMMETRY_SCALAR(std::complex<double>, Z, SYM);
+      BIND_ALL_SYMMETRY(No);
+      BIND_ALL_SYMMETRY(Z2);
+      BIND_ALL_SYMMETRY(U1);
+      BIND_ALL_SYMMETRY(Fermi);
+      BIND_ALL_SYMMETRY(FermiZ2);
+      BIND_ALL_SYMMETRY(FermiU1);
+#undef BIND_ALL_SYMMETRY
+#undef BIND_ALL_SYMMETRY_SCALAR
       at_exit.release();
    }
 } // namespace TAT

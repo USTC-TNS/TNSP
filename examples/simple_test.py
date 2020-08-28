@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,22 +17,32 @@
 #
 import TAT
 
+def run_test(function):
+    print("#", function.__name__)
+    function()
+    print()
+
 def test_create_tensor():
-    print("# test_create_tensor")
     print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test())
     print(TAT.Tensor.ZNo(["Left", "Right"], [0, 3]))
-    a = TAT.Tensor.ZNo([], []).set(lambda :10)
-    print(a)
-    print(a[{}])
-    a[{}] = 20
-    print(a)
-    print(a.block())
-    a.block()[0] = 30
-    print(a)
-    print("")
+    print(TAT.Tensor.DNo([], []).set(lambda : 10))
+    print(TAT.Tensor.DNo([], []).set(lambda : 10)[{}])
+    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test()[{"Right":2, "Left":1}])
 
-def main():
-    test_create_tensor()
+def test_create_symmetry_tensor():
+    print(TAT.Tensor.DZ2(["Left", "Right", "Up"], [{1:3,0:1},{1:1,0:2},{1:2,0:3}]).zero())
+    print(TAT.Tensor.DU1(["Left", "Right","Up"],[{-1:3,0:1,1:2},{-1:1,0:2,1:3},{-1:2,0:3,1:1}]).test(2))
+    print(TAT.Tensor.DU1(["Left", "Right","Up"],[{},{-1:1,0:2,1:3},{-1:2,0:3,1:1}]).zero())
+    print(TAT.Tensor.DU1([],[]).set(lambda :123))
+
+def test_create_fermi_symmetry_tensor():
+    print(TAT.Tensor.DFermi(["Left","Right","Up"],[{0:1,1:2},{-1:1,-2:3,0:2},{0:3,1:1}],True).test(2))
+    print(TAT.Tensor.DFermiU1(["Left","Right","Up"],[{(0,0):1,(1,1):2},{(-1,-1):1,(-2,0):3,(0,0):2},{(0,0):3,(1,-1):1}],True).test(2))
+    print(TAT.Tensor.DFermiU1(["Left","Right","Up"],[{(0,0):1,(1,1):2},{(-1,-1):1,(-2,0):3,(0,0):2},{(0,0):3,(1,-1):1}],True).test(2).block({"Left":(1,1),"Up":(1,-1),"Right":(-2,0)}))
+    print(TAT.Tensor.DFermiU1(1234)[{}])
+    print(TAT.Tensor.DFermiU1(["Left","Right","Up"],[{(0,0):1,(1,1):2},{(-1,-1):1,(-2,0):3,(0,0):2},{(0,0):3,(1,-1):1}],True).test(2)[{"Left":((1,1),1),"Up":((1,-1),0),"Right":((-2,0),0)}])
 
 if __name__ == "__main__":
-    main()
+    run_test(test_create_tensor)
+    run_test(test_create_symmetry_tensor)
+    run_test(test_create_fermi_symmetry_tensor)
