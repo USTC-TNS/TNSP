@@ -133,7 +133,11 @@ namespace TAT {
    /**
     * \brief 无对称性
     */
-   struct NoSymmetry : bose_symmetry<NoSymmetry> {};
+   struct NoSymmetry : bose_symmetry<NoSymmetry> {
+      auto information() const {
+         return 0;
+      }
+   };
    inline NoSymmetry operator+(const NoSymmetry&, const NoSymmetry&) {
       return NoSymmetry();
    }
@@ -151,6 +155,10 @@ namespace TAT {
       Z2 z2;
 
       Z2Symmetry(const Z2 z2 = false) : z2(z2) {}
+
+      auto information() const {
+         return z2;
+      }
    };
    inline Z2Symmetry operator+(const Z2Symmetry& symmetry_1, const Z2Symmetry& symmetry_2) {
       return Z2Symmetry(symmetry_1.z2 ^ symmetry_2.z2);
@@ -170,6 +178,10 @@ namespace TAT {
       U1 u1;
 
       U1Symmetry(const U1 u1 = 0) : u1(u1) {}
+
+      auto information() const {
+         return u1;
+      }
    };
    inline U1Symmetry operator+(const U1Symmetry& symmetry_1, const U1Symmetry& symmetry_2) {
       return U1Symmetry(symmetry_1.u1 + symmetry_2.u1);
@@ -189,6 +201,10 @@ namespace TAT {
       Fermi fermi;
 
       FermiSymmetry(const Fermi fermi = 0) : fermi(fermi) {}
+
+      auto information() const {
+         return fermi;
+      }
    };
    inline FermiSymmetry operator+(const FermiSymmetry& symmetry_1, const FermiSymmetry& symmetry_2) {
       return FermiSymmetry(symmetry_1.fermi + symmetry_2.fermi);
@@ -209,6 +225,10 @@ namespace TAT {
       Z2 z2;
 
       FermiZ2Symmetry(const Fermi fermi = 0, const Z2 z2 = false) : fermi(fermi), z2(z2) {}
+
+      auto information() const {
+         return std::tie(fermi, z2);
+      }
    };
    inline FermiZ2Symmetry operator+(const FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) {
       return FermiZ2Symmetry(symmetry_1.fermi + symmetry_2.fermi, symmetry_1.z2 ^ symmetry_2.z2);
@@ -230,6 +250,10 @@ namespace TAT {
       U1 u1;
 
       FermiU1Symmetry(const Fermi fermi = 0, const U1 u1 = 0) : fermi(fermi), u1(u1) {}
+
+      auto information() const {
+         return std::tie(fermi, u1);
+      }
    };
    inline FermiU1Symmetry operator+(const FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) {
       return FermiU1Symmetry(symmetry_1.fermi + symmetry_2.fermi, symmetry_1.u1 + symmetry_2.u1);
@@ -244,55 +268,25 @@ namespace TAT {
    }
 
    // 此处将可被c++20的operator<=>替换
-#define TAT_DEF_ALL_SYM_OP(expression_1, expression_2)      \
-   TAT_DEF_SYM_OP(operator==, expression_1 == expression_2) \
-   TAT_DEF_SYM_OP(operator!=, expression_1 != expression_2) \
-   TAT_DEF_SYM_OP(operator>=, expression_1 >= expression_2) \
-   TAT_DEF_SYM_OP(operator<=, expression_1 <= expression_2) \
-   TAT_DEF_SYM_OP(operator>, expression_1> expression_2)    \
-   TAT_DEF_SYM_OP(operator<, expression_1<expression_2)
-
-#define TAT_DEF_SYM_OP(OP, EXP)                           \
-   inline bool OP(const NoSymmetry&, const NoSymmetry&) { \
-      return EXP;                                         \
+#define TAT_DEF_SYM_OP(SYM, OP, EXP)                              \
+   inline bool OP(const SYM& symmetry_1, const SYM& symmetry_2) { \
+      return EXP;                                                 \
    }
-   TAT_DEF_ALL_SYM_OP(0, 0)
-#undef TAT_DEF_SYM_OP
+#define TAT_DEF_ALL_SYM_OP(SYM)                                                          \
+   TAT_DEF_SYM_OP(SYM, operator==, symmetry_1.information() == symmetry_2.information()) \
+   TAT_DEF_SYM_OP(SYM, operator!=, symmetry_1.information() != symmetry_2.information()) \
+   TAT_DEF_SYM_OP(SYM, operator>=, symmetry_1.information() >= symmetry_2.information()) \
+   TAT_DEF_SYM_OP(SYM, operator<=, symmetry_1.information() <= symmetry_2.information()) \
+   TAT_DEF_SYM_OP(SYM, operator>, symmetry_1.information() > symmetry_2.information())   \
+   TAT_DEF_SYM_OP(SYM, operator<, symmetry_1.information() < symmetry_2.information())
 
-#define TAT_DEF_SYM_OP(OP, EXP)                                                 \
-   inline bool OP(const Z2Symmetry& symmetry_1, const Z2Symmetry& symmetry_2) { \
-      return EXP;                                                               \
-   }
-   TAT_DEF_ALL_SYM_OP(symmetry_1.z2, symmetry_2.z2)
-#undef TAT_DEF_SYM_OP
-
-#define TAT_DEF_SYM_OP(OP, EXP)                                                 \
-   inline bool OP(const U1Symmetry& symmetry_1, const U1Symmetry& symmetry_2) { \
-      return EXP;                                                               \
-   }
-   TAT_DEF_ALL_SYM_OP(symmetry_1.u1, symmetry_2.u1)
-#undef TAT_DEF_SYM_OP
-
-#define TAT_DEF_SYM_OP(OP, EXP)                                                       \
-   inline bool OP(const FermiSymmetry& symmetry_1, const FermiSymmetry& symmetry_2) { \
-      return EXP;                                                                     \
-   }
-   TAT_DEF_ALL_SYM_OP(symmetry_1.fermi, symmetry_2.fermi)
-#undef TAT_DEF_SYM_OP
-
-#define TAT_DEF_SYM_OP(OP, EXP)                                                           \
-   inline bool OP(const FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) { \
-      return EXP;                                                                         \
-   }
-   TAT_DEF_ALL_SYM_OP(std::tie(symmetry_1.fermi, symmetry_1.z2), std::tie(symmetry_2.fermi, symmetry_2.z2))
-#undef TAT_DEF_SYM_OP
-
-#define TAT_DEF_SYM_OP(OP, EXP)                                                           \
-   inline bool OP(const FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) { \
-      return EXP;                                                                         \
-   }
-   TAT_DEF_ALL_SYM_OP(std::tie(symmetry_1.fermi, symmetry_1.u1), std::tie(symmetry_2.fermi, symmetry_2.u1))
-#undef TAT_DEF_SYM_OP
+   TAT_DEF_ALL_SYM_OP(NoSymmetry)
+   TAT_DEF_ALL_SYM_OP(Z2Symmetry)
+   TAT_DEF_ALL_SYM_OP(U1Symmetry)
+   TAT_DEF_ALL_SYM_OP(FermiSymmetry)
+   TAT_DEF_ALL_SYM_OP(FermiZ2Symmetry)
+   TAT_DEF_ALL_SYM_OP(FermiU1Symmetry)
 #undef TAT_DEF_ALL_SYM_OP
+#undef TAT_DEF_SYM_OP
 } // namespace TAT
 #endif
