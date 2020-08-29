@@ -46,15 +46,15 @@ namespace TAT {
          if (length != line_2.size()) {
             warning_or_error("Different Length When Do Two Line to One Line");
          }
-         //std::clog << "Two Line to One Line Start\n";
+         // std::clog << "Two Line to One Line Start\n";
 
          // product
          std::vector<Tensor<ScalarType, Symmetry>> double_line;
-         //std::clog << "double line:\n";
+         // std::clog << "double line:\n";
          for (int i = 0; i < length; i++) {
             double_line.push_back(Tensor<ScalarType, Symmetry>::contract(
                   line_1[i]->edge_rename({{left, left1}, {right, right1}}), line_2[i]->edge_rename({{left, left2}, {right, right2}}), {{down, up}}));
-            //std::clog << double_line[i] << "\n";
+            // std::clog << double_line[i] << "\n";
          }
 
          // left canonicalize
@@ -65,8 +65,8 @@ namespace TAT {
             double_line[i] = std::move(v);
             double_line[i + 1] = double_line[i + 1].contract(u, {{left1, right1}, {left2, right2}}).multiple(s, left, false);
          }
-         //std::clog << "double line:\n";
-         //for (int i = 0; i < length; i++) {
+         // std::clog << "double line:\n";
+         // for (int i = 0; i < length; i++) {
          //   std::clog << double_line[i] << "\n";
          //}
 
@@ -90,7 +90,7 @@ namespace TAT {
             double_line[i] = u.multiple(s, right, false).edge_rename({{up1, up}, {down1, down}});
          }
 
-         //std::clog << "Two Line to One Line End\n";
+         // std::clog << "Two Line to One Line End\n";
          return double_line;
       }
 

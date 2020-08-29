@@ -22,9 +22,6 @@
 #define TAT_IO_HPP
 
 #include <iostream>
-#ifdef _WIN32
-#include <windows.h>
-#endif
 
 #include "tensor.hpp"
 
@@ -188,26 +185,6 @@ namespace TAT {
       return out;
    }
 
-#ifdef _WIN32
-   inline const auto stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-   inline const auto stderr_handle = GetStdHandle(STD_ERROR_HANDLE);
-   struct WindowsColorCode {
-      int color_code;
-   };
-   inline std::ostream& operator<<(std::ostream& out, const WindowsColorCode& value) {
-      if (out.rdbuf() == std::cout.rdbuf()) {
-         SetConsoleTextAttribute(stdout_handle, value.color_code);
-      } else if (out.rdbuf() == std::clog.rdbuf() || out.rdbuf() == std::cerr.rdbuf()) {
-         SetConsoleTextAttribute(stderr_handle, value.color_code);
-      }
-      return out;
-   }
-   inline const WindowsColorCode console_red = {4};
-   inline const WindowsColorCode console_green = {2};
-   inline const WindowsColorCode console_yellow = {6};
-   inline const WindowsColorCode console_blue = {1};
-   inline const WindowsColorCode console_origin = {7};
-#else
    struct UnixColorCode {
       std::string color_code;
    };
@@ -220,7 +197,6 @@ namespace TAT {
       out << value.color_code;
       return out;
    }
-#endif
 
    template<class ScalarType, class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {

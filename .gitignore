@@ -9,6 +9,7 @@
 /emscripten/lib*
 /pybind11
 /CMakeSettings.json
+/env
 *.exp
 *.lib
 *.pdb

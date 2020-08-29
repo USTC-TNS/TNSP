@@ -24,7 +24,7 @@
 #include "tensor.hpp"
 
 namespace TAT {
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2, EVAL3)                                                                        \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                           \
    template<class ScalarType1, class ScalarType2, class Symmetry>                                                     \
    auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {            \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                \
@@ -113,13 +113,13 @@ namespace TAT {
       return OP(Tensor<ScalarType1, Symmetry>{number_1}, tensor_2);                                                   \
    }
 
-   DEF_SCALAR_OP(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
-   DEF_SCALAR_OP(operator-, c[j] = x - b[j], c[j] = a[j] - y, c[j] = a[j] - b[j])
-   DEF_SCALAR_OP(operator*, c[j] = x * b[j], c[j] = a[j] * y, c[j] = a[j] * b[j])
-   DEF_SCALAR_OP(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
-#undef DEF_SCALAR_OP
+   TAT_DEFINE_SCALAR_OPERATOR(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator-, c[j] = x - b[j], c[j] = a[j] - y, c[j] = a[j] - b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator*, c[j] = x * b[j], c[j] = a[j] * y, c[j] = a[j] * b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
+#undef TAT_DEFINE_SCALAR_OPERATOR
 
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2)                                                                                        \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2)                                                                           \
    template<class ScalarType1, class ScalarType2, class Symmetry>                                                              \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) { \
       if (tensor_1.core.use_count() != 1) {                                                                                    \
@@ -157,10 +157,10 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                   \
       return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                            \
    }
-   DEF_SCALAR_OP(operator+=, a[j] += y, a[j] += b[j])
-   DEF_SCALAR_OP(operator-=, a[j] -= y, a[j] -= b[j])
-   DEF_SCALAR_OP(operator*=, a[j] *= y, a[j] *= b[j])
-   DEF_SCALAR_OP(operator/=, a[j] /= y, a[j] /= b[j])
-#undef DEF_SCALAR_OP
+   TAT_DEFINE_SCALAR_OPERATOR(operator+=, a[j] += y, a[j] += b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator-=, a[j] -= y, a[j] -= b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator*=, a[j] *= y, a[j] *= b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator/=, a[j] /= y, a[j] /= b[j])
+#undef TAT_DEFINE_SCALAR_OPERATOR
 } // namespace TAT
 #endif

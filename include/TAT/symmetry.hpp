@@ -268,25 +268,25 @@ namespace TAT {
    }
 
    // 此处将可被c++20的operator<=>替换
-#define TAT_DEF_SYM_OP(SYM, OP, EXP)                              \
+#define TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, OP, EXP)         \
    inline bool OP(const SYM& symmetry_1, const SYM& symmetry_2) { \
       return EXP;                                                 \
    }
-#define TAT_DEF_ALL_SYM_OP(SYM)                                                          \
-   TAT_DEF_SYM_OP(SYM, operator==, symmetry_1.information() == symmetry_2.information()) \
-   TAT_DEF_SYM_OP(SYM, operator!=, symmetry_1.information() != symmetry_2.information()) \
-   TAT_DEF_SYM_OP(SYM, operator>=, symmetry_1.information() >= symmetry_2.information()) \
-   TAT_DEF_SYM_OP(SYM, operator<=, symmetry_1.information() <= symmetry_2.information()) \
-   TAT_DEF_SYM_OP(SYM, operator>, symmetry_1.information() > symmetry_2.information())   \
-   TAT_DEF_SYM_OP(SYM, operator<, symmetry_1.information() < symmetry_2.information())
+#define TAT_DEFINE_SYMMETRY_ALL_OPERATOR(SYM)                                                                 \
+   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator==, symmetry_1.information() == symmetry_2.information()) \
+   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator!=, symmetry_1.information() != symmetry_2.information()) \
+   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator>=, symmetry_1.information() >= symmetry_2.information()) \
+   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator<=, symmetry_1.information() <= symmetry_2.information()) \
+   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator>, symmetry_1.information() > symmetry_2.information())   \
+   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator<, symmetry_1.information() < symmetry_2.information())
 
-   TAT_DEF_ALL_SYM_OP(NoSymmetry)
-   TAT_DEF_ALL_SYM_OP(Z2Symmetry)
-   TAT_DEF_ALL_SYM_OP(U1Symmetry)
-   TAT_DEF_ALL_SYM_OP(FermiSymmetry)
-   TAT_DEF_ALL_SYM_OP(FermiZ2Symmetry)
-   TAT_DEF_ALL_SYM_OP(FermiU1Symmetry)
-#undef TAT_DEF_ALL_SYM_OP
-#undef TAT_DEF_SYM_OP
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(NoSymmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(Z2Symmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(U1Symmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiSymmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiZ2Symmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiU1Symmetry)
+#undef TAT_DEFINE_SYMMETRY_ALL_OPERATOR
+#undef TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR
 } // namespace TAT
 #endif

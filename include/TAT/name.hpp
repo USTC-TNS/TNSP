@@ -72,32 +72,32 @@ namespace TAT {
    };
 
    // 此处将可被c++20的operator<=>替换
-#define TAT_DEF_NAME_OP(OP, EXP)                            \
+#define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                   \
    inline bool OP(const Name& name_1, const Name& name_2) { \
       return EXP;                                           \
    }
-   TAT_DEF_NAME_OP(operator==, name_1.id == name_2.id)
-   TAT_DEF_NAME_OP(operator!=, name_1.id != name_2.id)
-   TAT_DEF_NAME_OP(operator>=, name_1.id >= name_2.id)
-   TAT_DEF_NAME_OP(operator<=, name_1.id <= name_2.id)
-   TAT_DEF_NAME_OP(operator>, name_1.id> name_2.id)
-   TAT_DEF_NAME_OP(operator<, name_1.id<name_2.id)
-#undef TAT_DEF_NAME_OP
+   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.id == name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.id != name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.id >= name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.id <= name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.id> name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id<name_2.id)
+#undef TAT_DEFINE_NAME_OPERATOR
 
    // 保留名称, 在一些张量运算内部使用
-#define TAT_DEF_NAME(x) inline const Name x(#x)
-   TAT_DEF_NAME(Contract1);
-   TAT_DEF_NAME(Contract2);
-   TAT_DEF_NAME(SVD1);
-   TAT_DEF_NAME(SVD2);
-   TAT_DEF_NAME(Trace1);
-   TAT_DEF_NAME(Trace2);
-   TAT_DEF_NAME(Trace3);
-   TAT_DEF_NAME(Up);
-   TAT_DEF_NAME(Down);
-   TAT_DEF_NAME(Left);
-   TAT_DEF_NAME(Right);
-#undef TAT_DEF_NAME
+#define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)
+   TAT_DEFINE_INTERNAL_NAME(Contract1);
+   TAT_DEFINE_INTERNAL_NAME(Contract2);
+   TAT_DEFINE_INTERNAL_NAME(SVD1);
+   TAT_DEFINE_INTERNAL_NAME(SVD2);
+   TAT_DEFINE_INTERNAL_NAME(Trace1);
+   TAT_DEFINE_INTERNAL_NAME(Trace2);
+   TAT_DEFINE_INTERNAL_NAME(Trace3);
+   TAT_DEFINE_INTERNAL_NAME(Up);
+   TAT_DEFINE_INTERNAL_NAME(Down);
+   TAT_DEFINE_INTERNAL_NAME(Left);
+   TAT_DEFINE_INTERNAL_NAME(Right);
+#undef TAT_DEFINE_INTERNAL_NAME
 
    /**
     * \brief 由名字列表构造名字到序号的映射表

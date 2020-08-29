@@ -35,6 +35,10 @@
 #endif
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 namespace TAT {
    /**
     * \brief TAT的版本号
@@ -42,9 +46,21 @@ namespace TAT {
    inline const char* version = "0.0.5";
 
    /**
-    * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源
+    * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式
     */
    struct Evil {
+      Evil() {
+#ifdef _WIN32
+         HANDLE output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+         DWORD output_mode = 0;
+         GetConsoleMode(output_handle, &output_mode);
+         SetConsoleMode(output_handle, output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+         HANDLE error_handle = GetStdHandle(STD_ERROR_HANDLE);
+         DWORD error_mode = 0;
+         GetConsoleMode(error_handle, &error_mode);
+         SetConsoleMode(error_handle, error_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+      }
       ~Evil();
    };
    const Evil evil;
