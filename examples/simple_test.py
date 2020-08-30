@@ -158,11 +158,11 @@ def test_split_and_merge():
     a = TAT.Tensor.DNo(["Left", "Right"], [2, 3]).set(initializer())
     b = a.merge_edge({"Merged": ["Left", "Right"]})
     c = a.merge_edge({"Merged": ["Right", "Left"]})
-    # d = c.split_edge({"Merged": [("1", 3), ("2", 2)]});
+    d = c.split_edge({"Merged": [("1", 3), ("2", 2)]});
     print(a)
     print(b)
     print(c)
-    # print(d)
+    print(d)
 
 
 if __name__ == "__main__":

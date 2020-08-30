@@ -65,7 +65,7 @@ namespace TAT {
       }
    }
 
-   template<class T, class A>
+   template<class T, class A, class = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
    std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;

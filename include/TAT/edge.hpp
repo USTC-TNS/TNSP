@@ -273,5 +273,16 @@ namespace TAT {
             });
       return result;
    }
+
+   /**
+    * \brief 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
+    * \tparam T 如果T是Edge类型, 则value为true
+    */
+   template<class T>
+   struct is_edge : std::bool_constant<false> {};
+   template<class T>
+   struct is_edge<Edge<T>> : std::bool_constant<true> {};
+   template<class T>
+   constexpr bool is_edge_v = is_edge<T>::value;
 } // namespace TAT
 #endif

@@ -479,7 +479,7 @@ namespace TAT {
                result_symmetries.push_back(-symmetry);
             }
             // result.core->blocks.at(result_symmetries) <- block
-            Size total_size = block.size();
+            const Size total_size = block.size();
             ScalarType* destination = result.core->blocks.at(result_symmetries).data();
             const ScalarType* source = block.data();
             bool parity = false;
@@ -527,14 +527,26 @@ namespace TAT {
          Tensor<ScalarType, Symmetry> V;
       };
 
+      [[deprecated]] Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, bool different_direction) & {
+         return multiple(S, name, different_direction ? 'v' : 'u');
+      }
+
       /**
        * \brief 张量缩并上SVD产生的奇异值数据, 就地操作
        * \param S 奇异值
        * \param name 张量与奇异值缩并的边名
-       * \param different_direction 奇异值是含有一个方向的, SVD的结果中U和S相乘则为false, V和S相乘为true
+       * \param direction 奇异值是含有一个方向的, SVD的结果中U还是V将与S相乘在这里被选定
        * \return 缩并的结果
        */
-      Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, bool different_direction = false) & {
+      Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, char direction = 'u') & {
+         bool different_direction;
+         if (direction == 'u' || direction == 'U') {
+            different_direction = false;
+         } else if (direction == 'v' || direction == 'V') {
+            different_direction = true;
+         } else {
+            return *this;
+         }
          if (core.use_count() != 1) {
             warning_or_error("Set Tensor Shared, You Can Use tensor.copy().multiple(...)");
          }
@@ -576,8 +588,12 @@ namespace TAT {
          return *this;
       }
 
-      Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, bool different_direction = false) && {
-         return std::move(this->multiple(S, name, different_direction));
+      [[deprecated]] Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, bool different_direction) && {
+         return std::move(this->multiple(S, name, different_direction ? 'v' : 'u'));
+      }
+
+      Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, char direction = 'u') && {
+         return std::move(this->multiple(S, name, direction));
       }
 
       /**
@@ -600,15 +616,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry>& meta_get(std::istream&);
       Tensor<ScalarType, Symmetry>& data_get(std::istream&);
 
-      std::string show() const;
-#ifdef __CLING__
-      std::string __repr__() const {
-         return "Tensor" + show();
-      }
-      std::string __str__() const {
-         return show();
-      }
-#endif
+      [[nodiscard]] std::string show() const;
    }; // namespace TAT
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
