@@ -368,7 +368,7 @@ void test_svd() {
       std::cout << v << "\n";
       std::cout << s.value.begin()->second << "\n";
       std::cout << decltype(v)::contract(v, v, {{"B", "B"}, {"C", "C"}}).transform([](auto i) { return std::abs(i) > 1e-5 ? i : 0; }) << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
+      std::cout << decltype(v)::contract(v.multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {
       auto c =
@@ -382,10 +382,10 @@ void test_svd() {
       }
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
-      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", 'u'), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
@@ -412,10 +412,10 @@ void test_svd() {
       }
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", true), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
-      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", false), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", 'u'), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);

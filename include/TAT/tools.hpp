@@ -63,7 +63,7 @@ namespace TAT {
             // 0 ... L-2
             auto [u, s, v] = double_line[i].svd({right1, right2}, left, right);
             double_line[i] = std::move(v);
-            double_line[i + 1] = double_line[i + 1].contract(u, {{left1, right1}, {left2, right2}}).multiple(s, left, false);
+            double_line[i + 1] = double_line[i + 1].contract(u, {{left1, right1}, {left2, right2}}).multiple(s, left, 'u');
          }
          // std::clog << "double line:\n";
          // for (int i = 0; i < length; i++) {
@@ -87,7 +87,7 @@ namespace TAT {
                                    {{right, left}})
                                    .svd(u_names, right, left, cut);
             double_line[i + 1] = v.edge_rename({{up2, up}, {down2, down}});
-            double_line[i] = u.multiple(s, right, false).edge_rename({{up1, up}, {down1, down}});
+            double_line[i] = u.multiple(s, right, 'u').edge_rename({{up1, up}, {down1, down}});
          }
 
          // std::clog << "Two Line to One Line End\n";

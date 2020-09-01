@@ -354,6 +354,49 @@ namespace TAT {
                   py::arg("parity_exclude_name_split_set") = py::set(),
                   "Split edges of a tensor to many edges")
             .def(
+                  "edge_operator",
+                  [](const T& tensor,
+                     const std::map<Name, Name>& rename_map,
+                     py::dict split,
+                     const std::set<Name>& reversed_name,
+                     const std::map<Name, std::vector<Name>>& merge_map,
+                     std::vector<Name> new_names,
+                     const bool apply_parity,
+                     std::set<Name> parity_exclude_name_split_set,
+                     std::set<Name> parity_exclude_name_reverse_set,
+                     std::set<Name> parity_exclude_name_reverse_before_merge_set,
+                     std::set<Name> parity_exclude_name_merge_set,
+                     const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) {
+                     auto split_map = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+                     for (const auto& [name, named_edge_list] : split) {
+                        split_map[py::cast<Name>(name)] = py::cast<std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(named_edge_list);
+                     }
+                     return tensor.edge_operator(
+                           rename_map,
+                           split_map,
+                           reversed_name,
+                           merge_map,
+                           new_names,
+                           apply_parity,
+                           {parity_exclude_name_split_set,
+                            parity_exclude_name_reverse_set,
+                            parity_exclude_name_reverse_before_merge_set,
+                            parity_exclude_name_merge_set},
+                           edge_and_symmetries_to_cut_before_all);
+                  },
+                  py::arg("rename_map"),
+                  py::arg("split_map"),
+                  py::arg("reversed_name"),
+                  py::arg("merge_map"),
+                  py::arg("new_names"),
+                  py::arg("apply_parity") = false,
+                  py::arg("parity_exclude_name_split_set") = py::set(),
+                  py::arg("parity_exclude_name_reverse_set") = py::set(),
+                  py::arg("parity_exclude_name_reverse_before_merge_set") = py::set(),
+                  py::arg("parity_exclude_name_merge_set") = py::set(),
+                  py::arg("edge_and_symmetries_to_cut_before_all") = py::dict(),
+                  "Tensor Edge Operator")
+            .def(
                   "contract",
                   [](const T& tensor_1, const T& tensor_2, const std::set<std::tuple<Name, Name>>& contract_names) {
                      return T::contract(tensor_1, tensor_2, contract_names);

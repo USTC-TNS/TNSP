@@ -527,10 +527,6 @@ namespace TAT {
          Tensor<ScalarType, Symmetry> V;
       };
 
-      [[deprecated]] Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, bool different_direction) & {
-         return multiple(S, name, different_direction ? 'v' : 'u');
-      }
-
       /**
        * \brief 张量缩并上SVD产生的奇异值数据, 就地操作
        * \param S 奇异值
@@ -588,10 +584,6 @@ namespace TAT {
          return *this;
       }
 
-      [[deprecated]] Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, bool different_direction) && {
-         return std::move(this->multiple(S, name, different_direction ? 'v' : 'u'));
-      }
-
       Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, char direction = 'u') && {
          return std::move(this->multiple(S, name, direction));
       }
@@ -606,7 +598,7 @@ namespace TAT {
        * \see svd_result
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
-      svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
+      [[nodiscard]] svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
 
       // TODO slice 可化为contract，但需要自动生成方便的辅助张量
       // 除此以外, 有了name 但是只有一个元素的张量也需要辅助函数

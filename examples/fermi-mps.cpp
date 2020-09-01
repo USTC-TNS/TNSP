@@ -36,7 +36,7 @@ struct MPS {
          if (i == 0) {
             chain.push_back(Tensor({"Total", "Phy", "Right"}, {{-1}, {0, 1}, {1, 0}}, true).set(g));
             //}
-            //if (i == 1) {
+            // if (i == 1) {
             //   chain.push_back(Tensor({"Left", "Phy", "Right"}, {{{-2, 1}, {-1, 1}}, {{0, 1}, {1, 1}}, {{2, 1}, {1, 2}, {0, 1}}}, true).set(g));
             //} else if (i == 2) {
             //   chain.push_back(Tensor({"Left", "Phy", "Right"}, {{{-2, 1}, {-1, 2}, {0, 1}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 1}}}, true).set(g));
@@ -80,7 +80,7 @@ struct MPS {
          auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
          auto [u, s, v] = ABH.svd({"Left", "O0"}, "Right", "Left", dimension);
          chain[i] = std::move(u).edge_rename({{"O0", "Phy"}});
-         chain[i + 1] = std::move(v.multiple(s, "Left", true)).edge_rename({{"O1", "Phy"}});
+         chain[i + 1] = std::move(v.multiple(s, "Left", 'v')).edge_rename({{"O1", "Phy"}});
          chain[i] = chain[i] / chain[i].norm<-1>();
          chain[i + 1] = chain[i + 1] / chain[i + 1].norm<-1>();
       }
@@ -90,7 +90,7 @@ struct MPS {
          auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
          auto [u, s, v] = ABH.svd({"Right", "O0"}, "Left", "Right", dimension);
          chain[i + 1] = std::move(u).edge_rename({{"O0", "Phy"}});
-         chain[i] = std::move(v.multiple(s, "Right", true)).edge_rename({{"O1", "Phy"}});
+         chain[i] = std::move(v.multiple(s, "Right", 'v')).edge_rename({{"O1", "Phy"}});
          chain[i + 1] = chain[i + 1] / chain[i + 1].norm<-1>();
          chain[i] = chain[i] / chain[i].norm<-1>();
       }
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
    std::uniform_real_distribution<double> dis(-1, 1);
    auto gen = [&]() { return dis(engine); };
    auto mps = MPS(2, 2, gen);
-   //mps.update(std::atoi(argv[3]), std::atof(argv[4]), std::atoi(argv[5]));
+   // mps.update(std::atoi(argv[3]), std::atof(argv[4]), std::atoi(argv[5]));
    mps.update(10, 0.1, 1);
    return 0;
 }

@@ -149,8 +149,8 @@ def test_transpose():
 
 def test_split_and_merge():
     class initializer():
-        def __init__(self):
-            self.i = -1
+        def __init__(self, first=-1):
+            self.i = first
 
         def __call__(self):
             self.i += 1
@@ -158,11 +158,42 @@ def test_split_and_merge():
     a = TAT.Tensor.DNo(["Left", "Right"], [2, 3]).set(initializer())
     b = a.merge_edge({"Merged": ["Left", "Right"]})
     c = a.merge_edge({"Merged": ["Right", "Left"]})
-    d = c.split_edge({"Merged": [("1", 3), ("2", 2)]});
+    d = c.split_edge({"Merged": [("1", 3), ("2", 2)]})
     print(a)
     print(b)
     print(c)
     print(d)
+
+    e = TAT.Tensor.ZFermi(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).set(initializer(0))
+    print(e)
+    f = e.merge_edge({"Merged": ["Left", "Up"]})
+    print(f)
+    g = f.split_edge({"Merged": [("Left", {-1: 3, 0: 1, 1: 2}), ("Up", {-1: 2, 0: 3, 1: 1})]})
+    print(g)
+    h = g.transpose(["Left", "Right", "Up"])
+    print(h)
+
+
+def test_edge_operator():
+    print(TAT.Tensor.DNo(["A", "B"], [8, 8]).test())
+    print(TAT.Tensor.DNo(["A", "B"], [8, 8]).test().edge_operator({"A": "C"}, {"C": [("D", 4), ("E", 2)], "B": [("F", 2), ("G", 4)]}, {"D", "F"}, {"I": ["D", "F"], "J": ["G", "E"]}, ["J", "I"]))
+    print(TAT.Tensor.DNo(["A", "B", "C"], [2, 3, 4]).test().edge_operator({}, {}, set(), {}, ["B", "C", "A"]))
+
+    a = TAT.Tensor.DU1(["Left", "Right", "Up", "Down"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 4, 1: 2}, {-1: 2, 0: 3, 1: 1}, {-1: 1, 0: 3, 1: 2}]).test(1)
+    b = a.edge_rename({"Right": "Right1"}).split_edge({"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]})
+    c = b.transpose(["Down1", "Right1", "Up", "Left", "Down2"])
+    d = c.merge_edge({"Left": ["Left", "Down2"]})
+    total = a.edge_operator({"Right": "Right1"}, {"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]}, set(), {"Left": ["Left", "Down2"]}, ["Down1", "Right1", "Up", "Left"])
+    print((total - d).norm_max())
+
+    a = TAT.Tensor.DFermi(["Left", "Right", "Up", "Down"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 4, 1: 2}, {-1: 2, 0: 3, 1: 1}, {-1: 1, 0: 3, 1: 2}]).test(1)
+    b = a.edge_rename({"Right": "Right1"}).split_edge({"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]})
+    r = b.reverse_edge({"Left"})
+    c = r.transpose(["Down1", "Right1", "Up", "Left", "Down2"])
+    d = c.merge_edge({"Left": ["Left", "Down2"]})
+    total = a.edge_operator({"Right": "Right1"}, {"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]}, {"Left"}, {"Left": ["Left", "Down2"]}, ["Down1", "Right1", "Up", "Left"])
+    print((total - d).norm_max())
+    print(total)
 
 
 if __name__ == "__main__":
@@ -176,3 +207,4 @@ if __name__ == "__main__":
     run_test(test_edge_rename)
     run_test(test_transpose)
     run_test(test_split_and_merge)
+    run_test(test_edge_operator)
