@@ -189,7 +189,7 @@ namespace TAT {
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
-      // 删除不存在的名称
+      // 删除不存在的名称, 即在name tuple list中但不在names中
       for (auto iterator = contract_names.begin(); iterator != contract_names.end();) {
          auto found_1 = tensor_1.name_to_index.find(std::get<0>(*iterator));
          auto found_2 = tensor_2.name_to_index.find(std::get<1>(*iterator));
@@ -199,6 +199,7 @@ namespace TAT {
             ++iterator;
          }
       }
+      const auto common_rank = contract_names.size();
       // Rank contract_origin_rank = contract_names_1.size();
       // for (Rank i = 0; i < contract_origin_rank; i++) {
       // }
@@ -207,15 +208,21 @@ namespace TAT {
       auto reversed_set_1 = std::set<Name>();           // 第一个张量merge时反转表
       auto reversed_set_2 = std::set<Name>();           // 第二个张量merge时反转表
       auto edge_result = std::vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      if constexpr (is_no_symmetry) {
+         edge_result.reserve(rank_1 + rank_2 - 2 * common_rank);
+      }
       auto split_map_result = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
       auto reversed_set_result = std::set<Name>();                                                 // 最后split时的反转标
       auto name_result = std::vector<Name>();                                                      // 最后split后的name
-      split_map_result[Contract1];
-      split_map_result[Contract2];
+      name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
+      split_map_result[Contract1].reserve(rank_1 - common_rank);
+      split_map_result[Contract2].reserve(rank_2 - common_rank);
       auto free_name_1 = std::vector<Name>(); // 第一个张量的自由边, merge时使用
+      free_name_1.reserve(rank_1 - common_rank);
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
          if (find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
+            // 是free name
             free_name_1.push_back(n);
             if constexpr (is_no_symmetry) {
                edge_result.push_back(tensor_1.core->edges[i]);
@@ -230,6 +237,7 @@ namespace TAT {
                }
             }
          } else {
+            // 将被contract掉
             if constexpr (is_fermi) {
                if (!tensor_1.core->edges[i].arrow) {
                   reversed_set_1.insert(n);
@@ -239,9 +247,11 @@ namespace TAT {
       }
       const auto free_rank_1 = free_name_1.size();
       auto free_name_2 = std::vector<Name>(); // 第二个张量的自由边, merge时使用
+      free_name_2.reserve(rank_2 - common_rank);
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
          if (find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
+            // 是free name
             free_name_2.push_back(n);
             if constexpr (is_no_symmetry) {
                edge_result.push_back(tensor_2.core->edges[i]);
@@ -256,6 +266,7 @@ namespace TAT {
                }
             }
          } else {
+            // 将被contract掉
             if constexpr (is_fermi) {
                if (tensor_2.core->edges[i].arrow) {
                   reversed_set_2.insert(n);
@@ -265,18 +276,17 @@ namespace TAT {
       }
       const auto free_rank_2 = free_name_2.size();
       // 确定转置方案
-      Rank common_rank = 0;
       auto common_name_1 = std::vector<Name>(); // 第一个张量的公共边, merge时使用
       auto common_name_2 = std::vector<Name>(); // 第二个张量的公共边, merge时使用
+      common_name_1.reserve(common_rank);
+      common_name_2.reserve(common_rank);
       bool put_common_1_right;
       bool put_common_2_right;
-      // 这会自动删掉两边都不在name中的情况
       auto fit_tensor_1_common_edge = [&]() {
          for (const auto& n : tensor_1.names) {
             if (auto position = find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
-               common_rank++;
             }
          }
       };
@@ -285,7 +295,6 @@ namespace TAT {
             if (auto position = find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
-               common_rank++;
             }
          }
       };
@@ -326,12 +335,16 @@ namespace TAT {
             auto found = edge_2.map.find(symmetry_2);
             if (found != edge_2.map.end()) {
                // found
-               if (found->second != dimension_1) {
+               if (const auto dimension_2 = found->second; dimension_2 != dimension_1) {
                   warning_or_error("Different Dimension to Contract");
+                  if (dimension_2 < dimension_1) {
+                     this_delete_1[symmetry_1] = dimension_2;
+                  }
                }
             } else {
                // not found
                this_delete_1[symmetry_1] = 0;
+               // 用于merge时cut, cut成0会自动删除
             }
          }
          if (!this_delete_1.empty()) {
@@ -343,8 +356,11 @@ namespace TAT {
             auto found = edge_1.map.find(symmetry_1);
             if (found != edge_1.map.end()) {
                // found
-               if (found->second != dimension_2) {
+               if (const auto dimension_1 = found->second; dimension_1 != dimension_2) {
                   warning_or_error("Different Dimension to Contract");
+                  if (dimension_1 < dimension_2) {
+                     this_delete_2[symmetry_2] = dimension_1;
+                  }
                }
             } else {
                // not found

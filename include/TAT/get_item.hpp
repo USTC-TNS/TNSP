@@ -28,13 +28,12 @@ namespace TAT {
     * \brief 寻找有对称性张量中的某个子块
     */
    template<class ScalarType, class Symmetry>
-   [[nodiscard]] auto get_block_for_get_item(
-         const std::map<Name, Symmetry>& position,
-         const std::map<Name, Rank>& name_to_index,
-         const Core<ScalarType, Symmetry>& core) {
-      auto symmetries = std::vector<Symmetry>(core.edges.size());
-      for (const auto& [name, symmetry] : position) {
-         symmetries[name_to_index.at(name)] = symmetry;
+   [[nodiscard]] auto
+   get_block_for_get_item(const std::map<Name, Symmetry>& position, const std::vector<Name>& names, const Core<ScalarType, Symmetry>& core) {
+      auto symmetries = std::vector<Symmetry>();
+      symmetries.reserve(names.size());
+      for (const auto& name : names) {
+         symmetries.push_back(position.at(name));
       }
       return symmetries;
    }
@@ -44,14 +43,15 @@ namespace TAT {
     */
    template<class ScalarType, class Symmetry>
    [[nodiscard]] auto
-   get_offset_for_get_item(const std::map<Name, Size>& position, const std::map<Name, Rank>& name_to_index, const Core<ScalarType, Symmetry>& core) {
-      const auto rank = Rank(core.edges.size());
-      auto scalar_position = std::vector<Size>(rank);
-      auto dimensions = std::vector<Size>(rank);
-      for (const auto& [name, position] : position) {
-         auto index = name_to_index.at(name);
-         scalar_position[index] = position;
-         dimensions[index] = core.edges[index].map.begin()->second;
+   get_offset_for_get_item(const std::map<Name, Size>& position, const std::vector<Name>& names, const Core<ScalarType, Symmetry>& core) {
+      const auto rank = Rank(names.size());
+      auto scalar_position = std::vector<Size>();
+      auto dimensions = std::vector<Size>();
+      scalar_position.reserve(rank);
+      dimensions.reserve(rank);
+      for (auto i = 0; i < rank; i++) {
+         scalar_position.push_back(position.at(names[i]));
+         dimensions.push_back(core.edges[i].map.begin()->second);
       }
       Size offset = 0;
       for (Rank j = 0; j < rank; j++) {
@@ -67,18 +67,21 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    [[nodiscard]] auto get_block_and_offset_for_get_item(
          const std::map<Name, std::tuple<Symmetry, Size>>& position,
-         const std::map<Name, Rank>& name_to_index,
+         const std::vector<Name>& names,
          const Core<ScalarType, Symmetry>& core) {
       const auto rank = Rank(core.edges.size());
-      auto symmetries = std::vector<Symmetry>(rank);
-      auto scalar_position = std::vector<Size>(rank);
-      auto dimensions = std::vector<Size>(rank);
-      for (const auto& [name, _] : position) {
-         const auto& [symmetry, position] = _;
-         auto index = name_to_index.at(name);
-         symmetries[index] = symmetry;
-         scalar_position[index] = position;
-         dimensions[index] = core.edges[index].map.at(symmetry);
+      auto symmetries = std::vector<Symmetry>();
+      auto scalar_position = std::vector<Size>();
+      auto dimensions = std::vector<Size>();
+      symmetries.reserve(rank);
+      scalar_position.reserve(rank);
+      dimensions.reserve(rank);
+      for (auto i = 0; i < rank; i++) {
+         const auto& name = names[i];
+         const auto& [symmetry, index] = position.at(name);
+         symmetries.push_back(symmetry);
+         scalar_position.push_back(index);
+         dimensions.push_back(core.edges[i].map.at(symmetry));
       }
       Size offset = 0;
       for (Rank j = 0; j < rank; j++) {
@@ -93,7 +96,7 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
-      auto symmetry = get_block_for_get_item(position, name_to_index, *core);
+      auto symmetry = get_block_for_get_item(position, names, *core);
       return core->blocks.at(symmetry);
    }
 
@@ -102,17 +105,17 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
-      auto symmetry = get_block_for_get_item(position, name_to_index, *core);
+      auto symmetry = get_block_for_get_item(position, names, *core);
       return core->blocks.at(symmetry);
    }
 
    template<class ScalarType, class Symmetry>
    ScalarType Tensor<ScalarType, Symmetry>::at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto offset = get_offset_for_get_item(position, name_to_index, *core);
+         auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
       } else {
-         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, name_to_index, *core);
+         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, names, *core);
          return core->blocks.at(symmetry)[offset];
       }
    }
@@ -120,10 +123,10 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    ScalarType& Tensor<ScalarType, Symmetry>::at(const std::map<Name, EdgeInfoForGetItem>& position) & {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto offset = get_offset_for_get_item(position, name_to_index, *core);
+         auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
       } else {
-         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, name_to_index, *core);
+         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, names, *core);
          return core->blocks.at(symmetry)[offset];
       }
    }

@@ -114,11 +114,15 @@ namespace TAT {
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
    inline bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      const auto result = names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
-      if (!result) {
-         warning_or_error("Wrong Name Number or Duplicated Name");
+      const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
+      const auto result_length = names.size() == rank;
+      if (!result_duplicated) {
+         warning_or_error("Wrong name list length");
       }
-      return result;
+      if (!result_length) {
+         warning_or_error("Duplicated names in name list");
+      }
+      return result_duplicated && result_length;
    }
 } // namespace TAT
 #endif

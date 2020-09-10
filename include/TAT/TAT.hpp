@@ -48,8 +48,8 @@ namespace TAT {
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式
     */
-   struct Evil {
-      Evil() {
+   struct evil_t {
+      evil_t() {
 #ifdef _WIN32
          HANDLE output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
          DWORD output_mode = 0;
@@ -61,15 +61,9 @@ namespace TAT {
          SetConsoleMode(error_handle, error_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
       }
-      ~Evil();
+      ~evil_t();
    };
-   const Evil evil;
-
-   /**
-    * \brief 打印警告, 一些即使是严重的错误也会使用本函数, 非debug模式中输出任何东西, 正确的程序不应有任何警告
-    * \param message 待打印的话
-    */
-   inline void warning_or_error([[maybe_unused]] const char* message);
+   const evil_t evil;
 } // namespace TAT
 
 // clang-format off

@@ -29,6 +29,7 @@ namespace TAT {
       // too easy so not use edge_operator
       auto result = Tensor<ScalarType, Symmetry>{};
       result.core = core;
+      result.names.reserve(names.size());
       std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](Name name) {
          if (auto position = dictionary.find(name); position == dictionary.end()) {
             return name;
@@ -41,9 +42,8 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   template<class T, class>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::transpose(T&& target_names) const {
-      return edge_operator({}, {}, {}, {}, std::forward<T>(target_names));
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::transpose(std::vector<Name> target_names) const {
+      return edge_operator({}, {}, {}, {}, std::move(target_names));
    }
 
    template<class ScalarType, class Symmetry>
@@ -62,6 +62,7 @@ namespace TAT {
       // delete edge from names_before_merge if not exist
       for (auto& [name_after_merge, names_before_merge] : merge) {
          auto new_names_before_merge = std::vector<Name>();
+         new_names_before_merge.reserve(names_before_merge.size());
          for (const auto& i : names_before_merge) {
             if (auto found = name_to_index.find(i); found != name_to_index.end()) {
                new_names_before_merge.push_back(i);
@@ -73,6 +74,7 @@ namespace TAT {
          // 根据edge_operator中的操作实际上就是消除了这个merge
       }
       std::vector<Name> target_name;
+      target_name.reserve(names.size());
       for (auto iterator = names.rbegin(); iterator != names.rend(); ++iterator) {
          // 找到且最后 -> 添加新的
          // 找到不最后 -> 不做事
@@ -119,6 +121,7 @@ namespace TAT {
       }
       // 生成target_name
       std::vector<Name> target_name;
+      target_name.reserve(names.size()); // 不够, 但是可以减少new的次数
       for (const auto& n : names) {
          if (auto found = split.find(n); found != split.end()) {
             for (const auto& edge_after_split : found->second) {

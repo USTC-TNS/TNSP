@@ -60,6 +60,7 @@ namespace TAT {
          auto real_result_edge = &tensor_1.core->edges;                                                               \
          auto new_result_edge = std::vector<Edge<Symmetry>>();                                                        \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
+            new_result_edge.reserve(tensor_1.names.size());                                                           \
             for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
                new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
                for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                 \

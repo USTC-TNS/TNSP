@@ -200,6 +200,9 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
+      if (!tensor.core) {
+         return out << "{" << console_red << "UNINITIALIZED" << console_origin << "}";
+      }
       out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names;
       out << ',' << console_green << "edges" << console_origin << ':';

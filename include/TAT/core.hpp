@@ -88,8 +88,7 @@ namespace TAT {
        * \note 使用auto_reverse时, 原则上构造时费米对称性值应该全正或全负, 如果不是这样, 结果会难以理解
        * \note 将会自动删除不出现于数据中的对称性
        */
-      template<class T = std::vector<Edge<Symmetry>>, class = std::enable_if_t<std::is_convertible_v<T, std::vector<Edge<Symmetry>>>>>
-      Core(T&& initial_edge, [[maybe_unused]] const bool auto_reverse = false) : edges(std::forward<T>(initial_edge)) {
+      Core(std::vector<Edge<Symmetry>> initial_edge, [[maybe_unused]] const bool auto_reverse = false) : edges(std::move(initial_edge)) {
          // 自动翻转边
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             if (auto_reverse) {
@@ -100,18 +99,19 @@ namespace TAT {
          }
          // 生成数据
          auto symmetries_list = initialize_block_symmetries_with_check(edges);
-         for (const auto& [symmetries, size] : symmetries_list) {
+         for (auto& [symmetries, size] : symmetries_list) {
             blocks[symmetries] = vector<ScalarType>(size);
          }
          // 删除不在block中用到的symmetry
+         const Rank rank = edges.size();
          auto edge_mark = std::vector<std::map<Symmetry, bool>>();
+         edge_mark.reserve(rank);
          for (const auto& edge : edges) {
             auto& this_mark = edge_mark.emplace_back();
             for (const auto& [symmetry, _] : edge.map) {
                this_mark[symmetry] = true;
             }
          }
-         const Rank rank = edges.size();
          for (const auto& [symmetries, _] : blocks) {
             for (Rank i = 0; i < rank; i++) {
                edge_mark[i].at(symmetries[i]) = false;

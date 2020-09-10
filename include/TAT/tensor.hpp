@@ -35,13 +35,6 @@
 #include "symmetry.hpp"
 
 namespace TAT {
-   /*
-    * TODO  在python中写更多的test
-    *  开始慢一点可以，但一定正确，需要
-    *  先用su、gm来测试
-    *  更多的文档和注释
-    */
-
    /**
     * \brief TAT is A Tensor library!
     * \tparam ScalarType 张量内的标量类型
@@ -76,15 +69,10 @@ namespace TAT {
        * \param auto_reverse 费米对称性是否自动根据是否有负值整个反转
        * \see Core
        */
-      template<
-            class U = std::vector<Name>,
-            class T = std::vector<Edge<Symmetry>>,
-            class = std::enable_if_t<std::is_convertible_v<U, std::vector<Name>>>,
-            class = std::enable_if_t<std::is_convertible_v<T, std::vector<Edge<Symmetry>>>>>
-      Tensor(U&& names_init, T&& edges_init, const bool auto_reverse = false) :
-            names(std::forward<U>(names_init)),
+      Tensor(std::vector<Name> names_init, std::vector<Edge<Symmetry>> edges_init, const bool auto_reverse = false) :
+            names(std::move(names_init)),
             name_to_index(construct_name_to_index(names)),
-            core(std::make_shared<Core<ScalarType, Symmetry>>(std::forward<T>(edges_init), auto_reverse)) {
+            core(std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges_init), auto_reverse)) {
          check_valid_name(names, core->edges.size());
       }
 
@@ -346,13 +334,13 @@ namespace TAT {
        * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
        * \note 本函数对转置外不标准的腿的输入是脆弱的
        */
-      template<class T = std::vector<Name>, class = std::enable_if_t<std::is_convertible_v<T, std::vector<Name>>>>
+      template<bool split_edge_is_pointer = false>
       [[nodiscard]] Tensor<ScalarType, Symmetry> edge_operator(
             const std::map<Name, Name>& rename_map,
-            const std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>& split_map,
+            const std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, split_edge_is_pointer>>>>& split_map,
             const std::set<Name>& reversed_name,
             const std::map<Name, std::vector<Name>>& merge_map,
-            T&& new_names,
+            std::vector<Name> new_names,
             const bool apply_parity = false,
             const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}},
             const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) const;
@@ -370,8 +358,7 @@ namespace TAT {
        * \param target_names 转置后的目标边的名称顺序
        * \return 转置后的结果张量
        */
-      template<class T = std::vector<Name>, class = std::enable_if_t<std::is_convertible_v<T, std::vector<Name>>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry> transpose(T&& target_names) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry> transpose(std::vector<Name> target_names) const;
 
       /**
        * \brief 将费米张量的一些边进行反转
@@ -410,8 +397,7 @@ namespace TAT {
             const bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {}) const;
 
-      // TODO: 不转置成矩阵直接乘积的可能
-      // 这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
+      // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
       /**
        * \brief 两个张量的缩并运算
        * \param tensor_1 参与缩并的第一个张量
@@ -435,11 +421,10 @@ namespace TAT {
        * \return 缩并后的结果
        */
       [[nodiscard]] ScalarType contract_all_edge(const Tensor<ScalarType, Symmetry>& other) const {
+         // other不含有的边会在contract中自动删除
          auto contract_names = std::set<std::tuple<Name, Name>>();
          for (const auto& i : names) {
-            if (auto found = other.name_to_index.find(i); found != other.name_to_index.end()) {
-               contract_names.insert({i, i});
-            }
+            contract_names.insert({i, i});
          }
          return contract(other, contract_names);
       }
@@ -461,6 +446,7 @@ namespace TAT {
             return copy();
          }
          auto result_edges = std::vector<Edge<Symmetry>>();
+         result_edges.reserve(names.size());
          for (const auto& edge : core->edges) {
             auto& result_edge = result_edges.emplace_back();
             if constexpr (is_fermi_symmetry_v<Symmetry>) {

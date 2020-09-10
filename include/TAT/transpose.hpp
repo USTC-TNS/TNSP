@@ -491,7 +491,7 @@ namespace TAT {
          return;
       }
 
-      auto [cutting_plan_source_to_destination,
+      const auto& [cutting_plan_source_to_destination,
             cutting_plan_destination_to_source,
             cutting_dimensions_source,
             cutting_dimensions_destination,
@@ -507,7 +507,7 @@ namespace TAT {
                   leading_destination,
                   rank);
 
-      auto [merging_plan_source_to_destination,
+      const auto& [merging_plan_source_to_destination,
             merging_plan_destination_to_source,
             merging_dimensions_source,
             merging_dimensions_destination,

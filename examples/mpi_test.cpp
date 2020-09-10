@@ -26,10 +26,11 @@ namespace mpi = TAT::mpi;
 
 int main() {
    auto input = Tensor(mpi::mpi.rank);
-   auto result = mpi::summary(input, 0);
-   result = mpi::broadcast(result, 0);
+   auto result = mpi::summary(input, mpi::mpi.size / 2);
+   mpi::mpi_out(mpi::mpi.size / 2) << result << "\n";
+   result = mpi::broadcast(result, mpi::mpi.size / 2);
    mpi::barrier();
-   std::cout << result << "\n";
+   std::cout << mpi::mpi.rank << " " << result << "\n";
    // TODO cannot use endl
    return 0;
 }

@@ -106,5 +106,11 @@ namespace TAT {
    struct is_real : std::is_same<T, real_base_t<T>> {};
    template<class T>
    constexpr bool is_real_v = is_real<T>::value;
+
+   /**
+    * \brief 打印警告, 一些即使是严重的错误也会使用本函数, 非debug模式中输出任何东西, 正确的程序不应有任何警告
+    * \param message 待打印的话
+    */
+   inline void warning_or_error([[maybe_unused]] const char* message);
 } // namespace TAT
 #endif

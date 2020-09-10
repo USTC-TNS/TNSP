@@ -48,11 +48,8 @@ namespace TAT {
       /**
        * \brief 由对称性到维度的映射表直接构造
        */
-      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      BoseEdge(T&& map) : map(std::forward<T>(map)) {}
-      /**
-       * \brief 由对称性到维度的映射表直接构造, 但是initializer_list需要显式写出
-       */
+      BoseEdge(std::map<Symmetry, Size>&& map) : map(std::move(map)) {}
+      BoseEdge(const std::map<Symmetry, Size>& map) : map(map) {}
       BoseEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       /**
@@ -63,10 +60,8 @@ namespace TAT {
             map[symmetry] = 1;
          }
       }
-      /**
-       * \brief 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1, 但是initializer_list需要显式写出
-       */
       BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::set<Symmetry>(symmetries)) {}
+
       /**
        * \brief 构造一个平凡的边, 仅含一个对称性
        */
@@ -104,11 +99,8 @@ namespace TAT {
       /**
        * \brief 由对称性到维度的映射表直接构造
        */
-      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      FermiEdge(T&& map) : map(std::forward<T>(map)) {}
-      /**
-       * \brief 由对称性到维度的映射表直接构造, 但是initializer_list需要显式写出
-       */
+      FermiEdge(std::map<Symmetry, Size>&& map) : map(std::move(map)) {}
+      FermiEdge(const std::map<Symmetry, Size>& map) : map(map) {}
       FermiEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       /**
@@ -119,10 +111,8 @@ namespace TAT {
             map[symmetry] = 1;
          }
       }
-      /**
-       * \brief 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1, 但是initializer_list需要显式写出
-       */
       FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::set<Symmetry>(symmetries)) {}
+
       /**
        * \brief 构造一个平凡的边, 仅含一个对称性
        */
@@ -131,11 +121,8 @@ namespace TAT {
       /**
        * \brief 由费米箭头方向和对称性到维度的映射表直接构造
        */
-      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(std::forward<T>(map)) {}
-      /**
-       * \brief 由费米箭头方向和对称性到维度的映射表直接构造, 但是initializer_list需要显式写出
-       */
+      FermiEdge(const Arrow arrow, std::map<Symmetry, Size>&& map) : arrow(arrow), map(std::move(map)) {}
+      FermiEdge(const Arrow arrow, const std::map<Symmetry, Size>& map) : arrow(arrow), map(map) {}
       FermiEdge(const Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
 
       /**
@@ -209,6 +196,7 @@ namespace TAT {
       using Symmetry = typename T::symmetry_type;
       using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
       auto symmetry_iterator_list = MapIteratorList();
+      symmetry_iterator_list.reserve(rank);
       for (auto i = 0; i != rank; ++i) {
          const auto& map = edges[i].map;
          auto symmetry_iterator = map.begin();
@@ -245,10 +233,10 @@ namespace TAT {
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
       using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
-      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
-      auto symmetries = std::vector<Symmetry>(edges.size());
-      auto sizes = std::vector<Size>(edges.size());
       Rank rank = edges.size();
+      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
+      auto symmetries = std::vector<Symmetry>(rank);
+      auto sizes = std::vector<Size>(rank);
       loop_edge(
             edges.data(),
             rank,
