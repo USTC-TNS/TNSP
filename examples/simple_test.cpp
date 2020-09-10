@@ -358,7 +358,7 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.value.begin()->second << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
+      std::cout << decltype(v)::contract(v.multiple(s, "F", 'u'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {
       auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
@@ -396,7 +396,7 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.value.begin()->second << "\n";
-      std::cout << decltype(v)::contract(v.multiple(s, "F"), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.multiple(s, "F", 'u'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);

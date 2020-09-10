@@ -68,6 +68,9 @@ namespace TAT {
             }
          }
          names_before_merge.swap(new_names_before_merge);
+         // if len(names_before_merge) == 0, it create a trivial edge?
+         // 不, 在反转target_name中, 如果原merge列表为空则不产生新的target_name
+         // 根据edge_operator中的操作实际上就是消除了这个merge
       }
       std::vector<Name> target_name;
       for (auto iterator = names.rbegin(); iterator != names.rend(); ++iterator) {
@@ -95,7 +98,7 @@ namespace TAT {
             target_name.push_back(name_after_merge);
          }
       }
-      reverse(target_name.begin(), target_name.end());
+      std::reverse(target_name.begin(), target_name.end());
       return edge_operator(
             {}, {}, {}, merge, std::move(target_name), apply_parity, {{{}, {}, parity_exclude_name_reverse, parity_exclude_name_merge}});
    }
@@ -106,6 +109,7 @@ namespace TAT {
          const bool apply_parity,
          const std::set<Name>& parity_exclude_name_split) const {
       // 删除不存在的边
+      // 根据edge_operator中的操作, 这应该是多余的, 不在names中的元素会自动忽略
       for (auto iterator = split.begin(); iterator != split.end();) {
          if (auto found = name_to_index.find(iterator->first); found == name_to_index.end()) {
             iterator = split.erase(iterator);

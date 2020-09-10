@@ -534,7 +534,7 @@ namespace TAT {
        * \param direction 奇异值是含有一个方向的, SVD的结果中U还是V将与S相乘在这里被选定
        * \return 缩并的结果
        */
-      Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, char direction = 'u') & {
+      Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, char direction) & {
          bool different_direction;
          if (direction == 'u' || direction == 'U') {
             different_direction = false;
@@ -584,7 +584,7 @@ namespace TAT {
          return *this;
       }
 
-      Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, char direction = 'u') && {
+      Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, char direction) && {
          return std::move(this->multiple(S, name, direction));
       }
 
