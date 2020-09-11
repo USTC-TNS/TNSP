@@ -5,13 +5,13 @@ on: [push, pull_request]
 jobs:
   check:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
     - name: checkout
       uses: actions/checkout@v2
     - name: dependence
-      run: sudo apt-get install -y mpi-default-dev liblapack-dev
+      run: sudo apt-get install -y mpi-default-dev intel-mkl
     - name: directory
       run: cmake -E make_directory ${{runner.workspace}}/build
     - name: configure

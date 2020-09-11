@@ -63,7 +63,7 @@ namespace TAT {
       }
       ~evil_t();
    };
-   const evil_t evil;
+   inline const evil_t evil;
 } // namespace TAT
 
 // clang-format off

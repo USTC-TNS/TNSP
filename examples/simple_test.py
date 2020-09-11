@@ -264,7 +264,7 @@ def test_svd():
     print(u)
     print(v)
     print(s)
-    print(v.contract(v, {("B", "B"), ("C", "C")}).transform(
+    print(v.contract(v.edge_rename({"F": "F2"}), {("B", "B"), ("C", "C")}).transform(
         lambda i: i if abs(i) > 1e-5 else 0))
     print(v.multiple(s, "F", 'v').contract(
         u, {("F", "E")}).transpose(["A", "B", "C", "D"]))
@@ -276,8 +276,8 @@ def test_svd():
     print(s)
     print(v)
     print(c)
-    print(v.copy().multiple(s, "F", 'v').contract(
-        u, {("F", "E")}).transpose(["A", "B", "C", "D"]).transform(lambda x: 0 if abs(x) < 0.01 else x))
+    print(v.copy().multiple(s, "F", 'v').contract(u, {("F", "E")}).transpose(
+        ["A", "B", "C", "D"]).transform(lambda x: 0 if abs(x) < 0.01 else x))
     print(v.contract(u.copy().multiple(s, "E", 'u'), {
         ("F", "E")}).transpose(["A", "B", "C", "D"]).transform(lambda x: 0 if abs(x) < 0.01 else x))
 

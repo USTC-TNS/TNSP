@@ -252,7 +252,7 @@ namespace TAT {
       // rank_4 and name_5 and rank_5
       // name build by merge may contain some edge not exist
       if (rank_at_transpose != name_before_merge.size()) {
-         warning_or_error("Different Rank When Transpose");
+         throw TAT_error("Tensor to transpose with Different Rank");
       }
 
       // 1.5 转置方案
@@ -270,7 +270,7 @@ namespace TAT {
          if (auto found = name_to_index_after_split.find(name_before_merge[i]); found != name_to_index_after_split.end()) {
             plan_destination_to_source[i] = found->second;
          } else {
-            warning_or_error("Different Name When Transpose");
+            throw TAT_error("Tensor to transpose with incompatible name list");
          }
          plan_source_to_destination[plan_destination_to_source[i]] = i;
          edge_after_transpose.push_back(edge_before_transpose[plan_destination_to_source[i]]);

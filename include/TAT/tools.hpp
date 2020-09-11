@@ -44,7 +44,7 @@ namespace TAT {
 
          int length = line_1.size();
          if (length != line_2.size()) {
-            warning_or_error("Different Length When Do Two Line to One Line");
+            throw TAT_error("Different Length When Do Two Line to One Line");
          }
          // std::clog << "Two Line to One Line Start\n";
 

@@ -51,6 +51,9 @@ namespace TAT {
          }                                                                                                            \
          return result;                                                                                               \
       } else {                                                                                                        \
+         if (tensor_1.names.size() != tensor_2.names.size()) {                                                        \
+            throw TAT_error("Try to do scalar operator on two different rank tensor");                                \
+         }                                                                                                            \
          auto real_tensor_2 = &tensor_2;                                                                              \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                         \
          if (tensor_1.names != tensor_2.names) {                                                                      \
@@ -62,9 +65,14 @@ namespace TAT {
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
             new_result_edge.reserve(tensor_1.names.size());                                                           \
             for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
-               new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
+               auto& single_new_edge = new_result_edge.emplace_back(tensor_1.core->edges[i]);                         \
                for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                 \
-                  new_result_edge.back().map[symmetry] = dimension;                                                   \
+                  auto found = single_new_edge.map.find(symmetry);                                                    \
+                  if (found == single_new_edge.map.end()) {                                                           \
+                     single_new_edge.map.insert({symmetry, dimension});                                               \
+                  } else if (found->second != dimension) {                                                            \
+                     throw TAT_error("Try to do scalar operator on two tensors which edges not compatible");          \
+                  }                                                                                                   \
                }                                                                                                      \
             }                                                                                                         \
             real_result_edge = &new_result_edge;                                                                      \
@@ -142,7 +150,7 @@ namespace TAT {
             real_tensor_2 = &new_tensor_2;                                                                                     \
          }                                                                                                                     \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                             \
-            warning_or_error("Scalar Operator In Different Shape Tensor, Maybe You Need Outplace Operator");                   \
+            throw TAT_error("Scalar Operator In Different Shape Tensor, Maybe You Need Outplace Operator");                    \
          }                                                                                                                     \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
             ScalarType1* __restrict a = block.data();                                                                          \

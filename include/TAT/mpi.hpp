@@ -102,6 +102,9 @@ namespace TAT {
          if (mpi.size == 1) {
             return tensor.copy(); // rvalue
          }
+         if (0 > root || root >= mpi.size) {
+            throw TAT_error("Invalid root rank when mpi broadcast a tensor");
+         }
          const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
          Tensor<ScalarType, Symmetry> result;
          // get from father
@@ -130,6 +133,9 @@ namespace TAT {
       Tensor<ScalarType, Symmetry> reduce(const Tensor<ScalarType, Symmetry>& tensor, const int root, Func&& function) {
          if (mpi.size == 1) {
             return tensor.copy(); // rvalue
+         }
+         if (0 > root || root >= mpi.size) {
+            throw TAT_error("Invalid root rank when mpi reduce a tensor");
          }
          const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
          Tensor<ScalarType, Symmetry> result;

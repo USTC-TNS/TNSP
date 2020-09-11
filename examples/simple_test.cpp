@@ -367,7 +367,9 @@ void test_svd() {
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s.value.begin()->second << "\n";
-      std::cout << decltype(v)::contract(v, v, {{"B", "B"}, {"C", "C"}}).transform([](auto i) { return std::abs(i) > 1e-5 ? i : 0; }) << "\n";
+      std::cout << decltype(v)::contract(v, v.edge_rename({{"F", "F2"}}), {{"B", "B"}, {"C", "C"}}).transform([](auto i) {
+         return std::abs(i) > 1e-5 ? i : 0;
+      }) << "\n";
       std::cout << decltype(v)::contract(v.multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {

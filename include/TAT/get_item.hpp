@@ -33,7 +33,11 @@ namespace TAT {
       auto symmetries = std::vector<Symmetry>();
       symmetries.reserve(names.size());
       for (const auto& name : names) {
-         symmetries.push_back(position.at(name));
+         if (auto found = position.find(name); found != position.end()) {
+            symmetries.push_back(found->second);
+         } else {
+            throw TAT_error("Name not found in position map when finding block");
+         }
       }
       return symmetries;
    }
@@ -50,7 +54,11 @@ namespace TAT {
       scalar_position.reserve(rank);
       dimensions.reserve(rank);
       for (auto i = 0; i < rank; i++) {
-         scalar_position.push_back(position.at(names[i]));
+         if (auto found = position.find(names[i]); found != position.end()) {
+            scalar_position.push_back(found->second);
+         } else {
+            throw TAT_error("Name not found in position map when finding offset");
+         }
          dimensions.push_back(core.edges[i].map.begin()->second);
       }
       Size offset = 0;
@@ -78,7 +86,11 @@ namespace TAT {
       dimensions.reserve(rank);
       for (auto i = 0; i < rank; i++) {
          const auto& name = names[i];
-         const auto& [symmetry, index] = position.at(name);
+         auto found = position.find(name);
+         if (found == position.end()) {
+            throw TAT_error("Name not found in position map when finding block and offset");
+         }
+         const auto& [symmetry, index] = found->second;
          symmetries.push_back(symmetry);
          scalar_position.push_back(index);
          dimensions.push_back(core.edges[i].map.at(symmetry));

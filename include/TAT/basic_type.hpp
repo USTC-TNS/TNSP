@@ -22,6 +22,7 @@
 #define TAT_BASIC_TYPE_HPP
 
 #include <complex>
+#include <stdexcept>
 #include <type_traits>
 
 /**
@@ -112,5 +113,9 @@ namespace TAT {
     * \param message 待打印的话
     */
    inline void warning_or_error([[maybe_unused]] const char* message);
+
+   struct TAT_error : std::runtime_error {
+      using std::runtime_error::runtime_error;
+   };
 } // namespace TAT
 #endif

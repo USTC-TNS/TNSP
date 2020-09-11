@@ -93,10 +93,35 @@ namespace TAT {
    TAT_DEFINE_INTERNAL_NAME(Trace1);
    TAT_DEFINE_INTERNAL_NAME(Trace2);
    TAT_DEFINE_INTERNAL_NAME(Trace3);
-   TAT_DEFINE_INTERNAL_NAME(Up);
-   TAT_DEFINE_INTERNAL_NAME(Down);
-   TAT_DEFINE_INTERNAL_NAME(Left);
-   TAT_DEFINE_INTERNAL_NAME(Right);
+#define TAT_DEFINE_COMMON_NAME_WITH_INDEX(x) \
+   TAT_DEFINE_INTERNAL_NAME(x);              \
+   TAT_DEFINE_INTERNAL_NAME(x##0);           \
+   TAT_DEFINE_INTERNAL_NAME(x##1);           \
+   TAT_DEFINE_INTERNAL_NAME(x##2);           \
+   TAT_DEFINE_INTERNAL_NAME(x##3);           \
+   TAT_DEFINE_INTERNAL_NAME(x##4);           \
+   TAT_DEFINE_INTERNAL_NAME(x##5);           \
+   TAT_DEFINE_INTERNAL_NAME(x##6);           \
+   TAT_DEFINE_INTERNAL_NAME(x##7);           \
+   TAT_DEFINE_INTERNAL_NAME(x##8);           \
+   TAT_DEFINE_INTERNAL_NAME(x##9);
+   namespace common_name {
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(P);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Phy);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(L);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Left);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(R);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Right);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(U);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Up);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(D);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Down);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(I);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(In);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(O);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Out);
+   } // namespace common_name
+#undef TAT_DEFINE_COMMON_NAME_WITH_INDEX
 #undef TAT_DEFINE_INTERNAL_NAME
 
    /**
@@ -117,10 +142,10 @@ namespace TAT {
       const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
       const auto result_length = names.size() == rank;
       if (!result_duplicated) {
-         warning_or_error("Wrong name list length");
+         throw TAT_error("Duplicated names in name list");
       }
       if (!result_length) {
-         warning_or_error("Duplicated names in name list");
+         throw TAT_error("Wrong name list length which no equals to expected length");
       }
       return result_duplicated && result_length;
    }

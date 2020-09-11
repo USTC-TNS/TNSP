@@ -336,10 +336,12 @@ namespace TAT {
             if (found != edge_2.map.end()) {
                // found
                if (const auto dimension_2 = found->second; dimension_2 != dimension_1) {
-                  warning_or_error("Different Dimension to Contract");
+                  throw TAT_error("Different Dimension to Contract");
+#if 0
                   if (dimension_2 < dimension_1) {
                      this_delete_1[symmetry_1] = dimension_2;
                   }
+#endif
                }
             } else {
                // not found
@@ -357,10 +359,12 @@ namespace TAT {
             if (found != edge_1.map.end()) {
                // found
                if (const auto dimension_1 = found->second; dimension_1 != dimension_2) {
-                  warning_or_error("Different Dimension to Contract");
+                  throw TAT_error("Different Dimension to Contract");
+#if 0
                   if (dimension_1 < dimension_2) {
                      this_delete_2[symmetry_2] = dimension_1;
                   }
+#endif
                }
             } else {
                // not found

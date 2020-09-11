@@ -94,7 +94,7 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         warning_or_error("Why Copy");
+         warning_or_error("Why Copy a Tensor");
       };
       Tensor(Tensor&& other) = default;
       Tensor& operator=(const Tensor& other) {
@@ -104,7 +104,7 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         warning_or_error("Why Copy");
+         warning_or_error("Why Copy a Tensor");
          return *this;
       };
       Tensor& operator=(Tensor&& other) = default;
@@ -123,11 +123,8 @@ namespace TAT {
        */
       operator ScalarType() const {
          if (core->blocks.size() != 1 || core->blocks.begin()->second.size() != 1) {
-            warning_or_error("Try to get the only element of the tensor which contains more than one element");
+            throw TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
-         // if (!names.empty()) {
-         //   warning_or_error("Conversion From Multiple Rank Tensor To Scalar");
-         //}
          return core->blocks.begin()->second[0];
       }
 
@@ -534,8 +531,8 @@ namespace TAT {
          }
          const auto found = name_to_index.find(name);
          if (found == name_to_index.end()) {
-            warning_or_error("Edge not Found in Multiple");
-            return *this;
+            throw TAT_error("Edge not Found in Multiple");
+            // return *this;
          }
          auto index = found->second;
          for (auto& [symmetries, block] : core->blocks) {
@@ -555,7 +552,7 @@ namespace TAT {
                n *= core->edges[i].map.at(symmetries[i]);
             }
             if (vector_in_S.size() != k) {
-               warning_or_error("Vector Size Invalid in Multiple");
+               throw TAT_error("Vector Size incompatible in Multiple with a tensor");
             }
             auto* data = block.data();
             for (Size a = 0; a < m; a++) {
