@@ -68,7 +68,7 @@ struct PBC {
          up_to_down_aux[0][j] = lattice.at(0).at(j).copy();
       }
       for (int i = 0; i < L - 1; i++) {
-         //std::clog << "Dealing with Line " << i << " and Line " << i + 1 << "\n";
+         // std::clog << "Dealing with Line " << i << " and Line " << i + 1 << "\n";
          auto line_1 = std::vector<const Tensor*>();
          auto line_2 = std::vector<const Tensor*>();
          for (int j = 0; j < L; j++) {
@@ -83,19 +83,19 @@ struct PBC {
                                 {{"right_1", "left_1"}, {"right_2", "left_2"}})
                                 .svd({"up1", "down1", "left"}, "right", "left", D_cut);
          new_line[0] = v.edge_rename({{"up2", "up"}, {"down2", "down"}});
-         new_line[L - 1] = u.multiple(s, "right", false).edge_rename({{"up1", "up"}, {"down1", "down"}});
+         new_line[L - 1] = u.multiple(s, "right", 'u').edge_rename({{"up1", "up"}, {"down1", "down"}});
          // std::clog << "new line:\n";
          for (int j = 0; j < L; j++) {
-            //std::clog << new_line[j] << "\n";
+            // std::clog << new_line[j] << "\n";
             up_to_down_aux[i + 1][j] = std::move(new_line[j]);
          }
       }
-      //std::clog << "end 2to1\n";
+      // std::clog << "end 2to1\n";
       auto result = Tensor(1);
       for (int j = 0; j < L; j++) {
          std::clog << up_to_down_aux[L - 1][j] << "\n";
          result = result.contract(up_to_down_aux[L - 1][j].trace({{"up", "down"}}), {{"right", "left"}});
-         //std::clog << result << "\n";
+         // std::clog << result << "\n";
       }
       // std::cout << result << "\n";
       std::clog << result << "\n";

@@ -1,7 +1,7 @@
 /**
  * \file implement.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,10 +22,11 @@
 #define TAT_IMPLEMENT_HPP
 
 #include "contract.hpp"
-#include "edge_misc.hpp"
+#include "edge_miscellaneous.hpp"
 #include "edge_operator.hpp"
 #include "get_item.hpp"
 #include "io.hpp"
+#include "mpi.hpp"
 #include "scalar.hpp"
 #include "svd.hpp"
 #include "trace.hpp"

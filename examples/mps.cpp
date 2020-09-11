@@ -79,7 +79,7 @@ struct MPS {
          auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
          auto [u, s, v] = ABH.svd({"Left", "O0"}, "Right", "Left", dimension);
          chain[i] = std::move(u).edge_rename({{"O0", "Phy"}});
-         chain[i + 1] = std::move(v.multiple(s, "Left", true)).edge_rename({{"O1", "Phy"}});
+         chain[i + 1] = std::move(v.multiple(s, "Left", 'v')).edge_rename({{"O1", "Phy"}});
          chain[i] = chain[i] / chain[i].norm<-1>();
          chain[i + 1] = chain[i + 1] / chain[i + 1].norm<-1>();
       }
@@ -89,7 +89,7 @@ struct MPS {
          auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
          auto [u, s, v] = ABH.svd({"Right", "O0"}, "Left", "Right", dimension);
          chain[i + 1] = std::move(u).edge_rename({{"O0", "Phy"}});
-         chain[i] = std::move(v.multiple(s, "Right", true)).edge_rename({{"O1", "Phy"}});
+         chain[i] = std::move(v.multiple(s, "Right", 'v')).edge_rename({{"O1", "Phy"}});
          chain[i + 1] = chain[i + 1] / chain[i + 1].norm<-1>();
          chain[i] = chain[i] / chain[i].norm<-1>();
       }

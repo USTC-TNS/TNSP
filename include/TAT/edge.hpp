@@ -1,7 +1,7 @@
 /**
  * \file edge.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,17 +24,19 @@
 #include <map>
 #include <set>
 
-#include "misc.hpp"
+#include "basic_type.hpp"
+#include "symmetry.hpp"
 
 namespace TAT {
    /**
     * \see Edge
     */
-   template<class Symmetry>
+   template<class Symmetry, bool is_pointer = false>
    struct BoseEdge {
       using symmetry_type = Symmetry;
+      using map_type = std::conditional_t<is_pointer, const std::map<Symmetry, Size>&, std::map<Symmetry, Size>>;
 
-      std::map<Symmetry, Size> map = {};
+      map_type map;
 
       BoseEdge() = default;
       BoseEdge(const BoseEdge&) = default;
@@ -43,29 +45,40 @@ namespace TAT {
       BoseEdge& operator=(BoseEdge&&) = default;
       ~BoseEdge() = default;
 
-      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      BoseEdge(T&& map) : map(std::forward<T>(map)) {}
-      BoseEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
+      /**
+       * \brief 由对称性到维度的映射表直接构造
+       */
+      BoseEdge(std::map<Symmetry, Size>&& map) : map(std::move(map)) {}
+      BoseEdge(const std::map<Symmetry, Size>& map) : map(map) {}
+      BoseEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
+      /**
+       * \brief 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
+       */
       BoseEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
             map[symmetry] = 1;
          }
       }
       BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::set<Symmetry>(symmetries)) {}
+
+      /**
+       * \brief 构造一个平凡的边, 仅含一个对称性
+       */
       BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
-   template<class Symmetry>
-   bool operator==(const BoseEdge<Symmetry>& edge_1, const BoseEdge<Symmetry>& edge_2) {
+   template<class Symmetry, bool is_pointer>
+   bool operator==(const BoseEdge<Symmetry, is_pointer>& edge_1, const BoseEdge<Symmetry, is_pointer>& edge_2) {
       return edge_1.map == edge_2.map;
    }
 
    /**
     * \see Edge
     */
-   template<class Symmetry>
+   template<class Symmetry, bool is_pointer = false>
    struct FermiEdge {
       using symmetry_type = Symmetry;
+      using map_type = std::conditional_t<is_pointer, const std::map<Symmetry, Size>&, std::map<Symmetry, Size>>;
 
       /**
        * \brief 费米箭头方向
@@ -74,7 +87,7 @@ namespace TAT {
        * \see arrow_valid
        */
       Arrow arrow = false;
-      std::map<Symmetry, Size> map = {};
+      map_type map = {};
 
       FermiEdge() = default;
       FermiEdge(const FermiEdge&) = default;
@@ -83,22 +96,38 @@ namespace TAT {
       FermiEdge& operator=(FermiEdge&&) = default;
       ~FermiEdge() = default;
 
-      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      FermiEdge(T&& map) : map(std::forward<T>(map)) {}
-      FermiEdge(std::initializer_list<std::pair<const Symmetry, Size>> map) : map(map) {}
+      /**
+       * \brief 由对称性到维度的映射表直接构造
+       */
+      FermiEdge(std::map<Symmetry, Size>&& map) : map(std::move(map)) {}
+      FermiEdge(const std::map<Symmetry, Size>& map) : map(map) {}
+      FermiEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
+      /**
+       * \brief 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
+       */
       FermiEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
             map[symmetry] = 1;
          }
       }
       FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::set<Symmetry>(symmetries)) {}
+
+      /**
+       * \brief 构造一个平凡的边, 仅含一个对称性
+       */
       FermiEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
 
-      template<class T = std::map<Symmetry, Size>, class = std::enable_if_t<std::is_convertible_v<T, std::map<Symmetry, Size>>>>
-      FermiEdge(const Arrow arrow, T&& map) : arrow(arrow), map(std::forward<T>(map)) {}
-      FermiEdge(const Arrow arrow, std::initializer_list<std::pair<const Symmetry, Size>> map) : arrow(arrow), map(map) {}
+      /**
+       * \brief 由费米箭头方向和对称性到维度的映射表直接构造
+       */
+      FermiEdge(const Arrow arrow, std::map<Symmetry, Size>&& map) : arrow(arrow), map(std::move(map)) {}
+      FermiEdge(const Arrow arrow, const std::map<Symmetry, Size>& map) : arrow(arrow), map(map) {}
+      FermiEdge(const Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
 
+      /**
+       * \brief 由费米子数自动构造箭头方向, 虽然这个不一定需要一致
+       */
       void possible_reverse() {
          for (const auto& [symmetry, size] : map) {
             if (symmetry.fermi < 0) {
@@ -108,6 +137,9 @@ namespace TAT {
          }
       }
 
+      /**
+       * \brief 检查箭头是否有效, 即含有非零的费米子数
+       */
       [[nodiscard]] bool arrow_valid() const {
          for (const auto& [symmetry, size] : map) {
             if (symmetry.fermi != 0) {
@@ -117,90 +149,36 @@ namespace TAT {
          return false;
       }
    };
-   template<class Symmetry>
-   bool operator==(const FermiEdge<Symmetry>& edge_1, const FermiEdge<Symmetry>& edge_2) {
+   template<class Symmetry, bool is_pointer>
+   bool operator==(const FermiEdge<Symmetry, is_pointer>& edge_1, const FermiEdge<Symmetry, is_pointer>& edge_2) {
       return edge_1.map == edge_2.map && edge_1.arrow == edge_2.arrow;
    }
 
-   template<class Symmetry>
-   using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry>, BoseEdge<Symmetry>>;
+   template<class Symmetry, bool is_pointer>
+   using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry, is_pointer>, BoseEdge<Symmetry, is_pointer>>;
    /**
     * \brief 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
     * \tparam Symmetry 张量所拥有的对称性
+    * \tparam is_pointer map是否为引用而非真是存储着数据的伪边
     * \see BoseEdge, FermiEdge
     */
-   template<class Symmetry, class = std::enable_if_t<is_symmetry_v<Symmetry>>>
-   struct Edge : public EdgeBase<Symmetry> {
-      using EdgeBase<Symmetry>::EdgeBase;
+   template<class Symmetry, bool is_pointer = false>
+   struct Edge : EdgeBase<Symmetry, is_pointer> {
+      using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
+
+      using EdgeBase<Symmetry, is_pointer>::EdgeBase;
    };
 
-   template<class Symmetry>
-   struct PtrBoseEdge {
-      using symmetry_type = Symmetry;
-
-      const std::map<Symmetry, Size>* map;
-
-      PtrBoseEdge() = default;
-      PtrBoseEdge(const PtrBoseEdge&) = default;
-      PtrBoseEdge(PtrBoseEdge&&) = default;
-      PtrBoseEdge& operator=(const PtrBoseEdge&) = default;
-      PtrBoseEdge& operator=(PtrBoseEdge&&) = default;
-      ~PtrBoseEdge() = default;
-
-      PtrBoseEdge(const std::map<Symmetry, Size>* m) : map(m) {}
-   };
-   template<class Symmetry>
-   struct PtrFermiEdge {
-      using symmetry_type = Symmetry;
-
-      Arrow arrow = false;
-      const std::map<Symmetry, Size>* map = nullptr;
-
-      PtrFermiEdge() = default;
-      PtrFermiEdge(const PtrFermiEdge&) = default;
-      PtrFermiEdge(PtrFermiEdge&&) = default;
-      PtrFermiEdge& operator=(const PtrFermiEdge&) = default;
-      PtrFermiEdge& operator=(PtrFermiEdge&&) = default;
-      ~PtrFermiEdge() = default;
-
-      PtrFermiEdge(const Arrow arrow, const std::map<Symmetry, Size>* map) : arrow(arrow), map(map) {}
-
-      [[nodiscard]] bool arrow_valid() const {
-         for (const auto& [symmetry, size] : *map) {
-            if (symmetry.fermi != 0) {
-               return true;
-            }
-         }
-         return false;
-      }
-   };
-   template<class Symmetry>
-   using PtrEdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, PtrFermiEdge<Symmetry>, PtrBoseEdge<Symmetry>>;
    /**
     * \brief 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
     */
    template<class Symmetry>
-   struct PtrEdge : PtrEdgeBase<Symmetry> {
-      using PtrEdgeBase<Symmetry>::PtrEdgeBase;
-   };
-
-   /**
-    * \brief PtrEdge的辅助函数, 用来提取其中的map
-    * \note 使用方式是remove_pointer(edge.map)
-    */
-   template<class T>
-   const auto& remove_pointer(const T& v) {
-      if constexpr (std::is_pointer_v<T>) {
-         return *v;
-      } else {
-         return v;
-      }
-   }
+   using EdgePointer = Edge<Symmetry, true>;
 
    /**
     * \brief 对一个边的形状列表进行枚举分块, 并做一些其他操作
-    * \tparam T 应是vector<Edge>或者vector<PtrEdge>的iterator
+    * \tparam T 应是vector<Edge>或者vector<EdgePointer>的iterator
     * \param edges 即将要枚举的边列表的开头指针
     * \param rank 即将要枚举的边列表的大小
     * \param rank0 如果边列表为空，则调用rank0后返回
@@ -218,8 +196,9 @@ namespace TAT {
       using Symmetry = typename T::symmetry_type;
       using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
       auto symmetry_iterator_list = MapIteratorList();
+      symmetry_iterator_list.reserve(rank);
       for (auto i = 0; i != rank; ++i) {
-         const auto& map = remove_pointer(edges[i].map);
+         const auto& map = edges[i].map;
          auto symmetry_iterator = map.begin();
          if (symmetry_iterator == map.end()) {
             dims0();
@@ -232,11 +211,11 @@ namespace TAT {
          minimum_changed = operate(symmetry_iterator_list, minimum_changed);
          auto edge_position = rank - 1;
          ++symmetry_iterator_list[edge_position];
-         while (symmetry_iterator_list[edge_position] == remove_pointer(edges[edge_position].map).end()) {
+         while (symmetry_iterator_list[edge_position] == edges[edge_position].map.end()) {
             if (edge_position == 0) {
                return;
             }
-            symmetry_iterator_list[edge_position] = remove_pointer(edges[edge_position].map).begin();
+            symmetry_iterator_list[edge_position] = edges[edge_position].map.begin();
             --edge_position;
             ++symmetry_iterator_list[edge_position];
          }
@@ -247,17 +226,17 @@ namespace TAT {
    /**
     * \brief 根据边的形状的列表, 得到所有满足对称性条件的张量分块
     * \return 分块信息, 为一个vector, 元素为两个类型的tuple, 分别是子块的各个子边对称性值和子块的总大小
-    * \tparam T 为vector<Edge>或者vector<PtrEdge>
+    * \tparam T 为vector<Edge>或者vector<EdgePointer>
     * \see loop_edge
     */
    template<class T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
       using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
-      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
-      auto symmetries = std::vector<Symmetry>(edges.size());
-      auto sizes = std::vector<Size>(edges.size());
       Rank rank = edges.size();
+      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
+      auto symmetries = std::vector<Symmetry>(rank);
+      auto sizes = std::vector<Size>(rank);
       loop_edge(
             edges.data(),
             rank,
@@ -282,5 +261,16 @@ namespace TAT {
             });
       return result;
    }
+
+   /**
+    * \brief 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
+    * \tparam T 如果T是Edge类型, 则value为true
+    */
+   template<class T>
+   struct is_edge : std::bool_constant<false> {};
+   template<class T>
+   struct is_edge<Edge<T>> : std::bool_constant<true> {};
+   template<class T>
+   constexpr bool is_edge_v = is_edge<T>::value;
 } // namespace TAT
 #endif

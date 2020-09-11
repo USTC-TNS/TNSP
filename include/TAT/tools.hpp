@@ -1,7 +1,7 @@
 /**
  * \file tools.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,17 +44,17 @@ namespace TAT {
 
          int length = line_1.size();
          if (length != line_2.size()) {
-            warning_or_error("Different Length When Do Two Line to One Line");
+            throw TAT_error("Different Length When Do Two Line to One Line");
          }
-         //std::clog << "Two Line to One Line Start\n";
+         // std::clog << "Two Line to One Line Start\n";
 
          // product
          std::vector<Tensor<ScalarType, Symmetry>> double_line;
-         //std::clog << "double line:\n";
+         // std::clog << "double line:\n";
          for (int i = 0; i < length; i++) {
             double_line.push_back(Tensor<ScalarType, Symmetry>::contract(
                   line_1[i]->edge_rename({{left, left1}, {right, right1}}), line_2[i]->edge_rename({{left, left2}, {right, right2}}), {{down, up}}));
-            //std::clog << double_line[i] << "\n";
+            // std::clog << double_line[i] << "\n";
          }
 
          // left canonicalize
@@ -63,10 +63,10 @@ namespace TAT {
             // 0 ... L-2
             auto [u, s, v] = double_line[i].svd({right1, right2}, left, right);
             double_line[i] = std::move(v);
-            double_line[i + 1] = double_line[i + 1].contract(u, {{left1, right1}, {left2, right2}}).multiple(s, left, false);
+            double_line[i + 1] = double_line[i + 1].contract(u, {{left1, right1}, {left2, right2}}).multiple(s, left, 'u');
          }
-         //std::clog << "double line:\n";
-         //for (int i = 0; i < length; i++) {
+         // std::clog << "double line:\n";
+         // for (int i = 0; i < length; i++) {
          //   std::clog << double_line[i] << "\n";
          //}
 
@@ -87,10 +87,10 @@ namespace TAT {
                                    {{right, left}})
                                    .svd(u_names, right, left, cut);
             double_line[i + 1] = v.edge_rename({{up2, up}, {down2, down}});
-            double_line[i] = u.multiple(s, right, false).edge_rename({{up1, up}, {down1, down}});
+            double_line[i] = u.multiple(s, right, 'u').edge_rename({{up1, up}, {down1, down}});
          }
 
-         //std::clog << "Two Line to One Line End\n";
+         // std::clog << "Two Line to One Line End\n";
          return double_line;
       }
 

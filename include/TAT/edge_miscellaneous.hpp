@@ -1,7 +1,7 @@
 /**
- * \file edge_misc.hpp
+ * \file edge_miscellaneous.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,16 +18,18 @@
  */
 
 #pragma once
-#ifndef TAT_EDGE_MISC_HPP
-#define TAT_EDGE_MISC_HPP
+#ifndef TAT_EDGE_MISCELLANEOUS_HPP
+#define TAT_EDGE_MISCELLANEOUS_HPP
 
 #include "tensor.hpp"
 
 namespace TAT {
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::edge_rename(const std::map<Name, Name>& dictionary) const {
+      // too easy so not use edge_operator
       auto result = Tensor<ScalarType, Symmetry>{};
       result.core = core;
+      result.names.reserve(names.size());
       std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](Name name) {
          if (auto position = dictionary.find(name); position == dictionary.end()) {
             return name;
@@ -40,29 +42,39 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   template<class T, class>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::transpose(T&& target_names) const {
-      return edge_operator({}, {}, {}, {}, std::forward<T>(target_names));
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::transpose(std::vector<Name> target_names) const {
+      return edge_operator({}, {}, {}, {}, std::move(target_names));
    }
 
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity) const {
-      return edge_operator({}, {}, reversed_name, {}, names, apply_parity);
+   Tensor<ScalarType, Symmetry>
+   Tensor<ScalarType, Symmetry>::reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity, const std::set<Name>& parity_exclude_name)
+         const {
+      return edge_operator({}, {}, reversed_name, {}, names, apply_parity, {{{}, parity_exclude_name, {}, {}}});
    }
 
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::merge_edge(std::map<Name, std::vector<Name>> merge, const bool apply_parity) const {
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::merge_edge(
+         std::map<Name, std::vector<Name>> merge,
+         const bool apply_parity,
+         const std::set<Name>& parity_exclude_name_merge,
+         const std::set<Name>& parity_exclude_name_reverse) const {
       // delete edge from names_before_merge if not exist
       for (auto& [name_after_merge, names_before_merge] : merge) {
          auto new_names_before_merge = std::vector<Name>();
+         new_names_before_merge.reserve(names_before_merge.size());
          for (const auto& i : names_before_merge) {
             if (auto found = name_to_index.find(i); found != name_to_index.end()) {
                new_names_before_merge.push_back(i);
             }
          }
          names_before_merge.swap(new_names_before_merge);
+         // if len(names_before_merge) == 0, it create a trivial edge?
+         // 不, 在反转target_name中, 如果原merge列表为空则不产生新的target_name
+         // 根据edge_operator中的操作实际上就是消除了这个merge
       }
       std::vector<Name> target_name;
+      target_name.reserve(names.size());
       for (auto iterator = names.rbegin(); iterator != names.rend(); ++iterator) {
          // 找到且最后 -> 添加新的
          // 找到不最后 -> 不做事
@@ -88,14 +100,18 @@ namespace TAT {
             target_name.push_back(name_after_merge);
          }
       }
-      reverse(target_name.begin(), target_name.end());
-      return edge_operator({}, {}, {}, merge, std::move(target_name), apply_parity);
+      std::reverse(target_name.begin(), target_name.end());
+      return edge_operator(
+            {}, {}, {}, merge, std::move(target_name), apply_parity, {{{}, {}, parity_exclude_name_reverse, parity_exclude_name_merge}});
    }
 
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry>
-   Tensor<ScalarType, Symmetry>::split_edge(std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split, const bool apply_parity) const {
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::split_edge(
+         std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split,
+         const bool apply_parity,
+         const std::set<Name>& parity_exclude_name_split) const {
       // 删除不存在的边
+      // 根据edge_operator中的操作, 这应该是多余的, 不在names中的元素会自动忽略
       for (auto iterator = split.begin(); iterator != split.end();) {
          if (auto found = name_to_index.find(iterator->first); found == name_to_index.end()) {
             iterator = split.erase(iterator);
@@ -105,6 +121,7 @@ namespace TAT {
       }
       // 生成target_name
       std::vector<Name> target_name;
+      target_name.reserve(names.size()); // 不够, 但是可以减少new的次数
       for (const auto& n : names) {
          if (auto found = split.find(n); found != split.end()) {
             for (const auto& edge_after_split : found->second) {
@@ -114,7 +131,7 @@ namespace TAT {
             target_name.push_back(n);
          }
       }
-      return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity);
+      return edge_operator({}, split, {}, {}, std::move(target_name), apply_parity, {{parity_exclude_name_split, {}, {}, {}}});
    }
 } // namespace TAT
 #endif

@@ -1,7 +1,7 @@
 /**
  * \file name.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
-#include "misc.hpp"
-
 #include <map>
 #include <set>
 #include <string>
@@ -39,6 +37,8 @@ namespace TAT {
    inline NameIdType names_total_index = 0;
    /**
     * \brief Name的字符串到标号的映射表
+    *
+    * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
     */
    inline std::map<std::string, NameIdType> name_to_id = {};
    /**
@@ -47,9 +47,9 @@ namespace TAT {
    inline std::map<NameIdType, std::string> id_to_name = {};
 
    /**
-    * \brief 用于给张量的脚标命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
-    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有全局变量names_total维护目前已分配的标号量,
-    * 新建一个字符串的Name时将递增names_total并获取一个唯一的标号
+    * \brief 用于给张量的边命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
+    * \note 一个Name拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有全局变量names_total_index维护目前已分配的标号量,
+    * 新建一个字符串的Name时将递增names_total_index并获取一个唯一的标号
     * \see names_total_index
     */
    struct Name {
@@ -72,35 +72,60 @@ namespace TAT {
    };
 
    // 此处将可被c++20的operator<=>替换
-#define TAT_DEF_NAME_OP(OP, EXP)                            \
+#define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                   \
    inline bool OP(const Name& name_1, const Name& name_2) { \
       return EXP;                                           \
    }
-   TAT_DEF_NAME_OP(operator==, name_1.id == name_2.id)
-   TAT_DEF_NAME_OP(operator!=, name_1.id != name_2.id)
-   TAT_DEF_NAME_OP(operator>=, name_1.id >= name_2.id)
-   TAT_DEF_NAME_OP(operator<=, name_1.id <= name_2.id)
-   TAT_DEF_NAME_OP(operator>, name_1.id> name_2.id)
-   TAT_DEF_NAME_OP(operator<, name_1.id<name_2.id)
-#undef TAT_DEF_NAME_OP
+   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.id == name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.id != name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.id >= name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.id <= name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.id> name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id<name_2.id)
+#undef TAT_DEFINE_NAME_OPERATOR
 
-   // 保留名称
-#define TAT_DEF_NAME(x) inline const Name x(#x)
-   TAT_DEF_NAME(Contract1);
-   TAT_DEF_NAME(Contract2);
-   TAT_DEF_NAME(SVD1);
-   TAT_DEF_NAME(SVD2);
-   TAT_DEF_NAME(Trace1);
-   TAT_DEF_NAME(Trace2);
-   TAT_DEF_NAME(Trace3);
-   TAT_DEF_NAME(Up);
-   TAT_DEF_NAME(Down);
-   TAT_DEF_NAME(Left);
-   TAT_DEF_NAME(Right);
-#undef TAT_DEF_NAME
+   // 保留名称, 在一些张量运算内部使用
+#define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)
+   TAT_DEFINE_INTERNAL_NAME(Contract1);
+   TAT_DEFINE_INTERNAL_NAME(Contract2);
+   TAT_DEFINE_INTERNAL_NAME(SVD1);
+   TAT_DEFINE_INTERNAL_NAME(SVD2);
+   TAT_DEFINE_INTERNAL_NAME(Trace1);
+   TAT_DEFINE_INTERNAL_NAME(Trace2);
+   TAT_DEFINE_INTERNAL_NAME(Trace3);
+#define TAT_DEFINE_COMMON_NAME_WITH_INDEX(x) \
+   TAT_DEFINE_INTERNAL_NAME(x);              \
+   TAT_DEFINE_INTERNAL_NAME(x##0);           \
+   TAT_DEFINE_INTERNAL_NAME(x##1);           \
+   TAT_DEFINE_INTERNAL_NAME(x##2);           \
+   TAT_DEFINE_INTERNAL_NAME(x##3);           \
+   TAT_DEFINE_INTERNAL_NAME(x##4);           \
+   TAT_DEFINE_INTERNAL_NAME(x##5);           \
+   TAT_DEFINE_INTERNAL_NAME(x##6);           \
+   TAT_DEFINE_INTERNAL_NAME(x##7);           \
+   TAT_DEFINE_INTERNAL_NAME(x##8);           \
+   TAT_DEFINE_INTERNAL_NAME(x##9);
+   namespace common_name {
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(P);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Phy);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(L);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Left);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(R);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Right);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(U);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Up);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(D);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Down);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(I);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(In);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(O);
+      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Out);
+   } // namespace common_name
+#undef TAT_DEFINE_COMMON_NAME_WITH_INDEX
+#undef TAT_DEFINE_INTERNAL_NAME
 
    /**
-    * \brief 由名字列表构造名字到需要的映射表
+    * \brief 由名字列表构造名字到序号的映射表
     */
    inline std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
       std::map<Name, Rank> result;
@@ -114,11 +139,15 @@ namespace TAT {
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
    inline bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      const auto result = names.size() == std::set<Name>(names.begin(), names.end()).size() && names.size() == rank;
-      if (!result) {
-         warning_or_error("Wrong Name Number or Duplicated Name");
+      const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
+      const auto result_length = names.size() == rank;
+      if (!result_duplicated) {
+         throw TAT_error("Duplicated names in name list");
       }
-      return result;
+      if (!result_length) {
+         throw TAT_error("Wrong name list length which no equals to expected length");
+      }
+      return result_duplicated && result_length;
    }
 } // namespace TAT
 #endif

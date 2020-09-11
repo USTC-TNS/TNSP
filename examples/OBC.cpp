@@ -76,7 +76,7 @@ struct PBC {
          up_to_down_aux[0][j] = lattice.at(0).at(j).copy();
       }
       for (int i = 0; i < L - 1; i++) {
-         //std::clog << "Dealing with Line " << i << " and Line " << i + 1 << "\n";
+         // std::clog << "Dealing with Line " << i << " and Line " << i + 1 << "\n";
          auto line_1 = std::vector<const Tensor*>();
          auto line_2 = std::vector<const Tensor*>();
          for (int j = 0; j < L; j++) {
@@ -84,9 +84,9 @@ struct PBC {
             line_2.push_back(&lattice.at(i + 1).at(j));
          }
          auto new_line = TAT::tools::two_line_to_one_line({"up", "down", "left", "right"}, line_1, line_2, D_cut);
-         //std::clog << "new line:\n";
+         // std::clog << "new line:\n";
          for (int j = 0; j < L; j++) {
-            //std::clog << new_line[j] << "\n";
+            // std::clog << new_line[j] << "\n";
             up_to_down_aux[i + 1][j] = std::move(new_line[j]);
          }
       }

@@ -15,7 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TAT_USE_MPI
+#ifndef TAT_USE_MPI
+#error testing mpi but mpi not enabled
+#endif
 #include <TAT/TAT.hpp>
 
 using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
@@ -24,10 +26,11 @@ namespace mpi = TAT::mpi;
 
 int main() {
    auto input = Tensor(mpi::mpi.rank);
-   auto result = mpi::summary(input, 0);
-   result = mpi::broadcast(result, 0);
+   auto result = mpi::summary(input, mpi::mpi.size / 2);
+   mpi::mpi_out(mpi::mpi.size / 2) << result << "\n";
+   result = mpi::broadcast(result, mpi::mpi.size / 2);
    mpi::barrier();
-   std::cout << result << "\n";
+   std::cout << mpi::mpi.rank << " " << result << "\n";
    // TODO cannot use endl
    return 0;
 }

@@ -1,7 +1,7 @@
 /**
  * \file svd.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,13 +22,6 @@
 #define TAT_SVD_HPP
 
 #include "tensor.hpp"
-
-#if 0
-#define LAPACK_COMPLEX_CUSTOM
-using lapack_complex_float = std::complex<float>;
-using lapack_complex_double = std::complex<double>;
-#include "lapacke.h"
-#endif
 
 extern "C" {
 int sgesvd_(
@@ -165,6 +158,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) const {
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
+      const auto rank = names.size();
       // merge
       auto free_name_u = std::vector<Name>();
       auto free_name_v = std::vector<Name>();
@@ -173,8 +167,14 @@ namespace TAT {
       auto reversed_set_origin = std::set<Name>();
       auto result_name_u = std::vector<Name>();
       auto result_name_v = std::vector<Name>();
-      auto free_names_and_edges_u = std::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
-      auto free_names_and_edges_v = std::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      auto free_names_and_edges_u = std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
+      auto free_names_and_edges_v = std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
+      free_name_u.reserve(rank);
+      free_name_v.reserve(rank);
+      result_name_u.reserve(rank + 1);
+      result_name_v.reserve(rank + 1);
+      free_names_and_edges_u.reserve(rank);
+      free_names_and_edges_v.reserve(rank);
       result_name_v.push_back(common_name_v);
       for (auto i = 0; i < names.size(); i++) {
          const auto& n = names[i];
@@ -280,7 +280,8 @@ namespace TAT {
       const auto& tensor_u = put_v_right ? tensor_1 : tensor_2;
       const auto& tensor_v = put_v_right ? tensor_2 : tensor_1;
       reversed_set_u.insert(common_name_u);
-      auto u = tensor_u.edge_operator(
+      // 这里会自动cut
+      auto u = tensor_u.template edge_operator<true>(
             {{SVD2, common_name_u}},
             {{SVD1, free_names_and_edges_u}},
             reversed_set_u,
@@ -289,7 +290,7 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             {{SVD2, remain_dimension_u}});
-      auto v = tensor_v.edge_operator(
+      auto v = tensor_v.template edge_operator<true>(
             {{SVD1, common_name_v}},
             {{SVD2, free_names_and_edges_v}},
             reversed_set_v,

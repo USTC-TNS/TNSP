@@ -1,7 +1,7 @@
 /**
  * \file scalar.hpp
  *
- * Copyright (C) 2019  Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include "tensor.hpp"
 
 namespace TAT {
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2, EVAL3)                                                                        \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                           \
    template<class ScalarType1, class ScalarType2, class Symmetry>                                                     \
    auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {            \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                \
@@ -51,6 +51,9 @@ namespace TAT {
          }                                                                                                            \
          return result;                                                                                               \
       } else {                                                                                                        \
+         if (tensor_1.names.size() != tensor_2.names.size()) {                                                        \
+            throw TAT_error("Try to do scalar operator on two different rank tensor");                                \
+         }                                                                                                            \
          auto real_tensor_2 = &tensor_2;                                                                              \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                         \
          if (tensor_1.names != tensor_2.names) {                                                                      \
@@ -60,10 +63,16 @@ namespace TAT {
          auto real_result_edge = &tensor_1.core->edges;                                                               \
          auto new_result_edge = std::vector<Edge<Symmetry>>();                                                        \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                    \
+            new_result_edge.reserve(tensor_1.names.size());                                                           \
             for (auto i = 0; i < tensor_1.names.size(); i++) {                                                        \
-               new_result_edge.push_back(tensor_1.core->edges[i]);                                                    \
+               auto& single_new_edge = new_result_edge.emplace_back(tensor_1.core->edges[i]);                         \
                for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                 \
-                  new_result_edge[i].map[symmetry] = dimension;                                                       \
+                  auto found = single_new_edge.map.find(symmetry);                                                    \
+                  if (found == single_new_edge.map.end()) {                                                           \
+                     single_new_edge.map.insert({symmetry, dimension});                                               \
+                  } else if (found->second != dimension) {                                                            \
+                     throw TAT_error("Try to do scalar operator on two tensors which edges not compatible");          \
+                  }                                                                                                   \
                }                                                                                                      \
             }                                                                                                         \
             real_result_edge = &new_result_edge;                                                                      \
@@ -113,13 +122,13 @@ namespace TAT {
       return OP(Tensor<ScalarType1, Symmetry>{number_1}, tensor_2);                                                   \
    }
 
-   DEF_SCALAR_OP(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
-   DEF_SCALAR_OP(operator-, c[j] = x - b[j], c[j] = a[j] - y, c[j] = a[j] - b[j])
-   DEF_SCALAR_OP(operator*, c[j] = x * b[j], c[j] = a[j] * y, c[j] = a[j] * b[j])
-   DEF_SCALAR_OP(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
-#undef DEF_SCALAR_OP
+   TAT_DEFINE_SCALAR_OPERATOR(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator-, c[j] = x - b[j], c[j] = a[j] - y, c[j] = a[j] - b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator*, c[j] = x * b[j], c[j] = a[j] * y, c[j] = a[j] * b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
+#undef TAT_DEFINE_SCALAR_OPERATOR
 
-#define DEF_SCALAR_OP(OP, EVAL1, EVAL2)                                                                                        \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2)                                                                           \
    template<class ScalarType1, class ScalarType2, class Symmetry>                                                              \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) { \
       if (tensor_1.core.use_count() != 1) {                                                                                    \
@@ -141,8 +150,7 @@ namespace TAT {
             real_tensor_2 = &new_tensor_2;                                                                                     \
          }                                                                                                                     \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                             \
-            warning_or_error("Scalar Operator In Different Shape Tensor");                                                     \
-            warning_or_error("Maybe You Need Outplace Operator");                                                              \
+            throw TAT_error("Scalar Operator In Different Shape Tensor, Maybe You Need Outplace Operator");                    \
          }                                                                                                                     \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
             ScalarType1* __restrict a = block.data();                                                                          \
@@ -158,10 +166,10 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                   \
       return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                            \
    }
-   DEF_SCALAR_OP(operator+=, a[j] += y, a[j] += b[j])
-   DEF_SCALAR_OP(operator-=, a[j] -= y, a[j] -= b[j])
-   DEF_SCALAR_OP(operator*=, a[j] *= y, a[j] *= b[j])
-   DEF_SCALAR_OP(operator/=, a[j] /= y, a[j] /= b[j])
-#undef DEF_SCALAR_OP
+   TAT_DEFINE_SCALAR_OPERATOR(operator+=, a[j] += y, a[j] += b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator-=, a[j] -= y, a[j] -= b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator*=, a[j] *= y, a[j] *= b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator/=, a[j] /= y, a[j] /= b[j])
+#undef TAT_DEFINE_SCALAR_OPERATOR
 } // namespace TAT
 #endif
