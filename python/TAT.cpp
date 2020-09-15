@@ -103,6 +103,7 @@ namespace TAT {
       return py::init(func);
    }
 
+#ifdef TAT_USE_MPI
    template<class ScalarType, class Symmetry>
    void declare_mpi(py::module& mpi_m) {
       using T = Tensor<ScalarType, Symmetry>;
@@ -123,6 +124,7 @@ namespace TAT {
             "Reduce a tensor with commutative function into root");
       mpi_m.def("summary", &mpi::summary<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Summation of a tensor into root");
    }
+#endif
 
    template<class ScalarType, class Symmetry>
    auto singular_to_string(const typename Tensor<ScalarType, Symmetry>::Singular& s) {
@@ -674,8 +676,8 @@ namespace TAT {
       TAT_LOOP_ALL_SCALAR_SYMMETRY;
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // mpi
-#ifdef TAT_USE_MPI
       auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
+#ifdef TAT_USE_MPI
       mpi_m.def("barrier", &mpi::barrier);
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) declare_mpi<SCALAR, SYM##Symmetry>(mpi_m);
       TAT_LOOP_ALL_SCALAR_SYMMETRY;
@@ -687,8 +689,11 @@ namespace TAT {
             py::print(*args, **kwargs);
          }
       });
-      // stl
+      mpi_m.attr("enabled") = true;
+#else
+      mpi_m.attr("enabled") = false;
 #endif
+      // stl
       auto stl_m = tat_m.def_submodule("stl", "STL bindings");
       py::bind_vector<std::vector<Name>>(stl_m, "NameList");
       py::implicitly_convertible<py::list, std::vector<Name>>();

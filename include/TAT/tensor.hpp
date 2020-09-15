@@ -417,7 +417,7 @@ namespace TAT {
        * \param other 另一个张量
        * \return 缩并后的结果
        */
-      [[nodiscard]] ScalarType contract_all_edge(const Tensor<ScalarType, Symmetry>& other) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> contract_all_edge(const Tensor<ScalarType, Symmetry>& other) const {
          // other不含有的边会在contract中自动删除
          auto contract_names = std::set<std::tuple<Name, Name>>();
          for (const auto& i : names) {
@@ -430,7 +430,7 @@ namespace TAT {
        * \brief 张量与自己的共轭进行尽可能的缩并
        * \return 缩并后的结果
        */
-      [[nodiscard]] ScalarType contract_all_edge() const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry> contract_all_edge() const {
          return contract_all_edge(conjugate());
       }
 
