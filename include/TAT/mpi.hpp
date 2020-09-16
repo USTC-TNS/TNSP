@@ -64,9 +64,7 @@ namespace TAT {
 
       template<class ScalarType, class Symmetry>
       void send(const Tensor<ScalarType, Symmetry>& tensor, const int destination) {
-         auto out = std::stringstream();
-         out < tensor;
-         auto data = out.str(); // TODO: 不需复制
+         auto data = tensor.dump(); // TODO: 不需复制
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, 0, MPI_COMM_WORLD);
       }
 
@@ -80,9 +78,7 @@ namespace TAT {
          MPI_Get_count(&status, MPI_BYTE, &length);
          auto data = std::string(length, '\0'); // 不需初始化
          MPI_Recv(data.data(), length, MPI_BYTE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-         auto in = std::stringstream(data); // 不需复制
-         auto result = Tensor<ScalarType, Symmetry>();
-         in > result;
+         auto result = Tensor<ScalarType, Symmetry>().load(data);
          return result;
       }
 

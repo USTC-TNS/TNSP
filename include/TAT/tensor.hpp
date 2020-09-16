@@ -35,6 +35,47 @@
 #include "symmetry.hpp"
 
 namespace TAT {
+   template<class ScalarType, class Symmetry>
+   struct Singular {
+      std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
+
+      void normalize(int p) {
+         if (p == -1) {
+            real_base_t<ScalarType> maximum = 0;
+            for (const auto& [symmetry, singulars] : value) {
+               for (const auto& element : singulars) {
+                  auto absolute = std::abs(element);
+                  maximum = maximum < absolute ? absolute : maximum;
+               }
+            }
+            for (auto& [symmetry, singulars] : value) {
+               for (auto& element : singulars) {
+                  element /= maximum;
+               }
+            }
+         } else if (p == 1) {
+            real_base_t<ScalarType> summation = 0;
+            for (const auto& [symmetry, singulars] : value) {
+               for (const auto& element : singulars) {
+                  auto absolute = std::abs(element);
+                  summation += absolute;
+               }
+            }
+            for (auto& [symmetry, singulars] : value) {
+               for (auto& element : singulars) {
+                  element /= summation;
+               }
+            }
+         } else {
+            throw TAT_error("Not Implement For Singulars Normalize Kind");
+         }
+      }
+
+      [[nodiscard]] std::string show() const;
+      [[nodiscard]] std::string dump() const;
+      Singular<ScalarType, Symmetry>& load(const std::string&);
+   };
+
    /**
     * \brief TAT is A Tensor library!
     * \tparam ScalarType 张量内的标量类型
@@ -496,17 +537,13 @@ namespace TAT {
 
       [[nodiscard]] Tensor<ScalarType, Symmetry> trace(const std::set<std::tuple<Name, Name>>& trace_names) const;
 
-      struct Singular {
-         std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
-      };
-
       /**
        * \brief 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
       struct svd_result {
          Tensor<ScalarType, Symmetry> U;
-         Singular S;
+         Singular<ScalarType, Symmetry> S;
          Tensor<ScalarType, Symmetry> V;
       };
 
@@ -515,9 +552,10 @@ namespace TAT {
        * \param S 奇异值
        * \param name 张量与奇异值缩并的边名
        * \param direction 奇异值是含有一个方向的, SVD的结果中U还是V将与S相乘在这里被选定
+       * \param division 如果为真, 则进行除法而不是乘法
        * \return 缩并的结果
        */
-      Tensor<ScalarType, Symmetry>& multiple(const Singular& S, const Name& name, char direction) & {
+      Tensor<ScalarType, Symmetry>& multiple(const Singular<ScalarType, Symmetry>& S, const Name& name, char direction, bool division = false) & {
          bool different_direction;
          if (direction == 'u' || direction == 'U') {
             different_direction = false;
@@ -555,11 +593,22 @@ namespace TAT {
                throw TAT_error("Vector Size incompatible in Multiple with a tensor");
             }
             auto* data = block.data();
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
-                  auto v = vector_in_S[b];
-                  for (Size c = 0; c < n; c++) {
-                     *(data++) *= v;
+            if (division) {
+               for (Size a = 0; a < m; a++) {
+                  for (Size b = 0; b < k; b++) {
+                     auto v = vector_in_S[b];
+                     for (Size c = 0; c < n; c++) {
+                        *(data++) /= v;
+                     }
+                  }
+               }
+            } else {
+               for (Size a = 0; a < m; a++) {
+                  for (Size b = 0; b < k; b++) {
+                     auto v = vector_in_S[b];
+                     for (Size c = 0; c < n; c++) {
+                        *(data++) *= v;
+                     }
                   }
                }
             }
@@ -567,8 +616,8 @@ namespace TAT {
          return *this;
       }
 
-      Tensor<ScalarType, Symmetry> multiple(const Singular& S, const Name& name, char direction) && {
-         return std::move(this->multiple(S, name, direction));
+      Tensor<ScalarType, Symmetry> multiple(const Singular<ScalarType, Symmetry>& S, const Name& name, char direction, bool division = false) && {
+         return std::move(this->multiple(S, name, direction, division));
       }
 
       /**
@@ -592,7 +641,9 @@ namespace TAT {
       Tensor<ScalarType, Symmetry>& data_get(std::istream&);
 
       [[nodiscard]] std::string show() const;
-   }; // namespace TAT
+      [[nodiscard]] std::string dump() const;
+      Tensor<ScalarType, Symmetry>& load(const std::string&);
+   };
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
    // 因为contract的操作是这样的

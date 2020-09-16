@@ -93,27 +93,27 @@ def test_scalar():
 
 def test_io():
     a = TAT.Tensor.DNo(["Left", "Right", "Up"], [2, 3, 4]).test()
-    ss = a.save()
+    ss = a.dump()
     b = TAT.Tensor.DNo().load(ss)
     print(a)
     print(b)
 
     c = TAT.Tensor.DU1(["Left", "Right", "Up"], [
                        {-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2)
-    ss = c.save()
+    ss = c.dump()
     d = TAT.Tensor.DU1().load(ss)
     print(c)
     print(d)
 
     g = TAT.Tensor.ZU1(["Left", "Right", "Up"], [
                        {-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2)
-    h = TAT.Tensor.ZU1().load(g.save())
+    h = TAT.Tensor.ZU1().load(g.dump())
     print(g)
     print(h)
 
     i = TAT.Tensor.ZFermi(["Left", "Right", "Up"], [
                           {-2: 3, 0: 1, -1: 2}, {0: 2, 1: 3}, {0: 3, 1: 1}], True).test(2)
-    j = TAT.Tensor.ZFermi().load(i.save())
+    j = TAT.Tensor.ZFermi().load(i.dump())
     print(i)
     print(j)
 

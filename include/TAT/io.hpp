@@ -227,7 +227,35 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
+   std::ostream& operator<<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
+      const auto& value = singular.value; // std::map<Symmetry, vector<real_base_t<ScalarType>>>
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         out << value.begin()->second;
+      } else {
+         out << '{';
+         bool first = true;
+         for (const auto& [key, value] : value) {
+            if (!first) {
+               out << ',';
+            } else {
+               first = false;
+            }
+            out << console_yellow << key << console_origin << ':' << value;
+         }
+         out << '}';
+      }
+      return out;
+   }
+
+   template<class ScalarType, class Symmetry>
    std::string Tensor<ScalarType, Symmetry>::show() const {
+      std::stringstream out;
+      out << *this;
+      return out.str();
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::string Singular<ScalarType, Symmetry>::show() const {
       std::stringstream out;
       out << *this;
       return out.str();
@@ -257,6 +285,35 @@ namespace TAT {
    std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
       tensor.meta_put(out).data_put(out);
       return out;
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::string Tensor<ScalarType, Symmetry>::dump() const {
+      std::stringstream out;
+      out < *this;
+      return out.str();
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         raw_write_vector(out, singular.value.begin()->second);
+      } else {
+         const Nums numbers = singular.value.size();
+         raw_write(out, &numbers);
+         for (const auto& [symmetry, vector] : singular.value) {
+            raw_write(out, &symmetry);
+            raw_write_vector(out, vector);
+         }
+      }
+      return out;
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::string Singular<ScalarType, Symmetry>::dump() const {
+      std::stringstream out;
+      out < *this;
+      return out.str();
    }
 
    template<class ScalarType, class Symmetry>
@@ -292,6 +349,41 @@ namespace TAT {
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
       tensor.meta_get(in).data_get(in);
       return in;
+   }
+
+   template<class ScalarType, class Symmetry>
+   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::load(const std::string& input) {
+      std::stringstream in(input);
+      in > *this;
+      return *this;
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry>& singular) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         vector<real_base_t<ScalarType>> singulars;
+         raw_read_vector(in, singulars);
+         singular.value[NoSymmetry()] = std::move(singulars);
+      } else {
+         Nums numbers;
+         raw_read(in, &numbers);
+         singular.value.clear();
+         for (Nums i = 0; i < numbers; i++) {
+            Symmetry symmetry;
+            vector<real_base_t<ScalarType>> singulars;
+            raw_read(in, &symmetry);
+            raw_read_vector(in, singulars);
+            singular.value[symmetry] = std::move(singulars);
+         }
+      }
+      return in;
+   }
+
+   template<class ScalarType, class Symmetry>
+   Singular<ScalarType, Symmetry>& Singular<ScalarType, Symmetry>::load(const std::string& input) {
+      std::stringstream in(input);
+      in > *this;
+      return *this;
    }
 
    template<class T>

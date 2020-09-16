@@ -98,7 +98,7 @@ namespace TAT {
       struct network {
          std::map<Key, Tensor<ScalarType, Symmetry>> site;
          // Singular is map<Symmetry, vector>, it there is no environment, the map is empty
-         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, typename Tensor<ScalarType, Symmetry>::Singular>> bond;
+         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, Singular<ScalarType, Symmetry>>> bond;
          // TODO: network
       };
    } // namespace tools
