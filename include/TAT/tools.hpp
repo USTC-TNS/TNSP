@@ -33,14 +33,14 @@ namespace TAT {
             std::vector<const Tensor<ScalarType, Symmetry>*> line_2,
             Size cut) {
          const auto& [up, down, left, right] = udlr_name;
-         const Name up1 = id_to_name.at(up.id) + "_1";
-         const Name up2 = id_to_name.at(up.id) + "_2";
-         const Name down1 = id_to_name.at(down.id) + "_1";
-         const Name down2 = id_to_name.at(down.id) + "_2";
-         const Name left1 = id_to_name.at(left.id) + "_1";
-         const Name left2 = id_to_name.at(left.id) + "_2";
-         const Name right1 = id_to_name.at(right.id) + "_1";
-         const Name right2 = id_to_name.at(right.id) + "_2";
+         const Name up1 = up.get_name() + "_1";
+         const Name up2 = up.get_name() + "_2";
+         const Name down1 = down.get_name() + "_1";
+         const Name down2 = down.get_name() + "_2";
+         const Name left1 = left.get_name() + "_1";
+         const Name left2 = left.get_name() + "_2";
+         const Name right1 = right.get_name() + "_1";
+         const Name right2 = right.get_name() + "_2";
 
          int length = line_1.size();
          if (length != line_2.size()) {

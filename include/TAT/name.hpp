@@ -26,6 +26,18 @@
 #include <string>
 
 namespace TAT {
+#ifdef TAT_USE_SIMPLE_NAME
+   struct Name {
+      std::string name;
+      Name(const std::string& name) : name(name) {}
+      Name(const char* name) : name(name) {}
+
+      const std::string& get_name() const {
+         return name;
+      }
+   };
+#define TAT_NAME_KEY name
+#else
    /**
     * \brief Name中用于标号的类型
     */
@@ -69,20 +81,27 @@ namespace TAT {
             id = position->second;
          }
       }
+
+      const std::string& get_name() const {
+         return id_to_name.at(id);
+      }
    };
+#define TAT_NAME_KEY id
+#endif
 
    // 此处将可被c++20的operator<=>替换
 #define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                   \
    inline bool OP(const Name& name_1, const Name& name_2) { \
       return EXP;                                           \
    }
-   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.id == name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.id != name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.id >= name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.id <= name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.id> name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id<name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.TAT_NAME_KEY == name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.TAT_NAME_KEY != name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.TAT_NAME_KEY >= name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.TAT_NAME_KEY <= name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.TAT_NAME_KEY> name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.TAT_NAME_KEY<name_2.TAT_NAME_KEY)
 #undef TAT_DEFINE_NAME_OPERATOR
+#undef TAT_NAME_KEY
 
    // 保留名称, 在一些张量运算内部使用
 #define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)

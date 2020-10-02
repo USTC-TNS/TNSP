@@ -39,6 +39,10 @@
 #include <windows.h>
 #endif
 
+// 开关说明
+// TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
+// TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
+
 namespace TAT {
    /**
     * \brief TAT的版本号

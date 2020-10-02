@@ -21,7 +21,6 @@ import numpy as np
 import pickle
 from TAT.Tensor import DNo as Tensor
 from TAT.Singular import DNo as Singular
-import fire
 
 
 class TwoDimensionHeisenberg:
@@ -651,4 +650,9 @@ class TwoDimensionHeisenberg:
 if __name__ == '__main__':
     # import cProfile
     # cProfile.run('fire.Fire({"new": TwoDimensionHeisenberg, "load": load, "test": test})', filename="profile.dat")
+    import fire
+    def Display(lines, out):
+        text = "\n".join(lines) + "\n"
+        out.write(text)
+    fire.core.Display = Display
     fire.Fire({"new": TwoDimensionHeisenberg, "load": TwoDimensionHeisenberg.load})

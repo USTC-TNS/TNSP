@@ -58,11 +58,15 @@ namespace TAT {
    }
 
    inline std::ostream& operator<<(std::ostream& out, const Name& name) {
+#ifdef TAT_USE_SIMPLE_NAME
+      return out << name.name;
+#else
       if (const auto position = id_to_name.find(name.id); position == id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
          return out << position->second;
       }
+#endif
    }
 
    template<class T, class A, class = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
@@ -83,6 +87,7 @@ namespace TAT {
       out << ']';
       return out;
    }
+
    template<class T, class A>
    void raw_write_vector(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
@@ -96,6 +101,19 @@ namespace TAT {
       list.resize(count);
       raw_read(in, list.data(), count);
    }
+
+   void raw_write_string(std::ostream& out, const std::string& string) {
+      Size count = string.size();
+      raw_write(out, &count);
+      raw_write(out, string.data(), count);
+   }
+   void raw_read_string(std::istream& in, std::string& string) {
+      Size count;
+      raw_read(in, &count);
+      string.resize(count);
+      raw_read(in, string.data(), count);
+   }
+
    template<class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
@@ -263,7 +281,15 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
+#ifdef TAT_USE_SIMPLE_NAME
+      Rank count = names.size();
+      raw_write(out, &count);
+      for (const auto& name : names) {
+         raw_write_string(out, name.name);
+      }
+#else
       raw_write_vector(out, names);
+#endif
       for (const auto& edge : core->edges) {
          raw_write_edge(out, edge);
       }
@@ -318,15 +344,28 @@ namespace TAT {
 
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_get(std::istream& in) {
+#ifdef TAT_USE_SIMPLE_NAME
+      Rank count;
+      raw_read(in, &count);
+      names.clear();
+      names.reserve(count);
+      for (auto i = 0; i < count; i++) {
+         std::string this_name;
+         raw_read_string(in, this_name);
+         names.push_back(std::move(this_name));
+      }
+#else
       raw_read_vector(in, names);
+#endif
       const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
-      std::vector<Edge<Symmetry>> edges(rank);
-      for (auto& edge : edges) {
+      core = std::make_shared<Core<ScalarType, Symmetry>>();
+      core->edges.clear();
+      core->edges.reserve(rank);
+      for (auto i = 0; i < rank; i++) {
+         auto& edge = core->edges.emplace_back();
          raw_read_edge(in, edge);
       }
-      core = std::make_shared<Core<ScalarType, Symmetry>>();
-      core->edges = std::move(edges);
       check_valid_name(names, core->edges.size());
       return *this;
    }

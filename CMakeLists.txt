@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13)
 
 project(TAT VERSION 0.0.5 LANGUAGES CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
 # blas, lapack和mkl都没有问题
 # windows的情况如下
@@ -59,6 +61,7 @@ else()
    link_libraries(${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
 endif()
 
+# examples中的各个程序
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB CPP_SRC ${PROJECT_SOURCE_DIR}/examples/*.cpp)
@@ -67,6 +70,7 @@ foreach(FILE ${CPP_SRC})
    add_executable(${NAME} ${FILE})
 endforeach(FILE)
 
+# 以及他们的测试
 enable_testing()
 add_test(simple_test ${PROJECT_BINARY_DIR}/simple_test ${PROJECT_SOURCE_DIR}/examples/simple_test.out)
 add_test(diag ${PROJECT_BINARY_DIR}/diag ${PROJECT_SOURCE_DIR}/examples/diag.out)

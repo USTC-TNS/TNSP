@@ -587,14 +587,17 @@ namespace TAT {
       tat_m.attr("version") = version;
       // name
       py::class_<Name>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
-            .def(implicit_init<Name, char*>(), py::arg("name"), "Name with specified name")
+#ifdef TAT_USE_SIMPLE_NAME
+            .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.name)); })
+#else
             .def(py::init<int>(), py::arg("id"), "Name with specified id directly")
-            .def("__repr__", [](const Name& name) { return "Name[" + id_to_name.at(name.id) + "]"; })
-            .def("__str__", [](const Name& name) { return id_to_name.at(name.id); })
             .def_readonly("id", &Name::id)
-            .def_property_readonly("name", [](const Name& name) { return id_to_name.at(name.id); })
-            .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.id)); });
-
+            .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.id)); })
+#endif
+            .def_property_readonly("name", [](const Name& name) { return name.get_name(); })
+            .def(implicit_init<Name, const char*>(), py::arg("name"), "Name with specified name")
+            .def("__repr__", [](const Name& name) { return "Name[" + name.get_name() + "]"; })
+            .def("__str__", [](const Name& name) { return name.get_name(); });
       // symmetry
       auto symmetry_m = tat_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
