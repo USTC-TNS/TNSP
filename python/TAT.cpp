@@ -272,7 +272,9 @@ namespace TAT {
                   "In-place map every element of a tensor",
                   py::return_value_policy::reference_internal)
             .def(
-                  "sqrt", [](const T& tensor) { return tensor.map([](ScalarType value) { return sqrt(value); }); }, "Get elementwise square root")
+                  "sqrt",
+                  [](const T& tensor) { return tensor.map([](ScalarType value) { return std::sqrt(value); }); },
+                  "Get elementwise square root")
             .def(
                   "set",
                   [](T& tensor, std::function<ScalarType()>& function) -> T& { return tensor.set(function); },

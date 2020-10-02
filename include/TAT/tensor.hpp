@@ -355,7 +355,7 @@ namespace TAT {
          return result;
       }
 
-      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
+      using MapIteratorList = std::vector<typename Edge<Symmetry>::edge_map::const_iterator>;
 
       /**
        * \brief 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
