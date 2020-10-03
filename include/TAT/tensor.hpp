@@ -548,6 +548,14 @@ namespace TAT {
       };
 
       /**
+       * \brief 张量qr的结果类型
+       */
+      struct qr_result {
+         Tensor<ScalarType, Symmetry> Q;
+         Tensor<ScalarType, Symmetry> R;
+      };
+
+      /**
        * \brief 张量缩并上SVD产生的奇异值数据, 就地操作
        * \param S 奇异值
        * \param name 张量与奇异值缩并的边名
@@ -631,6 +639,17 @@ namespace TAT {
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       [[nodiscard]] svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
+
+      /**
+       * \brief 对张量进行qr分解
+       * \param free_name_direction free_name_set取的方向, 为'Q'或'R'
+       * \param free_name_set qr分解中某一侧的边的名称集合
+       * \param common_name_q 分解后q新产生的边的名称
+       * \param common_name_r 分解后r新产生的边的名称
+       * \return qr的结果
+       * \see qr_result
+       */
+      [[nodiscard]] qr_result qr(char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) const;
 
       // TODO slice 可化为contract，但需要自动生成方便的辅助张量
       // 除此以外, 有了name 但是只有一个元素的张量也需要辅助函数

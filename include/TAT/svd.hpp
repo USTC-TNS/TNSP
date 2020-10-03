@@ -90,25 +90,31 @@ int zgesvd_(
 
 namespace TAT {
    template<class ScalarType>
-   void calculate_svd(const int& m, const int& n, const int& min, const ScalarType* a, ScalarType* u, real_base_t<ScalarType>* s, ScalarType* vt);
+   void calculate_svd(
+         const int& m,
+         const int& n,
+         const int& min,
+         const int& max,
+         const ScalarType* a,
+         ScalarType* u,
+         real_base_t<ScalarType>* s,
+         ScalarType* vt);
 
    template<>
-   inline void calculate_svd<float>(const int& m, const int& n, const int& min, const float* a, float* u, float* s, float* vt) {
+   inline void calculate_svd<float>(const int& m, const int& n, const int& min, const int& max, const float* a, float* u, float* s, float* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<float>(l_work);
+      auto work = vector<float>(l_work);
       sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
       }
    }
    template<>
-   inline void calculate_svd<double>(const int& m, const int& n, const int& min, const double* a, double* u, double* s, double* vt) {
+   inline void calculate_svd<double>(const int& m, const int& n, const int& min, const int& max, const double* a, double* u, double* s, double* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<double>(l_work);
+      auto work = vector<double>(l_work);
       dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
@@ -119,15 +125,15 @@ namespace TAT {
          const int& m,
          const int& n,
          const int& min,
+         const int& max,
          const std::complex<float>* a,
          std::complex<float>* u,
          float* s,
          std::complex<float>* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<std::complex<float>>(l_work);
-      auto r_work = std::vector<float>(5 * min);
+      auto work = vector<std::complex<float>>(l_work);
+      auto r_work = vector<float>(5 * min);
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
@@ -138,15 +144,15 @@ namespace TAT {
          const int& m,
          const int& n,
          const int& min,
+         const int& max,
          const std::complex<double>* a,
          std::complex<double>* u,
          double* s,
          std::complex<double>* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<std::complex<double>>(l_work);
-      auto r_work = std::vector<double>(5 * min);
+      auto work = vector<std::complex<double>>(l_work);
+      auto r_work = vector<double>(5 * min);
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
          warning_or_error("Error in GESVD");
@@ -232,10 +238,11 @@ namespace TAT {
          const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
          const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
          const int k = m > n ? n : m;
+         const int max = m > n ? m : n;
          auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
-            calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
+            calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
          }
          result_s[symmetries[put_v_right]] = std::move(s);
       }

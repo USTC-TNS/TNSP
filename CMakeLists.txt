@@ -59,6 +59,13 @@ else()
       find_package(LAPACK REQUIRED)
    endif()
    link_libraries(${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+   # 检查是否使用了mkl
+   if(BLAS_LIBRARIES MATCHES mkl)
+      message("-- Using mkl")
+      add_compile_definitions(TAT_USE_MKL_TRANSPOSE)
+   else()
+      message("-- Not using mkl")
+   endif()
 endif()
 
 # examples中的各个程序

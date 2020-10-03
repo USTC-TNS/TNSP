@@ -337,11 +337,6 @@ namespace TAT {
                // found
                if (const auto dimension_2 = found->second; dimension_2 != dimension_1) {
                   throw TAT_error("Different Dimension to Contract");
-#if 0
-                  if (dimension_2 < dimension_1) {
-                     this_delete_1[symmetry_1] = dimension_2;
-                  }
-#endif
                }
             } else {
                // not found
@@ -360,11 +355,6 @@ namespace TAT {
                // found
                if (const auto dimension_1 = found->second; dimension_1 != dimension_2) {
                   throw TAT_error("Different Dimension to Contract");
-#if 0
-                  if (dimension_1 < dimension_2) {
-                     this_delete_2[symmetry_2] = dimension_1;
-                  }
-#endif
                }
             } else {
                // not found
@@ -395,12 +385,6 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             delete_2);
-#if 0
-      std::cout << "T1:" << tensor_1 << "\n";
-      std::cout << "M1:" << tensor_1_merged << "\n";
-      std::cout << "T2:" << tensor_2 << "\n";
-      std::cout << "M2:" << tensor_2_merged << "\n";
-#endif
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {Contract1, Contract2},
@@ -419,16 +403,8 @@ namespace TAT {
          ScalarType alpha = 1;
          if constexpr (is_fermi) {
             if ((put_common_2_right ^ !put_common_1_right) && bool(symmetries[0].fermi % 2)) {
-#if 0
-               std::cout << "R\n";
-#endif
                alpha = -1;
             }
-#if 0
-            else {
-               std::cout << "N\n";
-            }
-#endif
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
@@ -456,10 +432,6 @@ namespace TAT {
          return result;
       } else {
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
-#if 0
-         std::cout << "R:" << product_result << "\n";
-         std::cout << "S:" << result << "\n";
-#endif
          return result;
       }
    }

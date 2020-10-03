@@ -25,6 +25,7 @@
 
 #include "basic_type.hpp"
 
+// TAT_USE_MKL_TRANSPOSE
 namespace TAT {
    template<class ScalarType>
    void line_copy(
