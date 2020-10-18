@@ -107,7 +107,7 @@ namespace TAT {
       auto work = vector<float>(l_work);
       sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
    template<>
@@ -117,7 +117,7 @@ namespace TAT {
       auto work = vector<double>(l_work);
       dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
    template<>
@@ -136,7 +136,7 @@ namespace TAT {
       auto r_work = vector<float>(5 * min);
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
    template<>
@@ -155,7 +155,7 @@ namespace TAT {
       auto r_work = vector<double>(5 * min);
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
 

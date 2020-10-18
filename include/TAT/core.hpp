@@ -75,11 +75,19 @@ namespace TAT {
        * \see Edge
        */
       std::vector<Edge<Symmetry>> edges = {};
+
+      using normal_map = std::map<std::vector<Symmetry>, vector<ScalarType>>;
+      using fake_block_map = fake_map<std::vector<Symmetry>, vector<ScalarType>>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using block_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
+#else
+      using block_map = normal_map;
+#endif
       /**
        * \brief 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
        * 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
        */
-      std::map<std::vector<Symmetry>, vector<ScalarType>> blocks = {};
+      block_map blocks = {};
 
       /**
        * \brief 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块

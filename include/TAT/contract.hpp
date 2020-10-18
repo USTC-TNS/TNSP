@@ -329,41 +329,27 @@ namespace TAT {
          auto name_2 = common_name_2[i];
          auto edge_1 = tensor_1.core->edges[tensor_1.name_to_index.at(name_1)];
          auto edge_2 = tensor_2.core->edges[tensor_2.name_to_index.at(name_2)];
-         auto this_delete_1 = std::map<Symmetry, Size>();
-         for (const auto& [symmetry_1, dimension_1] : edge_1.map) {
-            auto symmetry_2 = -symmetry_1;
-            auto found = edge_2.map.find(symmetry_2);
-            if (found != edge_2.map.end()) {
-               // found
-               if (const auto dimension_2 = found->second; dimension_2 != dimension_1) {
-                  throw TAT_error("Different Dimension to Contract");
+         auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
+            auto delete_map = std::map<Symmetry, Size>();
+            for (const auto& [symmetry, dimension] : edge_this.map) {
+               auto found = edge_other.map.find(-symmetry);
+               if (found != edge_other.map.end()) {
+                  // found
+                  if (const auto dimension_other = found->second; dimension_other != dimension) {
+                     TAT_error("Different Dimension to Contract");
+                  }
+               } else {
+                  // not found
+                  delete_map[symmetry] = 0;
+                  // 用于merge时cut, cut成0会自动删除
                }
-            } else {
-               // not found
-               this_delete_1[symmetry_1] = 0;
-               // 用于merge时cut, cut成0会自动删除
             }
-         }
-         if (!this_delete_1.empty()) {
-            delete_1[name_1] = std::move(this_delete_1);
-         }
-         auto this_delete_2 = std::map<Symmetry, Size>();
-         for (const auto& [symmetry_2, dimension_2] : edge_2.map) {
-            auto symmetry_1 = -symmetry_2;
-            auto found = edge_1.map.find(symmetry_1);
-            if (found != edge_1.map.end()) {
-               // found
-               if (const auto dimension_1 = found->second; dimension_1 != dimension_2) {
-                  throw TAT_error("Different Dimension to Contract");
-               }
-            } else {
-               // not found
-               this_delete_2[symmetry_2] = 0;
+            if (!delete_map.empty()) {
+               delete_this[name_this] = std::move(delete_map);
             }
-         }
-         if (!this_delete_2.empty()) {
-            delete_2[name_2] = std::move(this_delete_2);
-         }
+         };
+         delete_unused_dimension(edge_1, edge_2, name_1, delete_1);
+         delete_unused_dimension(edge_2, edge_1, name_2, delete_2);
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号

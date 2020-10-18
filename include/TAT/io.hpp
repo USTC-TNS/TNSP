@@ -26,6 +26,9 @@
 #include "tensor.hpp"
 
 namespace TAT {
+   /**
+    * 简洁地打印复数
+    */
    template<class ScalarType>
    std::ostream& print_complex(std::ostream& out, const std::complex<ScalarType>& value) {
       if (value.real() != 0) {
@@ -49,11 +52,11 @@ namespace TAT {
    }
 
    template<class T>
-   void raw_write(std::ostream& out, const T* data, const Size number = 1) {
+   void raw_write(std::ostream& out, const T* data, Size number = 1) {
       out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
    }
    template<class T>
-   void raw_read(std::istream& in, T* data, const Size number = 1) {
+   void raw_read(std::istream& in, T* data, Size number = 1) {
       in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
    }
 
@@ -148,7 +151,7 @@ namespace TAT {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             raw_write(out, &edge.arrow);
          }
-         const Nums numbers = edge.map.size();
+         const Rank numbers = edge.map.size();
          raw_write(out, &numbers);
          for (const auto& [symmetry, dimension] : edge.map) {
             raw_write(out, &symmetry);
@@ -166,10 +169,10 @@ namespace TAT {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             raw_read(in, &edge.arrow);
          }
-         Nums numbers;
+         Rank numbers;
          raw_read(in, &numbers);
          edge.map.clear();
-         for (Nums i = 0; i < numbers; i++) {
+         for (auto i = 0; i < numbers; i++) {
             Symmetry symmetry;
             Size dimension;
             raw_read(in, &symmetry);
@@ -203,14 +206,18 @@ namespace TAT {
       return out;
    }
 
+   /**
+    * \brief 一个控制屏幕字体色彩的简单类型
+    */
    struct UnixColorCode {
       std::string color_code;
+      UnixColorCode(const char* code) noexcept : color_code(code) {}
    };
-   inline const UnixColorCode console_red = {"\x1B[31m"};
-   inline const UnixColorCode console_green = {"\x1B[32m"};
-   inline const UnixColorCode console_yellow = {"\x1B[33m"};
-   inline const UnixColorCode console_blue = {"\x1B[34m"};
-   inline const UnixColorCode console_origin = {"\x1B[0m"};
+   inline const UnixColorCode console_red = "\x1B[31m";
+   inline const UnixColorCode console_green = "\x1B[32m";
+   inline const UnixColorCode console_yellow = "\x1B[33m";
+   inline const UnixColorCode console_blue = "\x1B[34m";
+   inline const UnixColorCode console_origin = "\x1B[0m";
    inline std::ostream& operator<<(std::ostream& out, const UnixColorCode& value) {
       out << value.color_code;
       return out;
@@ -301,7 +308,10 @@ namespace TAT {
       Size count = core->blocks.size();
       raw_write(out, &count);
       for (const auto& [i, j] : core->blocks) {
-         raw_write(out, i.data(), i.size());
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         } else {
+            raw_write(out, i.data(), i.size());
+         }
          raw_write_vector(out, j);
       }
       return *this;
@@ -325,7 +335,7 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          raw_write_vector(out, singular.value.begin()->second);
       } else {
-         const Nums numbers = singular.value.size();
+         const Rank numbers = singular.value.size();
          raw_write(out, &numbers);
          for (const auto& [symmetry, vector] : singular.value) {
             raw_write(out, &symmetry);
@@ -377,9 +387,13 @@ namespace TAT {
       raw_read(in, &count);
       core->blocks.clear();
       for (auto i = 0; i < count; i++) {
-         auto symmetries = std::vector<Symmetry>(rank);
-         raw_read(in, symmetries.data(), symmetries.size());
-         raw_read_vector(in, core->blocks[std::move(symmetries)]);
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+            raw_read_vector(in, core->blocks[std::vector<NoSymmetry>(rank, NoSymmetry())]);
+         } else {
+            auto symmetries = std::vector<Symmetry>(rank);
+            raw_read(in, symmetries.data(), symmetries.size());
+            raw_read_vector(in, core->blocks[std::move(symmetries)]);
+         }
       }
       return *this;
    }
@@ -404,10 +418,10 @@ namespace TAT {
          raw_read_vector(in, singulars);
          singular.value[NoSymmetry()] = std::move(singulars);
       } else {
-         Nums numbers;
+         Rank numbers;
          raw_read(in, &numbers);
          singular.value.clear();
-         for (Nums i = 0; i < numbers; i++) {
+         for (auto i = 0; i < numbers; i++) {
             Symmetry symmetry;
             vector<real_base_t<ScalarType>> singulars;
             raw_read(in, &symmetry);

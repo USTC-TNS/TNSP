@@ -193,7 +193,7 @@ namespace TAT {
                   "edge", [](const T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
             .def_property_readonly(
                   "data",
-                  [](const T& tensor) -> std::map<std::vector<Symmetry>, vector<ScalarType>>& { return tensor.core->blocks; },
+                  [](const T& tensor) -> auto& { return tensor.core->blocks; },
                   "All block data of the tensor")
             .def(py::self + py::self)
             .def(ScalarType() + py::self)

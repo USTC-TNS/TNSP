@@ -36,7 +36,7 @@ namespace TAT {
          if (auto found = position.find(name); found != position.end()) {
             symmetries.push_back(found->second);
          } else {
-            throw TAT_error("Name not found in position map when finding block");
+            TAT_error("Name not found in position map when finding block");
          }
       }
       return symmetries;
@@ -57,7 +57,7 @@ namespace TAT {
          if (auto found = position.find(names[i]); found != position.end()) {
             scalar_position.push_back(found->second);
          } else {
-            throw TAT_error("Name not found in position map when finding offset");
+            TAT_error("Name not found in position map when finding offset");
          }
          dimensions.push_back(core.edges[i].map.begin()->second);
       }
@@ -88,7 +88,7 @@ namespace TAT {
          const auto& name = names[i];
          auto found = position.find(name);
          if (found == position.end()) {
-            throw TAT_error("Name not found in position map when finding block and offset");
+            TAT_error("Name not found in position map when finding block and offset");
          }
          const auto& [symmetry, index] = found->second;
          symmetries.push_back(symmetry);

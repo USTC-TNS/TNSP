@@ -27,17 +27,22 @@
 
 namespace TAT {
 #ifdef TAT_USE_SIMPLE_NAME
+   constexpr bool use_simple_name = true;
+   /**
+    * \brief 用于给张量的边命名的类型Name, 直接使用字符串
+    */
    struct Name {
       std::string name;
-      Name(const std::string& name) : name(name) {}
+      Name(const std::string& name) noexcept : name(name) {}
       Name(const char* name) : name(name) {}
 
-      const std::string& get_name() const {
+      [[nodiscard]] const std::string& get_name() const {
          return name;
       }
    };
 #define TAT_NAME_KEY name
 #else
+   constexpr bool use_simple_name = false;
    /**
     * \brief Name中用于标号的类型
     */
@@ -70,9 +75,9 @@ namespace TAT {
        */
       NameIdType id = -1;
       Name() = default;
-      Name(const NameIdType id) : id(id) {}
-      Name(const char* name) : Name(std::string(name)) {}
-      Name(const std::string& name) {
+      Name(const NameIdType id) noexcept : id(id) {}
+      Name(const char* name) noexcept : Name(std::string(name)) {}
+      Name(const std::string& name) noexcept {
          if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
             id = names_total_index++;
             name_to_id[name] = id;
@@ -82,7 +87,7 @@ namespace TAT {
          }
       }
 
-      const std::string& get_name() const {
+      [[nodiscard]] const std::string& get_name() const {
          return id_to_name.at(id);
       }
    };
@@ -90,6 +95,7 @@ namespace TAT {
 #endif
 
    // 此处将可被c++20的operator<=>替换
+   // 生成Name的比较运算符重载
 #define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                   \
    inline bool OP(const Name& name_1, const Name& name_2) { \
       return EXP;                                           \
@@ -98,8 +104,8 @@ namespace TAT {
    TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.TAT_NAME_KEY != name_2.TAT_NAME_KEY)
    TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.TAT_NAME_KEY >= name_2.TAT_NAME_KEY)
    TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.TAT_NAME_KEY <= name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.TAT_NAME_KEY> name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.TAT_NAME_KEY<name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.TAT_NAME_KEY > name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.TAT_NAME_KEY < name_2.TAT_NAME_KEY)
 #undef TAT_DEFINE_NAME_OPERATOR
 #undef TAT_NAME_KEY
 
@@ -114,6 +120,7 @@ namespace TAT {
    TAT_DEFINE_INTERNAL_NAME(Trace1);
    TAT_DEFINE_INTERNAL_NAME(Trace2);
    TAT_DEFINE_INTERNAL_NAME(Trace3);
+   namespace common_name {
 #define TAT_DEFINE_COMMON_NAME_WITH_INDEX(x) \
    TAT_DEFINE_INTERNAL_NAME(x);              \
    TAT_DEFINE_INTERNAL_NAME(x##0);           \
@@ -126,7 +133,6 @@ namespace TAT {
    TAT_DEFINE_INTERNAL_NAME(x##7);           \
    TAT_DEFINE_INTERNAL_NAME(x##8);           \
    TAT_DEFINE_INTERNAL_NAME(x##9);
-   namespace common_name {
       TAT_DEFINE_COMMON_NAME_WITH_INDEX(P);
       TAT_DEFINE_COMMON_NAME_WITH_INDEX(Phy);
       TAT_DEFINE_COMMON_NAME_WITH_INDEX(L);
@@ -141,8 +147,8 @@ namespace TAT {
       TAT_DEFINE_COMMON_NAME_WITH_INDEX(In);
       TAT_DEFINE_COMMON_NAME_WITH_INDEX(O);
       TAT_DEFINE_COMMON_NAME_WITH_INDEX(Out);
-   } // namespace common_name
 #undef TAT_DEFINE_COMMON_NAME_WITH_INDEX
+   } // namespace common_name
 #undef TAT_DEFINE_INTERNAL_NAME
 
    /**
@@ -163,10 +169,10 @@ namespace TAT {
       const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
       const auto result_length = names.size() == rank;
       if (!result_duplicated) {
-         throw TAT_error("Duplicated names in name list");
+         TAT_error("Duplicated names in name list");
       }
       if (!result_length) {
-         throw TAT_error("Wrong name list length which no equals to expected length");
+         TAT_error("Wrong name list length which no equals to expected length");
       }
       return result_duplicated && result_length;
    }

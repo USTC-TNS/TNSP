@@ -28,52 +28,74 @@
 #include "symmetry.hpp"
 
 namespace TAT {
-   struct no_edge_map {
-      NoSymmetry first;
-      Size second;
-      no_edge_map() : second(0) {}
-      no_edge_map(const std::initializer_list<std::pair<const NoSymmetry, Size>>& map) : second(map.begin()->second) {}
-      no_edge_map(const std::map<NoSymmetry, Size>& map) : second(map.begin()->second) {}
-      Size& at(const NoSymmetry&) {
+   /**
+    * \brief 只有一个元素的假map
+    *
+    * 无对称性的系统为一个NoSymmetry到Size的map, 显然只有一个元素, 使用一个假map来节省一层指针, 在无对称性的block中也用到了这个类
+    */
+   template<class Key, class Value>
+   struct fake_map {
+      using iterator = fake_map*;
+      using const_iterator = const fake_map*;
+      Key first;
+      Value second;
+      fake_map() : second() {}
+      fake_map(const std::initializer_list<std::pair<const Key, Value>>& map) : second(map.begin()->second) {}
+      fake_map(const std::map<Key, Size>& map) : second(map.begin()->second) {}
+      [[nodiscard]] Value& at(const Key&) {
          return second;
       }
-      const Size& at(const NoSymmetry&) const {
+      [[nodiscard]] const Value& at(const Key&) const {
          return second;
       }
-      Size& operator[](const NoSymmetry&) {
+      Value& operator[](const Key&) {
          return second;
       }
-      no_edge_map* begin() {
+      [[nodiscard]] iterator begin() {
          return this;
       }
-      const no_edge_map* begin() const {
+      [[nodiscard]] const_iterator begin() const {
          return this;
       }
-      no_edge_map* end() {
+      [[nodiscard]] iterator end() {
          return this + 1;
       }
-      const no_edge_map* end() const {
+      [[nodiscard]] const_iterator end() const {
          return this + 1;
       }
-      no_edge_map* find(const NoSymmetry&) {
+      [[nodiscard]] iterator find(const Key&) {
          return this;
       }
-      const no_edge_map* find(const NoSymmetry&) const {
+      [[nodiscard]] const_iterator find(const Key&) const {
          return this;
       }
-      no_edge_map* erase(const NoSymmetry&) {
+      iterator erase(const Key&) {
          return this;
       }
-      std::pair<no_edge_map*, bool> insert(const std::tuple<NoSymmetry, Size>& pair) {
+      std::pair<iterator, bool> insert(const std::tuple<Key, Value>& pair) {
          second = std::get<1>(pair);
          return {this, true};
       }
-      using iterator = no_edge_map*;
-      using const_iterator = const no_edge_map*;
+      template<class T>
+      std::pair<iterator, bool> emplace(const Key&, T&& arg) {
+         second = Value(std::forward<T>(arg));
+         return {this, true};
+      }
+      Size size() const {
+         return 1;
+      }
+      void clear() {}
    };
-   bool operator==(const no_edge_map& map_1, const no_edge_map& map_2) {
+   template<class Key, class Value>
+   bool operator==(const fake_map<Key, Value>& map_1, const fake_map<Key, Value>& map_2) {
       return map_1.second == map_2.second;
    }
+
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+   constexpr bool use_simple_nosymmetry = true;
+#else
+   constexpr bool use_simple_nosymmetry = false;
+#endif
 
    /**
     * \see Edge
@@ -81,8 +103,8 @@ namespace TAT {
    template<class Symmetry, bool is_pointer = false>
    struct BoseEdge {
       using symmetry_type = Symmetry;
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY_EDGE
-      using edge_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, no_edge_map, std::map<Symmetry, Size>>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using edge_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_map<Symmetry, Size>, std::map<Symmetry, Size>>;
 #else
       using edge_map = std::map<Symmetry, Size>;
 #endif
@@ -92,9 +114,9 @@ namespace TAT {
 
       BoseEdge() = default;
       BoseEdge(const BoseEdge&) = default;
-      BoseEdge(BoseEdge&&) = default;
+      BoseEdge(BoseEdge&&) noexcept = default;
       BoseEdge& operator=(const BoseEdge&) = default;
-      BoseEdge& operator=(BoseEdge&&) = default;
+      BoseEdge& operator=(BoseEdge&&) noexcept = default;
       ~BoseEdge() = default;
 
       /**
@@ -144,9 +166,9 @@ namespace TAT {
 
       FermiEdge() = default;
       FermiEdge(const FermiEdge&) = default;
-      FermiEdge(FermiEdge&&) = default;
+      FermiEdge(FermiEdge&&) noexcept = default;
       FermiEdge& operator=(const FermiEdge&) = default;
-      FermiEdge& operator=(FermiEdge&&) = default;
+      FermiEdge& operator=(FermiEdge&&) noexcept = default;
       ~FermiEdge() = default;
 
       /**

@@ -67,7 +67,7 @@ namespace TAT {
                }
             }
          } else {
-            throw TAT_error("Not Implement For Singulars Normalize Kind");
+            TAT_error("Not Implement For Singulars Normalize Kind");
          }
       }
 
@@ -135,9 +135,9 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         warning_or_error("Why Copy a Tensor");
+         TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
       };
-      Tensor(Tensor&& other) = default;
+      Tensor(Tensor&& other) noexcept = default;
       Tensor& operator=(const Tensor& other) {
          if (&other == this) {
             return *this;
@@ -145,10 +145,10 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         warning_or_error("Why Copy a Tensor");
+         TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
          return *this;
       };
-      Tensor& operator=(Tensor&& other) = default;
+      Tensor& operator=(Tensor&& other) noexcept = default;
       ~Tensor() = default;
 
       /**
@@ -164,7 +164,7 @@ namespace TAT {
        */
       operator ScalarType() const {
          if (core->blocks.size() != 1 || core->blocks.begin()->second.size() != 1) {
-            throw TAT_error("Try to get the only element of the tensor which contains more than one element");
+            TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
          return core->blocks.begin()->second[0];
       }
@@ -202,7 +202,7 @@ namespace TAT {
       template<class Transform>
       Tensor<ScalarType, Symmetry>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
-            warning_or_error("Set Tensor Shared");
+            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
@@ -379,7 +379,7 @@ namespace TAT {
             const std::set<Name>& reversed_name,
             const std::map<Name, std::vector<Name>>& merge_map,
             std::vector<Name> new_names,
-            const bool apply_parity = false,
+            bool apply_parity = false,
             const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}},
             const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) const;
 
@@ -406,7 +406,7 @@ namespace TAT {
        * \return 反转后的结果张量
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry>
-      reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity = false, const std::set<Name>& parity_exclude_name = {}) const;
+      reverse_edge(const std::set<Name>& reversed_name, bool apply_parity = false, const std::set<Name>& parity_exclude_name = {}) const;
 
       /**
        * \brief 合并张量的一些边
@@ -419,7 +419,7 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry> merge_edge(
             std::map<Name, std::vector<Name>> merge,
-            const bool apply_parity = false,
+            bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_merge = {},
             const std::set<Name>& parity_exclude_name_reverse = {}) const;
 
@@ -432,7 +432,7 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry> split_edge(
             std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split,
-            const bool apply_parity = false,
+            bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {}) const;
 
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
@@ -573,12 +573,12 @@ namespace TAT {
             return *this;
          }
          if (core.use_count() != 1) {
-            warning_or_error("Set Tensor Shared, You Can Use tensor.copy().multiple(...)");
+            TAT_warning_or_error_when_inplace_multiple("Set Tensor Shared, You Can Use tensor.copy().multiple(...)");
          }
          const auto found = name_to_index.find(name);
          if (found == name_to_index.end()) {
-            throw TAT_error("Edge not Found in Multiple");
-            // return *this;
+            TAT_warning_or_error_when_multiple_name_missing("Edge not Found in Multiple");
+            return *this;
          }
          auto index = found->second;
          for (auto& [symmetries, block] : core->blocks) {
@@ -598,7 +598,7 @@ namespace TAT {
                n *= core->edges[i].map.at(symmetries[i]);
             }
             if (vector_in_S.size() != k) {
-               throw TAT_error("Vector Size incompatible in Multiple with a tensor");
+               TAT_error("Vector Size incompatible in Multiple with a tensor");
             }
             auto* data = block.data();
             if (division) {

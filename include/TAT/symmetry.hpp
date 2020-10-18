@@ -71,6 +71,10 @@ namespace TAT {
    struct fermi_symmetry : fermi_symmetry_base {
       /**
        * \brief 根据对称性列表和各边是否需要翻转的情况和parity有效性给出总的parity
+       *
+       * 在edge_operator中, 反转边的时候, 所有奇性边会产生一个符号, 本函数求得总的符号,
+       * 即统计symmetries中为奇, reverse_flag中为true, valid_mark中为true的数目的奇偶性
+       * \see Tensor::edge_operator
        */
       [[nodiscard]] static bool
       get_reverse_parity(const std::vector<Derived>& symmetries, const std::vector<bool>& reverse_flag, const std::vector<bool>& valid_mark) {
@@ -83,7 +87,10 @@ namespace TAT {
          return result;
       }
       /**
-       * \brief 根据对称性列表和各边的转置方案给出总parity, 转置的parity总是有效的, 不像翻转和split, merge只会有一侧的张量有效, 毕竟这是单个张量的操作
+       * \brief 根据对称性列表和各边的转置方案给出总parity
+       *
+       * 转置的parity总是有效的, 不像翻转和split, merge只会有一侧的张量有效, 毕竟这是单个张量的操作
+       * \see Tensor::edge_operator
        */
       [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
          auto result = false;
@@ -106,7 +113,7 @@ namespace TAT {
             const std::vector<Rank>& split_merge_flag, // before merge length
             const std::vector<bool>& valid_mark) {     // after merge length
          auto result = false;
-         for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
+         for (auto split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();
               split_merge_group_position++) {
             // split_merge_group_position point to after merge position
@@ -117,7 +124,7 @@ namespace TAT {
             if (valid_mark[split_merge_group_position]) {
                auto sum_of_parity = 0;
                auto sum_of_parity_square = 0;
-               for (Rank position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
+               for (auto position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
                   auto this_parity = symmetries[position_in_group].fermi;
                   sum_of_parity += this_parity;
                   sum_of_parity_square += this_parity * this_parity;
@@ -134,7 +141,7 @@ namespace TAT {
     * \brief 无对称性
     */
    struct NoSymmetry : bose_symmetry<NoSymmetry> {
-      auto information() const {
+      [[nodiscard]] auto information() const {
          return 0;
       }
    };
@@ -156,7 +163,7 @@ namespace TAT {
 
       Z2Symmetry(const Z2 z2 = false) : z2(z2) {}
 
-      auto information() const {
+      [[nodiscard]] auto information() const {
          return z2;
       }
    };
@@ -179,7 +186,7 @@ namespace TAT {
 
       U1Symmetry(const U1 u1 = 0) : u1(u1) {}
 
-      auto information() const {
+      [[nodiscard]] auto information() const {
          return u1;
       }
    };
@@ -202,7 +209,7 @@ namespace TAT {
 
       FermiSymmetry(const Fermi fermi = 0) : fermi(fermi) {}
 
-      auto information() const {
+      [[nodiscard]] auto information() const {
          return fermi;
       }
    };
@@ -226,7 +233,7 @@ namespace TAT {
 
       FermiZ2Symmetry(const Fermi fermi = 0, const Z2 z2 = false) : fermi(fermi), z2(z2) {}
 
-      auto information() const {
+      [[nodiscard]] auto information() const {
          return std::tie(fermi, z2);
       }
    };
@@ -251,7 +258,7 @@ namespace TAT {
 
       FermiU1Symmetry(const Fermi fermi = 0, const U1 u1 = 0) : fermi(fermi), u1(u1) {}
 
-      auto information() const {
+      [[nodiscard]] auto information() const {
          return std::tie(fermi, u1);
       }
    };
@@ -268,6 +275,7 @@ namespace TAT {
    }
 
    // 此处将可被c++20的operator<=>替换
+   // 生成每个对称性的对称性的比较运算符重载
 #define TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, OP, EXP)         \
    inline bool OP(const SYM& symmetry_1, const SYM& symmetry_2) { \
       return EXP;                                                 \

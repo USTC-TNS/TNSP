@@ -86,7 +86,7 @@ namespace TAT {
       // n*m fortran matrix at data do qr
       if (use_qr_not_lq) {
          // c qr -> fortran lq
-         throw TAT_error("Not Impl");
+         TAT_error("Not Impl");
          // TODO, 还有其他scalartype的东西
       } else {
          // c lq -> fortran qr
@@ -96,13 +96,13 @@ namespace TAT {
          auto tau = vector<float>(min);
          sgeqrf_(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
-            warning_or_error("Error in QR");
+            TAT_error("Error in QR");
          }
          // Q matrix min*n for c or n*min for fortran
          std::copy(data, data + n * min, data_2);
          sorgqr_(&n, &min, &min, data_2, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
-            warning_or_error("Error in QR");
+            TAT_error("Error in QR");
          }
          // R matrix
          for (auto i = 0; i < min; i++) {
@@ -127,7 +127,7 @@ namespace TAT {
       } else if (free_name_direction == 'q' || free_name_direction == 'Q') {
          use_r_name = false;
       } else {
-         throw TAT_error("Invalid direction in QR");
+         TAT_error("Invalid direction in QR");
       };
       bool use_qr_not_lq = names.empty() || ((free_name_set.find(names.back()) != free_name_set.end()) == use_r_name);
       // merge

@@ -23,6 +23,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 #include "io.hpp"
 #include "tensor.hpp"
@@ -37,17 +38,17 @@ namespace TAT {
       struct mpi_t {
          int size;
          int rank;
-         static bool initialized() {
+         static bool initialized() noexcept {
             int result;
             MPI_Initialized(&result);
             return result;
          }
-         static bool finalized() {
+         static bool finalized() noexcept {
             int result;
             MPI_Finalized(&result);
             return result;
          }
-         mpi_t() {
+         mpi_t() noexcept : size(1), rank(0) {
             if (!initialized()) {
                MPI_Init(nullptr, nullptr);
             }
@@ -62,26 +63,43 @@ namespace TAT {
       };
       inline mpi_t mpi;
 
+      /**
+       * \brief source调用此函数, 向destination发送一个张量
+       */
       template<class ScalarType, class Symmetry>
       void send(const Tensor<ScalarType, Symmetry>& tensor, const int destination) {
-         auto data = tensor.dump(); // TODO: 不需复制
+         auto data = tensor.dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, 0, MPI_COMM_WORLD);
       }
 
-      // TODO: 异步
+      // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
+      /**
+       * \brief destination调用此函数, 从source接受一个张量
+       */
       template<class ScalarType, class Symmetry>
-      Tensor<ScalarType, Symmetry> receive(const Tensor<ScalarType, Symmetry>&, const int source) {
-         // Tensor只是为了确定template参数
+      Tensor<ScalarType, Symmetry> receive(const int source) {
          auto status = MPI_Status();
          MPI_Probe(source, 0, MPI_COMM_WORLD, &status);
          int length;
          MPI_Get_count(&status, MPI_BYTE, &length);
-         auto data = std::string(length, '\0'); // 不需初始化
+         auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
          MPI_Recv(data.data(), length, MPI_BYTE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
          auto result = Tensor<ScalarType, Symmetry>().load(data);
          return result;
       }
 
+      /**
+       * \brief destination调用此函数, 从source接受一个张量
+       * 第一个参数并不使用, 仅仅是为了确定张量类型
+       */
+      template<class ScalarType, class Symmetry>
+      Tensor<ScalarType, Symmetry> receive(const Tensor<ScalarType, Symmetry>&, const int source) {
+         return receive<ScalarType, Symmetry>(source);
+      }
+
+      /**
+       * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
+       */
       template<class ScalarType, class Symmetry>
       Tensor<ScalarType, Symmetry> send_receive(const Tensor<ScalarType, Symmetry>& tensor, const int source, const int destination) {
          if (mpi.rank == source) {
@@ -93,13 +111,16 @@ namespace TAT {
          return Tensor<ScalarType, Symmetry>();
       }
 
+      /**
+       * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
+       */
       template<class ScalarType, class Symmetry>
       Tensor<ScalarType, Symmetry> broadcast(const Tensor<ScalarType, Symmetry>& tensor, const int root) {
          if (mpi.size == 1) {
             return tensor.copy(); // rvalue
          }
          if (0 > root || root >= mpi.size) {
-            throw TAT_error("Invalid root rank when mpi broadcast a tensor");
+            TAT_error("Invalid root rank when mpi broadcast a tensor");
          }
          const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
          Tensor<ScalarType, Symmetry> result;
@@ -109,6 +130,7 @@ namespace TAT {
             const auto father_real_rank = (father_fake_rank + root) % mpi.size;
             result = receive(result, father_real_rank);
          } else {
+            // 自己就是root的话, 会复制一次张量
             result = tensor.copy();
          }
          // send to son
@@ -125,13 +147,16 @@ namespace TAT {
          return result;
       }
 
+      /**
+       * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
+       */
       template<class ScalarType, class Symmetry, class Func>
       Tensor<ScalarType, Symmetry> reduce(const Tensor<ScalarType, Symmetry>& tensor, const int root, Func&& function) {
          if (mpi.size == 1) {
             return tensor.copy(); // rvalue
          }
          if (0 > root || root >= mpi.size) {
-            throw TAT_error("Invalid root rank when mpi reduce a tensor");
+            TAT_error("Invalid root rank when mpi reduce a tensor");
          }
          const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
          Tensor<ScalarType, Symmetry> result;
@@ -144,6 +169,7 @@ namespace TAT {
          }
          if (right_son_fake_rank < mpi.size) {
             const auto right_son_real_rank = (right_son_fake_rank + root) % mpi.size;
+            // 如果左儿子不存在, 那么右儿子一定不存在, 所以不必判断result是否有效
             result = function(result, receive(result, right_son_real_rank));
          }
          // pass to father
@@ -160,11 +186,17 @@ namespace TAT {
          // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
       }
 
+      /**
+       * 对各个进程但张量通过求和进行reduce
+       */
       template<class ScalarType, class Symmetry>
       Tensor<ScalarType, Symmetry> summary(const Tensor<ScalarType, Symmetry>& tensor, const int root) {
          return reduce(tensor, root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       }
 
+      /**
+       * mpi进程间同步
+       */
       inline void barrier() {
          MPI_Barrier(MPI_COMM_WORLD);
       }
@@ -203,6 +235,18 @@ namespace TAT {
    } // namespace mpi
 #endif
 
+   inline evil_t::evil_t() noexcept {
+#ifdef _WIN32
+      HANDLE output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+      DWORD output_mode = 0;
+      GetConsoleMode(output_handle, &output_mode);
+      SetConsoleMode(output_handle, output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+      HANDLE error_handle = GetStdHandle(STD_ERROR_HANDLE);
+      DWORD error_mode = 0;
+      GetConsoleMode(error_handle, &error_mode);
+      SetConsoleMode(error_handle, error_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+   }
    inline evil_t::~evil_t() {
 #ifndef NDEBUG
       try {
@@ -218,14 +262,16 @@ namespace TAT {
 #endif
    }
 
-   inline void warning_or_error([[maybe_unused]] const char* message) {
-#ifndef NDEBUG
+   inline void TAT_warning(const char* message) {
       std::cerr << console_red
 #ifdef TAT_USE_MPI
-                << "rank " << mpi::mpi.rank << " : "
+                << "[rank " << mpi::mpi.rank << "] "
 #endif
                 << message << console_origin << std::endl;
-#endif
+   }
+
+   inline void TAT_error(const char* message) {
+      throw std::runtime_error(message);
    }
 } // namespace TAT
 #endif

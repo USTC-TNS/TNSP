@@ -42,12 +42,20 @@
 // 开关说明
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
 // TODO: TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义
-// TODO: 使用其他lapack接口比如gesdd, gesvdx, geqr
+// TODO: 使用其他lapack接口比如gesdd, gesvdx, geqrf
 // TODO: TAT_USE_STUPID_TRANSPOSE
 // TODO: TAT_USE_SINGULAR_MATRIX
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
-// TAT_USE_SIMPLE_NOSYMMETRY_EDGE 定义以使用简单的Size作为无对称性的边
+// TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 
+/**
+ * \brief TAT is A Tensor library
+ *
+ * 张量含有两个模板参数, 分别是标量类型和对称性类型, 含有元信息和数据两部分. 元信息包括秩, 以及秩个边
+ * 每个边含有一个Name信息以及形状信息, 对于无对称性的张量, 边的形状使用一个数字描述, 即此边的维度.
+ * 对于其他类型的对称性, 边的形状为一个该类型对称性(应该是该对称性的量子数, 这里简称对称性)到数的映射,
+ * 表示某量子数下的维度. 而张量数据部分为若干个秩维矩块, 对于无对称性张量, 仅有唯一一个矩块.
+ */
 namespace TAT {
    /**
     * \brief TAT的版本号
@@ -58,21 +66,31 @@ namespace TAT {
     * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式
     */
    struct evil_t {
-      evil_t() {
-#ifdef _WIN32
-         HANDLE output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-         DWORD output_mode = 0;
-         GetConsoleMode(output_handle, &output_mode);
-         SetConsoleMode(output_handle, output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-         HANDLE error_handle = GetStdHandle(STD_ERROR_HANDLE);
-         DWORD error_mode = 0;
-         GetConsoleMode(error_handle, &error_mode);
-         SetConsoleMode(error_handle, error_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-#endif
-      }
+      evil_t() noexcept;
       ~evil_t();
    };
    inline const evil_t evil;
+
+   void TAT_nothing(const char*) {}
+
+   /**
+    * \brief TAT使用的打印警告
+    * \param message 待打印的内容
+    */
+   void TAT_warning(const char* message);
+
+   /**
+    * \brief TAT使用的抛出运行时异常
+    * \param message 异常说明
+    */
+   void TAT_error(const char* message);
+
+   const auto TAT_warning_or_error_when_copy_data = TAT_warning;
+   const auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
+   const auto TAT_warning_or_error_when_inplace_multiple = TAT_warning;
+   const auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
+   const auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
+   const auto TAT_warning_or_error_when_lapack_error = TAT_warning;
 } // namespace TAT
 
 // clang-format off
