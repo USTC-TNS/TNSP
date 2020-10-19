@@ -65,42 +65,194 @@ void zgelqf_(
       const int* lwork,
       int* info);
 void sorgqr_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
+void dorgqr_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
+void cungqr_(
+      const int* m,
+      const int* n,
+      const int* k,
+      std::complex<float>* A,
+      const int* lda,
+      std::complex<float> const* tau,
+      std::complex<float>* work,
+      const int* lwork,
+      int* info);
+void zungqr_(
+      const int* m,
+      const int* n,
+      const int* k,
+      std::complex<double>* A,
+      const int* lda,
+      std::complex<double> const* tau,
+      std::complex<double>* work,
+      const int* lwork,
+      int* info);
+void sorglq_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
+void dorglq_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
+void cunglq_(
+      const int* m,
+      const int* n,
+      const int* k,
+      std::complex<float>* A,
+      const int* lda,
+      std::complex<float> const* tau,
+      std::complex<float>* work,
+      const int* lwork,
+      int* info);
+void zunglq_(
+      const int* m,
+      const int* n,
+      const int* k,
+      std::complex<double>* A,
+      const int* lda,
+      std::complex<double> const* tau,
+      std::complex<double>* work,
+      const int* lwork,
+      int* info);
 }
 
 namespace TAT {
+   // template<class ScalarType>
+   // void geqrf(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
+   // template<class ScalarType>
+   // void gelqf(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
+   // template<class ScalarType>
+   // void
+   // orgqr(const int* m, const int* n, const int* k, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
+   // template<class ScalarType>
+   // void
+   // orglq(const int* m, const int* n, const int* k, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
+
+   template<class ScalarType>
+   constexpr void (
+         *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
+   template<>
+   auto geqrf<float> = sgeqrf_;
+   template<>
+   auto geqrf<double> = dgeqrf_;
+   template<>
+   auto geqrf<std::complex<float>> = cgeqrf_;
+   template<>
+   auto geqrf<std::complex<double>> = zgeqrf_;
+   template<class ScalarType>
+   constexpr void (
+         *gelqf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
+   template<>
+   auto gelqf<float> = sgelqf_;
+   template<>
+   auto gelqf<double> = dgelqf_;
+   template<>
+   auto gelqf<std::complex<float>> = cgelqf_;
+   template<>
+   auto gelqf<std::complex<double>> = zgelqf_;
+   template<class ScalarType>
+   constexpr void (*orgqr)(
+         const int* m,
+         const int* n,
+         const int* k,
+         ScalarType* A,
+         const int* lda,
+         ScalarType* tau,
+         ScalarType* work,
+         const int* lwork,
+         int* info) = nullptr;
+   template<>
+   auto orgqr<float> = sorgqr_;
+   template<>
+   auto orgqr<double> = dorgqr_;
+   template<>
+   auto orgqr<std::complex<float>> = cungqr_;
+   template<>
+   auto orgqr<std::complex<double>> = zungqr_;
+   template<class ScalarType>
+   constexpr void (*orglq)(
+         const int* m,
+         const int* n,
+         const int* k,
+         ScalarType* A,
+         const int* lda,
+         ScalarType* tau,
+         ScalarType* work,
+         const int* lwork,
+         int* info) = nullptr;
+   template<>
+   auto orglq<float> = sorglq_;
+   template<>
+   auto orglq<double> = dorglq_;
+   template<>
+   auto orglq<std::complex<float>> = cunglq_;
+   template<>
+   auto orglq<std::complex<double>> = zunglq_;
+
    template<class ScalarType>
    void calculate_qr(
          const int& m,
          const int& n,
          const int& min,
          const int& max,
-         ScalarType* data,
-         ScalarType* data_1,
-         ScalarType* data_2,
-         bool use_qr_not_lq);
-
-   template<>
-   void
-   calculate_qr<float>(const int& m, const int& n, const int& min, const int& max, float* data, float* data_1, float* data_2, bool use_qr_not_lq) {
+         ScalarType* __restrict data,
+         ScalarType* __restrict data_1,
+         ScalarType* __restrict data_2,
+         bool use_qr_not_lq) {
       // m*n c matrix at data do lq
       // n*m fortran matrix at data do qr
       if (use_qr_not_lq) {
          // c qr -> fortran lq
-         TAT_error("Not Impl");
-         // TODO, 还有其他scalartype的东西
-      } else {
-         // c lq -> fortran qr
+         // LQ
+         //
+         // XX   X        XQ
+         // XX   XX XX    XX
+         // XX = XX XX -> XX
+         //
+         // XXX   X  XXX    XQQ
+         // XXX = XX XXX -> XXQ
          int result;
          int lwork = 64 * max;
-         auto work = vector<float>(lwork);
-         auto tau = vector<float>(min);
-         sgeqrf_(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
+         auto work = vector<ScalarType>(lwork);
+         auto tau = vector<ScalarType>(min);
+         gelqf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
+         if (result != 0) {
+            TAT_error("Error in LQ");
+         }
+         // Q matrix
+         // data n*m
+         // data_1 min*m
+         for (auto i = 0; i < m; i++) {
+            std::copy(data + i * n, data + i * n + min, data_1 + i * min);
+         }
+         orglq<ScalarType>(&min, &m, &min, data_1, &min, tau.data(), work.data(), &lwork, &result);
+         if (result != 0) {
+            TAT_error("Error in LQ");
+         }
+         // L matrix
+         for (auto i = 0; i < min; i++) {
+            std::fill(data_2 + i * n, data_2 + i * n + i, 0);
+            std::copy(data + i * n + i, data + i * n + n, data_2 + i * n + i);
+         }
+      } else {
+         // c lq -> fortran qr
+         // QR
+         //
+         // XX   XX       XX
+         // XX   XX XX    QX
+         // XX = XX  X -> QQ
+         //
+         // XXX   XX XXX    XXX
+         // XXX = XX  XX -> QXX
+         int result;
+         int lwork = 64 * max;
+         auto work = vector<ScalarType>(lwork);
+         auto tau = vector<ScalarType>(min);
+         geqrf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
             TAT_error("Error in QR");
          }
-         // Q matrix min*n for c or n*min for fortran
-         std::copy(data, data + n * min, data_2);
-         sorgqr_(&n, &min, &min, data_2, &n, tau.data(), work.data(), &lwork, &result);
+         // Q matrix
+         std::copy(data, data + n * min, data_2); // 多复制了无用的上三角部分
+         // fortran
+         // data n*m
+         // data_2 n*min
+         orgqr<ScalarType>(&n, &min, &min, data_2, &n, tau.data(), work.data(), &lwork, &result);
+         // same size of lwork
          if (result != 0) {
             TAT_error("Error in QR");
          }
@@ -110,8 +262,8 @@ namespace TAT {
             std::fill(data_1 + min * i + i + 1, data_1 + min * i + min, 0);
          }
          std::copy(data + n * min, data + n * m, data_1 + min * min);
+         // 若为第一种, 则这个copy不做事
       }
-      // TODO
    }
 
    template<class ScalarType, class Symmetry>

@@ -288,10 +288,10 @@ namespace TAT {
 
       const auto& tensor_u = put_v_right ? tensor_1 : tensor_2;
       const auto& tensor_v = put_v_right ? tensor_2 : tensor_1;
-      reversed_set_u.insert(common_name_u);
       // 始终在tensor_1处无符号reverse, 然后判断是否再在tensor_u和tensor_v中分别有无符号转置
       // tensor_1 == tensor_u -> u nr
       // tensor_1 == tensor_v -> v nr v nr u yr -> u yr
+      reversed_set_u.insert(common_name_u);
       // 这里会自动cut
       auto u = tensor_u.template edge_operator<true>(
             {{SVD_V, common_name_u}},
