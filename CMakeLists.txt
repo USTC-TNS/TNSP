@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(TAT VERSION 0.0.5 LANGUAGES CXX)
+add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -9,7 +10,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # windows的情况如下
 # vs 2019 可以找到intel mpi, 使用clang和msvc都是可以的, 但是mkl需要手动设置MKLROOT的环境变量
 # clion 无法找到intel mpi, 其他与vs 2019一致
-# linux中无法使用intel的编译器进行编译, windows中懒得测试去了
+# 自己的pc上linux中无法使用intel的编译器进行编译, 似乎与版本有关系, 在学校超算上配合合适的gcc版本是可以编译的
+# windows中的intel情况懒得测试了
 
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
 set(CMAKE_CXX_STANDARD 17)
