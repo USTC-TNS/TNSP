@@ -62,11 +62,11 @@ namespace TAT {
     */
    inline const char* version =
 #ifdef TAT_VERSION
-      TAT_VERSION
+         TAT_VERSION
 #else
-      "unknown"
+         "unknown"
 #endif
-      ;
+         ;
 
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式

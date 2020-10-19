@@ -212,8 +212,9 @@ namespace TAT {
             {},
             {},
             reversed_set_origin,
-            {{SVD1, free_name_u}, {SVD2, free_name_v}},
-            put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1});
+            {{SVD_U, free_name_u}, {SVD_V, free_name_v}},
+            put_v_right ? std::vector<Name>{SVD_U, SVD_V} : std::vector<Name>{SVD_V, SVD_U});
+      // tensor -> SVD_U -O- SVD_V
       // call GESVD
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
@@ -226,10 +227,10 @@ namespace TAT {
          common_edge_2.map[sym[0]] = k;
       }
       auto tensor_1 = Tensor<ScalarType, Symmetry>{
-            put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1},
+            put_v_right ? std::vector<Name>{SVD_U, SVD_V} : std::vector<Name>{SVD_V, SVD_U},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
       auto tensor_2 = Tensor<ScalarType, Symmetry>{
-            put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1},
+            put_v_right ? std::vector<Name>{SVD_U, SVD_V} : std::vector<Name>{SVD_V, SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
@@ -293,23 +294,23 @@ namespace TAT {
       // tensor_1 == tensor_v -> v nr v nr u yr -> u yr
       // 这里会自动cut
       auto u = tensor_u.template edge_operator<true>(
-            {{SVD2, common_name_u}},
-            {{SVD1, free_names_and_edges_u}},
+            {{SVD_V, common_name_u}},
+            {{SVD_U, free_names_and_edges_u}},
             reversed_set_u,
             {},
             result_name_u,
             false,
             {{{}, std::set<Name>{common_name_u}, {}, {}}},
-            {{SVD2, remain_dimension_u}});
+            {{SVD_V, remain_dimension_u}});
       auto v = tensor_v.template edge_operator<true>(
-            {{SVD1, common_name_v}},
-            {{SVD2, free_names_and_edges_v}},
+            {{SVD_U, common_name_v}},
+            {{SVD_V, free_names_and_edges_v}},
             reversed_set_v,
             {},
             result_name_v,
             false,
             {{{}, {}, {}, {}}},
-            {{SVD1, remain_dimension_v}});
+            {{SVD_U, remain_dimension_v}});
       return {std::move(u), {std::move(result_s)}, std::move(v)};
    }
 } // namespace TAT
