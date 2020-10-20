@@ -179,7 +179,8 @@ namespace TAT {
             .def_readonly("value", &S::value, "singular value dictionary")
             .def("__str__", [](const S& s) { return s.show(); })
             .def("__repr__", [](const S& s) { return "Singular" + s.show(); })
-            .def("normalize", &S::normalize, py::arg("kind") = -1)
+            .def("normalize_max", &S::template normalize<-1>)
+            .def("normalize_sum", &S::template normalize<1>)
             .def("dump", [](S& s) { return py::bytes(s.dump()); })
             .def(
                   "load", [](S& s, py::bytes bytes) -> S& { return s.load(std::string(bytes)); }, py::return_value_policy::reference_internal)
@@ -318,7 +319,7 @@ namespace TAT {
             .def("to_double_complex", &T::template to<std::complex<double>>, "Convert to double complex tensor")
             .def("norm_max", &T::template norm<-1>, "Get -1 norm, namely max absolute value")
             .def("norm_num", &T::template norm<0>, "Get 0 norm, namely number of element, note: not check whether equal to 0")
-            .def("norm_1", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
+            .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
             .def("norm_2", &T::template norm<2>, "Get 2 norm")
             .def("edge_rename", &T::edge_rename, py::arg("name_dictionary"), "Rename names of edges, which will not copy data")
             .def(

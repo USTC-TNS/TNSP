@@ -333,7 +333,7 @@ class TwoDimensionHeisenberg:
                 .svd({"Left", "Up1", "Down1", "O0"}, "Right", "Left", self.D)
             u /= u.norm_max()
             v /= v.norm_max()
-            s.normalize()
+            s.normalize_max()
             self.environment["Right", l1, l2] = s
             self.lattice[l1][l2] = u.edge_rename({"Up1": "Up", "Down1": "Down", "O0": "Phy"})
             if ("Right", l1, l2 - 1) in self.environment:
@@ -381,7 +381,7 @@ class TwoDimensionHeisenberg:
                 .svd({"Up", "Left1", "Right1", "O0"}, "Down", "Up", self.D)
             u /= u.norm_max()
             v /= v.norm_max()
-            s.normalize()
+            s.normalize_max()
             self.environment["Down", l1, l2] = s
             self.lattice[l1][l2] = u.edge_rename({"Left1": "Left", "Right1": "Right", "O0": "Phy"})
             if ("Down", l1 - 1, l2) in self.environment:

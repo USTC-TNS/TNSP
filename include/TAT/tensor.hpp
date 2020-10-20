@@ -39,8 +39,9 @@ namespace TAT {
    struct Singular {
       std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
 
-      void normalize(int p) {
-         if (p == -1) {
+      template<int p>
+      void normalize() {
+         if constexpr (p == -1) {
             real_base_t<ScalarType> maximum = 0;
             for (const auto& [symmetry, singulars] : value) {
                for (const auto& element : singulars) {
@@ -53,7 +54,7 @@ namespace TAT {
                   element /= maximum;
                }
             }
-         } else if (p == 1) {
+         } else if constexpr (p == 1) {
             real_base_t<ScalarType> summation = 0;
             for (const auto& [symmetry, singulars] : value) {
                for (const auto& element : singulars) {
@@ -67,7 +68,7 @@ namespace TAT {
                }
             }
          } else {
-            TAT_error("Not Implement For Singulars Normalize Kind");
+            TAT_error("Not Implement For Singulars Normalize Kind, Only +1 and -1 supported now");
          }
       }
 
