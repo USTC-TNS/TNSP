@@ -40,7 +40,6 @@ namespace TAT {
             // v
             return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, internal_name::SVD_V}})
                   .edge_rename({{internal_name::SVD_U, name}});
-            // TODO also elementwise
          } else {
             // u
             return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, internal_name::SVD_U}})
