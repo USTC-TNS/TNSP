@@ -154,6 +154,24 @@ namespace TAT {
       }
 
       /**
+       * \brief 创建高秩但是元素只有一个的张量
+       * \param number 秩为零的张量拥有的唯一一个元素的值
+       * \param names_init 边的名称
+       * \param edge_symmetry 如果系统含有对称性, 则需要设置此值
+       * \param edge_arrow 如果系统对称性为fermi对称性, 则需要设置此值
+       */
+      static Tensor<ScalarType, Symmetry>
+      one(ScalarType number,
+          std::vector<Name> names_init,
+          const std::vector<Symmetry>& edge_symmetry = {},
+          const std::vector<Arrow>& edge_arrow = {}) {
+         auto rank = names_init.size();
+         auto result = Tensor(std::move(names_init), get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
+         result.core->blocks.begin()->second[0] = number;
+         return result;
+      }
+
+      /**
        * \brief 秩为一的张量转化为其中唯一一个元素的标量类型
        */
       operator ScalarType() const {
@@ -162,6 +180,8 @@ namespace TAT {
          }
          return core->blocks.begin()->second[0];
       }
+
+      // TODO Tensor<ScalarType, Symmetry> slice(const std::vector<Rank>& configure) const {}
 
       /**
        * \brief 产生一个与自己形状一样的张量

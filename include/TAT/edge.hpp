@@ -347,5 +347,24 @@ namespace TAT {
    struct is_edge<Edge<T>> : std::bool_constant<true> {};
    template<class T>
    constexpr bool is_edge_v = is_edge<T>::value;
+
+   template<class Symmetry>
+   [[nodiscard]] std::vector<Edge<Symmetry>>
+   get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         return std::vector<Edge<Symmetry>>(rank, {1});
+      } else {
+         auto result = std::vector<Edge<Symmetry>>();
+         result.reserve(rank);
+         for (auto i = 0; i < rank; i++) {
+            if constexpr (is_fermi_symmetry_v<Symmetry>) {
+               result.push_back({edge_arrow[i], {{edge_symmetry[i], 1}}});
+            } else {
+               result.push_back({{{edge_symmetry[i], 1}}});
+            }
+         }
+         return result;
+      }
+   }
 } // namespace TAT
 #endif

@@ -261,6 +261,12 @@ namespace TAT {
                  py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
             .def(implicit_init<T, ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
+            .def(py::init<>(&T::one),
+                 py::arg("number"),
+                 py::arg("names"),
+                 py::arg("edge_symmetry") = py::list(),
+                 py::arg("edge_arrow") = py::list(),
+                 "Create tensor with high rank but containing only one element")
             .def(
                   "value", [](const T& tensor) -> ScalarType { return tensor; }, "Get the only one element of a rank 0 tensor")
             .def("copy", &T::copy, "Deep copy a tensor")

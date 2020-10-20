@@ -90,7 +90,7 @@ def test_norm():
     t = TAT.Tensor.DU1("Left Right Up".split(" "), [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to_double_complex()
     print(t.norm_max())
     print(t.norm_num())
-    print(t.norm_1())
+    print(t.norm_sum())
     print(t.norm_2())
 
 
