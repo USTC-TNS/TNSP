@@ -325,6 +325,7 @@ namespace TAT {
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"),
                   py::arg("value"))
+            .def("slice", &T::slice, "Get Slice of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
             .def("to_single_real", &T::template to<float>, "Convert to single real tensor")
             .def("to_double_real", &T::template to<double>, "Convert to double real tensor")
             .def("to_single_complex", &T::template to<std::complex<float>>, "Convert to single complex tensor")

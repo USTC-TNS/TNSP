@@ -181,7 +181,17 @@ namespace TAT {
          return core->blocks.begin()->second[0];
       }
 
-      // TODO Tensor<ScalarType, Symmetry> slice(const std::vector<Rank>& configure) const {}
+      using EdgeInfoForGetItem = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
+      using EdgeInfoWithArrowForExpand = std::conditional_t<
+            std::is_same_v<Symmetry, NoSymmetry>,
+            std::tuple<Size, Size>,
+            std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
+
+      [[nodiscard]] Tensor<ScalarType, Symmetry>
+      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, Name old_name = internal_name::Null) const;
+
+      [[nodiscard]] Tensor<ScalarType, Symmetry>
+      slice(const std::map<Name, EdgeInfoForGetItem>& configure, Name new_name = internal_name::Null, Arrow arrow = false) const;
 
       /**
        * \brief 产生一个与自己形状一样的张量
@@ -281,8 +291,6 @@ namespace TAT {
       [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position = {}) const&;
 
       [[nodiscard]] auto& block(const std::map<Name, Symmetry>& position = {}) &;
-
-      using EdgeInfoForGetItem = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
 
       /**
        * \brief 获取张量中某个分块内的某个元素

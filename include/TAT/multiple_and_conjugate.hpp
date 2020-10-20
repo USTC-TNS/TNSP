@@ -1,7 +1,7 @@
 /**
  * \file multiple_and_conjugate.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,21 +38,21 @@ namespace TAT {
       if (division) {
          if (different_direction) {
             // v
-            return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, V_edge}})
-                  .edge_rename({{U_edge, name}});
+            return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, internal_name::SVD_V}})
+                  .edge_rename({{internal_name::SVD_U, name}});
             // TODO also elementwise
          } else {
             // u
-            return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, U_edge}})
-                  .edge_rename({{V_edge, name}});
+            return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, internal_name::SVD_U}})
+                  .edge_rename({{internal_name::SVD_V, name}});
          }
       } else {
          if (different_direction) {
             // v
-            return contract(S, {{name, V_edge}}).edge_rename({{U_edge, name}});
+            return contract(S, {{name, internal_name::SVD_V}}).edge_rename({{internal_name::SVD_U, name}});
          } else {
             // u
-            return contract(S, {{name, U_edge}}).edge_rename({{V_edge, name}});
+            return contract(S, {{name, internal_name::SVD_U}}).edge_rename({{internal_name::SVD_V, name}});
          }
       }
 #else

@@ -30,6 +30,7 @@
 #include "multiple_and_conjugate.hpp"
 #include "qr.hpp"
 #include "scalar.hpp"
+#include "slice_and_expand.hpp"
 #include "svd.hpp"
 #include "trace.hpp"
 #include "transpose.hpp"
