@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(TAT VERSION 0.0.5 LANGUAGES CXX)
+project(TAT VERSION 0.0.6 LANGUAGES CXX)
 add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
