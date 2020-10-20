@@ -109,20 +109,20 @@ namespace TAT {
       using T = Tensor<ScalarType, Symmetry>;
       mpi_m.def(
             "send_receive",
-            &mpi::send_receive<ScalarType, Symmetry>,
+            &send_receive<ScalarType, Symmetry>,
             py::arg("tensor"),
             py::arg("source"),
             py::arg("destination"),
             "Send tensor from source to destination");
-      mpi_m.def("broadcast", &mpi::broadcast<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Broadcast a tensor from root");
+      mpi_m.def("broadcast", &broadcast<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Broadcast a tensor from root");
       mpi_m.def(
             "reduce",
-            [](const T& tensor, const int root, std::function<T(T, T)> function) { return mpi::reduce(tensor, root, function); },
+            [](const T& tensor, const int root, std::function<T(T, T)> function) { return reduce(tensor, root, function); },
             py::arg("tensor"),
             py::arg("root"),
             py::arg("function"),
             "Reduce a tensor with commutative function into root");
-      mpi_m.def("summary", &mpi::summary<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Summation of a tensor into root");
+      mpi_m.def("summary", &summary<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Summation of a tensor into root");
    }
 #endif
 
@@ -674,14 +674,14 @@ namespace TAT {
       // mpi
       auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
 #ifdef TAT_USE_MPI
-      mpi_m.def("barrier", &mpi::barrier);
+      mpi_m.def("barrier", &barrier);
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) declare_mpi<SCALAR, SYM##Symmetry>(mpi_m);
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
-      mpi_m.attr("rank") = mpi::mpi.rank;
-      mpi_m.attr("size") = mpi::mpi.size;
+      mpi_m.attr("rank") = mpi.rank;
+      mpi_m.attr("size") = mpi.size;
       mpi_m.def("print", [](py::args& args, py::kwargs kwargs) {
-         if (mpi::mpi.rank == 0) {
+         if (mpi.rank == 0) {
             py::print(*args, **kwargs);
          }
       });
