@@ -192,9 +192,7 @@ namespace TAT {
             .def_property_readonly(
                   "edge", [](const T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
             .def_property_readonly(
-                  "data",
-                  [](const T& tensor) -> auto& { return tensor.core->blocks; },
-                  "All block data of the tensor")
+                  "data", [](const T& tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
             .def(py::self + py::self)
             .def(ScalarType() + py::self)
             .def(py::self + ScalarType())
@@ -425,6 +423,17 @@ namespace TAT {
                   py::arg("common_name_v"),
                   py::arg("cut") = Size(-1),
                   "Singular value decomposition")
+            .def(
+                  "qr",
+                  [](const T& tensor, char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) {
+                     auto result = tensor.qr(free_name_direction, free_name_set, common_name_q, common_name_r);
+                     return py::make_tuple(std::move(result.Q), std::move(result.R));
+                  },
+                  py::arg("free_name_direction"),
+                  py::arg("free_name_set"),
+                  py::arg("common_name_q"),
+                  py::arg("common_name_r"),
+                  "QR decomposition")
             .def(
                   "multiple",
                   [](T& tensor, const S& s, const Name& name, char direction, bool division) -> T& {

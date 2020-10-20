@@ -111,17 +111,6 @@ void zunglq_(
 }
 
 namespace TAT {
-   // template<class ScalarType>
-   // void geqrf(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
-   // template<class ScalarType>
-   // void gelqf(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
-   // template<class ScalarType>
-   // void
-   // orgqr(const int* m, const int* n, const int* k, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
-   // template<class ScalarType>
-   // void
-   // orglq(const int* m, const int* n, const int* k, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info);
-
    template<class ScalarType>
    constexpr void (
          *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
@@ -220,6 +209,7 @@ namespace TAT {
             std::copy(data + i * n, data + i * n + min, data_1 + i * min);
          }
          orglq<ScalarType>(&min, &m, &min, data_1, &min, tau.data(), work.data(), &lwork, &result);
+         // WRONG -> orglq<ScalarType>(&min, &min, &min, data_1, &min, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
             TAT_error("Error in LQ");
          }
@@ -252,6 +242,7 @@ namespace TAT {
          // data n*m
          // data_2 n*min
          orgqr<ScalarType>(&n, &min, &min, data_2, &n, tau.data(), work.data(), &lwork, &result);
+         // WRONG -> orgqr<ScalarType>(&min, &min, &min, data_2, &n, tau.data(), work.data(), &lwork, &result);
          // same size of lwork
          if (result != 0) {
             TAT_error("Error in QR");
