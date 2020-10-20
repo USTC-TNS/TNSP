@@ -204,7 +204,7 @@ namespace TAT {
          return *this;
       }
       template<class Transform>
-      Tensor<ScalarType, Symmetry> transform(Transform&& function) && {
+      Tensor<ScalarType, Symmetry>&& transform(Transform&& function) && {
          return std::move(transform(function));
       }
 
@@ -220,7 +220,7 @@ namespace TAT {
          return *this;
       }
       template<class Generator>
-      Tensor<ScalarType, Symmetry> set(Generator&& generator) && {
+      Tensor<ScalarType, Symmetry>&& set(Generator&& generator) && {
          return std::move(set(generator));
       }
 
@@ -232,7 +232,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry>& zero() & {
          return set([]() { return 0; });
       }
-      Tensor<ScalarType, Symmetry> zero() && {
+      Tensor<ScalarType, Symmetry>&& zero() && {
          return std::move(zero());
       }
 
@@ -248,7 +248,7 @@ namespace TAT {
             return result;
          });
       }
-      Tensor<ScalarType, Symmetry> test(ScalarType first = 0, ScalarType step = 1) && {
+      Tensor<ScalarType, Symmetry>&& test(ScalarType first = 0, ScalarType step = 1) && {
          return std::move(test(first, step));
       }
 
@@ -545,7 +545,10 @@ namespace TAT {
 
       [[nodiscard]] std::string show() const;
       [[nodiscard]] std::string dump() const;
-      Tensor<ScalarType, Symmetry>& load(const std::string&);
+      Tensor<ScalarType, Symmetry>& load(const std::string&) &;
+      Tensor<ScalarType, Symmetry>&& load(const std::string& string) && {
+         return std::move(load(string));
+      };
    };
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到

@@ -405,7 +405,7 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::load(const std::string& input) {
+   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::load(const std::string& input) & {
       std::stringstream in(input);
       in > *this;
       return *this;

@@ -55,7 +55,7 @@
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2); \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1);
 
-PYBIND11_MAKE_OPAQUE(std::vector<TAT::Name>);
+PYBIND11_MAKE_OPAQUE(std::vector<TAT::Name>)
 
 #define TAT_SINGLE_SYMMETRY(SYM)                                                                \
    PYBIND11_MAKE_OPAQUE(std::map<TAT::SYM##Symmetry, TAT::Size>);                               \
@@ -79,8 +79,8 @@ namespace TAT {
 
    struct AtExit {
       std::vector<std::function<void()>> function_list;
-      void operator()(std::function<void()> function) {
-         function_list.push_back(function);
+      void operator()(std::function<void()>&& function) {
+         function_list.push_back(std::move(function));
       }
       void release() {
          for (auto& function : function_list) {
@@ -181,10 +181,12 @@ namespace TAT {
             .def("__repr__", [](const S& s) { return "Singular" + s.show(); })
             .def("norm_max", &S::template norm<-1>)
             .def("norm_sum", &S::template norm<1>)
-            .def("dump", [](S& s) { return py::bytes(s.dump()); })
+            .def("dump", [](S& s) { return py::bytes(s.dump()); }) // 这个copy很难去掉, dump内一次copy, string to byte一次copy
             .def(
-                  "load", [](S& s, py::bytes bytes) -> S& { return s.load(std::string(bytes)); }, py::return_value_policy::reference_internal)
-            .def(py::pickle([](const S& s) { return py::bytes(s.dump()); }, [](py::bytes bytes) { return S().load(std::string(bytes)); }))
+                  "load", [](S& s, const py::bytes& bytes) -> S& { return s.load(std::string(bytes)); }, py::return_value_policy::reference_internal)
+            .def(py::pickle(
+                  [](const S& s) { return py::bytes(s.dump()); },
+                  [](const py::bytes& bytes) { return std::make_unique<S>(S().load(std::string(bytes))); }))
             .def(py::self += real_base_t<ScalarType>())
             .def(py::self -= real_base_t<ScalarType>())
             .def(py::self *= real_base_t<ScalarType>())
@@ -247,7 +249,7 @@ namespace TAT {
                   },
                   "The shape of this tensor")
             .def(py::init<>(), "Default Constructor")
-            .def(py::init<>([=](std::vector<Name> names, py::list edges, bool auto_reverse) {
+            .def(py::init<>([=](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
                     for (const auto& this_edge : edges) {
                        tensor_edges.push_back(py::cast<E>(edge_m.attr(symmetry_short_name.c_str())(this_edge)));
@@ -346,7 +348,7 @@ namespace TAT {
                  "Merge several edges of the tensor into ones")
             .def(
                   "split_edge",
-                  [](const T& tensor, py::dict split, const bool apply_parity, const std::set<Name>& parity_exclude_name_split) {
+                  [](const T& tensor, const py::dict& split, const bool apply_parity, const std::set<Name>& parity_exclude_name_split) {
                      auto tensor_split = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
                      for (const auto& [name, named_edge_list] : split) {
                         tensor_split[py::cast<Name>(name)] = py::cast<std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(named_edge_list);
@@ -361,7 +363,7 @@ namespace TAT {
                   "edge_operator",
                   [](const T& tensor,
                      const std::map<Name, Name>& rename_map,
-                     py::dict split,
+                     const py::dict& split,
                      const std::set<Name>& reversed_name,
                      const std::map<Name, std::vector<Name>>& merge_map,
                      std::vector<Name> new_names,
@@ -453,10 +455,13 @@ namespace TAT {
                   "dump", [](T& tensor) { return py::bytes(tensor.dump()); }, "dump Tensor to bytes")
             .def(
                   "load",
-                  [](T& tensor, py::bytes bytes) -> T& { return tensor.load(std::string(bytes)); },
+                  [](T& tensor, const py::bytes& bytes) -> T& { return tensor.load(std::string(bytes)); },
                   "Load Tensor from bytes",
                   py::return_value_policy::reference_internal)
-            .def(py::pickle([](const T& tensor) { return py::bytes(tensor.dump()); }, [](py::bytes bytes) { return T().load(std::string(bytes)); }));
+            .def(py::pickle(
+                  [](const T& tensor) { return py::bytes(tensor.dump()); },
+                  // 这里必须是make_unique, 很奇怪, 可能是pybind11的bug
+                  [](const py::bytes& bytes) { return std::make_unique<T>(T().load(std::string(bytes))); }));
    }
 
    template<class Symmetry, class Element, bool IsTuple, template<class, bool = false> class EdgeType = Edge>
@@ -656,18 +661,18 @@ namespace TAT {
       auto block_m = tat_m.def_submodule("Block", "Block of Tensor for TAT");
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
    declare_tensor<SCALAR, SYM##Symmetry>(tensor_m, singular_m, block_m, edge_m, tat_m, #SCALARSHORT, #SCALAR, #SYM);
-      TAT_LOOP_ALL_SCALAR_SYMMETRY;
+      TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // mpi
       auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
 #ifdef TAT_USE_MPI
       mpi_m.def("barrier", &mpi::barrier);
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) declare_mpi<SCALAR, SYM##Symmetry>(mpi_m);
-      TAT_LOOP_ALL_SCALAR_SYMMETRY;
+      TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       mpi_m.attr("rank") = mpi::mpi.rank;
       mpi_m.attr("size") = mpi::mpi.size;
-      mpi_m.def("print", [](py::args args, py::kwargs kwargs) {
+      mpi_m.def("print", [](py::args& args, py::kwargs kwargs) {
          if (mpi::mpi.rank == 0) {
             py::print(*args, **kwargs);
          }
@@ -691,17 +696,17 @@ namespace TAT {
    py::implicitly_convertible<py::list, std::vector<std::tuple<TAT::Name, TAT::BoseEdge<TAT::SYM##Symmetry>>>>();        \
    py::bind_map<std::map<Name, std::vector<std::tuple<Name, BoseEdge<SYM##Symmetry>>>>>(stl_m, #SYM "SymmetrySplitMap"); \
    py::implicitly_convertible<py::dict, std::map<Name, std::vector<std::tuple<Name, BoseEdge<SYM##Symmetry>>>>>();
-      TAT_LOOP_ALL_SYMMETRY;
+      TAT_LOOP_ALL_SYMMETRY
 #undef TAT_SINGLE_SYMMETRY
 #define TAT_SINGLE_SCALAR(SCALARSHORT, SCALAR)                  \
    py::bind_vector<vector<SCALAR>>(stl_m, #SCALARSHORT "Data"); \
    py::implicitly_convertible<py::list, vector<SCALAR>>();
-      TAT_LOOP_ALL_SCALAR;
+      TAT_LOOP_ALL_SCALAR
 #undef TAT_SINGLE_SCALAR
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM)                                                               \
    py::bind_map<std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>(stl_m, #SCALARSHORT #SYM "TensorDataMap"); \
    py::implicitly_convertible<py::dict, std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>();
-      TAT_LOOP_ALL_SCALAR_SYMMETRY;
+      TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       at_exit.release();
    }
