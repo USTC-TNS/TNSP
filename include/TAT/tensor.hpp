@@ -570,7 +570,7 @@ namespace TAT {
        * \param division 如果为真, 则进行除法而不是乘法
        * \return 缩并的结果
        */
-      Tensor<ScalarType, Symmetry> multiple(const SingularType& S, const Name& name, char direction, bool division = false) & {
+      Tensor<ScalarType, Symmetry> multiple(const SingularType& S, const Name& name, char direction, bool division = false) {
          bool different_direction;
          if (direction == 'u' || direction == 'U') {
             different_direction = false;
@@ -600,17 +600,15 @@ namespace TAT {
             }
          }
 #else
-         // TODO outplace
-         if (core.use_count() != 1) {
-            TAT_warning_or_error_when_inplace_multiple("Set Tensor Shared, You Can Use tensor.copy().multiple(...)");
-         }
          const auto found = name_to_index.find(name);
          if (found == name_to_index.end()) {
             TAT_warning_or_error_when_multiple_name_missing("Edge not Found in Multiple");
-            return *this;
+            return copy();
          }
+         auto result = same_shape();
          auto index = found->second;
-         for (auto& [symmetries, block] : core->blocks) {
+         for (const auto& [symmetries, block_source] : core->blocks) {
+            auto& block_destination = result.core->blocks.at(symmetries);
             auto symmetry_of_s = symmetries[index];
             if (different_direction) {
                symmetry_of_s = -symmetry_of_s;
@@ -629,13 +627,14 @@ namespace TAT {
             if (vector_in_S.size() != k) {
                TAT_error("Vector Size incompatible in Multiple with a tensor");
             }
-            auto* data = block.data();
+            const auto* data_source = block_source.data();
+            auto* data_destination = block_destination.data();
             if (division) {
                for (Size a = 0; a < m; a++) {
                   for (Size b = 0; b < k; b++) {
                      auto v = vector_in_S[b];
                      for (Size c = 0; c < n; c++) {
-                        *(data++) /= v;
+                        *(data_destination++) = *(data_source++) / v;
                      }
                   }
                }
@@ -644,18 +643,14 @@ namespace TAT {
                   for (Size b = 0; b < k; b++) {
                      auto v = vector_in_S[b];
                      for (Size c = 0; c < n; c++) {
-                        *(data++) *= v;
+                        *(data_destination++) = *(data_source++) * v;
                      }
                   }
                }
             }
          }
-         return *this;
+         return result;
 #endif
-      }
-
-      Tensor<ScalarType, Symmetry> multiple(const SingularType& S, const Name& name, char direction, bool division = false) && {
-         return std::move(multiple(S, name, direction, division));
       }
 
       /**

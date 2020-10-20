@@ -382,10 +382,10 @@ void test_svd() {
       std::cout << s << "\n";
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
-      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", 'u'), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v, u.multiple(s, "E", 'u'), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
@@ -410,10 +410,10 @@ void test_svd() {
       std::cout << s << "\n";
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.copy().multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v.multiple(s, "F", 'v'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
-      std::cout << decltype(v)::contract(v, u.copy().multiple(s, "E", 'u'), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
+      std::cout << decltype(v)::contract(v, u.multiple(s, "E", 'u'), {{"F", "E"}}).transpose({"A", "B", "C", "D"}).transform([](auto i) {
          return std::abs(i) < 0.01 ? 0 : i;
       }) << "\n";
    } while (false);
