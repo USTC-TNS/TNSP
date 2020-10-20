@@ -26,6 +26,9 @@
 #include "tensor.hpp"
 
 namespace TAT {
+   /**
+    * 简洁地打印复数
+    */
    template<class ScalarType>
    std::ostream& print_complex(std::ostream& out, const std::complex<ScalarType>& value) {
       if (value.real() != 0) {
@@ -49,20 +52,24 @@ namespace TAT {
    }
 
    template<class T>
-   void raw_write(std::ostream& out, const T* data, const Size number = 1) {
+   void raw_write(std::ostream& out, const T* data, Size number = 1) {
       out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
    }
    template<class T>
-   void raw_read(std::istream& in, T* data, const Size number = 1) {
+   void raw_read(std::istream& in, T* data, Size number = 1) {
       in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
    }
 
    inline std::ostream& operator<<(std::ostream& out, const Name& name) {
+#ifdef TAT_USE_SIMPLE_NAME
+      return out << name.name;
+#else
       if (const auto position = id_to_name.find(name.id); position == id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
          return out << position->second;
       }
+#endif
    }
 
    template<class T, class A, class = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
@@ -83,6 +90,7 @@ namespace TAT {
       out << ']';
       return out;
    }
+
    template<class T, class A>
    void raw_write_vector(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
@@ -96,6 +104,19 @@ namespace TAT {
       list.resize(count);
       raw_read(in, list.data(), count);
    }
+
+   void raw_write_string(std::ostream& out, const std::string& string) {
+      Size count = string.size();
+      raw_write(out, &count);
+      raw_write(out, string.data(), count);
+   }
+   void raw_read_string(std::istream& in, std::string& string) {
+      Size count;
+      raw_read(in, &count);
+      string.resize(count);
+      raw_read(in, string.data(), count);
+   }
+
    template<class Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
@@ -130,7 +151,7 @@ namespace TAT {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             raw_write(out, &edge.arrow);
          }
-         const Nums numbers = edge.map.size();
+         const Rank numbers = edge.map.size();
          raw_write(out, &numbers);
          for (const auto& [symmetry, dimension] : edge.map) {
             raw_write(out, &symmetry);
@@ -148,10 +169,10 @@ namespace TAT {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             raw_read(in, &edge.arrow);
          }
-         Nums numbers;
+         Rank numbers;
          raw_read(in, &numbers);
          edge.map.clear();
-         for (Nums i = 0; i < numbers; i++) {
+         for (auto i = 0; i < numbers; i++) {
             Symmetry symmetry;
             Size dimension;
             raw_read(in, &symmetry);
@@ -185,14 +206,18 @@ namespace TAT {
       return out;
    }
 
+   /**
+    * \brief 一个控制屏幕字体色彩的简单类型
+    */
    struct UnixColorCode {
       std::string color_code;
+      UnixColorCode(const char* code) noexcept : color_code(code) {}
    };
-   inline const UnixColorCode console_red = {"\x1B[31m"};
-   inline const UnixColorCode console_green = {"\x1B[32m"};
-   inline const UnixColorCode console_yellow = {"\x1B[33m"};
-   inline const UnixColorCode console_blue = {"\x1B[34m"};
-   inline const UnixColorCode console_origin = {"\x1B[0m"};
+   inline const UnixColorCode console_red = "\x1B[31m";
+   inline const UnixColorCode console_green = "\x1B[32m";
+   inline const UnixColorCode console_yellow = "\x1B[33m";
+   inline const UnixColorCode console_blue = "\x1B[34m";
+   inline const UnixColorCode console_origin = "\x1B[0m";
    inline std::ostream& operator<<(std::ostream& out, const UnixColorCode& value) {
       out << value.color_code;
       return out;
@@ -227,6 +252,27 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
+   std::ostream& operator<<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
+      const auto& value = singular.value; // std::map<Symmetry, vector<real_base_t<ScalarType>>>
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         out << value.begin()->second;
+      } else {
+         out << '{';
+         bool first = true;
+         for (const auto& [key, value] : value) {
+            if (!first) {
+               out << ',';
+            } else {
+               first = false;
+            }
+            out << console_yellow << key << console_origin << ':' << value;
+         }
+         out << '}';
+      }
+      return out;
+   }
+
+   template<class ScalarType, class Symmetry>
    std::string Tensor<ScalarType, Symmetry>::show() const {
       std::stringstream out;
       out << *this;
@@ -234,8 +280,23 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
+   std::string Singular<ScalarType, Symmetry>::show() const {
+      std::stringstream out;
+      out << *this;
+      return out.str();
+   }
+
+   template<class ScalarType, class Symmetry>
    const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
+#ifdef TAT_USE_SIMPLE_NAME
+      Rank count = names.size();
+      raw_write(out, &count);
+      for (const auto& name : names) {
+         raw_write_string(out, name.name);
+      }
+#else
       raw_write_vector(out, names);
+#endif
       for (const auto& edge : core->edges) {
          raw_write_edge(out, edge);
       }
@@ -247,7 +308,10 @@ namespace TAT {
       Size count = core->blocks.size();
       raw_write(out, &count);
       for (const auto& [i, j] : core->blocks) {
-         raw_write(out, i.data(), i.size());
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         } else {
+            raw_write(out, i.data(), i.size());
+         }
          raw_write_vector(out, j);
       }
       return *this;
@@ -260,16 +324,58 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
+   std::string Tensor<ScalarType, Symmetry>::dump() const {
+      std::stringstream out;
+      out < *this;
+      return out.str();
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         raw_write_vector(out, singular.value.begin()->second);
+      } else {
+         const Rank numbers = singular.value.size();
+         raw_write(out, &numbers);
+         for (const auto& [symmetry, vector] : singular.value) {
+            raw_write(out, &symmetry);
+            raw_write_vector(out, vector);
+         }
+      }
+      return out;
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::string Singular<ScalarType, Symmetry>::dump() const {
+      std::stringstream out;
+      out < *this;
+      return out.str();
+   }
+
+   template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_get(std::istream& in) {
+#ifdef TAT_USE_SIMPLE_NAME
+      Rank count;
+      raw_read(in, &count);
+      names.clear();
+      names.reserve(count);
+      for (auto i = 0; i < count; i++) {
+         std::string this_name;
+         raw_read_string(in, this_name);
+         names.push_back(std::move(this_name));
+      }
+#else
       raw_read_vector(in, names);
+#endif
       const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
-      std::vector<Edge<Symmetry>> edges(rank);
-      for (auto& edge : edges) {
+      core = std::make_shared<Core<ScalarType, Symmetry>>();
+      core->edges.clear();
+      core->edges.reserve(rank);
+      for (auto i = 0; i < rank; i++) {
+         auto& edge = core->edges.emplace_back();
          raw_read_edge(in, edge);
       }
-      core = std::make_shared<Core<ScalarType, Symmetry>>();
-      core->edges = std::move(edges);
       check_valid_name(names, core->edges.size());
       return *this;
    }
@@ -281,9 +387,13 @@ namespace TAT {
       raw_read(in, &count);
       core->blocks.clear();
       for (auto i = 0; i < count; i++) {
-         auto symmetries = std::vector<Symmetry>(rank);
-         raw_read(in, symmetries.data(), symmetries.size());
-         raw_read_vector(in, core->blocks[std::move(symmetries)]);
+         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+            raw_read_vector(in, core->blocks[std::vector<NoSymmetry>(rank, NoSymmetry())]);
+         } else {
+            auto symmetries = std::vector<Symmetry>(rank);
+            raw_read(in, symmetries.data(), symmetries.size());
+            raw_read_vector(in, core->blocks[std::move(symmetries)]);
+         }
       }
       return *this;
    }
@@ -292,6 +402,41 @@ namespace TAT {
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
       tensor.meta_get(in).data_get(in);
       return in;
+   }
+
+   template<class ScalarType, class Symmetry>
+   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::load(const std::string& input) & {
+      std::stringstream in(input);
+      in > *this;
+      return *this;
+   }
+
+   template<class ScalarType, class Symmetry>
+   std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry>& singular) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         vector<real_base_t<ScalarType>> singulars;
+         raw_read_vector(in, singulars);
+         singular.value[NoSymmetry()] = std::move(singulars);
+      } else {
+         Rank numbers;
+         raw_read(in, &numbers);
+         singular.value.clear();
+         for (auto i = 0; i < numbers; i++) {
+            Symmetry symmetry;
+            vector<real_base_t<ScalarType>> singulars;
+            raw_read(in, &symmetry);
+            raw_read_vector(in, singulars);
+            singular.value[symmetry] = std::move(singulars);
+         }
+      }
+      return in;
+   }
+
+   template<class ScalarType, class Symmetry>
+   Singular<ScalarType, Symmetry>& Singular<ScalarType, Symmetry>::load(const std::string& input) {
+      std::stringstream in(input);
+      in > *this;
+      return *this;
    }
 
    template<class T>

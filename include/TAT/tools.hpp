@@ -33,18 +33,18 @@ namespace TAT {
             std::vector<const Tensor<ScalarType, Symmetry>*> line_2,
             Size cut) {
          const auto& [up, down, left, right] = udlr_name;
-         const Name up1 = id_to_name.at(up.id) + "_1";
-         const Name up2 = id_to_name.at(up.id) + "_2";
-         const Name down1 = id_to_name.at(down.id) + "_1";
-         const Name down2 = id_to_name.at(down.id) + "_2";
-         const Name left1 = id_to_name.at(left.id) + "_1";
-         const Name left2 = id_to_name.at(left.id) + "_2";
-         const Name right1 = id_to_name.at(right.id) + "_1";
-         const Name right2 = id_to_name.at(right.id) + "_2";
+         const Name up1 = up.get_name() + "_1";
+         const Name up2 = up.get_name() + "_2";
+         const Name down1 = down.get_name() + "_1";
+         const Name down2 = down.get_name() + "_2";
+         const Name left1 = left.get_name() + "_1";
+         const Name left2 = left.get_name() + "_2";
+         const Name right1 = right.get_name() + "_1";
+         const Name right2 = right.get_name() + "_2";
 
          int length = line_1.size();
          if (length != line_2.size()) {
-            throw TAT_error("Different Length When Do Two Line to One Line");
+            TAT_error("Different Length When Do Two Line to One Line");
          }
          // std::clog << "Two Line to One Line Start\n";
 
@@ -98,7 +98,7 @@ namespace TAT {
       struct network {
          std::map<Key, Tensor<ScalarType, Symmetry>> site;
          // Singular is map<Symmetry, vector>, it there is no environment, the map is empty
-         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, typename Tensor<ScalarType, Symmetry>::Singular>> bond;
+         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, Singular<ScalarType, Symmetry>>> bond;
          // TODO: network
       };
    } // namespace tools

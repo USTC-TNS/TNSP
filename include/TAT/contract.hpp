@@ -215,8 +215,8 @@ namespace TAT {
       auto reversed_set_result = std::set<Name>();                                                 // 最后split时的反转标
       auto name_result = std::vector<Name>();                                                      // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
-      split_map_result[Contract1].reserve(rank_1 - common_rank);
-      split_map_result[Contract2].reserve(rank_2 - common_rank);
+      split_map_result[internal_name::Contract_1].reserve(rank_1 - common_rank);
+      split_map_result[internal_name::Contract_2].reserve(rank_2 - common_rank);
       auto free_name_1 = std::vector<Name>(); // 第一个张量的自由边, merge时使用
       free_name_1.reserve(rank_1 - common_rank);
       for (Rank i = 0; i < rank_1; i++) {
@@ -227,7 +227,7 @@ namespace TAT {
             if constexpr (is_no_symmetry) {
                edge_result.push_back(tensor_1.core->edges[i]);
             } else {
-               split_map_result.at(Contract1).push_back({n, {tensor_1.core->edges[i].map}});
+               split_map_result.at(internal_name::Contract_1).push_back({n, {tensor_1.core->edges[i].map}});
             }
             name_result.push_back(n);
             if constexpr (is_fermi) {
@@ -256,7 +256,7 @@ namespace TAT {
             if constexpr (is_no_symmetry) {
                edge_result.push_back(tensor_2.core->edges[i]);
             } else {
-               split_map_result.at(Contract2).push_back({n, {tensor_2.core->edges[i].map}});
+               split_map_result.at(internal_name::Contract_2).push_back({n, {tensor_2.core->edges[i].map}});
             }
             name_result.push_back(n);
             if constexpr (is_fermi) {
@@ -329,51 +329,32 @@ namespace TAT {
          auto name_2 = common_name_2[i];
          auto edge_1 = tensor_1.core->edges[tensor_1.name_to_index.at(name_1)];
          auto edge_2 = tensor_2.core->edges[tensor_2.name_to_index.at(name_2)];
-         auto this_delete_1 = std::map<Symmetry, Size>();
-         for (const auto& [symmetry_1, dimension_1] : edge_1.map) {
-            auto symmetry_2 = -symmetry_1;
-            auto found = edge_2.map.find(symmetry_2);
-            if (found != edge_2.map.end()) {
-               // found
-               if (const auto dimension_2 = found->second; dimension_2 != dimension_1) {
-                  throw TAT_error("Different Dimension to Contract");
-#if 0
-                  if (dimension_2 < dimension_1) {
-                     this_delete_1[symmetry_1] = dimension_2;
-                  }
-#endif
+         auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
+            if constexpr (is_fermi) {
+               if (edge_this.arrow == edge_other.arrow) {
+                  TAT_error("Different Fermi Arrow to Contract");
                }
-            } else {
-               // not found
-               this_delete_1[symmetry_1] = 0;
-               // 用于merge时cut, cut成0会自动删除
             }
-         }
-         if (!this_delete_1.empty()) {
-            delete_1[name_1] = std::move(this_delete_1);
-         }
-         auto this_delete_2 = std::map<Symmetry, Size>();
-         for (const auto& [symmetry_2, dimension_2] : edge_2.map) {
-            auto symmetry_1 = -symmetry_2;
-            auto found = edge_1.map.find(symmetry_1);
-            if (found != edge_1.map.end()) {
-               // found
-               if (const auto dimension_1 = found->second; dimension_1 != dimension_2) {
-                  throw TAT_error("Different Dimension to Contract");
-#if 0
-                  if (dimension_1 < dimension_2) {
-                     this_delete_2[symmetry_2] = dimension_1;
+            auto delete_map = std::map<Symmetry, Size>();
+            for (const auto& [symmetry, dimension] : edge_this.map) {
+               auto found = edge_other.map.find(-symmetry);
+               if (found != edge_other.map.end()) {
+                  // found
+                  if (const auto dimension_other = found->second; dimension_other != dimension) {
+                     TAT_error("Different Dimension to Contract");
                   }
-#endif
+               } else {
+                  // not found
+                  delete_map[symmetry] = 0;
+                  // 用于merge时cut, cut成0会自动删除
                }
-            } else {
-               // not found
-               this_delete_2[symmetry_2] = 0;
             }
-         }
-         if (!this_delete_2.empty()) {
-            delete_2[name_2] = std::move(this_delete_2);
-         }
+            if (!delete_map.empty()) {
+               delete_this[name_this] = std::move(delete_map);
+            }
+         };
+         delete_unused_dimension(edge_1, edge_2, name_1, delete_1);
+         delete_unused_dimension(edge_2, edge_1, name_2, delete_2);
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
@@ -381,29 +362,25 @@ namespace TAT {
             {},
             {},
             reversed_set_1,
-            {{Contract1, free_name_1}, {Contract2, common_name_1}},
-            put_common_1_right ? std::vector<Name>{Contract1, Contract2} : std::vector<Name>{Contract2, Contract1},
+            {{internal_name::Contract_1, free_name_1}, {internal_name::Contract_2, common_name_1}},
+            put_common_1_right ? std::vector<Name>{internal_name::Contract_1, internal_name::Contract_2} :
+                                 std::vector<Name>{internal_name::Contract_2, internal_name::Contract_1},
             false,
-            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {Contract2}}},
+            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {internal_name::Contract_2}}},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             reversed_set_2,
-            {{Contract2, free_name_2}, {Contract1, common_name_2}},
-            put_common_2_right ? std::vector<Name>{Contract2, Contract1} : std::vector<Name>{Contract1, Contract2},
+            {{internal_name::Contract_2, free_name_2}, {internal_name::Contract_1, common_name_2}},
+            put_common_2_right ? std::vector<Name>{internal_name::Contract_2, internal_name::Contract_1} :
+                                 std::vector<Name>{internal_name::Contract_1, internal_name::Contract_2},
             false,
             {{{}, {}, {}, {}}},
             delete_2);
-#if 0
-      std::cout << "T1:" << tensor_1 << "\n";
-      std::cout << "M1:" << tensor_1_merged << "\n";
-      std::cout << "T2:" << tensor_2 << "\n";
-      std::cout << "M2:" << tensor_2_merged << "\n";
-#endif
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
-            {Contract1, Contract2},
+            {internal_name::Contract_1, internal_name::Contract_2},
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
       // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
       auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
@@ -418,17 +395,10 @@ namespace TAT {
          const int k = common_edge.map.at(symmetries[1]);
          ScalarType alpha = 1;
          if constexpr (is_fermi) {
+            // 因为并非标准- + - -产生的符号
             if ((put_common_2_right ^ !put_common_1_right) && bool(symmetries[0].fermi % 2)) {
-#if 0
-               std::cout << "R\n";
-#endif
                alpha = -1;
             }
-#if 0
-            else {
-               std::cout << "N\n";
-            }
-#endif
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
@@ -456,10 +426,6 @@ namespace TAT {
          return result;
       } else {
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
-#if 0
-         std::cout << "R:" << product_result << "\n";
-         std::cout << "S:" << result << "\n";
-#endif
          return result;
       }
    }

@@ -25,6 +25,7 @@
 
 #include "basic_type.hpp"
 
+// TAT_USE_MKL_TRANSPOSE
 namespace TAT {
    template<class ScalarType>
    void line_copy(
@@ -86,7 +87,7 @@ namespace TAT {
             current_source += scalar_leading_source[current_position];
             current_destination += scalar_leading_destination[current_position];
          }
-      };
+      }
       // TODO: line size特化
    }
 

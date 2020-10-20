@@ -1,13 +1,17 @@
 cmake_minimum_required(VERSION 3.13)
 
 project(TAT VERSION 0.0.5 LANGUAGES CXX)
+add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
 # blas, lapack和mkl都没有问题
 # windows的情况如下
 # vs 2019 可以找到intel mpi, 使用clang和msvc都是可以的, 但是mkl需要手动设置MKLROOT的环境变量
 # clion 无法找到intel mpi, 其他与vs 2019一致
-# linux中无法使用intel的编译器进行编译, windows中懒得测试去了
+# 自己的pc上linux中无法使用intel的编译器进行编译, 似乎与版本有关系, 在学校超算上配合合适的gcc版本是可以编译的
+# windows中的intel情况懒得测试了
 
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
 set(CMAKE_CXX_STANDARD 17)
@@ -15,19 +19,23 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 尝试启用mpi, 如果无法启用, 也没关系
-if(CMAKE_CXX_COMPILER MATCHES "mpi")
-   message("-- Using mpi compiler directly")
-   add_compile_definitions(TAT_USE_MPI)
-else()
-   find_package(MPI)
-   if(MPI_FOUND)
-      include_directories(${MPI_INCLUDE_PATH})
-      link_libraries(${MPI_LIBRARIES})
-      message("-- Using mpi by linking mpi libraries")
+if(NOT TAT_NO_MPI)
+   if(CMAKE_CXX_COMPILER MATCHES "mpi")
+      message("-- Using mpi compiler directly")
       add_compile_definitions(TAT_USE_MPI)
    else()
-      message("-- No mpi support")
+      find_package(MPI)
+      if(MPI_FOUND)
+         include_directories(${MPI_INCLUDE_PATH})
+         link_libraries(${MPI_LIBRARIES})
+         message("-- Using mpi by linking mpi libraries")
+         add_compile_definitions(TAT_USE_MPI)
+      else()
+         message("-- No mpi support")
+      endif()
    endif()
+else()
+   message("-- Disable mpi support manually")
 endif()
 
 # msvc必须加个utf8的参数
@@ -40,19 +48,29 @@ if(EMSCRIPTEN)
    link_libraries(${PROJECT_SOURCE_DIR}/emscripten/libblas.a)
    link_libraries(${PROJECT_SOURCE_DIR}/emscripten/libf2c.a)
 else()
-   message("-- Try to find static blas and lapack")
-   set(BLA_STATIC ON)
-   find_package(BLAS)
-   find_package(LAPACK)
+   if (NOT TAT_FORCE_BLAS_DYNAMIC)
+      message("-- Try to find static blas and lapack")
+      set(BLA_STATIC ON)
+      find_package(BLAS)
+      find_package(LAPACK)
+   endif()
    if (NOT (LAPACK_FOUND AND BLAS_FOUND))
-      message("-- Static blas and lapack not found, try to find dynamic libraries")
+      message("-- Try to find dynamic libraries")
       set(BLA_STATIC OFF)
       find_package(BLAS REQUIRED)
       find_package(LAPACK REQUIRED)
    endif()
    link_libraries(${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+   # 检查是否使用了mkl
+   if(BLAS_LIBRARIES MATCHES mkl)
+      message("-- Using mkl")
+      add_compile_definitions(TAT_USE_MKL_TRANSPOSE)
+   else()
+      message("-- Not using mkl")
+   endif()
 endif()
 
+# examples中的各个程序
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB CPP_SRC ${PROJECT_SOURCE_DIR}/examples/*.cpp)
@@ -61,6 +79,7 @@ foreach(FILE ${CPP_SRC})
    add_executable(${NAME} ${FILE})
 endforeach(FILE)
 
+# 以及他们的测试
 enable_testing()
 add_test(simple_test ${PROJECT_BINARY_DIR}/simple_test ${PROJECT_SOURCE_DIR}/examples/simple_test.out)
 add_test(diag ${PROJECT_BINARY_DIR}/diag ${PROJECT_SOURCE_DIR}/examples/diag.out)

@@ -52,7 +52,7 @@ namespace TAT {
          return result;                                                                                               \
       } else {                                                                                                        \
          if (tensor_1.names.size() != tensor_2.names.size()) {                                                        \
-            throw TAT_error("Try to do scalar operator on two different rank tensor");                                \
+            TAT_error("Try to do scalar operator on two different rank tensor");                                      \
          }                                                                                                            \
          auto real_tensor_2 = &tensor_2;                                                                              \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                         \
@@ -71,7 +71,7 @@ namespace TAT {
                   if (found == single_new_edge.map.end()) {                                                           \
                      single_new_edge.map.insert({symmetry, dimension});                                               \
                   } else if (found->second != dimension) {                                                            \
-                     throw TAT_error("Try to do scalar operator on two tensors which edges not compatible");          \
+                     TAT_error("Try to do scalar operator on two tensors which edges not compatible");                \
                   }                                                                                                   \
                }                                                                                                      \
             }                                                                                                         \
@@ -132,7 +132,7 @@ namespace TAT {
    template<class ScalarType1, class ScalarType2, class Symmetry>                                                              \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) { \
       if (tensor_1.core.use_count() != 1) {                                                                                    \
-         warning_or_error("Inplace Operator On Tensor Shared");                                                                \
+         TAT_warning_or_error_when_inplace_scalar("Inplace Operator On Tensor Shared");                                        \
       }                                                                                                                        \
       if (tensor_2.names.empty()) {                                                                                            \
          const auto& y = tensor_2.at({});                                                                                      \
@@ -150,7 +150,7 @@ namespace TAT {
             real_tensor_2 = &new_tensor_2;                                                                                     \
          }                                                                                                                     \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                             \
-            throw TAT_error("Scalar Operator In Different Shape Tensor, Maybe You Need Outplace Operator");                    \
+            TAT_error("Scalar Operator In Different Shape Tensor, Maybe You Need Outplace Operator");                          \
          }                                                                                                                     \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                             \
             ScalarType1* __restrict a = block.data();                                                                          \
@@ -165,6 +165,17 @@ namespace TAT {
    template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>>          \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                   \
       return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                            \
+   }                                                                                                                           \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>>          \
+   Singular<ScalarType1, Symmetry>& OP(Singular<ScalarType1, Symmetry>& singular, const ScalarType2& number) {                 \
+      const auto& y = number;                                                                                                  \
+      for (auto& [symmetry, singulars] : singular.value) {                                                                     \
+         real_base_t<ScalarType1>* __restrict a = singulars.data();                                                            \
+         for (Size j = 0; j < singulars.size(); j++) {                                                                         \
+            EVAL1;                                                                                                             \
+         }                                                                                                                     \
+      }                                                                                                                        \
+      return singular;                                                                                                         \
    }
    TAT_DEFINE_SCALAR_OPERATOR(operator+=, a[j] += y, a[j] += b[j])
    TAT_DEFINE_SCALAR_OPERATOR(operator-=, a[j] -= y, a[j] -= b[j])

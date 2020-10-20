@@ -29,27 +29,101 @@
 
 namespace TAT {
    /**
+    * \brief 只有一个元素的假map
+    *
+    * 无对称性的系统为一个NoSymmetry到Size的map, 显然只有一个元素, 使用一个假map来节省一层指针, 在无对称性的block中也用到了这个类
+    */
+   template<class Key, class Value>
+   struct fake_map {
+      using iterator = fake_map*;
+      using const_iterator = const fake_map*;
+      Key first;
+      Value second;
+      fake_map() : second() {}
+      fake_map(const std::initializer_list<std::pair<const Key, Value>>& map) : second(map.begin()->second) {}
+      fake_map(const std::map<Key, Size>& map) : second(map.begin()->second) {}
+      [[nodiscard]] Value& at(const Key&) {
+         return second;
+      }
+      [[nodiscard]] const Value& at(const Key&) const {
+         return second;
+      }
+      Value& operator[](const Key&) {
+         return second;
+      }
+      [[nodiscard]] iterator begin() {
+         return this;
+      }
+      [[nodiscard]] const_iterator begin() const {
+         return this;
+      }
+      [[nodiscard]] iterator end() {
+         return this + 1;
+      }
+      [[nodiscard]] const_iterator end() const {
+         return this + 1;
+      }
+      [[nodiscard]] iterator find(const Key&) {
+         return this;
+      }
+      [[nodiscard]] const_iterator find(const Key&) const {
+         return this;
+      }
+      iterator erase(const Key&) {
+         return this;
+      }
+      std::pair<iterator, bool> insert(const std::tuple<Key, Value>& pair) {
+         second = std::get<1>(pair);
+         return {this, true};
+      }
+      template<class T>
+      std::pair<iterator, bool> emplace(const Key&, T&& arg) {
+         second = Value(std::forward<T>(arg));
+         return {this, true};
+      }
+      Size size() const {
+         return 1;
+      }
+      void clear() {}
+   };
+   template<class Key, class Value>
+   bool operator==(const fake_map<Key, Value>& map_1, const fake_map<Key, Value>& map_2) {
+      return map_1.second == map_2.second;
+   }
+
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+   constexpr bool use_simple_nosymmetry = true;
+#else
+   constexpr bool use_simple_nosymmetry = false;
+#endif
+
+   /**
     * \see Edge
     */
    template<class Symmetry, bool is_pointer = false>
    struct BoseEdge {
       using symmetry_type = Symmetry;
-      using map_type = std::conditional_t<is_pointer, const std::map<Symmetry, Size>&, std::map<Symmetry, Size>>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using edge_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_map<Symmetry, Size>, std::map<Symmetry, Size>>;
+#else
+      using edge_map = std::map<Symmetry, Size>;
+#endif
+      using map_type = std::conditional_t<is_pointer, const edge_map&, edge_map>;
 
       map_type map;
 
       BoseEdge() = default;
       BoseEdge(const BoseEdge&) = default;
-      BoseEdge(BoseEdge&&) = default;
+      BoseEdge(BoseEdge&&) noexcept = default;
       BoseEdge& operator=(const BoseEdge&) = default;
-      BoseEdge& operator=(BoseEdge&&) = default;
+      BoseEdge& operator=(BoseEdge&&) noexcept = default;
       ~BoseEdge() = default;
 
       /**
        * \brief 由对称性到维度的映射表直接构造
        */
-      BoseEdge(std::map<Symmetry, Size>&& map) : map(std::move(map)) {}
-      BoseEdge(const std::map<Symmetry, Size>& map) : map(map) {}
+      BoseEdge(edge_map&& map) : map(std::move(map)) {}
+      BoseEdge(const edge_map& map) : map(map) {}
       BoseEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       /**
@@ -78,7 +152,8 @@ namespace TAT {
    template<class Symmetry, bool is_pointer = false>
    struct FermiEdge {
       using symmetry_type = Symmetry;
-      using map_type = std::conditional_t<is_pointer, const std::map<Symmetry, Size>&, std::map<Symmetry, Size>>;
+      using edge_map = std::map<Symmetry, Size>;
+      using map_type = std::conditional_t<is_pointer, const edge_map&, edge_map>;
 
       /**
        * \brief 费米箭头方向
@@ -91,16 +166,16 @@ namespace TAT {
 
       FermiEdge() = default;
       FermiEdge(const FermiEdge&) = default;
-      FermiEdge(FermiEdge&&) = default;
+      FermiEdge(FermiEdge&&) noexcept = default;
       FermiEdge& operator=(const FermiEdge&) = default;
-      FermiEdge& operator=(FermiEdge&&) = default;
+      FermiEdge& operator=(FermiEdge&&) noexcept = default;
       ~FermiEdge() = default;
 
       /**
        * \brief 由对称性到维度的映射表直接构造
        */
-      FermiEdge(std::map<Symmetry, Size>&& map) : map(std::move(map)) {}
-      FermiEdge(const std::map<Symmetry, Size>& map) : map(map) {}
+      FermiEdge(edge_map&& map) : map(std::move(map)) {}
+      FermiEdge(const edge_map& map) : map(map) {}
       FermiEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       /**
@@ -121,8 +196,8 @@ namespace TAT {
       /**
        * \brief 由费米箭头方向和对称性到维度的映射表直接构造
        */
-      FermiEdge(const Arrow arrow, std::map<Symmetry, Size>&& map) : arrow(arrow), map(std::move(map)) {}
-      FermiEdge(const Arrow arrow, const std::map<Symmetry, Size>& map) : arrow(arrow), map(map) {}
+      FermiEdge(const Arrow arrow, edge_map&& map) : arrow(arrow), map(std::move(map)) {}
+      FermiEdge(const Arrow arrow, const edge_map& map) : arrow(arrow), map(map) {}
       FermiEdge(const Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
 
       /**
@@ -194,7 +269,7 @@ namespace TAT {
          return;
       }
       using Symmetry = typename T::symmetry_type;
-      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
+      using MapIteratorList = std::vector<typename T::edge_map::const_iterator>;
       auto symmetry_iterator_list = MapIteratorList();
       symmetry_iterator_list.reserve(rank);
       for (auto i = 0; i != rank; ++i) {
@@ -232,7 +307,7 @@ namespace TAT {
    template<class T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
-      using MapIteratorList = std::vector<typename std::map<Symmetry, Size>::const_iterator>;
+      using MapIteratorList = std::vector<typename T::value_type::edge_map::const_iterator>;
       Rank rank = edges.size();
       auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
       auto symmetries = std::vector<Symmetry>(rank);
@@ -272,5 +347,24 @@ namespace TAT {
    struct is_edge<Edge<T>> : std::bool_constant<true> {};
    template<class T>
    constexpr bool is_edge_v = is_edge<T>::value;
+
+   template<class Symmetry>
+   [[nodiscard]] std::vector<Edge<Symmetry>>
+   get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         return std::vector<Edge<Symmetry>>(rank, {1});
+      } else {
+         auto result = std::vector<Edge<Symmetry>>();
+         result.reserve(rank);
+         for (auto i = 0; i < rank; i++) {
+            if constexpr (is_fermi_symmetry_v<Symmetry>) {
+               result.push_back({edge_arrow[i], {{edge_symmetry[i], 1}}});
+            } else {
+               result.push_back({{{edge_symmetry[i], 1}}});
+            }
+         }
+         return result;
+      }
+   }
 } // namespace TAT
 #endif

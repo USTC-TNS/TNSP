@@ -89,29 +89,60 @@ int zgesvd_(
 }
 
 namespace TAT {
+   template<class ScalarType, class Symmetry>
+   [[nodiscard]] Tensor<ScalarType, Symmetry> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
+      auto symmetries = std::vector<Edge<Symmetry>>(2);
+      for (const auto& [symmetry, values] : singular) {
+         auto dimension = values.size();
+         symmetries[0].map[-symmetry] = dimension;
+         symmetries[1].map[symmetry] = dimension;
+      }
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         symmetries[0].arrow = false;
+         symmetries[1].arrow = true;
+      }
+      auto result = Tensor<ScalarType, Symmetry>({internal_name::SVD_U, internal_name::SVD_V}, std::move(symmetries));
+      for (auto& [symmetries, data_destination] : result.core->blocks) {
+         const auto& data_source = singular.at(symmetries[1]);
+         auto dimension = data_source.size();
+         auto dimension_plus_one = dimension + 1;
+         std::fill(data_destination.begin(), data_destination.end(), 0);
+         for (auto i = 0; i < data_source.size(); i++) {
+            data_destination[i * dimension_plus_one] = data_source[i];
+         }
+      }
+      return result;
+   }
+
    template<class ScalarType>
-   void calculate_svd(const int& m, const int& n, const int& min, const ScalarType* a, ScalarType* u, real_base_t<ScalarType>* s, ScalarType* vt);
+   void calculate_svd(
+         const int& m,
+         const int& n,
+         const int& min,
+         const int& max,
+         const ScalarType* a,
+         ScalarType* u,
+         real_base_t<ScalarType>* s,
+         ScalarType* vt);
 
    template<>
-   inline void calculate_svd<float>(const int& m, const int& n, const int& min, const float* a, float* u, float* s, float* vt) {
+   inline void calculate_svd<float>(const int& m, const int& n, const int& min, const int& max, const float* a, float* u, float* s, float* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<float>(l_work);
+      auto work = vector<float>(l_work);
       sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
    template<>
-   inline void calculate_svd<double>(const int& m, const int& n, const int& min, const double* a, double* u, double* s, double* vt) {
+   inline void calculate_svd<double>(const int& m, const int& n, const int& min, const int& max, const double* a, double* u, double* s, double* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<double>(l_work);
+      auto work = vector<double>(l_work);
       dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
    template<>
@@ -119,18 +150,18 @@ namespace TAT {
          const int& m,
          const int& n,
          const int& min,
+         const int& max,
          const std::complex<float>* a,
          std::complex<float>* u,
          float* s,
          std::complex<float>* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<std::complex<float>>(l_work);
-      auto r_work = std::vector<float>(5 * min);
+      auto work = vector<std::complex<float>>(l_work);
+      auto r_work = vector<float>(5 * min);
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
    template<>
@@ -138,18 +169,18 @@ namespace TAT {
          const int& m,
          const int& n,
          const int& min,
+         const int& max,
          const std::complex<double>* a,
          std::complex<double>* u,
          double* s,
          std::complex<double>* vt) {
       int result;
-      const int max = m > n ? m : n;
       const int l_work = 2 * (5 * min + max);
-      auto work = std::vector<std::complex<double>>(l_work);
-      auto r_work = std::vector<double>(5 * min);
+      auto work = vector<std::complex<double>>(l_work);
+      auto r_work = vector<double>(5 * min);
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &l_work, r_work.data(), &result);
       if (result != 0) {
-         warning_or_error("Error in GESVD");
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
 
@@ -206,11 +237,14 @@ namespace TAT {
             {},
             {},
             reversed_set_origin,
-            {{SVD1, free_name_u}, {SVD2, free_name_v}},
-            put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1});
+            {{internal_name::SVD_U, free_name_u}, {internal_name::SVD_V, free_name_v}},
+            put_v_right ? std::vector<Name>{internal_name::SVD_U, internal_name::SVD_V} :
+                          std::vector<Name>{internal_name::SVD_V, internal_name::SVD_U});
+      // tensor -> SVD_U -O- SVD_V
       // call GESVD
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
+      // arrow always false
       for (const auto& [sym, _] : tensor_merged.core->blocks) {
          auto m = tensor_merged.core->edges[0].map.at(sym[0]);
          auto n = tensor_merged.core->edges[1].map.at(sym[1]);
@@ -219,10 +253,12 @@ namespace TAT {
          common_edge_2.map[sym[0]] = k;
       }
       auto tensor_1 = Tensor<ScalarType, Symmetry>{
-            put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1},
+            put_v_right ? std::vector<Name>{internal_name::SVD_U, internal_name::SVD_V} :
+                          std::vector<Name>{internal_name::SVD_V, internal_name::SVD_U},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
       auto tensor_2 = Tensor<ScalarType, Symmetry>{
-            put_v_right ? std::vector<Name>{SVD1, SVD2} : std::vector<Name>{SVD2, SVD1},
+            put_v_right ? std::vector<Name>{internal_name::SVD_U, internal_name::SVD_V} :
+                          std::vector<Name>{internal_name::SVD_V, internal_name::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
@@ -232,10 +268,11 @@ namespace TAT {
          const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
          const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
          const int k = m > n ? n : m;
+         const int max = m > n ? m : n;
          auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
-            calculate_svd<ScalarType>(m, n, k, data, data_u, s_data, data_v);
+            calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
          }
          result_s[symmetries[put_v_right]] = std::move(s);
       }
@@ -279,27 +316,37 @@ namespace TAT {
 
       const auto& tensor_u = put_v_right ? tensor_1 : tensor_2;
       const auto& tensor_v = put_v_right ? tensor_2 : tensor_1;
+      // 始终在tensor_1处无符号reverse, 然后判断是否再在tensor_u和tensor_v中分别有无符号翻转
+      // tensor_1 == tensor_u -> u nr // put_v_right
+      // tensor_1 == tensor_v -> v nr v nr u yr -> u yr
       reversed_set_u.insert(common_name_u);
       // 这里会自动cut
       auto u = tensor_u.template edge_operator<true>(
-            {{SVD2, common_name_u}},
-            {{SVD1, free_names_and_edges_u}},
+            {{internal_name::SVD_V, common_name_u}},
+            {{internal_name::SVD_U, free_names_and_edges_u}},
             reversed_set_u,
             {},
             result_name_u,
             false,
-            {{{}, {}, {}, {}}},
-            {{SVD2, remain_dimension_u}});
+            {{{}, put_v_right ? std::set<Name>{} : std::set<Name>{common_name_u}, {}, {}}},
+            {{internal_name::SVD_V, remain_dimension_u}});
       auto v = tensor_v.template edge_operator<true>(
-            {{SVD1, common_name_v}},
-            {{SVD2, free_names_and_edges_v}},
+            {{internal_name::SVD_U, common_name_v}},
+            {{internal_name::SVD_V, free_names_and_edges_v}},
             reversed_set_v,
             {},
             result_name_v,
             false,
             {{{}, {}, {}, {}}},
-            {{SVD1, remain_dimension_v}});
-      return {std::move(u), {std::move(result_s)}, std::move(v)};
+            {{internal_name::SVD_U, remain_dimension_v}});
+      return {
+            std::move(u),
+#ifdef TAT_USE_SINGULAR_MATRIX
+            singular_to_tensor<ScalarType, Symmetry>(result_s),
+#else
+            {std::move(result_s)},
+#endif
+            std::move(v)};
    }
 } // namespace TAT
 #endif
