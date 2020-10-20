@@ -40,7 +40,7 @@ namespace TAT {
       std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
 
       template<int p>
-      void normalize() {
+      [[nodiscard]] real_base_t<ScalarType> norm() const {
          if constexpr (p == -1) {
             real_base_t<ScalarType> maximum = 0;
             for (const auto& [symmetry, singulars] : value) {
@@ -49,11 +49,7 @@ namespace TAT {
                   maximum = maximum < absolute ? absolute : maximum;
                }
             }
-            for (auto& [symmetry, singulars] : value) {
-               for (auto& element : singulars) {
-                  element /= maximum;
-               }
-            }
+            return maximum;
          } else if constexpr (p == 1) {
             real_base_t<ScalarType> summation = 0;
             for (const auto& [symmetry, singulars] : value) {
@@ -62,13 +58,10 @@ namespace TAT {
                   summation += absolute;
                }
             }
-            for (auto& [symmetry, singulars] : value) {
-               for (auto& element : singulars) {
-                  element /= summation;
-               }
-            }
+            return summation;
          } else {
             TAT_error("Not Implement For Singulars Normalize Kind, Only +1 and -1 supported now");
+            return 0;
          }
       }
 

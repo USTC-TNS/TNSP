@@ -165,6 +165,17 @@ namespace TAT {
    template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>>          \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const ScalarType2& number_2) {                   \
       return OP(tensor_1, Tensor<ScalarType2, Symmetry>{number_2});                                                            \
+   }                                                                                                                           \
+   template<class ScalarType1, class ScalarType2, class Symmetry, class = std::enable_if_t<is_scalar_v<ScalarType2>>>          \
+   Singular<ScalarType1, Symmetry>& OP(Singular<ScalarType1, Symmetry>& singular, const ScalarType2& number) {                 \
+      const auto& y = number;                                                                                                  \
+      for (auto& [symmetry, singulars] : singular.value) {                                                                     \
+         real_base_t<ScalarType1>* __restrict a = singulars.data();                                                            \
+         for (Size j = 0; j < singulars.size(); j++) {                                                                         \
+            EVAL1;                                                                                                             \
+         }                                                                                                                     \
+      }                                                                                                                        \
+      return singular;                                                                                                         \
    }
    TAT_DEFINE_SCALAR_OPERATOR(operator+=, a[j] += y, a[j] += b[j])
    TAT_DEFINE_SCALAR_OPERATOR(operator-=, a[j] -= y, a[j] -= b[j])

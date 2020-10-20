@@ -179,12 +179,16 @@ namespace TAT {
             .def_readonly("value", &S::value, "singular value dictionary")
             .def("__str__", [](const S& s) { return s.show(); })
             .def("__repr__", [](const S& s) { return "Singular" + s.show(); })
-            .def("normalize_max", &S::template normalize<-1>)
-            .def("normalize_sum", &S::template normalize<1>)
+            .def("norm_max", &S::template norm<-1>)
+            .def("norm_sum", &S::template norm<1>)
             .def("dump", [](S& s) { return py::bytes(s.dump()); })
             .def(
                   "load", [](S& s, py::bytes bytes) -> S& { return s.load(std::string(bytes)); }, py::return_value_policy::reference_internal)
-            .def(py::pickle([](const S& s) { return py::bytes(s.dump()); }, [](py::bytes bytes) { return S().load(std::string(bytes)); }));
+            .def(py::pickle([](const S& s) { return py::bytes(s.dump()); }, [](py::bytes bytes) { return S().load(std::string(bytes)); }))
+            .def(py::self += real_base_t<ScalarType>())
+            .def(py::self -= real_base_t<ScalarType>())
+            .def(py::self *= real_base_t<ScalarType>())
+            .def(py::self /= real_base_t<ScalarType>());
       py::class_<T>(
             tensor_m,
             tensor_name.c_str(),
