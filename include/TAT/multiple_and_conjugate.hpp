@@ -34,7 +34,7 @@ namespace TAT {
       } else {
          return copy();
       }
-#ifdef TAT_USE_SINGULAR_MATRIX
+#if 0
       if (division) {
          if (different_direction) {
             // v
@@ -55,7 +55,7 @@ namespace TAT {
             return contract(S, {{name, internal_name::SVD_U}}).edge_rename({{internal_name::SVD_V, name}});
          }
       }
-#else
+#endif
       const auto found = name_to_index.find(name);
       if (found == name_to_index.end()) {
          TAT_warning_or_error_when_multiple_name_missing("Edge not Found in Multiple");
@@ -69,7 +69,14 @@ namespace TAT {
          if (different_direction) {
             symmetry_of_s = -symmetry_of_s;
          }
+#ifdef TAT_USE_SINGULAR_MATRIX
+         const auto& vector_in_S = S.core->blocks.at({-symmetry_of_s, symmetry_of_s});
+         auto dimension = S.core->edges[1].map.at(symmetry_of_s);
+         auto dimension_plus_one = dimension + 1;
+#else
          const auto& vector_in_S = S.value.at(symmetry_of_s);
+         auto dimension = vector_in_S.size();
+#endif
          auto i = 0;
          Size m = 1;
          for (; i < index; i++) {
@@ -80,15 +87,20 @@ namespace TAT {
          for (i++; i < names.size(); i++) {
             n *= core->edges[i].map.at(symmetries[i]);
          }
-         if (vector_in_S.size() != k) {
+         if (dimension != k) {
             TAT_error("Vector Size incompatible in Multiple with a tensor");
          }
          const auto* data_source = block_source.data();
          auto* data_destination = block_destination.data();
+
          if (division) {
             for (Size a = 0; a < m; a++) {
                for (Size b = 0; b < k; b++) {
+#ifdef TAT_USE_SINGULAR_MATRIX
+                  auto v = vector_in_S[b * dimension_plus_one];
+#else
                   auto v = vector_in_S[b];
+#endif
                   for (Size c = 0; c < n; c++) {
                      *(data_destination++) = *(data_source++) / v;
                   }
@@ -97,7 +109,11 @@ namespace TAT {
          } else {
             for (Size a = 0; a < m; a++) {
                for (Size b = 0; b < k; b++) {
+#ifdef TAT_USE_SINGULAR_MATRIX
+                  auto v = vector_in_S[b * dimension_plus_one];
+#else
                   auto v = vector_in_S[b];
+#endif
                   for (Size c = 0; c < n; c++) {
                      *(data_destination++) = *(data_source++) * v;
                   }
@@ -106,7 +122,6 @@ namespace TAT {
          }
       }
       return result;
-#endif
    }
 
    template<class ScalarType, class Symmetry>
