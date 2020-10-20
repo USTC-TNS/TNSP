@@ -27,6 +27,7 @@
 #include "get_item.hpp"
 #include "io.hpp"
 #include "mpi.hpp"
+#include "multiple_and_conjugate.hpp"
 #include "qr.hpp"
 #include "scalar.hpp"
 #include "svd.hpp"
