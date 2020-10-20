@@ -45,7 +45,7 @@ namespace TAT {
       template<class... Args>
       void construct([[maybe_unused]] T* pointer, Args&&... arguments) {
          if constexpr (!((sizeof...(arguments) == 0) && (std::is_trivially_destructible_v<T>))) {
-            new (pointer) T(arguments...);
+            new (pointer) T(std::forward<Args>(arguments)...);
          }
       }
 

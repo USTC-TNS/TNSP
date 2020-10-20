@@ -120,6 +120,8 @@ namespace TAT {
    TAT_DEFINE_INTERNAL_NAME(Trace_1);
    TAT_DEFINE_INTERNAL_NAME(Trace_2);
    TAT_DEFINE_INTERNAL_NAME(Trace_3);
+   TAT_DEFINE_INTERNAL_NAME(U_edge);
+   TAT_DEFINE_INTERNAL_NAME(V_edge);
    namespace common_name {
 #define TAT_DEFINE_COMMON_NAME_WITH_INDEX(x) \
    TAT_DEFINE_INTERNAL_NAME(x);              \

@@ -89,6 +89,31 @@ int zgesvd_(
 }
 
 namespace TAT {
+   template<class ScalarType, class Symmetry>
+   [[nodiscard]] Tensor<ScalarType, Symmetry> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
+      auto symmetries = std::vector<Edge<Symmetry>>(2);
+      for (const auto& [symmetry, values] : singular) {
+         auto dimension = values.size();
+         symmetries[0].map[-symmetry] = dimension;
+         symmetries[1].map[symmetry] = dimension;
+      }
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         symmetries[0].arrow = false;
+         symmetries[1].arrow = true;
+      }
+      auto result = Tensor<ScalarType, Symmetry>({U_edge, V_edge}, std::move(symmetries));
+      for (auto& [symmetries, data_destination] : result.core->blocks) {
+         const auto& data_source = singular.at(symmetries[1]);
+         auto dimension = data_source.size();
+         auto dimension_plus_one = dimension + 1;
+         std::fill(data_destination.begin(), data_destination.end(), 0);
+         for (auto i = 0; i < data_source.size(); i++) {
+            data_destination[i * dimension_plus_one] = data_source[i];
+         }
+      }
+      return result;
+   }
+
    template<class ScalarType>
    void calculate_svd(
          const int& m,
@@ -311,7 +336,14 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             {{SVD_U, remain_dimension_v}});
-      return {std::move(u), {std::move(result_s)}, std::move(v)};
+      return {
+            std::move(u),
+#ifdef TAT_USE_SINGULAR_MATRIX
+            singular_to_tensor<ScalarType, Symmetry>(result_s),
+#else
+            {std::move(result_s)},
+#endif
+            std::move(v)};
    }
 } // namespace TAT
 #endif

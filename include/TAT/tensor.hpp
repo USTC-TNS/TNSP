@@ -537,13 +537,20 @@ namespace TAT {
 
       [[nodiscard]] Tensor<ScalarType, Symmetry> trace(const std::set<std::tuple<Name, Name>>& trace_names) const;
 
+      using SingularType =
+#ifdef TAT_USE_SINGULAR_MATRIX
+            Tensor<ScalarType, Symmetry>
+#else
+            Singular<ScalarType, Symmetry>
+#endif
+            ;
       /**
        * \brief 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
       struct svd_result {
          Tensor<ScalarType, Symmetry> U;
-         Singular<ScalarType, Symmetry> S;
+         SingularType S;
          Tensor<ScalarType, Symmetry> V;
       };
 
@@ -563,7 +570,7 @@ namespace TAT {
        * \param division 如果为真, 则进行除法而不是乘法
        * \return 缩并的结果
        */
-      Tensor<ScalarType, Symmetry>& multiple(const Singular<ScalarType, Symmetry>& S, const Name& name, char direction, bool division = false) & {
+      Tensor<ScalarType, Symmetry> multiple(const SingularType& S, const Name& name, char direction, bool division = false) & {
          bool different_direction;
          if (direction == 'u' || direction == 'U') {
             different_direction = false;
@@ -572,6 +579,28 @@ namespace TAT {
          } else {
             return *this;
          }
+#ifdef TAT_USE_SINGULAR_MATRIX
+         if (division) {
+            if (different_direction) {
+               // v
+               return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, V_edge}})
+                     .edge_rename({{U_edge, name}});
+            } else {
+               // u
+               return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, U_edge}})
+                     .edge_rename({{V_edge, name}});
+            }
+         } else {
+            if (different_direction) {
+               // v
+               return contract(S, {{name, V_edge}}).edge_rename({{U_edge, name}});
+            } else {
+               // u
+               return contract(S, {{name, U_edge}}).edge_rename({{V_edge, name}});
+            }
+         }
+#else
+         // TODO outplace
          if (core.use_count() != 1) {
             TAT_warning_or_error_when_inplace_multiple("Set Tensor Shared, You Can Use tensor.copy().multiple(...)");
          }
@@ -622,10 +651,11 @@ namespace TAT {
             }
          }
          return *this;
+#endif
       }
 
-      Tensor<ScalarType, Symmetry> multiple(const Singular<ScalarType, Symmetry>& S, const Name& name, char direction, bool division = false) && {
-         return std::move(this->multiple(S, name, direction, division));
+      Tensor<ScalarType, Symmetry> multiple(const SingularType& S, const Name& name, char direction, bool division = false) && {
+         return std::move(multiple(S, name, direction, division));
       }
 
       /**
