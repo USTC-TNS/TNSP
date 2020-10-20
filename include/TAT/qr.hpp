@@ -345,10 +345,19 @@ namespace TAT {
       }
       const auto& tensor_q = use_qr_not_lq ? tensor_1 : tensor_2;
       const auto& tensor_r = use_qr_not_lq ? tensor_2 : tensor_1;
-      // reversed_set_1.insert(common_name_q); ?? TODO ??
-      // cut 可以放在这里自动进行 TODO
+      // 参考svd中的情况
+      // 应 1 nr, 然后再考虑是否在q和r中是否分别左有无符号的反转
+      // tensor_1 == tensor_q -> q nr // use_qr_not_lq
+      // tensor_2 == tensor_q -> r nr r nr q yr
+      reversed_set_1.insert(common_name_q);
       auto new_tensor_1 = tensor_1.template edge_operator<true>(
-            {{QR_2, use_qr_not_lq ? common_name_q : common_name_r}}, {{QR_1, free_names_and_edges_1}}, reversed_set_1, {}, result_name_1);
+            {{QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
+            {{QR_1, free_names_and_edges_1}},
+            reversed_set_1,
+            {},
+            result_name_1,
+            false,
+            {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
       auto new_tensor_2 = tensor_2.template edge_operator<true>(
             {{QR_1, use_qr_not_lq ? common_name_r : common_name_q}}, {{QR_2, free_names_and_edges_2}}, reversed_set_2, {}, result_name_2);
       return {std::move(use_qr_not_lq ? new_tensor_1 : new_tensor_2), std::move(use_qr_not_lq ? new_tensor_2 : new_tensor_1)};
