@@ -34,6 +34,8 @@
 
 namespace TAT {
 #ifdef TAT_USE_MPI
+   constexpr int mpi_tag = 0;
+
    struct mpi_output_stream {
       std::ostream* out;
       bool valid;
@@ -101,18 +103,18 @@ namespace TAT {
    template<class ScalarType, class Symmetry>
    void Tensor<ScalarType, Symmetry>::send(const int destination) const {
       auto data = dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
-      MPI_Send(data.data(), data.length(), MPI_BYTE, destination, 0, MPI_COMM_WORLD);
+      MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
    }
 
    // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
    template<class ScalarType, class Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::receive(const int source) {
       auto status = MPI_Status();
-      MPI_Probe(source, 0, MPI_COMM_WORLD, &status);
+      MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
       int length;
       MPI_Get_count(&status, MPI_BYTE, &length);
       auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
-      MPI_Recv(data.data(), length, MPI_BYTE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
       auto result = Tensor<ScalarType, Symmetry>().load(data);
       return result;
    }
