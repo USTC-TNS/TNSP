@@ -225,7 +225,7 @@ namespace TAT {
                   },
                   "The shape of this tensor")
             .def(py::init<>(), "Default Constructor")
-            .def(py::init<>([=](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
+            .def(py::init<>([edge_m, symmetry_short_name](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
                     for (const auto& this_edge : edges) {
                        tensor_edges.push_back(py::cast<E>(edge_m.attr(symmetry_short_name.c_str())(this_edge)));
@@ -461,7 +461,9 @@ namespace TAT {
             .def_static("barrier", &T::barrier, "MPI barrier")
             .def_readonly_static("mpi", &T::mpi, "MPI Handle")
 #endif
-            .def_readonly_static("mpi_enabled", &T::mpi_enabled);
+            .def_readonly_static("mpi_enabled", &T::mpi_enabled)
+            .def_readonly_static("version", &T::version)
+            .def_readonly_static("license", &T::license);
    }
 
    template<class Symmetry, class Element, bool IsTuple, template<class, bool = false> class EdgeType = Edge>
@@ -606,16 +608,22 @@ namespace TAT {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       // mpi
-#ifdef TAT_USE_MPI
       auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
+#ifdef TAT_USE_MPI
       py::class_<mpi_t>(mpi_m, "mpi_t", "several functions for MPI")
             .def_readonly("rank", &mpi_t::rank)
             .def_readonly("size", &mpi_t::size)
-            .def("print", [](const mpi_t& mpi, py::args& args, py::kwargs kwargs) {
+            .def("print", [](const mpi_t& mpi, py::args args, py::kwargs kwargs) {
                if (mpi.rank == 0) {
                   py::print(*args, **kwargs);
                }
             });
+      mpi_m.attr("mpi") = mpi;
+      mpi_m.attr("enabled") = true;
+#else
+      mpi_m.attr("enabled") = false;
+      auto mpi_fake_m = mpi_m.def_submodule("mpi", "mpi support for TAT");
+      mpi_fake_m.attr("print") = py::print;
 #endif // MPI
       // name
       py::class_<Name>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
@@ -702,6 +710,74 @@ namespace TAT {
    py::implicitly_convertible<py::dict, std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>();
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
+      // get tensor
+      tat_m.attr("license") = license;
+      tat_m.def("TAT", [tensor_m, mpi_m](py::args args, py::kwargs kwargs) -> py::object {
+         if (py::len(args) == 0 && py::len(kwargs) == 0) {
+            std::string date = __DATE__;
+            std::string year = date.substr(date.size() - 4, 4);
+            mpi_m.attr("mpi").attr("print")(license);
+            return py::none();
+         }
+         auto text = py::str(py::make_tuple(args, kwargs));
+         auto contain = [&text](const char* string) { return py::cast<bool>(text.attr("__contains__")(string)); };
+         if (contain("mpi") || contain("MPI")) {
+            return mpi_m.attr("mpi");
+         }
+         std::string scalar = "";
+         std::string fermi = "";
+         std::string symmetry = "";
+         if (contain("Fermi")) {
+            fermi = "Fermi";
+         }
+         if (contain("Bose")) {
+            if (fermi != "") {
+               throw std::runtime_error("Fermi Ambiguous");
+            }
+         }
+         if (contain("U1")) {
+            symmetry = "U1";
+         }
+         if (contain("Z2")) {
+            if (symmetry == "") {
+               symmetry = "Z2";
+            } else {
+               throw std::runtime_error("Symmetry Ambiguous");
+            }
+         }
+         if (contain("No")) {
+            if (symmetry != "") {
+               throw std::runtime_error("Symmetry Ambiguous");
+            }
+         }
+         if (symmetry == "" && fermi == "") {
+            symmetry = "No";
+         }
+         if (contain("complex")) {
+            scalar = "Z";
+         }
+         if (contain("complex32")) {
+            scalar = "C";
+         }
+         if (contain("float")) {
+            if (scalar == "") {
+               scalar = "D";
+            } else {
+               throw std::runtime_error("Scalar Ambiguous");
+            }
+         }
+         if (contain("float32")) {
+            if (scalar == "" || scalar == "D") {
+               scalar = "S";
+            } else {
+               throw std::runtime_error("Scalar Ambiguous");
+            }
+         }
+         if (scalar == "") {
+            throw std::runtime_error("Scalar Ambiguous");
+         }
+         return tensor_m.attr((scalar + fermi + symmetry).c_str());
+      });
       at_exit.release();
    }
 } // namespace TAT
