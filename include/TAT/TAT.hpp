@@ -74,7 +74,11 @@ namespace TAT {
 #ifdef TAT_VERSION
                          " " TAT_VERSION
 #endif
-                         " (" __DATE__ ", " __TIME__
+                         " ("
+#ifdef TAT_BUILD_TYPE
+                         "" TAT_BUILD_TYPE ", "
+#endif
+                         "" __DATE__ ", " __TIME__
 #ifdef TAT_COMPILER_INFORMATION
                          ", " TAT_COMPILER_INFORMATION
 #endif
