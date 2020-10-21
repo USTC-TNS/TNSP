@@ -613,6 +613,18 @@ namespace TAT {
       py::class_<mpi_t>(mpi_m, "mpi_t", "several functions for MPI")
             .def_readonly("rank", &mpi_t::rank)
             .def_readonly("size", &mpi_t::size)
+            .def("__str__",
+                 [](const mpi_t& mpi) {
+                    auto out = std::stringstream();
+                    out << "[rank=" << mpi.rank << ", size=" << mpi.size << "]";
+                    return out.str();
+                 })
+            .def("__repr__",
+                 [](const mpi_t& mpi) {
+                    auto out = std::stringstream();
+                    out << "MPI[rank=" << mpi.rank << ", size=" << mpi.size << "]";
+                    return out.str();
+                 })
             .def("print", [](const mpi_t& mpi, py::args args, py::kwargs kwargs) {
                if (mpi.rank == 0) {
                   py::print(*args, **kwargs);
