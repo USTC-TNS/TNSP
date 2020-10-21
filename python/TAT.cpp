@@ -623,7 +623,7 @@ namespace TAT {
 #else
       mpi_m.attr("enabled") = false;
       auto mpi_fake_m = mpi_m.def_submodule("mpi", "mpi support for TAT");
-      mpi_fake_m.attr("print") = py::print;
+      mpi_fake_m.def("print", [](py::args args, py::kwargs kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
       // name
       py::class_<Name>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
