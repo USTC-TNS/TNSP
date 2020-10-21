@@ -35,6 +35,8 @@
 #include "symmetry.hpp"
 
 namespace TAT {
+   struct mpi_t;
+
    template<class ScalarType, class Symmetry>
    struct Singular {
       std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
@@ -563,8 +565,40 @@ namespace TAT {
        */
       [[nodiscard]] qr_result qr(char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) const;
 
-      // TODO slice 可化为contract，但需要自动生成方便的辅助张量
-      // 除此以外, 有了name 但是只有一个元素的张量也需要辅助函数
+#ifdef TAT_USE_MPI
+      /**
+       * \brief source调用此函数, 向destination发送一个张量
+       */
+      void send(const int destination) const;
+      /**
+       * \brief destination调用此函数, 从source接受一个张量
+       */
+      static Tensor<ScalarType, Symmetry> receive(const int source);
+      /**
+       * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
+       */
+      Tensor<ScalarType, Symmetry> send_receive(const int source, const int destination) const;
+      /**
+       * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
+       */
+      Tensor<ScalarType, Symmetry> broadcast(const int root) const;
+      /**
+       * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
+       */
+      template<class Func>
+      Tensor<ScalarType, Symmetry> reduce(const int root, Func&& function) const;
+      /**
+       * 对各个进程但张量通过求和进行reduce
+       */
+      Tensor<ScalarType, Symmetry> summary(const int root) const;
+      /**
+       * mpi进程间同步
+       */
+      static void barrier();
+
+      static mpi_t mpi;
+#endif
+      static bool mpi_enabled;
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;

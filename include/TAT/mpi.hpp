@@ -34,6 +34,28 @@
 
 namespace TAT {
 #ifdef TAT_USE_MPI
+   struct mpi_output_stream {
+      std::ostream* out;
+      bool valid;
+      mpi_output_stream(std::ostream* out, bool valid) : out(out), valid(valid) {}
+
+      template<class Type>
+      mpi_output_stream& operator<<(const Type& value) & {
+         if (valid) {
+            *out << value;
+         }
+         return *this;
+      }
+
+      template<class Type>
+      mpi_output_stream&& operator<<(const Type& value) && {
+         if (valid) {
+            *out << value;
+         }
+         return std::move(*this);
+      }
+   };
+
    struct mpi_t {
       int size;
       int rank;
@@ -47,6 +69,7 @@ namespace TAT {
          MPI_Finalized(&result);
          return result;
       }
+      // 因为属于Tensor的static member, 不同的模板参数会调用他多次
       mpi_t() noexcept : size(1), rank(0) {
          if (!initialized()) {
             MPI_Init(nullptr, nullptr);
@@ -59,24 +82,31 @@ namespace TAT {
             MPI_Finalize();
          }
       }
+      auto out(int rank_specified = 0) {
+         return mpi_output_stream(&std::cout, rank_specified == rank);
+      }
+      auto log(int rank_specified = 0) {
+         return mpi_output_stream(&std::clog, rank_specified == rank);
+      }
+      auto err(int rank_specified = 0) {
+         return mpi_output_stream(&std::cerr, rank_specified == rank);
+      }
    };
    inline mpi_t mpi;
-
-   /**
-    * \brief source调用此函数, 向destination发送一个张量
-    */
    template<class ScalarType, class Symmetry>
-   void send(const Tensor<ScalarType, Symmetry>& tensor, const int destination) {
-      auto data = tensor.dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
+   mpi_t Tensor<ScalarType, Symmetry>::mpi;
+   template<class ScalarType, class Symmetry>
+   bool Tensor<ScalarType, Symmetry>::mpi_enabled = true;
+
+   template<class ScalarType, class Symmetry>
+   void Tensor<ScalarType, Symmetry>::send(const int destination) const {
+      auto data = dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
       MPI_Send(data.data(), data.length(), MPI_BYTE, destination, 0, MPI_COMM_WORLD);
    }
 
    // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
-   /**
-    * \brief destination调用此函数, 从source接受一个张量
-    */
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> receive(const int source) {
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::receive(const int source) {
       auto status = MPI_Status();
       MPI_Probe(source, 0, MPI_COMM_WORLD, &status);
       int length;
@@ -87,34 +117,20 @@ namespace TAT {
       return result;
    }
 
-   /**
-    * \brief destination调用此函数, 从source接受一个张量
-    * 第一个参数并不使用, 仅仅是为了确定张量类型
-    */
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> receive(const Tensor<ScalarType, Symmetry>&, const int source) {
-      return receive<ScalarType, Symmetry>(source);
-   }
-
-   /**
-    * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
-    */
-   template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> send_receive(const Tensor<ScalarType, Symmetry>& tensor, const int source, const int destination) {
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::send_receive(const int source, const int destination) const {
       if (mpi.rank == source) {
-         send(tensor, destination);
+         send(destination);
       }
       if (mpi.rank == destination) {
-         return receive(tensor, source);
+         return receive(source);
       }
       return Tensor<ScalarType, Symmetry>();
    }
 
-   /**
-    * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
-    */
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> broadcast(const Tensor<ScalarType, Symmetry>& tensor, const int root) {
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::broadcast(const int root) const {
+      const auto& tensor = *this;
       if (mpi.size == 1) {
          return tensor.copy(); // rvalue
       }
@@ -127,7 +143,7 @@ namespace TAT {
       if (this_fake_rank != 0) {
          const auto father_fake_rank = (this_fake_rank - 1) / 2;
          const auto father_real_rank = (father_fake_rank + root) % mpi.size;
-         result = receive(result, father_real_rank);
+         result = receive(father_real_rank);
       } else {
          // 自己就是root的话, 会复制一次张量
          result = tensor.copy();
@@ -137,20 +153,19 @@ namespace TAT {
       const auto right_son_fake_rank = this_fake_rank * 2 + 2;
       if (left_son_fake_rank < mpi.size) {
          const auto left_son_real_rank = (left_son_fake_rank + root) % mpi.size;
-         send(result, left_son_real_rank);
+         result.send(left_son_real_rank);
       }
       if (right_son_fake_rank < mpi.size) {
          const auto right_son_real_rank = (right_son_fake_rank + root) % mpi.size;
-         send(result, right_son_real_rank);
+         result.send(right_son_real_rank);
       }
       return result;
    }
 
-   /**
-    * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
-    */
-   template<class ScalarType, class Symmetry, class Func>
-   Tensor<ScalarType, Symmetry> reduce(const Tensor<ScalarType, Symmetry>& tensor, const int root, Func&& function) {
+   template<class ScalarType, class Symmetry>
+   template<class Func>
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::reduce(const int root, Func&& function) const {
+      const auto& tensor = *this;
       if (mpi.size == 1) {
          return tensor.copy(); // rvalue
       }
@@ -164,73 +179,39 @@ namespace TAT {
       const auto right_son_fake_rank = this_fake_rank * 2 + 2;
       if (left_son_fake_rank < mpi.size) {
          const auto left_son_real_rank = (left_son_fake_rank + root) % mpi.size;
-         result = function(tensor, receive(result, left_son_real_rank));
+         result = function(tensor, receive(left_son_real_rank));
       }
       if (right_son_fake_rank < mpi.size) {
          const auto right_son_real_rank = (right_son_fake_rank + root) % mpi.size;
          // 如果左儿子不存在, 那么右儿子一定不存在, 所以不必判断result是否有效
-         result = function(result, receive(result, right_son_real_rank));
+         result = function(result, receive(right_son_real_rank));
       }
       // pass to father
       if (this_fake_rank != 0) {
          const auto father_fake_rank = (this_fake_rank - 1) / 2;
          const auto father_real_rank = (father_fake_rank + root) % mpi.size;
          if (left_son_fake_rank < mpi.size) {
-            send(result, father_real_rank);
+            result.send(father_real_rank);
          } else {
-            send(tensor, father_real_rank);
+            tensor.send(father_real_rank);
          }
       }
       return result;
       // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
    }
 
-   /**
-    * 对各个进程但张量通过求和进行reduce
-    */
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> summary(const Tensor<ScalarType, Symmetry>& tensor, const int root) {
-      return reduce(tensor, root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::summary(const int root) const {
+      return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
    }
 
-   /**
-    * mpi进程间同步
-    */
-   inline void barrier() {
+   template<class ScalarType, class Symmetry>
+   void Tensor<ScalarType, Symmetry>::barrier() {
       MPI_Barrier(MPI_COMM_WORLD);
    }
-
-   struct mpi_output_stream {
-      std::ostream* out;
-      int rank;
-      mpi_output_stream(std::ostream* out, int rank = 0) : out(out), rank(rank) {}
-
-      template<class Type>
-      mpi_output_stream& operator<<(const Type& value) & {
-         if (mpi.rank == rank) {
-            *out << value;
-         }
-         return *this;
-      }
-
-      template<class Type>
-      mpi_output_stream&& operator<<(const Type& value) && {
-         if (mpi.rank == rank) {
-            *out << value;
-         }
-         return std::move(*this);
-      }
-   };
-
-   inline auto mpi_out(int rank = 0) {
-      return mpi_output_stream(&std::cout, rank);
-   }
-   inline auto mpi_log(int rank = 0) {
-      return mpi_output_stream(&std::clog, rank);
-   }
-   inline auto mpi_err(int rank = 0) {
-      return mpi_output_stream(&std::cerr, rank);
-   }
+#else
+   template<class ScalarType, class Symmetry>
+   bool Tensor<ScalarType, Symmetry>::mpi_enabled = false;
 #endif
 
    inline evil_t::evil_t() noexcept {
@@ -249,7 +230,7 @@ namespace TAT {
 #ifndef NDEBUG
       try {
 #ifdef TAT_USE_MPI
-         mpi_log()
+         mpi.log()
 #else
          std::clog
 #endif

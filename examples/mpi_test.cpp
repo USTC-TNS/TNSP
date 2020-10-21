@@ -23,12 +23,12 @@
 using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 int main() {
-   auto input = Tensor(TAT::mpi.rank);
-   auto result = TAT::summary(input, TAT::mpi.size / 2);
-   TAT::mpi_out(TAT::mpi.size / 2) << result << "\n";
-   result = TAT::broadcast(result, TAT::mpi.size / 2);
-   TAT::barrier();
-   std::cout << TAT::mpi.rank << " " << result << "\n";
+   auto input = Tensor(Tensor::mpi.rank);
+   auto result = input.summary(Tensor::mpi.size / 2);
+   Tensor::mpi.out(Tensor::mpi.size / 2) << result << "\n";
+   result = result.broadcast(Tensor::mpi.size / 2);
+   Tensor::barrier();
+   std::cout << Tensor::mpi.rank << " " << result << "\n";
    // TODO cannot use endl
    return 0;
 }
