@@ -24,7 +24,6 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
-//#define TAT_USE_MPI
 #include "TAT/TAT.hpp"
 
 #define TAT_LOOP_ALL_SCALAR                   \
@@ -102,29 +101,6 @@ namespace TAT {
       at_exit([]() { py::implicitly_convertible<Args, Type>(); });
       return py::init(func);
    }
-
-#ifdef TAT_USE_MPI
-   template<class ScalarType, class Symmetry>
-   void declare_mpi(py::module& mpi_m) {
-      using T = Tensor<ScalarType, Symmetry>;
-      mpi_m.def(
-            "send_receive",
-            &mpi::send_receive<ScalarType, Symmetry>,
-            py::arg("tensor"),
-            py::arg("source"),
-            py::arg("destination"),
-            "Send tensor from source to destination");
-      mpi_m.def("broadcast", &mpi::broadcast<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Broadcast a tensor from root");
-      mpi_m.def(
-            "reduce",
-            [](const T& tensor, const int root, std::function<T(T, T)> function) { return mpi::reduce(tensor, root, function); },
-            py::arg("tensor"),
-            py::arg("root"),
-            py::arg("function"),
-            "Reduce a tensor with commutative function into root");
-      mpi_m.def("summary", &mpi::summary<ScalarType, Symmetry>, py::arg("tensor"), py::arg("root"), "Summation of a tensor into root");
-   }
-#endif
 
    template<class ScalarType, class Symmetry>
    struct block_of_tensor {
@@ -249,7 +225,7 @@ namespace TAT {
                   },
                   "The shape of this tensor")
             .def(py::init<>(), "Default Constructor")
-            .def(py::init<>([=](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
+            .def(py::init<>([edge_m, symmetry_short_name](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
                     for (const auto& this_edge : edges) {
                        tensor_edges.push_back(py::cast<E>(edge_m.attr(symmetry_short_name.c_str())(this_edge)));
@@ -469,7 +445,25 @@ namespace TAT {
             .def(py::pickle(
                   [](const T& tensor) { return py::bytes(tensor.dump()); },
                   // 这里必须是make_unique, 很奇怪, 可能是pybind11的bug
-                  [](const py::bytes& bytes) { return std::make_unique<T>(T().load(std::string(bytes))); }));
+                  [](const py::bytes& bytes) { return std::make_unique<T>(T().load(std::string(bytes))); }))
+#ifdef TAT_USE_MPI
+            .def("send", &T::send, py::arg("destination"), "Send a tensor to destination")
+            .def_static("receive", &T::receive, py::arg("source"), "Receive a tensor from source") // static ?
+            .def("send_receive", &T::send_receive, py::arg("source"), py::arg("destination"), "Send tensor from source to destination")
+            .def("broadcast", &T::broadcast, py::arg("root"), "Broadcast a tensor from root")
+            .def(
+                  "reduce",
+                  [](const T& tensor, const int root, std::function<T(T, T)> function) { return tensor.reduce(root, function); },
+                  py::arg("root"),
+                  py::arg("function"),
+                  "Reduce a tensor with commutative function into root")
+            .def("summary", &T::summary, py::arg("root"), "Summation of a tensor into root")
+            .def_static("barrier", &T::barrier, "MPI barrier")
+            .def_readonly_static("mpi", &T::mpi, "MPI Handle")
+#endif
+            .def_readonly_static("mpi_enabled", &T::mpi_enabled)
+            .def_readonly_static("version", &T::version)
+            .def_readonly_static("license", &T::license);
    }
 
    template<class Symmetry, class Element, bool IsTuple, template<class, bool = false> class EdgeType = Edge>
@@ -535,7 +529,7 @@ namespace TAT {
       if constexpr (is_fermi_symmetry_v<Symmetry> && is_edge_v<EdgeType<Symmetry>>) {
          // is fermi symmetry 且没有强制设置为BoseEdge
          result =
-               result.def_readwrite("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge")
+               result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge")
                      .def(py::init<Arrow, std::map<Symmetry, Size>>(),
                           py::arg("arrow"),
                           py::arg("dictionary_from_symmetry_to_dimension"),
@@ -613,6 +607,36 @@ namespace TAT {
    PYBIND11_MODULE(TAT, tat_m) {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
+      // mpi
+      auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
+#ifdef TAT_USE_MPI
+      py::class_<mpi_t>(mpi_m, "mpi_t", "several functions for MPI")
+            .def_readonly("rank", &mpi_t::rank)
+            .def_readonly("size", &mpi_t::size)
+            .def("__str__",
+                 [](const mpi_t& mpi) {
+                    auto out = std::stringstream();
+                    out << "[rank=" << mpi.rank << ", size=" << mpi.size << "]";
+                    return out.str();
+                 })
+            .def("__repr__",
+                 [](const mpi_t& mpi) {
+                    auto out = std::stringstream();
+                    out << "MPI[rank=" << mpi.rank << ", size=" << mpi.size << "]";
+                    return out.str();
+                 })
+            .def("print", [](const mpi_t& mpi, py::args args, py::kwargs kwargs) {
+               if (mpi.rank == 0) {
+                  py::print(*args, **kwargs);
+               }
+            });
+      mpi_m.attr("mpi") = mpi;
+      mpi_m.attr("enabled") = true;
+#else
+      mpi_m.attr("enabled") = false;
+      auto mpi_fake_m = mpi_m.def_submodule("mpi", "mpi support for TAT");
+      mpi_fake_m.def("print", [](py::args args, py::kwargs kwargs) { py::print(*args, **kwargs); });
+#endif // MPI
       // name
       py::class_<Name>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
 #ifdef TAT_USE_SIMPLE_NAME
@@ -671,24 +695,6 @@ namespace TAT {
    declare_tensor<SCALAR, SYM##Symmetry>(tensor_m, singular_m, block_m, edge_m, tat_m, #SCALARSHORT, #SCALAR, #SYM);
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
-      // mpi
-      auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
-#ifdef TAT_USE_MPI
-      mpi_m.def("barrier", &mpi::barrier);
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) declare_mpi<SCALAR, SYM##Symmetry>(mpi_m);
-      TAT_LOOP_ALL_SCALAR_SYMMETRY
-#undef TAT_SINGLE_SCALAR_SYMMETRY
-      mpi_m.attr("rank") = mpi::mpi.rank;
-      mpi_m.attr("size") = mpi::mpi.size;
-      mpi_m.def("print", [](py::args& args, py::kwargs kwargs) {
-         if (mpi::mpi.rank == 0) {
-            py::print(*args, **kwargs);
-         }
-      });
-      mpi_m.attr("enabled") = true;
-#else
-      mpi_m.attr("enabled") = false;
-#endif
       // stl
       auto stl_m = tat_m.def_submodule("stl", "STL bindings");
       py::bind_vector<std::vector<Name>>(stl_m, "NameList");
@@ -716,6 +722,74 @@ namespace TAT {
    py::implicitly_convertible<py::dict, std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>();
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
+      // get tensor
+      tat_m.attr("license") = license;
+      tat_m.def("TAT", [tensor_m, mpi_m](py::args args, py::kwargs kwargs) -> py::object {
+         if (py::len(args) == 0 && py::len(kwargs) == 0) {
+            std::string date = __DATE__;
+            std::string year = date.substr(date.size() - 4, 4);
+            mpi_m.attr("mpi").attr("print")(license);
+            return py::none();
+         }
+         auto text = py::str(py::make_tuple(args, kwargs));
+         auto contain = [&text](const char* string) { return py::cast<bool>(text.attr("__contains__")(string)); };
+         if (contain("mpi") || contain("MPI")) {
+            return mpi_m.attr("mpi");
+         }
+         std::string scalar = "";
+         std::string fermi = "";
+         std::string symmetry = "";
+         if (contain("Fermi")) {
+            fermi = "Fermi";
+         }
+         if (contain("Bose")) {
+            if (fermi != "") {
+               throw std::runtime_error("Fermi Ambiguous");
+            }
+         }
+         if (contain("U1")) {
+            symmetry = "U1";
+         }
+         if (contain("Z2")) {
+            if (symmetry == "") {
+               symmetry = "Z2";
+            } else {
+               throw std::runtime_error("Symmetry Ambiguous");
+            }
+         }
+         if (contain("No")) {
+            if (symmetry != "") {
+               throw std::runtime_error("Symmetry Ambiguous");
+            }
+         }
+         if (symmetry == "" && fermi == "") {
+            symmetry = "No";
+         }
+         if (contain("complex")) {
+            scalar = "Z";
+         }
+         if (contain("complex32")) {
+            scalar = "C";
+         }
+         if (contain("float")) {
+            if (scalar == "") {
+               scalar = "D";
+            } else {
+               throw std::runtime_error("Scalar Ambiguous");
+            }
+         }
+         if (contain("float32")) {
+            if (scalar == "" || scalar == "D") {
+               scalar = "S";
+            } else {
+               throw std::runtime_error("Scalar Ambiguous");
+            }
+         }
+         if (scalar == "") {
+            throw std::runtime_error("Scalar Ambiguous");
+         }
+         return tensor_m.attr((scalar + fermi + symmetry).c_str());
+      });
       at_exit.release();
    }
 } // namespace TAT

@@ -68,6 +68,26 @@ namespace TAT {
          ;
 
    /**
+    * license信息
+    */
+   const char* license = "TAT"
+#ifdef TAT_VERSION
+                         " " TAT_VERSION
+#endif
+                         " ("
+#ifdef TAT_BUILD_TYPE
+                         "" TAT_BUILD_TYPE ", "
+#endif
+                         "" __DATE__ ", " __TIME__
+#ifdef TAT_COMPILER_INFORMATION
+                         ", " TAT_COMPILER_INFORMATION
+#endif
+                         ")\n"
+                         "Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+                         "This is free software; see the source for copying conditions.  There is NO\n"
+                         "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+
+   /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式
     */
    struct evil_t {
