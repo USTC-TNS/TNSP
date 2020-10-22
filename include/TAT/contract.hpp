@@ -330,11 +330,14 @@ namespace TAT {
          auto edge_1 = tensor_1.core->edges[tensor_1.name_to_index.at(name_1)];
          auto edge_2 = tensor_2.core->edges[tensor_2.name_to_index.at(name_2)];
          auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
+#ifndef _MSVC_LANG
+            // TODO 现在版本的msvc认为constexpr需要捕获, 等待新版本msvc支持此功能
             if constexpr (is_fermi) {
                if (edge_this.arrow == edge_other.arrow) {
                   TAT_error("Different Fermi Arrow to Contract");
                }
             }
+#endif
             auto delete_map = std::map<Symmetry, Size>();
             for (const auto& [symmetry, dimension] : edge_this.map) {
                auto found = edge_other.map.find(-symmetry);
