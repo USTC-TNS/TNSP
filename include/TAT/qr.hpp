@@ -350,27 +350,27 @@ namespace TAT {
             calculate_qr<ScalarType>(m, n, k, max, data, data_1, data_2, use_qr_not_lq);
          }
       }
-      const auto& tensor_q = use_qr_not_lq ? tensor_1 : tensor_2;
-      const auto& tensor_r = use_qr_not_lq ? tensor_2 : tensor_1;
       // 参考svd中的情况
       // 应 1 nr, 然后再考虑是否在q和r中是否分别左有无符号的反转
-      // tensor_1 == tensor_q -> q nr // use_qr_not_lq
-      // tensor_2 == tensor_q -> r nr r nr q yr
-      reversed_set_1.insert(common_name_q);
+      // tensor_1 == tensor_q -> q nr             -> nothing  // use_qr_not_lq
+      // tensor_2 == tensor_q -> r nr (r nr q yr) -> q yr -> 2 yr
+      if constexpr (is_fermi) {
+         (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
+      }
       auto new_tensor_1 = tensor_1.template edge_operator<true>(
             {{internal_name::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
             {{internal_name::QR_1, free_names_and_edges_1}},
             reversed_set_1,
             {},
-            result_name_1,
-            false,
-            {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
+            result_name_1);
       auto new_tensor_2 = tensor_2.template edge_operator<true>(
             {{internal_name::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
             {{internal_name::QR_2, free_names_and_edges_2}},
             reversed_set_2,
             {},
-            result_name_2);
+            result_name_2,
+            false,
+            {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
       return {std::move(use_qr_not_lq ? new_tensor_1 : new_tensor_2), std::move(use_qr_not_lq ? new_tensor_2 : new_tensor_1)};
    }
 } // namespace TAT

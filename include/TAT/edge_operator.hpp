@@ -298,7 +298,9 @@ namespace TAT {
       result_edge.reserve(rank_after_merge);
       // prepare reversed_flag_dst
       auto reversed_after_transpose_flag = std::vector<bool>();
-      reversed_after_transpose_flag.reserve(rank_at_transpose);
+      if constexpr (is_fermi) {
+         reversed_after_transpose_flag.reserve(rank_at_transpose);
+      }
 
       auto merge_offset = std::vector<std::map<std::vector<Symmetry>, std::tuple<Symmetry, Size>>>();
       merge_offset.reserve(rank_after_merge);
@@ -311,8 +313,8 @@ namespace TAT {
          // arrow begin
          Arrow arrow;
          bool arrow_fixed = false;
-         for (auto merge_group_position = start_of_merge; merge_group_position < end_of_merge; merge_group_position++) {
-            if constexpr (is_fermi) {
+         if constexpr (is_fermi) {
+            for (auto merge_group_position = start_of_merge; merge_group_position < end_of_merge; merge_group_position++) {
                if (edge_before_merge[merge_group_position].arrow_valid()) {
                   if (arrow_fixed) {
                      if (arrow == edge_before_merge[merge_group_position].arrow) {

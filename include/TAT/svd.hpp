@@ -319,7 +319,9 @@ namespace TAT {
       // 始终在tensor_1处无符号reverse, 然后判断是否再在tensor_u和tensor_v中分别有无符号翻转
       // tensor_1 == tensor_u -> u nr // put_v_right
       // tensor_1 == tensor_v -> v nr v nr u yr -> u yr
-      reversed_set_u.insert(common_name_u);
+      if constexpr (is_fermi) {
+         reversed_set_u.insert(common_name_u);
+      }
       // 这里会自动cut
       auto u = tensor_u.template edge_operator<true>(
             {{internal_name::SVD_V, common_name_u}},
