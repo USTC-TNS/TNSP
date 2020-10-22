@@ -29,7 +29,13 @@
 #include "tensor.hpp"
 
 #ifdef TAT_USE_MPI
+#define TAT_BACKUP___cplusplus __cplusplus
+#undef __cplusplus
+extern "C" {
 #include <mpi.h>
+}
+#define __cplusplus TAT_BACKUP___cplusplus
+#undef TAT_BACKUP___cplusplus
 #endif
 
 namespace TAT {
