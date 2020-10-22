@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <random>
 #include <sstream>
 
 #include <pybind11/complex.h>
@@ -75,6 +76,11 @@ TAT_LOOP_ALL_SCALAR_SYMMETRY;
 
 namespace TAT {
    namespace py = ::pybind11;
+
+   auto random_engine = std::default_random_engine(std::random_device()());
+   void set_random_seed(unsigned long seed) {
+      random_engine.seed(seed);
+   }
 
    struct AtExit {
       std::vector<std::function<void()>> function_list;
@@ -148,6 +154,10 @@ namespace TAT {
                return py::buffer_info{
                      block.data(), sizeof(ScalarType), py::format_descriptor<ScalarType>::format(), rank, std::move(dimensions), std::move(leadings)};
             });
+      ScalarType one = 1;
+      if constexpr (is_complex_v<ScalarType>) {
+         one = ScalarType(1, 1);
+      }
       py::class_<S>(
             singular_m,
             tensor_name.c_str(),
@@ -462,6 +472,43 @@ namespace TAT {
             .def_readonly_static("mpi", &T::mpi, "MPI Handle")
 #endif
             .def_readonly_static("mpi_enabled", &T::mpi_enabled)
+            .def_static("set_seed", &set_random_seed, "Set Random Seed")
+            .def(
+                  "rand",
+                  [](T& tensor, ScalarType min, ScalarType max) -> T& {
+                     if constexpr (is_complex_v<ScalarType>) {
+                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(min.real(), max.imag());
+                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(min.real(), max.imag());
+                        return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
+                           return {distribution_real(random_engine), distribution_imag(random_engine)};
+                        });
+                     } else {
+                        auto distribution = std::uniform_real_distribution<real_base_t<ScalarType>>(min, max);
+                        return tensor.set([&distribution]() { return distribution(random_engine); });
+                     }
+                  },
+                  py::arg("min") = 0,
+                  py::arg("max") = one,
+                  "Set Uniform Random Number into Tensor",
+                  py::return_value_policy::reference_internal)
+            .def(
+                  "randn",
+                  [](T& tensor, ScalarType mean, ScalarType stddev) -> T& {
+                     if constexpr (is_complex_v<ScalarType>) {
+                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(mean.real(), stddev.imag());
+                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(mean.real(), stddev.imag());
+                        return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
+                           return {distribution_real(random_engine), distribution_imag(random_engine)};
+                        });
+                     } else {
+                        auto distribution = std::normal_distribution<real_base_t<ScalarType>>(mean, stddev);
+                        return tensor.set([&distribution]() { return distribution(random_engine); });
+                     }
+                  },
+                  py::arg("mean") = 0,
+                  py::arg("stddev") = one,
+                  "Set Normal Distribution Random Number into Tensor",
+                  py::return_value_policy::reference_internal)
             .def_readonly_static("version", &T::version)
             .def_readonly_static("license", &T::license);
    }
@@ -611,6 +658,9 @@ namespace TAT {
 #endif
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
+      // random
+      auto random_m = tat_m.def_submodule("random", "random number generator for TAT");
+      random_m.def("set_seed", &set_random_seed, "Set Random Seed");
       // mpi
       auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
 #ifdef TAT_USE_MPI
