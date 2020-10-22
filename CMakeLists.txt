@@ -100,7 +100,7 @@ add_test(fermi-diag ${PROJECT_BINARY_DIR}/fermi-diag ${PROJECT_SOURCE_DIR}/examp
 add_test(OBC ${PROJECT_BINARY_DIR}/OBC ${PROJECT_SOURCE_DIR}/examples/OBC.out)
 
 # 尝试产生本库的python接口, 先寻找系统中的pybind11, 否则尝试使用本目录下自行放置的pybind11
-find_package(pybind11)
+find_package(pybind11 QUIET)
 if(pybind11_FOUND)
    message("-- Enable python(system)")
    pybind11_add_module(TAT ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
