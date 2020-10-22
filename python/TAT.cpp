@@ -604,7 +604,11 @@ namespace TAT {
             });
    }
 
+#ifdef TAT_PYTHON_MODULE
+   PYBIND11_MODULE(TAT_PYTHON_MODULE, tat_m) {
+#else
    PYBIND11_MODULE(TAT, tat_m) {
+#endif
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       // mpi
