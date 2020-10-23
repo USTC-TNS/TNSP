@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.13)
 
 project(TAT VERSION 0.0.6 LANGUAGES CXX)
 
+# 可以设置的参数有CMAKE_BUILD_TYPE, TAT_NO_MPI, TAT_FORCE_BLAS_DYNAMIC
+
 add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
    set(TAT_PYTHON_MODULE TAT)
