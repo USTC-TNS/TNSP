@@ -131,7 +131,9 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
+#ifndef TAT_USE_COPY_WITHOUT_WARNING
          TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
+#endif
       };
       Tensor(Tensor&& other) noexcept = default;
       Tensor& operator=(const Tensor& other) {
@@ -141,7 +143,9 @@ namespace TAT {
          names = other.names;
          name_to_index = other.name_to_index;
          core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
+#ifndef TAT_USE_COPY_WITHOUT_WARNING
          TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
+#endif
          return *this;
       };
       Tensor& operator=(Tensor&& other) noexcept = default;

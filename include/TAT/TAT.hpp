@@ -46,6 +46,7 @@
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
+// TAT_USE_COPY_WITHOUT_WARNING 复制数据的时候不产生警告
 
 /**
  * \brief TAT is A Tensor library
