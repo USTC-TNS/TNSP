@@ -28,7 +28,7 @@
       std::cout << "\n";            \
    } while (false)
 
-template<class T>
+template<typename T>
 std::ostream& operator<<(std::ostream& out, const std::vector<T>& list) {
    out << '[';
    auto not_first = false;

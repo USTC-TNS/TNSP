@@ -62,12 +62,12 @@ struct lattice {
       return std::move(set_h(h));
    }
 
-   template<class G>
+   template<typename G>
    lattice& set_state(G&& g) & {
       state.set(std::forward<G>(g));
       return *this;
    }
-   template<class G>
+   template<typename G>
    lattice set_state(G&& g) && {
       state.set(std::forward<G>(g));
       return std::move(*this);

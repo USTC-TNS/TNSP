@@ -24,7 +24,7 @@
 #include "tensor.hpp"
 
 namespace TAT {
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
@@ -123,7 +123,7 @@ namespace TAT {
       return result;
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::conjugate() const {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return copy();

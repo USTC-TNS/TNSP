@@ -27,7 +27,7 @@
 
 // TAT_USE_MKL_TRANSPOSE
 namespace TAT {
-   template<class ScalarType>
+   template<typename ScalarType>
    void line_copy(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
@@ -91,7 +91,7 @@ namespace TAT {
       // TODO: line size特化
    }
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void matrix_transpose_kernel(
          const Size dimension_of_M,
          const Size dimension_of_N,
@@ -165,7 +165,7 @@ namespace TAT {
       }
    }
 
-   template<class ScalarType, Size cache_size, Size... other>
+   template<typename ScalarType, Size cache_size, Size... other>
    void matrix_transpose(
          const Size dimension_of_M,
          const Size dimension_of_N,
@@ -235,7 +235,7 @@ namespace TAT {
    inline const Size l3_cache = 9437184;
    // TODO: 如何确定系统cache
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void block_transpose(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
@@ -467,7 +467,7 @@ namespace TAT {
             result_rank);
    }
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void do_transpose(
          const ScalarType* data_source,
          ScalarType* data_destination,

@@ -89,7 +89,7 @@ int zgesvd_(
 }
 
 namespace TAT {
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    [[nodiscard]] Tensor<ScalarType, Symmetry> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
       auto symmetries = std::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
@@ -114,7 +114,7 @@ namespace TAT {
       return result;
    }
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void calculate_svd(
          const int& m,
          const int& n,
@@ -184,7 +184,7 @@ namespace TAT {
       }
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    typename Tensor<ScalarType, Symmetry>::svd_result
    Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) const {
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名

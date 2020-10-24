@@ -83,7 +83,7 @@ int zgemm_(
 }
 
 namespace TAT {
-   template<class ScalarType>
+   template<typename ScalarType>
    void calculate_product(
          const char* transpose_a,
          const char* transpose_b,
@@ -179,7 +179,7 @@ namespace TAT {
       return iterator;
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::contract(
          const Tensor<ScalarType, Symmetry>& tensor_1,
          const Tensor<ScalarType, Symmetry>& tensor_2,

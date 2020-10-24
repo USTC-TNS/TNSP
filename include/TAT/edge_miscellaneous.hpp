@@ -24,7 +24,7 @@
 #include "tensor.hpp"
 
 namespace TAT {
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::edge_rename(const std::map<Name, Name>& dictionary) const {
       // too easy so not use edge_operator
       auto result = Tensor<ScalarType, Symmetry>{};
@@ -41,19 +41,19 @@ namespace TAT {
       return result;
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::transpose(std::vector<Name> target_names) const {
       return edge_operator({}, {}, {}, {}, std::move(target_names));
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
    Tensor<ScalarType, Symmetry>::reverse_edge(const std::set<Name>& reversed_name, const bool apply_parity, const std::set<Name>& parity_exclude_name)
          const {
       return edge_operator({}, {}, reversed_name, {}, names, apply_parity, {{{}, parity_exclude_name, {}, {}}});
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::merge_edge(
          std::map<Name, std::vector<Name>> merge,
          const bool apply_parity,
@@ -105,7 +105,7 @@ namespace TAT {
             {}, {}, {}, merge, std::move(target_name), apply_parity, {{{}, {}, parity_exclude_name_reverse, parity_exclude_name_merge}});
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::split_edge(
          std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split,
          const bool apply_parity,

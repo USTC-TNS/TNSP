@@ -33,7 +33,7 @@ namespace TAT {
     *
     * 无对称性的系统为一个NoSymmetry到Size的map, 显然只有一个元素, 使用一个假map来节省一层指针, 在无对称性的block中也用到了这个类
     */
-   template<class Key, class Value>
+   template<typename Key, typename Value>
    struct fake_map {
       using iterator = fake_map*;
       using const_iterator = const fake_map*;
@@ -76,7 +76,7 @@ namespace TAT {
          second = std::get<1>(pair);
          return {this, true};
       }
-      template<class T>
+      template<typename T>
       std::pair<iterator, bool> emplace(const Key&, T&& arg) {
          second = Value(std::forward<T>(arg));
          return {this, true};
@@ -86,7 +86,7 @@ namespace TAT {
       }
       void clear() {}
    };
-   template<class Key, class Value>
+   template<typename Key, typename Value>
    bool operator==(const fake_map<Key, Value>& map_1, const fake_map<Key, Value>& map_2) {
       return map_1.second == map_2.second;
    }
@@ -100,7 +100,7 @@ namespace TAT {
    /**
     * \see Edge
     */
-   template<class Symmetry, bool is_pointer = false>
+   template<typename Symmetry, bool is_pointer = false>
    struct BoseEdge {
       using symmetry_type = Symmetry;
 #ifdef TAT_USE_SIMPLE_NOSYMMETRY
@@ -141,7 +141,7 @@ namespace TAT {
        */
       BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
-   template<class Symmetry, bool is_pointer>
+   template<typename Symmetry, bool is_pointer>
    bool operator==(const BoseEdge<Symmetry, is_pointer>& edge_1, const BoseEdge<Symmetry, is_pointer>& edge_2) {
       return edge_1.map == edge_2.map;
    }
@@ -149,7 +149,7 @@ namespace TAT {
    /**
     * \see Edge
     */
-   template<class Symmetry, bool is_pointer = false>
+   template<typename Symmetry, bool is_pointer = false>
    struct FermiEdge {
       using symmetry_type = Symmetry;
       using edge_map = std::map<Symmetry, Size>;
@@ -224,12 +224,12 @@ namespace TAT {
          return false;
       }
    };
-   template<class Symmetry, bool is_pointer>
+   template<typename Symmetry, bool is_pointer>
    bool operator==(const FermiEdge<Symmetry, is_pointer>& edge_1, const FermiEdge<Symmetry, is_pointer>& edge_2) {
       return edge_1.map == edge_2.map && edge_1.arrow == edge_2.arrow;
    }
 
-   template<class Symmetry, bool is_pointer>
+   template<typename Symmetry, bool is_pointer>
    using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry, is_pointer>, BoseEdge<Symmetry, is_pointer>>;
    /**
     * \brief 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
@@ -237,7 +237,7 @@ namespace TAT {
     * \tparam is_pointer map是否为引用而非真是存储着数据的伪边
     * \see BoseEdge, FermiEdge
     */
-   template<class Symmetry, bool is_pointer = false>
+   template<typename Symmetry, bool is_pointer = false>
    struct Edge : EdgeBase<Symmetry, is_pointer> {
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
 
@@ -248,7 +248,7 @@ namespace TAT {
     * \brief 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
     */
-   template<class Symmetry>
+   template<typename Symmetry>
    using EdgePointer = Edge<Symmetry, true>;
 
    /**
@@ -262,7 +262,7 @@ namespace TAT {
     * \note operate输入两个参数, 一个是每个边所在的位置列表, 一个是需要更新信息的位置开头, 并返回操作后需要更新的位置开头
     * \see initialize_block_symmetries_with_check, get_merged_edge
     */
-   template<class T, class F1, class F2, class F3>
+   template<typename T, typename F1, typename F2, typename F3>
    void loop_edge(const T* edges, const Rank rank, F1&& rank0, F2&& dims0, F3&& operate) {
       if (rank == 0) {
          rank0();
@@ -304,7 +304,7 @@ namespace TAT {
     * \tparam T 为vector<Edge>或者vector<EdgePointer>
     * \see loop_edge
     */
-   template<class T>
+   template<typename T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
       using MapIteratorList = std::vector<typename T::value_type::edge_map::const_iterator>;
@@ -341,14 +341,14 @@ namespace TAT {
     * \brief 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
     * \tparam T 如果T是Edge类型, 则value为true
     */
-   template<class T>
+   template<typename T>
    struct is_edge : std::bool_constant<false> {};
-   template<class T>
+   template<typename T>
    struct is_edge<Edge<T>> : std::bool_constant<true> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_edge_v = is_edge<T>::value;
 
-   template<class Symmetry>
+   template<typename Symmetry>
    [[nodiscard]] std::vector<Edge<Symmetry>>
    get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {

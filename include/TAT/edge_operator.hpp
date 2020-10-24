@@ -25,7 +25,7 @@
 #include "transpose.hpp"
 
 namespace TAT {
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    template<bool split_edge_is_pointer>
    [[nodiscard]] Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::edge_operator(
          const std::map<Name, Name>& rename_map,

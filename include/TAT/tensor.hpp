@@ -37,7 +37,7 @@
 namespace TAT {
    struct mpi_t;
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    struct Singular {
       std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
 
@@ -77,7 +77,7 @@ namespace TAT {
     * \tparam ScalarType 张量内的标量类型
     * \tparam Symmetry 张量所满足的对称性
     */
-   template<class ScalarType = double, class Symmetry = NoSymmetry>
+   template<typename ScalarType = double, typename Symmetry = NoSymmetry>
    struct Tensor {
       using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
@@ -209,7 +209,7 @@ namespace TAT {
        * \note 参见std::transform
        * \see transform
        */
-      template<class Transform>
+      template<typename Transform>
       [[nodiscard]] Tensor<ScalarType, Symmetry> map(Transform&& function) const {
          auto result = same_shape();
          for (auto& [symmetries, block] : core->blocks) {
@@ -225,7 +225,7 @@ namespace TAT {
        * \note 参见std::transform
        * \see map
        */
-      template<class Transform>
+      template<typename Transform>
       Tensor<ScalarType, Symmetry>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             TAT_warning_or_error_when_inplace_transform("Set Tensor Shared");
@@ -235,7 +235,7 @@ namespace TAT {
          }
          return *this;
       }
-      template<class Transform>
+      template<typename Transform>
       Tensor<ScalarType, Symmetry>&& transform(Transform&& function) && {
          return std::move(transform(function));
       }
@@ -246,12 +246,12 @@ namespace TAT {
        * \return 张量自身
        * \see transform
        */
-      template<class Generator>
+      template<typename Generator>
       Tensor<ScalarType, Symmetry>& set(Generator&& generator) & {
          transform([&](ScalarType _) { return generator(); });
          return *this;
       }
-      template<class Generator>
+      template<typename Generator>
       Tensor<ScalarType, Symmetry>&& set(Generator&& generator) && {
          return std::move(set(generator));
       }
@@ -309,7 +309,7 @@ namespace TAT {
        * \tparam OtherScalarType 目标张量的基础标量类型
        * \return 转换后的张量
        */
-      template<class OtherScalarType, class = std::enable_if_t<is_scalar_v<OtherScalarType>>>
+      template<typename OtherScalarType, typename = std::enable_if_t<is_scalar_v<OtherScalarType>>>
       [[nodiscard]] Tensor<OtherScalarType, Symmetry> to() const {
          if constexpr (std::is_same_v<ScalarType, OtherScalarType>) {
             auto result = Tensor<ScalarType, Symmetry>{};
@@ -585,7 +585,7 @@ namespace TAT {
       /**
        * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
        */
-      template<class Func>
+      template<typename Func>
       Tensor<ScalarType, Symmetry> reduce(const int root, Func&& function) const;
       /**
        * mpi进程间同步
@@ -621,7 +621,7 @@ namespace TAT {
    // 比较重要， 可以大幅减少对称性张量的分块
    // 需要先把svd写出来
    /*
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    struct QuasiTensor {
       Tensor<ScalarType, Symmetry> tensor;
       std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split_map;

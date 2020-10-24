@@ -96,25 +96,25 @@ namespace TAT {
    };
    AtExit at_exit;
 
-   template<class Type, class Args>
+   template<typename Type, typename Args>
    auto implicit_init() {
       at_exit([]() { py::implicitly_convertible<Args, Type>(); });
       return py::init<Args>();
    }
 
-   template<class Type, class Args, class Func>
+   template<typename Type, typename Args, typename Func>
    auto implicit_init(Func&& func) {
       at_exit([]() { py::implicitly_convertible<Args, Type>(); });
       return py::init(func);
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    struct block_of_tensor {
       Tensor<ScalarType, Symmetry>* tensor;
       std::map<Name, Symmetry> position;
    };
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    void declare_tensor(
          py::module& tensor_m,
          py::module& singular_m,
@@ -513,7 +513,7 @@ namespace TAT {
             .def_readonly_static("mpi_enabled", &mpi_enabled);
    }
 
-   template<class Symmetry, class Element, bool IsTuple, template<class, bool = false> class EdgeType = Edge>
+   template<typename Symmetry, typename Element, bool IsTuple, template<typename, bool = false> class EdgeType = Edge>
    auto declare_edge(py::module& edge_m, const char* name) {
       auto result = py::class_<EdgeType<Symmetry>>(edge_m, name, ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def_readonly("map", &EdgeType<Symmetry>::map)
@@ -621,7 +621,7 @@ namespace TAT {
       return result;
    }
 
-   template<class Symmetry>
+   template<typename Symmetry>
    auto declare_symmetry(py::module& symmetry_m, const char* name) {
       return py::class_<Symmetry>(symmetry_m, name, (std::string(name) + "Symmetry").c_str())
             .def(py::self < py::self)

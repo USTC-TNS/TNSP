@@ -41,33 +41,33 @@ namespace TAT {
     * \brief 判断一个类型是否是对称性类型
     * \tparam T 如果T是对称性类型, 则value为true
     */
-   template<class T>
+   template<typename T>
    struct is_symmetry : std::is_base_of<symmetry_base, T> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
    /**
     * \brief 判断一个类型是否是玻色对称性类型
     * \tparam T 如果T是玻色对称性类型, 则value为true
     */
-   template<class T>
+   template<typename T>
    struct is_bose_symmetry : std::is_base_of<bose_symmetry_base, T> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
 
    /**
     * \brief 判断一个类型是否是费米对称性类型
     * \tparam T 如果T是费米对称性类型, 则value为true
     */
-   template<class T>
+   template<typename T>
    struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
 
-   template<class Derived>
+   template<typename Derived>
    struct bose_symmetry : bose_symmetry_base {};
 
-   template<class Derived>
+   template<typename Derived>
    struct fermi_symmetry : fermi_symmetry_base {
       /**
        * \brief 根据对称性列表和各边是否需要翻转的情况和parity有效性给出总的parity

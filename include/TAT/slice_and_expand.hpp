@@ -23,7 +23,7 @@
 
 #include "tensor.hpp"
 namespace TAT {
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
    Tensor<ScalarType, Symmetry>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, Name old_name) const {
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
@@ -90,7 +90,7 @@ namespace TAT {
       return contract_all_edge(helper);
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
    Tensor<ScalarType, Symmetry>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, Name new_name, Arrow arrow) const {
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;

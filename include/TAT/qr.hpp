@@ -111,7 +111,7 @@ void zunglq_(
 }
 
 namespace TAT {
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (
          *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
    template<>
@@ -122,7 +122,7 @@ namespace TAT {
    auto geqrf<std::complex<float>> = cgeqrf_;
    template<>
    auto geqrf<std::complex<double>> = zgeqrf_;
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (
          *gelqf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
    template<>
@@ -133,7 +133,7 @@ namespace TAT {
    auto gelqf<std::complex<float>> = cgelqf_;
    template<>
    auto gelqf<std::complex<double>> = zgelqf_;
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (*orgqr)(
          const int* m,
          const int* n,
@@ -152,7 +152,7 @@ namespace TAT {
    auto orgqr<std::complex<float>> = cungqr_;
    template<>
    auto orgqr<std::complex<double>> = zungqr_;
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (*orglq)(
          const int* m,
          const int* n,
@@ -172,7 +172,7 @@ namespace TAT {
    template<>
    auto orglq<std::complex<double>> = zunglq_;
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void calculate_qr(
          const int& m,
          const int& n,
@@ -257,7 +257,7 @@ namespace TAT {
       }
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    typename Tensor<ScalarType, Symmetry>::qr_result
    Tensor<ScalarType, Symmetry>::qr(char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) const {
       // free_name_set不需要做特殊处理即可自动处理不准确的边名

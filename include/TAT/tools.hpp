@@ -26,7 +26,7 @@
 namespace TAT {
    namespace tools {
       // default: up to down
-      template<class ScalarType, class Symmetry>
+      template<typename ScalarType, typename Symmetry>
       auto two_line_to_one_line(
             const std::array<Name, 4>& udlr_name,
             std::vector<const Tensor<ScalarType, Symmetry>*> line_1,
@@ -94,7 +94,7 @@ namespace TAT {
          return double_line;
       }
 
-      template<class ScalarType, class Symmetry, class Key>
+      template<typename ScalarType, typename Symmetry, typename Key>
       struct network {
          std::map<Key, Tensor<ScalarType, Symmetry>> site;
          // Singular is map<Symmetry, vector>, it there is no environment, the map is empty
