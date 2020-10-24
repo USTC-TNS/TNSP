@@ -99,12 +99,13 @@ namespace TAT {
       auto err(int rank_specified = 0) {
          return mpi_output_stream(&std::cerr, rank_specified == rank);
       }
+      static void barrier() {
+         MPI_Barrier(MPI_COMM_WORLD);
+      }
    };
    inline mpi_t mpi;
    template<class ScalarType, class Symmetry>
    mpi_t Tensor<ScalarType, Symmetry>::mpi;
-   template<class ScalarType, class Symmetry>
-   bool Tensor<ScalarType, Symmetry>::mpi_enabled = true;
 
    template<class ScalarType, class Symmetry>
    void Tensor<ScalarType, Symmetry>::send(const int destination) const {
@@ -209,17 +210,12 @@ namespace TAT {
    }
 
    template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::summary(const int root) const {
-      return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
-   }
-
-   template<class ScalarType, class Symmetry>
    void Tensor<ScalarType, Symmetry>::barrier() {
       MPI_Barrier(MPI_COMM_WORLD);
    }
+   constexpr bool mpi_enabled = true;
 #else
-   template<class ScalarType, class Symmetry>
-   bool Tensor<ScalarType, Symmetry>::mpi_enabled = false;
+   constexpr bool mpi_enabled = false;
 #endif
 
    inline evil_t::evil_t() noexcept {

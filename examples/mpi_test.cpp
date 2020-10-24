@@ -24,7 +24,7 @@ using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 int main() {
    auto input = Tensor(Tensor::mpi.rank);
-   auto result = input.summary(Tensor::mpi.size / 2);
+   auto result = input.reduce(Tensor::mpi.size / 2, [](const Tensor& a, const Tensor& b) { return a + b; });
    Tensor::mpi.out(Tensor::mpi.size / 2) << result << "\n";
    result = result.broadcast(Tensor::mpi.size / 2);
    Tensor::barrier();

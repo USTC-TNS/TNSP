@@ -467,11 +467,14 @@ namespace TAT {
                   py::arg("root"),
                   py::arg("function"),
                   "Reduce a tensor with commutative function into root")
-            .def("summary", &T::summary, py::arg("root"), "Summation of a tensor into root")
+            .def(
+                  "summary",
+                  [](const T& tensor, const int root) { return tensor.reduce(root, [](const T& a, const T& b) { return a + b; }); },
+                  py::arg("root"),
+                  "Summation of a tensor into root")
             .def_static("barrier", &T::barrier, "MPI barrier")
             .def_readonly_static("mpi", &T::mpi, "MPI Handle")
 #endif
-            .def_readonly_static("mpi_enabled", &T::mpi_enabled)
             .def_static("set_seed", &set_random_seed, "Set Random Seed")
             .def(
                   "rand",
@@ -509,8 +512,9 @@ namespace TAT {
                   py::arg("stddev") = one,
                   "Set Normal Distribution Random Number into Tensor",
                   py::return_value_policy::reference_internal)
-            .def_readonly_static("version", &T::version)
-            .def_readonly_static("license", &T::license);
+            .def_readonly_static("version", &version)
+            .def_readonly_static("information", &information)
+            .def_readonly_static("mpi_enabled", &mpi_enabled);
    }
 
    template<class Symmetry, class Element, bool IsTuple, template<class, bool = false> class EdgeType = Edge>
@@ -658,15 +662,17 @@ namespace TAT {
 #endif
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
+      tat_m.attr("information") = information;
+      tat_m.attr("mpi_enabled") = mpi_enabled;
       // random
-      auto random_m = tat_m.def_submodule("random", "random number generator for TAT");
-      random_m.def("set_seed", &set_random_seed, "Set Random Seed");
+      tat_m.def("set_random_seed", &set_random_seed, "Set Random Seed");
       // mpi
       auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
 #ifdef TAT_USE_MPI
       py::class_<mpi_t>(mpi_m, "mpi_t", "several functions for MPI")
             .def_readonly("rank", &mpi_t::rank)
             .def_readonly("size", &mpi_t::size)
+            .def_static("barrier", &mpi_t::barrier)
             .def("__str__",
                  [](const mpi_t& mpi) {
                     auto out = std::stringstream();
@@ -777,12 +783,11 @@ namespace TAT {
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
-      tat_m.attr("license") = license;
       tat_m.def("TAT", [tensor_m, mpi_m](py::args args, py::kwargs kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
             std::string date = __DATE__;
             std::string year = date.substr(date.size() - 4, 4);
-            mpi_m.attr("mpi").attr("print")(license);
+            mpi_m.attr("mpi").attr("print")(information);
             return py::none();
          }
          auto text = py::str(py::make_tuple(args, kwargs));

@@ -592,19 +592,12 @@ namespace TAT {
       template<class Func>
       Tensor<ScalarType, Symmetry> reduce(const int root, Func&& function) const;
       /**
-       * 对各个进程但张量通过求和进行reduce
-       */
-      Tensor<ScalarType, Symmetry> summary(const int root) const;
-      /**
        * mpi进程间同步
        */
       static void barrier();
 
       static mpi_t mpi;
 #endif
-      static bool mpi_enabled;
-      static const char* version;
-      static const char* license;
 
       const Tensor<ScalarType, Symmetry>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry>& data_put(std::ostream&) const;
@@ -618,11 +611,6 @@ namespace TAT {
          return std::move(load(string));
       };
    };
-
-   template<class ScalarType, class Symmetry>
-   const char* Tensor<ScalarType, Symmetry>::version = version;
-   template<class ScalarType, class Symmetry>
-   const char* Tensor<ScalarType, Symmetry>::license = license;
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
    // 因为contract的操作是这样的
