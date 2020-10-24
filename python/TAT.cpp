@@ -480,8 +480,8 @@ namespace TAT {
                   "rand",
                   [](T& tensor, ScalarType min, ScalarType max) -> T& {
                      if constexpr (is_complex_v<ScalarType>) {
-                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(min.real(), max.imag());
-                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(min.real(), max.imag());
+                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(min.real(), max.real());
+                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(min.imag(), max.imag());
                         return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
                            return {distribution_real(random_engine), distribution_imag(random_engine)};
                         });
@@ -498,8 +498,8 @@ namespace TAT {
                   "randn",
                   [](T& tensor, ScalarType mean, ScalarType stddev) -> T& {
                      if constexpr (is_complex_v<ScalarType>) {
-                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(mean.real(), stddev.imag());
-                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(mean.real(), stddev.imag());
+                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(mean.real(), stddev.real());
+                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(mean.imag(), stddev.imag());
                         return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
                            return {distribution_real(random_engine), distribution_imag(random_engine)};
                         });
@@ -664,12 +664,12 @@ namespace TAT {
       tat_m.attr("version") = version;
       tat_m.attr("information") = information;
       tat_m.attr("mpi_enabled") = mpi_enabled;
+      auto internal_m = tat_m.def_submodule("_internal", "internal information of TAT");
       // random
       tat_m.def("set_random_seed", &set_random_seed, "Set Random Seed");
       // mpi
-      auto mpi_m = tat_m.def_submodule("mpi", "mpi support for TAT");
 #ifdef TAT_USE_MPI
-      py::class_<mpi_t>(mpi_m, "mpi_t", "several functions for MPI")
+      py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")
             .def_readonly("rank", &mpi_t::rank)
             .def_readonly("size", &mpi_t::size)
             .def_static("barrier", &mpi_t::barrier)
@@ -690,15 +690,13 @@ namespace TAT {
                   py::print(*args, **kwargs);
                }
             });
-      mpi_m.attr("mpi") = mpi;
-      mpi_m.attr("enabled") = true;
+      tat_m.attr("mpi") = mpi;
 #else
-      mpi_m.attr("enabled") = false;
       auto mpi_fake_m = mpi_m.def_submodule("mpi", "mpi support for TAT");
       mpi_fake_m.def("print", [](py::args args, py::kwargs kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
       // name
-      py::class_<Name>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
+      py::class_<Name>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
 #ifdef TAT_USE_SIMPLE_NAME
             .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.name)); })
 #else
@@ -711,7 +709,7 @@ namespace TAT {
             .def("__repr__", [](const Name& name) { return "Name[" + name.get_name() + "]"; })
             .def("__str__", [](const Name& name) { return name.get_name(); });
       // symmetry
-      auto symmetry_m = tat_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
+      auto symmetry_m = internal_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
       declare_symmetry<Z2Symmetry>(symmetry_m, "Z2").def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2")).def_readonly("z2", &Z2Symmetry::z2);
       declare_symmetry<U1Symmetry>(symmetry_m, "U1").def(implicit_init<U1Symmetry, U1>(), py::arg("u1")).def_readonly("u1", &U1Symmetry::u1);
@@ -733,7 +731,7 @@ namespace TAT {
             .def_readonly("fermi", &FermiU1Symmetry::fermi)
             .def_readonly("u1", &FermiU1Symmetry::u1);
       // edge
-      auto edge_m = tat_m.def_submodule("Edge", "Edges of all kinds of symmetries for TAT");
+      auto edge_m = internal_m.def_submodule("Edge", "Edges of all kinds of symmetries for TAT");
       declare_edge<NoSymmetry, void, false>(edge_m, "No");
       declare_edge<Z2Symmetry, Z2, false>(edge_m, "Z2");
       declare_edge<U1Symmetry, U1, false>(edge_m, "U1");
@@ -749,14 +747,14 @@ namespace TAT {
       declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true, BoseEdge>(bose_edge_m, "FermiU1");
       // tensor
       auto tensor_m = tat_m.def_submodule("Tensor", "Tensors for TAT");
-      auto singular_m = tat_m.def_submodule("Singular", "Singulars for TAT, used in svd");
-      auto block_m = tat_m.def_submodule("Block", "Block of Tensor for TAT");
+      auto singular_m = internal_m.def_submodule("Singular", "Singulars for TAT, used in svd");
+      auto block_m = internal_m.def_submodule("Block", "Block of Tensor for TAT");
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
    declare_tensor<SCALAR, SYM##Symmetry>(tensor_m, singular_m, block_m, edge_m, tat_m, #SCALARSHORT, #SCALAR, #SYM);
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // stl
-      auto stl_m = tat_m.def_submodule("stl", "STL bindings");
+      auto stl_m = internal_m.def_submodule("stl", "STL bindings");
       py::bind_vector<std::vector<Name>>(stl_m, "NameList");
       py::implicitly_convertible<py::list, std::vector<Name>>();
 #define TAT_SINGLE_SYMMETRY(SYM)                                                                                         \
@@ -783,17 +781,17 @@ namespace TAT {
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
-      tat_m.def("TAT", [tensor_m, mpi_m](py::args args, py::kwargs kwargs) -> py::object {
+      tat_m.def("TAT", [tensor_m, tat_m](py::args args, py::kwargs kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
             std::string date = __DATE__;
             std::string year = date.substr(date.size() - 4, 4);
-            mpi_m.attr("mpi").attr("print")(information);
+            tat_m.attr("mpi").attr("print")(information);
             return py::none();
          }
          auto text = py::str(py::make_tuple(args, kwargs));
          auto contain = [&text](const char* string) { return py::cast<bool>(text.attr("__contains__")(string)); };
          if (contain("mpi") || contain("MPI")) {
-            return mpi_m.attr("mpi");
+            return tat_m.attr("mpi");
          }
          std::string scalar = "";
          std::string fermi = "";
