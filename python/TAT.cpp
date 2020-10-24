@@ -25,7 +25,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
-#include "TAT/TAT.hpp"
+#include <TAT/TAT.hpp>
 
 #define TAT_LOOP_ALL_SCALAR                   \
    TAT_SINGLE_SCALAR(S, float);               \
@@ -75,7 +75,7 @@ TAT_LOOP_ALL_SCALAR_SYMMETRY;
 #undef TAT_SINGLE_SCALAR_SYMMETRY
 
 namespace TAT {
-   namespace py = ::pybind11;
+   namespace py = pybind11;
 
    auto random_engine = std::default_random_engine(std::random_device()());
    void set_random_seed(unsigned long seed) {
@@ -467,11 +467,7 @@ namespace TAT {
                   py::arg("root"),
                   py::arg("function"),
                   "Reduce a tensor with commutative function into root")
-            .def(
-                  "summary",
-                  [](const T& tensor, const int root) { return tensor.reduce(root, [](const T& a, const T& b) { return a + b; }); },
-                  py::arg("root"),
-                  "Summation of a tensor into root")
+            .def("summary", &T::summary, py::arg("root"), "Summation of a tensor into root")
             .def_static("barrier", &T::barrier, "MPI barrier")
             .def_readonly_static("mpi", &T::mpi, "MPI Handle")
 #endif
@@ -700,7 +696,7 @@ namespace TAT {
 #ifdef TAT_USE_SIMPLE_NAME
             .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.name)); })
 #else
-            .def(py::init<int>(), py::arg("id"), "Name with specified id directly")
+            .def(py::init<NameIdType>(), py::arg("id"), "Name with specified id directly")
             .def_readonly("id", &Name::id)
             .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.id)); })
 #endif

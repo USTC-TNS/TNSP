@@ -591,6 +591,12 @@ namespace TAT {
        * mpi进程间同步
        */
       static void barrier();
+      /*
+       * 对各个进程但张量通过求和进行reduce
+       */
+      Tensor<ScalarType, Symmetry> summary(const int root) const {
+         return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
+      };
 
       static mpi_t mpi;
 #endif
