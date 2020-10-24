@@ -480,8 +480,8 @@ namespace TAT {
                   "rand",
                   [](T& tensor, ScalarType min, ScalarType max) -> T& {
                      if constexpr (is_complex_v<ScalarType>) {
-                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(min.real(), max.real());
-                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(min.imag(), max.imag());
+                        auto distribution_real = std::uniform_real_distribution<real_base_t<ScalarType>>(min.real(), max.real());
+                        auto distribution_imag = std::uniform_real_distribution<real_base_t<ScalarType>>(min.imag(), max.imag());
                         return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
                            return {distribution_real(random_engine), distribution_imag(random_engine)};
                         });

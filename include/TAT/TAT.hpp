@@ -111,12 +111,17 @@ namespace TAT {
     */
    void TAT_error(const char* message);
 
-   const auto TAT_warning_or_error_when_copy_data = TAT_warning;
-   const auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
-   const auto TAT_warning_or_error_when_inplace_multiple = TAT_warning;
-   const auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
-   const auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
-   const auto TAT_warning_or_error_when_lapack_error = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_copy_data =
+#ifdef TAT_USE_COPY_WITHOUT_WARNING
+         TAT_nothing;
+#else
+         TAT_warning;
+#endif
+   constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_inplace_multiple = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
 } // namespace TAT
 
 // clang-format off
