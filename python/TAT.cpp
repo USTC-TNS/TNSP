@@ -82,6 +82,11 @@ namespace TAT {
       random_engine.seed(seed);
    }
 
+   template<typename T>
+   std::unique_ptr<T> to_unique(T&& object) {
+      return std::make_unique<T>(std::move(object));
+   }
+
    struct AtExit {
       std::vector<std::function<void()>> function_list;
       void operator()(std::function<void()>&& function) {
@@ -142,10 +147,11 @@ namespace TAT {
             .def("__getitem__",
                  [](const BS& bs, std::map<Name, Symmetry> position) {
                     auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
+                    auto result = py::cast(block, py::return_value_policy::move);
                     try {
-                       return py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
+                       return py::module::import("numpy").attr("array")(result, py::arg("copy") = false);
                     } catch (const py::error_already_set&) {
-                       return py::cast(block);
+                       return result;
                     }
                  })
             .def("__setitem__", [](BS& bs, std::map<Name, Symmetry> position, const py::object& object) {
@@ -201,8 +207,7 @@ namespace TAT {
             .def(
                   "load", [](S& s, const py::bytes& bytes) -> S& { return s.load(std::string(bytes)); }, py::return_value_policy::reference_internal)
             .def(py::pickle(
-                  [](const S& s) { return py::bytes(s.dump()); },
-                  [](const py::bytes& bytes) { return std::make_unique<S>(S().load(std::string(bytes))); }))
+                  [](const S& s) { return py::bytes(s.dump()); }, [](const py::bytes& bytes) { return to_unique(S().load(std::string(bytes))); }))
             .def(py::self += real_base_t<ScalarType>())
             .def(py::self -= real_base_t<ScalarType>())
             .def(py::self *= real_base_t<ScalarType>())
@@ -330,10 +335,32 @@ namespace TAT {
                   py::arg("value"))
             .def("slice", &T::slice, "Get Slice of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
             .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = "Null")
-            .def("to_single_real", &T::template to<float>, "Convert to single real tensor")
-            .def("to_double_real", &T::template to<double>, "Convert to double real tensor")
-            .def("to_single_complex", &T::template to<std::complex<float>>, "Convert to single complex tensor")
-            .def("to_double_complex", &T::template to<std::complex<double>>, "Convert to double complex tensor")
+            .def(
+                  "to",
+                  [](const T& tensor, const py::object& object) -> py::object {
+                     auto string = py::str(object);
+                     auto contain = [&string](const char* other) { return py::cast<bool>(string.attr("__contains__")(other)); };
+                     if (contain("float32")) {
+                        return py::cast(tensor.template to<float>(), py::return_value_policy::move);
+                     } else if (contain("complex32")) {
+                        return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
+                     } else if (contain("float")) {
+                        return py::cast(tensor.template to<double>(), py::return_value_policy::move);
+                     } else if (contain("complex")) {
+                        return py::cast(tensor.template to<std::complex<double>>(), py::return_value_policy::move);
+                     } else if (contain("S")) {
+                        return py::cast(tensor.template to<float>(), py::return_value_policy::move);
+                     } else if (contain("D")) {
+                        return py::cast(tensor.template to<double>(), py::return_value_policy::move);
+                     } else if (contain("C")) {
+                        return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
+                     } else if (contain("Z")) {
+                        return py::cast(tensor.template to<std::complex<double>>(), py::return_value_policy::move);
+                     } else {
+                        throw std::runtime_error("Invalid scalar type in type conversion");
+                     }
+                  },
+                  "Convert to other scalar type tensor")
             .def("norm_max", &T::template norm<-1>, "Get -1 norm, namely max absolute value")
             .def("norm_num", &T::template norm<0>, "Get 0 norm, namely number of element, note: not check whether equal to 0")
             .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
@@ -432,7 +459,7 @@ namespace TAT {
             .def("trace", &T::trace) // TODO trace
             .def(
                   "svd",
-                  [](const T& tensor, const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) {
+                  [](const T& tensor, const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) {
                      auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, cut);
                      return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
                   },
@@ -443,7 +470,11 @@ namespace TAT {
                   "Singular value decomposition")
             .def(
                   "qr",
-                  [](const T& tensor, char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) {
+                  [](const T& tensor,
+                     char free_name_direction,
+                     const std::set<Name>& free_name_set,
+                     const Name& common_name_q,
+                     const Name& common_name_r) {
                      auto result = tensor.qr(free_name_direction, free_name_set, common_name_q, common_name_r);
                      return py::make_tuple(std::move(result.Q), std::move(result.R));
                   },
@@ -472,7 +503,7 @@ namespace TAT {
             .def(py::pickle(
                   [](const T& tensor) { return py::bytes(tensor.dump()); },
                   // 这里必须是make_unique, 很奇怪, 可能是pybind11的bug
-                  [](const py::bytes& bytes) { return std::make_unique<T>(T().load(std::string(bytes))); }))
+                  [](const py::bytes& bytes) { return to_unique(T().load(std::string(bytes))); }))
 #ifdef TAT_USE_MPI
             .def("send", &T::send, py::arg("destination"), "Send a tensor to destination")
             .def_static("receive", &T::receive, py::arg("source"), "Receive a tensor from source") // static ?
@@ -480,7 +511,7 @@ namespace TAT {
             .def("broadcast", &T::broadcast, py::arg("root"), "Broadcast a tensor from root")
             .def(
                   "reduce",
-                  [](const T& tensor, const int root, std::function<T(T, T)> function) { return tensor.reduce(root, function); },
+                  [](const T& tensor, const int root, std::function<T(T, T)>& function) { return tensor.reduce(root, function); },
                   py::arg("root"),
                   py::arg("function"),
                   "Reduce a tensor with commutative function into root")

@@ -258,8 +258,11 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry>
-   typename Tensor<ScalarType, Symmetry>::qr_result
-   Tensor<ScalarType, Symmetry>::qr(char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) const {
+   typename Tensor<ScalarType, Symmetry>::qr_result Tensor<ScalarType, Symmetry>::qr(
+         char free_name_direction,
+         const std::set<Name>& free_name_set,
+         const Name& common_name_q,
+         const Name& common_name_r) const {
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();

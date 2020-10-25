@@ -80,14 +80,14 @@ def test_create_fermi_symmetry_tensor():
 def test_type_conversion():
     print(TAT.Tensor.DU1(123))
     print(float(TAT.Tensor.DU1(123)))
-    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to_double_real())
-    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to_double_complex())
-    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test(2).to_double_real())
-    print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to_double_complex())
+    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to(float))
+    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to(complex))
+    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test(2).to(float))
+    print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to(complex))
 
 
 def test_norm():
-    t = TAT.Tensor.DU1("Left Right Up".split(" "), [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to_double_complex()
+    t = TAT.Tensor.DU1("Left Right Up".split(" "), [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to(complex)
     print(t.norm_max())
     print(t.norm_num())
     print(t.norm_sum())

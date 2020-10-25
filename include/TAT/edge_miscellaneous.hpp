@@ -30,7 +30,7 @@ namespace TAT {
       auto result = Tensor<ScalarType, Symmetry>{};
       result.core = core;
       result.names.reserve(names.size());
-      std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](Name name) {
+      std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](const Name& name) {
          if (auto position = dictionary.find(name); position == dictionary.end()) {
             return name;
          } else {

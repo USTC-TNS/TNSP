@@ -25,7 +25,7 @@
 namespace TAT {
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
-   Tensor<ScalarType, Symmetry>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, Name old_name) const {
+   Tensor<ScalarType, Symmetry>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
       //            std::is_same_v<Symmetry, NoSymmetry>,
       //            std::tuple<Size, Size>,
@@ -92,7 +92,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
-   Tensor<ScalarType, Symmetry>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, Name new_name, Arrow arrow) const {
+   Tensor<ScalarType, Symmetry>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto new_names = std::vector<Name>();

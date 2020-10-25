@@ -186,7 +186,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    typename Tensor<ScalarType, Symmetry>::svd_result
-   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) const {
+   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) const {
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();

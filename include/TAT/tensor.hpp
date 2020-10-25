@@ -69,7 +69,10 @@ namespace TAT {
 
       [[nodiscard]] std::string show() const;
       [[nodiscard]] std::string dump() const;
-      Singular<ScalarType, Symmetry>& load(const std::string&);
+      Singular<ScalarType, Symmetry>& load(const std::string&) &;
+      Singular<ScalarType, Symmetry>&& load(const std::string& string) && {
+         return std::move(load(string));
+      };
    };
 
    /**
@@ -190,10 +193,10 @@ namespace TAT {
             std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry>
-      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, Name old_name = internal_name::Null) const;
+      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = internal_name::Null) const;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry>
-      slice(const std::map<Name, EdgeInfoForGetItem>& configure, Name new_name = internal_name::Null, Arrow arrow = false) const;
+      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = internal_name::Null, Arrow arrow = false) const;
 
       /**
        * \brief 产生一个与自己形状一样的张量
@@ -552,7 +555,7 @@ namespace TAT {
        * \see svd_result
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
-      [[nodiscard]] svd_result svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut = -1) const;
+      [[nodiscard]] svd_result svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = -1) const;
 
       /**
        * \brief 对张量进行qr分解
@@ -563,7 +566,8 @@ namespace TAT {
        * \return qr的结果
        * \see qr_result
        */
-      [[nodiscard]] qr_result qr(char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) const;
+      [[nodiscard]] qr_result
+      qr(char free_name_direction, const std::set<Name>& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
 
 #ifdef TAT_USE_MPI
       /**

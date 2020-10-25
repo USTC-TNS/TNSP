@@ -433,7 +433,7 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry>
-   Singular<ScalarType, Symmetry>& Singular<ScalarType, Symmetry>::load(const std::string& input) {
+   Singular<ScalarType, Symmetry>& Singular<ScalarType, Symmetry>::load(const std::string& input) & {
       std::stringstream in(input);
       in > *this;
       return *this;
