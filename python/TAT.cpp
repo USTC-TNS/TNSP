@@ -109,8 +109,13 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry>
+   struct blocks_of_tensor {
+      Tensor<ScalarType, Symmetry>& tensor;
+   };
+
+   template<typename ScalarType, typename Symmetry>
    struct block_of_tensor {
-      Tensor<ScalarType, Symmetry>* tensor;
+      Tensor<ScalarType, Symmetry>& tensor;
       std::map<Name, Symmetry> position;
    };
 
@@ -127,8 +132,34 @@ namespace TAT {
       using T = Tensor<ScalarType, Symmetry>;
       using S = Singular<ScalarType, Symmetry>;
       using E = Edge<Symmetry>;
+      using BS = blocks_of_tensor<ScalarType, Symmetry>;
       using B = block_of_tensor<ScalarType, Symmetry>;
       std::string tensor_name = scalar_short_name + symmetry_short_name;
+      py::class_<BS>(
+            block_m,
+            (tensor_name + "S").c_str(),
+            ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
+            .def(
+                  "__getitem__",
+                  [](const BS& bs, std::map<Name, Symmetry> position) {
+                     auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
+                     try {
+                        return py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
+                     } catch (const py::error_already_set&) {
+                        return py::cast(block);
+                     }
+                  },
+                  py::keep_alive<0, 1>())
+            .def("__setitem__", [](BS& bs, std::map<Name, Symmetry> position, py::object object) {
+               auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
+               py::object result;
+               try {
+                  result = py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
+               } catch (const py::error_already_set&) {
+                  throw std::runtime_error("Cannot import numpy but setting block of tensor need numpy");
+               }
+               result.attr("__setitem__")(py::ellipsis(), object);
+            });
       py::class_<B>(
             block_m,
             tensor_name.c_str(),
@@ -136,12 +167,12 @@ namespace TAT {
             py::buffer_protocol())
             .def_buffer([](B& b) {
                // 返回的buffer是可变的
-               auto& block = b.tensor->block(b.position);
-               const Rank rank = b.tensor->names.size();
+               auto& block = b.tensor.block(b.position);
+               const Rank rank = b.tensor.names.size();
                auto dimensions = std::vector<int>(rank);
                auto leadings = std::vector<int>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = b.tensor->core->edges[i].map.at(b.position[b.tensor->names[i]]);
+                  dimensions[i] = b.tensor.core->edges[i].map.at(b.position[b.tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
                }
                for (auto i = rank; i-- > 0;) {
@@ -286,20 +317,7 @@ namespace TAT {
                   py::arg("step") = 1,
                   "Useful function generate simple data in tensor element for test",
                   py::return_value_policy::reference_internal)
-            .def(
-                  "block",
-                  [](T& tensor, std::map<Name, Symmetry> position) {
-                     auto block = block_of_tensor<ScalarType, Symmetry>{&tensor, std::move(position)};
-                     try {
-                        return py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
-                     } catch (const py::error_already_set&) {
-                        return py::cast(block);
-                     }
-                  },
-                  py::arg("dictionary_from_name_to_symmetry") = py::dict(),
-                  "Get specified block data as a one dimension list",
-                  py::keep_alive<0, 1>())
-            // TODO t.block() = d => t.block().__setitem__(:, d)
+            .def_property_readonly("block", [](T& tensor) { return blocks_of_tensor<ScalarType, Symmetry>{tensor}; })
             .def(
                   "__getitem__",
                   [](const T& tensor, const std::map<Name, typename T::EdgeInfoForGetItem>& position) { return tensor.at(position); },
