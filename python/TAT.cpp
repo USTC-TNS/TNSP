@@ -253,8 +253,7 @@ namespace TAT {
                  py::arg("edge_symmetry") = py::list(),
                  py::arg("edge_arrow") = py::list(),
                  "Create tensor with high rank but containing only one element")
-            .def(
-                  "value", [](const T& tensor) -> ScalarType { return tensor; }, "Get the only one element of a rank 0 tensor")
+            .def(is_complex_v<ScalarType> ? "__complex__" : "__float__", [](const T& tensor) -> ScalarType { return tensor; })
             .def("copy", &T::copy, "Deep copy a tensor")
             .def("same_shape", &T::same_shape, "Create a tensor with same shape")
             .def(
@@ -300,6 +299,7 @@ namespace TAT {
                   py::arg("dictionary_from_name_to_symmetry") = py::dict(),
                   "Get specified block data as a one dimension list",
                   py::keep_alive<0, 1>())
+            // TODO t.block() = d => t.block().__setitem__(:, d)
             .def(
                   "__getitem__",
                   [](const T& tensor, const std::map<Name, typename T::EdgeInfoForGetItem>& position) { return tensor.at(position); },
