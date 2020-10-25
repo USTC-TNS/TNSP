@@ -53,11 +53,11 @@ def test_create_fermi_symmetry_tensor():
         }, {
             (0, 0): 3,
             (1, -1): 1
-        }], True).test(2).block({
+        }], True).test(2).block[{
             "Left": (1, 1),
             "Up": (1, -1),
             "Right": (-2, 0)
-        }))
+        }])
     print(TAT.Tensor.DFermiU1(1234)[{}])
     print(
         TAT.Tensor.DFermiU1(["Left", "Right", "Up"], [{
@@ -79,7 +79,7 @@ def test_create_fermi_symmetry_tensor():
 
 def test_type_conversion():
     print(TAT.Tensor.DU1(123))
-    print(TAT.Tensor.DU1(123).value())
+    print(float(TAT.Tensor.DU1(123)))
     print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to_double_real())
     print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to_double_complex())
     print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test(2).to_double_real())

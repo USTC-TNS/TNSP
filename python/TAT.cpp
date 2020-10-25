@@ -110,12 +110,12 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    struct blocks_of_tensor {
-      Tensor<ScalarType, Symmetry>& tensor;
+      py::object tensor;
    };
 
    template<typename ScalarType, typename Symmetry>
    struct block_of_tensor {
-      Tensor<ScalarType, Symmetry>& tensor;
+      py::object tensor;
       std::map<Name, Symmetry> position;
    };
 
@@ -139,18 +139,16 @@ namespace TAT {
             block_m,
             (tensor_name + "S").c_str(),
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
-            .def(
-                  "__getitem__",
-                  [](const BS& bs, std::map<Name, Symmetry> position) {
-                     auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
-                     try {
-                        return py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
-                     } catch (const py::error_already_set&) {
-                        return py::cast(block);
-                     }
-                  },
-                  py::keep_alive<0, 1>())
-            .def("__setitem__", [](BS& bs, std::map<Name, Symmetry> position, py::object object) {
+            .def("__getitem__",
+                 [](const BS& bs, std::map<Name, Symmetry> position) {
+                    auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
+                    try {
+                       return py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
+                    } catch (const py::error_already_set&) {
+                       return py::cast(block);
+                    }
+                 })
+            .def("__setitem__", [](BS& bs, std::map<Name, Symmetry> position, const py::object& object) {
                auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
                py::object result;
                try {
@@ -167,12 +165,13 @@ namespace TAT {
             py::buffer_protocol())
             .def_buffer([](B& b) {
                // 返回的buffer是可变的
-               auto& block = b.tensor.block(b.position);
-               const Rank rank = b.tensor.names.size();
+               auto& tensor = py::cast<T&>(b.tensor);
+               auto& block = tensor.block(b.position);
+               const Rank rank = tensor.names.size();
                auto dimensions = std::vector<int>(rank);
                auto leadings = std::vector<int>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = b.tensor.core->edges[i].map.at(b.position[b.tensor.names[i]]);
+                  dimensions[i] = tensor.core->edges[i].map.at(b.position[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
                }
                for (auto i = rank; i-- > 0;) {
@@ -317,7 +316,7 @@ namespace TAT {
                   py::arg("step") = 1,
                   "Useful function generate simple data in tensor element for test",
                   py::return_value_policy::reference_internal)
-            .def_property_readonly("block", [](T& tensor) { return blocks_of_tensor<ScalarType, Symmetry>{tensor}; })
+            .def_property_readonly("block", [](const py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>{tensor}; })
             .def(
                   "__getitem__",
                   [](const T& tensor, const std::map<Name, typename T::EdgeInfoForGetItem>& position) { return tensor.at(position); },
@@ -699,7 +698,7 @@ namespace TAT {
                     out << "MPI[rank=" << mpi.rank << ", size=" << mpi.size << "]";
                     return out.str();
                  })
-            .def("print", [](const mpi_t& mpi, py::args args, py::kwargs kwargs) {
+            .def("print", [](const mpi_t& mpi, const py::args& args, const py::kwargs& kwargs) {
                if (mpi.rank == 0) {
                   py::print(*args, **kwargs);
                }
@@ -707,7 +706,7 @@ namespace TAT {
       tat_m.attr("mpi") = mpi;
 #else
       auto mpi_fake_m = mpi_m.def_submodule("mpi", "mpi support for TAT");
-      mpi_fake_m.def("print", [](py::args args, py::kwargs kwargs) { py::print(*args, **kwargs); });
+      mpi_fake_m.def("print", [](const py::args& args, const py::kwargs& kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
       // name
       py::class_<Name>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
@@ -795,7 +794,7 @@ namespace TAT {
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
-      tat_m.def("TAT", [tensor_m, tat_m](py::args args, py::kwargs kwargs) -> py::object {
+      tat_m.def("TAT", [tensor_m, tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
             std::string date = __DATE__;
             std::string year = date.substr(date.size() - 4, 4);
