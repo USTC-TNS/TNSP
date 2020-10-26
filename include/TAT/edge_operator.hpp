@@ -135,7 +135,6 @@ namespace TAT {
                   }
                }
             } else {
-               // TODO 这里可以变成pointer
                real_edge_before_split.push_back(core->edges[i]);
             }
          }

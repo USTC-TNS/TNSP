@@ -41,12 +41,14 @@
 
 // 开关说明
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
-// TODO: TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义
+// TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义
 // TODO: TAT_USE_STUPID_TRANSPOSE
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_COPY_WITHOUT_WARNING 复制数据的时候不产生警告
+// TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
+// TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
 
 /**
  * \brief TAT is A Tensor library
@@ -122,6 +124,28 @@ namespace TAT {
    constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
    constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
    constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
+
+   inline const unsigned long l1_cache =
+#ifdef TAT_L1_CACHE
+         TAT_L1_CACHE
+#else
+         98304
+#endif
+         ;
+   inline const unsigned long l2_cache =
+#ifdef TAT_L2_CACHE
+         TAT_L2_CACHE
+#else
+         786432
+#endif
+         ;
+   inline const unsigned long l3_cache =
+#ifdef TAT_L3_CACHE
+         TAT_L3_CACHE
+#else
+         4718592
+#endif
+         ;
 } // namespace TAT
 
 // clang-format off
