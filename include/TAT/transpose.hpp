@@ -324,6 +324,7 @@ namespace TAT {
       }
    }
 
+   // 去掉dimension = 1的边
    inline auto cutting_for_transpose(
          const std::vector<Rank>& plan_source_to_destination,
          const std::vector<Rank>& plan_destination_to_source,
@@ -353,6 +354,8 @@ namespace TAT {
 
       std::vector<Rank> result_plan_source_to_destination;
       std::vector<Rank> result_plan_destination_to_source;
+      result_plan_source_to_destination.reserve(rank);
+      result_plan_destination_to_source.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
          if (!is_one_source[i]) {
             result_plan_source_to_destination.push_back(plan_source_to_destination[i] - accumulated_one_destination[plan_source_to_destination[i]]);
@@ -467,6 +470,40 @@ namespace TAT {
             result_rank);
    }
 
+   inline auto pretreatment_for_transpose(
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leading_source,
+         const std::vector<Size>& leading_destination,
+         const Rank& rank) {
+      auto [cutting_plan_source_to_destination,
+            cutting_plan_destination_to_source,
+            cutting_dimensions_source,
+            cutting_dimensions_destination,
+            cutting_leading_source,
+            cutting_leading_destination,
+            cutting_rank] =
+            cutting_for_transpose(
+                  plan_source_to_destination,
+                  plan_destination_to_source,
+                  dimensions_source,
+                  dimensions_destination,
+                  leading_source,
+                  leading_destination,
+                  rank);
+
+      return merging_for_transpose(
+            cutting_plan_source_to_destination,
+            cutting_plan_destination_to_source,
+            cutting_dimensions_source,
+            cutting_dimensions_destination,
+            cutting_leading_source,
+            cutting_leading_destination,
+            cutting_rank);
+   }
+
    template<typename ScalarType>
    void do_transpose(
          const ScalarType* data_source,
@@ -491,15 +528,16 @@ namespace TAT {
          }
          return;
       }
+      // rank != 0, dimension != 0
 
-      auto [cutting_plan_source_to_destination,
-            cutting_plan_destination_to_source,
-            cutting_dimensions_source,
-            cutting_dimensions_destination,
-            cutting_leading_source,
-            cutting_leading_destination,
-            cutting_rank] =
-            cutting_for_transpose(
+      auto [real_plan_source_to_destination,
+            real_plan_destination_to_source,
+            real_dimensions_source,
+            real_dimensions_destination,
+            real_leading_source,
+            real_leading_destination,
+            real_rank] =
+            pretreatment_for_transpose(
                   plan_source_to_destination,
                   plan_destination_to_source,
                   dimensions_source,
@@ -508,32 +546,16 @@ namespace TAT {
                   leading_destination,
                   rank);
 
-      auto [merging_plan_source_to_destination,
-            merging_plan_destination_to_source,
-            merging_dimensions_source,
-            merging_dimensions_destination,
-            merging_leading_source,
-            merging_leading_destination,
-            merging_rank] =
-            merging_for_transpose(
-                  cutting_plan_source_to_destination,
-                  cutting_plan_destination_to_source,
-                  cutting_dimensions_source,
-                  cutting_dimensions_destination,
-                  cutting_leading_source,
-                  cutting_leading_destination,
-                  cutting_rank);
-
       auto scalar_leading_source = std::vector<Size>();
       auto scalar_leading_destination = std::vector<Size>();
       auto scalar_line_size = std::vector<Size>();
-      Rank effective_rank = merging_rank;
+      Rank effective_rank = real_rank;
       Rank line_rank = 0;
 
-      while (effective_rank != 0 && merging_plan_source_to_destination[effective_rank - 1] == effective_rank - 1) {
-         scalar_line_size.push_back(merging_dimensions_destination[effective_rank - 1]);
-         scalar_leading_source.push_back(merging_leading_source[effective_rank - 1]);
-         scalar_leading_destination.push_back(merging_leading_destination[effective_rank - 1]);
+      while (effective_rank != 0 && real_plan_source_to_destination[effective_rank - 1] == effective_rank - 1) {
+         scalar_line_size.push_back(real_dimensions_destination[effective_rank - 1]);
+         scalar_leading_source.push_back(real_leading_source[effective_rank - 1]);
+         scalar_leading_destination.push_back(real_leading_destination[effective_rank - 1]);
          effective_rank--;
          line_rank++;
       }
@@ -547,12 +569,12 @@ namespace TAT {
       block_transpose(
             data_source,
             data_destination,
-            merging_plan_source_to_destination,
-            merging_plan_destination_to_source,
-            merging_dimensions_source,
-            merging_dimensions_destination,
-            merging_leading_source,
-            merging_leading_destination,
+            real_plan_source_to_destination,
+            real_plan_destination_to_source,
+            real_dimensions_source,
+            real_dimensions_destination,
+            real_leading_source,
+            real_leading_destination,
             total_size,
             effective_rank,
             scalar_line_size,
