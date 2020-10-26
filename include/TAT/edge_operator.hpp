@@ -215,15 +215,14 @@ namespace TAT {
                   edge_after_split.push_back({edge_before_split[position_before_split].map});
                }
                split_flag.push_back(total_split_index++);
-               // TODO 这里也许也可以通过后面加判断来去掉一些
                auto& this_offset = split_offset.emplace_back();
-               for (const auto& [symmetry, dimension] : edge_before_split[position_before_split].map) {
-                  this_offset[{symmetry}] = {symmetry, 0};
-               }
+               // 后面会判断如果没有实际上的split则不使用this_offset
+               // for (const auto& [symmetry, dimension] : edge_before_split[position_before_split].map) {
+               //   this_offset[{symmetry}] = {symmetry, 0};
+               // }
             }
          }
       } else {
-         // TODO 这里可以通过后面加判断来去掉一些
          edge_after_split.reserve(rank_before_split);
          split_flag.reserve(rank_before_split);
          split_offset.reserve(rank_before_split);
@@ -235,10 +234,11 @@ namespace TAT {
                edge_after_split.push_back({edge.map});
             }
             split_flag.push_back(i);
-            auto& this_offset = split_offset.emplace_back();
-            for (const auto& [symmetry, dimension] : edge.map) {
-               this_offset[{symmetry}] = {symmetry, 0};
-            }
+            // 后面会判断如果没有实际上的split则不使用this_offset, 因为全部没有split所以甚至不需要emplace_back
+            // auto& this_offset = split_offset.emplace_back();
+            // for (const auto& [symmetry, dimension] : edge.map) {
+            //    this_offset[{symmetry}] = {symmetry, 0};
+            // }
          }
       }
       const auto& name_after_split = !split_map.empty() ? real_name_after_split : name_before_split;
@@ -406,33 +406,40 @@ namespace TAT {
             auto accumulated_dimensions = std::vector<Size>(merge_rank);
             auto current_symmetries = std::vector<Symmetry>(merge_rank);
 
-            // TODO if (merge_rank == 1) == 0
-            loop_edge(
-                  edge_before_merge.data() + start_of_merge,
-                  merge_rank,
-                  [&merged_edge, &this_offset]() {
-                     merged_edge.map[Symmetry()] = 1;
-                     this_offset[std::vector<Symmetry>{}] = {Symmetry(), 0};
-                  },
-                  []() {},
-                  [&](const MapIteratorList& symmetry_iterator_list, const Rank minimum_changed) {
-                     for (auto i = minimum_changed; i < merge_rank; i++) {
-                        const auto& symmetry_iterator = symmetry_iterator_list[i];
-                        accumulated_symmetries[i] = symmetry_iterator->first + (i ? accumulated_symmetries[i - 1] : Symmetry());
-                        accumulated_dimensions[i] = symmetry_iterator->second * (i ? accumulated_dimensions[i - 1] : 1);
-                        // do not check dim=0, because in constructor, i didn't check
-                        current_symmetries[i] = symmetry_iterator->first;
-                     }
-                     auto target_symmetry = accumulated_symmetries.back();
-                     this_offset[current_symmetries] = {target_symmetry, merged_edge.map[target_symmetry]};
-                     merged_edge.map[target_symmetry] += accumulated_dimensions.back();
-                     return merge_rank;
-                  });
-            // merge edge end
-
-            if constexpr (is_fermi) {
-               merged_edge.arrow = arrow;
+            if (merge_rank != 1) {
+               loop_edge(
+                     edge_before_merge.data() + start_of_merge,
+                     merge_rank,
+                     [&merged_edge, &this_offset]() {
+                        merged_edge.map[Symmetry()] = 1;
+                        this_offset[std::vector<Symmetry>{}] = {Symmetry(), 0};
+                     },
+                     []() {},
+                     [&](const MapIteratorList& symmetry_iterator_list, const Rank minimum_changed) {
+                        for (auto i = minimum_changed; i < merge_rank; i++) {
+                           const auto& symmetry_iterator = symmetry_iterator_list[i];
+                           accumulated_symmetries[i] = symmetry_iterator->first + (i ? accumulated_symmetries[i - 1] : Symmetry());
+                           accumulated_dimensions[i] = symmetry_iterator->second * (i ? accumulated_dimensions[i - 1] : 1);
+                           // do not check dim=0, because in constructor, i didn't check
+                           current_symmetries[i] = symmetry_iterator->first;
+                        }
+                        auto target_symmetry = accumulated_symmetries.back();
+                        this_offset[current_symmetries] = {target_symmetry, merged_edge.map[target_symmetry]};
+                        merged_edge.map[target_symmetry] += accumulated_dimensions.back();
+                        return merge_rank;
+                     });
+               if constexpr (is_fermi) {
+                  merged_edge.arrow = arrow;
+               }
+            } else {
+               const auto& target_edge = edge_before_merge[start_of_merge];
+               merged_edge.map = target_edge.map;
+               if constexpr (is_fermi) {
+                  merged_edge.arrow = target_edge.arrow;
+               }
+               // 不需要修改this_offset因为后面会判断
             }
+            // merge edge end
             start_of_merge = end_of_merge;
          }
       } else {
@@ -449,11 +456,11 @@ namespace TAT {
             } else {
                result_edge.push_back({edge.map});
             }
-            // TODO 后面可判断而优化？
-            auto& this_offset = merge_offset.emplace_back();
-            for (const auto& [symmetry, dimension] : edge.map) {
-               this_offset[{symmetry}] = {symmetry, 0};
-            }
+            // 后面会判断如果没有实际上的merge则不使用this_offset, 因为全部没有merge所以甚至不需要emplace_back
+            // auto& this_offset = merge_offset.emplace_back();
+            // for (const auto& [symmetry, dimension] : edge.map) {
+            //    this_offset[{symmetry}] = {symmetry, 0};
+            // }
          }
       }
       // the code above is dealing with edge_5 and res_Edge and reversed_flag_dst
