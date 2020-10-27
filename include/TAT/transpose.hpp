@@ -173,9 +173,9 @@ namespace TAT {
          return;
       }
 
-      const auto scalar_line_size_head = scalar_line_size[0];
-      const auto scalar_leading_source_head = scalar_leading_source[0];
-      const auto scalar_leading_destination_head = scalar_leading_destination[0];
+      const auto scalar_line_size_head = scalar_line_size.front();
+      const auto scalar_leading_source_head = scalar_leading_source.front();
+      const auto scalar_leading_destination_head = scalar_leading_destination.front();
       if (rank == 1) {
          simple_line_copy(data_source, data_destination, scalar_line_size_head, scalar_leading_source_head, scalar_leading_destination_head, parity);
          return;
@@ -274,9 +274,9 @@ namespace TAT {
          }
       } else if (scalar_rank == 1) {
          // 相当于两个维度都有leading的拥有较大fake ScalarType的矩阵转置, 如果下面scalar_leading_head=1, 这个fake ScalarType是连续的
-         const auto scalar_leading_destination_head = scalar_leading_destination[0];
-         const auto scalar_leading_source_head = scalar_leading_source[0];
-         const auto scalar_line_size_head = scalar_line_size[0];
+         const auto scalar_leading_destination_head = scalar_leading_destination.front();
+         const auto scalar_leading_source_head = scalar_leading_source.front();
+         const auto scalar_line_size_head = scalar_line_size.front();
          if (scalar_leading_source_head == 1 && scalar_leading_destination_head == 1) {
             if (parity) {
                for (Size i = 0; i < dimension_of_M; i++) {
@@ -413,7 +413,6 @@ namespace TAT {
          const std::vector<Size>& dimensions_destination,
          const std::vector<Size>& leading_source,
          const std::vector<Size>& leading_destination,
-         [[maybe_unused]] const Size& size,
          const Rank rank,
          const std::vector<Size>& scalar_line_size,
          const std::vector<Size>& scalar_leading_source,
@@ -523,28 +522,32 @@ namespace TAT {
          const std::vector<Size>& leading_source,
          const std::vector<Size>& leading_destination,
          const Rank& rank) {
-      std::vector<bool> is_one_source(rank);
-      std::vector<bool> is_one_destination(rank);
+      std::vector<bool> is_one_source;
+      std::vector<bool> is_one_destination;
+      is_one_source.reserve(rank);
+      is_one_destination.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
-         is_one_source[i] = dimensions_source[i] == 1;
+         is_one_source.push_back(dimensions_source[i] == 1);
       }
       for (Rank i = 0; i < rank; i++) {
-         is_one_destination[i] = dimensions_destination[i] == 1;
+         is_one_destination.push_back(dimensions_destination[i] == 1);
       }
-      std::vector<Rank> accumulated_one_source(rank);
-      std::vector<Rank> accumulated_one_destination(rank);
-      accumulated_one_source[0] = is_one_source[0];
+      std::vector<Rank> accumulated_one_source;
+      std::vector<Rank> accumulated_one_destination;
+      accumulated_one_source.reserve(rank);
+      accumulated_one_destination.reserve(rank);
+      accumulated_one_source.push_back(is_one_source.front());
       for (Rank i = 1; i < rank; i++) {
-         accumulated_one_source[i] = accumulated_one_source[i - 1] + Rank(is_one_source[i]);
+         accumulated_one_source.push_back(accumulated_one_source[i - 1] + Rank(is_one_source[i]));
       }
-      accumulated_one_destination[0] = is_one_destination[0];
+      accumulated_one_destination.push_back(is_one_destination.front());
       for (Rank i = 1; i < rank; i++) {
-         accumulated_one_destination[i] = accumulated_one_destination[i - 1] + Rank(is_one_destination[i]);
+         accumulated_one_destination.push_back(accumulated_one_destination[i - 1] + Rank(is_one_destination[i]));
       }
 
       std::vector<Rank> result_plan_source_to_destination;
       std::vector<Rank> result_plan_destination_to_source;
-      result_plan_source_to_destination.reserve(rank);
+      result_plan_source_to_destination.reserve(rank); // 会冗余, 无所谓
       result_plan_destination_to_source.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
          if (!is_one_source[i]) {
@@ -562,6 +565,10 @@ namespace TAT {
       std::vector<Size> result_dimensions_destination;
       std::vector<Size> result_leading_source;
       std::vector<Size> result_leading_destination;
+      result_dimensions_source.reserve(result_rank);
+      result_dimensions_destination.reserve(result_rank);
+      result_leading_source.reserve(result_rank);
+      result_leading_destination.reserve(result_rank);
       for (Rank i = 0; i < rank; i++) {
          if (dimensions_source[i] != 1) {
             result_dimensions_source.push_back(dimensions_source[i]);
@@ -592,32 +599,35 @@ namespace TAT {
          const std::vector<Size>& leading_source,
          const std::vector<Size>& leading_destination,
          const Rank& rank) {
-      std::vector<bool> merging_source_to_destination(rank);
-      std::vector<bool> merging_destination_to_source(rank);
+      std::vector<bool> merging_source_to_destination(rank, false);
+      std::vector<bool> merging_destination_to_source(rank, false);
       for (Rank i = 1; i < rank; i++) {
          if (const auto j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
                                                            leading_source[i - 1] == leading_source[i] * dimensions_source[i] &&
                                                            leading_destination[j - 1] == leading_destination[j] * dimensions_destination[j]) {
             merging_source_to_destination[i] = true;
             merging_destination_to_source[plan_source_to_destination[i]] = true;
-         } else {
-            merging_source_to_destination[i] = false;
-            merging_destination_to_source[plan_source_to_destination[i]] = false;
          }
       }
 
-      std::vector<Rank> accumulated_merging_source_to_destination(rank);
-      std::vector<Rank> accumulated_merging_destination_to_source(rank);
-      accumulated_merging_source_to_destination[0] = 0;
+      std::vector<Rank> accumulated_merging_source_to_destination;
+      std::vector<Rank> accumulated_merging_destination_to_source;
+      accumulated_merging_source_to_destination.reserve(rank);
+      accumulated_merging_destination_to_source.reserve(rank);
+      accumulated_merging_source_to_destination.push_back(0);
       for (Rank i = 1; i < rank; i++) {
-         accumulated_merging_source_to_destination[i] = accumulated_merging_source_to_destination[i - 1] + Rank(merging_source_to_destination[i]);
+         accumulated_merging_source_to_destination.push_back(
+               accumulated_merging_source_to_destination.back() + Rank(merging_source_to_destination[i]));
       }
-      accumulated_merging_destination_to_source[0] = 0;
+      accumulated_merging_destination_to_source.push_back(0);
       for (Rank i = 1; i < rank; i++) {
-         accumulated_merging_destination_to_source[i] = accumulated_merging_destination_to_source[i - 1] + Rank(merging_destination_to_source[i]);
+         accumulated_merging_destination_to_source.push_back(
+               accumulated_merging_destination_to_source.back() + Rank(merging_destination_to_source[i]));
       }
       std::vector<Rank> result_plan_source_to_destination;
       std::vector<Rank> result_plan_destination_to_source;
+      result_plan_source_to_destination.reserve(rank); // 会冗余, 无所谓
+      result_plan_destination_to_source.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
          if (!merging_source_to_destination[i]) {
             result_plan_source_to_destination.push_back(
@@ -660,40 +670,6 @@ namespace TAT {
             result_rank);
    }
 
-   inline auto pretreatment_for_transpose(
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
-         const Rank& rank) {
-      auto [cutting_plan_source_to_destination,
-            cutting_plan_destination_to_source,
-            cutting_dimensions_source,
-            cutting_dimensions_destination,
-            cutting_leading_source,
-            cutting_leading_destination,
-            cutting_rank] =
-            cutting_for_transpose(
-                  plan_source_to_destination,
-                  plan_destination_to_source,
-                  dimensions_source,
-                  dimensions_destination,
-                  leading_source,
-                  leading_destination,
-                  rank);
-
-      return merging_for_transpose(
-            cutting_plan_source_to_destination,
-            cutting_plan_destination_to_source,
-            cutting_dimensions_source,
-            cutting_dimensions_destination,
-            cutting_leading_source,
-            cutting_leading_destination,
-            cutting_rank);
-   }
-
    template<typename ScalarType>
    void do_transpose(
          const ScalarType* data_source,
@@ -720,15 +696,14 @@ namespace TAT {
       }
       // rank != 0, dimension != 0
 
-      // TODO: 近期要做的只有这个TODO 整理pretreatment
-      auto [real_plan_source_to_destination,
-            real_plan_destination_to_source,
-            real_dimensions_source,
-            real_dimensions_destination,
-            real_leading_source,
-            real_leading_destination,
-            real_rank] =
-            pretreatment_for_transpose(
+      auto [cutting_plan_source_to_destination,
+            cutting_plan_destination_to_source,
+            cutting_dimensions_source,
+            cutting_dimensions_destination,
+            cutting_leading_source,
+            cutting_leading_destination,
+            cutting_rank] =
+            cutting_for_transpose(
                   plan_source_to_destination,
                   plan_destination_to_source,
                   dimensions_source,
@@ -736,6 +711,22 @@ namespace TAT {
                   leading_source,
                   leading_destination,
                   rank);
+
+      auto [real_plan_source_to_destination,
+            real_plan_destination_to_source,
+            real_dimensions_source,
+            real_dimensions_destination,
+            real_leading_source,
+            real_leading_destination,
+            real_rank] =
+            merging_for_transpose(
+                  cutting_plan_source_to_destination,
+                  cutting_plan_destination_to_source,
+                  cutting_dimensions_source,
+                  cutting_dimensions_destination,
+                  cutting_leading_source,
+                  cutting_leading_destination,
+                  cutting_rank);
 
       // 处理后面几维顺序不变只是可能leading不同的情况， 这三个的顺序关于维度是逆序的
       auto scalar_leading_source = std::vector<Size>();
@@ -752,6 +743,13 @@ namespace TAT {
          line_rank++;
       }
 
+      real_plan_source_to_destination.resize(effective_rank);
+      real_plan_destination_to_source.resize(effective_rank);
+      real_dimensions_source.resize(effective_rank);
+      real_dimensions_destination.resize(effective_rank);
+      real_leading_source.resize(effective_rank);
+      real_leading_destination.resize(effective_rank);
+
       if (effective_rank == 0) {
          line_copy(data_source, data_destination, line_rank, scalar_line_size, scalar_leading_source, scalar_leading_destination, parity);
          return;
@@ -767,7 +765,6 @@ namespace TAT {
             real_dimensions_destination,
             real_leading_source,
             real_leading_destination,
-            total_size,
             effective_rank,
             scalar_line_size,
             scalar_leading_source,
