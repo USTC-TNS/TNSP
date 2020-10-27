@@ -27,11 +27,11 @@
 #include "get_item.hpp"
 #include "io.hpp"
 #include "mpi.hpp"
-#include "multiple_and_conjugate.hpp"
 #include "qr.hpp"
 #include "scalar.hpp"
 #include "slice_and_expand.hpp"
 #include "svd.hpp"
+#include "tensor_miscellaneous.hpp"
 #include "trace.hpp"
 #include "transpose.hpp"
 

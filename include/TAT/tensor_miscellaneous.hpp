@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#ifndef TAT_MULTIPLE_AND_CONJUGATE_HPP
-#define TAT_MULTIPLE_AND_CONJUGATE_HPP
+#ifndef TAT_TENSOR_MISCELLANEOUS_HPP
+#define TAT_TENSOR_MISCELLANEOUS_HPP
 
 #include "tensor.hpp"
 
@@ -204,10 +204,8 @@ namespace TAT {
       real_base_t<ScalarType> temporary_tensor_parameter = 1;
       while (temporary_tensor_parameter * norm_max > 1) {
          temporary_tensor_rank += 1;
-         temporary_tensor_parameter *= 1 / 2;
+         temporary_tensor_parameter *= 1. / 2;
       }
-      temporary_tensor_rank += 2;
-      temporary_tensor_parameter *= 1 / 4;
       auto temporary_tensor = *this * temporary_tensor_parameter;
 
       auto result = same_shape().identity(pairs);
