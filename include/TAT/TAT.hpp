@@ -47,8 +47,16 @@
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_COPY_WITHOUT_WARNING 复制数据的时候不产生警告
+// TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
 // TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
+#ifdef WANGCHAO
+#define TAT_USE_SINGULAR_MATRIX
+#define TAT_USE_SIMPLE_NAME
+#define TAT_USE_SIMPLE_NOSYMMETRY
+#define TAT_USE_COPY_WITHOUT_WARNING
+#define TAT_USE_VALID_DEFAULT_TENSOR
+#endif
 
 /**
  * \brief TAT is A Tensor library

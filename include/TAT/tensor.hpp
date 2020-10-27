@@ -129,7 +129,11 @@ namespace TAT {
          return result;
       }
 
+#ifdef TAT_USE_VALID_DEFAULT_TENSOR
+      Tensor() : Tensor(0){};
+#else
       Tensor() = default;
+#endif
       Tensor(const Tensor& other) {
          names = other.names;
          name_to_index = other.name_to_index;

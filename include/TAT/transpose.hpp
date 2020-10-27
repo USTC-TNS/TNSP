@@ -128,22 +128,22 @@ namespace TAT {
       // leading[0] may not be 1
       if (scalar_leading_source_head == 1 && scalar_leading_destination_head == 1) {
          if (parity) {
-            for (Rank i = 0; i < scalar_line_size_head; i++) {
+            for (Size i = 0; i < scalar_line_size_head; i++) {
                data_destination[i] = -data_source[i];
             }
          } else {
-            for (Rank i = 0; i < scalar_line_size_head; i++) {
+            for (Size i = 0; i < scalar_line_size_head; i++) {
                data_destination[i] = data_source[i];
             }
          }
       } else {
          if (parity) {
-            for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
+            for (Size i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
                  i++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
                data_destination[destination_index] = -data_source[source_index];
             }
          } else {
-            for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
+            for (Size i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
                  i++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
                data_destination[destination_index] = data_source[source_index];
             }
@@ -283,7 +283,7 @@ namespace TAT {
                   for (Size j = 0; j < dimension_of_N; j++) {
                      auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
                      auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Rank k = 0; k < scalar_line_size_head; k++) {
+                     for (Size k = 0; k < scalar_line_size_head; k++) {
                         line_destination[k] = -line_source[k];
                      }
                   }
@@ -293,7 +293,7 @@ namespace TAT {
                   for (Size j = 0; j < dimension_of_N; j++) {
                      auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
                      auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Rank k = 0; k < scalar_line_size_head; k++) {
+                     for (Size k = 0; k < scalar_line_size_head; k++) {
                         line_destination[k] = line_source[k];
                      }
                   }
@@ -305,7 +305,7 @@ namespace TAT {
                   for (Size j = 0; j < dimension_of_N; j++) {
                      auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
                      auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Rank k = 0, source_index = 0, destination_index = 0; k < scalar_line_size_head;
+                     for (Size k = 0, source_index = 0, destination_index = 0; k < scalar_line_size_head;
                           k++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
                         line_destination[destination_index] = -line_source[source_index];
                      }
@@ -316,7 +316,7 @@ namespace TAT {
                   for (Size j = 0; j < dimension_of_N; j++) {
                      auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
                      auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Rank k = 0, source_index = 0, destination_index = 0; k < scalar_line_size_head;
+                     for (Size k = 0, source_index = 0, destination_index = 0; k < scalar_line_size_head;
                           k++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
                         line_destination[destination_index] = line_source[source_index];
                      }
