@@ -1,19 +1,34 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(TAT VERSION 0.0.6 LANGUAGES CXX)
+project(TAT VERSION 0.0.7 LANGUAGES CXX)
+
+# 常设置的参数有
+# CMAKE_BUILD_TYPE
+# TAT_NO_MPI, TAT_FORCE_BLAS_DYNAMIC, TAT_PYTHON_MODULE
+# BLA_VENDOR
+# PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
+
+if(NOT DEFINED TAT_PYTHON_MODULE)
+   if(CMAKE_BUILD_TYPE STREQUAL "Release")
+      set(TAT_PYTHON_MODULE TAT)
+   else()
+      set(TAT_PYTHON_MODULE TAT_${CMAKE_BUILD_TYPE})
+   endif()
+endif()
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+   set(TAT_COMPILER_NAME "GCC")
+else()
+   set(TAT_COMPILER_NAME "${CMAKE_CXX_COMPILER_ID}")
+endif()
 
 add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
+add_compile_definitions(TAT_PYTHON_MODULE=${TAT_PYTHON_MODULE})
 if(CMAKE_BUILD_TYPE STREQUAL "")
    add_compile_definitions(TAT_BUILD_TYPE="Default")
 else()
    add_compile_definitions(TAT_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
 endif()
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-   set(CXX_COMPILER_NAME "GCC")
-else()
-   set(CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER_ID}")
-endif()
-add_compile_definitions(TAT_COMPILER_INFORMATION="${CXX_COMPILER_NAME} ${CMAKE_CXX_COMPILER_VERSION} on ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
+add_compile_definitions(TAT_COMPILER_INFORMATION="${TAT_COMPILER_NAME} ${CMAKE_CXX_COMPILER_VERSION} on ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -104,11 +119,11 @@ if(NOT EMSCRIPTEN)
    find_package(pybind11 QUIET)
    if(pybind11_FOUND)
       message("-- Enable python(system)")
-      pybind11_add_module(TAT ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
+      pybind11_add_module(${TAT_PYTHON_MODULE} ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
    elseif(EXISTS ${PROJECT_SOURCE_DIR}/pybind11)
       add_subdirectory(pybind11)
       message("-- Enable python(local)")
-      pybind11_add_module(TAT ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
+      pybind11_add_module(${TAT_PYTHON_MODULE} ${PROJECT_SOURCE_DIR}/python/TAT.cpp)
    else()
       message("-- Disable python")
    endif()

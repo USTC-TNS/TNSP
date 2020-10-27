@@ -47,7 +47,7 @@ namespace TAT {
       bool valid;
       mpi_output_stream(std::ostream* out, bool valid) : out(out), valid(valid) {}
 
-      template<class Type>
+      template<typename Type>
       mpi_output_stream& operator<<(const Type& value) & {
          if (valid) {
             *out << value;
@@ -55,7 +55,7 @@ namespace TAT {
          return *this;
       }
 
-      template<class Type>
+      template<typename Type>
       mpi_output_stream&& operator<<(const Type& value) && {
          if (valid) {
             *out << value;
@@ -99,21 +99,22 @@ namespace TAT {
       auto err(int rank_specified = 0) {
          return mpi_output_stream(&std::cerr, rank_specified == rank);
       }
+      static void barrier() {
+         MPI_Barrier(MPI_COMM_WORLD);
+      }
    };
    inline mpi_t mpi;
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    mpi_t Tensor<ScalarType, Symmetry>::mpi;
-   template<class ScalarType, class Symmetry>
-   bool Tensor<ScalarType, Symmetry>::mpi_enabled = true;
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    void Tensor<ScalarType, Symmetry>::send(const int destination) const {
       auto data = dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
       MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
    }
 
    // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::receive(const int source) {
       auto status = MPI_Status();
       MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
@@ -125,7 +126,7 @@ namespace TAT {
       return result;
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::send_receive(const int source, const int destination) const {
       if (mpi.rank == source) {
          send(destination);
@@ -136,7 +137,7 @@ namespace TAT {
       return Tensor<ScalarType, Symmetry>();
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::broadcast(const int root) const {
       const auto& tensor = *this;
       if (mpi.size == 1) {
@@ -170,8 +171,8 @@ namespace TAT {
       return result;
    }
 
-   template<class ScalarType, class Symmetry>
-   template<class Func>
+   template<typename ScalarType, typename Symmetry>
+   template<typename Func>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::reduce(const int root, Func&& function) const {
       const auto& tensor = *this;
       if (mpi.size == 1) {
@@ -208,18 +209,13 @@ namespace TAT {
       // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
    }
 
-   template<class ScalarType, class Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::summary(const int root) const {
-      return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
-   }
-
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    void Tensor<ScalarType, Symmetry>::barrier() {
       MPI_Barrier(MPI_COMM_WORLD);
    }
+   constexpr bool mpi_enabled = true;
 #else
-   template<class ScalarType, class Symmetry>
-   bool Tensor<ScalarType, Symmetry>::mpi_enabled = false;
+   constexpr bool mpi_enabled = false;
 #endif
 
    inline evil_t::evil_t() noexcept {

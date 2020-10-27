@@ -27,7 +27,6 @@
 
 namespace TAT {
 #ifdef TAT_USE_SIMPLE_NAME
-   constexpr bool use_simple_name = true;
    /**
     * \brief 用于给张量的边命名的类型Name, 直接使用字符串
     */
@@ -42,7 +41,6 @@ namespace TAT {
    };
 #define TAT_NAME_KEY name
 #else
-   constexpr bool use_simple_name = false;
    /**
     * \brief Name中用于标号的类型
     */

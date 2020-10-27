@@ -41,11 +41,14 @@
 
 // 开关说明
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
-// TODO: TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义
+// TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义
 // TODO: TAT_USE_STUPID_TRANSPOSE
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
+// TAT_USE_COPY_WITHOUT_WARNING 复制数据的时候不产生警告
+// TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
+// TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
 
 /**
  * \brief TAT is A Tensor library
@@ -68,24 +71,24 @@ namespace TAT {
          ;
 
    /**
-    * license信息
+    * 编译与license相关的信息
     */
-   const char* license = "TAT"
+   const char* information = "TAT"
 #ifdef TAT_VERSION
-                         " " TAT_VERSION
+                             " " TAT_VERSION
 #endif
-                         " ("
+                             " ("
 #ifdef TAT_BUILD_TYPE
-                         "" TAT_BUILD_TYPE ", "
+                             "" TAT_BUILD_TYPE ", "
 #endif
-                         "" __DATE__ ", " __TIME__
+                             "" __DATE__ ", " __TIME__
 #ifdef TAT_COMPILER_INFORMATION
-                         ", " TAT_COMPILER_INFORMATION
+                             ", " TAT_COMPILER_INFORMATION
 #endif
-                         ")\n"
-                         "Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
-                         "This is free software; see the source for copying conditions.  There is NO\n"
-                         "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+                             ")\n"
+                             "Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+                             "This is free software; see the source for copying conditions.  There is NO\n"
+                             "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 
    /**
     * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式
@@ -110,12 +113,39 @@ namespace TAT {
     */
    void TAT_error(const char* message);
 
-   const auto TAT_warning_or_error_when_copy_data = TAT_warning;
-   const auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
-   const auto TAT_warning_or_error_when_inplace_multiple = TAT_warning;
-   const auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
-   const auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
-   const auto TAT_warning_or_error_when_lapack_error = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_copy_data =
+#ifdef TAT_USE_COPY_WITHOUT_WARNING
+         TAT_nothing;
+#else
+         TAT_warning;
+#endif
+   constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_inplace_multiple = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
+
+   inline const unsigned long l1_cache =
+#ifdef TAT_L1_CACHE
+         TAT_L1_CACHE
+#else
+         98304
+#endif
+         ;
+   inline const unsigned long l2_cache =
+#ifdef TAT_L2_CACHE
+         TAT_L2_CACHE
+#else
+         786432
+#endif
+         ;
+   inline const unsigned long l3_cache =
+#ifdef TAT_L3_CACHE
+         TAT_L3_CACHE
+#else
+         4718592
+#endif
+         ;
 } // namespace TAT
 
 // clang-format off

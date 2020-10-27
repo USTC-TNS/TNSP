@@ -57,11 +57,11 @@ namespace TAT {
     * \tparam T 如果T是标量类型, 则value为true
     * \see is_scalar_v
     */
-   template<class T>
+   template<typename T>
    struct is_scalar : std::is_scalar<T> {};
-   template<class T>
+   template<typename T>
    struct is_scalar<std::complex<T>> : std::is_scalar<T> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_scalar_v = is_scalar<T>::value;
 
    /**
@@ -69,28 +69,28 @@ namespace TAT {
     * \tparam T 如果T是std::complex<S>, 则type为S, 若T为其他标量类型, 则type为T本身, 否则为void
     * \see real_base_t
     */
-   template<class T>
+   template<typename T>
    struct real_base : std::conditional<is_scalar<T>::value, T, void> {};
-   template<class T>
+   template<typename T>
    struct real_base<std::complex<T>> : std::conditional<is_scalar<T>::value, T, void> {};
-   template<class T>
+   template<typename T>
    using real_base_t = typename real_base<T>::type;
 
    /**
     * \brief 判断是否是复数类型
     * \see is_complex_v
     */
-   template<class T>
+   template<typename T>
    struct is_complex : std::is_same<T, std::complex<real_base_t<T>>> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_complex_v = is_complex<T>::value;
    /**
     * \brief 判断是否是实数类型
     * \see is_real_v
     */
-   template<class T>
+   template<typename T>
    struct is_real : std::is_same<T, real_base_t<T>> {};
-   template<class T>
+   template<typename T>
    constexpr bool is_real_v = is_real<T>::value;
 } // namespace TAT
 #endif

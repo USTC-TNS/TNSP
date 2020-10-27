@@ -30,7 +30,7 @@ struct MPS {
    Tensor hamiltonian;
    int dimension;
 
-   template<class G>
+   template<typename G>
    MPS(int n, int d, G&& g) : dimension(d) {
       for (int i = 0; i < n; i++) {
          if (i == 0) {

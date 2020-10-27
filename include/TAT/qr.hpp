@@ -111,7 +111,7 @@ void zunglq_(
 }
 
 namespace TAT {
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (
          *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
    template<>
@@ -122,7 +122,7 @@ namespace TAT {
    auto geqrf<std::complex<float>> = cgeqrf_;
    template<>
    auto geqrf<std::complex<double>> = zgeqrf_;
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (
          *gelqf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
    template<>
@@ -133,7 +133,7 @@ namespace TAT {
    auto gelqf<std::complex<float>> = cgelqf_;
    template<>
    auto gelqf<std::complex<double>> = zgelqf_;
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (*orgqr)(
          const int* m,
          const int* n,
@@ -152,7 +152,7 @@ namespace TAT {
    auto orgqr<std::complex<float>> = cungqr_;
    template<>
    auto orgqr<std::complex<double>> = zungqr_;
-   template<class ScalarType>
+   template<typename ScalarType>
    constexpr void (*orglq)(
          const int* m,
          const int* n,
@@ -172,7 +172,7 @@ namespace TAT {
    template<>
    auto orglq<std::complex<double>> = zunglq_;
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void calculate_qr(
          const int& m,
          const int& n,
@@ -257,9 +257,12 @@ namespace TAT {
       }
    }
 
-   template<class ScalarType, class Symmetry>
-   typename Tensor<ScalarType, Symmetry>::qr_result
-   Tensor<ScalarType, Symmetry>::qr(char free_name_direction, const std::set<Name>& free_name_set, Name common_name_q, Name common_name_r) const {
+   template<typename ScalarType, typename Symmetry>
+   typename Tensor<ScalarType, Symmetry>::qr_result Tensor<ScalarType, Symmetry>::qr(
+         char free_name_direction,
+         const std::set<Name>& free_name_set,
+         const Name& common_name_q,
+         const Name& common_name_r) const {
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -350,27 +353,27 @@ namespace TAT {
             calculate_qr<ScalarType>(m, n, k, max, data, data_1, data_2, use_qr_not_lq);
          }
       }
-      const auto& tensor_q = use_qr_not_lq ? tensor_1 : tensor_2;
-      const auto& tensor_r = use_qr_not_lq ? tensor_2 : tensor_1;
       // 参考svd中的情况
       // 应 1 nr, 然后再考虑是否在q和r中是否分别左有无符号的反转
-      // tensor_1 == tensor_q -> q nr // use_qr_not_lq
-      // tensor_2 == tensor_q -> r nr r nr q yr
-      reversed_set_1.insert(common_name_q);
+      // tensor_1 == tensor_q -> q nr             -> nothing  // use_qr_not_lq
+      // tensor_2 == tensor_q -> r nr (r nr q yr) -> q yr -> 2 yr
+      if constexpr (is_fermi) {
+         (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
+      }
       auto new_tensor_1 = tensor_1.template edge_operator<true>(
             {{internal_name::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
             {{internal_name::QR_1, free_names_and_edges_1}},
             reversed_set_1,
             {},
-            result_name_1,
-            false,
-            {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
+            result_name_1);
       auto new_tensor_2 = tensor_2.template edge_operator<true>(
             {{internal_name::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
             {{internal_name::QR_2, free_names_and_edges_2}},
             reversed_set_2,
             {},
-            result_name_2);
+            result_name_2,
+            false,
+            {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
       return {std::move(use_qr_not_lq ? new_tensor_1 : new_tensor_2), std::move(use_qr_not_lq ? new_tensor_2 : new_tensor_1)};
    }
 } // namespace TAT

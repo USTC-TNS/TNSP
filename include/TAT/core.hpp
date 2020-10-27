@@ -29,9 +29,9 @@ namespace TAT {
    /**
     * \brief 用于不初始化的vector的allocator, 仅用于张量数据的存储
     */
-   template<class T>
+   template<typename T>
    struct allocator_without_initialize : std::allocator<T> {
-      template<class U>
+      template<typename U>
       struct rebind {
          using other = allocator_without_initialize<U>;
       };
@@ -42,7 +42,7 @@ namespace TAT {
        * \param pointer 被初始化的值的地址
        * \param arguments 初始化的参数
        */
-      template<class... Args>
+      template<typename... Args>
       void construct([[maybe_unused]] T* pointer, Args&&... arguments) {
          if constexpr (!((sizeof...(arguments) == 0) && (std::is_trivially_destructible_v<T>))) {
             new (pointer) T(std::forward<Args>(arguments)...);
@@ -50,7 +50,7 @@ namespace TAT {
       }
 
       allocator_without_initialize() = default;
-      template<class U>
+      template<typename U>
       explicit allocator_without_initialize(allocator_without_initialize<U>) {}
    };
 
@@ -59,7 +59,7 @@ namespace TAT {
     * \see allocator_without_initialize
     * \note 为了其他部分与stl兼容性, 仅在张量的数据处使用
     */
-   template<class T>
+   template<typename T>
    using vector = std::vector<T, allocator_without_initialize<T>>;
 
    /**
@@ -68,7 +68,7 @@ namespace TAT {
     * \tparam Symmetry 张量所拥有的对称性
     * \note Core的存在是为了让边的名称的重命名节省时间
     */
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    struct Core {
       /**
        * \brief 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表

@@ -89,7 +89,7 @@ int zgesvd_(
 }
 
 namespace TAT {
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    [[nodiscard]] Tensor<ScalarType, Symmetry> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
       auto symmetries = std::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
@@ -114,7 +114,7 @@ namespace TAT {
       return result;
    }
 
-   template<class ScalarType>
+   template<typename ScalarType>
    void calculate_svd(
          const int& m,
          const int& n,
@@ -184,9 +184,9 @@ namespace TAT {
       }
    }
 
-   template<class ScalarType, class Symmetry>
+   template<typename ScalarType, typename Symmetry>
    typename Tensor<ScalarType, Symmetry>::svd_result
-   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, Name common_name_u, Name common_name_v, Size cut) const {
+   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) const {
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -319,7 +319,9 @@ namespace TAT {
       // 始终在tensor_1处无符号reverse, 然后判断是否再在tensor_u和tensor_v中分别有无符号翻转
       // tensor_1 == tensor_u -> u nr // put_v_right
       // tensor_1 == tensor_v -> v nr v nr u yr -> u yr
-      reversed_set_u.insert(common_name_u);
+      if constexpr (is_fermi) {
+         reversed_set_u.insert(common_name_u);
+      }
       // 这里会自动cut
       auto u = tensor_u.template edge_operator<true>(
             {{internal_name::SVD_V, common_name_u}},

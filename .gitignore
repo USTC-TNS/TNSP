@@ -15,3 +15,4 @@
 *.pdb
 *.pyd
 *.so
+__pycache__
