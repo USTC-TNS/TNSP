@@ -130,7 +130,7 @@ namespace TAT {
       }
 
 #ifdef TAT_USE_VALID_DEFAULT_TENSOR
-      Tensor() : Tensor(0){};
+      Tensor() : Tensor(1){};
 #else
       Tensor() = default;
 #endif
@@ -159,7 +159,7 @@ namespace TAT {
        * \param number 秩为零的张量拥有的唯一一个元素的值
        */
       Tensor(ScalarType number) : Tensor({}, {}) {
-         core->blocks.begin()->second[0] = number;
+         core->blocks.begin()->second.front() = number;
       }
 
       /**
@@ -176,7 +176,7 @@ namespace TAT {
           const std::vector<Arrow>& edge_arrow = {}) {
          auto rank = names_init.size();
          auto result = Tensor(std::move(names_init), get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
-         result.core->blocks.begin()->second[0] = number;
+         result.core->blocks.begin()->second.front() = number;
          return result;
       }
 
@@ -187,7 +187,7 @@ namespace TAT {
          if (core->blocks.size() != 1 || core->blocks.begin()->second.size() != 1) {
             TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
-         return core->blocks.begin()->second[0];
+         return core->blocks.begin()->second.front();
       }
 
       using EdgeInfoForGetItem = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
@@ -273,6 +273,15 @@ namespace TAT {
       }
       Tensor<ScalarType, Symmetry>&& zero() && {
          return std::move(zero());
+      }
+
+      /**
+       * \brief 看作矩阵并生成单位矩阵
+       * \param pairs 看作矩阵时边的配对方案
+       */
+      Tensor<ScalarType, Symmetry>& identity(const std::set<std::tuple<Name, Name>>& pairs) &;
+      Tensor<ScalarType, Symmetry>&& identity(const std::set<std::tuple<Name, Name>>& pairs) && {
+         return std::move(identity(pairs));
       }
 
       /**
@@ -507,6 +516,13 @@ namespace TAT {
       }
 
       /**
+       * \brief 看作矩阵后求出矩阵指数
+       * \param pairs 边的配对方案
+       * \param step 展开近似的次数
+       */
+      [[nodiscard]] Tensor<ScalarType, Symmetry> exponential(const std::set<std::tuple<Name, Name>>& pairs, int step = 2) const;
+
+      /**
        * \brief 生成张量的共轭张量
        * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
        */
@@ -577,24 +593,24 @@ namespace TAT {
       /**
        * \brief source调用此函数, 向destination发送一个张量
        */
-      void send(const int destination) const;
+      void send(int destination) const;
       /**
        * \brief destination调用此函数, 从source接受一个张量
        */
-      static Tensor<ScalarType, Symmetry> receive(const int source);
+      static Tensor<ScalarType, Symmetry> receive(int source);
       /**
        * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
        */
-      Tensor<ScalarType, Symmetry> send_receive(const int source, const int destination) const;
+      Tensor<ScalarType, Symmetry> send_receive(int source, int destination) const;
       /**
        * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
        */
-      Tensor<ScalarType, Symmetry> broadcast(const int root) const;
+      Tensor<ScalarType, Symmetry> broadcast(int root) const;
       /**
        * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
        */
       template<typename Func>
-      Tensor<ScalarType, Symmetry> reduce(const int root, Func&& function) const;
+      Tensor<ScalarType, Symmetry> reduce(int root, Func&& function) const;
       /**
        * mpi进程间同步
        */

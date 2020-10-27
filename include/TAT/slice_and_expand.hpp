@@ -23,6 +23,7 @@
 
 #include "tensor.hpp"
 namespace TAT {
+   // TODO 这些都可以优化
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
    Tensor<ScalarType, Symmetry>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {

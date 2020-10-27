@@ -282,12 +282,14 @@ namespace TAT {
                  py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
             .def(implicit_init<T, ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
-            .def(py::init<>(&T::one),
-                 py::arg("number"),
-                 py::arg("names"),
-                 py::arg("edge_symmetry") = py::list(),
-                 py::arg("edge_arrow") = py::list(),
-                 "Create tensor with high rank but containing only one element")
+            .def_static(
+                  "one",
+                  &T::one,
+                  py::arg("number"),
+                  py::arg("names"),
+                  py::arg("edge_symmetry") = py::list(),
+                  py::arg("edge_arrow") = py::list(),
+                  "Create tensor with high rank but containing only one element")
             .def(is_complex_v<ScalarType> ? "__complex__" : "__float__", [](const T& tensor) -> ScalarType { return tensor; })
             .def("copy", &T::copy, "Deep copy a tensor")
             .def("same_shape", &T::same_shape, "Create a tensor with same shape")
@@ -314,6 +316,12 @@ namespace TAT {
                   py::return_value_policy::reference_internal)
             .def(
                   "zero", [](T& tensor) -> T& { return tensor.zero(); }, "Set all element zero", py::return_value_policy::reference_internal)
+            .def(
+                  "identity",
+                  [](T& tensor, const std::set<std::tuple<Name, Name>>& pair) -> T& { return tensor.identity(pair); },
+                  py::arg("pairs"),
+                  "Set tensor to identity like matrix",
+                  py::return_value_policy::reference_internal)
             .def(
                   "test",
                   [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.test(first, step); },
@@ -455,6 +463,7 @@ namespace TAT {
                   [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); },
                   py::arg("another_tensor"),
                   "Contract as much as possible with another tensor on same name edges")
+            .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
             .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
             .def("trace", &T::trace) // TODO trace
             .def(

@@ -104,7 +104,7 @@ namespace TAT {
           edge_and_symmetries_to_cut_before_all.empty()) {
          // share the core
          auto result = Tensor<ScalarType, Symmetry>();
-         result.names = std::move(name_before_split);
+         result.names = std::move(new_names);
          result.name_to_index = construct_name_to_index(result.names);
          result.core = core; // 因为是rename edge所以不拷贝
          // check_valid_name(result.names, result.core->edges.size());
@@ -513,7 +513,7 @@ namespace TAT {
                      break;
                   }
                } else {
-                  symmetries.push_back(split_group_symmetries[0]);
+                  symmetries.push_back(split_group_symmetries.front());
                   offsets.push_back(0);
                }
             }
@@ -554,7 +554,7 @@ namespace TAT {
                      break;
                   }
                } else {
-                  symmetries.push_back(merge_group_symmetries[0]);
+                  symmetries.push_back(merge_group_symmetries.front());
                   offsets.push_back(0);
                }
             }
