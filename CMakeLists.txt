@@ -4,7 +4,7 @@ project(TAT VERSION 0.0.7 LANGUAGES CXX)
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
-# TAT_NO_MPI, TAT_FORCE_BLAS_DYNAMIC, TAT_PYTHON_MODULE
+# TAT_NO_MPI, TAT_FORCE_BLAS_DYNAMIC, TAT_PYTHON_MODULE, TAT_FORCE_VERSION
 # BLA_VENDOR
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
 
@@ -21,7 +21,11 @@ else()
    set(TAT_COMPILER_NAME "${CMAKE_CXX_COMPILER_ID}")
 endif()
 
-add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
+if(DEFINED TAT_FORCE_VERSION)
+   add_compile_definitions(TAT_VERSION="${TAT_FORCE_VERSION}")
+else()
+   add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
+endif()
 add_compile_definitions(TAT_PYTHON_MODULE=${TAT_PYTHON_MODULE})
 if(CMAKE_BUILD_TYPE STREQUAL "")
    add_compile_definitions(TAT_BUILD_TYPE="Default")
@@ -75,13 +79,13 @@ if(EMSCRIPTEN)
    link_libraries(${PROJECT_SOURCE_DIR}/emscripten/libblas.a)
    link_libraries(${PROJECT_SOURCE_DIR}/emscripten/libf2c.a)
 else()
-   if (NOT TAT_FORCE_BLAS_DYNAMIC)
+   if(NOT TAT_FORCE_BLAS_DYNAMIC)
       message("-- Try to find static blas and lapack")
       set(BLA_STATIC ON)
       find_package(BLAS QUIET)
       find_package(LAPACK QUIET)
    endif()
-   if (NOT (LAPACK_FOUND AND BLAS_FOUND))
+   if(NOT (LAPACK_FOUND AND BLAS_FOUND))
       message("-- Try to find dynamic libraries")
       set(BLA_STATIC OFF)
       find_package(BLAS REQUIRED)

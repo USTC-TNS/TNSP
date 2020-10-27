@@ -79,10 +79,6 @@ namespace TAT {
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
       const Size line_size = destination_block.size();
 
-#if 0
-      std::cout << merged_tensor << "\n";
-#endif
-
       for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
          auto symmetry_2 = -symmetry_1;
          auto source_block = merged_tensor.core->blocks.at({symmetry_1, symmetry_2, Symmetry()});
@@ -94,12 +90,6 @@ namespace TAT {
             }
          }
       }
-#if 0
-       std::cout << merged_tensor << "\n";
-       std::cout << line_size << "\n";
-       std::cout << traced_tensor << "\n";
-       std::cout << traced_tensor << "\n";
-#endif
       auto result = traced_tensor.edge_operator({}, {{internal_name::Trace_3, split_plan}}, reverse_names, {}, result_names);
       return result;
    }

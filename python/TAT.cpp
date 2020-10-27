@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -465,7 +465,7 @@ namespace TAT {
                   "Contract as much as possible with another tensor on same name edges")
             .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
             .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
-            .def("trace", &T::trace) // TODO trace
+            .def("trace", &T::trace)
             .def(
                   "svd",
                   [](const T& tensor, const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) {

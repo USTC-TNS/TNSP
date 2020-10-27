@@ -191,7 +191,7 @@ namespace TAT {
             block[i * dimension_plus_one] = 1;
          }
       } else {
-         // TODO
+         // TODO identity for symmetry tensor
          TAT_error("Not implement yet");
       }
       return *this;
