@@ -136,16 +136,6 @@ namespace TAT {
                data_destination[i] = data_source[i];
             }
          }
-      } else if (scalar_leading_source_head == 2 && scalar_leading_destination_head == 2) {
-         if (parity) {
-            for (Rank i = 0; i < scalar_line_size_head; i++) {
-               data_destination[2 * i] = -data_source[2 * i];
-            }
-         } else {
-            for (Rank i = 0; i < scalar_line_size_head; i++) {
-               data_destination[2 * i] = data_source[2 * i];
-            }
-         }
       } else {
          if (parity) {
             for (Rank i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
@@ -255,17 +245,13 @@ namespace TAT {
             if (parity) {
                for (Size i = 0; i < dimension_of_M; i++) {
                   for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i;
-                     auto line_source = data_source + i * leading_source + j;
-                     *line_destination = -*line_source;
+                     data_destination[j * leading_destination + i] = -data_source[i * leading_source + j];
                   }
                }
             } else {
                for (Size i = 0; i < dimension_of_M; i++) {
                   for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i;
-                     auto line_source = data_source + i * leading_source + j;
-                     *line_destination = *line_source;
+                     data_destination[j * leading_destination + i] = data_source[i * leading_source + j];
                   }
                }
             }
@@ -273,23 +259,21 @@ namespace TAT {
             if (parity) {
                for (Size i = 0; i < dimension_of_M; i++) {
                   for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-                     auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     *line_destination = -*line_source;
+                     data_destination[j * leading_destination + i * scalar_size_destination] =
+                           -data_source[i * leading_source + j * scalar_size_source];
                   }
                }
             } else {
                for (Size i = 0; i < dimension_of_M; i++) {
                   for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-                     auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     *line_destination = *line_source;
+                     data_destination[j * leading_destination + i * scalar_size_destination] =
+                           data_source[i * leading_source + j * scalar_size_source];
                   }
                }
             }
          }
       } else if (scalar_rank == 1) {
-         // 相当于两个维度都有leading的拥有较大ScalarType的矩阵转置, 如果下面scalar_size_source=scalar_line_size[0], 那就是正常的矩阵转置的
+         // 相当于两个维度都有leading的拥有较大fake ScalarType的矩阵转置, 如果下面scalar_leading_head=1, 这个fake ScalarType是连续的
          const auto scalar_leading_destination_head = scalar_leading_destination[0];
          const auto scalar_leading_source_head = scalar_leading_source[0];
          const auto scalar_line_size_head = scalar_line_size[0];
@@ -370,10 +354,10 @@ namespace TAT {
       Size block_size = 2; // 防止奇怪的参数使得一开始就false, 这样的话1 >> 1 = 0, 应该不会发生的
       // TODO: 是否应该乘以二做点冗余?
       while (block_size * block_size * (scalar_size_source + scalar_size_destination) * sizeof(ScalarType) * 2 < cache_size) {
-         block_size <<= 1;
+         block_size <<= 1u;
       }
       // 现在的block_size是放不下的
-      block_size >>= 1;
+      block_size >>= 1u;
       // 现在放得下了
       for (Size i = 0; i < dimension_of_M; i += block_size) {
          for (Size j = 0; j < dimension_of_N; j += block_size) {
@@ -454,7 +438,9 @@ namespace TAT {
       while (true) {
          // TODO: l3太大了, 所以只按着l2和l1来划分, 这样合适么
 #ifdef TAT_USE_MKL_TRANSPOSE
-         if (line_rank == 0 && leading_of_N_in_source == 1 && leading_of_M_in_destination == 1) {
+         if ((std::is_same_v<ScalarType, float> || std::is_same_v<ScalarType, double> || std::is_same_v<ScalarType, std::complex<float>> ||
+              std::is_same_v<ScalarType, std::complex<double>>)&&line_rank == 0 &&
+             leading_of_N_in_source == 1 && leading_of_M_in_destination == 1) {
             ScalarType alpha = parity ? -1 : 1;
             mkl_transpose(
                   dimension_of_M,
@@ -734,7 +720,7 @@ namespace TAT {
       }
       // rank != 0, dimension != 0
 
-      // TODO: 整理pretreatment
+      // TODO: 近期要做的只有这个TODO 整理pretreatment
       auto [real_plan_source_to_destination,
             real_plan_destination_to_source,
             real_dimensions_source,
