@@ -29,11 +29,12 @@ SS = SxSx + SySy + SzSz
 
 class SpinLattice():
 
-    def __init__(self, node_names):
+    def __init__(self, node_names, approximate_energy=0):
         self.node_number = len(node_names)
         self.state_vector = Tensor(node_names, [2 for _ in range(self.node_number)]).randn()
         self.bonds = []
         self.energy = 0.
+        self.approximate_energy = abs(approximate_energy)
 
     def set_bond(self, n1, n2, matrix):
         sn1 = str(n1)
@@ -43,14 +44,16 @@ class SpinLattice():
         self.bonds.append(operator)
 
     def update(self):
-        self.energy = 1 - float(self.state_vector.norm_max())
-        self.state_vector /= 1 - self.energy
+        norm_max = float(self.state_vector.norm_max())
+        self.energy = self.approximate_energy - norm_max
+        self.state_vector /= norm_max
         state_vector_temporary = self.state_vector.same_shape().zero()
         for i in self.bonds:
             sn1, sn2 = i.name[:2]
             this_term = self.state_vector.contract_all_edge(i).edge_rename({f"_{sn1}": sn1, f"_{sn2}": sn2})
             state_vector_temporary += this_term
         self.total_energy = float(self.state_vector.contract_all_edge(state_vector_temporary) / self.state_vector.contract_all_edge(self.state_vector))
+        self.state_vector *= self.approximate_energy
         self.state_vector -= state_vector_temporary  # v <- (1-H)v
 
 
