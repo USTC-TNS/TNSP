@@ -50,9 +50,8 @@ class SpinLattice():
         state_vector_temporary = self.state_vector.same_shape().zero()
         for i in self.bonds:
             sn1, sn2 = i.name[:2]
-            this_term = self.state_vector.contract_all_edge(i).edge_rename({f"_{sn1}": sn1, f"_{sn2}": sn2})
+            this_term = i.contract_all_edge(self.state_vector).edge_rename({f"_{sn1}": sn1, f"_{sn2}": sn2})
             state_vector_temporary += this_term
-        self.total_energy = float(self.state_vector.contract_all_edge(state_vector_temporary) / self.state_vector.contract_all_edge(self.state_vector))
         self.state_vector *= self.approximate_energy
         self.state_vector -= state_vector_temporary  # v <- (1-H)v
 
