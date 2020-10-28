@@ -331,7 +331,7 @@ namespace TAT {
          auto edge_2 = tensor_2.core->edges[tensor_2.name_to_index.at(name_2)];
          auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
 #ifndef _MSVC_LANG
-            // TODO 现在版本的msvc认为constexpr需要捕获, 等待新版本msvc支持此功能
+            // 2020.10.27 现在版本的msvc认为constexpr需要捕获, 等待新版本msvc支持此功能, 才可以删掉这个判断
             if constexpr (is_fermi) {
                if (edge_this.arrow == edge_other.arrow) {
                   TAT_error("Different Fermi Arrow to Contract");

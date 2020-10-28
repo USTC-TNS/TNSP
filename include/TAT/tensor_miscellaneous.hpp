@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#ifndef TAT_MULTIPLE_AND_CONJUGATE_HPP
-#define TAT_MULTIPLE_AND_CONJUGATE_HPP
+#ifndef TAT_TENSOR_MISCELLANEOUS_HPP
+#define TAT_TENSOR_MISCELLANEOUS_HPP
 
 #include "tensor.hpp"
 
@@ -180,5 +180,56 @@ namespace TAT {
       return result;
    }
 
+   template<typename ScalarType, typename Symmetry>
+   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
+      zero();
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         auto dimension = core->edges[0].map.begin()->second;
+         auto dimension_plus_one = dimension + 1;
+         auto& block = core->blocks.begin()->second;
+         for (auto i = 0; i < dimension; i++) {
+            block[i * dimension_plus_one] = 1;
+         }
+      } else {
+         // TODO identity for symmetry tensor
+         TAT_error("Not implement yet");
+      }
+      return *this;
+   }
+
+   template<typename ScalarType, typename Symmetry>
+   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
+      real_base_t<ScalarType> norm_max = norm<-1>();
+      auto temporary_tensor_rank = 0;
+      real_base_t<ScalarType> temporary_tensor_parameter = 1;
+      while (temporary_tensor_parameter * norm_max > 1) {
+         temporary_tensor_rank += 1;
+         temporary_tensor_parameter *= 1. / 2;
+      }
+      auto temporary_tensor = *this * temporary_tensor_parameter;
+
+      auto result = same_shape().identity(pairs);
+
+      auto power_of_temporary_tensor = decltype(result)();
+
+      ScalarType series_parameter = 1;
+      for (auto i = 1; i <= step; i++) {
+         series_parameter /= i;
+         if (i == 1) {
+            result += temporary_tensor;
+         } else if (i == 2) {
+            power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
+            result += series_parameter * power_of_temporary_tensor;
+         } else {
+            power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
+            result += series_parameter * power_of_temporary_tensor;
+         }
+      }
+
+      for (auto i = 0; i < temporary_tensor_rank; i++) {
+         result = result.contract(result, pairs);
+      }
+      return result;
+   }
 } // namespace TAT
 #endif
