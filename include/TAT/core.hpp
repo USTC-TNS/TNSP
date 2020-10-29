@@ -60,7 +60,11 @@ namespace TAT {
     * \note 为了其他部分与stl兼容性, 仅在张量的数据处使用
     */
    template<typename T>
-   using vector = std::vector<T, allocator_without_initialize<T>>;
+   struct vector : std::vector<T, allocator_without_initialize<T>> {
+      using std::vector<T, allocator_without_initialize<T>>::vector;
+
+      vector(const std::vector<T>& other) : vector(other.begin(), other.end()) {}
+   };
 
    /**
     * \brief 记录了张量的核心数据的类型, 核心数据指的是除了角标名称之外的信息, 包括边的形状, 以及张量内本身的数据

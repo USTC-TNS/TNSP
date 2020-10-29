@@ -111,300 +111,62 @@ namespace TAT {
    }
 #endif
 
-   /**
-    * \brief 简单的复制一条线上的数据
-    *
-    * 将data_source[i*scalar_leading_source_head]赋值给data_destination[i*scalar_leading_destination_head],
-    * 其中0 <= i < scalar_line_size_head
-    */
-   template<typename ScalarType>
-   void simple_line_copy(
+   template<typename ScalarType, bool parity>
+   void tensor_transpose_kernel(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
-         const Size scalar_line_size_head,
-         const Size scalar_leading_source_head,
-         const Size scalar_leading_destination_head,
-         const bool parity) {
-      // leading[0] may not be 1
-      if (scalar_leading_source_head == 1 && scalar_leading_destination_head == 1) {
-         if (parity) {
-            for (Size i = 0; i < scalar_line_size_head; i++) {
-               data_destination[i] = -data_source[i];
-            }
-         } else {
-            for (Size i = 0; i < scalar_line_size_head; i++) {
-               data_destination[i] = data_source[i];
-            }
-         }
-      } else {
-         if (parity) {
-            for (Size i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
-                 i++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
-               data_destination[destination_index] = -data_source[source_index];
-            }
-         } else {
-            for (Size i = 0, source_index = 0, destination_index = 0; i < scalar_line_size_head;
-                 i++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
-               data_destination[destination_index] = data_source[source_index];
-            }
-         }
-      }
-   }
-
-   /**
-    * \brief 复制一条线上的数据
-    *
-    * 类似simple_line_copy, 但是数据并不是一维的, 而是多维有leading的array之间的复制, 只不过leading不同所以不能简单的复制
-    *
-    * \see simple_line_copy
-    */
-   template<typename ScalarType>
-   void line_copy(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const Rank rank,
-         const std::vector<Size>& scalar_line_size,
-         const std::vector<Size>& scalar_leading_source,
-         const std::vector<Size>& scalar_leading_destination,
-         const bool parity) {
-      if (rank == 0) {
-         // 一般来说这个分支不会走, 会在上面就优化掉而走其他路径的
-         data_destination[0] = parity ? -data_source[0] : data_source[0];
-         return;
-      }
-
-      const auto scalar_line_size_head = scalar_line_size.front();
-      const auto scalar_leading_source_head = scalar_leading_source.front();
-      const auto scalar_leading_destination_head = scalar_leading_destination.front();
-      if (rank == 1) {
-         simple_line_copy(data_source, data_destination, scalar_line_size_head, scalar_leading_source_head, scalar_leading_destination_head, parity);
-         return;
-      }
-      auto index_list = std::vector<Rank>(rank, 0);
+         const Size* const dimension,
+         const Size* const leading_source,
+         const Size* const leading_destination,
+         const Rank rank) {
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
-
+      std::vector<Size> index_list(rank, 0);
       while (true) {
-         simple_line_copy(
-               current_source, current_destination, scalar_line_size_head, scalar_leading_source_head, scalar_leading_destination_head, parity);
-         // 迭代index_list并更新current_source, current_destination
-         auto current_position = 1;
-         index_list[current_position]++;
-         current_source += scalar_leading_source[current_position];
-         current_destination += scalar_leading_destination[current_position];
-         while (index_list[current_position] == scalar_line_size[current_position]) {
-            index_list[current_position] = 0;
-            current_source -= scalar_leading_source[current_position] * scalar_line_size[current_position];
-            current_destination -= scalar_leading_destination[current_position] * scalar_line_size[current_position];
+         if constexpr (parity) {
+            *current_destination = -*current_source;
+         } else {
+            *current_destination = *current_source;
+         }
 
-            current_position++;
-            if (current_position == rank) {
+         Rank active_position = rank - 1;
+
+         index_list[active_position]++;
+         current_source += leading_source[active_position];
+         current_destination += leading_destination[active_position];
+
+         while (index_list[active_position] == dimension[active_position]) {
+            index_list[active_position] = 0;
+            current_source -= dimension[active_position] * leading_source[active_position];
+            current_destination -= dimension[active_position] * leading_destination[active_position];
+
+            if (active_position == 0) {
                return;
             }
-            index_list[current_position]++;
-            current_source += scalar_leading_source[current_position];
-            current_destination += scalar_leading_destination[current_position];
+            active_position--;
+
+            index_list[active_position]++;
+            current_source += leading_source[active_position];
+            current_destination += leading_destination[active_position];
          }
       }
    }
+   // TODO: l3太大了, 所以只按着l2和l1来划分, 这样合适么
+   // 注意，现在这段代码被我暂时删掉了
+   //
+   // TODO 类似矩阵转置的优化方式优化张量转置
+   // O...O...O.O..XXX
+   //  X..X..X.....OOOO
+   //              ^
+   // 首先找到一段前后各自连续的部分，然后分块地做转置，分块的方案是cut掉这里的维度
+   //
+   // TODO
+   // 按照cache来split边
+   // 再交替iter dim
+   // 即可兼容矩阵转置的优化方式
 
-   /**
-    * \brief 转置一个矩阵, 但是其中的基本元素实际上是一个"line", 其赋值会line_copy
-    *
-    * 矩阵维度为M*N -> N*M
-    * 其中标量相当于大小为scalar_size_source个ScalarType
-    * 他们的leading分别是
-    * M * N:
-    * leading_source, scalar_size_source
-    * N * M:
-    * leading_source, scalar_size_source
-    *
-    * 正常的矩阵转置相当于scalar_rank=1且scalar_size_source=1
-    *
-    * \see line_copy
-    */
-   template<typename ScalarType>
-   void matrix_transpose_kernel(
-         const Size dimension_of_M,
-         const Size dimension_of_N,
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const Size leading_source,
-         const Size leading_destination,
-         const Size scalar_size_source,
-         const Size scalar_size_destination,
-         const Rank scalar_rank,
-         const std::vector<Size>& scalar_line_size,
-         const std::vector<Size>& scalar_leading_source,
-         const std::vector<Size>& scalar_leading_destination,
-         const bool parity) {
-      // TODO: 这些细分合适么?
-      if (scalar_rank == 0) {
-         // 相当于两个维度都有leading的矩阵转置, 如果下面scalar_size=1, 那就是正常的矩阵转置的
-         if (scalar_size_source == 1 && scalar_size_destination == 1) {
-            if (parity) {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     data_destination[j * leading_destination + i] = -data_source[i * leading_source + j];
-                  }
-               }
-            } else {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     data_destination[j * leading_destination + i] = data_source[i * leading_source + j];
-                  }
-               }
-            }
-         } else {
-            if (parity) {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     data_destination[j * leading_destination + i * scalar_size_destination] =
-                           -data_source[i * leading_source + j * scalar_size_source];
-                  }
-               }
-            } else {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     data_destination[j * leading_destination + i * scalar_size_destination] =
-                           data_source[i * leading_source + j * scalar_size_source];
-                  }
-               }
-            }
-         }
-      } else if (scalar_rank == 1) {
-         // 相当于两个维度都有leading的拥有较大fake ScalarType的矩阵转置, 如果下面scalar_leading_head=1, 这个fake ScalarType是连续的
-         const auto scalar_leading_destination_head = scalar_leading_destination.front();
-         const auto scalar_leading_source_head = scalar_leading_source.front();
-         const auto scalar_line_size_head = scalar_line_size.front();
-         if (scalar_leading_source_head == 1 && scalar_leading_destination_head == 1) {
-            if (parity) {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-                     auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Size k = 0; k < scalar_line_size_head; k++) {
-                        line_destination[k] = -line_source[k];
-                     }
-                  }
-               }
-            } else {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-                     auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Size k = 0; k < scalar_line_size_head; k++) {
-                        line_destination[k] = line_source[k];
-                     }
-                  }
-               }
-            }
-         } else {
-            if (parity) {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-                     auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Size k = 0, source_index = 0, destination_index = 0; k < scalar_line_size_head;
-                          k++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
-                        line_destination[destination_index] = -line_source[source_index];
-                     }
-                  }
-               }
-            } else {
-               for (Size i = 0; i < dimension_of_M; i++) {
-                  for (Size j = 0; j < dimension_of_N; j++) {
-                     auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-                     auto line_source = data_source + i * leading_source + j * scalar_size_source;
-                     for (Size k = 0, source_index = 0, destination_index = 0; k < scalar_line_size_head;
-                          k++, source_index += scalar_leading_source_head, destination_index += scalar_leading_destination_head) {
-                        line_destination[destination_index] = line_source[source_index];
-                     }
-                  }
-               }
-            }
-         }
-      } else {
-         // 最一般的情况
-         for (Size i = 0; i < dimension_of_M; i++) {
-            for (Size j = 0; j < dimension_of_N; j++) {
-               auto line_destination = data_destination + j * leading_destination + i * scalar_size_destination;
-               auto line_source = data_source + i * leading_source + j * scalar_size_source;
-               line_copy(line_source, line_destination, scalar_rank, scalar_line_size, scalar_leading_source, scalar_leading_destination, parity);
-            }
-         }
-      }
-   }
-
-   template<typename ScalarType, Size cache_size, Size... other>
-   void matrix_transpose(
-         const Size dimension_of_M,
-         const Size dimension_of_N,
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const Size leading_source,
-         const Size leading_destination,
-         const Size scalar_size_source,
-         const Size scalar_size_destination,
-         const Rank scalar_rank,
-         const std::vector<Size>& scalar_line_size,
-         const std::vector<Size>& scalar_leading_source,
-         const std::vector<Size>& scalar_leading_destination,
-         const bool parity) {
-      Size block_size = 2; // 防止奇怪的参数使得一开始就false, 这样的话1 >> 1 = 0, 应该不会发生的
-      // TODO: 是否应该乘以二做点冗余?
-      while (block_size * block_size * (scalar_size_source + scalar_size_destination) * sizeof(ScalarType) * 2 < cache_size) {
-         block_size <<= 1u;
-      }
-      // 现在的block_size是放不下的
-      block_size >>= 1u;
-      // 现在放得下了
-      for (Size i = 0; i < dimension_of_M; i += block_size) {
-         for (Size j = 0; j < dimension_of_N; j += block_size) {
-            auto block_dst = data_destination + j * leading_destination + i * scalar_size_destination;
-            auto block_src = data_source + i * leading_source + j * scalar_size_source;
-            auto little_dimension_of_M = dimension_of_M - i;
-            auto little_dimension_of_N = dimension_of_N - j;
-            little_dimension_of_M = (block_size <= little_dimension_of_M) ? block_size : little_dimension_of_M;
-            little_dimension_of_N = (block_size <= little_dimension_of_N) ? block_size : little_dimension_of_N;
-
-            if constexpr (sizeof...(other) == 0) {
-               matrix_transpose_kernel<ScalarType>(
-                     little_dimension_of_M,
-                     little_dimension_of_N,
-                     block_src,
-                     block_dst,
-                     leading_source,
-                     leading_destination,
-                     scalar_size_source,
-                     scalar_size_destination,
-                     scalar_rank,
-                     scalar_line_size,
-                     scalar_leading_source,
-                     scalar_leading_destination,
-                     parity);
-            } else {
-               matrix_transpose<ScalarType, other...>(
-                     little_dimension_of_M,
-                     little_dimension_of_N,
-                     block_src,
-                     block_dst,
-                     leading_source,
-                     leading_destination,
-                     scalar_size_source,
-                     scalar_size_destination,
-                     scalar_rank,
-                     scalar_line_size,
-                     scalar_leading_source,
-                     scalar_leading_destination,
-                     parity);
-            }
-         }
-      }
-   }
-
-   template<typename ScalarType>
-   void block_transpose(
+   template<typename ScalarType, bool parity>
+   void simple_transpose(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
          const std::vector<Rank>& plan_source_to_destination,
@@ -413,104 +175,20 @@ namespace TAT {
          const std::vector<Size>& dimensions_destination,
          const std::vector<Size>& leading_source,
          const std::vector<Size>& leading_destination,
-         const Rank rank,
-         const std::vector<Size>& scalar_line_size,
-         const std::vector<Size>& scalar_leading_source,
-         const std::vector<Size>& scalar_leading_destination,
-         const Rank line_rank,
-         const bool parity) {
-      std::vector<Size> index_list_source(rank, 0);
+         const Rank rank) {
+      // std::vector<Size> index_list_source(rank, 0);
       std::vector<Size> index_list_destination(rank, 0);
-      Size offset_source = 0;
-      Size offset_destination = 0;
+      const ScalarType* current_source = data_source;
+      ScalarType* current_destination = data_destination;
 
-      // M N => N M
-      const Size dimension_of_N = dimensions_source[rank - 1];
-      const Size dimension_of_M = dimensions_destination[rank - 1];
-      const Rank position_of_M_in_source = plan_destination_to_source[rank - 1];
-      const Rank position_of_N_in_destination = plan_source_to_destination[rank - 1];
-      const Size leading_of_M_in_source = leading_source[position_of_M_in_source];
-      const Size leading_of_N_in_source = leading_source[rank - 1];
-      const Size leading_of_N_in_destination = leading_destination[position_of_N_in_destination];
-      const Size leading_of_M_in_destination = leading_destination[rank - 1];
-
-      while (true) {
-         // TODO: l3太大了, 所以只按着l2和l1来划分, 这样合适么
-#ifdef TAT_USE_MKL_TRANSPOSE
-         if ((std::is_same_v<ScalarType, float> || std::is_same_v<ScalarType, double> || std::is_same_v<ScalarType, std::complex<float>> ||
-              std::is_same_v<ScalarType, std::complex<double>>)&&line_rank == 0 &&
-             leading_of_N_in_source == 1 && leading_of_M_in_destination == 1) {
-            ScalarType alpha = parity ? -1 : 1;
-            mkl_transpose(
-                  dimension_of_M,
-                  dimension_of_N,
-                  data_source + offset_source,
-                  data_destination + offset_destination,
-                  leading_of_M_in_source,
-                  leading_of_N_in_destination,
-                  alpha);
-         } else {
-#endif
-#ifdef TAT_USE_L3_CACHE
-            matrix_transpose<ScalarType, l3_cache, l2_cache, l1_cache>(
-#else
-         matrix_transpose<ScalarType, l2_cache, l1_cache>(
-#endif
-                  dimension_of_M,
-                  dimension_of_N,
-                  data_source + offset_source,
-                  data_destination + offset_destination,
-                  leading_of_M_in_source,
-                  leading_of_N_in_destination,
-                  leading_of_N_in_source,
-                  leading_of_M_in_destination,
-                  line_rank,
-                  scalar_line_size,
-                  scalar_leading_source,
-                  scalar_leading_destination,
-                  parity);
-#ifdef TAT_USE_MKL_TRANSPOSE
-         }
-#endif
-
-         Rank active_position_in_destination = rank - 2;
-         Rank active_position_in_source = plan_destination_to_source[active_position_in_destination];
-         if (active_position_in_source == rank - 1) {
-            if (active_position_in_destination == 0) {
-               return;
-            }
-            active_position_in_destination--;
-            active_position_in_source = plan_destination_to_source[active_position_in_destination];
-         }
-
-         index_list_source[active_position_in_source]++;
-         offset_source += leading_source[active_position_in_source];
-         index_list_destination[active_position_in_destination]++;
-         offset_destination += leading_destination[active_position_in_destination];
-
-         while (index_list_destination[active_position_in_destination] == dimensions_destination[active_position_in_destination]) {
-            index_list_source[active_position_in_source] = 0;
-            offset_source -= dimensions_source[active_position_in_source] * leading_source[active_position_in_source];
-            index_list_destination[active_position_in_destination] = 0;
-            offset_destination -= dimensions_destination[active_position_in_destination] * leading_destination[active_position_in_destination];
-            if (active_position_in_destination == 0) {
-               return;
-            }
-            active_position_in_destination--;
-            active_position_in_source = plan_destination_to_source[active_position_in_destination];
-            if (active_position_in_source == rank - 1) {
-               if (active_position_in_destination == 0) {
-                  return;
-               }
-               active_position_in_destination--;
-               active_position_in_source = plan_destination_to_source[active_position_in_destination];
-            }
-            index_list_source[active_position_in_source]++;
-            offset_source += leading_source[active_position_in_source];
-            index_list_destination[active_position_in_destination]++;
-            offset_destination += leading_destination[active_position_in_destination];
-         }
+      std::vector<Size> leading_source_by_destination(rank);
+      for (auto i = 0; i < rank; i++) {
+         auto j = plan_destination_to_source[i];
+         leading_source_by_destination[i] = leading_source[j];
       }
+
+      tensor_transpose_kernel<ScalarType, parity>(
+            data_source, data_destination, dimensions_destination.data(), leading_source_by_destination.data(), leading_destination.data(), rank);
    }
 
    // 去掉dimension = 1的边
@@ -728,49 +406,30 @@ namespace TAT {
                   cutting_leading_destination,
                   cutting_rank);
 
-      // 处理后面几维顺序不变只是可能leading不同的情况， 这三个的顺序关于维度是逆序的
-      auto scalar_leading_source = std::vector<Size>();
-      auto scalar_leading_destination = std::vector<Size>();
-      auto scalar_line_size = std::vector<Size>();
-      Rank effective_rank = real_rank;
-      Rank line_rank = 0;
-
-      while (effective_rank != 0 && real_plan_source_to_destination[effective_rank - 1] == effective_rank - 1) {
-         scalar_line_size.push_back(real_dimensions_destination[effective_rank - 1]);
-         scalar_leading_source.push_back(real_leading_source[effective_rank - 1]);
-         scalar_leading_destination.push_back(real_leading_destination[effective_rank - 1]);
-         effective_rank--;
-         line_rank++;
-      }
-
-      real_plan_source_to_destination.resize(effective_rank);
-      real_plan_destination_to_source.resize(effective_rank);
-      real_dimensions_source.resize(effective_rank);
-      real_dimensions_destination.resize(effective_rank);
-      real_leading_source.resize(effective_rank);
-      real_leading_destination.resize(effective_rank);
-
-      if (effective_rank == 0) {
-         line_copy(data_source, data_destination, line_rank, scalar_line_size, scalar_leading_source, scalar_leading_destination, parity);
-         return;
-      }
-
       // TODO: 需要考虑极端细致的情况
-      block_transpose(
-            data_source,
-            data_destination,
-            real_plan_source_to_destination,
-            real_plan_destination_to_source,
-            real_dimensions_source,
-            real_dimensions_destination,
-            real_leading_source,
-            real_leading_destination,
-            effective_rank,
-            scalar_line_size,
-            scalar_leading_source,
-            scalar_leading_destination,
-            line_rank,
-            parity);
+      if (parity) {
+         simple_transpose<ScalarType, true>(
+               data_source,
+               data_destination,
+               real_plan_source_to_destination,
+               real_plan_destination_to_source,
+               real_dimensions_source,
+               real_dimensions_destination,
+               real_leading_source,
+               real_leading_destination,
+               real_rank);
+      } else {
+         simple_transpose<ScalarType, false>(
+               data_source,
+               data_destination,
+               real_plan_source_to_destination,
+               real_plan_destination_to_source,
+               real_dimensions_source,
+               real_dimensions_destination,
+               real_leading_source,
+               real_leading_destination,
+               real_rank);
+      }
    }
 } // namespace TAT
 #endif

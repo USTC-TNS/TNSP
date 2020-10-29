@@ -1,5 +1,5 @@
 /**
- * \file multiple_and_conjugate.hpp
+ * \file tensor_miscellaneous.hpp
  *
  * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *

@@ -29,13 +29,8 @@
 #include "tensor.hpp"
 
 #ifdef TAT_USE_MPI
-#define TAT_BACKUP___cplusplus __cplusplus
-#undef __cplusplus
-extern "C" {
+// 不可以extern "C"，因为mpi.h发现不可以被暂时屏蔽的宏__cplusplus后申明一些cpp的函数
 #include <mpi.h>
-}
-#define __cplusplus TAT_BACKUP___cplusplus
-#undef TAT_BACKUP___cplusplus
 #endif
 
 namespace TAT {

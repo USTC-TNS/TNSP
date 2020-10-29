@@ -23,6 +23,8 @@
 
 #include "tensor.hpp"
 
+// TODO 目前这个文件的定位很迷惑
+
 namespace TAT {
    namespace tools {
       // default: up to down
