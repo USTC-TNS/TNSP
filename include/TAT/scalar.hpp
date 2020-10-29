@@ -28,7 +28,7 @@ namespace TAT {
    template<typename ScalarType1, typename ScalarType2, typename Symmetry>                                                        \
    auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {                        \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                            \
-      if (tensor_1.names.empty()) {                                                                                               \
+      if (tensor_1.is_scalar()) {                                                                                                 \
          const auto& x = tensor_1.at({});                                                                                         \
          auto result = Tensor<ScalarType, Symmetry>{tensor_2.names, tensor_2.core->edges};                                        \
          for (auto& [symmetries, block] : result.core->blocks) {                                                                  \
@@ -39,7 +39,7 @@ namespace TAT {
             }                                                                                                                     \
          }                                                                                                                        \
          return result;                                                                                                           \
-      } else if (tensor_2.names.empty()) {                                                                                        \
+      } else if (tensor_2.is_scalar()) {                                                                                          \
          const auto& y = tensor_2.at({});                                                                                         \
          auto result = Tensor<ScalarType, Symmetry>{tensor_1.names, tensor_1.core->edges};                                        \
          for (auto& [symmetries, block] : result.core->blocks) {                                                                  \
@@ -134,7 +134,7 @@ namespace TAT {
       if (tensor_1.core.use_count() != 1) {                                                                                       \
          TAT_warning_or_error_when_inplace_scalar("Inplace Operator On Tensor Shared");                                           \
       }                                                                                                                           \
-      if (tensor_2.names.empty()) {                                                                                               \
+      if (tensor_2.is_scalar()) {                                                                                                 \
          const auto& y = tensor_2.at({});                                                                                         \
          for (auto& [symmetries, block] : tensor_1.core->blocks) {                                                                \
             ScalarType1* __restrict a = block.data();                                                                             \

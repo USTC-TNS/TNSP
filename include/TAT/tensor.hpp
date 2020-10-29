@@ -186,11 +186,15 @@ namespace TAT {
          return result;
       }
 
+      [[nodiscard]] bool is_scalar() const {
+         return core->blocks.size() == 1 && core->blocks.begin()->second.size() == 1;
+      }
+
       /**
        * \brief 秩为一的张量转化为其中唯一一个元素的标量类型
        */
       operator ScalarType() const {
-         if (core->blocks.size() != 1 || core->blocks.begin()->second.size() != 1) {
+         if (!is_scalar()) {
             TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
          return core->blocks.begin()->second.front();
