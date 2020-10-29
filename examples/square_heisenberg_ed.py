@@ -27,10 +27,10 @@ def main(n1, n2, step):
     print("Set Bonds...")
     for i in range(n1 - 1):
         for j in range(n2):
-            lattice.set_bond((i, j), (i + 1, j), ED.SS)
+            lattice.set_bond([(i, j), (i + 1, j)], ED.SS)
     for i in range(n1):
         for j in range(n2 - 1):
-            lattice.set_bond((i, j), (i, j + 1), ED.SS)
+            lattice.set_bond([(i, j), (i, j + 1)], ED.SS)
     print("Set Bonds Done")
     for _ in range(step):
         lattice.update()

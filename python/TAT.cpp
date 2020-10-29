@@ -122,6 +122,10 @@ namespace TAT {
    struct block_of_tensor {
       py::object tensor;
       std::map<Name, Symmetry> position;
+      // py::tuple position
+      // 这里应该是list[(name,symmetry)], 因为有顺序
+      // 或者是map[name->symmetry], 应该都支持所以这个地方应该是py::object, 在buffer中设置转化
+      // TODO
    };
 
    template<typename ScalarType, typename Symmetry>
