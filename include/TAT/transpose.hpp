@@ -160,7 +160,6 @@ namespace TAT {
    //              ^
    // 首先找到一段前后各自连续的部分，然后分块地做转置，分块的方案是cut掉这里的维度
    //
-   // TODO 检查数组形式而不是指针会怎么样
    // TODO
    // 按照cache来split边
    // 再交替iter dim
