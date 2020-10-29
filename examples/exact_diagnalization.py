@@ -50,7 +50,7 @@ class SpinLattice():
         state_vector_temporary = self.state_vector.same_shape().zero()
         for i in self.bonds:
             sn1, sn2 = i.name[:2]
-            this_term = i.contract_all_edge(self.state_vector).edge_rename({f"_{sn1}": sn1, f"_{sn2}": sn2})
+            this_term = self.state_vector.contract_all_edge(i).edge_rename({f"_{sn1}": sn1, f"_{sn2}": sn2})
             state_vector_temporary += this_term
         self.state_vector *= self.approximate_energy
         self.state_vector -= state_vector_temporary  # v <- (1-H)v
@@ -58,11 +58,11 @@ class SpinLattice():
 
 class SquareSpinLattice(SpinLattice):
 
-    def __init__(self, n1, n2):
+    def __init__(self, n1, n2, approximate_energy=0):
         self.n1 = n1
         self.n2 = n2
         self.node_names = [f"{i}.{j}" for i in range(self.n1) for j in range(self.n2)]
-        super().__init__(self.node_names)
+        super().__init__(self.node_names, approximate_energy)
 
     def set_bond(self, p1, p2, matrix):
         super().set_bond(f"{p1[0]}.{p1[1]}", f"{p2[0]}.{p2[1]}", matrix)
