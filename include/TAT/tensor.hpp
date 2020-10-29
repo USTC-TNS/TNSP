@@ -116,6 +116,12 @@ namespace TAT {
          check_valid_name(names, core->edges.size());
       }
 
+#ifdef TAT_USE_EASY_CONVERSION
+      template<typename NameList, typename EdgeList>
+      Tensor(NameList&& names_init, EdgeList&& edges_init, const bool auto_reverse = false) :
+            Tensor({names_init.begin(), names_init.end()}, {edges_init.begin(), edges_init.end()}, auto_reverse) {}
+#endif
+
       /**
        * \brief 张量的复制, 默认的赋值和复制初始化不会拷贝数据，而会共用core
        * \return 复制的结果
