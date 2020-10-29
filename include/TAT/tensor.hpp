@@ -403,7 +403,7 @@ namespace TAT {
        * \return 标量类型的模
        */
       template<int p = 2>
-      [[nodiscard]] Tensor<real_base_t<ScalarType>, Symmetry> norm() const {
+      [[nodiscard]] real_base_t<ScalarType> norm() const {
          real_base_t<ScalarType> result = 0;
          if constexpr (p == -1) {
             for (const auto& [_, block] : core->blocks) {
