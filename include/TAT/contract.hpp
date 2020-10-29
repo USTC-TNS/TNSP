@@ -406,8 +406,8 @@ namespace TAT {
          const ScalarType beta = 0;
          if (m * n * k != 0) {
             calculate_product<ScalarType>(
-                  put_common_2_right ? "C" : "N",
-                  put_common_1_right ? "N" : "C",
+                  put_common_2_right ? "T" : "N",
+                  put_common_1_right ? "N" : "T",
                   &n,
                   &m,
                   &k,
