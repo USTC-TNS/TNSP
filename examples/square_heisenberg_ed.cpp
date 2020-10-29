@@ -106,7 +106,7 @@ int main() {
          lattice.set_bond({i, j}, {i, j + 1}, SS);
       }
    }
-   for (auto t = 0; t < 500; t++) {
+   for (auto t = 0; t < 1000; t++) {
       lattice.update();
       std::printf("%.20f\n", lattice.energy / (n1 * n2));
    }
