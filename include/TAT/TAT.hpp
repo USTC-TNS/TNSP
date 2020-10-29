@@ -41,7 +41,7 @@
 
 // 开关说明
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
-// TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义
+// TAT_USE_MKL_TRANSPOSE TODO 定义以使用mkl加速转置, cmake可对此进行定义
 // TODO: TAT_USE_STUPID_TRANSPOSE
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
