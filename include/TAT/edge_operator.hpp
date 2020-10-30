@@ -22,6 +22,7 @@
 #define TAT_EDGE_OPERATOR_HPP
 
 #include "tensor.hpp"
+#include "timer.hpp"
 #include "transpose.hpp"
 
 namespace TAT {
@@ -36,6 +37,7 @@ namespace TAT {
          const bool apply_parity,
          const std::array<std::set<Name>, 4>& parity_exclude_name,
          const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all) const {
+      auto guard = transpose_misc_guard();
       // step 1: rename and cut
       // step 2: split
       // step 3: reverse
@@ -712,6 +714,8 @@ namespace TAT {
             parity ^= Symmetry::get_split_merge_parity(symmetries_after_transpose, merge_flag, merge_flag_mark);
          }
 
+         auto kernel_guard = transpose_kernel_guard();
+         guard.pause();
          do_transpose(
                source_block.data() + total_source_offset,
                destination_block.data() + total_destination_offset,
@@ -724,6 +728,7 @@ namespace TAT {
                rank_at_transpose,
                total_size,
                parity);
+         guard.resume();
       }
 
       return result;

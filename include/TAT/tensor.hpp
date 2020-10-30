@@ -135,6 +135,10 @@ namespace TAT {
          return result;
       }
 
+      [[nodiscard]] bool is_valid() const {
+         return core;
+      }
+
 #ifdef TAT_USE_VALID_DEFAULT_TENSOR
       Tensor() : Tensor(1){};
 #else

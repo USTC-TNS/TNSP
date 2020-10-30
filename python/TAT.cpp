@@ -247,7 +247,7 @@ namespace TAT {
             .def(py::self /= ScalarType())
             .def("__str__",
                  [](const T& tensor) {
-                    if (tensor.core) {
+                    if (tensor.is_valid()) {
                        return tensor.show();
                     } else {
                        return std::string("{}");
@@ -255,7 +255,7 @@ namespace TAT {
                  })
             .def("__repr__",
                  [](const T& tensor) {
-                    if (tensor.core) {
+                    if (tensor.is_valid()) {
                        return "Tensor" + tensor.show();
                     } else {
                        return std::string("Tensor{}");

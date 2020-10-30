@@ -49,6 +49,7 @@
 // TAT_USE_COPY_WITHOUT_WARNING 复制数据的时候不产生警告
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_EASY_CONVERSION tensor的各个接口可以自动转化类型 TODO 目前并不是所有接口都支持之
+// TAT_USE_NO_TIMER 禁用对常见操作进行计时
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
 // TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
 #ifdef TAT_ENABLE_ALL_OPTIONAL_FEATURE
@@ -109,19 +110,21 @@ namespace TAT {
    };
    inline const evil_t evil;
 
-   void TAT_nothing(const char*) {}
+   inline void TAT_nothing(const char*) {}
+
+   inline void TAT_log(const char* message);
 
    /**
     * \brief TAT使用的打印警告
     * \param message 待打印的内容
     */
-   void TAT_warning(const char* message);
+   inline void TAT_warning(const char* message);
 
    /**
     * \brief TAT使用的抛出运行时异常
     * \param message 异常说明
     */
-   void TAT_error(const char* message);
+   inline void TAT_error(const char* message);
 
    constexpr auto TAT_warning_or_error_when_copy_data =
 #ifdef TAT_USE_COPY_WITHOUT_WARNING

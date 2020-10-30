@@ -240,6 +240,16 @@ namespace TAT {
 #endif
    }
 
+   inline void TAT_log(const char* message) {
+      std::cerr << console_yellow;
+#ifdef TAT_USE_MPI
+      if (mpi.size != 1) {
+         std::clog << "[rank " << mpi.rank << "] ";
+      }
+#endif
+      std::clog << message << console_origin << std::endl;
+   }
+
    inline void TAT_warning(const char* message) {
       std::cerr << console_red;
 #ifdef TAT_USE_MPI
