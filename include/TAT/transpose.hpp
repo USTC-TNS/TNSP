@@ -173,22 +173,22 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          const Rank rank) {
       // std::vector<Size> index_list_source(rank, 0);
       std::vector<Size> index_list_destination(rank, 0);
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
 
-      std::vector<Size> leading_source_by_destination(rank);
+      std::vector<Size> leadings_source_by_destination(rank);
       for (auto i = 0; i < rank; i++) {
          auto j = plan_destination_to_source[i];
-         leading_source_by_destination[i] = leading_source[j];
+         leadings_source_by_destination[i] = leadings_source[j];
       }
 
       tensor_transpose_kernel<ScalarType, parity>(
-            data_source, data_destination, dimensions_destination.data(), leading_source_by_destination.data(), leading_destination.data(), rank);
+            data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
    }
 
    // 去掉dimension = 1的边
@@ -197,8 +197,8 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          const Rank& rank) {
       std::vector<bool> is_one_source;
       std::vector<bool> is_one_destination;
@@ -241,22 +241,22 @@ namespace TAT {
 
       std::vector<Size> result_dimensions_source;
       std::vector<Size> result_dimensions_destination;
-      std::vector<Size> result_leading_source;
-      std::vector<Size> result_leading_destination;
+      std::vector<Size> result_leadings_source;
+      std::vector<Size> result_leadings_destination;
       result_dimensions_source.reserve(result_rank);
       result_dimensions_destination.reserve(result_rank);
-      result_leading_source.reserve(result_rank);
-      result_leading_destination.reserve(result_rank);
+      result_leadings_source.reserve(result_rank);
+      result_leadings_destination.reserve(result_rank);
       for (Rank i = 0; i < rank; i++) {
          if (dimensions_source[i] != 1) {
             result_dimensions_source.push_back(dimensions_source[i]);
-            result_leading_source.push_back(leading_source[i]);
+            result_leadings_source.push_back(leadings_source[i]);
          }
       }
       for (Rank i = 0; i < rank; i++) {
          if (dimensions_destination[i] != 1) {
             result_dimensions_destination.push_back(dimensions_destination[i]);
-            result_leading_destination.push_back(leading_destination[i]);
+            result_leadings_destination.push_back(leadings_destination[i]);
          }
       }
       return std::make_tuple(
@@ -264,8 +264,8 @@ namespace TAT {
             std::move(result_plan_destination_to_source),
             std::move(result_dimensions_source),
             std::move(result_dimensions_destination),
-            std::move(result_leading_source),
-            std::move(result_leading_destination),
+            std::move(result_leadings_source),
+            std::move(result_leadings_destination),
             result_rank);
    }
 
@@ -274,15 +274,15 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          const Rank& rank) {
       std::vector<bool> merging_source_to_destination(rank, false);
       std::vector<bool> merging_destination_to_source(rank, false);
       for (Rank i = 1; i < rank; i++) {
          if (const auto j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
-                                                           leading_source[i - 1] == leading_source[i] * dimensions_source[i] &&
-                                                           leading_destination[j - 1] == leading_destination[j] * dimensions_destination[j]) {
+                                                           leadings_source[i - 1] == leadings_source[i] * dimensions_source[i] &&
+                                                           leadings_destination[j - 1] == leadings_destination[j] * dimensions_destination[j]) {
             merging_source_to_destination[i] = true;
             merging_destination_to_source[plan_source_to_destination[i]] = true;
          }
@@ -321,17 +321,17 @@ namespace TAT {
       auto result_rank = Rank(result_plan_source_to_destination.size());
       std::vector<Size> result_dimensions_source(result_rank);
       std::vector<Size> result_dimensions_destination(result_rank);
-      std::vector<Size> result_leading_source(result_rank);
-      std::vector<Size> result_leading_destination(result_rank);
+      std::vector<Size> result_leadings_source(result_rank);
+      std::vector<Size> result_leadings_destination(result_rank);
       for (Rank i = result_rank, j = rank; i-- > 0;) {
-         result_leading_source[i] = leading_source[--j];
+         result_leadings_source[i] = leadings_source[--j];
          result_dimensions_source[i] = dimensions_source[j];
          while (merging_source_to_destination[j]) {
             result_dimensions_source[i] *= dimensions_source[--j];
          }
       }
       for (Rank i = result_rank, j = rank; i-- > 0;) {
-         result_leading_destination[i] = leading_destination[--j];
+         result_leadings_destination[i] = leadings_destination[--j];
          result_dimensions_destination[i] = dimensions_destination[j];
          while (merging_destination_to_source[j]) {
             result_dimensions_destination[i] *= dimensions_destination[--j];
@@ -343,8 +343,8 @@ namespace TAT {
             std::move(result_plan_destination_to_source),
             std::move(result_dimensions_source),
             std::move(result_dimensions_destination),
-            std::move(result_leading_source),
-            std::move(result_leading_destination),
+            std::move(result_leadings_source),
+            std::move(result_leadings_destination),
             result_rank);
    }
 
@@ -356,8 +356,8 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          Rank rank,
          Size total_size,
          bool parity) {
@@ -378,32 +378,32 @@ namespace TAT {
             cutting_plan_destination_to_source,
             cutting_dimensions_source,
             cutting_dimensions_destination,
-            cutting_leading_source,
-            cutting_leading_destination,
+            cutting_leadings_source,
+            cutting_leadings_destination,
             cutting_rank] =
             cutting_for_transpose(
                   plan_source_to_destination,
                   plan_destination_to_source,
                   dimensions_source,
                   dimensions_destination,
-                  leading_source,
-                  leading_destination,
+                  leadings_source,
+                  leadings_destination,
                   rank);
 
       auto [real_plan_source_to_destination,
             real_plan_destination_to_source,
             real_dimensions_source,
             real_dimensions_destination,
-            real_leading_source,
-            real_leading_destination,
+            real_leadings_source,
+            real_leadings_destination,
             real_rank] =
             merging_for_transpose(
                   cutting_plan_source_to_destination,
                   cutting_plan_destination_to_source,
                   cutting_dimensions_source,
                   cutting_dimensions_destination,
-                  cutting_leading_source,
-                  cutting_leading_destination,
+                  cutting_leadings_source,
+                  cutting_leadings_destination,
                   cutting_rank);
 
       // TODO: 需要考虑极端细致的情况
@@ -415,8 +415,8 @@ namespace TAT {
                real_plan_destination_to_source,
                real_dimensions_source,
                real_dimensions_destination,
-               real_leading_source,
-               real_leading_destination,
+               real_leadings_source,
+               real_leadings_destination,
                real_rank);
       } else {
          simple_transpose<ScalarType, false>(
@@ -426,8 +426,8 @@ namespace TAT {
                real_plan_destination_to_source,
                real_dimensions_source,
                real_dimensions_destination,
-               real_leading_source,
-               real_leading_destination,
+               real_leadings_source,
+               real_leadings_destination,
                real_rank);
       }
    }
