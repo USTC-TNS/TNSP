@@ -136,7 +136,7 @@ namespace TAT {
       }
 
       [[nodiscard]] bool is_valid() const {
-         return core;
+         return bool(core);
       }
 
 #ifdef TAT_USE_VALID_DEFAULT_TENSOR
@@ -395,9 +395,9 @@ namespace TAT {
                auto& this_block = iterator->second;
                for (auto i = 0; i < block.size(); i++) {
                   if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
-                     this_block[i] = static_cast<OtherScalarType>(block[i].real());
+                     this_block[i] = OtherScalarType(block[i].real());
                   } else {
-                     this_block[i] = static_cast<OtherScalarType>(block[i]);
+                     this_block[i] = OtherScalarType(block[i]);
                   }
                }
             }
