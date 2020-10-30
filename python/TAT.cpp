@@ -119,14 +119,46 @@ namespace TAT {
    };
 
    template<typename ScalarType, typename Symmetry>
-   struct block_of_tensor {
+   struct unordered_block_of_tensor {
       py::object tensor;
       std::map<Name, Symmetry> position;
-      // py::tuple position
-      // 这里应该是list[(name,symmetry)], 因为有顺序
-      // 或者是map[name->symmetry], 应该都支持所以这个地方应该是py::object, 在buffer中设置转化
-      // TODO
    };
+
+   template<typename ScalarType, typename Symmetry>
+   struct ordered_block_of_tensor {
+      py::object tensor;
+      std::vector<std::tuple<Name, Symmetry>> position;
+   };
+
+   template<typename Symmetry>
+   auto generate_vector_of_name_and_symmetry(const std::vector<Name>& position) {
+      auto real_position = std::vector<std::tuple<Name, Symmetry>>();
+      for (const auto& n : position) {
+         real_position.push_back({n, Symmetry()});
+      }
+      return real_position;
+   }
+
+   template<typename Block>
+   auto try_get_numpy_array(Block& block) {
+      auto result = py::cast(block, py::return_value_policy::move);
+      try {
+         return py::module::import("numpy").attr("array")(result, py::arg("copy") = false);
+      } catch (const py::error_already_set&) {
+         return result;
+      }
+   }
+
+   template<typename Block>
+   auto try_set_numpy_array(Block& block, const py::object& object) {
+      auto result = py::cast(block, py::return_value_policy::move);
+      try {
+         result = py::module::import("numpy").attr("array")(result, py::arg("copy") = false);
+      } catch (const py::error_already_set&) {
+         throw std::runtime_error("Cannot import numpy but setting block of tensor need numpy");
+      }
+      result.attr("__setitem__")(py::ellipsis(), object);
+   }
 
    template<typename ScalarType, typename Symmetry>
    void declare_tensor(
@@ -142,7 +174,8 @@ namespace TAT {
       using S = Singular<ScalarType, Symmetry>;
       using E = Edge<Symmetry>;
       using BS = blocks_of_tensor<ScalarType, Symmetry>;
-      using B = block_of_tensor<ScalarType, Symmetry>;
+      using B1 = unordered_block_of_tensor<ScalarType, Symmetry>;
+      using B2 = ordered_block_of_tensor<ScalarType, Symmetry>;
       std::string tensor_name = scalar_short_name + symmetry_short_name;
       py::class_<BS>(
             block_m,
@@ -150,30 +183,39 @@ namespace TAT {
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def("__getitem__",
                  [](const BS& bs, std::map<Name, Symmetry> position) {
-                    auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
-                    auto result = py::cast(block, py::return_value_policy::move);
-                    try {
-                       return py::module::import("numpy").attr("array")(result, py::arg("copy") = false);
-                    } catch (const py::error_already_set&) {
-                       return result;
-                    }
+                    auto block = B1{bs.tensor, std::move(position)};
+                    return try_get_numpy_array(block);
                  })
-            .def("__setitem__", [](BS& bs, std::map<Name, Symmetry> position, const py::object& object) {
-               auto block = block_of_tensor<ScalarType, Symmetry>{bs.tensor, std::move(position)};
-               py::object result;
-               try {
-                  result = py::module::import("numpy").attr("array")(block, py::arg("copy") = false);
-               } catch (const py::error_already_set&) {
-                  throw std::runtime_error("Cannot import numpy but setting block of tensor need numpy");
-               }
-               result.attr("__setitem__")(py::ellipsis(), object);
+            .def("__setitem__",
+                 [](BS& bs, std::map<Name, Symmetry> position, const py::object& object) {
+                    auto block = B1{bs.tensor, std::move(position)};
+                    try_set_numpy_array(block, object);
+                 })
+            .def("__getitem__",
+                 [](const BS& bs, std::vector<std::tuple<Name, Symmetry>> position) {
+                    auto block = B2{bs.tensor, std::move(position)};
+                    return try_get_numpy_array(block);
+                 })
+            .def("__setitem__",
+                 [](BS& bs, std::vector<std::tuple<Name, Symmetry>> position, const py::object& object) {
+                    auto block = B2{bs.tensor, std::move(position)};
+                    try_set_numpy_array(block, object);
+                 })
+            .def("__getitem__",
+                 [](const BS& bs, const std::vector<Name>& position) {
+                    auto block = B2{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)};
+                    return try_get_numpy_array(block);
+                 })
+            .def("__setitem__", [](BS& bs, const std::vector<Name>& position, const py::object& object) {
+               auto block = B2{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)};
+               try_set_numpy_array(block, object);
             });
-      py::class_<B>(
+      py::class_<B1>(
             block_m,
-            tensor_name.c_str(),
-            ("Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
+            ("U_" + tensor_name).c_str(),
+            ("Unordered Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
             py::buffer_protocol())
-            .def_buffer([](B& b) {
+            .def_buffer([](B1& b) {
                // 返回的buffer是可变的
                auto& tensor = py::cast<T&>(b.tensor);
                auto& block = tensor.block(b.position);
@@ -193,6 +235,48 @@ namespace TAT {
                }
                return py::buffer_info{
                      block.data(), sizeof(ScalarType), py::format_descriptor<ScalarType>::format(), rank, std::move(dimensions), std::move(leadings)};
+            });
+      py::class_<B2>(
+            block_m,
+            ("O_" + tensor_name).c_str(),
+            ("Ordered Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
+            py::buffer_protocol())
+            .def_buffer([](B2& b) {
+               // 返回的buffer是可变的
+               auto& tensor = py::cast<T&>(b.tensor);
+               auto position_map = std::map<Name, Symmetry>();
+               for (const auto& [name, symmetry] : b.position) {
+                  position_map[name] = symmetry;
+               }
+               auto& block = tensor.block(position_map);
+               const Rank rank = tensor.names.size();
+               auto dimensions = std::vector<int>(rank);
+               auto leadings = std::vector<int>(rank);
+               for (auto i = 0; i < rank; i++) {
+                  dimensions[i] = tensor.core->edges[i].map.at(position_map[tensor.names[i]]);
+                  // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
+               }
+               for (auto i = rank; i-- > 0;) {
+                  if (i == rank - 1) {
+                     leadings[i] = sizeof(ScalarType);
+                  } else {
+                     leadings[i] = leadings[i + 1] * dimensions[i + 1];
+                  }
+               }
+               auto real_dimensions = std::vector<int>(rank);
+               auto real_leadings = std::vector<int>(rank);
+               for (auto i = 0; i < rank; i++) {
+                  auto j = tensor.name_to_index.at(std::get<0>(b.position[i]));
+                  real_dimensions[i] = dimensions[j];
+                  real_leadings[i] = leadings[j];
+               }
+               return py::buffer_info{
+                     block.data(),
+                     sizeof(ScalarType),
+                     py::format_descriptor<ScalarType>::format(),
+                     rank,
+                     std::move(real_dimensions),
+                     std::move(real_leadings)};
             });
       ScalarType one = 1;
       if constexpr (is_complex_v<ScalarType>) {
@@ -532,7 +616,7 @@ namespace TAT {
             .def_static("barrier", &T::barrier, "MPI barrier")
             .def_readonly_static("mpi", &T::mpi, "MPI Handle")
 #endif
-            .def_static("set_seed", &set_random_seed, "Set Random Seed")
+            .def_static("set_random_seed", &set_random_seed, "Set Random Seed")
             .def(
                   "rand",
                   [](T& tensor, ScalarType min, ScalarType max) -> T& {
