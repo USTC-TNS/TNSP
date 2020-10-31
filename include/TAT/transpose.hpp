@@ -176,19 +176,123 @@ namespace TAT {
          const std::vector<Size>& leadings_source,
          const std::vector<Size>& leadings_destination,
          const Rank rank) {
-      // std::vector<Size> index_list_source(rank, 0);
-      std::vector<Size> index_list_destination(rank, 0);
-      const ScalarType* current_source = data_source;
-      ScalarType* current_destination = data_destination;
-
-      std::vector<Size> leadings_source_by_destination(rank);
+      auto leadings_source_by_destination = std::vector<Size>();
+      leadings_source_by_destination.reserve(rank);
       for (auto i = 0; i < rank; i++) {
          auto j = plan_destination_to_source[i];
-         leadings_source_by_destination[i] = leadings_source[j];
+         leadings_source_by_destination.push_back(leadings_source[j]);
       }
 
       tensor_transpose_kernel<ScalarType, parity>(
             data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
+   }
+
+   template<typename ScalarType, bool parity>
+   void inturn_transpose(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto mask_source = std::vector<bool>(rank, false);
+      auto mask_destination = std::vector<bool>(rank, false);
+      auto real_dimensions = std::vector<Size>(rank);
+      auto real_leadings_source = std::vector<Size>(rank);
+      auto real_leadings_destination = std::vector<Size>(rank);
+
+      bool source_exhausted = false;
+      bool destination_exhausted = false;
+      for (auto current_index = rank, current_index_source = rank, current_index_destination = rank; current_index-- > 0;) {
+         if (current_index_destination != rank &&
+             (current_index_source == rank || (destination_exhausted || (!source_exhausted && leadings_destination[current_index_destination] >
+                                                                                                    leadings_source[current_index_source])))) {
+            // add src
+            do {
+               current_index_source--;
+            } while (mask_source[current_index_source]);
+            auto response_index_destination = plan_source_to_destination[current_index_source];
+
+            real_dimensions[current_index] = dimensions_source[current_index_source];
+            real_leadings_source[current_index] = leadings_source[current_index_source];
+            real_leadings_destination[current_index] = leadings_destination[response_index_destination];
+
+            mask_destination[response_index_destination] = true;
+            mask_source[current_index_source] = true;
+
+            if (current_index_source == 0) {
+               source_exhausted = true;
+            }
+         } else {
+            // add dst
+            do {
+               current_index_destination--;
+            } while (mask_destination[current_index_destination]);
+            auto response_index_source = plan_destination_to_source[current_index_destination];
+
+            real_dimensions[current_index] = dimensions_destination[current_index_destination];
+            real_leadings_destination[current_index] = leadings_destination[current_index_destination];
+            real_leadings_source[current_index] = leadings_source[response_index_source];
+
+            mask_source[response_index_source] = true;
+            mask_destination[current_index_destination] = true;
+
+            if (current_index_destination == 0) {
+               destination_exhausted = true;
+            }
+         }
+      }
+
+      tensor_transpose_kernel<ScalarType, parity>(
+            data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+   }
+
+   inline auto find_in_leading(const std::vector<Size>& leading, Size size) {
+      for (auto i = leading.size(); i-- > 0;) {
+         if (leading[i] > size) {
+            return i;
+         }
+      }
+      return -1; // -1 means no split needed
+   }
+
+   // TODO 其实判断应该是下面的dimension乘上下面的leading而不是自己的leading，只不过稠密的时候他们相等
+   // 这个部分也许应该放在noone和merge那一块
+   template<typename ScalarType, bool parity>
+   void block_transpose(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      Size block_size = 2;
+      while (block_size * block_size * sizeof(ScalarType) < l1_cache) {
+         block_size <<= 1u;
+      }
+      block_size >>= 1u;
+      auto source_split_index = find_in_leading(leadings_source, block_size);
+      if (source_split_index != -1) {
+         auto this_leading = leadings_source[source_split_index];
+         auto next_leading = leadings_source[source_split_index + 1];
+         auto this_dimension = this_leading / next_leading;
+         auto this_dimension_2 = 2;
+         while (next_leading * this_dimension_2 < block_size) {
+            this_dimension_2 <<= 1u;
+         }
+         this_dimension_2 >>= 1u;
+         auto this_dimension_1 = this_dimension / this_dimension_2;
+         if (this_dimension_1 * this_dimension_2 == this_dimension) {
+            auto middle_leading = this_dimension_2 * next_leading;
+         }
+      }
+      // 这个plan需要重新分析，很烦
    }
 
    // 去掉dimension = 1的边
