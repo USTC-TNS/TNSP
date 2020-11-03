@@ -22,11 +22,13 @@
 #define TAT_SCALAR_HPP
 
 #include "tensor.hpp"
+#include "timer.hpp"
 
 namespace TAT {
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                                       \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry>                                                        \
    auto OP(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {                        \
+      auto guard = scalar_outplace_guard();                                                                                       \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                            \
       if (tensor_1.is_scalar()) {                                                                                                 \
          const auto& x = ScalarType1(tensor_1);                                                                                   \
@@ -57,7 +59,9 @@ namespace TAT {
          auto real_tensor_2 = &tensor_2;                                                                                          \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                                     \
          if (tensor_1.names != tensor_2.names) {                                                                                  \
+            guard.pause();                                                                                                        \
             new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                                    \
+            guard.resume();                                                                                                       \
             real_tensor_2 = &new_tensor_2;                                                                                        \
          }                                                                                                                        \
          auto real_result_edge = &tensor_1.core->edges;                                                                           \
@@ -131,6 +135,7 @@ namespace TAT {
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2)                                                                              \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry>                                                        \
    Tensor<ScalarType1, Symmetry>& OP(Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2) {    \
+      auto guard = scalar_inplace_guard();                                                                                        \
       if (tensor_1.core.use_count() != 1) {                                                                                       \
          TAT_warning_or_error_when_inplace_scalar("Inplace Operator On Tensor Shared");                                           \
       }                                                                                                                           \
@@ -146,7 +151,9 @@ namespace TAT {
          auto real_tensor_2 = &tensor_2;                                                                                          \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                                     \
          if (tensor_1.names != tensor_2.names) {                                                                                  \
+            guard.pause();                                                                                                        \
             new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                                    \
+            guard.resume();                                                                                                       \
             real_tensor_2 = &new_tensor_2;                                                                                        \
          }                                                                                                                        \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                                \

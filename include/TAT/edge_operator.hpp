@@ -22,6 +22,7 @@
 #define TAT_EDGE_OPERATOR_HPP
 
 #include "tensor.hpp"
+#include "timer.hpp"
 #include "transpose.hpp"
 
 namespace TAT {
@@ -36,6 +37,7 @@ namespace TAT {
          const bool apply_parity,
          const std::array<std::set<Name>, 4>& parity_exclude_name,
          const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all) const {
+      auto guard = transpose_misc_guard();
       // step 1: rename and cut
       // step 2: split
       // step 3: reverse
@@ -129,7 +131,7 @@ namespace TAT {
                         this_edge.map[symmetry] = new_dimension < dimension ? new_dimension : dimension;
                      }
                      // 如果new_dimension=0则直接去掉了这个symmetry
-                     // 这个会影响leading, 故只需修改原来算offset处的代码即可, 替换回core->edges
+                     // 这个会影响leadings, 故只需修改原来算offset处的代码即可, 替换回core->edges
                   } else {
                      this_edge.map[symmetry] = dimension;
                   }
@@ -628,8 +630,8 @@ namespace TAT {
          // block             O              O
          //
          // leadings
-         // leading_of_source[before_split] -> leading_before_transpose[at_transpose]
-         // leading_of_destination[after_merge] -> leading_after_transpose[at_transpose]
+         // leadings_of_source[before_split] -> leadings_before_transpose[at_transpose]
+         // leadings_of_destination[after_merge] -> leadings_after_transpose[at_transpose]
          const auto& [source_symmetries, source_offsets] = source_symmetries_and_offsets;
 
          auto symmetries_after_transpose = std::vector<Symmetry>(rank_at_transpose);
@@ -647,7 +649,7 @@ namespace TAT {
          const auto& [destination_symmetries, destination_offsets] = data_after_transpose_to_destination.at(symmetries_after_transpose);
 
          // 已经获得四个symmetry, 两个offset, 两个dimension
-         // 现在获得leading和开始点
+         // 现在获得leadings和开始点
 
          const auto& source_block = core->blocks.at(source_symmetries);
          auto& destination_block = result.core->blocks.at(destination_symmetries);
@@ -664,40 +666,40 @@ namespace TAT {
             total_destination_offset += destination_offsets[i];
          }
 
-         auto leading_of_source = std::vector<Size>(rank_before_split);
+         auto leadings_of_source = std::vector<Size>(rank_before_split);
          for (auto i = rank_before_split; i-- > 0;) {
             if (i == rank_before_split - 1) {
-               leading_of_source[i] = 1;
+               leadings_of_source[i] = 1;
             } else {
                // 这里将edge_before_split换为core->edges
-               leading_of_source[i] = leading_of_source[i + 1] * core->edges[i + 1].map.at(source_symmetries[i + 1]);
+               leadings_of_source[i] = leadings_of_source[i + 1] * core->edges[i + 1].map.at(source_symmetries[i + 1]);
             }
          }
-         auto leading_before_transpose = std::vector<Size>(rank_at_transpose);
+         auto leadings_before_transpose = std::vector<Size>(rank_at_transpose);
          for (auto i = rank_at_transpose; i-- > 0;) {
             if (i != rank_at_transpose - 1 && split_flag[i] == split_flag[i + 1]) {
-               leading_before_transpose[i] = leading_before_transpose[i + 1] * dimensions_before_transpose[i + 1];
+               leadings_before_transpose[i] = leadings_before_transpose[i + 1] * dimensions_before_transpose[i + 1];
                // dimensions_before_transpose[i + 1] == edge_before_transpose[i + 1].map.at(symmetries_before_transpose[i + 1]);
             } else {
-               leading_before_transpose[i] = leading_of_source[split_flag[i]];
+               leadings_before_transpose[i] = leadings_of_source[split_flag[i]];
             }
          }
 
-         auto leading_of_destination = std::vector<Size>(rank_after_merge);
+         auto leadings_of_destination = std::vector<Size>(rank_after_merge);
          for (auto i = rank_after_merge; i-- > 0;) {
             if (i == rank_after_merge - 1) {
-               leading_of_destination[i] = 1;
+               leadings_of_destination[i] = 1;
             } else {
-               leading_of_destination[i] = leading_of_destination[i + 1] * edge_after_merge[i + 1].map.at(destination_symmetries[i + 1]);
+               leadings_of_destination[i] = leadings_of_destination[i + 1] * edge_after_merge[i + 1].map.at(destination_symmetries[i + 1]);
             }
          }
-         auto leading_after_transpose = std::vector<Size>(rank_at_transpose);
+         auto leadings_after_transpose = std::vector<Size>(rank_at_transpose);
          for (auto i = rank_at_transpose; i-- > 0;) {
             if (i != rank_at_transpose - 1 && merge_flag[i] == merge_flag[i + 1]) {
-               leading_after_transpose[i] = leading_after_transpose[i + 1] * dimensions_after_transpose[i + 1];
+               leadings_after_transpose[i] = leadings_after_transpose[i + 1] * dimensions_after_transpose[i + 1];
                // dimensions_after_transpose[i + 1] == edge_after_transpose[i + 1].map.at(symmetries_after_transpose[i + 1]);
             } else {
-               leading_after_transpose[i] = leading_of_destination[merge_flag[i]];
+               leadings_after_transpose[i] = leadings_of_destination[merge_flag[i]];
             }
          }
 
@@ -712,6 +714,8 @@ namespace TAT {
             parity ^= Symmetry::get_split_merge_parity(symmetries_after_transpose, merge_flag, merge_flag_mark);
          }
 
+         auto kernel_guard = transpose_kernel_guard();
+         guard.pause();
          do_transpose(
                source_block.data() + total_source_offset,
                destination_block.data() + total_destination_offset,
@@ -719,11 +723,12 @@ namespace TAT {
                plan_destination_to_source,
                dimensions_before_transpose,
                dimensions_after_transpose,
-               leading_before_transpose,
-               leading_after_transpose,
+               leadings_before_transpose,
+               leadings_after_transpose,
                rank_at_transpose,
                total_size,
                parity);
+         guard.resume();
       }
 
       return result;

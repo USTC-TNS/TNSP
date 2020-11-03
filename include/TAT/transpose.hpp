@@ -111,14 +111,21 @@ namespace TAT {
    }
 #endif
 
+   // 这个是最简单的张量转置中实际搬运数据的部分，numpy也是这么写的，区别在于dimension和两个leading的顺序是可以一同交换的
+   // numpy保证destination的leading是降序的， simple_transpose就是这么调用tensor_transpose_kernel的
+   // 另外一个正在写的inturn_transpose是src dst轮流来, 可能会对cache更加友好, 日后还会根据cache大小split边，这样类似于矩阵转置中的预分块
    template<typename ScalarType, bool parity>
    void tensor_transpose_kernel(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
-         const Size* const dimension,
-         const Size* const leading_source,
-         const Size* const leading_destination,
+         const Size* const __restrict dimension,
+         const Rank* const __restrict,
+         const Size* const __restrict,
+         const Size* const __restrict leading_source,
+         const Size* const __restrict leading_destination,
          const Rank rank) {
+      auto guard = transpose_kernel_core_guard();
+
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
       std::vector<Size> index_list(rank, 0);
@@ -151,6 +158,73 @@ namespace TAT {
          }
       }
    }
+
+   template<typename ScalarType, bool parity>
+   void tensor_transpose_kernel_with_block(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         Size* const __restrict dimension,
+         const Rank* const __restrict checked_index,
+         Size* const __restrict incomplete_dimension,
+         const Size* const __restrict leading_source,
+         const Size* const __restrict leading_destination,
+         const Rank rank) {
+      auto guard = transpose_kernel_core_guard();
+
+      const ScalarType* current_source = data_source;
+      ScalarType* current_destination = data_destination;
+      std::vector<Size> index_list(rank, 0);
+      while (true) {
+         if constexpr (parity) {
+            *current_destination = -*current_source;
+         } else {
+            *current_destination = *current_source;
+         }
+
+         Rank active_position = rank - 1;
+
+         index_list[active_position]++;
+         current_source += leading_source[active_position];
+         current_destination += leading_destination[active_position];
+
+         // index_list[active_position] == dimension[active_position]
+         // 变成
+         // active_checked_position = checked_index[active_position]
+         // if active_checked_position == rank
+         //    then index_list[active_position] == dimension[active_position]
+         //    else if index_list[active_checked_position] == dimension[active_checked_position] - 1
+         //         then index_list[active_position] == incomplete_dimension[active_position]
+         //         else index_list[active_position] == dimension[active_position]
+
+         while (index_list[active_position] == dimension[active_position]) {
+            index_list[active_position] = 0;
+            current_source -= dimension[active_position] * leading_source[active_position];
+            current_destination -= dimension[active_position] * leading_destination[active_position];
+            if (Rank active_checked_position = checked_index[active_position]; active_checked_position != rank) {
+               auto temporary = dimension[active_checked_position];
+               dimension[active_checked_position] = incomplete_dimension[active_checked_position];
+               incomplete_dimension[active_checked_position] = temporary;
+            }
+
+            if (active_position == 0) {
+               return;
+            }
+            active_position--;
+
+            index_list[active_position]++;
+            current_source += leading_source[active_position];
+            current_destination += leading_destination[active_position];
+         }
+
+         if (index_list[active_position] == dimension[active_position] - 1) {
+            if (Rank active_checked_position = checked_index[active_position]; active_checked_position != rank) {
+               auto temporary = dimension[active_checked_position];
+               dimension[active_checked_position] = incomplete_dimension[active_checked_position];
+               incomplete_dimension[active_checked_position] = temporary;
+            }
+         }
+      }
+   }
    // TODO: l3太大了, 所以只按着l2和l1来划分, 这样合适么
    // 注意，现在这段代码被我暂时删掉了
    //
@@ -165,6 +239,83 @@ namespace TAT {
    // 再交替iter dim
    // 即可兼容矩阵转置的优化方式
 
+   inline auto simple_configure(
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto leadings_source_by_destination = std::vector<Size>();
+      leadings_source_by_destination.reserve(rank);
+      for (auto i = 0; i < rank; i++) {
+         auto j = plan_destination_to_source[i];
+         leadings_source_by_destination.push_back(leadings_source[j]);
+      }
+
+      return std::make_tuple(dimensions_destination, leadings_source_by_destination, leadings_destination);
+   }
+
+   inline auto inturn_configure(
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto mask_source = std::vector<bool>(rank, false);
+      auto mask_destination = std::vector<bool>(rank, false);
+      auto real_dimensions = std::vector<Size>(rank);
+      auto real_leadings_source = std::vector<Size>(rank);
+      auto real_leadings_destination = std::vector<Size>(rank);
+
+      bool source_exhausted = false;
+      bool destination_exhausted = false;
+      for (auto current_index = rank, current_index_source = rank, current_index_destination = rank; current_index-- > 0;) {
+         if (current_index_destination != rank &&
+             (current_index_source == rank || (destination_exhausted || (!source_exhausted && leadings_destination[current_index_destination] >
+                                                                                                    leadings_source[current_index_source])))) {
+            // add src
+            do {
+               current_index_source--;
+            } while (mask_source[current_index_source]);
+            auto response_index_destination = plan_source_to_destination[current_index_source];
+
+            real_dimensions[current_index] = dimensions_source[current_index_source];
+            real_leadings_source[current_index] = leadings_source[current_index_source];
+            real_leadings_destination[current_index] = leadings_destination[response_index_destination];
+
+            mask_destination[response_index_destination] = true;
+            mask_source[current_index_source] = true;
+
+            if (current_index_source == 0) {
+               source_exhausted = true;
+            }
+         } else {
+            // add dst
+            do {
+               current_index_destination--;
+            } while (mask_destination[current_index_destination]);
+            auto response_index_source = plan_destination_to_source[current_index_destination];
+
+            real_dimensions[current_index] = dimensions_destination[current_index_destination];
+            real_leadings_destination[current_index] = leadings_destination[current_index_destination];
+            real_leadings_source[current_index] = leadings_source[response_index_source];
+
+            mask_source[response_index_source] = true;
+            mask_destination[current_index_destination] = true;
+
+            if (current_index_destination == 0) {
+               destination_exhausted = true;
+            }
+         }
+      }
+
+      return std::make_tuple(std::move(real_dimensions), std::move(real_leadings_source), std::move(real_leadings_destination));
+   }
+
    template<typename ScalarType, bool parity>
    void simple_transpose(
          const ScalarType* const __restrict data_source,
@@ -173,32 +324,189 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          const Rank rank) {
-      // std::vector<Size> index_list_source(rank, 0);
-      std::vector<Size> index_list_destination(rank, 0);
-      const ScalarType* current_source = data_source;
-      ScalarType* current_destination = data_destination;
+      auto [dimension, leading_of_source, leading_of_destination] = simple_configure(
+            plan_source_to_destination,
+            plan_destination_to_source,
+            dimensions_source,
+            dimensions_destination,
+            leadings_source,
+            leadings_destination,
+            rank);
 
-      std::vector<Size> leading_source_by_destination(rank);
-      for (auto i = 0; i < rank; i++) {
-         auto j = plan_destination_to_source[i];
-         leading_source_by_destination[i] = leading_source[j];
-      }
+      auto checked_index = std::vector<Rank>(rank, rank);
+      auto incomplete_dimension = std::vector<Size>(rank, 0);
 
       tensor_transpose_kernel<ScalarType, parity>(
-            data_source, data_destination, dimensions_destination.data(), leading_source_by_destination.data(), leading_destination.data(), rank);
+            data_source,
+            data_destination,
+            dimension.data(),
+            checked_index.data(),
+            incomplete_dimension.data(),
+            leading_of_source.data(),
+            leading_of_destination.data(),
+            rank);
    }
 
-   // 去掉dimension = 1的边
-   inline auto cutting_for_transpose(
+   template<typename ScalarType, bool parity>
+   void simple_transpose_with_block(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
          const std::vector<Rank>& plan_source_to_destination,
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto [dimension, leading_of_source, leading_of_destination] = simple_configure(
+            plan_source_to_destination,
+            plan_destination_to_source,
+            dimensions_source,
+            dimensions_destination,
+            leadings_source,
+            leadings_destination,
+            rank);
+
+      auto checked_index = std::vector<Rank>(rank, rank);
+      auto incomplete_dimension = std::vector<Size>(rank, 0);
+
+      tensor_transpose_kernel_with_block<ScalarType, parity>(
+            data_source,
+            data_destination,
+            dimension.data(),
+            checked_index.data(),
+            incomplete_dimension.data(),
+            leading_of_source.data(),
+            leading_of_destination.data(),
+            rank);
+   }
+
+   template<typename ScalarType, bool parity>
+   void inturn_transpose(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto [dimension, leading_of_source, leading_of_destination] = inturn_configure(
+            plan_source_to_destination,
+            plan_destination_to_source,
+            dimensions_source,
+            dimensions_destination,
+            leadings_source,
+            leadings_destination,
+            rank);
+
+      auto checked_index = std::vector<Rank>(rank, rank);
+      auto incomplete_dimension = std::vector<Size>(rank, 0);
+
+      tensor_transpose_kernel<ScalarType, parity>(
+            data_source,
+            data_destination,
+            dimension.data(),
+            checked_index.data(),
+            incomplete_dimension.data(),
+            leading_of_source.data(),
+            leading_of_destination.data(),
+            rank);
+   }
+
+   template<typename ScalarType, bool parity>
+   void inturn_transpose_with_block(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto [dimension, leading_of_source, leading_of_destination] = inturn_configure(
+            plan_source_to_destination,
+            plan_destination_to_source,
+            dimensions_source,
+            dimensions_destination,
+            leadings_source,
+            leadings_destination,
+            rank);
+
+      auto checked_index = std::vector<Rank>(rank, rank);
+      auto incomplete_dimension = std::vector<Size>(rank, 0);
+
+      tensor_transpose_kernel_with_block<ScalarType, parity>(
+            data_source,
+            data_destination,
+            dimension.data(),
+            checked_index.data(),
+            incomplete_dimension.data(),
+            leading_of_source.data(),
+            leading_of_destination.data(),
+            rank);
+   }
+
+   /*
+   inline auto find_in_leading(const std::vector<Size>& leading, Size size) {
+      for (auto i = leading.size(); i-- > 0;) {
+         if (leading[i] > size) {
+            return Size(i);
+         }
+      }
+      return Size(-1); // -1 means no split needed
+   }
+
+   // TODO 其实判断应该是下面的dimension乘上下面的leading而不是自己的leading，只不过稠密的时候他们相等
+   // 这个部分也许应该放在noone和merge那一块
+   template<typename ScalarType, bool parity>
+   void block_transpose(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
+         const Rank rank) {
+      Size block_size = 2;
+      while (block_size * block_size * sizeof(ScalarType) < l1_cache) {
+         block_size <<= 1u;
+      }
+      block_size >>= 1u;
+      auto source_split_index = find_in_leading(leadings_source, block_size);
+      if (source_split_index != -1) {
+         auto this_leading = leadings_source[source_split_index];
+         auto next_leading = leadings_source[source_split_index + 1];
+         auto this_dimension = this_leading / next_leading;
+         auto this_dimension_2 = 2;
+         while (next_leading * this_dimension_2 < block_size) {
+            this_dimension_2 <<= 1u;
+         }
+         this_dimension_2 >>= 1u;
+         auto this_dimension_1 = this_dimension / this_dimension_2;
+         if (this_dimension_1 * this_dimension_2 == this_dimension) {
+            auto middle_leading = this_dimension_2 * next_leading;
+         }
+      }
+      // 这个plan需要重新分析，很烦
+   }
+    */
+
+   // 去掉dimension = 1的边
+   inline auto prune_for_transpose(
+         const std::vector<Rank>& plan_source_to_destination,
+         const std::vector<Rank>& plan_destination_to_source,
+         const std::vector<Size>& dimensions_source,
+         const std::vector<Size>& dimensions_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          const Rank& rank) {
       std::vector<bool> is_one_source;
       std::vector<bool> is_one_destination;
@@ -241,22 +549,22 @@ namespace TAT {
 
       std::vector<Size> result_dimensions_source;
       std::vector<Size> result_dimensions_destination;
-      std::vector<Size> result_leading_source;
-      std::vector<Size> result_leading_destination;
+      std::vector<Size> result_leadings_source;
+      std::vector<Size> result_leadings_destination;
       result_dimensions_source.reserve(result_rank);
       result_dimensions_destination.reserve(result_rank);
-      result_leading_source.reserve(result_rank);
-      result_leading_destination.reserve(result_rank);
+      result_leadings_source.reserve(result_rank);
+      result_leadings_destination.reserve(result_rank);
       for (Rank i = 0; i < rank; i++) {
          if (dimensions_source[i] != 1) {
             result_dimensions_source.push_back(dimensions_source[i]);
-            result_leading_source.push_back(leading_source[i]);
+            result_leadings_source.push_back(leadings_source[i]);
          }
       }
       for (Rank i = 0; i < rank; i++) {
          if (dimensions_destination[i] != 1) {
             result_dimensions_destination.push_back(dimensions_destination[i]);
-            result_leading_destination.push_back(leading_destination[i]);
+            result_leadings_destination.push_back(leadings_destination[i]);
          }
       }
       return std::make_tuple(
@@ -264,8 +572,8 @@ namespace TAT {
             std::move(result_plan_destination_to_source),
             std::move(result_dimensions_source),
             std::move(result_dimensions_destination),
-            std::move(result_leading_source),
-            std::move(result_leading_destination),
+            std::move(result_leadings_source),
+            std::move(result_leadings_destination),
             result_rank);
    }
 
@@ -274,15 +582,15 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          const Rank& rank) {
       std::vector<bool> merging_source_to_destination(rank, false);
       std::vector<bool> merging_destination_to_source(rank, false);
       for (Rank i = 1; i < rank; i++) {
          if (const auto j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
-                                                           leading_source[i - 1] == leading_source[i] * dimensions_source[i] &&
-                                                           leading_destination[j - 1] == leading_destination[j] * dimensions_destination[j]) {
+                                                           leadings_source[i - 1] == leadings_source[i] * dimensions_source[i] &&
+                                                           leadings_destination[j - 1] == leadings_destination[j] * dimensions_destination[j]) {
             merging_source_to_destination[i] = true;
             merging_destination_to_source[plan_source_to_destination[i]] = true;
          }
@@ -321,17 +629,17 @@ namespace TAT {
       auto result_rank = Rank(result_plan_source_to_destination.size());
       std::vector<Size> result_dimensions_source(result_rank);
       std::vector<Size> result_dimensions_destination(result_rank);
-      std::vector<Size> result_leading_source(result_rank);
-      std::vector<Size> result_leading_destination(result_rank);
+      std::vector<Size> result_leadings_source(result_rank);
+      std::vector<Size> result_leadings_destination(result_rank);
       for (Rank i = result_rank, j = rank; i-- > 0;) {
-         result_leading_source[i] = leading_source[--j];
+         result_leadings_source[i] = leadings_source[--j];
          result_dimensions_source[i] = dimensions_source[j];
          while (merging_source_to_destination[j]) {
             result_dimensions_source[i] *= dimensions_source[--j];
          }
       }
       for (Rank i = result_rank, j = rank; i-- > 0;) {
-         result_leading_destination[i] = leading_destination[--j];
+         result_leadings_destination[i] = leadings_destination[--j];
          result_dimensions_destination[i] = dimensions_destination[j];
          while (merging_destination_to_source[j]) {
             result_dimensions_destination[i] *= dimensions_destination[--j];
@@ -343,8 +651,8 @@ namespace TAT {
             std::move(result_plan_destination_to_source),
             std::move(result_dimensions_source),
             std::move(result_dimensions_destination),
-            std::move(result_leading_source),
-            std::move(result_leading_destination),
+            std::move(result_leadings_source),
+            std::move(result_leadings_destination),
             result_rank);
    }
 
@@ -356,8 +664,8 @@ namespace TAT {
          const std::vector<Rank>& plan_destination_to_source,
          const std::vector<Size>& dimensions_source,
          const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leading_source,
-         const std::vector<Size>& leading_destination,
+         const std::vector<Size>& leadings_source,
+         const std::vector<Size>& leadings_destination,
          Rank rank,
          Size total_size,
          bool parity) {
@@ -374,37 +682,37 @@ namespace TAT {
       }
       // rank != 0, dimension != 0
 
-      auto [cutting_plan_source_to_destination,
-            cutting_plan_destination_to_source,
-            cutting_dimensions_source,
-            cutting_dimensions_destination,
-            cutting_leading_source,
-            cutting_leading_destination,
-            cutting_rank] =
-            cutting_for_transpose(
+      auto [prune_plan_source_to_destination,
+            prune_plan_destination_to_source,
+            prune_dimensions_source,
+            prune_dimensions_destination,
+            prune_leadings_source,
+            prune_leadings_destination,
+            prune_rank] =
+            prune_for_transpose(
                   plan_source_to_destination,
                   plan_destination_to_source,
                   dimensions_source,
                   dimensions_destination,
-                  leading_source,
-                  leading_destination,
+                  leadings_source,
+                  leadings_destination,
                   rank);
 
       auto [real_plan_source_to_destination,
             real_plan_destination_to_source,
             real_dimensions_source,
             real_dimensions_destination,
-            real_leading_source,
-            real_leading_destination,
+            real_leadings_source,
+            real_leadings_destination,
             real_rank] =
             merging_for_transpose(
-                  cutting_plan_source_to_destination,
-                  cutting_plan_destination_to_source,
-                  cutting_dimensions_source,
-                  cutting_dimensions_destination,
-                  cutting_leading_source,
-                  cutting_leading_destination,
-                  cutting_rank);
+                  prune_plan_source_to_destination,
+                  prune_plan_destination_to_source,
+                  prune_dimensions_source,
+                  prune_dimensions_destination,
+                  prune_leadings_source,
+                  prune_leadings_destination,
+                  prune_rank);
 
       // TODO: 需要考虑极端细致的情况
       if (parity) {
@@ -415,8 +723,8 @@ namespace TAT {
                real_plan_destination_to_source,
                real_dimensions_source,
                real_dimensions_destination,
-               real_leading_source,
-               real_leading_destination,
+               real_leadings_source,
+               real_leadings_destination,
                real_rank);
       } else {
          simple_transpose<ScalarType, false>(
@@ -426,8 +734,8 @@ namespace TAT {
                real_plan_destination_to_source,
                real_dimensions_source,
                real_dimensions_destination,
-               real_leading_source,
-               real_leading_destination,
+               real_leadings_source,
+               real_leadings_destination,
                real_rank);
       }
    }

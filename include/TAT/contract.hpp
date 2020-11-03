@@ -22,6 +22,7 @@
 #define TAT_CONTRACT_HPP
 
 #include "tensor.hpp"
+#include "timer.hpp"
 
 extern "C" {
 int sgemm_(
@@ -184,6 +185,7 @@ namespace TAT {
          const Tensor<ScalarType, Symmetry>& tensor_1,
          const Tensor<ScalarType, Symmetry>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
+      auto guard = contract_misc_guard();
       // 为未来split做准备
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
@@ -361,6 +363,7 @@ namespace TAT {
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
+      guard.pause();
       auto tensor_1_merged = tensor_1.edge_operator(
             {},
             {},
@@ -381,6 +384,7 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             delete_2);
+      guard.resume();
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {internal_name::Contract_1, internal_name::Contract_2},
@@ -405,6 +409,8 @@ namespace TAT {
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
+            auto kernel_guard = contract_kernel_guard();
+            guard.pause();
             calculate_product<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",
@@ -419,6 +425,7 @@ namespace TAT {
                   &beta,
                   data.data(),
                   &n);
+            guard.resume();
          } else if (m * n != 0) {
             std::fill(data.begin(), data.end(), 0);
          }
@@ -428,7 +435,9 @@ namespace TAT {
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
+         guard.pause();
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
+         guard.resume();
          return result;
       }
    }

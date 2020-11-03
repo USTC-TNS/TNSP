@@ -1,0 +1,29 @@
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover"></meta>
+<style>
+body { margin: 0; }
+canvas { display: block; }
+span { position: absolute; color: white; }
+input { background-color: transparent; border: 0; color: white; }
+</style>
+<title>Square Lattice</title>
+
+<span style="left:0; top:0;">
+   L1=
+   <input id=L1 value=3 />
+   L2=
+   <input id=L2 value=3 />
+   <button onclick=create_lattice()>create</button>
+</span>
+
+<span style="right:0; bottom:0;">
+   energy=
+   <input id=energy readonly value="?"></input>
+   step=
+   <input id=step value=10></input>
+   <button onclick=update_lattice()>update</button>
+</span>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/three.js/r122/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="kernel.js"></script>
+<script src="square_lattice.js"></script>

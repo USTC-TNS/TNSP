@@ -6,7 +6,6 @@
 /out
 /clion-build
 /docs
-/emscripten/lib*
 /pybind11
 /CMakeSettings.json
 /env
