@@ -1,5 +1,6 @@
 #include <TAT/TAT.hpp>
 #include <cstdio>
+#include <fire.hpp>
 #include <random>
 
 using Tensor = TAT::Tensor<double>;
@@ -91,10 +92,14 @@ struct SquareSpinLattice : SpinLattice {
    }
 };
 
-int main() {
-   auto n1 = 4;
-   auto n2 = 4;
-   random_engine.seed(0);
+int fired_main(
+      int n1 = fire::arg({"-M", "system size"}, 4),
+      int n2 = fire::arg({"-N", "system size"}, 4),
+      int step = fire::arg({"-S", "step to run"}, 1000),
+      bool print_energy = fire::arg({"-P"}),
+      int seed = fire::arg({"-R", "random seed"}, 0)) {
+   std::ios::sync_with_stdio(false);
+   random_engine.seed(seed);
    auto lattice = SquareSpinLattice(n1, n2, 1);
    for (auto i = 0; i < n1 - 1; i++) {
       for (auto j = 0; j < n2; j++) {
@@ -106,8 +111,13 @@ int main() {
          lattice.set_bond({i, j}, {i, j + 1}, SS);
       }
    }
-   for (auto t = 0; t < 1000; t++) {
+   for (auto t = 0; t < step; t++) {
       lattice.update();
-      std::printf("%.20f\n", lattice.energy / (n1 * n2));
+      if (print_energy) {
+         std::printf("%.20f\n", lattice.energy / (n1 * n2));
+      }
    }
+   return 0;
 }
+
+FIRE(fired_main)

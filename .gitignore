@@ -8,6 +8,7 @@
 /docs
 /emscripten/lib*
 /pybind11
+/include/fire.hpp
 /CMakeSettings.json
 /env
 *.exp
