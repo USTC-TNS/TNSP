@@ -6,11 +6,11 @@ document.body.appendChild(renderer.domElement);
 
 var scene = new THREE.Scene();
 
-axesHelper = new THREE.AxesHelper( 5 );
+var axesHelper = new THREE.AxesHelper( 5 );
 scene.add(axesHelper);
 
-geometry = new THREE.SphereGeometry(0.05,10,10);
-material = new THREE.MeshNormalMaterial();
+var geometry = new THREE.SphereGeometry(0.05,10,10);
+var material = new THREE.MeshNormalMaterial();
 
 // var camera = new THREE.OrthographicCamera(-width/2, +width/2, -height/2, +height/2, 0.1, 10);
 var camera = new THREE.PerspectiveCamera(20, width/height, 5, 1000);
@@ -18,7 +18,7 @@ camera.position.set(10,10,5)
 camera.up.set(0,0,1);
 camera.lookAt(0,0,0)
 
-controls = new THREE.OrbitControls(camera, renderer.domElement);
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping=true
 
 var do_render = () =>{
@@ -66,6 +66,7 @@ var update_lattice = () => {
    if (L1 == 0 || L2 == 0) {
       return
    }
+   var start = performance.now()
    _update_lattice(parseInt(document.getElementById("step").value))
    var energy = _get_energy()
    document.getElementById("energy").value = energy
@@ -81,4 +82,6 @@ var update_lattice = () => {
          scene.getObjectByName("A"+i+"."+j).setLength(len/den);
       }
    }
+   var end = performance.now()
+   console.log((end-start)/1000)
 };
