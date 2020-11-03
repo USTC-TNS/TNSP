@@ -30,17 +30,7 @@ namespace TAT {
    }
 
    struct timer {
-#ifdef TAT_USE_NO_TIMER
-      timer(const char*) {}
-
-      struct timer_guard {
-         void pause() {}
-         void resume() {}
-      };
-      auto operator()() {
-         return timer_guard();
-      }
-#else
+#ifndef TAT_USE_NO_TIMER
       std::string timer_name;
       std::chrono::high_resolution_clock::duration timer_count;
 
@@ -79,6 +69,16 @@ namespace TAT {
       auto operator()() {
          return timer_guard(this);
       }
+#else
+      timer(const char*) {}
+
+      struct timer_guard {
+         void pause() {}
+         void resume() {}
+      };
+      auto operator()() {
+         return timer_guard();
+      }
 #endif
    };
 
@@ -93,6 +93,7 @@ namespace TAT {
    TAT_DEFINE_TIMER(scalar_inplace)
    TAT_DEFINE_TIMER(transpose_misc)
    TAT_DEFINE_TIMER(transpose_kernel)
+   TAT_DEFINE_TIMER(transpose_kernel_core)
 #undef TAT_DEFINE_TIMER
 } // namespace TAT
 #endif

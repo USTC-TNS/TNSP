@@ -52,14 +52,6 @@
 // TAT_USE_NO_TIMER 禁用对常见操作进行计时
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
 // TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
-#ifdef TAT_ENABLE_ALL_OPTIONAL_FEATURE
-#define TAT_USE_SINGULAR_MATRIX
-#define TAT_USE_SIMPLE_NAME
-#define TAT_USE_SIMPLE_NOSYMMETRY
-#define TAT_USE_COPY_WITHOUT_WARNING
-#define TAT_USE_VALID_DEFAULT_TENSOR
-#define TAT_USE_EASY_CONVERSION
-#endif
 
 /**
  * \brief TAT is A Tensor library
@@ -82,7 +74,7 @@ namespace TAT {
          ;
 
    /**
-    * 编译与license相关的信息
+    * \brief 编译与license相关的信息
     */
    const char* information = "TAT"
 #ifdef TAT_VERSION
@@ -110,9 +102,11 @@ namespace TAT {
    };
    inline const evil_t evil;
 
-   inline void TAT_nothing(const char*) {}
-
+   // 目前只在timer中用到了
    inline void TAT_log(const char* message);
+
+   // 下面三个函数常用来被各种细分的警告或错误使用，可以通过设置他们为下面三个中的一个来选择对错误的容忍程度
+   inline void TAT_nothing(const char*) {}
 
    /**
     * \brief TAT使用的打印警告
@@ -137,21 +131,22 @@ namespace TAT {
    constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
    constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
 
-   inline const unsigned long l1_cache =
+   // 张量转置中会使用这三个变量
+   constexpr unsigned long l1_cache =
 #ifdef TAT_L1_CACHE
          TAT_L1_CACHE
 #else
          98304
 #endif
          ;
-   inline const unsigned long l2_cache =
+   constexpr unsigned long l2_cache =
 #ifdef TAT_L2_CACHE
          TAT_L2_CACHE
 #else
          786432
 #endif
          ;
-   inline const unsigned long l3_cache =
+   constexpr unsigned long l3_cache =
 #ifdef TAT_L3_CACHE
          TAT_L3_CACHE
 #else
