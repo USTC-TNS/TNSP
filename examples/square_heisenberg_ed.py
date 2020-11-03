@@ -19,7 +19,7 @@ import fire
 import exact_diagnalization as ED
 
 
-def main(n1, n2, step):
+def main(n1, n2, step, print_energy: bool = False):
     print("Construct Lattice...")
     lattice = ED.SquareSpinLattice(n1, n2, 1)
     print("Construct Lattice done")
@@ -34,7 +34,8 @@ def main(n1, n2, step):
     print("Set Bonds Done")
     for _ in range(step):
         lattice.update()
-        print(lattice.energy / (n1 * n2))
+        if print_energy:
+            print(lattice.energy / (n1 * n2))
 
 
 if __name__ == "__main__":
