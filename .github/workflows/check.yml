@@ -12,6 +12,8 @@ jobs:
       uses: actions/checkout@v2
     - name: dependence
       run: sudo apt-get install -y mpi-default-dev intel-mkl
+    - name: fire
+      run: wget https://raw.githubusercontent.com/kongaskristjan/fire-hpp/master/include/fire-hpp/fire.hpp -O ${{github.workspace}}/include/fire.hpp
     - name: directory
       run: cmake -E make_directory ${{runner.workspace}}/build
     - name: configure
