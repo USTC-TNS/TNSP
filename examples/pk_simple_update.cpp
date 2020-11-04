@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#define TAT_USE_SIMPLE_NAME
 #define TAT_USE_EASY_CONVERSION
 #include <TAT/TAT.hpp>
 #include <random>
@@ -117,7 +118,7 @@ struct TwoDimensionHeisenberg {
       }
    }
 
-   void _try_multiple(Tensor& tensor, int l1, int l2, const std::string& direction, bool division = false) {
+   void _try_multiple(Tensor& tensor, int l1, int l2, const std::string& direction, bool division = false) const {
       if (direction == "Left") {
          if (auto found = environment.find({l1, l2 - 1, Direction::Right}); found != environment.end()) {
             tensor = tensor.multiple(found->second, "Left", 'v', division);
@@ -139,66 +140,130 @@ struct TwoDimensionHeisenberg {
 
    void _single_term_simple_update(const Tensor& updater, Direction direction, int l1, int l2) {
       if (direction == Direction::Right) {
-         auto left = lattice[{l1, l2}].copy();
+         auto left = lattice[{l1, l2}].edge_rename({});
          _try_multiple(left, l1, l2, "Left");
          _try_multiple(left, l1, l2, "Up");
          _try_multiple(left, l1, l2, "Down");
          _try_multiple(left, l1, l2, "Right");
-         auto right = lattice[{l1, l2 + 1}].copy();
+         auto right = lattice[{l1, l2 + 1}].edge_rename({});
          _try_multiple(right, l1, l2 + 1, "Up");
          _try_multiple(right, l1, l2 + 1, "Down");
          _try_multiple(right, l1, l2 + 1, "Right");
-         auto [u, s, v] = left.edge_rename({{"Up", "Up0"}, {"Down", "Down0"}, {"Phy", "Phy0"}})
-                                .contract(right.edge_rename({{"Up", "Up1"}, {"Down", "Down1"}, {"Phy", "Phy1"}}), {{"Right", "Left"}})
+         auto [left_q, left_r] = left.qr('r', {"Phy", "Right"}, "Right", "Left");
+         auto [right_q, right_r] = right.qr('r', {"Phy", "Left"}, "Left", "Right");
+         auto [u, s, v] = left_r.edge_rename({{"Phy", "Phy0"}})
+                                .contract(right_r.edge_rename({{"Phy", "Phy1"}}), {{"Right", "Left"}})
                                 .contract(updater, {{"Phy0", "I0"}, {"Phy1", "I1"}})
-                                .svd({"Left", "Up0", "Down0", "O0"}, "Right", "Left", D);
+                                .svd({"Left", "O0"}, "Right", "Left", D);
          u /= u.norm<-1>();
          s /= s.norm<-1>();
          v /= v.norm<-1>();
          environment[{l1, l2, Direction::Right}] = std::move(s);
-         u = u.edge_rename({{"Up0", "Up"}, {"Down0", "Down"}, {"O0", "Phy"}});
+         u = u.contract(left_q, {{"Left", "Right"}}).edge_rename({{"O0", "Phy"}});
          _try_multiple(u, l1, l2, "Left", true);
          _try_multiple(u, l1, l2, "Up", true);
          _try_multiple(u, l1, l2, "Down", true);
          lattice[{l1, l2}] = std::move(u);
-         v = v.edge_rename({{"Up1", "Up"}, {"Down1", "Down"}, {"O1", "Phy"}});
+         v = v.contract(right_q, {{"Right", "Left"}}).edge_rename({{"O1", "Phy"}});
          _try_multiple(v, l1, l2 + 1, "Up", true);
          _try_multiple(v, l1, l2 + 1, "Down", true);
          _try_multiple(v, l1, l2 + 1, "Right", true);
          lattice[{l1, l2 + 1}] = std::move(v);
       } else {
-         auto up = lattice[{l1, l2}].copy();
+         auto up = lattice[{l1, l2}].edge_rename({});
          _try_multiple(up, l1, l2, "Left");
          _try_multiple(up, l1, l2, "Up");
          _try_multiple(up, l1, l2, "Down");
          _try_multiple(up, l1, l2, "Right");
-         auto down = lattice[{l1 + 1, l2}].copy();
+         auto down = lattice[{l1 + 1, l2}].edge_rename({});
          _try_multiple(down, l1 + 1, l2, "Left");
          _try_multiple(down, l1 + 1, l2, "Down");
          _try_multiple(down, l1 + 1, l2, "Right");
-         auto [u, s, v] = up.edge_rename({{"Left", "Left0"}, {"Right", "Right0"}, {"Phy", "Phy0"}})
-                                .contract(down.edge_rename({{"Left", "Left1"}, {"Right", "Right1"}, {"Phy", "Phy1"}}), {{"Down", "Up"}})
+         auto [up_q, up_r] = up.qr('r', {"Phy", "Down"}, "Down", "Up");
+         auto [down_q, down_r] = down.qr('r', {"Phy", "Up"}, "Up", "Down");
+         auto [u, s, v] = up_r.edge_rename({{"Phy", "Phy0"}})
+                                .contract(down_r.edge_rename({{"Phy", "Phy1"}}), {{"Down", "Up"}})
                                 .contract(updater, {{"Phy0", "I0"}, {"Phy1", "I1"}})
-                                .svd({"Up", "Left0", "Right0", "O0"}, "Down", "Up", D);
+                                .svd({"Up", "O0"}, "Down", "Up", D);
          u /= u.norm<-1>();
          s /= s.norm<-1>();
          v /= v.norm<-1>();
          environment[{l1, l2, Direction::Down}] = std::move(s);
-         u = u.edge_rename({{"Left0", "Left"}, {"Right0", "Right"}, {"O0", "Phy"}});
+         u = u.contract(up_q, {{"Up", "Down"}}).edge_rename({{"O0", "Phy"}});
          _try_multiple(u, l1, l2, "Left", true);
          _try_multiple(u, l1, l2, "Up", true);
          _try_multiple(u, l1, l2, "Right", true);
          lattice[{l1, l2}] = std::move(u);
-         v = v.edge_rename({{"Left1", "Left"}, {"Right1", "Right"}, {"O1", "Phy"}});
+         v = v.contract(down_q, {{"Down", "Up"}}).edge_rename({{"O1", "Phy"}});
          _try_multiple(v, l1 + 1, l2, "Left", true);
          _try_multiple(v, l1 + 1, l2, "Down", true);
          _try_multiple(v, l1 + 1, l2, "Right", true);
          lattice[{l1 + 1, l2}] = std::move(v);
       }
    }
+
+   auto exact_state() const {
+      auto psi = Tensor(1);
+      for (const auto& [position, tensor] : lattice) {
+         auto const& [i, j] = position;
+         auto this_tensor = tensor.edge_rename({});
+         _try_multiple(this_tensor, i, j, "Down");
+         _try_multiple(this_tensor, i, j, "Right");
+         this_tensor = this_tensor.edge_rename(
+               {{"Up", "Up" + std::to_string(j)},
+                {"Down", "Down" + std::to_string(j)},
+                {"Left", "Left" + std::to_string(i)},
+                {"Right", "Right" + std::to_string(i)},
+                {"Phy", std::to_string(i) + "." + std::to_string(j)}});
+         psi = psi.contract(
+               this_tensor,
+               {{"Down" + std::to_string(j), "Up" + std::to_string(j)},
+                {"Up" + std::to_string(j), "Down" + std::to_string(j)},
+                {"Left" + std::to_string(i), "Right" + std::to_string(i)},
+                {"Right" + std::to_string(i), "Left" + std::to_string(i)}});
+      }
+      return psi;
+   }
+
+   void exact_update() const {
+      auto psi = exact_state();
+      psi /= psi.norm<-1>();
+      double approximate_energy = 1;
+      for (auto t = 0; t < 100; t++) {
+         auto temporary = psi.same_shape().zero();
+         for (auto i = 0; i < L1; i++) {
+            for (auto j = 0; j < L2 - 1; j++) {
+               auto this_term = psi.contract(
+                     hamiltonian.edge_rename(
+                           {{"O0", std::to_string(i) + "." + std::to_string(j)}, {"O1", std::to_string(i) + "." + std::to_string(j + 1)}}),
+                     {{std::to_string(i) + "." + std::to_string(j), "I0"}, {std::to_string(i) + "." + std::to_string(j + 1), "I1"}});
+               temporary += this_term;
+            }
+         }
+         for (auto j = 0; j < L2; j++) {
+            for (auto i = 0; i < L1 - 1; i++) {
+               auto this_term = psi.contract(
+                     hamiltonian.edge_rename(
+                           {{"O0", std::to_string(i) + "." + std::to_string(j)}, {"O1", std::to_string(i + 1) + "." + std::to_string(j)}}),
+                     {{std::to_string(i) + "." + std::to_string(j), "I0"}, {std::to_string(i + 1) + "." + std::to_string(j), "I1"}});
+               temporary += this_term;
+            }
+         }
+         psi *= approximate_energy;
+         psi -= temporary;
+         auto norm_max = double(psi.norm<-1>());
+         double energy = approximate_energy - norm_max;
+         psi /= norm_max;
+         std::cout << energy / (L1 * L2) << "\n";
+      }
+   }
 };
 
 int main() {
-   auto lattice = TwoDimensionHeisenberg(6, 6, 6);
+   auto lattice = TwoDimensionHeisenberg(20, 20, 16);
    lattice.simple_update(4, 0.1);
+   // auto lattice = TwoDimensionHeisenberg(4, 4, 10);
+   // lattice.simple_update(1000, 0.1);
+   // lattice.simple_update(1000, 0.01);
+   // lattice.exact_update();
 }
