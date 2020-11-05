@@ -174,6 +174,15 @@ namespace TAT {
    auto orglq<std::complex<double>> = zunglq_;
 
    template<typename ScalarType>
+   int to_int(const ScalarType& value) {
+      if constexpr (is_complex_v<ScalarType>) {
+         return int(value.real());
+      } else {
+         return int(value);
+      }
+   }
+
+   template<typename ScalarType>
    void calculate_qr(
          const int& m,
          const int& n,
@@ -196,9 +205,12 @@ namespace TAT {
          // XXX   X  XXX    XQQ
          // XXX = XX XXX -> XXQ
          int result;
-         int lwork = 64 * max;
-         auto work = vector<ScalarType>(lwork);
          auto tau = vector<ScalarType>(min);
+         const int lwork_query = -1;
+         ScalarType float_lwork;
+         gelqf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
+         const int lwork = to_int(float_lwork);
+         auto work = vector<ScalarType>(lwork);
          gelqf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
             TAT_error("Error in LQ");
@@ -230,9 +242,12 @@ namespace TAT {
          // XXX   XX XXX    XXX
          // XXX = XX  XX -> QXX
          int result;
-         int lwork = 64 * max;
-         auto work = vector<ScalarType>(lwork);
          auto tau = vector<ScalarType>(min);
+         const int lwork_query = -1;
+         ScalarType float_lwork;
+         geqrf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
+         const int lwork = to_int(float_lwork);
+         auto work = vector<ScalarType>(lwork);
          geqrf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
             TAT_error("Error in QR");
