@@ -23,6 +23,7 @@
 
 #include "tensor.hpp"
 #include "timer.hpp"
+#include "transpose.hpp"
 
 extern "C" {
 int sgesvd_(
@@ -116,7 +117,7 @@ namespace TAT {
    }
 
    template<typename ScalarType>
-   void calculate_svd(
+   void calculate_svd_kernel(
          const int& m,
          const int& n,
          const int& min,
@@ -126,8 +127,37 @@ namespace TAT {
          real_base_t<ScalarType>* s,
          ScalarType* vt);
 
+   template<typename ScalarType>
+   void calculate_svd(
+         const int& m,
+         const int& n,
+         const int& min,
+         const int& max,
+         const ScalarType* a,
+         ScalarType* u,
+         real_base_t<ScalarType>* s,
+         ScalarType* vt) {
+      if (m > n) {
+         auto new_a = vector<ScalarType>(n * m);
+         auto old_u = vector<ScalarType>(n * min);
+         auto old_vt = vector<ScalarType>(min * m);
+         // new_a = a^T
+         // u s vt = a
+         // vt^T s u^T = a^T
+         // old_u = vt^T
+         // old_vt = u^T
+         matrix_transpose(m, n, a, new_a.data()); // m*n -> n*m
+         calculate_svd_kernel(n, m, min, max, new_a.data(), old_u.data(), s, old_vt.data());
+         matrix_transpose(n, min, old_u.data(), vt); // n*min -> min*n
+         matrix_transpose(min, m, old_vt.data(), u); // min*m -> m*min
+      } else {
+         calculate_svd_kernel(m, n, min, max, a, u, s, vt);
+      }
+   }
+
    template<>
-   inline void calculate_svd<float>(const int& m, const int& n, const int& min, const int& max, const float* a, float* u, float* s, float* vt) {
+   inline void
+   calculate_svd_kernel<float>(const int& m, const int& n, const int& min, const int& max, const float* a, float* u, float* s, float* vt) {
       // TODO transpose will let svd faster
       int result;
       const int lwork_query = -1;
@@ -141,7 +171,8 @@ namespace TAT {
       }
    }
    template<>
-   inline void calculate_svd<double>(const int& m, const int& n, const int& min, const int& max, const double* a, double* u, double* s, double* vt) {
+   inline void
+   calculate_svd_kernel<double>(const int& m, const int& n, const int& min, const int& max, const double* a, double* u, double* s, double* vt) {
       int result;
       const int lwork_query = -1;
       double float_lwork;
@@ -154,7 +185,7 @@ namespace TAT {
       }
    }
    template<>
-   inline void calculate_svd<std::complex<float>>(
+   inline void calculate_svd_kernel<std::complex<float>>(
          const int& m,
          const int& n,
          const int& min,
@@ -176,7 +207,7 @@ namespace TAT {
       }
    }
    template<>
-   inline void calculate_svd<std::complex<double>>(
+   inline void calculate_svd_kernel<std::complex<double>>(
          const int& m,
          const int& n,
          const int& min,
