@@ -27,9 +27,8 @@ namespace TAT {
    /**
     * \brief 寻找有对称性张量中的某个子块
     */
-   template<typename ScalarType, typename Symmetry>
-   [[nodiscard]] auto
-   get_block_for_get_item(const std::map<Name, Symmetry>& position, const std::vector<Name>& names, const Core<ScalarType, Symmetry>& core) {
+   template<typename Symmetry>
+   [[nodiscard]] auto get_block_for_get_item(const std::map<Name, Symmetry>& position, const std::vector<Name>& names) {
       auto symmetries = std::vector<Symmetry>();
       symmetries.reserve(names.size());
       for (const auto& name : names) {
@@ -108,7 +107,7 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
-      auto symmetry = get_block_for_get_item(position, names, *core);
+      auto symmetry = get_block_for_get_item(position, names);
       return core->blocks.at(symmetry);
    }
 
@@ -117,7 +116,7 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
-      auto symmetry = get_block_for_get_item(position, names, *core);
+      auto symmetry = get_block_for_get_item(position, names);
       return core->blocks.at(symmetry);
    }
 

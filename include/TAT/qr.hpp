@@ -192,6 +192,7 @@ namespace TAT {
          ScalarType* __restrict data_1,
          ScalarType* __restrict data_2,
          bool use_qr_not_lq) {
+      // TODO: 有时可能多转置一下更快，参见svd中的做法
       // m*n c matrix at data do lq
       // n*m fortran matrix at data do qr
       if (use_qr_not_lq) {

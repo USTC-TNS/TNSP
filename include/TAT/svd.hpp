@@ -158,7 +158,6 @@ namespace TAT {
    template<>
    inline void
    calculate_svd_kernel<float>(const int& m, const int& n, const int& min, const int& max, const float* a, float* u, float* s, float* vt) {
-      // TODO transpose will let svd faster
       int result;
       const int lwork_query = -1;
       float float_lwork;
