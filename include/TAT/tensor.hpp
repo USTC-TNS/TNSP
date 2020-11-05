@@ -37,7 +37,7 @@
 namespace TAT {
    struct mpi_t;
 
-   template<typename ScalarType, typename Symmetry>
+   template<typename ScalarType = double, typename Symmetry = NoSymmetry>
    struct Singular {
       std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
 

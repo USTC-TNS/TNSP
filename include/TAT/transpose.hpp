@@ -739,5 +739,14 @@ namespace TAT {
                real_rank);
       }
    }
+
+   template<typename ScalarType>
+   void matrix_transpose(Size m, Size n, const ScalarType* const source, ScalarType* const destination) {
+      auto dimension = std::vector<Size>{m, n};
+      auto leading_source = std::vector<Size>{n, 1};
+      auto leading_destination = std::vector<Size>{1, m};
+      tensor_transpose_kernel<ScalarType, false>(
+            source, destination, dimension.data(), nullptr, nullptr, leading_source.data(), leading_destination.data(), 2);
+   }
 } // namespace TAT
 #endif
