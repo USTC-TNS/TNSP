@@ -539,20 +539,43 @@ namespace TAT {
             const Tensor<ScalarType, Symmetry>& tensor_2,
             std::set<std::tuple<Name, Name>> contract_names);
 
-      [[nodiscard]] Tensor<ScalarType, Symmetry>
-      contract(const Tensor<ScalarType, Symmetry>& tensor_2, std::set<std::tuple<Name, Name>> contract_names) const {
-         return Tensor<ScalarType, Symmetry>::contract(*this, tensor_2, std::move(contract_names));
+      template<typename ScalarType1, typename ScalarType2>
+      [[nodiscard]] static auto contract(
+            const Tensor<ScalarType1, Symmetry>& tensor_1,
+            const Tensor<ScalarType2, Symmetry>& tensor_2,
+            std::set<std::tuple<Name, Name>> contract_names) {
+         using ResultScalarType = std::common_type_t<ScalarType1, ScalarType2>;
+         using ResultTensor = Tensor<ResultScalarType, Symmetry>;
+         if constexpr (std::is_same_v<ResultScalarType, ScalarType1>) {
+            if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
+               return ResultTensor::contract(tensor_1, tensor_2, std::move(contract_names));
+            } else {
+               return ResultTensor::contract(tensor_1, tensor_2.template to<ResultScalarType>(), std::move(contract_names));
+            }
+         } else {
+            if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
+               return ResultTensor::contract(tensor_1.template to<ResultScalarType>(), tensor_2, std::move(contract_names));
+            } else {
+               return ResultTensor::contract(
+                     tensor_1.template to<ResultScalarType>(), tensor_2.template to<ResultScalarType>(), std::move(contract_names));
+            }
+         }
+      }
+
+      template<typename OtherScalarType>
+      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry>& tensor_2, std::set<std::tuple<Name, Name>> contract_names) const {
+         return contract(*this, tensor_2, std::move(contract_names));
       }
 
 #ifdef TAT_USE_EASY_CONVERSION
-      template<typename PairSet>
-      [[nodiscard]] static Tensor<ScalarType, Symmetry>
-      contract(const Tensor<ScalarType, Symmetry>& tensor_1, const Tensor<ScalarType, Symmetry>& tensor_2, PairSet&& contract_names) {
+      template<typename ScalarType1, typename ScalarType2, typename PairSet>
+      [[nodiscard]] static auto
+      contract(const Tensor<ScalarType1, Symmetry>& tensor_1, const Tensor<ScalarType2, Symmetry>& tensor_2, PairSet&& contract_names) {
          return contract(tensor_1, tensor_2, {contract_names.begin(), contract_names.end()});
       };
 
-      template<typename PairSet>
-      [[nodiscard]] Tensor<ScalarType, Symmetry> contract(const Tensor<ScalarType, Symmetry>& tensor_2, PairSet&& contract_names) const {
+      template<typename OtherScalarType, typename PairSet>
+      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry>& tensor_2, PairSet&& contract_names) const {
          return contract(*this, tensor_2, {contract_names.begin(), contract_names.end()});
       }
 #endif
