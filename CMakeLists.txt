@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(TAT VERSION 0.0.9 LANGUAGES CXX)
+project(TAT VERSION 0.0.10 LANGUAGES CXX)
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
