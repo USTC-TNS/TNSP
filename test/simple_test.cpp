@@ -28,25 +28,6 @@
       std::cout << "\n";            \
    } while (false)
 
-template<typename T>
-std::ostream& operator<<(std::ostream& out, const std::vector<T>& list) {
-   out << '[';
-   auto not_first = false;
-   for (const auto& i : list) {
-      if (not_first) {
-         out << ',';
-      }
-      not_first = true;
-      if constexpr (std::is_same_v<T, std::complex<TAT::real_base_t<T>>>) {
-         TAT::print_complex(out, i);
-      } else {
-         out << i;
-      }
-   }
-   out << ']';
-   return out;
-}
-
 void test_create_tensor() {
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test() << "\n";
    std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {0, 3}} << "\n";

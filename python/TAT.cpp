@@ -838,6 +838,12 @@ namespace TAT {
 #endif // MPI
       // name
       py::class_<Name>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
+            .def(py::self < py::self)
+            .def(py::self > py::self)
+            .def(py::self <= py::self)
+            .def(py::self >= py::self)
+            .def(py::self == py::self)
+            .def(py::self != py::self)
 #ifdef TAT_USE_SIMPLE_NAME
             .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.name)); })
 #else
