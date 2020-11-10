@@ -288,7 +288,6 @@ namespace TAT {
             ("Singulars in tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def_readonly("value", &S::value, "singular value dictionary")
             .def("__str__", [](const S& s) { return s.show(); })
-            .def("__repr__", [](const S& s) { return "Singular" + s.show(); })
             .def("norm_max", &S::template norm<-1>)
             .def("norm_sum", &S::template norm<1>)
             .def("dump", [](S& s) { return py::bytes(s.dump()); }) // 这个copy很难去掉, dump内一次copy, string to byte一次copy
@@ -339,24 +338,14 @@ namespace TAT {
                  })
             .def("__repr__",
                  [](const T& tensor) {
-                    if (tensor.is_valid()) {
-                       return "Tensor" + tensor.show();
-                    } else {
-                       return std::string("Tensor{}");
-                    }
+                    auto out = std::stringstream();
+                    out << '{' << console_green << "names" << console_origin << ':';
+                    out << tensor.names;
+                    out << ',' << console_green << "edges" << console_origin << ':';
+                    out << tensor.core->edges;
+                    out << '}';
+                    return out.str();
                  })
-            .def(
-                  "shape",
-                  [](const T& tensor) {
-                     auto out = std::stringstream();
-                     out << '{' << console_green << "names" << console_origin << ':';
-                     out << tensor.names;
-                     out << ',' << console_green << "edges" << console_origin << ':';
-                     out << tensor.core->edges;
-                     out << '}';
-                     return out.str();
-                  },
-                  "The shape of this tensor")
             .def(py::init<>(), "Default Constructor")
             .def(py::init<>([edge_m, symmetry_short_name](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
