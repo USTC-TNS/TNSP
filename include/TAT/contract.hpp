@@ -202,6 +202,15 @@ namespace TAT {
          }
       }
       const auto common_rank = contract_names.size();
+      std::set<Name> contract_names_1;
+      std::set<Name> contract_names_2;
+      for (const auto& [name_1, name_2] : contract_names) {
+         contract_names_1.insert(name_1);
+         contract_names_2.insert(name_2);
+      }
+      if (contract_names_1.size() != common_rank || contract_names_2.size() != common_rank) {
+         TAT_error("Duplicated Contract Name");
+      }
       // Rank contract_origin_rank = contract_names_1.size();
       // for (Rank i = 0; i < contract_origin_rank; i++) {
       // }
