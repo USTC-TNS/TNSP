@@ -587,12 +587,6 @@ namespace TAT {
       }
 #endif
 
-      // 将自动fuse相同名称的腿
-      [[nodiscard]] static Tensor<ScalarType, Symmetry> contract_with_fuse(
-            const Tensor<ScalarType, Symmetry>& tensor_1,
-            const Tensor<ScalarType, Symmetry>& tensor_2,
-            std::set<std::tuple<Name, Name>> contract_names);
-
       /**
        * \brief 将一个张量与另一个张量的所有相同名称的边进行缩并
        * \param other 另一个张量
