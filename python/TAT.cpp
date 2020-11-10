@@ -339,6 +339,7 @@ namespace TAT {
             .def("__repr__",
                  [](const T& tensor) {
                     auto out = std::stringstream();
+                    out << tensor_name << "Tensor";
                     out << '{' << console_green << "names" << console_origin << ':';
                     out << tensor.names;
                     out << ',' << console_green << "edges" << console_origin << ':';
