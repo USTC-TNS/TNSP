@@ -39,7 +39,14 @@ namespace TAT {
 
    template<typename ScalarType = double, typename Symmetry = NoSymmetry>
    struct Singular {
-      std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
+      using normal_map = std::map<Symmetry, vector<real_base_t<ScalarType>>>;
+      using fake_singular_map = fake_map<Symmetry, vector<real_base_t<ScalarType>>>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using singular_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
+#else
+      using singular_map = normal_map;
+#endif
+      singular_map value;
 
       template<int p>
       [[nodiscard]] real_base_t<ScalarType> norm() const {
@@ -579,6 +586,12 @@ namespace TAT {
          return contract(*this, tensor_2, {contract_names.begin(), contract_names.end()});
       }
 #endif
+
+      // 将自动fuse相同名称的腿
+      [[nodiscard]] static Tensor<ScalarType, Symmetry> contract_with_fuse(
+            const Tensor<ScalarType, Symmetry>& tensor_1,
+            const Tensor<ScalarType, Symmetry>& tensor_2,
+            std::set<std::tuple<Name, Name>> contract_names);
 
       /**
        * \brief 将一个张量与另一个张量的所有相同名称的边进行缩并
