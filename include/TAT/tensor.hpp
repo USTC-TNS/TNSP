@@ -39,7 +39,14 @@ namespace TAT {
 
    template<typename ScalarType = double, typename Symmetry = NoSymmetry>
    struct Singular {
-      std::map<Symmetry, vector<real_base_t<ScalarType>>> value;
+      using normal_map = std::map<Symmetry, vector<real_base_t<ScalarType>>>;
+      using fake_singular_map = fake_map<Symmetry, vector<real_base_t<ScalarType>>>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using singular_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
+#else
+      using singular_map = normal_map;
+#endif
+      singular_map value;
 
       template<int p>
       [[nodiscard]] real_base_t<ScalarType> norm() const {

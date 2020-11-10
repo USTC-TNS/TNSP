@@ -102,8 +102,8 @@ namespace TAT {
    TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.TAT_NAME_KEY != name_2.TAT_NAME_KEY)
    TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.TAT_NAME_KEY >= name_2.TAT_NAME_KEY)
    TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.TAT_NAME_KEY <= name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.TAT_NAME_KEY> name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.TAT_NAME_KEY<name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.TAT_NAME_KEY > name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.TAT_NAME_KEY < name_2.TAT_NAME_KEY)
 #undef TAT_DEFINE_NAME_OPERATOR
 #undef TAT_NAME_KEY
 
@@ -111,6 +111,7 @@ namespace TAT {
 #define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)
    namespace internal_name {
       TAT_DEFINE_INTERNAL_NAME(Null);
+      TAT_DEFINE_INTERNAL_NAME(Contract_0);
       TAT_DEFINE_INTERNAL_NAME(Contract_1);
       TAT_DEFINE_INTERNAL_NAME(Contract_2);
       TAT_DEFINE_INTERNAL_NAME(SVD_U);
