@@ -187,16 +187,31 @@ namespace TAT {
          std::set<std::tuple<Name, Name>> contract_names);
 
    template<typename ScalarType, typename Symmetry>
+   Tensor<ScalarType, Symmetry> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry>& tensor_1,
+         const Tensor<ScalarType, Symmetry>& tensor_2,
+         std::set<std::tuple<Name, Name>> contract_names);
+
+   template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::contract(
          const Tensor<ScalarType, Symmetry>& tensor_1,
          const Tensor<ScalarType, Symmetry>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         return contract_with_fuse(tensor_1, tensor_2, std::move(contract_names));
+      } else {
+         return contract_without_fuse(tensor_1, tensor_2, std::move(contract_names));
+      }
+   }
+
+   template<typename ScalarType, typename Symmetry>
+   Tensor<ScalarType, Symmetry> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry>& tensor_1,
+         const Tensor<ScalarType, Symmetry>& tensor_2,
+         std::set<std::tuple<Name, Name>> contract_names) {
+      auto guard = contract_misc_guard();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
-      if constexpr (is_no_symmetry) {
-         return contract_with_fuse(tensor_1, tensor_2, std::move(contract_names));
-      }
-      auto guard = contract_misc_guard();
       // 为未来split做准备
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
