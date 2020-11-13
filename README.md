@@ -13,13 +13,15 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
 ## Usage
 Just include the file [`include/TAT/TAT.hpp`](/include/TAT/TAT.hpp) and link blas/lapack or mkl in link time
 
-For good practice, pass `-I$path_to_repo_root/include` to compiler and use `#include <TAT/TAT.hpp>` in your source file
+For good practice, pass `-I$path_to_TAT_root/include` to compiler and use `#include <TAT/TAT.hpp>` in your source file
 
 For mpi support, you need to define macro `TAT_USE_MPI` and use mpi compiler such as `mpic++`(recommend) or pass correct flag to normal compiler(for expert)
 
 Please check comment in file [`TAT.hpp`](/include/TAT/TAT.hpp#L42) for some other macro option
 
 Please notice that this library need proper compiler optimization option(`-O2`, `-O3`, `-Ofast`) for good performace
+
+You can also use TAT as a cmake subdirectory, just use `add_subdirectory(path_to_TAT_root)` and `target_link_libraries(your_target TAT)` in your `CMakeLists.txt`
 
 ## Python binding
 Python binding is configured in [`CMakeLists.txt`](/CMakeLists.txt#L127), use cmake and build target `TAT`
