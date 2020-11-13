@@ -3,7 +3,7 @@ name: doxygen
 on:
   push:
     branches:
-    - master
+    - TAT
 
 jobs:
   doxygen:
