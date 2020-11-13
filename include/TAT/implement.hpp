@@ -32,6 +32,7 @@
 #include "slice_and_expand.hpp"
 #include "svd.hpp"
 #include "tensor_miscellaneous.hpp"
+#include "text_io.hpp"
 #include "trace.hpp"
 #include "transpose.hpp"
 
