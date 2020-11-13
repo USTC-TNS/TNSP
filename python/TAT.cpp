@@ -347,7 +347,7 @@ namespace TAT {
                     out << '}';
                     return out.str();
                  })
-            .def(py::init<>(), "Default Constructor")
+            .def(py::init<>([]() { return T(1); }), "Default Constructor")
             .def(py::init<>([edge_m, symmetry_short_name](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
                     for (const auto& this_edge : edges) {

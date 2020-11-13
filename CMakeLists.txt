@@ -4,9 +4,27 @@ project(TAT VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
+string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+# linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
+# blas, lapack和mkl都没有问题
+# windows的情况如下
+# vs 2019 可以找到intel mpi, 使用clang和msvc都是可以的, 但是mkl需要手动设置MKLROOT的环境变量
+# clion 无法找到intel mpi, 其他与vs 2019一致
+# 自己的pc上linux中无法使用intel的编译器进行编译, 似乎与版本有关系, 在学校超算上配合合适的gcc版本是可以编译的
+# windows中的intel情况懒得测试了
+
 # 设置TAT library
 add_library(TAT INTERFACE)
 target_include_directories(TAT INTERFACE ${PROJECT_SOURCE_DIR}/include/)
+
+# 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
+# 可以打开gnu dialect，但是作为测试保证在c++17标准下可以编译
+target_compile_features(TAT INTERFACE cxx_std_17)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
@@ -25,24 +43,6 @@ target_compile_definitions(TAT INTERFACE TAT_COMPILER_INFORMATION="${CMAKE_CXX_C
 
 # msvc必须加个utf8的参数
 target_compile_options(TAT INTERFACE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-
-# linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
-# blas, lapack和mkl都没有问题
-# windows的情况如下
-# vs 2019 可以找到intel mpi, 使用clang和msvc都是可以的, 但是mkl需要手动设置MKLROOT的环境变量
-# clion 无法找到intel mpi, 其他与vs 2019一致
-# 自己的pc上linux中无法使用intel的编译器进行编译, 似乎与版本有关系, 在学校超算上配合合适的gcc版本是可以编译的
-# windows中的intel情况懒得测试了
-
-# 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 # 尝试启用mpi, 如果无法启用, 也没关系
 if(CMAKE_CXX_COMPILER MATCHES "mpi")
