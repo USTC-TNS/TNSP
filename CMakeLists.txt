@@ -4,37 +4,23 @@ project(TAT VERSION 0.1.0 LANGUAGES CXX)
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
-# TAT_NO_MPI, TAT_FORCE_BLAS_DYNAMIC, TAT_PYTHON_MODULE, TAT_FORCE_VERSION
+# TAT_USE_MPI, TAT_PREFER_BLAS_STATIC, TAT_PYTHON_MODULE, TAT_FORCE_VERSION
 # BLA_VENDOR
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
+option(TAT_USE_MPI "Use mpi for TAT" ON)
+option(TAT_PREFER_BLAS_STATIC "Prefer to static blas library for TAT" ON)
+set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
+set(TAT_FORCE_VERSION ${PROJECT_VERSION} CACHE STRING "Force set TAT version")
 
-if(NOT DEFINED TAT_PYTHON_MODULE)
-   if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-      set(TAT_PYTHON_MODULE TAT)
-   else()
-      set(TAT_PYTHON_MODULE TAT_${CMAKE_BUILD_TYPE})
-   endif()
-endif()
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-   set(TAT_COMPILER_NAME "GCC")
-else()
-   set(TAT_COMPILER_NAME "${CMAKE_CXX_COMPILER_ID}")
-endif()
-
-if(DEFINED TAT_FORCE_VERSION)
-   add_compile_definitions(TAT_VERSION="${TAT_FORCE_VERSION}")
-else()
-   add_compile_definitions(TAT_VERSION="${PROJECT_VERSION}")
-endif()
+add_compile_definitions(TAT_VERSION="${TAT_FORCE_VERSION}")
 add_compile_definitions(TAT_PYTHON_MODULE=${TAT_PYTHON_MODULE})
-if(CMAKE_BUILD_TYPE STREQUAL "")
-   add_compile_definitions(TAT_BUILD_TYPE="Default")
-else()
-   add_compile_definitions(TAT_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
-endif()
-add_compile_definitions(TAT_COMPILER_INFORMATION="${TAT_COMPILER_NAME} ${CMAKE_CXX_COMPILER_VERSION} on ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
+add_compile_definitions(TAT_BUILD_TYPE="$<IF:$<STREQUAL:${CMAKE_BUILD_TYPE},>,Default,${CMAKE_BUILD_TYPE}>")
+add_compile_definitions(TAT_COMPILER_INFORMATION="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} on ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# msvc必须加个utf8的参数
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 # linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
 # blas, lapack和mkl都没有问题
@@ -55,27 +41,27 @@ string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINS
 string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 # 尝试启用mpi, 如果无法启用, 也没关系
-if(NOT TAT_NO_MPI)
-   if(CMAKE_CXX_COMPILER MATCHES "mpi")
-      message("-- Using mpi compiler directly")
-      add_compile_definitions(TAT_USE_MPI)
-   else()
-      find_package(MPI QUIET)
-      if(MPI_FOUND)
-         include_directories(${MPI_INCLUDE_PATH})
-         link_libraries(${MPI_LIBRARIES})
-         message("-- Using mpi by linking mpi libraries")
-         add_compile_definitions(TAT_USE_MPI)
-      else()
-         message("-- No mpi support")
-      endif()
+if(CMAKE_CXX_COMPILER MATCHES "mpi")
+   message("-- Using mpi compiler directly")
+   add_compile_definitions(TAT_USE_MPI)
+   if(NOT TAT_USE_MPI)
+      message("-- Ignore TAT_USE_MPI=OFF")
    endif()
 else()
-   message("-- Disable mpi support manually")
+   if(TAT_USE_MPI)
+         find_package(MPI QUIET)
+         if(MPI_FOUND)
+            include_directories(${MPI_INCLUDE_PATH})
+            link_libraries(${MPI_LIBRARIES})
+            message("-- Using mpi by linking mpi libraries")
+            add_compile_definitions(TAT_USE_MPI)
+         else()
+            message("-- No mpi support since mpi not found")
+         endif()
+   else()
+      message("-- Disable mpi support since TAT_USE_MPI=OFF")
+   endif()
 endif()
-
-# msvc必须加个utf8的参数
-add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 
 # 链接blas和lapack, 尽量使用静态链接, 如果是emscripten则链接emlapack, 需要自行放入emscripten目录下
 if(EMSCRIPTEN)
@@ -84,7 +70,7 @@ if(EMSCRIPTEN)
    link_libraries(${PROJECT_SOURCE_DIR}/emscripten/libblas.a)
    link_libraries(${PROJECT_SOURCE_DIR}/emscripten/libf2c.a)
 else()
-   if(NOT TAT_FORCE_BLAS_DYNAMIC)
+   if(TAT_PREFER_BLAS_STATIC)
       message("-- Try to find static blas and lapack")
       set(BLA_STATIC ON)
       find_package(BLAS QUIET)
