@@ -340,14 +340,17 @@ namespace TAT {
                  [tensor_name](const T& tensor) {
                     auto out = std::stringstream();
                     out << tensor_name << "Tensor";
-                    out << '{' << console_green << "names" << console_origin << ':';
-                    out << tensor.names;
-                    out << ',' << console_green << "edges" << console_origin << ':';
-                    out << tensor.core->edges;
+                    out << '{';
+                    if (tensor.is_valid()) {
+                       out << console_green << "names" << console_origin << ':';
+                       out << tensor.names;
+                       out << ',' << console_green << "edges" << console_origin << ':';
+                       out << tensor.core->edges;
+                    }
                     out << '}';
                     return out.str();
                  })
-            .def(py::init<>([]() { return T(1); }), "Default Constructor")
+            .def(py::init<>(), "Default Constructor")
             .def(py::init<>([edge_m, symmetry_short_name](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
                     for (const auto& this_edge : edges) {
