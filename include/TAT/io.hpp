@@ -51,11 +51,11 @@ namespace TAT {
       return out;
    }
 
-   template<typename T>
+   template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_write(std::ostream& out, const T* data, Size number = 1) {
       out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
    }
-   template<typename T>
+   template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_read(std::istream& in, T* data, Size number = 1) {
       in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
    }
@@ -91,13 +91,13 @@ namespace TAT {
       return out;
    }
 
-   template<typename T, typename A>
+   template<typename T, typename A, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_write_vector(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
       raw_write(out, &count);
       raw_write(out, list.data(), count);
    }
-   template<typename T, typename A>
+   template<typename T, typename A, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_read_vector(std::istream& in, std::vector<T, A>& list) {
       Size count;
       raw_read(in, &count);
