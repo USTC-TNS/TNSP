@@ -34,7 +34,7 @@ namespace TAT {
       std::string timer_name;
       std::chrono::high_resolution_clock::duration timer_count;
 
-      timer(const char* name) : timer_name(name) {}
+      timer(const char* name) : timer_name(name), timer_count(std::chrono::high_resolution_clock::duration::zero()) {}
 
       ~timer() {
          if (timer_count.count() != 0) {
@@ -44,8 +44,8 @@ namespace TAT {
       }
 
       struct timer_guard {
-         std::chrono::time_point<std::chrono::high_resolution_clock> tic;
-         std::chrono::time_point<std::chrono::high_resolution_clock> toc;
+         std::chrono::high_resolution_clock::time_point tic;
+         std::chrono::high_resolution_clock::time_point toc;
          timer* owner;
 
          timer_guard(timer* owner) : owner(owner) {
