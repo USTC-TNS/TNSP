@@ -115,6 +115,7 @@ namespace TAT {
          const float* beta,
          float* c,
          const int* ldc) {
+      auto kernel_guard = contract_kernel_guard();
       sgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
@@ -132,6 +133,7 @@ namespace TAT {
          const double* beta,
          double* c,
          const int* ldc) {
+      auto kernel_guard = contract_kernel_guard();
       dgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
@@ -149,6 +151,7 @@ namespace TAT {
          const std::complex<float>* beta,
          std::complex<float>* c,
          const int* ldc) {
+      auto kernel_guard = contract_kernel_guard();
       cgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
    template<>
@@ -166,6 +169,7 @@ namespace TAT {
          const std::complex<double>* beta,
          std::complex<double>* c,
          const int* ldc) {
+      auto kernel_guard = contract_kernel_guard();
       zgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
 
@@ -197,6 +201,7 @@ namespace TAT {
          const Tensor<ScalarType, Symmetry>& tensor_1,
          const Tensor<ScalarType, Symmetry>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
+      auto guard = contract_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return contract_with_fuse(tensor_1, tensor_2, std::move(contract_names));
       } else {
@@ -209,7 +214,6 @@ namespace TAT {
          const Tensor<ScalarType, Symmetry>& tensor_1,
          const Tensor<ScalarType, Symmetry>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
-      auto guard = contract_misc_guard();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       // 为未来split做准备
@@ -442,7 +446,6 @@ namespace TAT {
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
-            auto kernel_guard = contract_kernel_guard();
             calculate_product<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",
@@ -476,7 +479,6 @@ namespace TAT {
          const Tensor<ScalarType, NoSymmetry>& tensor_1,
          const Tensor<ScalarType, NoSymmetry>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
-      auto guard = contract_misc_guard();
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
       // 删除不存在的名称, 即在name tuple list中但不在names中
@@ -646,7 +648,6 @@ namespace TAT {
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
       if (m * n * k != 0) {
          for (auto i = 0; i < l; i++) {
-            auto kernel_guard = contract_kernel_guard();
             calculate_product<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",

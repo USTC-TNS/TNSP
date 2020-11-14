@@ -98,15 +98,15 @@ namespace TAT {
 #endif
 
 #define TAT_DEFINE_TIMER(x) inline timer x##_guard(#x);
-   TAT_DEFINE_TIMER(contract_misc)
+   TAT_DEFINE_TIMER(contract)
    TAT_DEFINE_TIMER(contract_kernel)
-   TAT_DEFINE_TIMER(svd_misc)
+   TAT_DEFINE_TIMER(svd)
    TAT_DEFINE_TIMER(svd_kernel)
-   TAT_DEFINE_TIMER(qr_misc)
+   TAT_DEFINE_TIMER(qr)
    TAT_DEFINE_TIMER(qr_kernel)
    TAT_DEFINE_TIMER(scalar_outplace)
    TAT_DEFINE_TIMER(scalar_inplace)
-   TAT_DEFINE_TIMER(transpose_misc)
+   TAT_DEFINE_TIMER(transpose)
    TAT_DEFINE_TIMER(transpose_kernel)
    TAT_DEFINE_TIMER(transpose_kernel_core)
    TAT_DEFINE_TIMER(multiple)

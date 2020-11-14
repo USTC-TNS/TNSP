@@ -192,6 +192,7 @@ namespace TAT {
          ScalarType* __restrict data_1,
          ScalarType* __restrict data_2,
          bool use_qr_not_lq) {
+      auto kernel_guard = qr_kernel_guard();
       // TODO: 有时可能多转置一下更快，参见svd中的做法
       // m*n c matrix at data do lq
       // n*m fortran matrix at data do qr
@@ -280,7 +281,7 @@ namespace TAT {
          const std::set<Name>& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
-      auto guard = qr_misc_guard();
+      auto guard = qr_guard();
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -368,7 +369,6 @@ namespace TAT {
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
          if (m * n != 0) {
-            auto kernel_guard = qr_kernel_guard();
             calculate_qr<ScalarType>(m, n, k, max, data, data_1, data_2, use_qr_not_lq);
          }
       }

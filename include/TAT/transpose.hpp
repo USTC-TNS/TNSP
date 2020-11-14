@@ -124,6 +124,8 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
+      auto guard = transpose_kernel_core_guard();
+
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
       std::vector<Size> index_list(rank, 0);
@@ -167,6 +169,8 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
+      auto guard = transpose_kernel_core_guard();
+
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
       std::vector<Size> index_list(rank, 0);
@@ -335,8 +339,6 @@ namespace TAT {
       auto checked_index = std::vector<Rank>(rank, rank);
       auto incomplete_dimension = std::vector<Size>(rank, 0);
 
-      auto guard = transpose_kernel_core_guard();
-
       tensor_transpose_kernel<ScalarType, parity>(
             data_source,
             data_destination,
@@ -370,8 +372,6 @@ namespace TAT {
 
       auto checked_index = std::vector<Rank>(rank, rank);
       auto incomplete_dimension = std::vector<Size>(rank, 0);
-
-      auto guard = transpose_kernel_core_guard();
 
       tensor_transpose_kernel_with_block<ScalarType, parity>(
             data_source,
@@ -407,8 +407,6 @@ namespace TAT {
       auto checked_index = std::vector<Rank>(rank, rank);
       auto incomplete_dimension = std::vector<Size>(rank, 0);
 
-      auto guard = transpose_kernel_core_guard();
-
       tensor_transpose_kernel<ScalarType, parity>(
             data_source,
             data_destination,
@@ -442,8 +440,6 @@ namespace TAT {
 
       auto checked_index = std::vector<Rank>(rank, rank);
       auto incomplete_dimension = std::vector<Size>(rank, 0);
-
-      auto guard = transpose_kernel_core_guard();
 
       tensor_transpose_kernel_with_block<ScalarType, parity>(
             data_source,
@@ -673,6 +669,8 @@ namespace TAT {
          Rank rank,
          Size total_size,
          bool parity) {
+      auto guard = transpose_kernel_guard();
+
       if (total_size == 0) {
          return;
       }
