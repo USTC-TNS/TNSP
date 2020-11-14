@@ -192,6 +192,7 @@ namespace TAT {
          ScalarType* __restrict data_1,
          ScalarType* __restrict data_2,
          bool use_qr_not_lq) {
+      auto kernel_guard = qr_kernel_guard();
       // TODO: 有时可能多转置一下更快，参见svd中的做法
       // m*n c matrix at data do lq
       // n*m fortran matrix at data do qr
@@ -280,7 +281,7 @@ namespace TAT {
          const std::set<Name>& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
-      auto guard = qr_misc_guard();
+      auto guard = qr_guard();
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -339,14 +340,12 @@ namespace TAT {
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
-      guard.pause();
       auto tensor_merged = edge_operator(
             {},
             {},
             reversed_set_origin,
             {{internal_name::QR_1, free_name_1}, {internal_name::QR_2, free_name_2}},
             {internal_name::QR_1, internal_name::QR_2});
-      guard.resume();
       // call lapack
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
@@ -370,10 +369,7 @@ namespace TAT {
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
          if (m * n != 0) {
-            auto kernel_guard = qr_kernel_guard();
-            guard.pause();
             calculate_qr<ScalarType>(m, n, k, max, data, data_1, data_2, use_qr_not_lq);
-            guard.resume();
          }
       }
       // 参考svd中的情况
@@ -383,7 +379,6 @@ namespace TAT {
       if constexpr (is_fermi) {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
-      guard.pause();
       auto new_tensor_1 = tensor_1.template edge_operator<true>(
             {{internal_name::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
             {{internal_name::QR_1, free_names_and_edges_1}},
@@ -398,7 +393,6 @@ namespace TAT {
             result_name_2,
             false,
             {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
-      guard.resume();
       return {std::move(use_qr_not_lq ? new_tensor_1 : new_tensor_2), std::move(use_qr_not_lq ? new_tensor_2 : new_tensor_1)};
    }
 } // namespace TAT

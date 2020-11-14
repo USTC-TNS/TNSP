@@ -59,9 +59,7 @@ namespace TAT {
          auto real_tensor_2 = &tensor_2;                                                                                          \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                                     \
          if (tensor_1.names != tensor_2.names) {                                                                                  \
-            guard.pause();                                                                                                        \
             new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                                    \
-            guard.resume();                                                                                                       \
             real_tensor_2 = &new_tensor_2;                                                                                        \
          }                                                                                                                        \
          auto real_result_edge = &tensor_1.core->edges;                                                                           \
@@ -151,9 +149,7 @@ namespace TAT {
          auto real_tensor_2 = &tensor_2;                                                                                          \
          auto new_tensor_2 = Tensor<ScalarType2, Symmetry>();                                                                     \
          if (tensor_1.names != tensor_2.names) {                                                                                  \
-            guard.pause();                                                                                                        \
             new_tensor_2 = tensor_2.transpose(tensor_1.names);                                                                    \
-            guard.resume();                                                                                                       \
             real_tensor_2 = &new_tensor_2;                                                                                        \
          }                                                                                                                        \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                                \

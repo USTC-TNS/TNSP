@@ -137,6 +137,7 @@ namespace TAT {
          ScalarType* u,
          real_base_t<ScalarType>* s,
          ScalarType* vt) {
+      auto kernel_guard = svd_kernel_guard();
       if (m > n) {
          auto new_a = vector<ScalarType>(n * m);
          auto old_u = vector<ScalarType>(n * min);
@@ -231,7 +232,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry>
    typename Tensor<ScalarType, Symmetry>::svd_result
    Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) const {
-      auto guard = svd_misc_guard();
+      auto guard = svd_guard();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -278,7 +279,6 @@ namespace TAT {
       }
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
-      guard.pause();
       auto tensor_merged = edge_operator(
             {},
             {},
@@ -286,7 +286,6 @@ namespace TAT {
             {{internal_name::SVD_U, free_name_u}, {internal_name::SVD_V, free_name_v}},
             put_v_right ? std::vector<Name>{internal_name::SVD_U, internal_name::SVD_V} :
                           std::vector<Name>{internal_name::SVD_V, internal_name::SVD_U});
-      guard.resume();
       // tensor -> SVD_U -O- SVD_V
       // call GESVD
       auto common_edge_1 = Edge<Symmetry>();
@@ -319,10 +318,7 @@ namespace TAT {
          auto s = vector<real_base_t<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
-            auto kernel_guard = svd_kernel_guard();
-            guard.pause();
             calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
-            guard.resume();
          }
          result_s[symmetries[put_v_right]] = std::move(s);
       }
@@ -373,7 +369,6 @@ namespace TAT {
          reversed_set_u.insert(common_name_u);
       }
       // 这里会自动cut
-      guard.pause();
       auto u = tensor_u.template edge_operator<true>(
             {{internal_name::SVD_V, common_name_u}},
             {{internal_name::SVD_U, free_names_and_edges_u}},
@@ -392,7 +387,6 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             {{internal_name::SVD_U, remain_dimension_v}});
-      guard.resume();
       return {
             std::move(u),
 #ifdef TAT_USE_SINGULAR_MATRIX
