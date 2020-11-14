@@ -126,8 +126,10 @@ namespace TAT {
    inline std::istream& operator>>(std::istream& in, Name& name) {
       char buffer[256]; // max name length = 256
       Size length = 0;
-      while (std::isalnum(in.peek())) {
+      char next = in.peek();
+      while (std::isalnum(next) || next == '.' || next == '_' || next == '-' || next == '(' || next == ')') {
          buffer[length++] = in.get();
+         next = in.peek();
       }
       buffer[length] = '\x00';
       name = Name((const char*)buffer);
