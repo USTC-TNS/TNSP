@@ -715,7 +715,6 @@ namespace TAT {
          }
 
          auto kernel_guard = transpose_kernel_guard();
-         guard.pause();
          do_transpose(
                source_block.data() + total_source_offset,
                destination_block.data() + total_destination_offset,
@@ -728,7 +727,6 @@ namespace TAT {
                rank_at_transpose,
                total_size,
                parity);
-         guard.resume();
       }
 
       return result;

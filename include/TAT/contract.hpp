@@ -398,7 +398,6 @@ namespace TAT {
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
-      guard.pause();
       auto tensor_1_merged = tensor_1.edge_operator(
             {},
             {},
@@ -419,7 +418,6 @@ namespace TAT {
             false,
             {{{}, {}, {}, {}}},
             delete_2);
-      guard.resume();
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry>(
             {internal_name::Contract_1, internal_name::Contract_2},
@@ -445,7 +443,6 @@ namespace TAT {
          const ScalarType beta = 0;
          if (m * n * k != 0) {
             auto kernel_guard = contract_kernel_guard();
-            guard.pause();
             calculate_product<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",
@@ -460,7 +457,6 @@ namespace TAT {
                   &beta,
                   data.data(),
                   &n);
-            guard.resume();
          } else if (m * n != 0) {
             std::fill(data.begin(), data.end(), 0);
          }
@@ -470,9 +466,7 @@ namespace TAT {
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
-         guard.pause();
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
-         guard.resume();
          return result;
       }
    }
@@ -617,7 +611,6 @@ namespace TAT {
 
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
-      guard.pause();
       auto tensor_1_merged = tensor_1.edge_operator(
             {},
             {},
@@ -632,7 +625,6 @@ namespace TAT {
             {{internal_name::Contract_2, free_name_2}, {internal_name::Contract_1, common_name_2}, {internal_name::Contract_0, fuse_names_list}},
             put_common_2_right ? std::vector<Name>{internal_name::Contract_0, internal_name::Contract_2, internal_name::Contract_1} :
                                  std::vector<Name>{internal_name::Contract_0, internal_name::Contract_1, internal_name::Contract_2});
-      guard.resume();
       // calculate_product
       auto product_result = Tensor<ScalarType, NoSymmetry>(
             {internal_name::Contract_0, internal_name::Contract_1, internal_name::Contract_2},
@@ -655,7 +647,6 @@ namespace TAT {
       if (m * n * k != 0) {
          for (auto i = 0; i < l; i++) {
             auto kernel_guard = contract_kernel_guard();
-            guard.pause();
             calculate_product<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",
@@ -670,7 +661,6 @@ namespace TAT {
                   &beta,
                   data + m * n * i,
                   &n);
-            guard.resume();
          }
       } else if (m * n != 0) {
          std::fill(data, data + m * n * l, 0);
