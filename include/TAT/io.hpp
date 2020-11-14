@@ -21,7 +21,9 @@
 #ifndef TAT_IO_HPP
 #define TAT_IO_HPP
 
+#include <cctype>
 #include <iostream>
+#include <limits>
 
 #include "tensor.hpp"
 
@@ -51,11 +53,60 @@ namespace TAT {
       return out;
    }
 
-   template<typename T>
+   template<typename ScalarType>
+   std::ostream&& print_complex(std::ostream&& out, const std::complex<ScalarType>& value) {
+      print_complex(out, value);
+      return std::move(out);
+   }
+
+   inline void skip_space(std::istream& in) {
+      while (std::isspace(in.peek())) {
+         in.get();
+      }
+   }
+
+   inline void ignore_util(std::istream& in, char end) {
+      in.ignore(std::numeric_limits<std::streamsize>::max(), end);
+   }
+
+   template<typename ScalarType>
+   std::istream& scan_complex(std::istream& in, std::complex<ScalarType>& value) {
+      ScalarType part;
+      in >> part;
+      char maybe_i = in.peek();
+      if (maybe_i == 'i') {
+         in.get();
+         // no real part
+         value = std::complex<ScalarType>{0, part};
+      } else {
+         // have real part
+         if (maybe_i == '+' || maybe_i == '-') {
+            // have imag part
+            ScalarType another_part;
+            in >> another_part;
+            value = std::complex<ScalarType>{part, another_part};
+            if (in.get() != 'i') {
+               in.setstate(std::ios::failbit);
+            }
+         } else {
+            // no imag part
+            value = std::complex<ScalarType>{part, 0};
+         }
+      }
+      return in;
+   }
+
+   template<typename ScalarType>
+   std::istream&& scan_complex(std::istream&& in, std::complex<ScalarType>& value) {
+      scan_complex(in, value);
+      return std::move(in);
+   }
+
+   template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_write(std::ostream& out, const T* data, Size number = 1) {
       out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
    }
-   template<typename T>
+   template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_read(std::istream& in, T* data, Size number = 1) {
       in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
    }
@@ -70,6 +121,17 @@ namespace TAT {
          return out << position->second;
       }
 #endif
+   }
+
+   inline std::istream& operator>>(std::istream& in, Name& name) {
+      char buffer[256]; // max name length = 256
+      Size length = 0;
+      while (std::isalnum(in.peek())) {
+         buffer[length++] = in.get();
+      }
+      buffer[length] = '\x00';
+      name = Name((const char*)buffer);
+      return in;
    }
 
    template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
@@ -91,13 +153,39 @@ namespace TAT {
       return out;
    }
 
-   template<typename T, typename A>
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
+   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
+      ignore_util(in, '[');
+      list.clear();
+      if (in.peek() == ']') {
+         // empty list
+         in.get(); // 获取']'
+      } else {
+         // not empty
+         while (true) {
+            // 此时没有space
+            auto& i = list.emplace_back();
+            if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+               scan_complex(in, i);
+            } else {
+               in >> i;
+            }
+            char next = in.get();
+            if (next == ']') {
+               break;
+            }
+         }
+      }
+      return in;
+   }
+
+   template<typename T, typename A, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_write_vector(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
       raw_write(out, &count);
       raw_write(out, list.data(), count);
    }
-   template<typename T, typename A>
+   template<typename T, typename A, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
    void raw_read_vector(std::istream& in, std::vector<T, A>& list) {
       Size count;
       raw_read(in, &count);
@@ -144,6 +232,37 @@ namespace TAT {
       return out;
    }
    template<typename Symmetry>
+   std::istream& operator>>(std::istream& in, Edge<Symmetry>& edge) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         in >> edge.map[NoSymmetry()];
+      } else {
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            ignore_util(in, ':');
+            in >> edge.arrow;
+         }
+         ignore_util(in, '{');
+         edge.map.clear();
+         if (in.peek() != '}') {
+            // not empty
+            do {
+               Symmetry symmetry;
+               in >> symmetry;
+               ignore_util(in, ':');
+               Size dimension;
+               in >> dimension;
+               edge.map[symmetry] = dimension;
+            } while (in.get() == ','); // 读了map最后的'}'
+         } else {
+            in.get(); // 读了map最后的'}'
+         }
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            ignore_util(in, '}');
+         }
+      }
+      return in;
+   }
+
+   template<typename Symmetry>
    void raw_write_edge(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          raw_write(out, &edge.map.begin()->second);
@@ -185,25 +304,57 @@ namespace TAT {
    inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
       return out;
    }
+   inline std::istream& operator>>(std::istream& in, NoSymmetry&) {
+      return in;
+   }
    inline std::ostream& operator<<(std::ostream& out, const Z2Symmetry& symmetry) {
       out << symmetry.z2;
       return out;
+   }
+   inline std::istream& operator>>(std::istream& in, Z2Symmetry& symmetry) {
+      in >> symmetry.z2;
+      return in;
    }
    inline std::ostream& operator<<(std::ostream& out, const U1Symmetry& symmetry) {
       out << symmetry.u1;
       return out;
    }
+   inline std::istream& operator>>(std::istream& in, U1Symmetry& symmetry) {
+      in >> symmetry.u1;
+      return in;
+   }
    inline std::ostream& operator<<(std::ostream& out, const FermiSymmetry& symmetry) {
       out << symmetry.fermi;
       return out;
+   }
+   inline std::istream& operator>>(std::istream& in, FermiSymmetry& symmetry) {
+      in >> symmetry.fermi;
+      return in;
    }
    inline std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& symmetry) {
       out << '(' << symmetry.fermi << ',' << symmetry.z2 << ')';
       return out;
    }
+   inline std::istream& operator>>(std::istream& in, FermiZ2Symmetry& symmetry) {
+      ignore_util(in, '(');
+      in >> symmetry.fermi;
+      ignore_util(in, ',');
+      in >> symmetry.z2;
+      ignore_util(in, ')');
+      return in;
+   }
+
    inline std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& symmetry) {
       out << '(' << symmetry.fermi << ',' << symmetry.u1 << ')';
       return out;
+   }
+   inline std::istream& operator>>(std::istream& in, FermiU1Symmetry& symmetry) {
+      ignore_util(in, '(');
+      in >> symmetry.fermi;
+      ignore_util(in, ',');
+      in >> symmetry.u1;
+      ignore_util(in, ')');
+      return in;
    }
 
    /**
@@ -225,9 +376,6 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
-      if (!tensor.core) {
-         return out << "{" << console_red << "UNINITIALIZED" << console_origin << "}";
-      }
       out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names;
       out << ',' << console_green << "edges" << console_origin << ':';
@@ -249,6 +397,36 @@ namespace TAT {
       }
       out << '}';
       return out;
+   }
+   template<typename ScalarType, typename Symmetry>
+   std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
+      ignore_util(in, ':');
+      in >> tensor.names;
+      tensor.name_to_index = construct_name_to_index(tensor.names);
+      ignore_util(in, ':');
+      tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();
+      in >> tensor.core->edges;
+      check_valid_name(tensor.names, tensor.core->edges.size());
+      ignore_util(in, ':');
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         // change begin();
+         in >> tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), Symmetry())];
+      } else {
+         ignore_util(in, '{');
+         if (in.peek() != '}') {
+            do {
+               std::vector<Symmetry> symmetries;
+               in >> symmetries;
+               ignore_util(in, ':');
+               auto& data = tensor.core->blocks[std::move(symmetries)];
+               in >> data;
+            } while (in.get() == ','); // 读了map最后的'}'
+         } else {
+            in.get(); // 读了map最后的'}'
+         }
+      }
+      ignore_util(in, '}');
+      return in;
    }
 
    template<typename ScalarType, typename Symmetry>

@@ -38,14 +38,14 @@ namespace TAT {
    constexpr int mpi_tag = 0;
 
    struct mpi_output_stream {
-      std::ostream* out;
+      std::ostream& out;
       bool valid;
-      mpi_output_stream(std::ostream* out, bool valid) : out(out), valid(valid) {}
+      mpi_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
 
       template<typename Type>
       mpi_output_stream& operator<<(const Type& value) & {
          if (valid) {
-            *out << value;
+            out << value;
          }
          return *this;
       }
@@ -53,7 +53,7 @@ namespace TAT {
       template<typename Type>
       mpi_output_stream&& operator<<(const Type& value) && {
          if (valid) {
-            *out << value;
+            out << value;
          }
          return std::move(*this);
       }
@@ -86,13 +86,13 @@ namespace TAT {
          }
       }
       auto out(int rank_specified = 0) {
-         return mpi_output_stream(&std::cout, rank_specified == rank);
+         return mpi_output_stream(std::cout, rank_specified == rank);
       }
       auto log(int rank_specified = 0) {
-         return mpi_output_stream(&std::clog, rank_specified == rank);
+         return mpi_output_stream(std::clog, rank_specified == rank);
       }
       auto err(int rank_specified = 0) {
-         return mpi_output_stream(&std::cerr, rank_specified == rank);
+         return mpi_output_stream(std::cerr, rank_specified == rank);
       }
       static void barrier() {
          MPI_Barrier(MPI_COMM_WORLD);

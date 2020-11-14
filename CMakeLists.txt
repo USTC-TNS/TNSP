@@ -4,10 +4,10 @@ project(TAT VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
-string(REPLACE "-O2" "-Ofast" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
+string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 # linux一般没问题, clang, gcc当然是都没问题的 我只使用过openmpi
 # blas, lapack和mkl都没有问题
@@ -110,7 +110,7 @@ if(NOT EMSCRIPTEN)
       message("-- Enable python(local)")
       set(TAT_BUILD_PYTAT ON)
    else()
-      message("-- Disable python")
+      message("-- Disable python since pybind11 not found, try install pybind11 or put it into TAT directory")
    endif()
 endif()
 if(TAT_BUILD_PYTAT)
