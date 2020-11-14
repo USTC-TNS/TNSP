@@ -363,6 +363,13 @@ namespace TAT {
                  py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
             .def(implicit_init<T, ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
+            .def(py::init<>([](const std::string& string) {
+                    auto ss = std::stringstream(string);
+                    auto result = T();
+                    ss >> result;
+                    return result;
+                 }),
+                 "Read tensor from text string")
             .def_static(
                   "one",
                   &T::one,
@@ -669,9 +676,9 @@ namespace TAT {
                                 out << edge;
                                 return out.str();
                              })
-                        .def("__repr__", [](const EdgeType<Symmetry>& edge) {
+                        .def("__repr__", [name](const EdgeType<Symmetry>& edge) {
                            auto out = std::stringstream();
-                           out << "Edge";
+                           out << name << "Edge";
                            if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
                               out << "[";
                            }
