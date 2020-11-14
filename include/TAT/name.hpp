@@ -34,6 +34,7 @@ namespace TAT {
       std::string name;
       Name(const std::string& name) noexcept : name(name) {}
       Name(const char* name) : name(name) {}
+      Name() : name("Null") {}
 
       [[nodiscard]] const std::string& get_name() const {
          return name;
