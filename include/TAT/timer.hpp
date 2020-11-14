@@ -94,6 +94,8 @@ namespace TAT {
    TAT_DEFINE_TIMER(transpose_misc)
    TAT_DEFINE_TIMER(transpose_kernel)
    TAT_DEFINE_TIMER(transpose_kernel_core)
+   TAT_DEFINE_TIMER(multiple)
+   TAT_DEFINE_TIMER(conjugate)
 #undef TAT_DEFINE_TIMER
 } // namespace TAT
 #endif

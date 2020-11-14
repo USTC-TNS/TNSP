@@ -22,10 +22,12 @@
 #define TAT_TENSOR_MISCELLANEOUS_HPP
 
 #include "tensor.hpp"
+#include "timer.hpp"
 
 namespace TAT {
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
+      auto guard = multiple_guard();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;
@@ -34,27 +36,6 @@ namespace TAT {
       } else {
          return copy();
       }
-#if 0
-      if (division) {
-         if (different_direction) {
-            // v
-            return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, internal_name::SVD_V}})
-                  .edge_rename({{internal_name::SVD_U, name}});
-         } else {
-            // u
-            return contract(S.map([](const ScalarType& value) { return value != 0 ? 1. / value : 0; }), {{name, internal_name::SVD_U}})
-                  .edge_rename({{internal_name::SVD_V, name}});
-         }
-      } else {
-         if (different_direction) {
-            // v
-            return contract(S, {{name, internal_name::SVD_V}}).edge_rename({{internal_name::SVD_U, name}});
-         } else {
-            // u
-            return contract(S, {{name, internal_name::SVD_U}}).edge_rename({{internal_name::SVD_V, name}});
-         }
-      }
-#endif
       const auto found = name_to_index.find(name);
       if (found == name_to_index.end()) {
          TAT_warning_or_error_when_multiple_name_missing("Edge not Found in Multiple");
@@ -125,6 +106,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::conjugate() const {
+      auto guard = conjugate_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return copy();
       }
