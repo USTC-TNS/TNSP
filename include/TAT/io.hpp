@@ -21,7 +21,6 @@
 #ifndef TAT_IO_HPP
 #define TAT_IO_HPP
 
-#include <cctype>
 #include <iostream>
 #include <limits>
 
@@ -57,12 +56,6 @@ namespace TAT {
    std::ostream&& print_complex(std::ostream&& out, const std::complex<ScalarType>& value) {
       print_complex(out, value);
       return std::move(out);
-   }
-
-   inline void skip_space(std::istream& in) {
-      while (std::isspace(in.peek())) {
-         in.get();
-      }
    }
 
    inline void ignore_util(std::istream& in, char end) {
@@ -123,13 +116,16 @@ namespace TAT {
 #endif
    }
 
+   bool valid_name_character(char c) {
+      return ' ' < c && c < '\x7f' && c != ',' && c != '[' && c != ']';
+      // 可打印字符去掉空格，逗号和方括号
+   }
+
    inline std::istream& operator>>(std::istream& in, Name& name) {
       char buffer[256]; // max name length = 256
       Size length = 0;
-      char next = in.peek();
-      while (std::isalnum(next) || next == '.' || next == '_' || next == '-' || next == '(' || next == ')') {
+      while (valid_name_character(in.peek())) {
          buffer[length++] = in.get();
-         next = in.peek();
       }
       buffer[length] = '\x00';
       name = Name((const char*)buffer);
