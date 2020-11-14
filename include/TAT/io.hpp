@@ -420,7 +420,7 @@ namespace TAT {
                ignore_util(in, ':');
                auto& data = tensor.core->blocks[std::move(symmetries)];
                in >> data;
-            } while (in.peek() == ','); // 读了map最后的'}'
+            } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
          }

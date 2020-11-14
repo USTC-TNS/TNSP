@@ -40,12 +40,12 @@ namespace TAT {
    struct mpi_output_stream {
       std::ostream& out;
       bool valid;
-      mpi_output_stream(std::ostream& : out, bool valid) : out(out), valid(valid) {}
+      mpi_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
 
       template<typename Type>
       mpi_output_stream& operator<<(const Type& value) & {
          if (valid) {
-            *out << value;
+            out << value;
          }
          return *this;
       }
@@ -53,7 +53,7 @@ namespace TAT {
       template<typename Type>
       mpi_output_stream&& operator<<(const Type& value) && {
          if (valid) {
-            *out << value;
+            out << value;
          }
          return std::move(*this);
       }
