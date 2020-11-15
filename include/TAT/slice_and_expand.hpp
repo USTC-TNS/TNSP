@@ -23,11 +23,13 @@
 
 #include "tensor.hpp"
 namespace TAT {
+   // TODO expand的名字还不是很好听
    // TODO 这些都可以优化
    // TODO 复杂的slice -> 同时slice and expand
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
    Tensor<ScalarType, Symmetry>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
+      auto guard = expand_guard();
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
       //            std::is_same_v<Symmetry, NoSymmetry>,
       //            std::tuple<Size, Size>,
@@ -95,6 +97,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>
    Tensor<ScalarType, Symmetry>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
+      auto guard = slice_guard();
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto new_names = std::vector<Name>();
