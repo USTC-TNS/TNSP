@@ -851,10 +851,10 @@ namespace TAT {
             .def_readonly("id", &Name::id)
             .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.id)); })
 #endif
-            .def_property_readonly("name", [](const Name& name) { return name.get_name(); })
+            .def_property_readonly("name", [](const Name& name) { return static_cast<const std::string&>(name); })
             .def(implicit_init<Name, const char*>(), py::arg("name"), "Name with specified name")
-            .def("__repr__", [](const Name& name) { return "Name[" + name.get_name() + "]"; })
-            .def("__str__", [](const Name& name) { return name.get_name(); });
+            .def("__repr__", [](const Name& name) { return "Name[" + static_cast<const std::string&>(name) + "]"; })
+            .def("__str__", [](const Name& name) { return static_cast<const std::string&>(name); });
       // symmetry
       auto symmetry_m = internal_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());

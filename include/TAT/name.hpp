@@ -29,27 +29,7 @@ namespace TAT {
    /**
     * \brief 用于给张量的边命名的类型Name, 直接使用字符串
     */
-   struct SimpleName {
-      std::string name;
-      SimpleName(const std::string& name) noexcept : name(name) {}
-      SimpleName(const char* name) : name(name) {}
-      SimpleName() : name("Null") {}
-
-      [[nodiscard]] const std::string& get_name() const {
-         return name;
-      }
-   };
-#define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                               \
-   inline bool OP(const SimpleName& name_1, const SimpleName& name_2) { \
-      return EXP;                                                       \
-   }
-   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.name == name_2.name)
-   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.name != name_2.name)
-   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.name >= name_2.name)
-   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.name <= name_2.name)
-   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.name > name_2.name)
-   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.name < name_2.name)
-#undef TAT_DEFINE_NAME_OPERATOR
+   using SimpleName = std::string;
 
    /**
     * \brief Name中用于标号的类型
@@ -94,8 +74,7 @@ namespace TAT {
             id = position->second;
          }
       }
-
-      [[nodiscard]] const std::string& get_name() const {
+      operator const std::string&() const {
          return id_to_name.at(id);
       }
    };

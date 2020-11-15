@@ -104,16 +104,15 @@ namespace TAT {
       in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
    }
 
-   inline std::ostream& operator<<(std::ostream& out, const Name& name) {
-#ifdef TAT_USE_SIMPLE_NAME
-      return out << name.name;
-#else
+   // 如果Name = std::string则不能使用这个来输出
+   // 而输入的话会重载std::string的输入问题不大
+   // 对于二进制io在tensor处处理了问题也不大
+   inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
       if (const auto position = id_to_name.find(name.id); position == id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
          return out << position->second;
       }
-#endif
    }
 
    bool valid_name_character(char c) {
@@ -468,7 +467,7 @@ namespace TAT {
       Rank count = names.size();
       raw_write(out, &count);
       for (const auto& name : names) {
-         raw_write_string(out, name.name);
+         raw_write_string(out, name);
       }
 #else
       raw_write_vector(out, names);
