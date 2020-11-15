@@ -26,6 +26,7 @@
 namespace TAT {
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
+      auto guard = trace_guard();
       // TODO to implement
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       // 对于fermi的情况, 应是一进一出才合法
