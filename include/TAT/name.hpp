@@ -26,22 +26,11 @@
 #include <string>
 
 namespace TAT {
-#ifdef TAT_USE_SIMPLE_NAME
    /**
     * \brief 用于给张量的边命名的类型Name, 直接使用字符串
     */
-   struct Name {
-      std::string name;
-      Name(const std::string& name) noexcept : name(name) {}
-      Name(const char* name) : name(name) {}
-      Name() : name("Null") {}
+   using SimpleName = std::string;
 
-      [[nodiscard]] const std::string& get_name() const {
-         return name;
-      }
-   };
-#define TAT_NAME_KEY name
-#else
    /**
     * \brief Name中用于标号的类型
     */
@@ -68,15 +57,15 @@ namespace TAT {
     * 新建一个字符串的Name时将递增names_total_index并获取一个唯一的标号
     * \see names_total_index
     */
-   struct Name {
+   struct FastName {
       /**
        * \brief Name的标号
        */
       NameIdType id = -1;
-      Name() = default;
-      Name(const NameIdType id) noexcept : id(id) {}
-      Name(const char* name) noexcept : Name(std::string(name)) {}
-      Name(const std::string& name) noexcept {
+      FastName() = default;
+      FastName(const NameIdType id) noexcept : id(id) {}
+      FastName(const char* name) noexcept : FastName(std::string(name)) {}
+      FastName(const std::string& name) noexcept {
          if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
             id = names_total_index++;
             name_to_id[name] = id;
@@ -85,28 +74,32 @@ namespace TAT {
             id = position->second;
          }
       }
-
-      [[nodiscard]] const std::string& get_name() const {
+      operator const std::string&() const {
          return id_to_name.at(id);
       }
    };
-#define TAT_NAME_KEY id
-#endif
 
    // 此处将可被c++20的operator<=>替换
    // 生成Name的比较运算符重载
-#define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                   \
-   inline bool OP(const Name& name_1, const Name& name_2) { \
-      return EXP;                                           \
+#define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                           \
+   inline bool OP(const FastName& name_1, const FastName& name_2) { \
+      return EXP;                                                   \
    }
-   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.TAT_NAME_KEY == name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.TAT_NAME_KEY != name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.TAT_NAME_KEY >= name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.TAT_NAME_KEY <= name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.TAT_NAME_KEY > name_2.TAT_NAME_KEY)
-   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.TAT_NAME_KEY < name_2.TAT_NAME_KEY)
+   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.id == name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.id != name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.id >= name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.id <= name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.id > name_2.id)
+   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id < name_2.id)
 #undef TAT_DEFINE_NAME_OPERATOR
-#undef TAT_NAME_KEY
+
+   using Name =
+#ifdef TAT_USE_SIMPLE_NAME
+         SimpleName
+#else
+         FastName
+#endif
+         ;
 
    // 保留名称, 在一些张量运算内部使用
 #define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)
@@ -159,8 +152,9 @@ namespace TAT {
    /**
     * \brief 由名字列表构造名字到序号的映射表
     */
-   inline std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
-      std::map<Name, Rank> result;
+   template<typename NameType>
+   std::map<NameType, Rank> construct_name_to_index(const std::vector<NameType>& names) {
+      std::map<NameType, Rank> result;
       for (auto name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
       }
@@ -170,8 +164,9 @@ namespace TAT {
    /**
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
-   inline bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
+   template<typename NameType>
+   bool check_valid_name(const std::vector<NameType>& names, const Rank& rank) {
+      const auto result_duplicated = names.size() == std::set<NameType>(names.begin(), names.end()).size();
       const auto result_length = names.size() == rank;
       if (!result_duplicated) {
          TAT_error("Duplicated names in name list");
