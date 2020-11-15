@@ -96,12 +96,14 @@ namespace TAT {
    }
 
    template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
-   void raw_write(std::ostream& out, const T* data, Size number = 1) {
-      out.write(reinterpret_cast<const char*>(data), sizeof(T) * number);
+   std::ostream& operator<(std::ostream& out, const T& data) {
+      out.write(reinterpret_cast<const char*>(&data), sizeof(T));
+      return out;
    }
    template<typename T, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
-   void raw_read(std::istream& in, T* data, Size number = 1) {
-      in.read(reinterpret_cast<char*>(data), sizeof(T) * number);
+   std::istream& operator>(std::istream& in, T& data) {
+      in.read(reinterpret_cast<char*>(&data), sizeof(T));
+      return in;
    }
 
    // 如果Name = std::string则不能使用这个来输出
@@ -176,30 +178,47 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
-   void raw_write_vector(std::ostream& out, const std::vector<T, A>& list) {
-      Size count = list.size();
-      raw_write(out, &count);
-      raw_write(out, list.data(), count);
+   std::ostream& operator<(std::ostream& out, const std::string& string) {
+      Size count = string.size();
+      out < count;
+      out.write(string.data(), sizeof(char) * count);
+      return out;
    }
-   template<typename T, typename A, typename = std::enable_if_t<std::is_trivially_destructible_v<T>>>
-   void raw_read_vector(std::istream& in, std::vector<T, A>& list) {
+   std::istream& operator>(std::istream& in, std::string& string) {
       Size count;
-      raw_read(in, &count);
-      list.resize(count);
-      raw_read(in, list.data(), count);
+      in > count;
+      string.resize(count);
+      in.read(string.data(), sizeof(char) * count);
+      return in;
    }
 
-   void raw_write_string(std::ostream& out, const std::string& string) {
-      Size count = string.size();
-      raw_write(out, &count);
-      raw_write(out, string.data(), count);
+   template<typename T, typename A>
+   std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
+      Size count = list.size();
+      out < count;
+      if constexpr (std::is_trivially_destructible_v<T>) {
+         out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
+      } else {
+         for (const auto& i : list) {
+            out < i;
+         }
+      }
+      return out;
    }
-   void raw_read_string(std::istream& in, std::string& string) {
+   template<typename T, typename A>
+   std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
       Size count;
-      raw_read(in, &count);
-      string.resize(count);
-      raw_read(in, string.data(), count);
+      in > count;
+      if constexpr (std::is_trivially_destructible_v<T>) {
+         list.resize(count);
+         in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
+      } else {
+         for (auto i = 0; i < count; i++) {
+            auto& item = list.emplace_back();
+            in > item;
+         }
+      }
+      return in;
    }
 
    template<typename Symmetry>
@@ -260,42 +279,40 @@ namespace TAT {
    }
 
    template<typename Symmetry>
-   void raw_write_edge(std::ostream& out, const Edge<Symmetry>& edge) {
+   std::ostream& operator<(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         raw_write(out, &edge.map.begin()->second);
+         out < edge.map.begin()->second;
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            raw_write(out, &edge.arrow);
+            out < edge.arrow;
          }
          const Rank numbers = edge.map.size();
-         raw_write(out, &numbers);
+         out < numbers;
          for (const auto& [symmetry, dimension] : edge.map) {
-            raw_write(out, &symmetry);
-            raw_write(out, &dimension);
+            out < symmetry < dimension;
          }
       }
+      return out;
    }
    template<typename Symmetry>
-   void raw_read_edge(std::istream& in, Edge<Symmetry>& edge) {
+   std::istream& operator>(std::istream& in, Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         Size dim;
-         raw_read(in, &dim);
-         edge.map[NoSymmetry()] = dim;
+         in > edge.map[NoSymmetry()];
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            raw_read(in, &edge.arrow);
+            in > edge.arrow;
          }
          Rank numbers;
-         raw_read(in, &numbers);
+         in > numbers;
          edge.map.clear();
          for (auto i = 0; i < numbers; i++) {
             Symmetry symmetry;
             Size dimension;
-            raw_read(in, &symmetry);
-            raw_read(in, &dimension);
+            in > symmetry > dimension;
             edge.map[symmetry] = dimension;
          }
       }
+      return in;
    }
 
    inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
@@ -463,17 +480,9 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
-#ifdef TAT_USE_SIMPLE_NAME
-      Rank count = names.size();
-      raw_write(out, &count);
-      for (const auto& name : names) {
-         raw_write_string(out, name);
-      }
-#else
-      raw_write_vector(out, names);
-#endif
+      out < names;
       for (const auto& edge : core->edges) {
-         raw_write_edge(out, edge);
+         out < edge;
       }
       return *this;
    }
@@ -481,13 +490,13 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry>
    const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
       Size count = core->blocks.size();
-      raw_write(out, &count);
+      out < count;
       for (const auto& [i, j] : core->blocks) {
          if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          } else {
-            raw_write(out, i.data(), i.size());
+            out < i;
          }
-         raw_write_vector(out, j);
+         out < j;
       }
       return *this;
    }
@@ -508,13 +517,12 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry>
    std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         raw_write_vector(out, singular.value.begin()->second);
+         out < singular.value.begin()->second;
       } else {
          const Rank numbers = singular.value.size();
-         raw_write(out, &numbers);
+         out < numbers;
          for (const auto& [symmetry, vector] : singular.value) {
-            raw_write(out, &symmetry);
-            raw_write_vector(out, vector);
+            out < symmetry < vector;
          }
       }
       return out;
@@ -529,19 +537,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_get(std::istream& in) {
-#ifdef TAT_USE_SIMPLE_NAME
-      Rank count;
-      raw_read(in, &count);
-      names.clear();
-      names.reserve(count);
-      for (auto i = 0; i < count; i++) {
-         std::string this_name;
-         raw_read_string(in, this_name);
-         names.push_back(std::move(this_name));
-      }
-#else
-      raw_read_vector(in, names);
-#endif
+      in > names;
       const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
       core = std::make_shared<Core<ScalarType, Symmetry>>();
@@ -549,7 +545,7 @@ namespace TAT {
       core->edges.reserve(rank);
       for (auto i = 0; i < rank; i++) {
          auto& edge = core->edges.emplace_back();
-         raw_read_edge(in, edge);
+         in > edge;
       }
       check_valid_name(names, core->edges.size());
       return *this;
@@ -559,15 +555,15 @@ namespace TAT {
    Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_get(std::istream& in) {
       Rank rank = names.size();
       Size count;
-      raw_read(in, &count);
+      in > count;
       core->blocks.clear();
       for (auto i = 0; i < count; i++) {
          if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-            raw_read_vector(in, core->blocks[std::vector<NoSymmetry>(rank, NoSymmetry())]);
+            in > core->blocks[std::vector<NoSymmetry>(rank, NoSymmetry())];
          } else {
             auto symmetries = std::vector<Symmetry>(rank);
-            raw_read(in, symmetries.data(), symmetries.size());
-            raw_read_vector(in, core->blocks[std::move(symmetries)]);
+            in > symmetries;
+            in > core->blocks[std::move(symmetries)];
          }
       }
       return *this;
@@ -590,17 +586,16 @@ namespace TAT {
    std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry>& singular) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          vector<real_base_t<ScalarType>> singulars;
-         raw_read_vector(in, singulars);
+         in > singulars;
          singular.value[NoSymmetry()] = std::move(singulars);
       } else {
          Rank numbers;
-         raw_read(in, &numbers);
+         in > numbers;
          singular.value.clear();
          for (auto i = 0; i < numbers; i++) {
             Symmetry symmetry;
             vector<real_base_t<ScalarType>> singulars;
-            raw_read(in, &symmetry);
-            raw_read_vector(in, singulars);
+            in > symmetry > singulars;
             singular.value[symmetry] = std::move(singulars);
          }
       }
