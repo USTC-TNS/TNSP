@@ -5,26 +5,26 @@ TAT is a header-only c++ tensor library with support for Abelian [symmetry](http
 The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it should be all uppercase.
 
 ## Prerequisites
-- c++ compiler with c++17 support(such as gcc7+)
-- blas/lapack or mkl
+- c++ compiler with c++17 support(such as gcc7+, clang5+, msvc19.14+)
+- lapack/blas or mkl
 - [pybind11](https://github.com/pybind/pybind11)(optional for python binding)
 - mpi(optional for parallel computing)
 
 ## Usage
-Just include the file [`include/TAT/TAT.hpp`](/include/TAT/TAT.hpp) and link blas/lapack or mkl in link time
+Just include the file [`include/TAT/TAT.hpp`](/include/TAT/TAT.hpp) and link lapack/blas or mkl at link time
 
-For good practice, pass `-I$path_to_TAT_root/include` to compiler and use `#include <TAT/TAT.hpp>` in your source file
+For good practice, pass argument `-I$path_to_TAT_root/include` to compiler and use `#include <TAT/TAT.hpp>` in your source file
 
 For mpi support, you need to define macro `TAT_USE_MPI` and use mpi compiler such as `mpic++`(recommend) or pass correct flag to normal compiler(for expert)
 
-Please check comment in file [`TAT.hpp`](/include/TAT/TAT.hpp#L42) for some other macro option
+Please check comment in file [`TAT.hpp`](/include/TAT/TAT.hpp#L42) for some other macro options
 
 Please notice that this library need proper compiler optimization option(`-O2`, `-O3`, `-Ofast`) for good performace
 
 You can also use TAT as a cmake subdirectory, just use `add_subdirectory(path_to_TAT_root)` and `target_link_libraries(your_target TAT)` in your `CMakeLists.txt`
 
 ## Python binding
-Python binding is configured in [`CMakeLists.txt`](/CMakeLists.txt#L127), use cmake and build target `TAT`
+Python binding is configured in [`CMakeLists.txt`](/CMakeLists.txt#L117), use cmake and build target `PyTAT`
 
 For other customed python module name, define `TAT_PYTHON_MODULE` as cmake variable
 
@@ -35,6 +35,6 @@ Please notice that for some old mpi version(for example, openmpi 2.1.1 in ubuntu
 ## Use with [emscripten](https://emscripten.org/)
 If you want to run a program using TAT in browser, which is very useful for demonstration.
 
-You can simply compile TAT with `em++`(no mpi support, no doubt), and link `libblas.a`, `libf2c.a`, `liblapack.a` compiled from [clapack-3.2.1](https://www.netlib.org/clapack/)
+You can simply compile TAT with `em++`(no mpi support, no doubt), and link `liblapack.a`, `libblas.a`, `libf2c.a` compiled from [clapack-3.2.1](https://www.netlib.org/clapack/)
 
 You can download them from [here](https://github.com/hzhangxyz/TAT/releases/tag/v0.0.6) or compile by yourself.
