@@ -275,8 +275,8 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry>
-   typename Tensor<ScalarType, Symmetry>::qr_result Tensor<ScalarType, Symmetry>::qr(
+   template<typename ScalarType, typename Symmetry, typename Name>
+   typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr(
          char free_name_direction,
          const std::set<Name>& free_name_set,
          const Name& common_name_q,
@@ -351,8 +351,8 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry>{{",QR_1", ",QR_2"}, {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry>{{",QR_1", ",QR_2"}, {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{{",QR_1", ",QR_2"}, {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{{",QR_1", ",QR_2"}, {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       for (auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_1 = tensor_1.core->blocks.at(symmetries).data();
          auto* data_2 = tensor_2.core->blocks.at(symmetries).data();

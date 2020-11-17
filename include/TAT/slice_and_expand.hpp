@@ -26,9 +26,9 @@ namespace TAT {
    // TODO expand的名字还不是很好听
    // TODO 这些都可以优化
    // TODO 复杂的slice -> 同时slice and expand
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry>
-   Tensor<ScalarType, Symmetry>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>
+   Tensor<ScalarType, Symmetry, Name>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
       auto guard = expand_guard();
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
       //            std::is_same_v<Symmetry, NoSymmetry>,
@@ -88,15 +88,15 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry>(std::move(new_names), std::move(new_edges));
+      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return contract_all_edge(helper);
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry>
-   Tensor<ScalarType, Symmetry>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>
+   Tensor<ScalarType, Symmetry, Name>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
       auto guard = slice_guard();
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
@@ -145,7 +145,7 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry>(std::move(new_names), std::move(new_edges));
+      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return contract_all_edge(helper);

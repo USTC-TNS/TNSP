@@ -173,7 +173,7 @@ namespace TAT {
       zgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
    }
 
-   template<int i>
+   template<int i, typename Name>
    auto find_in_contract_names(const std::set<std::tuple<Name, Name>>& contract_names, const Name& name) {
       auto iterator = contract_names.begin();
       for (; iterator != contract_names.end(); ++iterator) {
@@ -184,22 +184,22 @@ namespace TAT {
       return iterator;
    }
 
-   template<typename ScalarType>
-   Tensor<ScalarType, NoSymmetry> contract_with_fuse(
-         const Tensor<ScalarType, NoSymmetry>& tensor_1,
-         const Tensor<ScalarType, NoSymmetry>& tensor_2,
+   template<typename ScalarType, typename Name>
+   Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
+         const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
+         const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names);
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> contract_without_fuse(
-         const Tensor<ScalarType, Symmetry>& tensor_1,
-         const Tensor<ScalarType, Symmetry>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names);
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::contract(
-         const Tensor<ScalarType, Symmetry>& tensor_1,
-         const Tensor<ScalarType, Symmetry>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract(
+         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
       auto guard = contract_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
@@ -209,10 +209,10 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> contract_without_fuse(
-         const Tensor<ScalarType, Symmetry>& tensor_1,
-         const Tensor<ScalarType, Symmetry>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
@@ -421,7 +421,7 @@ namespace TAT {
             {{{}, {}, {}, {}}},
             delete_2);
       // calculate_product
-      auto product_result = Tensor<ScalarType, Symmetry>(
+      auto product_result = Tensor<ScalarType, Symmetry, Name>(
             {",Contract_1", ",Contract_2"},
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
       // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
@@ -463,7 +463,7 @@ namespace TAT {
          }
       }
       if constexpr (is_no_symmetry) {
-         auto result = Tensor<ScalarType, Symmetry>{std::move(name_result), std::move(edge_result)};
+         auto result = Tensor<ScalarType, Symmetry, Name>{std::move(name_result), std::move(edge_result)};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
@@ -472,10 +472,10 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType>
-   Tensor<ScalarType, NoSymmetry> contract_with_fuse(
-         const Tensor<ScalarType, NoSymmetry>& tensor_1,
-         const Tensor<ScalarType, NoSymmetry>& tensor_2,
+   template<typename ScalarType, typename Name>
+   Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
+         const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
+         const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names) {
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
@@ -626,7 +626,7 @@ namespace TAT {
             put_common_2_right ? std::vector<Name>{",Contract_0", ",Contract_2", ",Contract_1"} :
                                  std::vector<Name>{",Contract_0", ",Contract_1", ",Contract_2"});
       // calculate_product
-      auto product_result = Tensor<ScalarType, NoSymmetry>(
+      auto product_result = Tensor<ScalarType, NoSymmetry, Name>(
             {",Contract_0", ",Contract_1", ",Contract_2"},
             {std::move(tensor_1_merged.core->edges[0]),
              std::move(tensor_1_merged.core->edges[1 + !put_common_1_right]),
@@ -665,7 +665,7 @@ namespace TAT {
          std::fill(data, data + m * n * l, 0);
       }
 
-      auto result = Tensor<ScalarType, NoSymmetry>{std::move(name_result), std::move(edge_result)};
+      auto result = Tensor<ScalarType, NoSymmetry, Name>{std::move(name_result), std::move(edge_result)};
       result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
       return result;
    }

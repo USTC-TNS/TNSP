@@ -40,7 +40,7 @@ struct PBC {
    PBC(int L, unsigned int D, std::function<float()> generator) : L(L), D(D) {
       for (int i = 0; i < L; i++) {
          for (int j = 0; j < L; j++) {
-            auto names = std::vector<TAT::Name>();
+            auto names = std::vector<TAT::DefaultName>();
             if (i != 0) {
                names.emplace_back("up");
             }
@@ -62,7 +62,7 @@ struct PBC {
       auto result = Tensor(1);
       for (int i = 0; i < L; i++) {
          for (int j = 0; j < L; j++) {
-            auto contract_names = std::set<std::tuple<TAT::Name, TAT::Name>>{{right(i), left(i)}, {down(j), up(j)}};
+            auto contract_names = std::set<std::tuple<TAT::DefaultName, TAT::DefaultName>>{{right(i), left(i)}, {down(j), up(j)}};
             result = result.contract(
                   lattice.at(i).at(j).edge_rename({{"up", up(j)}, {"down", down(j)}, {"left", left(i)}, {"right", right(i)}}), contract_names);
          }

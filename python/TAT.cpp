@@ -55,14 +55,14 @@
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2); \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1);
 
-PYBIND11_MAKE_OPAQUE(std::vector<TAT::Name>)
+PYBIND11_MAKE_OPAQUE(std::vector<TAT::DefaultName>)
 
-#define TAT_SINGLE_SYMMETRY(SYM)                                                                \
-   PYBIND11_MAKE_OPAQUE(std::map<TAT::SYM##Symmetry, TAT::Size>);                               \
-   PYBIND11_MAKE_OPAQUE(std::vector<TAT::SYM##Symmetry>);                                       \
-   PYBIND11_MAKE_OPAQUE(std::vector<TAT::Edge<TAT::SYM##Symmetry>>);                            \
-   PYBIND11_MAKE_OPAQUE(std::vector<std::tuple<TAT::Name, TAT::BoseEdge<TAT::SYM##Symmetry>>>); \
-   PYBIND11_MAKE_OPAQUE(std::map<TAT::Name, std::vector<std::tuple<TAT::Name, TAT::BoseEdge<TAT::SYM##Symmetry>>>>);
+#define TAT_SINGLE_SYMMETRY(SYM)                                                                       \
+   PYBIND11_MAKE_OPAQUE(std::map<TAT::SYM##Symmetry, TAT::Size>);                                      \
+   PYBIND11_MAKE_OPAQUE(std::vector<TAT::SYM##Symmetry>);                                              \
+   PYBIND11_MAKE_OPAQUE(std::vector<TAT::Edge<TAT::SYM##Symmetry>>);                                   \
+   PYBIND11_MAKE_OPAQUE(std::vector<std::tuple<TAT::DefaultName, TAT::BoseEdge<TAT::SYM##Symmetry>>>); \
+   PYBIND11_MAKE_OPAQUE(std::map<TAT::DefaultName, std::vector<std::tuple<TAT::DefaultName, TAT::BoseEdge<TAT::SYM##Symmetry>>>>);
 TAT_LOOP_ALL_SYMMETRY;
 #undef TAT_SINGLE_SYMMETRY
 
@@ -121,18 +121,18 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry>
    struct unordered_block_of_tensor {
       py::object tensor;
-      std::map<Name, Symmetry> position;
+      std::map<DefaultName, Symmetry> position;
    };
 
    template<typename ScalarType, typename Symmetry>
    struct ordered_block_of_tensor {
       py::object tensor;
-      std::vector<std::tuple<Name, Symmetry>> position;
+      std::vector<std::tuple<DefaultName, Symmetry>> position;
    };
 
    template<typename Symmetry>
-   auto generate_vector_of_name_and_symmetry(const std::vector<Name>& position) {
-      auto real_position = std::vector<std::tuple<Name, Symmetry>>();
+   auto generate_vector_of_name_and_symmetry(const std::vector<DefaultName>& position) {
+      auto real_position = std::vector<std::tuple<DefaultName, Symmetry>>();
       for (const auto& n : position) {
          real_position.push_back({n, Symmetry()});
       }
@@ -182,31 +182,31 @@ namespace TAT {
             (tensor_name + "S").c_str(),
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def("__getitem__",
-                 [](const BS& bs, std::map<Name, Symmetry> position) {
+                 [](const BS& bs, std::map<DefaultName, Symmetry> position) {
                     auto block = B1{bs.tensor, std::move(position)};
                     return try_get_numpy_array(block);
                  })
             .def("__setitem__",
-                 [](BS& bs, std::map<Name, Symmetry> position, const py::object& object) {
+                 [](BS& bs, std::map<DefaultName, Symmetry> position, const py::object& object) {
                     auto block = B1{bs.tensor, std::move(position)};
                     try_set_numpy_array(block, object);
                  })
             .def("__getitem__",
-                 [](const BS& bs, std::vector<std::tuple<Name, Symmetry>> position) {
+                 [](const BS& bs, std::vector<std::tuple<DefaultName, Symmetry>> position) {
                     auto block = B2{bs.tensor, std::move(position)};
                     return try_get_numpy_array(block);
                  })
             .def("__setitem__",
-                 [](BS& bs, std::vector<std::tuple<Name, Symmetry>> position, const py::object& object) {
+                 [](BS& bs, std::vector<std::tuple<DefaultName, Symmetry>> position, const py::object& object) {
                     auto block = B2{bs.tensor, std::move(position)};
                     try_set_numpy_array(block, object);
                  })
             .def("__getitem__",
-                 [](const BS& bs, const std::vector<Name>& position) {
+                 [](const BS& bs, const std::vector<DefaultName>& position) {
                     auto block = B2{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)};
                     return try_get_numpy_array(block);
                  })
-            .def("__setitem__", [](BS& bs, const std::vector<Name>& position, const py::object& object) {
+            .def("__setitem__", [](BS& bs, const std::vector<DefaultName>& position, const py::object& object) {
                auto block = B2{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)};
                try_set_numpy_array(block, object);
             });
@@ -244,7 +244,7 @@ namespace TAT {
             .def_buffer([](B2& b) {
                // 返回的buffer是可变的
                auto& tensor = py::cast<T&>(b.tensor);
-               auto position_map = std::map<Name, Symmetry>();
+               auto position_map = std::map<DefaultName, Symmetry>();
                for (const auto& [name, symmetry] : b.position) {
                   position_map[name] = symmetry;
                }
@@ -351,7 +351,7 @@ namespace TAT {
                     return out.str();
                  })
             .def(py::init<>(), "Default Constructor")
-            .def(py::init<>([edge_m, symmetry_short_name](std::vector<Name> names, const py::list& edges, bool auto_reverse) {
+            .def(py::init<>([edge_m, symmetry_short_name](std::vector<DefaultName> names, const py::list& edges, bool auto_reverse) {
                     auto tensor_edges = std::vector<E>();
                     for (const auto& this_edge : edges) {
                        tensor_edges.push_back(py::cast<E>(edge_m.attr(symmetry_short_name.c_str())(this_edge)));
@@ -406,7 +406,7 @@ namespace TAT {
                   "zero", [](T& tensor) -> T& { return tensor.zero(); }, "Set all element zero", py::return_value_policy::reference_internal)
             .def(
                   "identity",
-                  [](T& tensor, const std::set<std::tuple<Name, Name>>& pair) -> T& { return tensor.identity(pair); },
+                  [](T& tensor, const std::set<std::tuple<DefaultName, DefaultName>>& pair) -> T& { return tensor.identity(pair); },
                   py::arg("pairs"),
                   "Set tensor to identity like matrix",
                   py::return_value_policy::reference_internal)
@@ -420,11 +420,11 @@ namespace TAT {
             .def_property_readonly("block", [](const py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>{tensor}; })
             .def(
                   "__getitem__",
-                  [](const T& tensor, const std::map<Name, typename T::EdgeInfoForGetItem>& position) { return tensor.at(position); },
+                  [](const T& tensor, const std::map<DefaultName, typename T::EdgeInfoForGetItem>& position) { return tensor.at(position); },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"))
             .def(
                   "__setitem__",
-                  [](T& tensor, const std::map<Name, typename T::EdgeInfoForGetItem>& position, const ScalarType& value) {
+                  [](T& tensor, const std::map<DefaultName, typename T::EdgeInfoForGetItem>& position, const ScalarType& value) {
                      tensor.at(position) = value;
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"),
@@ -464,7 +464,7 @@ namespace TAT {
             .def("edge_rename", &T::edge_rename, py::arg("name_dictionary"), "Rename names of edges, which will not copy data")
             .def(
                   "transpose",
-                  [](const T& tensor, std::vector<Name> names) { return tensor.transpose(std::move(names)); },
+                  [](const T& tensor, std::vector<DefaultName> names) { return tensor.transpose(std::move(names)); },
                   py::arg("new_names"),
                   "Transpose the tensor to the order of new names")
             .def("reverse_edge",
@@ -482,10 +482,11 @@ namespace TAT {
                  "Merge several edges of the tensor into ones")
             .def(
                   "split_edge",
-                  [](const T& tensor, const py::dict& split, const bool apply_parity, const std::set<Name>& parity_exclude_name_split) {
-                     auto tensor_split = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+                  [](const T& tensor, const py::dict& split, const bool apply_parity, const std::set<DefaultName>& parity_exclude_name_split) {
+                     auto tensor_split = std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>();
                      for (const auto& [name, named_edge_list] : split) {
-                        tensor_split[py::cast<Name>(name)] = py::cast<std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(named_edge_list);
+                        tensor_split[py::cast<DefaultName>(name)] =
+                              py::cast<std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>(named_edge_list);
                      }
                      return tensor.split_edge(std::move(tensor_split), apply_parity, parity_exclude_name_split);
                   },
@@ -496,20 +497,20 @@ namespace TAT {
             .def(
                   "edge_operator",
                   [](const T& tensor,
-                     const std::map<Name, Name>& rename_map,
+                     const std::map<DefaultName, DefaultName>& rename_map,
                      const py::dict& split,
-                     const std::set<Name>& reversed_name,
-                     const std::map<Name, std::vector<Name>>& merge_map,
-                     std::vector<Name> new_names,
+                     const std::set<DefaultName>& reversed_name,
+                     const std::map<DefaultName, std::vector<DefaultName>>& merge_map,
+                     std::vector<DefaultName> new_names,
                      const bool apply_parity,
-                     std::set<Name> parity_exclude_name_split_set,
-                     std::set<Name> parity_exclude_name_reverse_set,
-                     std::set<Name> parity_exclude_name_reverse_before_merge_set,
-                     std::set<Name> parity_exclude_name_merge_set,
-                     const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) {
-                     auto split_map = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+                     std::set<DefaultName> parity_exclude_name_split_set,
+                     std::set<DefaultName> parity_exclude_name_reverse_set,
+                     std::set<DefaultName> parity_exclude_name_reverse_before_merge_set,
+                     std::set<DefaultName> parity_exclude_name_merge_set,
+                     const std::map<DefaultName, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) {
+                     auto split_map = std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>();
                      for (const auto& [name, named_edge_list] : split) {
-                        split_map[py::cast<Name>(name)] = py::cast<std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(named_edge_list);
+                        split_map[py::cast<DefaultName>(name)] = py::cast<std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>(named_edge_list);
                      }
                      return tensor.edge_operator(
                            rename_map,
@@ -538,7 +539,7 @@ namespace TAT {
                   "Tensor Edge Operator")
             .def(
                   "contract",
-                  [](const T& tensor_1, const T& tensor_2, std::set<std::tuple<Name, Name>> contract_names) {
+                  [](const T& tensor_1, const T& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) {
                      return T::contract(tensor_1, tensor_2, std::move(contract_names));
                   },
                   py::arg("another_tensor"),
@@ -556,7 +557,11 @@ namespace TAT {
             .def("trace", &T::trace)
             .def(
                   "svd",
-                  [](const T& tensor, const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) {
+                  [](const T& tensor,
+                     const std::set<DefaultName>& free_name_set_u,
+                     const DefaultName& common_name_u,
+                     const DefaultName& common_name_v,
+                     Size cut) {
                      auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, cut);
                      return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
                   },
@@ -569,9 +574,9 @@ namespace TAT {
                   "qr",
                   [](const T& tensor,
                      char free_name_direction,
-                     const std::set<Name>& free_name_set,
-                     const Name& common_name_q,
-                     const Name& common_name_r) {
+                     const std::set<DefaultName>& free_name_set,
+                     const DefaultName& common_name_q,
+                     const DefaultName& common_name_r) {
                      auto result = tensor.qr(free_name_direction, free_name_set, common_name_q, common_name_r);
                      return py::make_tuple(std::move(result.Q), std::move(result.R));
                   },
@@ -582,7 +587,7 @@ namespace TAT {
                   "QR decomposition")
             .def(
                   "multiple",
-                  [](T& tensor, const typename T::SingularType& s, const Name& name, char direction, bool division) {
+                  [](T& tensor, const typename T::SingularType& s, const DefaultName& name, char direction, bool division) {
                      return tensor.multiple(s, name, direction, division);
                   },
                   py::arg("singular"),
@@ -837,7 +842,7 @@ namespace TAT {
       mpi_fake_m.def("print", [](const py::args& args, const py::kwargs& kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
       // name
-      py::class_<Name>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
+      py::class_<DefaultName>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)
             .def(py::self > py::self)
             .def(py::self <= py::self)
@@ -845,16 +850,16 @@ namespace TAT {
             .def(py::self == py::self)
             .def(py::self != py::self)
 #ifdef TAT_USE_SIMPLE_NAME
-            .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.name)); })
+            .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.name)); })
 #else
-            .def(py::init<NameIdType>(), py::arg("id"), "Name with specified id directly")
-            .def_readonly("id", &Name::id)
-            .def("__hash__", [](const Name& name) { return py::hash(py::cast(name.id)); })
+            .def(py::init<FastNameId>(), py::arg("id"), "Name with specified id directly")
+            .def_readonly("id", &DefaultName::id)
+            .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.id)); })
 #endif
-            .def_property_readonly("name", [](const Name& name) { return static_cast<const std::string&>(name); })
-            .def(implicit_init<Name, const char*>(), py::arg("name"), "Name with specified name")
-            .def("__repr__", [](const Name& name) { return "Name[" + static_cast<const std::string&>(name) + "]"; })
-            .def("__str__", [](const Name& name) { return static_cast<const std::string&>(name); });
+            .def_property_readonly("name", [](const DefaultName& name) { return static_cast<const std::string&>(name); })
+            .def(implicit_init<DefaultName, const char*>(), py::arg("name"), "Name with specified name")
+            .def("__repr__", [](const DefaultName& name) { return "Name[" + static_cast<const std::string&>(name) + "]"; })
+            .def("__str__", [](const DefaultName& name) { return static_cast<const std::string&>(name); });
       // symmetry
       auto symmetry_m = internal_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
@@ -902,19 +907,19 @@ namespace TAT {
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // stl
       auto stl_m = internal_m.def_submodule("stl", "STL bindings");
-      py::bind_vector<std::vector<Name>>(stl_m, "NameList");
-      py::implicitly_convertible<py::list, std::vector<Name>>();
-#define TAT_SINGLE_SYMMETRY(SYM)                                                                                         \
-   py::bind_map<std::map<SYM##Symmetry, Size>>(stl_m, #SYM "SymmetryEdgeMap");                                           \
-   py::implicitly_convertible<py::dict, std::map<SYM##Symmetry, Size>>();                                                \
-   py::bind_vector<std::vector<SYM##Symmetry>>(stl_m, #SYM "SymmetryList");                                              \
-   py::implicitly_convertible<py::list, std::vector<SYM##Symmetry>>();                                                   \
-   py::bind_vector<std::vector<Edge<SYM##Symmetry>>>(stl_m, #SYM "SymmetryEdgeList");                                    \
-   py::implicitly_convertible<py::list, std::vector<Edge<SYM##Symmetry>>>();                                             \
-   py::bind_vector<std::vector<std::tuple<Name, BoseEdge<SYM##Symmetry>>>>(stl_m, #SYM "SymmetryEdgeWithNameList");      \
-   py::implicitly_convertible<py::list, std::vector<std::tuple<TAT::Name, TAT::BoseEdge<TAT::SYM##Symmetry>>>>();        \
-   py::bind_map<std::map<Name, std::vector<std::tuple<Name, BoseEdge<SYM##Symmetry>>>>>(stl_m, #SYM "SymmetrySplitMap"); \
-   py::implicitly_convertible<py::dict, std::map<Name, std::vector<std::tuple<Name, BoseEdge<SYM##Symmetry>>>>>();
+      py::bind_vector<std::vector<DefaultName>>(stl_m, "NameList");
+      py::implicitly_convertible<py::list, std::vector<DefaultName>>();
+#define TAT_SINGLE_SYMMETRY(SYM)                                                                                                       \
+   py::bind_map<std::map<SYM##Symmetry, Size>>(stl_m, #SYM "SymmetryEdgeMap");                                                         \
+   py::implicitly_convertible<py::dict, std::map<SYM##Symmetry, Size>>();                                                              \
+   py::bind_vector<std::vector<SYM##Symmetry>>(stl_m, #SYM "SymmetryList");                                                            \
+   py::implicitly_convertible<py::list, std::vector<SYM##Symmetry>>();                                                                 \
+   py::bind_vector<std::vector<Edge<SYM##Symmetry>>>(stl_m, #SYM "SymmetryEdgeList");                                                  \
+   py::implicitly_convertible<py::list, std::vector<Edge<SYM##Symmetry>>>();                                                           \
+   py::bind_vector<std::vector<std::tuple<DefaultName, BoseEdge<SYM##Symmetry>>>>(stl_m, #SYM "SymmetryEdgeWithNameList");             \
+   py::implicitly_convertible<py::list, std::vector<std::tuple<DefaultName, BoseEdge<SYM##Symmetry>>>>();                              \
+   py::bind_map<std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<SYM##Symmetry>>>>>(stl_m, #SYM "SymmetrySplitMap"); \
+   py::implicitly_convertible<py::dict, std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<SYM##Symmetry>>>>>();
       TAT_LOOP_ALL_SYMMETRY
 #undef TAT_SINGLE_SYMMETRY
 #define TAT_SINGLE_SCALAR(SCALARSHORT, SCALAR)                  \
@@ -922,9 +927,9 @@ namespace TAT {
    py::implicitly_convertible<py::list, vector<SCALAR>>();
       TAT_LOOP_ALL_SCALAR
 #undef TAT_SINGLE_SCALAR
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM)                                                               \
-   py::bind_map<std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>(stl_m, #SCALARSHORT #SYM "TensorDataMap"); \
-   py::implicitly_convertible<py::dict, std::map<std::vector<TAT::SYM##Symmetry>, TAT::vector<SCALAR>>>();
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM)                                                     \
+   py::bind_map<std::map<std::vector<SYM##Symmetry>, vector<SCALAR>>>(stl_m, #SCALARSHORT #SYM "TensorDataMap"); \
+   py::implicitly_convertible<py::dict, std::map<std::vector<SYM##Symmetry>, vector<SCALAR>>>();
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor

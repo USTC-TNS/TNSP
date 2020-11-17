@@ -24,8 +24,8 @@
 #include "tensor.hpp"
 
 namespace TAT {
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
       auto guard = trace_guard();
       // TODO to implement
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
@@ -76,7 +76,7 @@ namespace TAT {
             {",Trace_1", ",Trace_2", ",Trace_3"},
             false,
             {{{}, {}, {}, {",Trace_1"}}});
-      auto traced_tensor = Tensor<ScalarType, Symmetry>({",Trace_3"}, {merged_tensor.core->edges[2]}).zero();
+      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({",Trace_3"}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
       const Size line_size = destination_block.size();
 

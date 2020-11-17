@@ -30,7 +30,7 @@ struct lattice {
    Tensor hamiltonian;
 
    lattice& create_vector(int n) & {
-      auto name = std::vector<TAT::Name>();
+      auto name = std::vector<TAT::DefaultName>();
       auto edge = std::vector<TAT::Edge<TAT::NoSymmetry>>();
       for (auto i = 0; i < n; i++) {
          name.emplace_back(std::to_string(i));

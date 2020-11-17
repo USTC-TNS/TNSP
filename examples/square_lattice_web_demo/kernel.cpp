@@ -70,7 +70,7 @@ struct SpinLattice {
 
    template<typename Scalar>
    auto observe(const TAT::Tensor<Scalar>& op) const {
-      std::map<TAT::Name, TAT::Name> map;
+      std::map<TAT::DefaultName, TAT::DefaultName> map;
       for (const auto& n : op.names) {
          auto str = n.get_name();
          map["_" + str] = str;

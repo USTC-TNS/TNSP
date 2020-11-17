@@ -26,9 +26,9 @@
 #include "transpose.hpp"
 
 namespace TAT {
-   template<typename ScalarType, typename Symmetry>
+   template<typename ScalarType, typename Symmetry, typename Name>
    template<bool split_edge_is_pointer>
-   [[nodiscard]] Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::edge_operator(
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::edge_operator(
          const std::map<Name, Name>& rename_map,
          const std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, split_edge_is_pointer>>>>& split_map,
          const std::set<Name>& reversed_name,
@@ -105,7 +105,7 @@ namespace TAT {
       if (name_before_split == new_names && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
           edge_and_symmetries_to_cut_before_all.empty()) {
          // share the core
-         auto result = Tensor<ScalarType, Symmetry>();
+         auto result = Tensor<ScalarType, Symmetry, Name>();
          result.names = std::move(new_names);
          result.name_to_index = construct_name_to_index(result.names);
          result.core = core; // 因为是rename edge所以不拷贝
@@ -271,7 +271,7 @@ namespace TAT {
       const auto& edge_before_transpose = is_fermi && !reversed_name.empty() ? fermi_edge_before_transpose : edge_after_split;
 
       // create res names
-      auto result = Tensor<ScalarType, Symmetry>();
+      auto result = Tensor<ScalarType, Symmetry, Name>();
       result.names = std::move(new_names);
       result.name_to_index = construct_name_to_index(result.names);
 

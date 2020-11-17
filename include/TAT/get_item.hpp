@@ -27,7 +27,7 @@ namespace TAT {
    /**
     * \brief 寻找有对称性张量中的某个子块
     */
-   template<typename Symmetry>
+   template<typename Symmetry, typename Name>
    [[nodiscard]] auto get_block_for_get_item(const std::map<Name, Symmetry>& position, const std::vector<Name>& names) {
       auto symmetries = std::vector<Symmetry>();
       symmetries.reserve(names.size());
@@ -44,7 +44,7 @@ namespace TAT {
    /**
     * \brief 寻找无对称性张量中每个元素
     */
-   template<typename ScalarType, typename Symmetry>
+   template<typename ScalarType, typename Symmetry, typename Name>
    [[nodiscard]] auto
    get_offset_for_get_item(const std::map<Name, Size>& position, const std::vector<Name>& names, const Core<ScalarType, Symmetry>& core) {
       const auto rank = Rank(names.size());
@@ -71,7 +71,7 @@ namespace TAT {
    /**
     * \brief 寻找有对称性张量中的某个子块的某个元素
     */
-   template<typename ScalarType, typename Symmetry>
+   template<typename ScalarType, typename Symmetry, typename Name>
    [[nodiscard]] auto get_block_and_offset_for_get_item(
          const std::map<Name, std::tuple<Symmetry, Size>>& position,
          const std::vector<Name>& names,
@@ -102,8 +102,8 @@ namespace TAT {
       return std::make_tuple(symmetries, offset);
    }
 
-   template<typename ScalarType, typename Symmetry>
-   const auto& Tensor<ScalarType, Symmetry>::block(const std::map<Name, Symmetry>& position) const& {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   const auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
@@ -111,8 +111,8 @@ namespace TAT {
       return core->blocks.at(symmetry);
    }
 
-   template<typename ScalarType, typename Symmetry>
-   auto& Tensor<ScalarType, Symmetry>::block(const std::map<Name, Symmetry>& position) & {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) & {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
@@ -120,8 +120,8 @@ namespace TAT {
       return core->blocks.at(symmetry);
    }
 
-   template<typename ScalarType, typename Symmetry>
-   ScalarType Tensor<ScalarType, Symmetry>::at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   ScalarType Tensor<ScalarType, Symmetry, Name>::at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
@@ -131,8 +131,8 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry>
-   ScalarType& Tensor<ScalarType, Symmetry>::at(const std::map<Name, EdgeInfoForGetItem>& position) & {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const std::map<Name, EdgeInfoForGetItem>& position) & {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];

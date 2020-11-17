@@ -91,8 +91,8 @@ int zgesvd_(
 }
 
 namespace TAT {
-   template<typename ScalarType, typename Symmetry>
-   [[nodiscard]] Tensor<ScalarType, Symmetry> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
       auto symmetries = std::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
          auto dimension = values.size();
@@ -103,7 +103,7 @@ namespace TAT {
          symmetries[0].arrow = false;
          symmetries[1].arrow = true;
       }
-      auto result = Tensor<ScalarType, Symmetry>({",SVD_U", ",SVD_V"}, std::move(symmetries));
+      auto result = Tensor<ScalarType, Symmetry, Name>({",SVD_U", ",SVD_V"}, std::move(symmetries));
       for (auto& [symmetries, data_destination] : result.core->blocks) {
          const auto& data_source = singular.at(symmetries[1]);
          auto dimension = data_source.size();
@@ -229,9 +229,10 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry>
-   typename Tensor<ScalarType, Symmetry>::svd_result
-   Tensor<ScalarType, Symmetry>::svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   typename Tensor<ScalarType, Symmetry, Name>::svd_result
+   Tensor<ScalarType, Symmetry, Name>::svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut)
+         const {
       auto guard = svd_guard();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
@@ -297,10 +298,10 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry>{
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{",SVD_U", ",SVD_V"} : std::vector<Name>{",SVD_V", ",SVD_U"},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry>{
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{",SVD_U", ",SVD_V"} : std::vector<Name>{",SVD_V", ",SVD_U"},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();

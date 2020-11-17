@@ -28,11 +28,11 @@
 namespace TAT {
    namespace tools {
       // default: up to down
-      template<typename ScalarType, typename Symmetry>
+      template<typename ScalarType, typename Symmetry, typename Name>
       auto two_line_to_one_line(
             const std::array<Name, 4>& udlr_name,
-            std::vector<const Tensor<ScalarType, Symmetry>*> line_1,
-            std::vector<const Tensor<ScalarType, Symmetry>*> line_2,
+            std::vector<const Tensor<ScalarType, Symmetry, Name>*> line_1,
+            std::vector<const Tensor<ScalarType, Symmetry, Name>*> line_2,
             Size cut) {
          const auto& [up, down, left, right] = udlr_name;
          const Name up1 = static_cast<const std::string&>(up) + "_1";
@@ -51,10 +51,10 @@ namespace TAT {
          // std::clog << "Two Line to One Line Start\n";
 
          // product
-         std::vector<Tensor<ScalarType, Symmetry>> double_line;
+         std::vector<Tensor<ScalarType, Symmetry, Name>> double_line;
          // std::clog << "double line:\n";
          for (int i = 0; i < length; i++) {
-            double_line.push_back(Tensor<ScalarType, Symmetry>::contract(
+            double_line.push_back(Tensor<ScalarType, Symmetry, Name>::contract(
                   line_1[i]->edge_rename({{left, left1}, {right, right1}}), line_2[i]->edge_rename({{left, left2}, {right, right2}}), {{down, up}}));
             // std::clog << double_line[i] << "\n";
          }
@@ -83,7 +83,7 @@ namespace TAT {
             u_names.erase(down);
             u_names.insert(up1);
             u_names.insert(down1);
-            auto [u, s, v] = Tensor<ScalarType, Symmetry>::contract(
+            auto [u, s, v] = Tensor<ScalarType, Symmetry, Name>::contract(
                                    double_line[i].edge_rename({{up, up1}, {down, down1}}),
                                    double_line[i + 1].edge_rename({{up, up2}, {down, down2}}),
                                    {{right, left}})
@@ -96,11 +96,11 @@ namespace TAT {
          return double_line;
       }
 
-      template<typename ScalarType, typename Symmetry, typename Key>
+      template<typename ScalarType, typename Symmetry, typename Name, typename Key>
       struct network {
-         std::map<Key, Tensor<ScalarType, Symmetry>> site;
+         std::map<Key, Tensor<ScalarType, Symmetry, Name>> site;
          // Singular is map<Symmetry, vector>, it there is no environment, the map is empty
-         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, Singular<ScalarType, Symmetry>>> bond;
+         std::map<std::tuple<Key, Key>, std::map<std::tuple<Name, Name>, Singular<ScalarType, Symmetry, Name>>> bond;
          // TODO: network
       };
    } // namespace tools

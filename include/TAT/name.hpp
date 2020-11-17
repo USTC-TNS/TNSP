@@ -34,22 +34,22 @@ namespace TAT {
    /**
     * \brief Name中用于标号的类型
     */
-   using NameIdType = int;
+   using FastNameId = int;
 
    /**
     * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
     */
-   inline NameIdType names_total_index = 0;
+   inline FastNameId names_total_index = 0;
    /**
     * \brief Name的字符串到标号的映射表
     *
     * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
     */
-   inline std::map<std::string, NameIdType> name_to_id = {};
+   inline std::map<std::string, FastNameId> name_to_id = {{"", 0}};
    /**
     * \brief 标号到Name的字符串的映射表
     */
-   inline std::map<NameIdType, std::string> id_to_name = {};
+   inline std::map<FastNameId, std::string> id_to_name = {{0, ""}};
 
    /**
     * \brief 用于给张量的边命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
@@ -61,9 +61,9 @@ namespace TAT {
       /**
        * \brief Name的标号
        */
-      NameIdType id = -1;
+      FastNameId id = 0; // 默认为空串, 行为和std::string一致
       FastName() = default;
-      FastName(const NameIdType id) noexcept : id(id) {}
+      FastName(const FastNameId id) noexcept : id(id) {}
       FastName(const char* name) noexcept : FastName(std::string(name)) {}
       FastName(const std::string& name) noexcept {
          if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
@@ -93,7 +93,7 @@ namespace TAT {
    TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id < name_2.id)
 #undef TAT_DEFINE_NAME_OPERATOR
 
-   using Name =
+   using DefaultName =
 #ifdef TAT_USE_SIMPLE_NAME
          SimpleName
 #else
@@ -104,9 +104,9 @@ namespace TAT {
    /**
     * \brief 由名字列表构造名字到序号的映射表
     */
-   template<typename NameType>
-   std::map<NameType, Rank> construct_name_to_index(const std::vector<NameType>& names) {
-      std::map<NameType, Rank> result;
+   template<typename Name>
+   std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
+      std::map<Name, Rank> result;
       for (auto name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
       }
@@ -116,9 +116,9 @@ namespace TAT {
    /**
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
-   template<typename NameType>
-   bool check_valid_name(const std::vector<NameType>& names, const Rank& rank) {
-      const auto result_duplicated = names.size() == std::set<NameType>(names.begin(), names.end()).size();
+   template<typename Name>
+   bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
+      const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
       const auto result_length = names.size() == rank;
       if (!result_duplicated) {
          TAT_error("Duplicated names in name list");
