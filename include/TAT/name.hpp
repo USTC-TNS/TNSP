@@ -31,25 +31,30 @@ namespace TAT {
     */
    using SimpleName = std::string;
 
-   /**
-    * \brief Name中用于标号的类型
-    */
-   using FastNameId = int;
+   struct fast_name_dataset_t {
+      /**
+       * \brief Name中用于标号的类型
+       */
+      using FastNameId = int;
 
-   /**
-    * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
-    */
-   inline FastNameId names_total_index = 0;
-   /**
-    * \brief Name的字符串到标号的映射表
-    *
-    * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
-    */
-   inline std::map<std::string, FastNameId> name_to_id = {{"", 0}};
-   /**
-    * \brief 标号到Name的字符串的映射表
-    */
-   inline std::map<FastNameId, std::string> id_to_name = {{0, ""}};
+      /**
+       * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
+       */
+      FastNameId names_total_index = 0;
+
+      /**
+       * \brief Name的字符串到标号的映射表
+       *
+       * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
+       */
+      std::map<std::string, FastNameId> name_to_id = {{"", 0}};
+      /**
+       * \brief 标号到Name的字符串的映射表
+       */
+      std::map<FastNameId, std::string> id_to_name = {{0, ""}};
+   };
+
+   inline auto fast_name_dataset = fast_name_dataset_t();
 
    /**
     * \brief 用于给张量的边命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
@@ -61,21 +66,21 @@ namespace TAT {
       /**
        * \brief Name的标号
        */
-      FastNameId id = 0; // 默认为空串, 行为和std::string一致
+      fast_name_dataset_t::FastNameId id = 0; // 默认为空串, 行为和std::string一致
       FastName() = default;
-      FastName(const FastNameId id) noexcept : id(id) {}
+      FastName(const fast_name_dataset_t::FastNameId id) noexcept : id(id) {}
       FastName(const char* name) noexcept : FastName(std::string(name)) {}
       FastName(const std::string& name) noexcept {
-         if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
-            id = names_total_index++;
-            name_to_id[name] = id;
-            id_to_name[id] = name;
+         if (const auto position = fast_name_dataset.name_to_id.find(name); position == fast_name_dataset.name_to_id.end()) {
+            id = fast_name_dataset.names_total_index++;
+            fast_name_dataset.name_to_id[name] = id;
+            fast_name_dataset.id_to_name[id] = name;
          } else {
             id = position->second;
          }
       }
       operator const std::string&() const {
-         return id_to_name.at(id);
+         return fast_name_dataset.id_to_name.at(id);
       }
    };
 

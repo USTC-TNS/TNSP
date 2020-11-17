@@ -110,7 +110,7 @@ namespace TAT {
    // 而输入的话会重载std::string的输入问题不大
    // 对于二进制io在tensor处处理了问题也不大
    inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      if (const auto position = id_to_name.find(name.id); position == id_to_name.end()) {
+      if (const auto position = fast_name_dataset.id_to_name.find(name.id); position == fast_name_dataset.id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
          return out << position->second;

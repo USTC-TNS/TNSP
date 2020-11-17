@@ -852,7 +852,7 @@ namespace TAT {
 #ifdef TAT_USE_SIMPLE_NAME
             .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.name)); })
 #else
-            .def(py::init<FastNameId>(), py::arg("id"), "Name with specified id directly")
+            .def(py::init<fast_name_dataset_t::FastNameId>(), py::arg("id"), "Name with specified id directly")
             .def_readonly("id", &DefaultName::id)
             .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.id)); })
 #endif
