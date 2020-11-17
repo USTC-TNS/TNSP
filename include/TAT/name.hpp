@@ -101,54 +101,6 @@ namespace TAT {
 #endif
          ;
 
-   // 保留名称, 在一些张量运算内部使用
-#define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)
-   namespace internal_name {
-      TAT_DEFINE_INTERNAL_NAME(Null);
-      TAT_DEFINE_INTERNAL_NAME(Contract_0);
-      TAT_DEFINE_INTERNAL_NAME(Contract_1);
-      TAT_DEFINE_INTERNAL_NAME(Contract_2);
-      TAT_DEFINE_INTERNAL_NAME(SVD_U);
-      TAT_DEFINE_INTERNAL_NAME(SVD_V);
-      TAT_DEFINE_INTERNAL_NAME(QR_1);
-      TAT_DEFINE_INTERNAL_NAME(QR_2);
-      TAT_DEFINE_INTERNAL_NAME(Trace_1);
-      TAT_DEFINE_INTERNAL_NAME(Trace_2);
-      TAT_DEFINE_INTERNAL_NAME(Trace_3);
-      TAT_DEFINE_INTERNAL_NAME(U_edge);
-      TAT_DEFINE_INTERNAL_NAME(V_edge);
-   } // namespace internal_name
-   namespace common_name {
-#define TAT_DEFINE_COMMON_NAME_WITH_INDEX(x) \
-   TAT_DEFINE_INTERNAL_NAME(x);              \
-   TAT_DEFINE_INTERNAL_NAME(x##0);           \
-   TAT_DEFINE_INTERNAL_NAME(x##1);           \
-   TAT_DEFINE_INTERNAL_NAME(x##2);           \
-   TAT_DEFINE_INTERNAL_NAME(x##3);           \
-   TAT_DEFINE_INTERNAL_NAME(x##4);           \
-   TAT_DEFINE_INTERNAL_NAME(x##5);           \
-   TAT_DEFINE_INTERNAL_NAME(x##6);           \
-   TAT_DEFINE_INTERNAL_NAME(x##7);           \
-   TAT_DEFINE_INTERNAL_NAME(x##8);           \
-   TAT_DEFINE_INTERNAL_NAME(x##9);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(P);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Phy);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(L);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Left);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(R);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Right);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(U);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Up);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(D);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Down);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(I);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(In);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(O);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Out);
-#undef TAT_DEFINE_COMMON_NAME_WITH_INDEX
-   } // namespace common_name
-#undef TAT_DEFINE_INTERNAL_NAME
-
    /**
     * \brief 由名字列表构造名字到序号的映射表
     */

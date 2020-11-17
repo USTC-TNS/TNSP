@@ -72,11 +72,11 @@ namespace TAT {
             {},
             {},
             reverse_names,
-            {{internal_name::Trace_1, trace_1_names}, {internal_name::Trace_2, trace_2_names}, {internal_name::Trace_3, result_names}},
-            {internal_name::Trace_1, internal_name::Trace_2, internal_name::Trace_3},
+            {{",Trace_1", trace_1_names}, {",Trace_2", trace_2_names}, {",Trace_3", result_names}},
+            {",Trace_1", ",Trace_2", ",Trace_3"},
             false,
-            {{{}, {}, {}, {internal_name::Trace_1}}});
-      auto traced_tensor = Tensor<ScalarType, Symmetry>({internal_name::Trace_3}, {merged_tensor.core->edges[2]}).zero();
+            {{{}, {}, {}, {",Trace_1"}}});
+      auto traced_tensor = Tensor<ScalarType, Symmetry>({",Trace_3"}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
       const Size line_size = destination_block.size();
 
@@ -91,7 +91,7 @@ namespace TAT {
             }
          }
       }
-      auto result = traced_tensor.edge_operator({}, {{internal_name::Trace_3, split_plan}}, reverse_names, {}, result_names);
+      auto result = traced_tensor.edge_operator({}, {{",Trace_3", split_plan}}, reverse_names, {}, result_names);
       return result;
    }
 } // namespace TAT
