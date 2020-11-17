@@ -91,11 +91,7 @@ namespace TAT {
    struct Tensor {
       using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
-      using name_valid = std::enable_if_t<
-            std::is_assignable_v<Name, const char*> && std::is_assignable_v<Name, const std::string&> &&
-            std::is_convertible_v<Name, const std::string&>>;
-      // 还需要可以比较, 但在c++17中写起来不方便而且map可以很快的确认这一点，所以没有写
-      // 还需要text/binary的io供输入输出
+      using name_valid = std::enable_if_t<is_name_v<Name>>;
 
       /**
        * \brief 张量的边的名称

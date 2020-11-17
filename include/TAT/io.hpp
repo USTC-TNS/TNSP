@@ -110,11 +110,7 @@ namespace TAT {
    // 而输入的话会重载std::string的输入问题不大
    // 对于二进制io在tensor处处理了问题也不大
    inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      if (const auto position = fast_name_dataset.id_to_name.find(name.id); position == fast_name_dataset.id_to_name.end()) {
-         return out << "UserDefinedName" << name.id;
-      } else {
-         return out << position->second;
-      }
+      return out << fast_name_dataset.id_to_name[name.id];
    }
 
    bool valid_name_character(char c) {
@@ -152,7 +148,14 @@ namespace TAT {
       return in;
    }
 
-   template<typename Key, typename Value>
+   template<typename T>
+   struct is_symmetry_vector : std::bool_constant<false> {};
+   template<typename T>
+   struct is_symmetry_vector<std::vector<T>> : is_symmetry<T> {};
+   template<typename T>
+   constexpr bool is_symmetry_vector_v = is_symmetry_vector<T>::value;
+
+   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
       Size size = map.size();
       out < size;
@@ -162,7 +165,7 @@ namespace TAT {
       return out;
    }
 
-   template<typename Key, typename Value>
+   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
       Size size;
       in > size;
@@ -175,11 +178,7 @@ namespace TAT {
       return in;
    }
 
-   template<
-         typename T,
-         typename A,
-         typename =
-               std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, std::string> || std::is_same_v<T, FastName> || is_edge_v<T> || is_symmetry_v<T>>>
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_name_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
    std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
@@ -198,11 +197,7 @@ namespace TAT {
       return out;
    }
 
-   template<
-         typename T,
-         typename A,
-         typename =
-               std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, std::string> || std::is_same_v<T, FastName> || is_edge_v<T> || is_symmetry_v<T>>>
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_name_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
    std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       ignore_util(in, '[');
       list.clear();
@@ -614,10 +609,15 @@ namespace TAT {
    }
 
    inline std::ostream& operator<(std::ostream& out, const fast_name_dataset_t& dataset) {
-      return out < dataset.names_total_index < dataset.name_to_id < dataset.id_to_name;
+      return out < dataset.id_to_name;
    }
    inline std::istream& operator>(std::istream& in, fast_name_dataset_t& dataset) {
-      return in > dataset.names_total_index > dataset.name_to_id > dataset.id_to_name;
+      return in > dataset.id_to_name;
+      dataset.names_total_index = dataset.id_to_name.size();
+      dataset.name_to_id.clear();
+      for (auto i = 0; i < dataset.names_total_index; i++) {
+         dataset.name_to_id[dataset.id_to_name[i]] = i;
+      }
    }
    inline void load_fast_name_dataset(const std::string& input) {
       std::stringstream in(input);

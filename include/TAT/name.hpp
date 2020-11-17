@@ -40,7 +40,7 @@ namespace TAT {
       /**
        * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
        */
-      FastNameId names_total_index = 0;
+      FastNameId names_total_index = 1;
 
       /**
        * \brief Name的字符串到标号的映射表
@@ -51,7 +51,7 @@ namespace TAT {
       /**
        * \brief 标号到Name的字符串的映射表
        */
-      std::map<FastNameId, std::string> id_to_name = {{0, ""}};
+      std::vector<std::string> id_to_name = {""};
    };
 
    inline auto fast_name_dataset = fast_name_dataset_t();
@@ -72,15 +72,14 @@ namespace TAT {
       FastName(const char* name) noexcept : FastName(std::string(name)) {}
       FastName(const std::string& name) noexcept {
          if (const auto position = fast_name_dataset.name_to_id.find(name); position == fast_name_dataset.name_to_id.end()) {
-            id = fast_name_dataset.names_total_index++;
-            fast_name_dataset.name_to_id[name] = id;
-            fast_name_dataset.id_to_name[id] = name;
+            fast_name_dataset.name_to_id[name] = fast_name_dataset.names_total_index++;
+            fast_name_dataset.id_to_name.push_back(name);
          } else {
             id = position->second;
          }
       }
       operator const std::string&() const {
-         return fast_name_dataset.id_to_name.at(id);
+         return fast_name_dataset.id_to_name[id];
       }
    };
 
@@ -105,6 +104,16 @@ namespace TAT {
          FastName
 #endif
          ;
+
+   template<typename T>
+   struct is_name :
+         std::bool_constant<
+               std::is_assignable_v<T, const char*> && std::is_assignable_v<T, const std::string&> && std::is_convertible_v<T, const std::string&>> {
+   };
+   // 还需要可以比较, 但在c++17中写起来不方便而且map可以很快的确认这一点，所以没有写
+   // 还需要text/binary的io供输入输出
+   template<typename T>
+   constexpr bool is_name_v = is_name<T>::value;
 
    /**
     * \brief 由名字列表构造名字到序号的映射表
