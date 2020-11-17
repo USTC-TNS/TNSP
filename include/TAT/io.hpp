@@ -175,7 +175,11 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename A>
+   template<
+         typename T,
+         typename A,
+         typename =
+               std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, std::string> || std::is_same_v<T, FastName> || is_edge_v<T> || is_symmetry_v<T>>>
    std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
@@ -194,7 +198,11 @@ namespace TAT {
       return out;
    }
 
-   template<typename T, typename A>
+   template<
+         typename T,
+         typename A,
+         typename =
+               std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, std::string> || std::is_same_v<T, FastName> || is_edge_v<T> || is_symmetry_v<T>>>
    std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       ignore_util(in, '[');
       list.clear();
