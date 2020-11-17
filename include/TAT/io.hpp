@@ -247,6 +247,7 @@ namespace TAT {
          list.resize(count);
          in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
       } else {
+         list.clear();
          for (auto i = 0; i < count; i++) {
             auto& item = list.emplace_back();
             in > item;
@@ -504,9 +505,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_put(std::ostream& out) const {
       out < names;
-      for (const auto& edge : core->edges) {
-         out < edge;
-      }
+      out < core->edges;
       return *this;
    }
 
@@ -556,12 +555,7 @@ namespace TAT {
       const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
       core = std::make_shared<Core<ScalarType, Symmetry>>();
-      core->edges.clear();
-      core->edges.reserve(rank);
-      for (auto i = 0; i < rank; i++) {
-         auto& edge = core->edges.emplace_back();
-         in > edge;
-      }
+      in > core->edges;
       check_valid_name(names, core->edges.size());
       return *this;
    }
