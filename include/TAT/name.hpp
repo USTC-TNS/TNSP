@@ -72,7 +72,7 @@ namespace TAT {
       FastName(const char* name) noexcept : FastName(std::string(name)) {}
       FastName(const std::string& name) noexcept {
          if (const auto position = fast_name_dataset.name_to_id.find(name); position == fast_name_dataset.name_to_id.end()) {
-            fast_name_dataset.name_to_id[name] = fast_name_dataset.names_total_index++;
+            id = fast_name_dataset.name_to_id[name] = fast_name_dataset.names_total_index++;
             fast_name_dataset.id_to_name.push_back(name);
          } else {
             id = position->second;
