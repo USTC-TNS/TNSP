@@ -138,6 +138,29 @@ namespace TAT {
       return in;
    }
 
+   template<typename Key, typename Value>
+   std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
+      Size size = map.size();
+      out < size;
+      for (const auto& [key, value] : map) {
+         out < key < value;
+      }
+      return out;
+   }
+
+   template<typename Key, typename Value>
+   std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
+      Size size;
+      in > size;
+      map.clear();
+      for (auto i = 0; i < size; i++) {
+         Key key;
+         in > key;
+         in > map[std::move(key)];
+      }
+      return in;
+   }
+
    template<
          typename T,
          typename A,
@@ -302,31 +325,20 @@ namespace TAT {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             out < edge.arrow;
          }
-         const Rank numbers = edge.map.size();
-         out < numbers;
-         for (const auto& [symmetry, dimension] : edge.map) {
-            out < symmetry < dimension;
-         }
+         out < edge.map;
       }
       return out;
    }
    template<typename Symmetry>
    std::istream& operator>(std::istream& in, Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         // edge.map.clear(); 不需要
          in > edge.map[NoSymmetry()];
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             in > edge.arrow;
          }
-         Rank numbers;
-         in > numbers;
-         edge.map.clear();
-         for (auto i = 0; i < numbers; i++) {
-            Symmetry symmetry;
-            Size dimension;
-            in > symmetry > dimension;
-            edge.map[symmetry] = dimension;
-         }
+         in > edge.map;
       }
       return in;
    }
@@ -505,14 +517,10 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_put(std::ostream& out) const {
-      Size count = core->blocks.size();
-      out < count;
-      for (const auto& [i, j] : core->blocks) {
-         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         } else {
-            out < i;
-         }
-         out < j;
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         out < core->blocks.begin()->second;
+      } else {
+         out < core->blocks;
       }
       return *this;
    }
@@ -535,11 +543,7 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          out < singular.value.begin()->second;
       } else {
-         const Rank numbers = singular.value.size();
-         out < numbers;
-         for (const auto& [symmetry, vector] : singular.value) {
-            out < symmetry < vector;
-         }
+         out < singular.value;
       }
       return out;
    }
@@ -569,18 +573,11 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_get(std::istream& in) {
-      Rank rank = names.size();
-      Size count;
-      in > count;
-      core->blocks.clear();
-      for (auto i = 0; i < count; i++) {
-         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-            in > core->blocks[std::vector<NoSymmetry>(rank, NoSymmetry())];
-         } else {
-            auto symmetries = std::vector<Symmetry>(rank);
-            in > symmetries;
-            in > core->blocks[std::move(symmetries)];
-         }
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         core->blocks.clear();
+         in->core->blocks[std::vector<NoSymmetry>(names.size(), NoSymmetry())];
+      } else {
+         in > core->blocks;
       }
       return *this;
    }
@@ -601,19 +598,10 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry, Name>& singular) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         vector<real_base_t<ScalarType>> singulars;
-         in > singulars;
-         singular.value[NoSymmetry()] = std::move(singulars);
+         // singular.value.clear(); 不需要
+         in > singular.value[NoSymmetry()];
       } else {
-         Rank numbers;
-         in > numbers;
-         singular.value.clear();
-         for (auto i = 0; i < numbers; i++) {
-            Symmetry symmetry;
-            vector<real_base_t<ScalarType>> singulars;
-            in > symmetry > singulars;
-            singular.value[symmetry] = std::move(singulars);
-         }
+         in > singular.value;
       }
       return in;
    }
