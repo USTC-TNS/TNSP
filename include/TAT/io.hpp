@@ -138,6 +138,20 @@ namespace TAT {
       return in;
    }
 
+   std::ostream& operator<(std::ostream& out, const std::string& string) {
+      Size count = string.size();
+      out < count;
+      out.write(string.data(), sizeof(char) * count);
+      return out;
+   }
+   std::istream& operator>(std::istream& in, std::string& string) {
+      Size count;
+      in > count;
+      string.resize(count);
+      in.read(string.data(), sizeof(char) * count);
+      return in;
+   }
+
    template<typename Key, typename Value>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
       Size size = map.size();
@@ -214,20 +228,6 @@ namespace TAT {
             }
          }
       }
-      return in;
-   }
-
-   std::ostream& operator<(std::ostream& out, const std::string& string) {
-      Size count = string.size();
-      out < count;
-      out.write(string.data(), sizeof(char) * count);
-      return out;
-   }
-   std::istream& operator>(std::istream& in, std::string& string) {
-      Size count;
-      in > count;
-      string.resize(count);
-      in.read(string.data(), sizeof(char) * count);
       return in;
    }
 
@@ -478,12 +478,12 @@ namespace TAT {
          out << value.begin()->second;
       } else {
          out << '{';
-         bool first = true;
+         bool not_first = false;
          for (const auto& [key, value] : value) {
-            if (!first) {
+            if (not_first) {
                out << ',';
             } else {
-               first = false;
+               not_first = true;
             }
             out << console_yellow << key << console_origin << ':' << value;
          }
@@ -575,7 +575,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_get(std::istream& in) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          core->blocks.clear();
-         in->core->blocks[std::vector<NoSymmetry>(names.size(), NoSymmetry())];
+         in > core->blocks[std::vector<NoSymmetry>(names.size(), NoSymmetry())];
       } else {
          in > core->blocks;
       }
@@ -611,6 +611,22 @@ namespace TAT {
       std::stringstream in(input);
       in > *this;
       return *this;
+   }
+
+   inline std::ostream& operator<(std::ostream& out, const fast_name_dataset_t& dataset) {
+      return out < dataset.names_total_index < dataset.name_to_id < dataset.id_to_name;
+   }
+   inline std::istream& operator>(std::istream& in, fast_name_dataset_t& dataset) {
+      return in > dataset.names_total_index > dataset.name_to_id > dataset.id_to_name;
+   }
+   inline void load_fast_name_dataset(const std::string& input) {
+      std::stringstream in(input);
+      in > fast_name_dataset;
+   }
+   inline std::string dump_fast_name_dataset() {
+      std::stringstream out;
+      out < fast_name_dataset;
+      return out.str();
    }
 
    template<typename T>

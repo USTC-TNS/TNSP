@@ -855,6 +855,9 @@ namespace TAT {
             .def(py::init<fast_name_dataset_t::FastNameId>(), py::arg("id"), "Name with specified id directly")
             .def_readonly("id", &DefaultName::id)
             .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.id)); })
+            .def_static(
+                  "load", [](const py::bytes& bytes) { return load_fast_name_dataset(std::string(bytes)); })
+            .def_static("dump", []() { return py::bytes(dump_fast_name_dataset()); })
 #endif
             .def_property_readonly("name", [](const DefaultName& name) { return static_cast<const std::string&>(name); })
             .def(implicit_init<DefaultName, const char*>(), py::arg("name"), "Name with specified name")
