@@ -110,7 +110,7 @@ namespace TAT {
    // 而输入的话会重载std::string的输入问题不大
    // 对于二进制io在tensor处处理了问题也不大
    inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      if (const auto position = id_to_name.find(name.id); position == id_to_name.end()) {
+      if (const auto position = fast_name_dataset.id_to_name.find(name.id); position == fast_name_dataset.id_to_name.end()) {
          return out << "UserDefinedName" << name.id;
       } else {
          return out << position->second;
@@ -122,18 +122,60 @@ namespace TAT {
       // 可打印字符去掉空格，逗号和方括号
    }
 
-   inline std::istream& operator>>(std::istream& in, Name& name) {
+   // inline std::istream& operator>>(std::istream& in, std::string& name) {
+   inline std::string read_string_for_name(std::istream& in) {
       char buffer[256]; // max name length = 256
       Size length = 0;
       while (valid_name_character(in.peek())) {
          buffer[length++] = in.get();
       }
       buffer[length] = '\x00';
-      name = Name((const char*)buffer);
+      return std::string((const char*)buffer);
+   }
+
+   inline std::istream& operator>>(std::istream& in, FastName& name) {
+      name = FastName(read_string_for_name(in));
       return in;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
+   std::ostream& operator<(std::ostream& out, const std::string& string) {
+      Size count = string.size();
+      out < count;
+      out.write(string.data(), sizeof(char) * count);
+      return out;
+   }
+   std::istream& operator>(std::istream& in, std::string& string) {
+      Size count;
+      in > count;
+      string.resize(count);
+      in.read(string.data(), sizeof(char) * count);
+      return in;
+   }
+
+   template<typename Key, typename Value>
+   std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
+      Size size = map.size();
+      out < size;
+      for (const auto& [key, value] : map) {
+         out < key < value;
+      }
+      return out;
+   }
+
+   template<typename Key, typename Value>
+   std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
+      Size size;
+      in > size;
+      map.clear();
+      for (auto i = 0; i < size; i++) {
+         Key key;
+         in > key;
+         in > map[std::move(key)];
+      }
+      return in;
+   }
+
+   template<typename T, typename A>
    std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
@@ -152,7 +194,7 @@ namespace TAT {
       return out;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || std::is_same_v<T, Name> || is_edge_v<T> || is_symmetry_v<T>>>
+   template<typename T, typename A>
    std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       ignore_util(in, '[');
       list.clear();
@@ -164,6 +206,9 @@ namespace TAT {
          while (true) {
             // 此时没有space
             auto& i = list.emplace_back();
+            if constexpr (std::is_same_v<T, std::string>) {
+               i = read_string_for_name(in);
+            }
             if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
                scan_complex(in, i);
             } else {
@@ -175,20 +220,6 @@ namespace TAT {
             }
          }
       }
-      return in;
-   }
-
-   std::ostream& operator<(std::ostream& out, const std::string& string) {
-      Size count = string.size();
-      out < count;
-      out.write(string.data(), sizeof(char) * count);
-      return out;
-   }
-   std::istream& operator>(std::istream& in, std::string& string) {
-      Size count;
-      in > count;
-      string.resize(count);
-      in.read(string.data(), sizeof(char) * count);
       return in;
    }
 
@@ -286,31 +317,20 @@ namespace TAT {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             out < edge.arrow;
          }
-         const Rank numbers = edge.map.size();
-         out < numbers;
-         for (const auto& [symmetry, dimension] : edge.map) {
-            out < symmetry < dimension;
-         }
+         out < edge.map;
       }
       return out;
    }
    template<typename Symmetry>
    std::istream& operator>(std::istream& in, Edge<Symmetry>& edge) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         // edge.map.clear(); 不需要
          in > edge.map[NoSymmetry()];
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             in > edge.arrow;
          }
-         Rank numbers;
-         in > numbers;
-         edge.map.clear();
-         for (auto i = 0; i < numbers; i++) {
-            Symmetry symmetry;
-            Size dimension;
-            in > symmetry > dimension;
-            edge.map[symmetry] = dimension;
-         }
+         in > edge.map;
       }
       return in;
    }
@@ -388,8 +408,8 @@ namespace TAT {
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names;
       out << ',' << console_green << "edges" << console_origin << ':';
@@ -412,8 +432,8 @@ namespace TAT {
       out << '}';
       return out;
    }
-   template<typename ScalarType, typename Symmetry>
-   std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       ignore_util(in, ':');
       in >> tensor.names;
       tensor.name_to_index = construct_name_to_index(tensor.names);
@@ -443,19 +463,19 @@ namespace TAT {
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::ostream& operator<<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::ostream& operator<<(std::ostream& out, const Singular<ScalarType, Symmetry, Name>& singular) {
       const auto& value = singular.value; // std::map<Symmetry, vector<real_base_t<ScalarType>>>
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          out << value.begin()->second;
       } else {
          out << '{';
-         bool first = true;
+         bool not_first = false;
          for (const auto& [key, value] : value) {
-            if (!first) {
+            if (not_first) {
                out << ',';
             } else {
-               first = false;
+               not_first = true;
             }
             out << console_yellow << key << console_origin << ':' << value;
          }
@@ -464,22 +484,22 @@ namespace TAT {
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::string Tensor<ScalarType, Symmetry>::show() const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::string Tensor<ScalarType, Symmetry, Name>::show() const {
       std::stringstream out;
       out << *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::string Singular<ScalarType, Symmetry>::show() const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::string Singular<ScalarType, Symmetry, Name>::show() const {
       std::stringstream out;
       out << *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry>
-   const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_put(std::ostream& out) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_put(std::ostream& out) const {
       out < names;
       for (const auto& edge : core->edges) {
          out < edge;
@@ -487,56 +507,48 @@ namespace TAT {
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   const Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_put(std::ostream& out) const {
-      Size count = core->blocks.size();
-      out < count;
-      for (const auto& [i, j] : core->blocks) {
-         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         } else {
-            out < i;
-         }
-         out < j;
+   template<typename ScalarType, typename Symmetry, typename Name>
+   const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_put(std::ostream& out) const {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         out < core->blocks.begin()->second;
+      } else {
+         out < core->blocks;
       }
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry>& tensor) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       tensor.meta_put(out).data_put(out);
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::string Tensor<ScalarType, Symmetry>::dump() const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::string Tensor<ScalarType, Symmetry, Name>::dump() const {
       std::stringstream out;
       out < *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry>& singular) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry, Name>& singular) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          out < singular.value.begin()->second;
       } else {
-         const Rank numbers = singular.value.size();
-         out < numbers;
-         for (const auto& [symmetry, vector] : singular.value) {
-            out < symmetry < vector;
-         }
+         out < singular.value;
       }
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::string Singular<ScalarType, Symmetry>::dump() const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::string Singular<ScalarType, Symmetry, Name>::dump() const {
       std::stringstream out;
       out < *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::meta_get(std::istream& in) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
       in > names;
       const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
@@ -551,62 +563,62 @@ namespace TAT {
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::data_get(std::istream& in) {
-      Rank rank = names.size();
-      Size count;
-      in > count;
-      core->blocks.clear();
-      for (auto i = 0; i < count; i++) {
-         if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-            in > core->blocks[std::vector<NoSymmetry>(rank, NoSymmetry())];
-         } else {
-            auto symmetries = std::vector<Symmetry>(rank);
-            in > symmetries;
-            in > core->blocks[std::move(symmetries)];
-         }
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_get(std::istream& in) {
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         core->blocks.clear();
+         in > core->blocks[std::vector<NoSymmetry>(names.size(), NoSymmetry())];
+      } else {
+         in > core->blocks;
       }
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry>& tensor) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       tensor.meta_get(in).data_get(in);
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::load(const std::string& input) & {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::load(const std::string& input) & {
       std::stringstream in(input);
       in > *this;
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry>& singular) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry, Name>& singular) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         vector<real_base_t<ScalarType>> singulars;
-         in > singulars;
-         singular.value[NoSymmetry()] = std::move(singulars);
+         // singular.value.clear(); 不需要
+         in > singular.value[NoSymmetry()];
       } else {
-         Rank numbers;
-         in > numbers;
-         singular.value.clear();
-         for (auto i = 0; i < numbers; i++) {
-            Symmetry symmetry;
-            vector<real_base_t<ScalarType>> singulars;
-            in > symmetry > singulars;
-            singular.value[symmetry] = std::move(singulars);
-         }
+         in > singular.value;
       }
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Singular<ScalarType, Symmetry>& Singular<ScalarType, Symmetry>::load(const std::string& input) & {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Singular<ScalarType, Symmetry, Name>& Singular<ScalarType, Symmetry, Name>::load(const std::string& input) & {
       std::stringstream in(input);
       in > *this;
       return *this;
+   }
+
+   inline std::ostream& operator<(std::ostream& out, const fast_name_dataset_t& dataset) {
+      return out < dataset.names_total_index < dataset.name_to_id < dataset.id_to_name;
+   }
+   inline std::istream& operator>(std::istream& in, fast_name_dataset_t& dataset) {
+      return in > dataset.names_total_index > dataset.name_to_id > dataset.id_to_name;
+   }
+   inline void load_fast_name_dataset(const std::string& input) {
+      std::stringstream in(input);
+      in > fast_name_dataset;
+   }
+   inline std::string dump_fast_name_dataset() {
+      std::stringstream out;
+      out < fast_name_dataset;
+      return out.str();
    }
 
    template<typename T>

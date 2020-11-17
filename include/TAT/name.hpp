@@ -31,25 +31,30 @@ namespace TAT {
     */
    using SimpleName = std::string;
 
-   /**
-    * \brief Name中用于标号的类型
-    */
-   using NameIdType = int;
+   struct fast_name_dataset_t {
+      /**
+       * \brief Name中用于标号的类型
+       */
+      using FastNameId = int;
 
-   /**
-    * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
-    */
-   inline NameIdType names_total_index = 0;
-   /**
-    * \brief Name的字符串到标号的映射表
-    *
-    * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
-    */
-   inline std::map<std::string, NameIdType> name_to_id = {};
-   /**
-    * \brief 标号到Name的字符串的映射表
-    */
-   inline std::map<NameIdType, std::string> id_to_name = {};
+      /**
+       * \brief Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
+       */
+      FastNameId names_total_index = 0;
+
+      /**
+       * \brief Name的字符串到标号的映射表
+       *
+       * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
+       */
+      std::map<std::string, FastNameId> name_to_id = {{"", 0}};
+      /**
+       * \brief 标号到Name的字符串的映射表
+       */
+      std::map<FastNameId, std::string> id_to_name = {{0, ""}};
+   };
+
+   inline auto fast_name_dataset = fast_name_dataset_t();
 
    /**
     * \brief 用于给张量的边命名的类型Name, 新建Name的时候可以选定标号, 也可以选定字符串作为名称, Name将自动保证标号和名称的一一对应
@@ -61,21 +66,21 @@ namespace TAT {
       /**
        * \brief Name的标号
        */
-      NameIdType id = -1;
+      fast_name_dataset_t::FastNameId id = 0; // 默认为空串, 行为和std::string一致
       FastName() = default;
-      FastName(const NameIdType id) noexcept : id(id) {}
+      FastName(const fast_name_dataset_t::FastNameId id) noexcept : id(id) {}
       FastName(const char* name) noexcept : FastName(std::string(name)) {}
       FastName(const std::string& name) noexcept {
-         if (const auto position = name_to_id.find(name); position == name_to_id.end()) {
-            id = names_total_index++;
-            name_to_id[name] = id;
-            id_to_name[id] = name;
+         if (const auto position = fast_name_dataset.name_to_id.find(name); position == fast_name_dataset.name_to_id.end()) {
+            id = fast_name_dataset.names_total_index++;
+            fast_name_dataset.name_to_id[name] = id;
+            fast_name_dataset.id_to_name[id] = name;
          } else {
             id = position->second;
          }
       }
       operator const std::string&() const {
-         return id_to_name.at(id);
+         return fast_name_dataset.id_to_name.at(id);
       }
    };
 
@@ -93,7 +98,7 @@ namespace TAT {
    TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id < name_2.id)
 #undef TAT_DEFINE_NAME_OPERATOR
 
-   using Name =
+   using DefaultName =
 #ifdef TAT_USE_SIMPLE_NAME
          SimpleName
 #else
@@ -101,60 +106,12 @@ namespace TAT {
 #endif
          ;
 
-   // 保留名称, 在一些张量运算内部使用
-#define TAT_DEFINE_INTERNAL_NAME(x) inline const Name x(#x)
-   namespace internal_name {
-      TAT_DEFINE_INTERNAL_NAME(Null);
-      TAT_DEFINE_INTERNAL_NAME(Contract_0);
-      TAT_DEFINE_INTERNAL_NAME(Contract_1);
-      TAT_DEFINE_INTERNAL_NAME(Contract_2);
-      TAT_DEFINE_INTERNAL_NAME(SVD_U);
-      TAT_DEFINE_INTERNAL_NAME(SVD_V);
-      TAT_DEFINE_INTERNAL_NAME(QR_1);
-      TAT_DEFINE_INTERNAL_NAME(QR_2);
-      TAT_DEFINE_INTERNAL_NAME(Trace_1);
-      TAT_DEFINE_INTERNAL_NAME(Trace_2);
-      TAT_DEFINE_INTERNAL_NAME(Trace_3);
-      TAT_DEFINE_INTERNAL_NAME(U_edge);
-      TAT_DEFINE_INTERNAL_NAME(V_edge);
-   } // namespace internal_name
-   namespace common_name {
-#define TAT_DEFINE_COMMON_NAME_WITH_INDEX(x) \
-   TAT_DEFINE_INTERNAL_NAME(x);              \
-   TAT_DEFINE_INTERNAL_NAME(x##0);           \
-   TAT_DEFINE_INTERNAL_NAME(x##1);           \
-   TAT_DEFINE_INTERNAL_NAME(x##2);           \
-   TAT_DEFINE_INTERNAL_NAME(x##3);           \
-   TAT_DEFINE_INTERNAL_NAME(x##4);           \
-   TAT_DEFINE_INTERNAL_NAME(x##5);           \
-   TAT_DEFINE_INTERNAL_NAME(x##6);           \
-   TAT_DEFINE_INTERNAL_NAME(x##7);           \
-   TAT_DEFINE_INTERNAL_NAME(x##8);           \
-   TAT_DEFINE_INTERNAL_NAME(x##9);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(P);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Phy);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(L);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Left);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(R);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Right);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(U);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Up);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(D);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Down);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(I);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(In);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(O);
-      TAT_DEFINE_COMMON_NAME_WITH_INDEX(Out);
-#undef TAT_DEFINE_COMMON_NAME_WITH_INDEX
-   } // namespace common_name
-#undef TAT_DEFINE_INTERNAL_NAME
-
    /**
     * \brief 由名字列表构造名字到序号的映射表
     */
-   template<typename NameType>
-   std::map<NameType, Rank> construct_name_to_index(const std::vector<NameType>& names) {
-      std::map<NameType, Rank> result;
+   template<typename Name>
+   std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
+      std::map<Name, Rank> result;
       for (auto name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
       }
@@ -164,9 +121,9 @@ namespace TAT {
    /**
     * \brief 判断一个名字列表names是否合法, 即无重复且个数与rank相同
     */
-   template<typename NameType>
-   bool check_valid_name(const std::vector<NameType>& names, const Rank& rank) {
-      const auto result_duplicated = names.size() == std::set<NameType>(names.begin(), names.end()).size();
+   template<typename Name>
+   bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
+      const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
       const auto result_length = names.size() == rank;
       if (!result_duplicated) {
          TAT_error("Duplicated names in name list");

@@ -99,41 +99,41 @@ namespace TAT {
       }
    };
    inline mpi_t mpi;
-   template<typename ScalarType, typename Symmetry>
-   mpi_t Tensor<ScalarType, Symmetry>::mpi;
+   template<typename ScalarType, typename Symmetry, typename Name>
+   mpi_t Tensor<ScalarType, Symmetry, Name>::mpi;
 
-   template<typename ScalarType, typename Symmetry>
-   void Tensor<ScalarType, Symmetry>::send(const int destination) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   void Tensor<ScalarType, Symmetry, Name>::send(const int destination) const {
       auto data = dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
       MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
    }
 
    // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::receive(const int source) {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::receive(const int source) {
       auto status = MPI_Status();
       MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
       int length;
       MPI_Get_count(&status, MPI_BYTE, &length);
       auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
       MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      auto result = Tensor<ScalarType, Symmetry>().load(data);
+      auto result = Tensor<ScalarType, Symmetry, Name>().load(data);
       return result;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::send_receive(const int source, const int destination) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::send_receive(const int source, const int destination) const {
       if (mpi.rank == source) {
          send(destination);
       }
       if (mpi.rank == destination) {
          return receive(source);
       }
-      return Tensor<ScalarType, Symmetry>();
+      return Tensor<ScalarType, Symmetry, Name>();
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::broadcast(const int root) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::broadcast(const int root) const {
       const auto& tensor = *this;
       if (mpi.size == 1) {
          return tensor.copy(); // rvalue
@@ -142,7 +142,7 @@ namespace TAT {
          TAT_error("Invalid root rank when mpi broadcast a tensor");
       }
       const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
-      Tensor<ScalarType, Symmetry> result;
+      Tensor<ScalarType, Symmetry, Name> result;
       // get from father
       if (this_fake_rank != 0) {
          const auto father_fake_rank = (this_fake_rank - 1) / 2;
@@ -166,9 +166,9 @@ namespace TAT {
       return result;
    }
 
-   template<typename ScalarType, typename Symmetry>
+   template<typename ScalarType, typename Symmetry, typename Name>
    template<typename Func>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::reduce(const int root, Func&& function) const {
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::reduce(const int root, Func&& function) const {
       const auto& tensor = *this;
       if (mpi.size == 1) {
          return tensor.copy(); // rvalue
@@ -177,7 +177,7 @@ namespace TAT {
          TAT_error("Invalid root rank when mpi reduce a tensor");
       }
       const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
-      Tensor<ScalarType, Symmetry> result;
+      Tensor<ScalarType, Symmetry, Name> result;
       // get from son
       const auto left_son_fake_rank = this_fake_rank * 2 + 1;
       const auto right_son_fake_rank = this_fake_rank * 2 + 2;
@@ -204,8 +204,8 @@ namespace TAT {
       // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
    }
 
-   template<typename ScalarType, typename Symmetry>
-   void Tensor<ScalarType, Symmetry>::barrier() {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   void Tensor<ScalarType, Symmetry, Name>::barrier() {
       MPI_Barrier(MPI_COMM_WORLD);
    }
    constexpr bool mpi_enabled = true;

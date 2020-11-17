@@ -25,8 +25,9 @@
 #include "timer.hpp"
 
 namespace TAT {
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>
+   Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       auto guard = multiple_guard();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
@@ -104,8 +105,8 @@ namespace TAT {
       return result;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::conjugate() const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
       auto guard = conjugate_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return copy();
@@ -123,7 +124,7 @@ namespace TAT {
       }
       auto transpose_flag = std::vector<Rank>(names.size(), 0);
       auto valid_flag = std::vector<bool>(1, true);
-      auto result = Tensor<ScalarType, Symmetry>(names, result_edges);
+      auto result = Tensor<ScalarType, Symmetry, Name>(names, result_edges);
       for (const auto& [symmetries, block] : core->blocks) {
          auto result_symmetries = std::vector<Symmetry>();
          for (const auto& symmetry : symmetries) {
@@ -162,8 +163,8 @@ namespace TAT {
       return result;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry>& Tensor<ScalarType, Symmetry>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
       zero();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto dimension = core->edges[0].map.begin()->second;
@@ -179,8 +180,8 @@ namespace TAT {
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry>
-   Tensor<ScalarType, Symmetry> Tensor<ScalarType, Symmetry>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
       real_base_t<ScalarType> norm_max = norm<-1>();
       auto temporary_tensor_rank = 0;
       real_base_t<ScalarType> temporary_tensor_parameter = 1;
