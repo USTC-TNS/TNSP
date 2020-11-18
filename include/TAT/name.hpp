@@ -106,14 +106,16 @@ namespace TAT {
          ;
 
    template<typename T>
-   struct is_name :
-         std::bool_constant<
-               std::is_assignable_v<T, const char*> && std::is_assignable_v<T, const std::string&> && std::is_convertible_v<T, const std::string&>> {
-   };
-   // 还需要可以比较, 但在c++17中写起来不方便而且map可以很快的确认这一点，所以没有写
-   // 还需要text/binary的io供输入输出
+   struct is_name : std::bool_constant<false> {};
    template<typename T>
    constexpr bool is_name_v = is_name<T>::value;
+
+   template<>
+   struct is_name<FastName> : std::bool_constant<true> {};
+   template<>
+   struct is_name<std::string> : std::bool_constant<true> {};
+   // 需要可以比较, 需要text/binary的io供输入输出
+   // 在python/TAT.cpp中还需要到std::string的转换函数
 
    /**
     * \brief 由名字列表构造名字到序号的映射表
