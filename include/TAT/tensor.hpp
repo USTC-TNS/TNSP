@@ -91,7 +91,6 @@ namespace TAT {
    struct Tensor {
       using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
-      using name_valid = std::enable_if_t<is_name_v<Name>>;
 
       /**
        * \brief 张量的边的名称

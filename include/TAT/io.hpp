@@ -178,8 +178,8 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_name_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
-   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
+   template<typename T, typename A>
+   void print_vector(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
       for (const auto& i : list) {
@@ -194,11 +194,16 @@ namespace TAT {
          }
       }
       out << ']';
+   }
+
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
+   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
+      print_vector(out, list);
       return out;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_name_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
-   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
+   template<typename T, typename A>
+   void scan_vector(std::istream& in, std::vector<T, A>& list) {
       ignore_util(in, '[');
       list.clear();
       if (in.peek() == ']') {
@@ -223,6 +228,11 @@ namespace TAT {
             }
          }
       }
+   }
+
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
+   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
+      scan_vector(in, list);
       return in;
    }
 
@@ -415,7 +425,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
-      out << tensor.names;
+      print_vector(out, tensor.names);
       out << ',' << console_green << "edges" << console_origin << ':';
       out << tensor.core->edges;
       out << ',' << console_green << "blocks" << console_origin << ':';
@@ -439,7 +449,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       ignore_util(in, ':');
-      in >> tensor.names;
+      scan_vector(in, tensor.names);
       tensor.name_to_index = construct_name_to_index(tensor.names);
       ignore_util(in, ':');
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();

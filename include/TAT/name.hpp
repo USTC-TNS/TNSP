@@ -105,16 +105,7 @@ namespace TAT {
 #endif
          ;
 
-   template<typename T>
-   struct is_name : std::bool_constant<false> {};
-   template<typename T>
-   constexpr bool is_name_v = is_name<T>::value;
-
-   template<>
-   struct is_name<FastName> : std::bool_constant<true> {};
-   template<>
-   struct is_name<std::string> : std::bool_constant<true> {};
-   // 需要可以比较, 需要text/binary的io供输入输出
+   // 作为Name需要可以比较, 需要text/binary的io供输入输出
    // 在python/TAT.cpp中还需要到std::string的转换函数
 
    /**

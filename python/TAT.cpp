@@ -343,7 +343,7 @@ namespace TAT {
                     out << '{';
                     if (tensor.is_valid()) {
                        out << console_green << "names" << console_origin << ':';
-                       out << tensor.names;
+                       print_vector(out, tensor.names);
                        out << ',' << console_green << "edges" << console_origin << ':';
                        out << tensor.core->edges;
                     }
