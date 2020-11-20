@@ -81,6 +81,73 @@ int zgemm_(
       const std::complex<double>* beta,
       std::complex<double>* c,
       const int* ldc);
+
+#ifdef TAT_USE_MKL_GEMM_BATCH
+int sgemm_batch_(
+      const char* transpose_a,
+      const char* transpose_b,
+      const int* m,
+      const int* n,
+      const int* k,
+      const float* alpha,
+      const float** a,
+      const int* lda,
+      const float** b,
+      const int* ldb,
+      const float* beta,
+      float** c,
+      const int* ldc,
+      const int* group_count,
+      const int* group_size);
+int dgemm_batch_(
+      const char* transpose_a,
+      const char* transpose_b,
+      const int* m,
+      const int* n,
+      const int* k,
+      const double* alpha,
+      const double** a,
+      const int* lda,
+      const double** b,
+      const int* ldb,
+      const double* beta,
+      double** c,
+      const int* ldc,
+      const int* group_count,
+      const int* group_size);
+int cgemm_batch_(
+      const char* transpose_a,
+      const char* transpose_b,
+      const int* m,
+      const int* n,
+      const int* k,
+      const std::complex<float>* alpha,
+      const std::complex<float>** a,
+      const int* lda,
+      const std::complex<float>** b,
+      const int* ldb,
+      const std::complex<float>* beta,
+      std::complex<float>** c,
+      const int* ldc,
+      const int* group_count,
+      const int* group_size);
+int zgemm_batch_(
+      const char* transpose_a,
+      const char* transpose_b,
+      const int* m,
+      const int* n,
+      const int* k,
+      const std::complex<double>* alpha,
+      const std::complex<double>** a,
+      const int* lda,
+      const std::complex<double>** b,
+      const int* ldb,
+      const std::complex<double>* beta,
+      std::complex<double>** c,
+      const int* ldc,
+      const int* group_count,
+      const int* group_size);
+#endif
 }
 
 namespace TAT {
@@ -110,24 +177,65 @@ namespace TAT {
    auto gemm<std::complex<double>> = zgemm_;
 
    template<typename ScalarType>
-   void gemm_batch(
-         const char** transpose_a,
-         const char** transpose_b,
-         const int** m,
-         const int** n,
-         const int** k,
-         const ScalarType** alpha,
+   constexpr void (*mkl_gemm_batch)(
+         const char* transpose_a,
+         const char* transpose_b,
+         const int* m,
+         const int* n,
+         const int* k,
+         const ScalarType* alpha,
          const ScalarType** a,
-         const int** lda,
+         const int* lda,
          const ScalarType** b,
-         const int** ldb,
-         const ScalarType** beta,
+         const int* ldb,
+         const ScalarType* beta,
          ScalarType** c,
-         const int** ldc,
-         const int& batch_size) {
-      for (auto i = 0; i < batch_size; i++) {
-         gemm<ScalarType>(transpose_a[i], transpose_b[i], m[i], n[i], k[i], alpha[i], a[i], lda[i], b[i], ldb[i], beta[i], c[i], ldc[i]);
+         const int* ldc,
+         const int* group_count,
+         const int* group_size) = nullptr;
+
+#ifdef TAT_USE_MKL_GEMM_BATCH
+   template<>
+   auto mkl_gemm_batch<float> = sgemm_batch_;
+   template<>
+   auto mkl_gemm_batch<double> = dgemm_batch_;
+   template<>
+   auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
+   template<>
+   auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
+#endif
+
+   template<typename ScalarType>
+   void gemm_batch(
+         const char* transpose_a,
+         const char* transpose_b,
+         const int* m,
+         const int* n,
+         const int* k,
+         const ScalarType* alpha,
+         const ScalarType** a,
+         const int* lda,
+         const ScalarType** b,
+         const int* ldb,
+         const ScalarType* beta,
+         ScalarType** c,
+         const int* ldc,
+         const int& batch_size,
+         bool same_shape = false) {
+      auto kernel_guard = contract_kernel_guard();
+#ifdef TAT_USE_MKL_GEMM_BATCH
+      if (same_shape) {
+         int group_count = 1;
+         mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
+      } else {
+         std::vector<int> group_size(batch_size, 1);
+         mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
       }
+#else
+      for (auto i = 0; i < batch_size; i++) {
+         gemm<ScalarType>(&transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
+      }
+#endif
    }
 
    template<int i, typename Name>
@@ -383,6 +491,16 @@ namespace TAT {
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
       // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
       auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
+
+      auto max_batch_size = product_result.core->blocks.size();
+      vector<char> transpose_a_list(max_batch_size), transpose_b_list(max_batch_size);
+      vector<int> m_list(max_batch_size), n_list(max_batch_size), k_list(max_batch_size), lda_list(max_batch_size), ldb_list(max_batch_size),
+            ldc_list(max_batch_size);
+      vector<ScalarType> alpha_list(max_batch_size), beta_list(max_batch_size);
+      vector<const ScalarType*> a_list(max_batch_size), b_list(max_batch_size);
+      vector<ScalarType*> c_list(max_batch_size);
+      int batch_size = 0;
+
       for (auto& [symmetries, data] : product_result.core->blocks) {
          // m k n
          auto symmetries_1 = put_common_1_right ? symmetries : std::vector<Symmetry>{symmetries[1], symmetries[0]};
@@ -401,25 +519,40 @@ namespace TAT {
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
-            auto kernel_guard = contract_kernel_guard();
-            gemm<ScalarType>(
-                  put_common_2_right ? "T" : "N",
-                  put_common_1_right ? "N" : "T",
-                  &n,
-                  &m,
-                  &k,
-                  &alpha,
-                  data_2.data(),
-                  put_common_2_right ? &k : &n,
-                  data_1.data(),
-                  put_common_1_right ? &k : &m,
-                  &beta,
-                  data.data(),
-                  &n);
+            transpose_a_list[batch_size] = put_common_2_right ? 'T' : 'N';
+            transpose_b_list[batch_size] = put_common_1_right ? 'N' : 'T';
+            m_list[batch_size] = n;
+            n_list[batch_size] = m;
+            k_list[batch_size] = k;
+            alpha_list[batch_size] = alpha;
+            a_list[batch_size] = data_2.data();
+            lda_list[batch_size] = put_common_2_right ? k : n;
+            b_list[batch_size] = data_1.data();
+            ldb_list[batch_size] = put_common_1_right ? k : m;
+            beta_list[batch_size] = beta;
+            c_list[batch_size] = data.data();
+            ldc_list[batch_size] = n;
+            batch_size++;
          } else if (m * n != 0) {
             std::fill(data.begin(), data.end(), 0);
          }
       }
+      gemm_batch<ScalarType>(
+            transpose_a_list.data(),
+            transpose_b_list.data(),
+            m_list.data(),
+            n_list.data(),
+            k_list.data(),
+            alpha_list.data(),
+            a_list.data(),
+            lda_list.data(),
+            b_list.data(),
+            ldb_list.data(),
+            beta_list.data(),
+            c_list.data(),
+            ldc_list.data(),
+            batch_size);
+
       if constexpr (is_no_symmetry) {
          auto result = Tensor<ScalarType, Symmetry, Name>{std::move(name_result), std::move(edge_result)};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
@@ -603,26 +736,26 @@ namespace TAT {
       const ScalarType* data_1 = tensor_1_merged.core->blocks.begin()->second.data();
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
       if (m * n * k != 0) {
-         vector<const char*> transpose_a_list(l), transpose_b_list(l);
-         vector<const int*> m_list(l), n_list(l), k_list(l), lda_list(l), ldb_list(l), ldc_list(l);
-         vector<const ScalarType*> alpha_list(l), beta_list(l), a_list(l), b_list(l);
+         vector<char> transpose_a_list(l), transpose_b_list(l);
+         vector<int> m_list(l), n_list(l), k_list(l), lda_list(l), ldb_list(l), ldc_list(l);
+         vector<ScalarType> alpha_list(l), beta_list(l);
+         vector<const ScalarType*> a_list(l), b_list(l);
          vector<ScalarType*> c_list(l);
          for (auto i = 0; i < l; i++) {
-            transpose_a_list[i] = put_common_2_right ? "T" : "N";
-            transpose_b_list[i] = put_common_1_right ? "N" : "T";
-            m_list[i] = &n;
-            n_list[i] = &m;
-            k_list[i] = &k;
-            alpha_list[i] = &alpha;
+            transpose_a_list[i] = put_common_2_right ? 'T' : 'N';
+            transpose_b_list[i] = put_common_1_right ? 'N' : 'T';
+            m_list[i] = n;
+            n_list[i] = m;
+            k_list[i] = k;
+            alpha_list[i] = alpha;
             a_list[i] = data_2 + k * n * i;
-            lda_list[i] = put_common_2_right ? &k : &n;
+            lda_list[i] = put_common_2_right ? k : n;
             b_list[i] = data_1 + m * k * i;
-            ldb_list[i] = put_common_1_right ? &k : &m;
-            beta_list[i] = &beta;
+            ldb_list[i] = put_common_1_right ? k : m;
+            beta_list[i] = beta;
             c_list[i] = data + m * n * i;
-            ldc_list[i] = &n;
+            ldc_list[i] = n;
          }
-         auto kernel_guard = contract_kernel_guard();
          gemm_batch<ScalarType>(
                transpose_a_list.data(),
                transpose_b_list.data(),
@@ -637,7 +770,8 @@ namespace TAT {
                beta_list.data(),
                c_list.data(),
                ldc_list.data(),
-               l);
+               l,
+               true);
       } else if (m * n != 0) {
          std::fill(data, data + m * n * l, 0);
       }
