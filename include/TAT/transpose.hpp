@@ -125,6 +125,8 @@ namespace TAT {
          const Rank rank) {
       auto guard = transpose_kernel_core_guard();
 
+      // 经过测试使用mkl的transpose有时会变慢
+#if 0
 #ifdef TAT_USE_MKL_TRANSPOSE
       if (rank == 2) {
          if (leading_source[1] == 1 && leading_destination[0] == 1) {
@@ -137,6 +139,7 @@ namespace TAT {
             return;
          }
       }
+#endif
 #endif
 
       const ScalarType* current_source = data_source;

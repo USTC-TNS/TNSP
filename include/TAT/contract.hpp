@@ -223,19 +223,23 @@ namespace TAT {
          const int& batch_size,
          bool same_shape = false) {
       auto kernel_guard = contract_kernel_guard();
-#ifdef TAT_USE_MKL_GEMM_BATCH
-      if (same_shape) {
-         int group_count = 1;
-         mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
+      if (batch_size == 1) {
+         gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
       } else {
-         std::vector<int> group_size(batch_size, 1);
-         mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
-      }
+#ifdef TAT_USE_MKL_GEMM_BATCH
+         if (same_shape) {
+            int group_count = 1;
+            mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
+         } else {
+            std::vector<int> group_size(batch_size, 1);
+            mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
+         }
 #else
-      for (auto i = 0; i < batch_size; i++) {
-         gemm<ScalarType>(&transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
-      }
+         for (auto i = 0; i < batch_size; i++) {
+            gemm<ScalarType>(&transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
+         }
 #endif
+      }
    }
 
    template<int i, typename Name>
