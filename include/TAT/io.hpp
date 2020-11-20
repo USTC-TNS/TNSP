@@ -167,9 +167,9 @@ namespace TAT {
 
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
+      map.clear();
       Size size;
       in > size;
-      map.clear();
       for (auto i = 0; i < size; i++) {
          Key key;
          in > key;
@@ -204,8 +204,8 @@ namespace TAT {
 
    template<typename T, typename A>
    void scan_vector(std::istream& in, std::vector<T, A>& list) {
-      ignore_util(in, '[');
       list.clear();
+      ignore_util(in, '[');
       if (in.peek() == ']') {
          // empty list
          in.get(); // 获取']'
@@ -251,13 +251,13 @@ namespace TAT {
    }
    template<typename T, typename A>
    std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
+      list.clear();
       Size count;
       in > count;
       if constexpr (std::is_trivially_destructible_v<T>) {
          list.resize(count);
          in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
       } else {
-         list.clear();
          for (auto i = 0; i < count; i++) {
             auto& item = list.emplace_back();
             in > item;
@@ -301,17 +301,15 @@ namespace TAT {
             ignore_util(in, ':');
             in >> edge.arrow;
          }
-         ignore_util(in, '{');
          edge.map.clear();
+         ignore_util(in, '{');
          if (in.peek() != '}') {
             // not empty
             do {
                Symmetry symmetry;
                in >> symmetry;
                ignore_util(in, ':');
-               Size dimension;
-               in >> dimension;
-               edge.map[symmetry] = dimension;
+               in >> edge.map[symmetry];
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
@@ -458,16 +456,16 @@ namespace TAT {
       ignore_util(in, ':');
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          // change begin();
-         in >> tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), Symmetry())];
+         in >> tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), NoSymmetry())];
       } else {
+         // core是刚刚创建的所以不需要clear blocks
          ignore_util(in, '{');
          if (in.peek() != '}') {
             do {
                std::vector<Symmetry> symmetries;
                in >> symmetries;
                ignore_util(in, ':');
-               auto& data = tensor.core->blocks[std::move(symmetries)];
-               in >> data;
+               in >> tensor.core->blocks[std::move(symmetries)];
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
@@ -496,6 +494,28 @@ namespace TAT {
          out << '}';
       }
       return out;
+   }
+
+   template<typename ScalarType, typename Symmetry, typename Name>
+   std::istream& operator>>(std::istream& in, Singular<ScalarType, Symmetry, Name>& singular) {
+      auto& value = singular.value;
+      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         in >> value[NoSymmetry()];
+      } else {
+         value.clear();
+         ignore_util(in, '{');
+         if (in.peek() != '}') {
+            do {
+               Symmetry symmetry;
+               in >> symmetry;
+               ignore_util(in, ':');
+               in >> value[symmetry];
+            } while (in.get() == ','); // 读了map最后的'}'
+         } else {
+            in.get(); // 读了map最后的'}'
+         }
+      }
+      return in;
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
@@ -573,7 +593,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_get(std::istream& in) {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         core->blocks.clear();
+         core->blocks.clear(); // vector的长度不一定相同, 所以还是要clear一下
          in > core->blocks[std::vector<NoSymmetry>(names.size(), NoSymmetry())];
       } else {
          in > core->blocks;
