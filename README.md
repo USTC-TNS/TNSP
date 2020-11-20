@@ -2,7 +2,7 @@
 
 TAT is a header-only c++ tensor library with support for Abelian [symmetry](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301) for tensor network
 
-The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it should be all uppercase.
+The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it should be all uppercase
 
 ## Prerequisites
 - c++ compiler with c++17 support(such as gcc7+, clang5+, msvc19.14+)
@@ -33,8 +33,10 @@ If you are familiar with [pybind11](https://pybind11.readthedocs.io/en/stable/co
 Please notice that for some old mpi version(for example, openmpi 2.1.1 in ubuntu 18.04 LTS), you need to load mpi dynamic shared library manually before `import TAT`, The way to load it manually is `import ctypes` and `ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)`
 
 ## Use with [emscripten](https://emscripten.org/)
-If you want to run a program using TAT in browser, which is very useful for demonstration.
+If you want to run a program using TAT in browser, which is very useful for demonstration
 
 You can simply compile TAT with `em++`(no mpi support, no doubt), and link `liblapack.a`, `libblas.a`, `libf2c.a` compiled from [clapack-3.2.1](https://www.netlib.org/clapack/)
 
-You can download them from [here](https://github.com/hzhangxyz/TAT/releases/tag/v0.0.6) or compile by yourself.
+You can download them from [here](https://github.com/hzhangxyz/TAT/releases/tag/v0.0.6) or compile by yourself
+
+If you are using cmake, you need to put these three files into directory `emscripten`, then run `emcmake cmake $path_to_TAT_root` which will configure it automatically
