@@ -109,6 +109,27 @@ namespace TAT {
    template<>
    auto gemm<std::complex<double>> = zgemm_;
 
+   template<typename ScalarType>
+   void gemm_batch(
+         const char** transpose_a,
+         const char** transpose_b,
+         const int** m,
+         const int** n,
+         const int** k,
+         const ScalarType** alpha,
+         const ScalarType** a,
+         const int** lda,
+         const ScalarType** b,
+         const int** ldb,
+         const ScalarType** beta,
+         ScalarType** c,
+         const int** ldc,
+         const int& batch_size) {
+      for (auto i = 0; i < batch_size; i++) {
+         gemm<ScalarType>(transpose_a[i], transpose_b[i], m[i], n[i], k[i], alpha[i], a[i], lda[i], b[i], ldb[i], beta[i], c[i], ldc[i]);
+      }
+   }
+
    template<int i, typename Name>
    auto find_in_contract_names(const std::set<std::tuple<Name, Name>>& contract_names, const Name& name) {
       auto iterator = contract_names.begin();
@@ -582,23 +603,41 @@ namespace TAT {
       const ScalarType* data_1 = tensor_1_merged.core->blocks.begin()->second.data();
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
       if (m * n * k != 0) {
+         vector<const char*> transpose_a_list(l), transpose_b_list(l);
+         vector<const int*> m_list(l), n_list(l), k_list(l), lda_list(l), ldb_list(l), ldc_list(l);
+         vector<const ScalarType*> alpha_list(l), beta_list(l), a_list(l), b_list(l);
+         vector<ScalarType*> c_list(l);
          for (auto i = 0; i < l; i++) {
-            auto kernel_guard = contract_kernel_guard();
-            gemm<ScalarType>(
-                  put_common_2_right ? "T" : "N",
-                  put_common_1_right ? "N" : "T",
-                  &n,
-                  &m,
-                  &k,
-                  &alpha,
-                  data_2 + k * n * i,
-                  put_common_2_right ? &k : &n,
-                  data_1 + m * k * i,
-                  put_common_1_right ? &k : &m,
-                  &beta,
-                  data + m * n * i,
-                  &n);
+            transpose_a_list[i] = put_common_2_right ? "T" : "N";
+            transpose_b_list[i] = put_common_1_right ? "N" : "T";
+            m_list[i] = &n;
+            n_list[i] = &m;
+            k_list[i] = &k;
+            alpha_list[i] = &alpha;
+            a_list[i] = data_2 + k * n * i;
+            lda_list[i] = put_common_2_right ? &k : &n;
+            b_list[i] = data_1 + m * k * i;
+            ldb_list[i] = put_common_1_right ? &k : &m;
+            beta_list[i] = &beta;
+            c_list[i] = data + m * n * i;
+            ldc_list[i] = &n;
          }
+         auto kernel_guard = contract_kernel_guard();
+         gemm_batch<ScalarType>(
+               transpose_a_list.data(),
+               transpose_b_list.data(),
+               m_list.data(),
+               n_list.data(),
+               k_list.data(),
+               alpha_list.data(),
+               a_list.data(),
+               lda_list.data(),
+               b_list.data(),
+               ldb_list.data(),
+               beta_list.data(),
+               c_list.data(),
+               ldc_list.data(),
+               l);
       } else if (m * n != 0) {
          std::fill(data, data + m * n * l, 0);
       }
