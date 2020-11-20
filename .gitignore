@@ -7,7 +7,3 @@
 /include/fire.hpp
 __pycache__
 .ipynb_checkpoints
-/src
-/pkg
-TAT*.pkg.tar*
-v*.tar.gz

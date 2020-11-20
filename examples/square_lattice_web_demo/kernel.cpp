@@ -72,7 +72,7 @@ struct SpinLattice {
    auto observe(const TAT::Tensor<Scalar>& op) const {
       std::map<TAT::DefaultName, TAT::DefaultName> map;
       for (const auto& n : op.names) {
-         auto str = n.get_name();
+         auto str = std::string(n);
          map["_" + str] = str;
       }
       if constexpr (TAT::is_complex_v<Scalar>) {
