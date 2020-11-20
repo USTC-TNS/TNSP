@@ -85,7 +85,7 @@ int zgemm_(
 
 namespace TAT {
    template<typename ScalarType>
-   void calculate_product(
+   constexpr void (*gemm)(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -98,80 +98,16 @@ namespace TAT {
          const int* ldb,
          const ScalarType* beta,
          ScalarType* c,
-         const int* ldc);
+         const int* ldc) = nullptr;
 
    template<>
-   inline void calculate_product<float>(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const float* alpha,
-         const float* a,
-         const int* lda,
-         const float* b,
-         const int* ldb,
-         const float* beta,
-         float* c,
-         const int* ldc) {
-      auto kernel_guard = contract_kernel_guard();
-      sgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-   }
+   auto gemm<float> = sgemm_;
    template<>
-   inline void calculate_product<double>(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const double* alpha,
-         const double* a,
-         const int* lda,
-         const double* b,
-         const int* ldb,
-         const double* beta,
-         double* c,
-         const int* ldc) {
-      auto kernel_guard = contract_kernel_guard();
-      dgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-   }
+   auto gemm<double> = dgemm_;
    template<>
-   inline void calculate_product<std::complex<float>>(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const std::complex<float>* alpha,
-         const std::complex<float>* a,
-         const int* lda,
-         const std::complex<float>* b,
-         const int* ldb,
-         const std::complex<float>* beta,
-         std::complex<float>* c,
-         const int* ldc) {
-      auto kernel_guard = contract_kernel_guard();
-      cgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-   }
+   auto gemm<std::complex<float>> = cgemm_;
    template<>
-   inline void calculate_product<std::complex<double>>(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const std::complex<double>* alpha,
-         const std::complex<double>* a,
-         const int* lda,
-         const std::complex<double>* b,
-         const int* ldb,
-         const std::complex<double>* beta,
-         std::complex<double>* c,
-         const int* ldc) {
-      auto kernel_guard = contract_kernel_guard();
-      zgemm_(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc);
-   }
+   auto gemm<std::complex<double>> = zgemm_;
 
    template<int i, typename Name>
    auto find_in_contract_names(const std::set<std::tuple<Name, Name>>& contract_names, const Name& name) {
@@ -444,7 +380,8 @@ namespace TAT {
          }
          const ScalarType beta = 0;
          if (m * n * k != 0) {
-            calculate_product<ScalarType>(
+            auto kernel_guard = contract_kernel_guard();
+            gemm<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",
                   &n,
@@ -646,7 +583,8 @@ namespace TAT {
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
       if (m * n * k != 0) {
          for (auto i = 0; i < l; i++) {
-            calculate_product<ScalarType>(
+            auto kernel_guard = contract_kernel_guard();
+            gemm<ScalarType>(
                   put_common_2_right ? "T" : "N",
                   put_common_1_right ? "N" : "T",
                   &n,

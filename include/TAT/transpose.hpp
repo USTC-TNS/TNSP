@@ -52,7 +52,6 @@ void mkl_zomatcopy_(
 }
 #endif
 
-// TAT_USE_MKL_TRANSPOSE
 namespace TAT {
    template<typename ScalarType>
    void mkl_transpose(
@@ -125,6 +124,20 @@ namespace TAT {
          const Size* const __restrict leading_destination,
          const Rank rank) {
       auto guard = transpose_kernel_core_guard();
+
+#ifdef TAT_USE_MKL_TRANSPOSE
+      if (rank == 2) {
+         if (leading_source[1] == 1 && leading_destination[0] == 1) {
+            mkl_transpose<ScalarType>(
+                  dimension[0], dimension[1], data_source, data_destination, leading_source[0], leading_destination[1], parity ? -1 : 1);
+            return;
+         } else if (leading_source[0] == 1 && leading_destination[1] == 1) {
+            mkl_transpose<ScalarType>(
+                  dimension[1], dimension[0], data_source, data_destination, leading_source[1], leading_destination[0], parity ? -1 : 1);
+            return;
+         }
+      }
+#endif
 
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
