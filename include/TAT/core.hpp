@@ -21,6 +21,7 @@
 #ifndef TAT_CORE_HPP
 #define TAT_CORE_HPP
 
+#include <numeric>
 #include <vector>
 
 #include "edge.hpp"
@@ -41,12 +42,23 @@ namespace TAT {
        * \tparam Args 初始化的参数类型
        * \param pointer 被初始化的值的地址
        * \param arguments 初始化的参数
+       * \note c++20废弃了std::allocator<T>的construct, 但是c++20的行为是检测allocator是否有construct, 有则调用没有则自己construct, 所以没关系
        */
       template<typename... Args>
       void construct([[maybe_unused]] T* pointer, Args&&... arguments) {
          if constexpr (!((sizeof...(arguments) == 0) && (std::is_trivially_destructible_v<T>))) {
             new (pointer) T(std::forward<Args>(arguments)...);
          }
+      }
+
+      T* allocate(std::size_t n) {
+         constexpr auto align = std::align_val_t(std::lcm(1024, alignof(T)));
+         return (T*)operator new(n * sizeof(T), align);
+      }
+
+      void deallocate(T* p, std::size_t n) {
+         constexpr auto align = std::align_val_t(std::lcm(1024, alignof(T)));
+         operator delete(p, align);
       }
 
       allocator_without_initialize() = default;
