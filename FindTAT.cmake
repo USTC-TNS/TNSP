@@ -24,6 +24,7 @@ option(TAT_PREFER_BLAS_STATIC "Prefer to static blas library for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
 set(TAT_FORCE_VERSION dev CACHE STRING "Force set TAT version")
 
+# 下面四个宏全部都是在build PyTAT时才会用到
 target_compile_definitions(TAT INTERFACE TAT_VERSION="${TAT_FORCE_VERSION}")
 target_compile_definitions(TAT INTERFACE TAT_PYTHON_MODULE=${TAT_PYTHON_MODULE})
 target_compile_definitions(TAT INTERFACE TAT_BUILD_TYPE="$<IF:$<STREQUAL:${CMAKE_BUILD_TYPE},>,Default,${CMAKE_BUILD_TYPE}>")

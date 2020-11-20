@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 pkgname=TAT
 pkgver=0.1.0
-suffix=-rc.8
+suffix=-rc.8-2
 TATver=$pkgver$suffix
 pkgrel=1
 pkgdesc="TAT is A Tensor library"
@@ -20,9 +20,10 @@ sha256sums=(
 )
 build() {
    cd $srcdir/$pkgname-$TATver
+   sed -i s/dev/$TATver/ FindTAT.cmake
    mkdir build
    cd build
-   cmake .. -DBLA_VENDOR=Generic -DCMAKE_BUILD_TYPE=Release -DTAT_FORCE_VERSION=$TATver
+   cmake .. -DBLA_VENDOR=Generic -DCMAKE_BUILD_TYPE=Release
    make PyTAT
 }
 package() {
