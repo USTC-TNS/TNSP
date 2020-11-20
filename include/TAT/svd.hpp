@@ -138,6 +138,7 @@ namespace TAT {
          real_base_t<ScalarType>* s,
          ScalarType* vt) {
       auto kernel_guard = svd_kernel_guard();
+      // 经过初步测试m > n比m < n和false要好, true是显然更糟糕的
       if (m > n) {
          auto new_a = vector<ScalarType>(n * m);
          auto old_u = vector<ScalarType>(n * min);
