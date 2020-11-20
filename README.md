@@ -41,6 +41,11 @@ You can download them from [here](https://github.com/hzhangxyz/TAT/releases/tag/
 
 If you are using cmake, you need to put these three files into directory `emscripten`, then run `emcmake cmake $path_to_TAT_root` which will configure it automatically
 
+## Installation(for Arch Linux users only)
+Download [PKGBUILD](/PKGBUILD) into any empty directory and run `makepkg` to build your package
+
+Then use `pacman -U TAT-xxx-x86_64.pkg.tar.zst` to install
+
 ## Links
 - [a tensor network library](https://github.com/crimestop/net)
 - [gitee mirror of TAT](https://gitee.com/hzhangxyz/TAT)
