@@ -40,3 +40,7 @@ You can simply compile TAT with `em++`(no mpi support, no doubt), and link `libl
 You can download them from [here](https://github.com/hzhangxyz/TAT/releases/tag/v0.0.6) or compile by yourself
 
 If you are using cmake, you need to put these three files into directory `emscripten`, then run `emcmake cmake $path_to_TAT_root` which will configure it automatically
+
+## Links
+- [a tensor network library](https://github.com/crimestop/net)
+- [gitee mirror of TAT](https://gitee.com/hzhangxyz/TAT)
