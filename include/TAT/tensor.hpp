@@ -186,7 +186,7 @@ namespace TAT {
        * \param edge_symmetry 如果系统含有对称性, 则需要设置此值
        * \param edge_arrow 如果系统对称性为fermi对称性, 则需要设置此值
        */
-      static Tensor<ScalarType, Symmetry, Name>
+      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name>
       one(ScalarType number,
           std::vector<Name> names_init,
           const std::vector<Symmetry>& edge_symmetry = {},
@@ -296,6 +296,7 @@ namespace TAT {
          return std::move(zero());
       }
 
+      // TODO 这个东西应该作为static的函数，类似one
       /**
        * \brief 看作矩阵并生成单位矩阵
        * \param pairs 看作矩阵时边的配对方案

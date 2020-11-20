@@ -23,6 +23,7 @@
 
 #include "tensor.hpp"
 #include "timer.hpp"
+#include "transpose.hpp"
 
 extern "C" {
 void sgeqrf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
@@ -183,7 +184,7 @@ namespace TAT {
    }
 
    template<typename ScalarType>
-   void calculate_qr(
+   void calculate_qr_kernel(
          const int& m,
          const int& n,
          const int& min,
@@ -192,8 +193,6 @@ namespace TAT {
          ScalarType* __restrict data_1,
          ScalarType* __restrict data_2,
          bool use_qr_not_lq) {
-      auto kernel_guard = qr_kernel_guard();
-      // TODO: 有时可能多转置一下更快，参见svd中的做法
       // m*n c matrix at data do lq
       // n*m fortran matrix at data do qr
       if (use_qr_not_lq) {
@@ -272,6 +271,32 @@ namespace TAT {
          }
          std::copy(data + n * min, data + n * m, data_1 + min * min);
          // 若为第一种, 则这个copy不做事
+      }
+   }
+
+   template<typename ScalarType>
+   void calculate_qr(
+         const int& m,
+         const int& n,
+         const int& min,
+         const int& max,
+         ScalarType* __restrict data,
+         ScalarType* __restrict data_1,
+         ScalarType* __restrict data_2,
+         bool use_qr_not_lq) {
+      auto kernel_guard = qr_kernel_guard();
+      // 有时可能多转置一下更快，参见svd中的做法
+      // 经过初步测试m > n看起来最好
+      if (m > n) {
+         auto new_data = vector<ScalarType>(n * m);
+         auto old_data_1 = vector<ScalarType>(n * min);
+         auto old_data_2 = vector<ScalarType>(min * m);
+         matrix_transpose(m, n, data, new_data.data());
+         calculate_qr_kernel(n, m, min, max, new_data.data(), old_data_1.data(), old_data_2.data(), !use_qr_not_lq);
+         matrix_transpose(n, min, old_data_1.data(), data_2);
+         matrix_transpose(min, m, old_data_2.data(), data_1);
+      } else {
+         calculate_qr_kernel(m, n, min, max, data, data_1, data_2, use_qr_not_lq);
       }
    }
 

@@ -27,7 +27,7 @@
 namespace TAT {
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                                                      \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name>                                                        \
-   auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) {                           \
+   [[nodiscard]] auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) {             \
       auto guard = scalar_outplace_guard();                                                                                                      \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                                           \
       if (tensor_1.is_scalar()) {                                                                                                                \
@@ -116,11 +116,11 @@ namespace TAT {
       }                                                                                                                                          \
    }                                                                                                                                             \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name, typename = std::enable_if_t<is_scalar_v<ScalarType2>>> \
-   auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const ScalarType2& number_2) {                                                   \
+   [[nodiscard]] auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const ScalarType2& number_2) {                                     \
       return OP(tensor_1, Tensor<ScalarType2, Symmetry, Name>{number_2});                                                                        \
    }                                                                                                                                             \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name, typename = std::enable_if_t<is_scalar_v<ScalarType1>>> \
-   auto OP(const ScalarType1& number_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) {                                                   \
+   [[nodiscard]] auto OP(const ScalarType1& number_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) {                                     \
       return OP(Tensor<ScalarType1, Symmetry, Name>{number_1}, tensor_2);                                                                        \
    }
 
