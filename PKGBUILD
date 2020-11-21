@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 _pkgname=TAT
 pkgname=$_pkgname-git
-pkgver=0
+pkgver=283.631d786
 pkgrel=1
 pkgdesc="TAT is A Tensor library"
 arch=('x86_64')

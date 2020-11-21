@@ -936,7 +936,7 @@ namespace TAT {
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
-      tat_m.def("TAT", [tensor_m, tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
+      internal_m.def("hub", [tensor_m, tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
             std::string date = __DATE__;
             std::string year = date.substr(date.size() - 4, 4);
@@ -1002,6 +1002,14 @@ namespace TAT {
          }
          return tensor_m.attr((scalar + fermi + symmetry).c_str());
       });
+      auto py_module_type = tat_m.attr("__class__");
+      auto py_type = tat_m.attr("__class__").attr("__class__");
+      py::dict callable_type_dict;
+      callable_type_dict["__call__"] = internal_m.attr("hub");
+      py::list base_types;
+      base_types.append(py_module_type);
+      internal_m.attr("CallableModule") = py_type("CallableModule", py::tuple(base_types), callable_type_dict);
+      tat_m.attr("__class__") = internal_m.attr("CallableModule");
       at_exit.release();
    }
 } // namespace TAT
