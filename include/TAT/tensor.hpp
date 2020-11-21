@@ -218,10 +218,10 @@ namespace TAT {
             std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = ",No_Old_Name") const;
+      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = NameTraits<Name>::No_Old_Name) const;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = ",No_New_Name", Arrow arrow = false) const;
+      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = NameTraits<Name>::No_New_Name, Arrow arrow = false) const;
 
       /**
        * \brief 产生一个与自己形状一样的张量
