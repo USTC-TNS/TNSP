@@ -936,7 +936,7 @@ namespace TAT {
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
-      tat_m.def("TAT", [tensor_m, tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
+      tat_m.def("TATensor", [tensor_m, tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
             std::string date = __DATE__;
             std::string year = date.substr(date.size() - 4, 4);
