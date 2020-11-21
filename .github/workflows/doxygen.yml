@@ -17,7 +17,7 @@ jobs:
       id: tagger
       uses: digital-ai/query-tag-action@v2
     - name: update version
-      run: sed -i 's/dev/${steps.tagger.outputs.tag}/' Doxyfile
+      run: sed -i s/dev/${{steps.tagger.outputs.tag}}/ Doxyfile
     - name: install doxygen
       run: sudo apt-get install doxygen -y
     - name: create docs
