@@ -26,6 +26,15 @@
 
 #include "tensor.hpp"
 
+// using root namespace need at least one operator declared in root namespace, so I need to declare a useless class and its operator
+struct never_use_it_by_TAT {
+   never_use_it_by_TAT() = delete;
+};
+void operator<<(never_use_it_by_TAT, never_use_it_by_TAT);
+void operator>>(never_use_it_by_TAT, never_use_it_by_TAT);
+void operator<(never_use_it_by_TAT, never_use_it_by_TAT);
+void operator>(never_use_it_by_TAT, never_use_it_by_TAT);
+
 namespace TAT {
    /**
     * 简洁地打印复数
@@ -157,6 +166,8 @@ namespace TAT {
 
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
+      using TAT::operator<;
+      using ::operator<;
       Size size = map.size();
       out < size;
       for (const auto& [key, value] : map) {
@@ -167,6 +178,8 @@ namespace TAT {
 
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
+      using TAT::operator>;
+      using ::operator>;
       map.clear();
       Size size;
       in > size;
@@ -180,6 +193,8 @@ namespace TAT {
 
    template<typename T, typename A>
    void print_vector(std::ostream& out, const std::vector<T, A>& list) {
+      using TAT::operator<<;
+      using ::operator<<;
       out << '[';
       auto not_first = false;
       for (const auto& i : list) {
@@ -204,6 +219,8 @@ namespace TAT {
 
    template<typename T, typename A>
    void scan_vector(std::istream& in, std::vector<T, A>& list) {
+      using TAT::operator>>;
+      using ::operator>>;
       list.clear();
       ignore_util(in, '[');
       if (in.peek() == ']') {
@@ -238,6 +255,8 @@ namespace TAT {
 
    template<typename T, typename A>
    std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
+      using TAT::operator<;
+      using ::operator<;
       Size count = list.size();
       out < count;
       if constexpr (std::is_trivially_destructible_v<T>) {
@@ -251,6 +270,8 @@ namespace TAT {
    }
    template<typename T, typename A>
    std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
+      using TAT::operator>;
+      using ::operator>;
       list.clear();
       Size count;
       in > count;
