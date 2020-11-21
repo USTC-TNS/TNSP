@@ -122,11 +122,30 @@ namespace TAT {
       static const Name Trace_3;
       static const Name No_Old_Name;
       static const Name No_New_Name;
+      static const Name Internal_0;
+      static const Name Internal_1;
+      static const Name Internal_2;
    };
-#define TAT_DEFINE_INTERNAL_NAME(x)                  \
-   template<>                                        \
-   const std::string NameTraits<std::string>::x(#x); \
-   template<>                                        \
+#define TAT_DEFINE_DEFAULT_INTERNAL_NAME(x, n) \
+   template<typename Name>                     \
+   const Name NameTraits<Name>::x = NameTraits<Name>::Internal_##n;
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_0, 0)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_1, 1)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_2, 2)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(SVD_U, 1)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(SVD_V, 2)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(QR_1, 1)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(QR_2, 2)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_1, 0)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_2, 1)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_3, 2)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(No_Old_Name, 0)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(No_New_Name, 0)
+#undef TAT_DEFINE_DEFAULT_INTERNAL_NAME
+#define TAT_DEFINE_INTERNAL_NAME(x)                      \
+   template<>                                            \
+   const std::string NameTraits<std::string>::x("," #x); \
+   template<>                                            \
    const FastName NameTraits<FastName>::x("," #x);
    TAT_DEFINE_INTERNAL_NAME(Contract_0)
    TAT_DEFINE_INTERNAL_NAME(Contract_1)
