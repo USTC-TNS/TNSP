@@ -323,8 +323,8 @@ namespace TAT {
       auto reversed_set_result = std::set<Name>();                                                 // 最后split时的反转标
       auto name_result = std::vector<Name>();                                                      // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
-      split_map_result[NameTraits<Name>::Contract_1].reserve(rank_1 - common_rank);
-      split_map_result[NameTraits<Name>::Contract_2].reserve(rank_2 - common_rank);
+      split_map_result[InternalName<Name>::Contract_1].reserve(rank_1 - common_rank);
+      split_map_result[InternalName<Name>::Contract_2].reserve(rank_2 - common_rank);
       auto free_name_1 = std::vector<Name>(); // 第一个张量的自由边, merge时使用
       free_name_1.reserve(rank_1 - common_rank);
       for (Rank i = 0; i < rank_1; i++) {
@@ -335,7 +335,7 @@ namespace TAT {
             if constexpr (is_no_symmetry) {
                edge_result.push_back(tensor_1.core->edges[i]);
             } else {
-               split_map_result.at(NameTraits<Name>::Contract_1).push_back({n, {tensor_1.core->edges[i].map}});
+               split_map_result.at(InternalName<Name>::Contract_1).push_back({n, {tensor_1.core->edges[i].map}});
             }
             name_result.push_back(n);
             if constexpr (is_fermi) {
@@ -364,7 +364,7 @@ namespace TAT {
             if constexpr (is_no_symmetry) {
                edge_result.push_back(tensor_2.core->edges[i]);
             } else {
-               split_map_result.at(NameTraits<Name>::Contract_2).push_back({n, {tensor_2.core->edges[i].map}});
+               split_map_result.at(InternalName<Name>::Contract_2).push_back({n, {tensor_2.core->edges[i].map}});
             }
             name_result.push_back(n);
             if constexpr (is_fermi) {
@@ -475,25 +475,25 @@ namespace TAT {
             {},
             {},
             reversed_set_1,
-            {{NameTraits<Name>::Contract_1, free_name_1}, {NameTraits<Name>::Contract_2, common_name_1}},
-            put_common_1_right ? std::vector<Name>{NameTraits<Name>::Contract_1, NameTraits<Name>::Contract_2} :
-                                 std::vector<Name>{NameTraits<Name>::Contract_2, NameTraits<Name>::Contract_1},
+            {{InternalName<Name>::Contract_1, free_name_1}, {InternalName<Name>::Contract_2, common_name_1}},
+            put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
+                                 std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1},
             false,
-            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {NameTraits<Name>::Contract_2}}},
+            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {InternalName<Name>::Contract_2}}},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             reversed_set_2,
-            {{NameTraits<Name>::Contract_2, free_name_2}, {NameTraits<Name>::Contract_1, common_name_2}},
-            put_common_2_right ? std::vector<Name>{NameTraits<Name>::Contract_2, NameTraits<Name>::Contract_1} :
-                                 std::vector<Name>{NameTraits<Name>::Contract_1, NameTraits<Name>::Contract_2},
+            {{InternalName<Name>::Contract_2, free_name_2}, {InternalName<Name>::Contract_1, common_name_2}},
+            put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
+                                 std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             false,
             {{{}, {}, {}, {}}},
             delete_2);
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry, Name>(
-            {NameTraits<Name>::Contract_1, NameTraits<Name>::Contract_2},
+            {InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
       // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
       auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
@@ -712,23 +712,23 @@ namespace TAT {
             {},
             {},
             {},
-            {{NameTraits<Name>::Contract_1, free_name_1},
-             {NameTraits<Name>::Contract_2, common_name_1},
-             {NameTraits<Name>::Contract_0, fuse_names_list}},
-            put_common_1_right ? std::vector<Name>{NameTraits<Name>::Contract_0, NameTraits<Name>::Contract_1, NameTraits<Name>::Contract_2} :
-                                 std::vector<Name>{NameTraits<Name>::Contract_0, NameTraits<Name>::Contract_2, NameTraits<Name>::Contract_1});
+            {{InternalName<Name>::Contract_1, free_name_1},
+             {InternalName<Name>::Contract_2, common_name_1},
+             {InternalName<Name>::Contract_0, fuse_names_list}},
+            put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
+                                 std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             {},
-            {{NameTraits<Name>::Contract_2, free_name_2},
-             {NameTraits<Name>::Contract_1, common_name_2},
-             {NameTraits<Name>::Contract_0, fuse_names_list}},
-            put_common_2_right ? std::vector<Name>{NameTraits<Name>::Contract_0, NameTraits<Name>::Contract_2, NameTraits<Name>::Contract_1} :
-                                 std::vector<Name>{NameTraits<Name>::Contract_0, NameTraits<Name>::Contract_1, NameTraits<Name>::Contract_2});
+            {{InternalName<Name>::Contract_2, free_name_2},
+             {InternalName<Name>::Contract_1, common_name_2},
+             {InternalName<Name>::Contract_0, fuse_names_list}},
+            put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
+                                 std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2});
       // calculate_product
       auto product_result = Tensor<ScalarType, NoSymmetry, Name>(
-            {NameTraits<Name>::Contract_0, NameTraits<Name>::Contract_1, NameTraits<Name>::Contract_2},
+            {InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             {std::move(tensor_1_merged.core->edges[0]),
              std::move(tensor_1_merged.core->edges[1 + !put_common_1_right]),
              std::move(tensor_2_merged.core->edges[1 + !put_common_2_right])});

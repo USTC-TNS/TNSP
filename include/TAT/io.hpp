@@ -26,15 +26,6 @@
 
 #include "tensor.hpp"
 
-// using root namespace need at least one operator declared in root namespace, so I need to declare a useless class and its operator
-struct never_use_it_by_TAT {
-   never_use_it_by_TAT() = delete;
-};
-void operator<<(never_use_it_by_TAT, never_use_it_by_TAT);
-void operator>>(never_use_it_by_TAT, never_use_it_by_TAT);
-void operator<(never_use_it_by_TAT, never_use_it_by_TAT);
-void operator>(never_use_it_by_TAT, never_use_it_by_TAT);
-
 namespace TAT {
    /**
     * 简洁地打印复数
@@ -128,18 +119,21 @@ namespace TAT {
    }
 
    // inline std::istream& operator>>(std::istream& in, std::string& name) {
-   inline std::string read_string_for_name(std::istream& in) {
+   inline std::istream& scan_string_for_name(std::istream& in, std::string& name) {
       char buffer[256]; // max name length = 256
       Size length = 0;
       while (valid_name_character(in.peek())) {
          buffer[length++] = in.get();
       }
       buffer[length] = '\x00';
-      return std::string((const char*)buffer);
+      name = (const char*)buffer;
+      return in;
    }
 
-   inline std::istream& operator>>(std::istream& in, FastName& name) {
-      name = FastName(read_string_for_name(in));
+   inline std::istream& scan_fastname_for_name(std::istream& in, FastName& name) {
+      std::string string;
+      scan_string_for_name(in, string);
+      name = FastName(string);
       return in;
    }
 
@@ -157,6 +151,21 @@ namespace TAT {
       return in;
    }
 
+   template<>
+   struct NameTraits<FastName> {
+      static constexpr name_out_operator<FastName> write = operator<;
+      static constexpr name_in_operator<FastName> read = operator>;
+      static constexpr name_out_operator<FastName> print = operator<<;
+      static constexpr name_in_operator<FastName> scan = scan_fastname_for_name;
+   };
+   template<>
+   struct NameTraits<std::string> {
+      static constexpr name_out_operator<std::string> write = operator<;
+      static constexpr name_in_operator<std::string> read = operator>;
+      static constexpr name_out_operator<std::string> print = std::operator<<;
+      static constexpr name_in_operator<std::string> scan = scan_string_for_name;
+   };
+
    template<typename T>
    struct is_symmetry_vector : std::bool_constant<false> {};
    template<typename T>
@@ -166,8 +175,6 @@ namespace TAT {
 
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
-      using TAT::operator<;
-      using ::operator<;
       Size size = map.size();
       out < size;
       for (const auto& [key, value] : map) {
@@ -178,8 +185,6 @@ namespace TAT {
 
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
-      using TAT::operator>;
-      using ::operator>;
       map.clear();
       Size size;
       in > size;
@@ -193,8 +198,6 @@ namespace TAT {
 
    template<typename T, typename A>
    void print_vector(std::ostream& out, const std::vector<T, A>& list) {
-      using TAT::operator<<;
-      using ::operator<<;
       out << '[';
       auto not_first = false;
       for (const auto& i : list) {
@@ -202,7 +205,9 @@ namespace TAT {
             out << ',';
          }
          not_first = true;
-         if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+         if constexpr (is_name_v<T>) {
+            NameTraits<T>::print(out, i);
+         } else if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
             print_complex(out, i);
          } else {
             out << i;
@@ -219,8 +224,6 @@ namespace TAT {
 
    template<typename T, typename A>
    void scan_vector(std::istream& in, std::vector<T, A>& list) {
-      using TAT::operator>>;
-      using ::operator>>;
       list.clear();
       ignore_util(in, '[');
       if (in.peek() == ']') {
@@ -231,10 +234,9 @@ namespace TAT {
          while (true) {
             // 此时没有space
             auto& i = list.emplace_back();
-            if constexpr (std::is_same_v<T, std::string>) {
-               i = read_string_for_name(in);
-            }
-            if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::scan(in, i);
+            } else if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
                scan_complex(in, i);
             } else {
                in >> i;
@@ -255,23 +257,23 @@ namespace TAT {
 
    template<typename T, typename A>
    std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
-      using TAT::operator<;
-      using ::operator<;
       Size count = list.size();
       out < count;
       if constexpr (std::is_trivially_destructible_v<T>) {
          out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
       } else {
          for (const auto& i : list) {
-            out < i;
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::write(out, i);
+            } else {
+               out < i;
+            }
          }
       }
       return out;
    }
    template<typename T, typename A>
    std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
-      using TAT::operator>;
-      using ::operator>;
       list.clear();
       Size count;
       in > count;
@@ -281,7 +283,11 @@ namespace TAT {
       } else {
          for (auto i = 0; i < count; i++) {
             auto& item = list.emplace_back();
-            in > item;
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::read(in, item);
+            } else {
+               in > item;
+            }
          }
       }
       return in;

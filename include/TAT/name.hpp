@@ -21,16 +21,12 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
+#include <iostream>
 #include <map>
 #include <set>
 #include <string>
 
 namespace TAT {
-   /**
-    * \brief 用于给张量的边命名的类型Name, 直接使用字符串
-    */
-   using SimpleName = std::string;
-
    struct fast_name_dataset_t {
       /**
        * \brief Name中用于标号的类型
@@ -99,36 +95,35 @@ namespace TAT {
 
    using DefaultName =
 #ifdef TAT_USE_SIMPLE_NAME
-         SimpleName
+         std::string
 #else
          FastName
 #endif
          ;
 
-   // 作为Name需要可以比较, 需要text/binary的io供输入输出
-   // 在python/TAT.cpp中还需要到std::string的转换函数
-   // 最后需要通过下面的NameTraits设置内部名称
    template<typename Name>
-   struct NameTraits {
-      static const Name Contract_0;
-      static const Name Contract_1;
-      static const Name Contract_2;
-      static const Name SVD_U;
-      static const Name SVD_V;
-      static const Name QR_1;
-      static const Name QR_2;
-      static const Name Trace_1;
-      static const Name Trace_2;
-      static const Name Trace_3;
-      static const Name No_Old_Name;
-      static const Name No_New_Name;
-      static const Name Internal_0;
-      static const Name Internal_1;
-      static const Name Internal_2;
+   struct InternalName {
+#define TAT_DEFINE_ALL_INTERNAL_NAME(x) static const Name x;
+      TAT_DEFINE_ALL_INTERNAL_NAME(Default_0)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Default_1)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Default_2)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_0)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_1)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_2)
+      TAT_DEFINE_ALL_INTERNAL_NAME(SVD_U)
+      TAT_DEFINE_ALL_INTERNAL_NAME(SVD_V)
+      TAT_DEFINE_ALL_INTERNAL_NAME(QR_1)
+      TAT_DEFINE_ALL_INTERNAL_NAME(QR_2)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_1)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_2)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_3)
+      TAT_DEFINE_ALL_INTERNAL_NAME(No_Old_Name)
+      TAT_DEFINE_ALL_INTERNAL_NAME(No_New_Name)
+#undef TAT_DEFINE_ALL_INTERNAL_NAME
    };
 #define TAT_DEFINE_DEFAULT_INTERNAL_NAME(x, n) \
    template<typename Name>                     \
-   const Name NameTraits<Name>::x = NameTraits<Name>::Internal_##n;
+   const Name InternalName<Name>::x = InternalName<Name>::Default_##n;
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_0, 0)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_1, 1)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_2, 2)
@@ -142,11 +137,11 @@ namespace TAT {
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(No_Old_Name, 0)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(No_New_Name, 0)
 #undef TAT_DEFINE_DEFAULT_INTERNAL_NAME
-#define TAT_DEFINE_INTERNAL_NAME(x)                      \
-   template<>                                            \
-   const std::string NameTraits<std::string>::x("," #x); \
-   template<>                                            \
-   const FastName NameTraits<FastName>::x("," #x);
+#define TAT_DEFINE_INTERNAL_NAME(x)                   \
+   template<>                                         \
+   const FastName InternalName<FastName>::x = "," #x; \
+   template<>                                         \
+   const std::string InternalName<std::string>::x = "," #x;
    TAT_DEFINE_INTERNAL_NAME(Contract_0)
    TAT_DEFINE_INTERNAL_NAME(Contract_1)
    TAT_DEFINE_INTERNAL_NAME(Contract_2)
@@ -160,6 +155,33 @@ namespace TAT {
    TAT_DEFINE_INTERNAL_NAME(No_Old_Name)
    TAT_DEFINE_INTERNAL_NAME(No_New_Name)
 #undef TAT_DEFINE_INTERNAL_NAME
+
+   template<typename Name>
+   using name_out_operator = std::ostream& (*)(std::ostream&, const Name&);
+   template<typename Name>
+   using name_in_operator = std::istream& (*)(std::istream&, Name&);
+
+   // 作为Name需要可以比较, 需要text/binary的io供输入输出
+   // 在python/TAT.cpp中还需要到std::string的转换函数
+   // 最后需要通过上面的InternalName设置内部名称
+   template<typename Name>
+   struct NameTraitsBase {
+      static constexpr name_out_operator<Name> write = nullptr;
+      static constexpr name_in_operator<Name> read = nullptr;
+      static constexpr name_out_operator<Name> print = nullptr;
+      static constexpr name_in_operator<Name> scan = nullptr;
+   };
+   template<typename Name>
+   struct NameTraits : NameTraitsBase<Name> {};
+   // need to sed write, read, print, scan and some internal name
+
+   template<typename Name>
+   struct is_name :
+         std::bool_constant<
+               NameTraits<Name>::write != nullptr || NameTraits<Name>::read != nullptr || NameTraits<Name>::print != nullptr ||
+               NameTraits<Name>::scan != nullptr> {};
+   template<typename Name>
+   constexpr bool is_name_v = is_name<Name>::value;
 
    /**
     * \brief 由名字列表构造名字到序号的映射表
