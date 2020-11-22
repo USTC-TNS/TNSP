@@ -62,7 +62,7 @@ namespace TAT {
             new_edges.push_back({{{symmetry, dimension}}});
          }
       }
-      if (old_name != ",No_Old_Name") {
+      if (old_name != InternalName<Name>::No_Old_Name) {
          new_names.push_back(old_name);
          // 调整使得可以缩并
          auto& old_edge = core->edges[name_to_index.at(old_name)];
@@ -131,7 +131,7 @@ namespace TAT {
             }
          }
       }
-      if (new_name != ",No_New_Name") {
+      if (new_name != InternalName<Name>::No_New_Name) {
          new_names.push_back(new_name);
          if constexpr (is_fermi) {
             new_edges.push_back({arrow, {{total_symmetry, 1}}});

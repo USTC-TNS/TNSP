@@ -119,18 +119,21 @@ namespace TAT {
    }
 
    // inline std::istream& operator>>(std::istream& in, std::string& name) {
-   inline std::string read_string_for_name(std::istream& in) {
+   inline std::istream& scan_string_for_name(std::istream& in, std::string& name) {
       char buffer[256]; // max name length = 256
       Size length = 0;
       while (valid_name_character(in.peek())) {
          buffer[length++] = in.get();
       }
       buffer[length] = '\x00';
-      return std::string((const char*)buffer);
+      name = (const char*)buffer;
+      return in;
    }
 
-   inline std::istream& operator>>(std::istream& in, FastName& name) {
-      name = FastName(read_string_for_name(in));
+   inline std::istream& scan_fastname_for_name(std::istream& in, FastName& name) {
+      std::string string;
+      scan_string_for_name(in, string);
+      name = FastName(string);
       return in;
    }
 
@@ -147,6 +150,21 @@ namespace TAT {
       in.read(string.data(), sizeof(char) * count);
       return in;
    }
+
+   template<>
+   struct NameTraits<FastName> {
+      static constexpr name_out_operator<FastName> write = operator<;
+      static constexpr name_in_operator<FastName> read = operator>;
+      static constexpr name_out_operator<FastName> print = operator<<;
+      static constexpr name_in_operator<FastName> scan = scan_fastname_for_name;
+   };
+   template<>
+   struct NameTraits<std::string> {
+      static constexpr name_out_operator<std::string> write = operator<;
+      static constexpr name_in_operator<std::string> read = operator>;
+      static constexpr name_out_operator<std::string> print = std::operator<<;
+      static constexpr name_in_operator<std::string> scan = scan_string_for_name;
+   };
 
    template<typename T>
    struct is_symmetry_vector : std::bool_constant<false> {};
@@ -187,7 +205,9 @@ namespace TAT {
             out << ',';
          }
          not_first = true;
-         if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+         if constexpr (is_name_v<T>) {
+            NameTraits<T>::print(out, i);
+         } else if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
             print_complex(out, i);
          } else {
             out << i;
@@ -214,10 +234,9 @@ namespace TAT {
          while (true) {
             // 此时没有space
             auto& i = list.emplace_back();
-            if constexpr (std::is_same_v<T, std::string>) {
-               i = read_string_for_name(in);
-            }
-            if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::scan(in, i);
+            } else if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
                scan_complex(in, i);
             } else {
                in >> i;
@@ -244,7 +263,11 @@ namespace TAT {
          out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
       } else {
          for (const auto& i : list) {
-            out < i;
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::write(out, i);
+            } else {
+               out < i;
+            }
          }
       }
       return out;
@@ -260,7 +283,11 @@ namespace TAT {
       } else {
          for (auto i = 0; i < count; i++) {
             auto& item = list.emplace_back();
-            in > item;
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::read(in, item);
+            } else {
+               in > item;
+            }
          }
       }
       return in;

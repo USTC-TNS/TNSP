@@ -91,6 +91,7 @@ namespace TAT {
    struct Tensor {
       using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
+      using name_valid = std::enable_if_t<is_name_v<Name>>;
 
       /**
        * \brief 张量的边的名称
@@ -218,10 +219,10 @@ namespace TAT {
             std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = ",No_Old_Name") const;
+      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = ",No_New_Name", Arrow arrow = false) const;
+      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
       /**
        * \brief 产生一个与自己形状一样的张量

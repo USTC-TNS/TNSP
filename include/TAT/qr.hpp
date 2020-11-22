@@ -365,7 +365,12 @@ namespace TAT {
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
-      auto tensor_merged = edge_operator({}, {}, reversed_set_origin, {{",QR_1", free_name_1}, {",QR_2", free_name_2}}, {",QR_1", ",QR_2"});
+      auto tensor_merged = edge_operator(
+            {},
+            {},
+            reversed_set_origin,
+            {{InternalName<Name>::QR_1, free_name_1}, {InternalName<Name>::QR_2, free_name_2}},
+            {InternalName<Name>::QR_1, InternalName<Name>::QR_2});
       // call lapack
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
@@ -376,8 +381,10 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{{",QR_1", ",QR_2"}, {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{{",QR_1", ",QR_2"}, {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
+            {InternalName<Name>::QR_1, InternalName<Name>::QR_2}, {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
+            {InternalName<Name>::QR_1, InternalName<Name>::QR_2}, {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       for (auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_1 = tensor_1.core->blocks.at(symmetries).data();
          auto* data_2 = tensor_2.core->blocks.at(symmetries).data();
@@ -398,10 +405,14 @@ namespace TAT {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
       auto new_tensor_1 = tensor_1.template edge_operator<true>(
-            {{",QR_2", use_qr_not_lq ? common_name_q : common_name_r}}, {{",QR_1", free_names_and_edges_1}}, reversed_set_1, {}, result_name_1);
+            {{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
+            {{InternalName<Name>::QR_1, free_names_and_edges_1}},
+            reversed_set_1,
+            {},
+            result_name_1);
       auto new_tensor_2 = tensor_2.template edge_operator<true>(
-            {{",QR_1", use_qr_not_lq ? common_name_r : common_name_q}},
-            {{",QR_2", free_names_and_edges_2}},
+            {{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
+            {{InternalName<Name>::QR_2, free_names_and_edges_2}},
             reversed_set_2,
             {},
             result_name_2,
