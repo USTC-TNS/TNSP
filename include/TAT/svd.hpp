@@ -392,7 +392,7 @@ namespace TAT {
       return {
             std::move(u),
 #ifdef TAT_USE_SINGULAR_MATRIX
-            singular_to_tensor<ScalarType, Symmetry>(result_s),
+            singular_to_tensor<ScalarType, Symmetry, Name>(result_s),
 #else
             {std::move(result_s)},
 #endif

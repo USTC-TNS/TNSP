@@ -25,6 +25,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
+#define TAT_USE_SINGULAR_MATRIX
 #include <TAT/TAT.hpp>
 
 #define TAT_LOOP_ALL_SCALAR                   \

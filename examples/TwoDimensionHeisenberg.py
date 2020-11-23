@@ -546,7 +546,7 @@ class TwoDimensionHeisenberg:
                               {("Right1", "Left1"), ("Right2", "Left2"), ("Right3", "Left3")}).value()
             new_index = np.random.randint(2, size=[2])
             wss = self._get_wss(point1, point2, cut, new_index)
-            if wss ** 2 / ws ** 2 > np.random.rand():
+            if wss**2 / ws**2 > np.random.rand():
                 if self.spin[p1l1][p1l2] != new_index[0]:
                     self.spin[p1l1][p1l2] = new_index[0]
                     self._refresh_auxiliaries(p1l1, p1l2)
@@ -571,7 +571,7 @@ class TwoDimensionHeisenberg:
                               {("Down1", "Up1"), ("Down2", "Up2"), ("Down3", "Up3")}).value()
             new_index = np.random.randint(2, size=[2])
             wss = self._get_wss(point1, point2, cut, new_index)
-            if wss ** 2 / ws ** 2 > np.random.rand():
+            if wss**2 / ws**2 > np.random.rand():
                 if self.spin[p1l1][p1l2] != new_index[0]:
                     self.spin[p1l1][p1l2] = new_index[0]
                     self._refresh_auxiliaries(p1l1, p1l2)
