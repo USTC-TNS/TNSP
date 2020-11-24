@@ -29,7 +29,11 @@
 
 namespace TAT {
    /**
-    * \brief 只有一个元素的假map
+    * \defgroup Miscellaneous
+    * @{
+    */
+   /**
+    * 只有一个元素的假map
     *
     * 无对称性的系统为一个NoSymmetry到Size的map, 显然只有一个元素, 使用一个假map来节省一层指针, 在无对称性的block中也用到了这个类
     */
@@ -97,6 +101,11 @@ namespace TAT {
    constexpr bool use_simple_nosymmetry = false;
 #endif
 
+   /**@}*/
+   /** \defgroup Edge
+    * @{
+    */
+
    /**
     * \see Edge
     */
@@ -120,14 +129,14 @@ namespace TAT {
       ~BoseEdge() = default;
 
       /**
-       * \brief 由对称性到维度的映射表直接构造
+       * 由对称性到维度的映射表直接构造
        */
       BoseEdge(edge_map&& map) : map(std::move(map)) {}
       BoseEdge(const edge_map& map) : map(map) {}
       BoseEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       /**
-       * \brief 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
+       * 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
        */
       BoseEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
@@ -137,7 +146,7 @@ namespace TAT {
       BoseEdge(const std::initializer_list<Symmetry>& symmetries) : BoseEdge(std::set<Symmetry>(symmetries)) {}
 
       /**
-       * \brief 构造一个平凡的边, 仅含一个对称性
+       * 构造一个平凡的边, 仅含一个对称性
        */
       BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
@@ -156,7 +165,7 @@ namespace TAT {
       using map_type = std::conditional_t<is_pointer, const edge_map&, edge_map>;
 
       /**
-       * \brief 费米箭头方向
+       * 费米箭头方向
        * \note 当map中只含fermi=0的对称性值时, arrow无法定义,
        * 这在possible_reverse中得到体现
        * \see arrow_valid
@@ -172,14 +181,14 @@ namespace TAT {
       ~FermiEdge() = default;
 
       /**
-       * \brief 由对称性到维度的映射表直接构造
+       * 由对称性到维度的映射表直接构造
        */
       FermiEdge(edge_map&& map) : map(std::move(map)) {}
       FermiEdge(const edge_map& map) : map(map) {}
       FermiEdge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
 
       /**
-       * \brief 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
+       * 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
        */
       FermiEdge(const std::set<Symmetry>& symmetries) {
          for (const auto& symmetry : symmetries) {
@@ -189,19 +198,19 @@ namespace TAT {
       FermiEdge(const std::initializer_list<Symmetry>& symmetries) : FermiEdge(std::set<Symmetry>(symmetries)) {}
 
       /**
-       * \brief 构造一个平凡的边, 仅含一个对称性
+       * 构造一个平凡的边, 仅含一个对称性
        */
       FermiEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
 
       /**
-       * \brief 由费米箭头方向和对称性到维度的映射表直接构造
+       * 由费米箭头方向和对称性到维度的映射表直接构造
        */
       FermiEdge(const Arrow arrow, edge_map&& map) : arrow(arrow), map(std::move(map)) {}
       FermiEdge(const Arrow arrow, const edge_map& map) : arrow(arrow), map(map) {}
       FermiEdge(const Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : arrow(arrow), map(map) {}
 
       /**
-       * \brief 由费米子数自动构造箭头方向, 虽然这个不一定需要一致
+       * 由费米子数自动构造箭头方向, 虽然这个不一定需要一致
        */
       void possible_reverse() {
          for (const auto& [symmetry, size] : map) {
@@ -213,7 +222,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 检查箭头是否有效, 即含有非零的费米子数
+       * 检查箭头是否有效, 即含有非零的费米子数
        */
       [[nodiscard]] bool arrow_valid() const {
          for (const auto& [symmetry, size] : map) {
@@ -232,7 +241,7 @@ namespace TAT {
    template<typename Symmetry, bool is_pointer>
    using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry, is_pointer>, BoseEdge<Symmetry, is_pointer>>;
    /**
-    * \brief 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
+    * 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
     * \tparam Symmetry 张量所拥有的对称性
     * \tparam is_pointer map是否为引用而非真是存储着数据的伪边
     * \see BoseEdge, FermiEdge
@@ -245,14 +254,14 @@ namespace TAT {
    };
 
    /**
-    * \brief 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
+    * 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
     */
    template<typename Symmetry>
    using EdgePointer = Edge<Symmetry, true>;
 
    /**
-    * \brief 对一个边的形状列表进行枚举分块, 并做一些其他操作
+    * 对一个边的形状列表进行枚举分块, 并做一些其他操作
     * \tparam T 应是vector<Edge>或者vector<EdgePointer>的iterator
     * \param edges 即将要枚举的边列表的开头指针
     * \param rank 即将要枚举的边列表的大小
@@ -298,12 +307,7 @@ namespace TAT {
       }
    }
 
-   /**
-    * \brief 根据边的形状的列表, 得到所有满足对称性条件的张量分块
-    * \return 分块信息, 为一个vector, 元素为两个类型的tuple, 分别是子块的各个子边对称性值和子块的总大小
-    * \tparam T 为vector<Edge>或者vector<EdgePointer>
-    * \see loop_edge
-    */
+   /// \private
    template<typename T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
@@ -338,16 +342,19 @@ namespace TAT {
    }
 
    /**
-    * \brief 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
+    * 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
     * \tparam T 如果T是Edge类型, 则value为true
+    * \see is_edge_v
     */
    template<typename T>
    struct is_edge : std::bool_constant<false> {};
+   /// \private
    template<typename T>
    struct is_edge<Edge<T>> : std::bool_constant<true> {};
    template<typename T>
    constexpr bool is_edge_v = is_edge<T>::value;
 
+   /// \private
    template<typename Symmetry>
    [[nodiscard]] std::vector<Edge<Symmetry>>
    get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
@@ -366,5 +373,6 @@ namespace TAT {
          return result;
       }
    }
+   /**@}*/
 } // namespace TAT
 #endif

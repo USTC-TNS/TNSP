@@ -24,9 +24,7 @@
 #include "tensor.hpp"
 
 namespace TAT {
-   /**
-    * \brief 寻找有对称性张量中的某个子块
-    */
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename Symmetry, typename Name>
    [[nodiscard]] auto get_block_for_get_item(const std::map<Name, Symmetry>& position, const std::vector<Name>& names) {
       auto symmetries = std::vector<Symmetry>();
@@ -41,9 +39,6 @@ namespace TAT {
       return symmetries;
    }
 
-   /**
-    * \brief 寻找无对称性张量中每个元素
-    */
    template<typename ScalarType, typename Symmetry, typename Name>
    [[nodiscard]] auto
    get_offset_for_get_item(const std::map<Name, Size>& position, const std::vector<Name>& names, const Core<ScalarType, Symmetry>& core) {
@@ -68,9 +63,6 @@ namespace TAT {
       return offset;
    }
 
-   /**
-    * \brief 寻找有对称性张量中的某个子块的某个元素
-    */
    template<typename ScalarType, typename Symmetry, typename Name>
    [[nodiscard]] auto get_block_and_offset_for_get_item(
          const std::map<Name, std::tuple<Symmetry, Size>>& position,
@@ -101,6 +93,7 @@ namespace TAT {
       }
       return std::make_tuple(symmetries, offset);
    }
+#endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
    const auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) const& {

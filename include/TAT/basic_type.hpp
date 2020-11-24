@@ -26,58 +26,70 @@
 
 namespace TAT {
    /**
-    * \brief 张量的秩的类型
+    * \defgroup Miscellaneous
+    * @{
+    */
+
+   /**
+    * 张量的秩的类型
     */
    using Rank = unsigned short;
    /**
-    * \brief 张量数据维度大小和数据本身大小的类型
+    * 张量分块数目和一个边上对称性数目的类型
+    */
+   using Nums = unsigned int;
+   /**
+    * 张量数据维度大小和数据本身大小的类型
     */
    using Size = unsigned long;
 
    /**
-    * \brief Z2对称性的类型
+    * Z2对称性的类型
     */
    using Z2 = bool;
    /**
-    * \brief U1对称性的类型
+    * U1对称性的类型
     */
    using U1 = int;
    /**
-    * \brief 费米子数目的类型
+    * 费米子数目的类型
     */
    using Fermi = short;
 
    /**
-    * \brief 费米箭头方向的类型, false和true分别表示出入
+    * 费米箭头方向的类型, `false`和`true`分别表示出入
     */
    using Arrow = bool;
 
    /**
-    * \brief 判断一个类型是否是标量类型, 修复了std::scalar不能判断std::complex的问题
-    * \tparam T 如果T是标量类型, 则value为true
+    * 判断一个类型是否是标量类型, 修复了`std::scalar`不能判断`std::complex`的问题
+    * \tparam T 如果`T`是标量类型, 则`value`为`true`
     * \see is_scalar_v
     */
    template<typename T>
    struct is_scalar : std::is_scalar<T> {};
+   /// \private
    template<typename T>
    struct is_scalar<std::complex<T>> : std::is_scalar<T> {};
    template<typename T>
    constexpr bool is_scalar_v = is_scalar<T>::value;
 
    /**
-    * \brief 取对应的实数类型, 在svd, norm等地方会用到
-    * \tparam T 如果T是std::complex<S>, 则type为S, 若T为其他标量类型, 则type为T本身, 否则为void
+    * 取对应的实数类型, 在svd, norm等地方会用到
+    * \tparam T 如果`T`是`std::complex<S>`, 则`type`为`S`, 若`T`为其他标量类型, 则`type`为`T`本身, 否则为`void`
     * \see real_base_t
     */
    template<typename T>
    struct real_base : std::conditional<is_scalar<T>::value, T, void> {};
+   /// \private
    template<typename T>
    struct real_base<std::complex<T>> : std::conditional<is_scalar<T>::value, T, void> {};
    template<typename T>
    using real_base_t = typename real_base<T>::type;
 
    /**
-    * \brief 判断是否是复数类型
+    * 判断是否是复数类型
+    * \tparam T 如果`T`为复数标量类型则`value`为`true`, 否则为`false`
     * \see is_complex_v
     */
    template<typename T>
@@ -85,12 +97,15 @@ namespace TAT {
    template<typename T>
    constexpr bool is_complex_v = is_complex<T>::value;
    /**
-    * \brief 判断是否是实数类型
+    * 判断是否是实数类型
+    * \tparam T 如果`T`为实数标量类型则`value`为`true`, 否则为`false`
     * \see is_real_v
     */
    template<typename T>
    struct is_real : std::is_same<T, real_base_t<T>> {};
    template<typename T>
    constexpr bool is_real_v = is_real<T>::value;
+
+   /**@}*/
 } // namespace TAT
 #endif

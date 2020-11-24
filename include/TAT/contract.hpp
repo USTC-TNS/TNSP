@@ -24,6 +24,7 @@
 #include "tensor.hpp"
 #include "timer.hpp"
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
 int sgemm_(
       const char* transpose_a,
@@ -149,8 +150,10 @@ int zgemm_batch_(
       const int* group_size);
 #endif
 }
+#endif
 
 namespace TAT {
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename ScalarType>
    constexpr void (*gemm)(
          const char* transpose_a,
@@ -252,13 +255,16 @@ namespace TAT {
       }
       return iterator;
    }
+#endif
 
+   /// \private
    template<typename ScalarType, typename Name>
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
          std::set<std::tuple<Name, Name>> contract_names);
 
+   /// \private
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,

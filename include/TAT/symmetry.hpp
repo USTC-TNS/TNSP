@@ -25,21 +25,32 @@
 
 namespace TAT {
    /**
-    * \brief 所有对称性类型的基类, 用来判断一个类型是否是对称性类型
+    * \defgroup Symmetry
+    * 对称性模块
+    *
+    * 如需自定义新的对称性类型CustomizedSymmetry, 需继承自TAT::bose_symmetry<CustomizedSymmetry>
+    * 或者TAT::fermi_symmetry<CustomizedSymmetry>并实现比较运算以及至少`operator+`, `operator+=`, `operator-`三个运算符
+    * @{
+    */
+
+   /**
+    * 所有对称性类型的基类, 用于判断一个类型是否是对称性类型
     */
    struct symmetry_base {};
    /**
-    * \brief 所有费米对称性的基类, 用来判断一个类型是否是玻色对称性
+    * 所有玻色对称性的基类, 用来判断一个类型是否是玻色对称性
     */
    struct bose_symmetry_base : symmetry_base {};
    /**
-    * \brief 所有费米对称性的基类, 用来判断一个类型是否是费米对称性
+    * 所有费米对称性的基类, 用来判断一个类型是否是费米对称性
     */
    struct fermi_symmetry_base : symmetry_base {};
 
    /**
-    * \brief 判断一个类型是否是对称性类型
-    * \tparam T 如果T是对称性类型, 则value为true
+    * 判断一个类型是否是对称性类型
+    *
+    * \tparam T 如果`T`是对称性类型, 则`value`为`true`
+    * \see is_symmetry_v
     */
    template<typename T>
    struct is_symmetry : std::is_base_of<symmetry_base, T> {};
@@ -47,8 +58,10 @@ namespace TAT {
    constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
    /**
-    * \brief 判断一个类型是否是玻色对称性类型
-    * \tparam T 如果T是玻色对称性类型, 则value为true
+    * 判断一个类型是否是玻色对称性类型
+    *
+    * \tparam T 如果`T`是玻色对称性类型, 则`value`为`true`
+    * \see is_bose_symmetry_v
     */
    template<typename T>
    struct is_bose_symmetry : std::is_base_of<bose_symmetry_base, T> {};
@@ -56,21 +69,33 @@ namespace TAT {
    constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
 
    /**
-    * \brief 判断一个类型是否是费米对称性类型
-    * \tparam T 如果T是费米对称性类型, 则value为true
+    * 判断一个类型是否是费米对称性类型
+    *
+    * \tparam T 如果`T`是费米对称性类型, 则`value`为`true`
+    * \see is_fermi_symmetry_v
     */
    template<typename T>
    struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
    template<typename T>
    constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
 
+   /**
+    * 玻色对称性的公有方法集, 并不存在
+    */
    template<typename Derived>
    struct bose_symmetry : bose_symmetry_base {};
 
+   /**
+    * 费米对称性的公有方法集
+    */
    template<typename Derived>
    struct fermi_symmetry : fermi_symmetry_base {
       /**
-       * \brief 根据对称性列表和各边是否需要翻转的情况和parity有效性给出总的parity
+       * 给出翻转各边时产生的parity
+       *
+       * \param symmetries 某分块在各个边的对称性情况
+       * \param reverse_flag 各个边是否需要翻转的列表
+       * \param valid_mark 各个边翻转的有效性
        *
        * 在edge_operator中, 反转边的时候, 所有奇性边会产生一个符号, 本函数求得总的符号,
        * 即统计symmetries中为奇, reverse_flag中为true, valid_mark中为true的数目的奇偶性
@@ -87,9 +112,12 @@ namespace TAT {
          return result;
       }
       /**
-       * \brief 根据对称性列表和各边的转置方案给出总parity
+       * 给出转置时产生的parity
        *
-       * 转置的parity总是有效的, 不像翻转和split, merge只会有一侧的张量有效, 毕竟这是单个张量的操作
+       * \param symmetries 某分块在各个边的对称性情况
+       * \param transpose_plan 转置方案
+       *
+       * 转置的parity总是有效的, 而翻转和split, merge涉及的两个张量只会有一侧有效, 毕竟这是单个张量的操作
        * \see Tensor::edge_operator
        */
       [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
@@ -104,9 +132,13 @@ namespace TAT {
          return result;
       }
       /**
-       * \brief 根据对称性列表和split或merge的方案以及parity有效性给出总的parity
+       * 给出merge或split时产生的parity
        *
-       * \note sum_{i!=j} s_i s_j = ((sum s_i)^2 - sum s_i^2)/2
+       * \param symmetries 某分块在各个边的对称性情况
+       * \param split_merge_flag merge或split的方案
+       * \param valid_mark 各个merge或split的有效性
+       *
+       * \note 实际上每一个merge或split操作都是一个全翻转, 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
        */
       [[nodiscard]] static bool get_split_merge_parity(
             const std::vector<Derived>& symmetries,    // before merge length
@@ -138,13 +170,14 @@ namespace TAT {
    };
 
    /**
-    * \brief 无对称性
+    * 无对称性
     */
    struct NoSymmetry : bose_symmetry<NoSymmetry> {
       [[nodiscard]] auto information() const {
          return 0;
       }
    };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    inline NoSymmetry operator+(const NoSymmetry&, const NoSymmetry&) {
       return NoSymmetry();
    }
@@ -154,9 +187,10 @@ namespace TAT {
    inline NoSymmetry operator-(const NoSymmetry&) {
       return NoSymmetry();
    }
+#endif
 
    /**
-    * \brief Z2对称性
+    * Z2对称性
     */
    struct Z2Symmetry : bose_symmetry<Z2Symmetry> {
       Z2 z2;
@@ -167,6 +201,7 @@ namespace TAT {
          return z2;
       }
    };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    inline Z2Symmetry operator+(const Z2Symmetry& symmetry_1, const Z2Symmetry& symmetry_2) {
       return Z2Symmetry(symmetry_1.z2 ^ symmetry_2.z2);
    }
@@ -175,11 +210,12 @@ namespace TAT {
       return symmetry_1;
    }
    inline Z2Symmetry operator-(const Z2Symmetry& symmetry) {
-      return Z2Symmetry(-symmetry.z2);
+      return Z2Symmetry(symmetry.z2);
    }
+#endif
 
    /**
-    * \brief U1对称性
+    * U1对称性
     */
    struct U1Symmetry : bose_symmetry<U1Symmetry> {
       U1 u1;
@@ -190,6 +226,7 @@ namespace TAT {
          return u1;
       }
    };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    inline U1Symmetry operator+(const U1Symmetry& symmetry_1, const U1Symmetry& symmetry_2) {
       return U1Symmetry(symmetry_1.u1 + symmetry_2.u1);
    }
@@ -200,9 +237,10 @@ namespace TAT {
    inline U1Symmetry operator-(const U1Symmetry& symmetry) {
       return U1Symmetry(-symmetry.u1);
    }
+#endif
 
    /**
-    * \brief 费米的无对称性
+    * 费米的无对称性
     */
    struct FermiSymmetry : fermi_symmetry<FermiSymmetry> {
       Fermi fermi;
@@ -213,6 +251,7 @@ namespace TAT {
          return fermi;
       }
    };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    inline FermiSymmetry operator+(const FermiSymmetry& symmetry_1, const FermiSymmetry& symmetry_2) {
       return FermiSymmetry(symmetry_1.fermi + symmetry_2.fermi);
    }
@@ -223,9 +262,10 @@ namespace TAT {
    inline FermiSymmetry operator-(const FermiSymmetry& symmetry) {
       return FermiSymmetry(-symmetry.fermi);
    }
+#endif
 
    /**
-    * \brief 费米的Z2对称性
+    * 费米的Z2对称性
     */
    struct FermiZ2Symmetry : fermi_symmetry<FermiZ2Symmetry> {
       Fermi fermi;
@@ -237,6 +277,7 @@ namespace TAT {
          return std::tie(fermi, z2);
       }
    };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    inline FermiZ2Symmetry operator+(const FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) {
       return FermiZ2Symmetry(symmetry_1.fermi + symmetry_2.fermi, symmetry_1.z2 ^ symmetry_2.z2);
    }
@@ -246,11 +287,12 @@ namespace TAT {
       return symmetry_1;
    }
    inline FermiZ2Symmetry operator-(const FermiZ2Symmetry& symmetry) {
-      return FermiZ2Symmetry(-symmetry.fermi, -symmetry.z2);
+      return FermiZ2Symmetry(-symmetry.fermi, symmetry.z2);
    }
+#endif
 
    /**
-    * \brief 费米的U1对称性
+    * 费米的U1对称性
     */
    struct FermiU1Symmetry : fermi_symmetry<FermiU1Symmetry> {
       Fermi fermi;
@@ -262,6 +304,7 @@ namespace TAT {
          return std::tie(fermi, u1);
       }
    };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    inline FermiU1Symmetry operator+(const FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) {
       return FermiU1Symmetry(symmetry_1.fermi + symmetry_2.fermi, symmetry_1.u1 + symmetry_2.u1);
    }
@@ -273,9 +316,11 @@ namespace TAT {
    inline FermiU1Symmetry operator-(const FermiU1Symmetry& symmetry) {
       return FermiU1Symmetry(-symmetry.fermi, -symmetry.u1);
    }
+#endif
 
    // 此处将可被c++20的operator<=>替换
    // 生成每个对称性的对称性的比较运算符重载
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #define TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, OP, EXP)         \
    inline bool OP(const SYM& symmetry_1, const SYM& symmetry_2) { \
       return EXP;                                                 \
@@ -296,5 +341,7 @@ namespace TAT {
    TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiU1Symmetry)
 #undef TAT_DEFINE_SYMMETRY_ALL_OPERATOR
 #undef TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR
+#endif
+   /**@}*/
 } // namespace TAT
 #endif

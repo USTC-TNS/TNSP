@@ -28,7 +28,13 @@
 
 namespace TAT {
    /**
-    * \brief 用于不初始化的vector的allocator, 仅用于张量数据的存储
+    * \defgroup Miscellaneous
+    * @{
+    */
+   /**
+    * 用于不初始化的`vector`的`allocator`, 仅用于张量数据的存储
+    *
+    * \see vector
     */
    template<typename T>
    struct allocator_without_initialize : std::allocator<T> {
@@ -38,7 +44,7 @@ namespace TAT {
       };
 
       /**
-       * \brief 初始化函数, 如果没有参数, 且类型T可以被平凡的析构, 则不做任何初始化操作, 否则进行正常的就地初始化
+       * 初始化函数, 如果没有参数, 且类型T可以被平凡的析构, 则不做任何初始化操作, 否则进行正常的就地初始化
        * \tparam Args 初始化的参数类型
        * \param pointer 被初始化的值的地址
        * \param arguments 初始化的参数
@@ -51,11 +57,17 @@ namespace TAT {
          }
       }
 
+      /**
+       * 对齐地分配内存, 对齐方式`lcm(1024, alignof(T))`
+       */
       T* allocate(std::size_t n) {
          constexpr auto align = std::align_val_t(std::lcm(1024, alignof(T)));
          return (T*)operator new(n * sizeof(T), align);
       }
 
+      /**
+       * 释放对齐分配的内存
+       */
       void deallocate(T* p, std::size_t n) {
          constexpr auto align = std::align_val_t(std::lcm(1024, alignof(T)));
          operator delete(p, align);
@@ -67,7 +79,7 @@ namespace TAT {
    };
 
    /**
-    * \brief 尽可能不做初始化的vector容器
+    * 尽可能不做初始化的vector容器
     * \see allocator_without_initialize
     * \note 为了其他部分与stl兼容性, 仅在张量的数据处使用
     */
@@ -78,8 +90,14 @@ namespace TAT {
       vector(const std::vector<T>& other) : vector(other.begin(), other.end()) {}
    };
 
+   /**@}*/
    /**
-    * \brief 记录了张量的核心数据的类型, 核心数据指的是除了角标名称之外的信息, 包括边的形状, 以及张量内本身的数据
+    * \defgroup Tensor
+    * @{
+    */
+
+   /**
+    * 记录了张量的核心数据的类型, 核心数据指的是除了角标名称之外的信息, 包括边的形状, 以及张量内本身的数据
     * \tparam ScalarType 张量内本身的数据的标量类型
     * \tparam Symmetry 张量所拥有的对称性
     * \note Core的存在是为了让边的名称的重命名节省时间
@@ -87,7 +105,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry>
    struct Core {
       /**
-       * \brief 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
+       * 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
        * \see Edge
        */
       std::vector<Edge<Symmetry>> edges = {};
@@ -100,13 +118,13 @@ namespace TAT {
       using block_map = normal_map;
 #endif
       /**
-       * \brief 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
+       * 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
        * 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
        */
       block_map blocks = {};
 
       /**
-       * \brief 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块
+       * 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块
        * \param initial_edge 边的形状的列表
        * \param auto_reverse 对于费米张量是否自动对含有负对称值的边整个取反
        * \note 使用auto_reverse时, 原则上构造时费米对称性值应该全正或全负, 如果不是这样, 结果会难以理解
@@ -157,5 +175,6 @@ namespace TAT {
       Core& operator=(Core&&) = default;
       ~Core() = default;
    };
+   /**@}*/
 } // namespace TAT
 #endif

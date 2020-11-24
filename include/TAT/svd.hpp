@@ -25,6 +25,7 @@
 #include "timer.hpp"
 #include "transpose.hpp"
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
 int sgesvd_(
       const char* job_u,
@@ -89,8 +90,10 @@ int zgesvd_(
       double* rwork,
       int* info);
 }
+#endif
 
 namespace TAT {
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename ScalarType, typename Symmetry, typename Name>
    [[nodiscard]] Tensor<ScalarType, Symmetry, Name> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
       auto symmetries = std::vector<Edge<Symmetry>>(2);
@@ -229,6 +232,7 @@ namespace TAT {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
    }
+#endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::svd_result

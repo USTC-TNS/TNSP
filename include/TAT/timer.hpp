@@ -25,18 +25,29 @@
 #include <stack>
 
 namespace TAT {
+   /**
+    * \defgroup Timer
+    * @{
+    */
 #ifndef TAT_USE_NO_TIMER
    using time_point = std::chrono::high_resolution_clock::time_point;
    using time_duration = std::chrono::high_resolution_clock::duration;
    using time_pair = std::tuple<time_point, time_duration>;
 
+   /**
+    * 获取当前时间点
+    */
    inline auto get_current_time() {
       return std::chrono::high_resolution_clock::now();
    }
+   /**
+    * 将`std::chrono::high_resolution_clock::duration`转化为秒数
+    */
    inline auto count_to_second(const time_duration& count) {
       return std::chrono::duration<double>(count).count();
    }
 
+   /// \private
    struct timer_stack_t {
       std::stack<time_pair, std::vector<time_pair>> stack;
       timer_stack_t() {
@@ -50,11 +61,30 @@ namespace TAT {
                        .c_str());
       }
    };
+   /**
+    * 统计各个函数时间用的栈
+    */
    inline auto timer_stack = timer_stack_t();
 
+   /**
+    * 计时器类型
+    *
+    * 使用timer_stack对各个关注的函数进行计时，将统计调用其他函数的时间和自身的时间
+    *
+    * 如果希望增加自定义的计时器, 在全局空间定义`timer some_function_guard("some function_name");`,
+    * 在计时处添加`auto guard = some_function_guard();`即可, 计时器会统计自构建到析构间的时间
+    *
+    * \see timer_stack
+    */
    struct timer {
       std::string timer_name;
+      /**
+       * 计时器统计的全部时间, 将在计时器销毁时打印出来
+       */
       time_duration timer_total_count;
+      /**
+       * 计时器统计的自身时间, 将在计时器销毁时打印出来
+       */
       time_duration timer_self_count;
 
       timer(const char* name) : timer_name(name), timer_total_count(time_duration::zero()), timer_self_count(time_duration::zero()) {}
@@ -97,6 +127,7 @@ namespace TAT {
    };
 #endif
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #define TAT_DEFINE_TIMER(x) inline timer x##_guard(#x);
    TAT_DEFINE_TIMER(contract)
    TAT_DEFINE_TIMER(contract_kernel)
@@ -115,5 +146,7 @@ namespace TAT {
    TAT_DEFINE_TIMER(slice)
    TAT_DEFINE_TIMER(expand)
 #undef TAT_DEFINE_TIMER
+#endif
+   /**@}*/
 } // namespace TAT
 #endif
