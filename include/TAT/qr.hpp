@@ -25,6 +25,7 @@
 #include "timer.hpp"
 #include "transpose.hpp"
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
 void sgeqrf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
 void dgeqrf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
@@ -111,8 +112,10 @@ void zunglq_(
       const int* lwork,
       int* info);
 }
+#endif
 
 namespace TAT {
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename ScalarType>
    constexpr void (
          *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
@@ -299,6 +302,7 @@ namespace TAT {
          calculate_qr_kernel(m, n, min, max, data, data_1, data_2, use_qr_not_lq);
       }
    }
+#endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr(

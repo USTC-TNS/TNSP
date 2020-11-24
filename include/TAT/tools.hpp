@@ -26,6 +26,7 @@
 // TODO 目前这个文件的定位很迷惑
 
 namespace TAT {
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    namespace tools {
       // default: up to down
       template<typename ScalarType, typename Symmetry, typename Name>
@@ -104,5 +105,6 @@ namespace TAT {
          // TODO: network
       };
    } // namespace tools
+#endif
 } // namespace TAT
 #endif

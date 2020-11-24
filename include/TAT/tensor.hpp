@@ -37,6 +37,16 @@
 namespace TAT {
    struct mpi_t;
 
+   /**
+    * \defgroup Singular
+    * @{
+    */
+
+   /**
+    * 张量看成矩阵后做svd分解后得到的奇异值类型, 为对角矩阵形式的张量
+    *
+    * \see Tensor::svd
+    */
    template<typename ScalarType = double, typename Symmetry = NoSymmetry, typename Name = DefaultName>
    struct Singular {
       using normal_map = std::map<Symmetry, vector<real_base_t<ScalarType>>>;
@@ -82,10 +92,23 @@ namespace TAT {
       };
    };
 
+   /**@}*/
    /**
-    * \brief TAT is A Tensor library!
+    * \defgroup Tensor
+    * @{
+    */
+
+   /**
+    * 张量类型
+    *
+    * 张量类型中含有元信息和数据两部分. 元信息包括秩, 以及秩个边
+    * 每个边含有一个Name信息以及形状信息, 对于无对称性的张量, 边的形状使用一个数字描述, 即此边的维度.
+    * 对于其他类型的对称性, 边的形状为一个该类型对称性(应该是该对称性的量子数, 这里简称对称性)到数的映射,
+    * 表示某量子数下的维度. 而张量数据部分为若干个秩维矩块, 对于无对称性张量, 仅有唯一一个矩块.
+    *
     * \tparam ScalarType 张量内的标量类型
     * \tparam Symmetry 张量所满足的对称性
+    * \tparam Name 张量的边的名称类型
     */
    template<typename ScalarType = double, typename Symmetry = NoSymmetry, typename Name = DefaultName>
    struct Tensor {
@@ -94,24 +117,24 @@ namespace TAT {
       using name_valid = std::enable_if_t<is_name_v<Name>>;
 
       /**
-       * \brief 张量的边的名称
+       * 张量的边的名称
        * \see Name
        */
       std::vector<Name> names;
       /**
-       * \brief 张量边名称到边的序号的映射表
+       * 张量边名称到边的序号的映射表
        * \note 虽然可能因为内存分配效率会不高, 但是在边很多的时候会很有用, 比如费米张量的w(s)处
        */
       std::map<Name, Rank> name_to_index;
       /**
-       * \brief 张量中出了边名称外的其他数据
+       * 张量中出了边名称外的其他数据
        * \see Core
        * \note 因为重命名边的操作很常见, 为了避免复制, 使用shared_ptr封装Core
        */
       std::shared_ptr<Core<ScalarType, Symmetry>> core;
 
       /**
-       * \brief 根据张量边的名称和形状构造张量, 分块将自动根据对称性进行处理
+       * 根据张量边的名称和形状构造张量, 分块将自动根据对称性进行处理
        * \param names_init 边的名称
        * \param edges_init 边的形状
        * \param auto_reverse 费米对称性是否自动根据是否有负值整个反转
@@ -131,7 +154,7 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 张量的复制, 默认的赋值和复制初始化不会拷贝数据，而会共用core
+       * 张量的复制, 默认的赋值和复制初始化不会拷贝数据，而会共用core
        * \return 复制的结果
        * \see core
        */
@@ -173,7 +196,7 @@ namespace TAT {
       ~Tensor() = default;
 
       /**
-       * \brief 创建秩为零的张量
+       * 创建秩为零的张量
        * \param number 秩为零的张量拥有的唯一一个元素的值
        */
       Tensor(ScalarType number) : Tensor({}, {}) {
@@ -181,7 +204,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 创建高秩但是元素只有一个的张量
+       * 创建高秩但是元素只有一个的张量
        * \param number 秩为零的张量拥有的唯一一个元素的值
        * \param names_init 边的名称
        * \param edge_symmetry 如果系统含有对称性, 则需要设置此值
@@ -203,7 +226,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 秩为一的张量转化为其中唯一一个元素的标量类型
+       * 秩为一的张量转化为其中唯一一个元素的标量类型
        */
       operator ScalarType() const {
          if (!is_scalar()) {
@@ -225,14 +248,14 @@ namespace TAT {
       slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
       /**
-       * \brief 产生一个与自己形状一样的张量
+       * 产生一个与自己形状一样的张量
        * \return 一个未初始化数据内容的张量
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> same_shape() const {
          return Tensor<ScalarType, Symmetry, Name>(names, core->edges);
       }
       /**
-       * \brief 对张量的每个数据元素做同样的非原地的变换
+       * 对张量的每个数据元素做同样的非原地的变换
        * \param function 变换的函数
        * \return 张量自身
        * \note 参见std::transform
@@ -248,7 +271,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 对张量的每个数据元素做同样的原地的变换
+       * 对张量的每个数据元素做同样的原地的变换
        * \param function 变换的函数
        * \return 张量自身
        * \note 参见std::transform
@@ -270,7 +293,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 通过一个生成器设置一个张量内的数据
+       * 通过一个生成器设置一个张量内的数据
        * \param generator 生成器, 一般来说是一个无参数的函数, 返回值为标量, 多次调用填充张量
        * \return 张量自身
        * \see transform
@@ -286,7 +309,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 将张量内的数据全部设置为零
+       * 将张量内的数据全部设置为零
        * \return 张量自身
        * \see set
        */
@@ -299,7 +322,7 @@ namespace TAT {
 
       // TODO 这个东西应该作为static的函数，类似one
       /**
-       * \brief 看作矩阵并生成单位矩阵
+       * 看作矩阵并生成单位矩阵
        * \param pairs 看作矩阵时边的配对方案
        */
       Tensor<ScalarType, Symmetry, Name>& identity(const std::set<std::tuple<Name, Name>>& pairs) &;
@@ -321,7 +344,7 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 将张量内的数据设置为便于测试的值
+       * 将张量内的数据设置为便于测试的值
        * \return 张量自身
        * \see set
        */
@@ -337,7 +360,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 获取张量的某个分块
+       * 获取张量的某个分块
        * \param position 分块每个子边对应的对称性值
        * \return 一个不可变的一维数组
        * \see get_block_for_get_item
@@ -359,9 +382,8 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 获取张量中某个分块内的某个元素
+       * 获取张量中某个分块内的某个元素
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
-       * \see get_offset_for_get_item, get_block_and_offset_for_get_item
        * \note position对于无对称性张量, 为边名到维度的映射表, 对于有对称性的张量, 是边名到对称性和相应维度的映射表
        */
       [[nodiscard]] ScalarType at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
@@ -381,7 +403,7 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 不同标量类型的张量之间的转换函数
+       * 不同标量类型的张量之间的转换函数
        * \tparam OtherScalarType 目标张量的基础标量类型
        * \return 转换后的张量
        */
@@ -415,7 +437,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 求张量的模, 是拉平看作向量的模, 并不是矩阵模之类的东西
+       * 求张量的模, 是拉平看作向量的模, 并不是矩阵模之类的东西
        * \tparam p 所求的模是张量的p-模, 如果p=-1, 则意味着最大模即p=inf
        * \return 标量类型的模
        */
@@ -458,7 +480,7 @@ namespace TAT {
       using MapIteratorList = std::vector<typename Edge<Symmetry>::edge_map::const_iterator>;
 
       /**
-       * \brief 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
+       * 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
        * \param rename_map 重命名边的名称的映射表
        * \param split_map 分裂一些边的数据, 需要包含分裂后边的形状, 不然分裂不唯一
        * \param reversed_name 将要取反费米箭头的边的名称列表
@@ -484,7 +506,7 @@ namespace TAT {
             const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) const;
 
       /**
-       * \brief 对张量边的名称进行重命名
+       * 对张量边的名称进行重命名
        * \param dictionary 重命名方案的映射表
        * \return 仅仅改变了边的名称的张量, 与原张量共享Core
        * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator, 而是实现一个小功能的edge_rename
@@ -492,14 +514,14 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_rename(const std::map<Name, Name>& dictionary) const;
 
       /**
-       * \brief 对张量进行转置
+       * 对张量进行转置
        * \param target_names 转置后的目标边的名称顺序
        * \return 转置后的结果张量
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(std::vector<Name> target_names) const;
 
       /**
-       * \brief 将费米张量的一些边进行反转
+       * 将费米张量的一些边进行反转
        * \param reversed_name 反转的边的集合
        * \param apply_parity 是否应用反转产生的符号
        * \param parity_exclude_name 与apply_parity行为相反的边名集合
@@ -509,7 +531,7 @@ namespace TAT {
       reverse_edge(const std::set<Name>& reversed_name, bool apply_parity = false, const std::set<Name>& parity_exclude_name = {}) const;
 
       /**
-       * \brief 合并张量的一些边
+       * 合并张量的一些边
        * \param merge 合并的边的名称的映射表
        * \param apply_parity 是否应用合并边产生的符号
        * \param parity_exclude_name_merge merge过程中与apply_parity不符的例外
@@ -524,7 +546,7 @@ namespace TAT {
             const std::set<Name>& parity_exclude_name_reverse = {}) const;
 
       /**
-       * \brief 分裂张量的一些边
+       * 分裂张量的一些边
        * \param split 分裂的边的名称的映射表
        * \param apply_parity 是否应用分裂边产生的符号
        * \param parity_exclude_name_split split过程中与apply_parity不符的例外
@@ -537,7 +559,7 @@ namespace TAT {
 
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
       /**
-       * \brief 两个张量的缩并运算
+       * 两个张量的缩并运算
        * \param tensor_1 参与缩并的第一个张量
        * \param tensor_2 参与缩并的第二个张量
        * \param contract_names 两个张量将要缩并掉的边的名称
@@ -590,7 +612,7 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 将一个张量与另一个张量的所有相同名称的边进行缩并
+       * 将一个张量与另一个张量的所有相同名称的边进行缩并
        * \param other 另一个张量
        * \return 缩并后的结果
        */
@@ -604,7 +626,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 张量与自己的共轭进行尽可能的缩并
+       * 张量与自己的共轭进行尽可能的缩并
        * \return 缩并后的结果
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge() const {
@@ -612,7 +634,7 @@ namespace TAT {
       }
 
       /**
-       * \brief 看作矩阵后求出矩阵指数
+       * 看作矩阵后求出矩阵指数
        * \param pairs 边的配对方案
        * \param step 展开近似的次数
        */
@@ -626,7 +648,7 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 生成张量的共轭张量
+       * 生成张量的共轭张量
        * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
@@ -648,7 +670,7 @@ namespace TAT {
 #endif
             ;
       /**
-       * \brief 张量svd的结果类型
+       * 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
       struct svd_result {
@@ -658,7 +680,7 @@ namespace TAT {
       };
 
       /**
-       * \brief 张量qr的结果类型
+       * 张量qr的结果类型
        */
       struct qr_result {
          Tensor<ScalarType, Symmetry, Name> Q;
@@ -666,7 +688,7 @@ namespace TAT {
       };
 
       /**
-       * \brief 张量缩并上SVD产生的奇异值数据, 就地操作
+       * 张量缩并上SVD产生的奇异值数据, 就地操作
        * \param S 奇异值
        * \param name 张量与奇异值缩并的边名
        * \param direction 奇异值是含有一个方向的, SVD的结果中U还是V将与S相乘在这里被选定
@@ -676,7 +698,7 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> multiple(const SingularType& S, const Name& name, char direction, bool division = false) const;
 
       /**
-       * \brief 对张量进行svd分解
+       * 对张量进行svd分解
        * \param free_name_set_u svd分解中u的边的名称集合
        * \param common_name_u 分解后u新产生的边的名称
        * \param common_name_v 分解后v新产生的边的名称
@@ -695,7 +717,7 @@ namespace TAT {
 #endif
 
       /**
-       * \brief 对张量进行qr分解
+       * 对张量进行qr分解
        * \param free_name_direction free_name_set取的方向, 为'Q'或'R'
        * \param free_name_set qr分解中某一侧的边的名称集合
        * \param common_name_q 分解后q新产生的边的名称
@@ -715,11 +737,11 @@ namespace TAT {
 
 #ifdef TAT_USE_MPI
       /**
-       * \brief source调用此函数, 向destination发送一个张量
+       * source调用此函数, 向destination发送一个张量
        */
       void send(int destination) const;
       /**
-       * \brief destination调用此函数, 从source接受一个张量
+       * destination调用此函数, 从source接受一个张量
        */
       static Tensor<ScalarType, Symmetry, Name> receive(int source);
       /**
@@ -746,6 +768,9 @@ namespace TAT {
          return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       };
 
+      /**
+       * \see mpi_t
+       */
       static mpi_t mpi;
 #endif
 
@@ -761,6 +786,7 @@ namespace TAT {
          return std::move(load(string));
       };
    };
+   /**@}*/
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
    // 因为contract的操作是这样的

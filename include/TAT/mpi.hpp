@@ -35,8 +35,18 @@
 
 namespace TAT {
 #ifdef TAT_USE_MPI
+   /**
+    * \defgroup MPI
+    * @{
+    */
+   constexpr bool mpi_enabled = true;
+
+   /// \private
    constexpr int mpi_tag = 0;
 
+   /**
+    * 对流进行包装, 包装后流只会从创建时指定的rank进程中输出
+    */
    struct mpi_output_stream {
       std::ostream& out;
       bool valid;
@@ -59,6 +69,11 @@ namespace TAT {
       }
    };
 
+   /**
+    * 一个mpi handler, 会在构造和析构时自动调用MPI_Init和MPI_Finalize, 且会获取Size和Rank信息
+    *
+    * 创建多个mpi_t不会产生冲突
+    */
    struct mpi_t {
       int size;
       int rank;
@@ -98,7 +113,12 @@ namespace TAT {
          MPI_Barrier(MPI_COMM_WORLD);
       }
    };
+   /**
+    * \see mpi_t
+    */
    inline mpi_t mpi;
+   /**@}*/
+
    template<typename ScalarType, typename Symmetry, typename Name>
    mpi_t Tensor<ScalarType, Symmetry, Name>::mpi;
 
@@ -208,7 +228,6 @@ namespace TAT {
    void Tensor<ScalarType, Symmetry, Name>::barrier() {
       MPI_Barrier(MPI_COMM_WORLD);
    }
-   constexpr bool mpi_enabled = true;
 #else
    constexpr bool mpi_enabled = false;
 #endif

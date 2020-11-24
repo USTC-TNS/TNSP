@@ -54,16 +54,16 @@
 // TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
 
 /**
- * \brief TAT is A Tensor library
- *
- * 张量含有两个模板参数, 分别是标量类型和对称性类型, 含有元信息和数据两部分. 元信息包括秩, 以及秩个边
- * 每个边含有一个Name信息以及形状信息, 对于无对称性的张量, 边的形状使用一个数字描述, 即此边的维度.
- * 对于其他类型的对称性, 边的形状为一个该类型对称性(应该是该对称性的量子数, 这里简称对称性)到数的映射,
- * 表示某量子数下的维度. 而张量数据部分为若干个秩维矩块, 对于无对称性张量, 仅有唯一一个矩块.
+ * TAT is A Tensor library
  */
 namespace TAT {
    /**
-    * \brief TAT的版本号
+    * \defgroup Miscellaneous
+    * @{
+    */
+
+   /**
+    * TAT的版本号
     */
    inline const char* version =
 #ifdef TAT_VERSION
@@ -74,52 +74,68 @@ namespace TAT {
          ;
 
    /**
-    * \brief 编译与license相关的信息
+    * 编译与license的相关信息
     */
-   const char* information = "TAT"
+   inline const char* information = "TAT"
 #ifdef TAT_VERSION
-                             " " TAT_VERSION
+                                    " " TAT_VERSION
 #endif
-                             " ("
+                                    " ("
 #ifdef TAT_BUILD_TYPE
-                             "" TAT_BUILD_TYPE ", "
+                                    "" TAT_BUILD_TYPE ", "
 #endif
-                             "" __DATE__ ", " __TIME__
+                                    "" __DATE__ ", " __TIME__
 #ifdef TAT_COMPILER_INFORMATION
-                             ", " TAT_COMPILER_INFORMATION
+                                    ", " TAT_COMPILER_INFORMATION
 #endif
-                             ")\n"
-                             "Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
-                             "This is free software; see the source for copying conditions.  There is NO\n"
-                             "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+                                    ")\n"
+                                    "Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+                                    "This is free software; see the source for copying conditions.  There is NO\n"
+                                    "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 
-   /**
-    * \brief Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时控制windows下终端的色彩模式
-    */
+   /// \private
    struct evil_t {
       evil_t() noexcept;
       ~evil_t();
    };
+   /**
+    * Debug模式中, 将在程序末尾打印一行友情提示, 过早的优化是万恶之源, 同时此对象也控制windows下终端的色彩模式
+    */
    inline const evil_t evil;
 
-   // 目前只在timer中用到了
+   /**
+    * TAT使用的日志打印
+    */
    inline void TAT_log(const char* message);
 
-   // 下面三个函数常用来被各种细分的警告或错误使用，可以通过设置他们为下面三个中的一个来选择对错误的容忍程度
+   /**
+    * 什么事情也不做
+    *
+    * 接口和`TAT_warning`, `TAT_error`一致, 可供各种细分的警告或错误使用, 通过设置他们为这三个中的一个的指针来选择对错误的容忍程度
+    *
+    * \see TAT_warning, TAT_error
+    */
    inline void TAT_nothing(const char*) {}
 
    /**
-    * \brief TAT使用的打印警告
+    * TAT使用的打印警告
+    *
     * \param message 待打印的内容
+    *
+    * \see TAT_nothing, TAT_error
     */
    inline void TAT_warning(const char* message);
 
    /**
-    * \brief TAT使用的抛出运行时异常
+    * TAT使用的抛出运行时异常
+    *
     * \param message 异常说明
+    *
+    * \see TAT_nothing, TAT_warning
     */
    inline void TAT_error(const char* message);
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    constexpr auto TAT_warning_or_error_when_copy_data =
 #ifdef TAT_USE_COPY_WITHOUT_WARNING
          TAT_nothing;
@@ -130,8 +146,11 @@ namespace TAT {
    constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
    constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
    constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
+#endif
 
-   // 张量转置中会使用这三个变量
+   /**
+    * 供转置中使用的l1 cache大小, 可由宏`TAT_L1_CACHE`设置
+    */
    constexpr unsigned long l1_cache =
 #ifdef TAT_L1_CACHE
          TAT_L1_CACHE
@@ -139,6 +158,9 @@ namespace TAT {
          98304
 #endif
          ;
+   /**
+    * 供转置中使用的l2 cache大小, 可由宏`TAT_L2_CACHE`设置
+    */
    constexpr unsigned long l2_cache =
 #ifdef TAT_L2_CACHE
          TAT_L2_CACHE
@@ -146,6 +168,9 @@ namespace TAT {
          786432
 #endif
          ;
+   /**
+    * 供转置中使用的l3 cache大小, 可由宏`TAT_L3_CACHE`设置
+    */
    constexpr unsigned long l3_cache =
 #ifdef TAT_L3_CACHE
          TAT_L3_CACHE
@@ -153,6 +178,7 @@ namespace TAT {
          4718592
 #endif
          ;
+   /**@}*/
 } // namespace TAT
 
 // clang-format off

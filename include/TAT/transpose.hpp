@@ -25,6 +25,7 @@
 
 #include "basic_type.hpp"
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #ifdef TAT_USE_MKL_TRANSPOSE
 extern "C" {
 void mkl_somatcopy_(const char*, const char*, const int*, const int*, const float*, const float*, const int*, float*, const int*);
@@ -51,8 +52,10 @@ void mkl_zomatcopy_(
       const int*);
 }
 #endif
+#endif
 
 namespace TAT {
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename ScalarType>
    void mkl_transpose(
          int dimension_of_M,
@@ -766,5 +769,6 @@ namespace TAT {
       tensor_transpose_kernel<ScalarType, false>(
             source, destination, dimension.data(), nullptr, nullptr, leading_source.data(), leading_destination.data(), 2);
    }
+#endif
 } // namespace TAT
 #endif

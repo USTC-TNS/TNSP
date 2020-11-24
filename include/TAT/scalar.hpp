@@ -25,6 +25,10 @@
 #include "timer.hpp"
 
 namespace TAT {
+   /**
+    * \defgroup Scalar
+    * @{
+    */
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                                                      \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name>                                                        \
    [[nodiscard]] auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) {             \
@@ -185,5 +189,6 @@ namespace TAT {
    TAT_DEFINE_SCALAR_OPERATOR(operator*=, a[j] *= y, a[j] *= b[j])
    TAT_DEFINE_SCALAR_OPERATOR(operator/=, a[j] /= y, a[j] /= b[j])
 #undef TAT_DEFINE_SCALAR_OPERATOR
+   /**@}*/
 } // namespace TAT
 #endif

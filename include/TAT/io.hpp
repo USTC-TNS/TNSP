@@ -28,7 +28,8 @@
 
 namespace TAT {
    /**
-    * 简洁地打印复数
+    * \defgroup IO
+    * @{
     */
    template<typename ScalarType>
    std::ostream& print_complex(std::ostream& out, const std::complex<ScalarType>& value) {
@@ -151,6 +152,7 @@ namespace TAT {
       return in;
    }
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<>
    struct NameTraits<FastName> {
       static constexpr name_out_operator<FastName> write = operator<;
@@ -172,6 +174,7 @@ namespace TAT {
    struct is_symmetry_vector<std::vector<T>> : is_symmetry<T> {};
    template<typename T>
    constexpr bool is_symmetry_vector_v = is_symmetry_vector<T>::value;
+#endif
 
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
@@ -196,8 +199,8 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename A>
-   void print_vector(std::ostream& out, const std::vector<T, A>& list) {
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T> || is_name_v<T>>>
+   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
       for (const auto& i : list) {
@@ -214,16 +217,11 @@ namespace TAT {
          }
       }
       out << ']';
-   }
-
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
-   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
-      print_vector(out, list);
       return out;
    }
 
-   template<typename T, typename A>
-   void scan_vector(std::istream& in, std::vector<T, A>& list) {
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T> || is_name_v<T>>>
+   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       list.clear();
       ignore_util(in, '[');
       if (in.peek() == ']') {
@@ -247,11 +245,6 @@ namespace TAT {
             }
          }
       }
-   }
-
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T>>>
-   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
-      scan_vector(in, list);
       return in;
    }
 
@@ -431,7 +424,7 @@ namespace TAT {
    }
 
    /**
-    * \brief 一个控制屏幕字体色彩的简单类型
+    * 一个控制屏幕字体色彩的简单类型
     */
    struct UnixColorCode {
       std::string color_code;
@@ -450,7 +443,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
-      print_vector(out, tensor.names);
+      out << tensor.names;
       out << ',' << console_green << "edges" << console_origin << ':';
       out << tensor.core->edges;
       out << ',' << console_green << "blocks" << console_origin << ':';
@@ -474,7 +467,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       ignore_util(in, ':');
-      scan_vector(in, tensor.names);
+      in >> tensor.names;
       tensor.name_to_index = construct_name_to_index(tensor.names);
       ignore_util(in, ':');
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();
@@ -690,5 +683,6 @@ namespace TAT {
       out < v;
       return std::move(out);
    }
+   /**@}*/
 } // namespace TAT
 #endif
