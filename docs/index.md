@@ -1,6 +1,11 @@
 # Welcome to the TAT Documents
 
-TAT is a header-only c++ tensor library with support for Abelian [symmetry](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301) for tensor network
+[![version](https://img.shields.io/github/v/tag/hzhangxyz/TAT?style=flat-square)](https://github.com/hzhangxyz/TAT/tags)
+[![license](https://img.shields.io/github/license/hzhangxyz/TAT?style=flat-square)](https://github.com/hzhangxyz/TAT/blob/TAT/LICENSE.md)
+[![build](https://img.shields.io/github/workflow/status/hzhangxyz/TAT/check?style=flat-square)](https://github.com/hzhangxyz/TAT/actions?query=workflow%3Acheck)
+[![document](https://img.shields.io/github/workflow/status/hzhangxyz/TAT/doxygen?color=%237f7fff&label=doc&style=flat-square)](https://hzhangxyz.github.io/TAT/index.html)
+
+[TAT](https://github.com/hzhangxyz/TAT) is a header-only c++ tensor library with support for Abelian [symmetry](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301) for tensor network
 
 The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it should be all uppercase
 

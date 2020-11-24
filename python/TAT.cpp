@@ -344,8 +344,8 @@ namespace TAT {
                     out << '{';
                     if (tensor.is_valid()) {
                        out << console_green << "names" << console_origin << ':';
-                       print_vector(out, tensor.names);
-                       out << ',' << console_green << "edges" << console_origin << ':';
+                       out << tensor.names << ',';
+                       out << console_green << "edges" << console_origin << ':';
                        out << tensor.core->edges;
                     }
                     out << '}';
@@ -839,7 +839,7 @@ namespace TAT {
             });
       tat_m.attr("mpi") = mpi;
 #else
-      auto mpi_fake_m = mpi_m.def_submodule("mpi", "mpi support for TAT");
+      auto mpi_fake_m = tat_m.def_submodule("mpi", "mpi support for TAT");
       mpi_fake_m.def("print", [](const py::args& args, const py::kwargs& kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
       // name

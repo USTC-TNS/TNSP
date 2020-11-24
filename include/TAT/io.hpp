@@ -443,10 +443,10 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
-      out << tensor.names;
-      out << ',' << console_green << "edges" << console_origin << ':';
-      out << tensor.core->edges;
-      out << ',' << console_green << "blocks" << console_origin << ':';
+      out << tensor.names << ',';
+      out << console_green << "edges" << console_origin << ':';
+      out << tensor.core->edges << ',';
+      out << console_green << "blocks" << console_origin << ':';
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          out << tensor.core->blocks.begin()->second;
       } else {

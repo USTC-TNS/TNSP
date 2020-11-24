@@ -13,7 +13,7 @@ using Tensor = TAT::Tensor<>;
 
 For `TAT::Tensor`, the first argument is tensor's basic scalar type, the second is the symmetry the tensor has, and the third is the name type to mark tensor's index.
 
-# Create tensor {#create-tensor}
+## Create tensor {#create-tensor}
 To create a no symmetry tensor, pass names and dimension for each dimension of the tensor
 ```{cpp}
 auto tensor = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B"}, {3, 4});
@@ -50,9 +50,9 @@ to get a tensor with one dimension equals to zero and the result is
 ```
 
 
-# Initialize tensor {#initialize-tensor}
+## Initialize tensor {#initialize-tensor}
 
-## Initialize tensor data for test
+### Initialize tensor data for test
 You can easily initialize data for some simple test by `tensor.test()`, which will initialize data as natural number sequence. For example
 ```{cpp}
 auto tensor = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {2, 2, 3}).test();
@@ -63,7 +63,7 @@ The result is
 {names:[A,B,C],edges:[2,2,3],blocks:[0,1,2,3,4,5,6,7,8,9,10,11]}
 ```
 
-## Initialize tensor's elements to zero
+### Initialize tensor's elements to zero
 To initialize all tensor's elements to zero, call `tensor.zero()`, for example
 ```{cpp}
 auto tensor = TAT::Tensor<double, TAT::NoSymmetry>({"X", "Y", "Z"}, {1, 2, 3}).zero();
