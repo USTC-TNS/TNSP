@@ -1,7 +1,7 @@
 /.idea
 /.vscode
 /build
-/docs
+/html
 /pybind11
 /emscripten
 /include/fire.hpp

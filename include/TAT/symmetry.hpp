@@ -26,7 +26,9 @@
 namespace TAT {
    /**
     * \defgroup Symmetry
-    * 对称性模块, 如需自定义新的对称性类型CustomizedSymmetry, 需继承自TAT::bose_symmetry<CustomizedSymmetry>
+    * 对称性模块
+    *
+    * 如需自定义新的对称性类型CustomizedSymmetry, 需继承自TAT::bose_symmetry<CustomizedSymmetry>
     * 或者TAT::fermi_symmetry<CustomizedSymmetry>并实现比较运算以及至少`operator+`, `operator+=`, `operator-`三个运算符
     * @{
     */

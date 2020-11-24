@@ -29,6 +29,8 @@
 namespace TAT {
    /**
     * \defgroup Name
+    * 张量的边的名称
+    *
     * 张量的边的名称可以是用户自定义的类型, 但是需要满足一些条件
     * 1. 拥有比较函数, 从而使他可以作为`std::map`的`Key`
     * 2. 设置了InternalName, 这会在张量的一些函数中使用, 如svd, contract
