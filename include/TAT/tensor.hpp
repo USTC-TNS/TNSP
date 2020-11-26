@@ -147,7 +147,7 @@ namespace TAT {
          check_valid_name(names, core->edges.size());
       }
 
-      template<typename Int = Size, typename = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>>
+      template<typename Int = Size, typename = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry> && !std::is_same_v<Int, Edge<Symmetry>>>>
       Tensor(std::vector<Name> names_init, const std::vector<Int>& edges_init) :
             Tensor(std::move(names_init), {edges_init.begin(), edges_init.end()}) {}
 

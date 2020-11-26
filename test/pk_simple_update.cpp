@@ -83,7 +83,7 @@ struct TwoDimensionHeisenberg {
       if (l2 != L2 - 1) {
          name_list.push_back("Right");
       }
-      auto dimension_list = std::vector<int>(name_list.size(), D);
+      auto dimension_list = std::vector<TAT::Edge<TAT::NoSymmetry>>(name_list.size(), D);
       name_list.push_back("Phy");
       dimension_list.push_back(2);
       auto result = Tensor(name_list, dimension_list);
