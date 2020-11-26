@@ -114,7 +114,7 @@ namespace TAT {
       return out << fast_name_dataset.id_to_name[name.id];
    }
 
-   bool valid_name_character(char c) {
+   inline bool valid_name_character(char c) {
       return ' ' < c && c < '\x7f' && c != ',' && c != '[' && c != ']';
       // 可打印字符去掉空格，逗号和方括号
    }
@@ -138,13 +138,13 @@ namespace TAT {
       return in;
    }
 
-   std::ostream& operator<(std::ostream& out, const std::string& string) {
+   inline std::ostream& operator<(std::ostream& out, const std::string& string) {
       Size count = string.size();
       out < count;
       out.write(string.data(), sizeof(char) * count);
       return out;
    }
-   std::istream& operator>(std::istream& in, std::string& string) {
+   inline std::istream& operator>(std::istream& in, std::string& string) {
       Size count;
       in > count;
       string.resize(count);

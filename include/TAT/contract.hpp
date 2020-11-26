@@ -171,13 +171,13 @@ namespace TAT {
          const int* ldc) = nullptr;
 
    template<>
-   auto gemm<float> = sgemm_;
+   inline auto gemm<float> = sgemm_;
    template<>
-   auto gemm<double> = dgemm_;
+   inline auto gemm<double> = dgemm_;
    template<>
-   auto gemm<std::complex<float>> = cgemm_;
+   inline auto gemm<std::complex<float>> = cgemm_;
    template<>
-   auto gemm<std::complex<double>> = zgemm_;
+   inline auto gemm<std::complex<double>> = zgemm_;
 
    template<typename ScalarType>
    constexpr void (*mkl_gemm_batch)(
@@ -199,13 +199,13 @@ namespace TAT {
 
 #ifdef TAT_USE_MKL_GEMM_BATCH
    template<>
-   auto mkl_gemm_batch<float> = sgemm_batch_;
+   inline auto mkl_gemm_batch<float> = sgemm_batch_;
    template<>
-   auto mkl_gemm_batch<double> = dgemm_batch_;
+   inline auto mkl_gemm_batch<double> = dgemm_batch_;
    template<>
-   auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
+   inline auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
    template<>
-   auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
+   inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
 #endif
 
    template<typename ScalarType>

@@ -120,24 +120,24 @@ namespace TAT {
    constexpr void (
          *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
    template<>
-   auto geqrf<float> = sgeqrf_;
+   inline auto geqrf<float> = sgeqrf_;
    template<>
-   auto geqrf<double> = dgeqrf_;
+   inline auto geqrf<double> = dgeqrf_;
    template<>
-   auto geqrf<std::complex<float>> = cgeqrf_;
+   inline auto geqrf<std::complex<float>> = cgeqrf_;
    template<>
-   auto geqrf<std::complex<double>> = zgeqrf_;
+   inline auto geqrf<std::complex<double>> = zgeqrf_;
    template<typename ScalarType>
    constexpr void (
          *gelqf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) = nullptr;
    template<>
-   auto gelqf<float> = sgelqf_;
+   inline auto gelqf<float> = sgelqf_;
    template<>
-   auto gelqf<double> = dgelqf_;
+   inline auto gelqf<double> = dgelqf_;
    template<>
-   auto gelqf<std::complex<float>> = cgelqf_;
+   inline auto gelqf<std::complex<float>> = cgelqf_;
    template<>
-   auto gelqf<std::complex<double>> = zgelqf_;
+   inline auto gelqf<std::complex<double>> = zgelqf_;
    template<typename ScalarType>
    constexpr void (*orgqr)(
          const int* m,
@@ -150,13 +150,13 @@ namespace TAT {
          const int* lwork,
          int* info) = nullptr;
    template<>
-   auto orgqr<float> = sorgqr_;
+   inline auto orgqr<float> = sorgqr_;
    template<>
-   auto orgqr<double> = dorgqr_;
+   inline auto orgqr<double> = dorgqr_;
    template<>
-   auto orgqr<std::complex<float>> = cungqr_;
+   inline auto orgqr<std::complex<float>> = cungqr_;
    template<>
-   auto orgqr<std::complex<double>> = zungqr_;
+   inline auto orgqr<std::complex<double>> = zungqr_;
    template<typename ScalarType>
    constexpr void (*orglq)(
          const int* m,
@@ -169,13 +169,13 @@ namespace TAT {
          const int* lwork,
          int* info) = nullptr;
    template<>
-   auto orglq<float> = sorglq_;
+   inline auto orglq<float> = sorglq_;
    template<>
-   auto orglq<double> = dorglq_;
+   inline auto orglq<double> = dorglq_;
    template<>
-   auto orglq<std::complex<float>> = cunglq_;
+   inline auto orglq<std::complex<float>> = cunglq_;
    template<>
-   auto orglq<std::complex<double>> = zunglq_;
+   inline auto orglq<std::complex<double>> = zunglq_;
 
    template<typename ScalarType>
    int to_int(const ScalarType& value) {
