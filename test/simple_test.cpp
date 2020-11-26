@@ -177,7 +177,7 @@ void test_edge_rename() {
    auto t2 = t1.edge_rename({{"Left", "Up"}});
    t1.test();
    std::cout << t1 << "\n";
-   std::cout << t2 << "\n";
+   // std::cout << t2 << "\n";
 }
 
 void test_transpose() {
@@ -194,8 +194,8 @@ void test_transpose() {
    std::cout << c << "\n";
    auto ct = c.transpose({"Right", "Up", "Left"});
    std ::cout << ct << "\n";
-   std::cout << c.at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
-   std::cout << ct.at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
+   std::cout << c.const_at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
+   std::cout << ct.const_at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
    auto d =
          TAT::Tensor<double, TAT::FermiSymmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}, true}
@@ -207,8 +207,8 @@ void test_transpose() {
    std::cout << e << "\n";
    auto et = e.transpose({"Left", "Down", "Right", "Up"});
    std::cout << et << "\n";
-   std::cout << e.at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
-   std::cout << et.at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
+   std::cout << e.const_at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
+   std::cout << et.const_at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
    auto f = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.test();
    std::cout << f << "\n";
    std::cout << f.transpose({"l1", "l2", "l3"}) << "\n";
