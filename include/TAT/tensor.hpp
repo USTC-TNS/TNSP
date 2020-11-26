@@ -799,6 +799,15 @@ namespace TAT {
    };
    /**@}*/
 
+   /// \private
+   template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name>
+   [[nodiscard]] auto contract(
+         const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
+         const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
+         std::set<std::tuple<Name, Name>> contract_names) {
+      return tensor_1.contract(tensor_2, std::move(contract_names));
+   }
+
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
    // 因为contract的操作是这样的
    // merge gemm split
