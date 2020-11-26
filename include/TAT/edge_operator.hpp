@@ -484,7 +484,15 @@ namespace TAT {
       // reversed_after_transpose_flag_mark
       // merge_flag_mark
 
-      auto data_before_transpose_to_source = std::map<std::vector<Symmetry>, std::tuple<std::vector<Symmetry>, std::vector<Size>>>();
+      using NormalMapFromTransposeToSourceDestination = std::map<std::vector<Symmetry>, std::tuple<std::vector<Symmetry>, std::vector<Size>>>;
+      using FakeMapFromTransposeToSourceDestination = fake_map<std::vector<Symmetry>, std::tuple<std::vector<Symmetry>, std::vector<Size>>>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using MapFromTransposeToSourceDestination = std::
+            conditional_t<std::is_same_v<Symmetry, NoSymmetry>, FakeMapFromTransposeToSourceDestination, NormalMapFromTransposeToSourceDestination>;
+#else
+      using MapFromTransposeToSourceDestination = NormalMapFromTransposeToSourceDestination;
+#endif
+      auto data_before_transpose_to_source = MapFromTransposeToSourceDestination();
       if (!split_map.empty() || (is_fermi && !reversed_name.empty())) {
          // 需要使用reversed前的symmetry，所以
          // 1. 上面判断了是否reversed为空，不然else中的edge不正确 2.下面使用edge_after_split而不是edge_before_transpose
@@ -528,7 +536,7 @@ namespace TAT {
             data_before_transpose_to_source[symmetries] = {symmetries, std::vector<Size>(rank_before_split, 0)};
          }
       }
-      auto data_after_transpose_to_destination = std::map<std::vector<Symmetry>, std::tuple<std::vector<Symmetry>, std::vector<Size>>>();
+      auto data_after_transpose_to_destination = MapFromTransposeToSourceDestination();
       if (!merge_map.empty()) {
          for (auto& [symmetries_after_transpose, size] : initialize_block_symmetries_with_check(edge_before_merge)) {
             // convert sym -> target_sym and offsets
