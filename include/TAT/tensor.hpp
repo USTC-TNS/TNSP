@@ -178,7 +178,8 @@ namespace TAT {
       Tensor(const Tensor& other) {
          names = other.names;
          name_to_index = other.name_to_index;
-         core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
+         // core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
+         core = other.core;
          TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
       };
       Tensor(Tensor&& other) noexcept = default;
@@ -188,7 +189,8 @@ namespace TAT {
          }
          names = other.names;
          name_to_index = other.name_to_index;
-         core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
+         // core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
+         core = other.core;
          TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
          return *this;
       };
@@ -280,6 +282,7 @@ namespace TAT {
       template<typename Transform>
       Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
+            core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
             TAT_warning_or_error_when_inplace_transform("Set Tensor Shared");
          }
          for (auto& [_, block] : core->blocks) {
@@ -365,9 +368,13 @@ namespace TAT {
        * \return 一个不可变的一维数组
        * \see get_block_for_get_item
        */
-      [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position = {}) const&;
+      [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position = {}) const& {
+         return const_block(position);
+      }
 
       [[nodiscard]] auto& block(const std::map<Name, Symmetry>& position = {}) &;
+
+      [[nodiscard]] const auto& const_block(const std::map<Name, Symmetry>& position = {}) const&;
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename Position>
@@ -386,9 +393,13 @@ namespace TAT {
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
        * \note position对于无对称性张量, 为边名到维度的映射表, 对于有对称性的张量, 是边名到对称性和相应维度的映射表
        */
-      [[nodiscard]] ScalarType at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
+      [[nodiscard]] const ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+         return const_at(position);
+      }
 
       [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) &;
+
+      [[nodiscard]] const ScalarType& const_at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename Position>

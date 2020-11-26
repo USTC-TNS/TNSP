@@ -139,6 +139,7 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
       auto guard = scalar_inplace_guard();                                                                                                       \
       if (tensor_1.core.use_count() != 1) {                                                                                                      \
+         tensor_1.core = std::make_shared<Core<ScalarType1, Symmetry>>(*tensor_1.core);                                                          \
          TAT_warning_or_error_when_inplace_scalar("Inplace Operator On Tensor Shared");                                                          \
       }                                                                                                                                          \
       if (tensor_2.is_scalar()) {                                                                                                                \
