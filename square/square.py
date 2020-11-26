@@ -123,7 +123,7 @@ class SquareLattice:
 
     def _initialize_vector(self):
         name_list = [f"P-{i}-{j}" for i in range(self.M) for j in range(self.N)]
-        dimension_list = [self.Dimension_Physics for i in range(self.M) for j in range(self.N)]
+        dimension_list = [self.Dimension_Physics for _ in range(self.M) for _ in range(self.N)]
         self.vector = Tensor(name_list, dimension_list).randn()
 
     def _initialize_network(self):
