@@ -116,7 +116,7 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   ScalarType Tensor<ScalarType, Symmetry, Name>::const_at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+   const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];

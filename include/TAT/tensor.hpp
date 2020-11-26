@@ -393,13 +393,13 @@ namespace TAT {
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
        * \note position对于无对称性张量, 为边名到维度的映射表, 对于有对称性的张量, 是边名到对称性和相应维度的映射表
        */
-      [[nodiscard]] ScalarType at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+      [[nodiscard]] const ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
          return const_at(position);
       }
 
       [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) &;
 
-      [[nodiscard]] ScalarType& const_at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
+      [[nodiscard]] const ScalarType& const_at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename Position>

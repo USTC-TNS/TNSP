@@ -88,6 +88,10 @@ namespace TAT {
       using std::vector<T, allocator_without_initialize<T>>::vector;
 
       vector(const std::vector<T>& other) : vector(other.begin(), other.end()) {}
+      operator std::vector<T>() const {
+         using Base = std::vector<T, allocator_without_initialize<T>>;
+         return std::vector<T>(Base::cbegin(), Base::cend());
+      }
    };
 
    /**@}*/
