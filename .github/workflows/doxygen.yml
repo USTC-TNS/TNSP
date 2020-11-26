@@ -17,10 +17,12 @@ jobs:
       id: tagger
       uses: digital-ai/query-tag-action@v2
     - name: update version
+      working-directory: ${{github.workspace}}
       run: sed -i s/dev/${{steps.tagger.outputs.tag}}/ Doxyfile
     - name: install doxygen
       run: sudo apt-get install doxygen -y
     - name: create docs
+      working-directory: ${{github.workspace}}
       run: doxygen
     - name: publish
       if: success()
@@ -28,4 +30,4 @@ jobs:
       with:
         build_dir: html
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

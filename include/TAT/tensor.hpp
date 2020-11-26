@@ -152,9 +152,11 @@ namespace TAT {
             Tensor(std::move(names_init), {edges_init.begin(), edges_init.end()}) {}
 
 #ifdef TAT_USE_EASY_CONVERSION
-      template<typename NameList, typename EdgeList, typename = void>
-      [[deprecated(
-            "Easy conversion supported will be dropped")]] Tensor(NameList&& names_init, EdgeList&& edges_init, const bool auto_reverse = false) :
+      template<typename NameType, typename EdgeType, typename = std::enable_if_t<!std::is_same_v<NameType, Name>>>
+      [[deprecated("Easy conversion supported will be dropped")]] Tensor(
+            std::vector<NameType>&& names_init,
+            std::vector<EdgeType>&& edges_init,
+            const bool auto_reverse = false) :
             Tensor({names_init.begin(), names_init.end()}, {edges_init.begin(), edges_init.end()}, auto_reverse) {}
 #endif
 
