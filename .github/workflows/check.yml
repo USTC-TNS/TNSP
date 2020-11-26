@@ -11,17 +11,18 @@ jobs:
     - name: checkout
       uses: actions/checkout@v2
     - name: dependence
-      run: sudo apt-get install -y mpi-default-dev intel-mkl
+      run: sudo apt-get install -y mpi-default-dev intel-mkl pybind11-dev
     - name: fire
-      run: wget https://raw.githubusercontent.com/kongaskristjan/fire-hpp/master/include/fire-hpp/fire.hpp -O ${{github.workspace}}/include/fire.hpp
+      working-directory: ${{runner.workspace}}/include
+      run: wget https://raw.githubusercontent.com/kongaskristjan/fire-hpp/master/include/fire-hpp/fire.hpp
     - name: directory
       run: cmake -E make_directory ${{runner.workspace}}/build
     - name: configure
       working-directory: ${{runner.workspace}}/build
-      run: cmake $GITHUB_WORKSPACE
+      run: cmake $GITHUB_WORKSPACE -DTAT_PREFER_BLAS_STATIC=OFF
     - name: make
       working-directory: ${{runner.workspace}}/build
-      run: cmake --build .
+      run: cmake --build . --parallel
     - name: test
       working-directory: ${{runner.workspace}}/build
       run: ./simple_test
