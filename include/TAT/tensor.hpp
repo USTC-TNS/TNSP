@@ -147,9 +147,14 @@ namespace TAT {
          check_valid_name(names, core->edges.size());
       }
 
+      template<typename Int = Size, typename = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry>>>
+      Tensor(std::vector<Name> names_init, const std::vector<Int>& edges_init) :
+            Tensor(std::move(names_init), {edges_init.begin(), edges_init.end()}) {}
+
 #ifdef TAT_USE_EASY_CONVERSION
-      template<typename NameList, typename EdgeList>
-      Tensor(NameList&& names_init, EdgeList&& edges_init, const bool auto_reverse = false) :
+      template<typename NameList, typename EdgeList, typename = void>
+      [[deprecated(
+            "Easy conversion supported will be dropped")]] Tensor(NameList&& names_init, EdgeList&& edges_init, const bool auto_reverse = false) :
             Tensor({names_init.begin(), names_init.end()}, {edges_init.begin(), edges_init.end()}, auto_reverse) {}
 #endif
 
@@ -336,12 +341,12 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename PairSet>
-      Tensor<ScalarType, Symmetry, Name>&& identity(PairSet&& pairs) && {
+      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name>&& identity(PairSet&& pairs) && {
          return std::move(identity({pairs.begin(), pairs.end()}));
       }
 
       template<typename PairSet>
-      Tensor<ScalarType, Symmetry, Name>& identity(PairSet&& pairs) & {
+      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name>& identity(PairSet&& pairs) & {
          return identity({pairs.begin(), pairs.end()});
       }
 #endif
@@ -378,12 +383,12 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename Position>
-      [[nodiscard]] const auto& block(Position&& position) const& {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] const auto& block(Position&& position) const& {
          return block({position.begin(), position.end()});
       }
 
       template<typename Position>
-      [[nodiscard]] auto& block(Position&& position) & {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] auto& block(Position&& position) & {
          return block({position.begin(), position.end()});
       }
 #endif
@@ -403,12 +408,12 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename Position>
-      [[nodiscard]] ScalarType at(Position&& position) const& {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] ScalarType at(Position&& position) const& {
          return at({position.begin(), position.end()});
       }
 
       template<typename Position>
-      [[nodiscard]] ScalarType& at(Position&& position) & {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] ScalarType& at(Position&& position) & {
          return at({position.begin(), position.end()});
       }
 #endif
@@ -611,13 +616,14 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename ScalarType1, typename ScalarType2, typename PairSet>
-      [[nodiscard]] static auto
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] static auto
       contract(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2, PairSet&& contract_names) {
          return contract(tensor_1, tensor_2, {contract_names.begin(), contract_names.end()});
       };
 
       template<typename OtherScalarType, typename PairSet>
-      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, PairSet&& contract_names) const {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] auto
+      contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, PairSet&& contract_names) const {
          return contract(*this, tensor_2, {contract_names.begin(), contract_names.end()});
       }
 #endif
@@ -653,7 +659,8 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename PairSet>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(PairSet&& pairs, int step = 2) const {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      exponential(PairSet&& pairs, int step = 2) const {
          return exponential({pairs.begin(), pairs.end()}, step);
       }
 #endif
@@ -668,7 +675,8 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename PairSet>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(PairSet&& trace_names) const {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      trace(PairSet&& trace_names) const {
          return trace({trace_names.begin(), trace_names.end()});
       }
 #endif
@@ -722,7 +730,8 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename FreeNameSet>
-      [[nodiscard]] svd_result svd(FreeNameSet&& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = -1) const {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] svd_result
+      svd(FreeNameSet&& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = -1) const {
          return svd({free_name_set_u.begin(), free_name_set_u.end()}, common_name_u, common_name_v, cut);
       }
 #endif
@@ -741,7 +750,8 @@ namespace TAT {
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename FreeNameSet>
-      [[nodiscard]] qr_result qr(char free_name_direction, FreeNameSet&& free_name_set, const Name& common_name_q, const Name& common_name_r) const {
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] qr_result
+      qr(char free_name_direction, FreeNameSet&& free_name_set, const Name& common_name_q, const Name& common_name_r) const {
          return qr(free_name_direction, {free_name_set.begin(), free_name_set.end()}, common_name_q, common_name_r);
       }
 #endif
