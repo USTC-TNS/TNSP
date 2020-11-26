@@ -144,6 +144,7 @@ namespace TAT {
 #endif
    constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
    constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
+   constexpr auto TAT_warning_or_error_when_reference_which_may_change = TAT_warning;
    constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
    constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
 #endif

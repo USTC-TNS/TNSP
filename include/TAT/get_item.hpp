@@ -96,7 +96,7 @@ namespace TAT {
 #endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   const auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) const& {
+   const auto& Tensor<ScalarType, Symmetry, Name>::const_block(const std::map<Name, Symmetry>& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
@@ -106,6 +106,8 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) & {
+      core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
+      TAT_warning_or_error_when_reference_which_may_change("Get reference which may change");
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
@@ -114,7 +116,7 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   ScalarType Tensor<ScalarType, Symmetry, Name>::at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+   ScalarType Tensor<ScalarType, Symmetry, Name>::const_at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
@@ -126,6 +128,8 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const std::map<Name, EdgeInfoForGetItem>& position) & {
+      core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
+      TAT_warning_or_error_when_reference_which_may_change("Get reference which may change");
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
