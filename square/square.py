@@ -81,10 +81,7 @@ class SquareLattice:
         updater: dict[tuple[tuple[int, int], ...], Tensor] = {}
         for positions, term in self.hamiltonian.items():
             site_number: int = len(positions)
-            merged_hamiltonian: Tensor = term.merge_edge({"I": [f"I{i}" for i in range(site_number)], "O": [f"O{i}" for i in range(site_number)]})
-            merged_exp: Tensor = merged_hamiltonian.exponential({("I", "O")}, 8)
-            updater[positions] = merged_exp.split_edge({"I": [(f"I{i}", self.dimension_physics) for i in range(site_number)], "O": [(f"O{i}", self.dimension_physics) for i in range(site_number)]})
-            # TODO use exp directly after impl in c++
+            updater[positions] = term.exponential({(f"I{i}", f"O{i}") for i in range(site_number)}, 8)
         for _ in range(time):
             for positions, term in updater.items():
                 self._single_term_simple_update(positions, term)

@@ -207,17 +207,17 @@ namespace TAT {
       ordered_pair.reserve(half_rank);
       ordered_pair_index.reserve(half_rank);
       auto valid_index = std::vector<bool>(rank, true);
-      for (auto i = 0; i < rank; i++) {
+      for (Rank i = 0; i < rank; i++) {
          if (valid_index[i]) {
             const auto& name_to_find = names[i];
-            const Name* name_correspond;
-            for (auto found = pairs.begin(); found != pairs.end(); found++) {
-               if (std::get<0>(*found) == name_to_find) {
-                  name_correspond = &std::get<1>(*found);
+            const Name* name_correspond = nullptr;
+            for (const auto& [name_1, name_2] : pairs) {
+               if (name_1 == name_to_find) {
+                  name_correspond = &name_2;
                   break;
                }
-               if (std::get<1>(*found) == name_to_find) {
-                  name_correspond = &std::get<0>(*found);
+               if (name_2 == name_to_find) {
+                  name_correspond = &name_1;
                   break;
                }
             }
@@ -266,7 +266,7 @@ namespace TAT {
 
       auto result = same_shape().identity(pairs);
 
-      auto power_of_temporary_tensor = decltype(result)();
+      auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
 
       ScalarType series_parameter = 1;
       for (auto i = 1; i <= step; i++) {
@@ -275,7 +275,10 @@ namespace TAT {
             result += temporary_tensor;
          } else if (i == 2) {
             power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
-            result += series_parameter * power_of_temporary_tensor;
+            // result += series_parameter * power_of_temporary_tensor;
+            result = series_parameter * power_of_temporary_tensor + result;
+            // power_of_temporary_tensor相乘一次后边应该就会稳定, 这个时候将result放在+的右侧, 会使得result边的排列和左侧一样
+            // 从而在 i>2 的时候减少转置
          } else {
             power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
             result += series_parameter * power_of_temporary_tensor;
