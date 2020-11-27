@@ -191,7 +191,7 @@ namespace TAT {
       map.clear();
       Size size;
       in > size;
-      for (auto i = 0; i < size; i++) {
+      for (Size i = 0; i < size; i++) {
          Key key;
          in > key;
          in > map[std::move(key)];
@@ -274,7 +274,7 @@ namespace TAT {
          list.resize(count);
          in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
       } else {
-         for (auto i = 0; i < count; i++) {
+         for (Size i = 0; i < count; i++) {
             auto& item = list.emplace_back();
             if constexpr (is_name_v<T>) {
                NameTraits<T>::read(in, item);
@@ -602,7 +602,6 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
       in > names;
-      const Rank rank = names.size();
       name_to_index = construct_name_to_index(names);
       core = std::make_shared<Core<ScalarType, Symmetry>>();
       in > core->edges;

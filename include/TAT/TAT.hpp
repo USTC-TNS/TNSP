@@ -46,7 +46,6 @@
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
-// TAT_USE_COPY_WITHOUT_WARNING 复制数据的时候不产生警告
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_EASY_CONVERSION tensor的各个接口可以自动转化类型 TODO 目前并不是所有接口都支持之
 // TAT_USE_NO_TIMER 禁用对常见操作进行计时
@@ -136,12 +135,6 @@ namespace TAT {
    inline void TAT_error(const char* message);
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   constexpr auto TAT_warning_or_error_when_copy_data =
-#ifdef TAT_USE_COPY_WITHOUT_WARNING
-         TAT_nothing;
-#else
-         TAT_warning;
-#endif
    constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
    constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
    constexpr auto TAT_warning_or_error_when_reference_which_may_change = TAT_warning;

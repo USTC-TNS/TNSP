@@ -182,25 +182,9 @@ namespace TAT {
 #else
       Tensor() = default;
 #endif
-      Tensor(const Tensor& other) {
-         names = other.names;
-         name_to_index = other.name_to_index;
-         // core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         core = other.core;
-         TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
-      };
+      Tensor(const Tensor& other) = default;
       Tensor(Tensor&& other) noexcept = default;
-      Tensor& operator=(const Tensor& other) {
-         if (&other == this) {
-            return *this;
-         }
-         names = other.names;
-         name_to_index = other.name_to_index;
-         // core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         core = other.core;
-         TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
-         return *this;
-      };
+      Tensor& operator=(const Tensor& other) = default;
       Tensor& operator=(Tensor&& other) noexcept = default;
       ~Tensor() = default;
 
@@ -290,7 +274,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared");
+            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared, Copy Data Happened Here");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
@@ -442,7 +426,7 @@ namespace TAT {
             for (const auto& [symmetries, block] : core->blocks) {
                auto [iterator, success] = result.core->blocks.emplace(symmetries, block.size());
                auto& this_block = iterator->second;
-               for (auto i = 0; i < block.size(); i++) {
+               for (Nums i = 0; i < block.size(); i++) {
                   if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
                      this_block[i] = OtherScalarType(block[i].real());
                   } else {
@@ -728,7 +712,8 @@ namespace TAT {
        * \see svd_result
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
-      [[nodiscard]] svd_result svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = -1) const;
+      [[nodiscard]] svd_result
+      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = Size(-1)) const;
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename FreeNameSet>
