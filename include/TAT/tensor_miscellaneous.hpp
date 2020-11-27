@@ -163,24 +163,93 @@ namespace TAT {
       return result;
    }
 
+   /// \private
+   template<typename ScalarType>
+   void set_to_identity(ScalarType* pointer, const std::vector<Size>& dimension, const std::vector<Size>& leading, Rank rank) {
+      auto current_index = std::vector<Size>(rank, 0);
+      while (true) {
+         *pointer = 1;
+         Rank active_position = rank - 1;
+
+         current_index[active_position]++;
+         pointer += leading[active_position];
+
+         while (current_index[active_position] == dimension[active_position]) {
+            current_index[active_position] = 0;
+            pointer -= dimension[active_position] * leading[active_position];
+
+            if (active_position == 0) {
+               return;
+            }
+            active_position--;
+
+            current_index[active_position]++;
+            pointer += leading[active_position];
+         }
+      }
+   }
+
+   // identity应该是一个static的函数么？
+   // 如果是static的, 他的接口应该类似于
+   // Tensor::identity({"D", "A", "C", "B"}, {{"A", "B", 6}, {"C", "D", 9}}})
+   // 因为我应该避免生成后还需要转置的行为, 所以vector<Name>必须保留
+   // 而Edge方面, 不得不写成tuple<Name, Name, Edge>的形式, 太麻烦了
+   // 所以像现在这样写成inplace的形式
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
+      // 不需要check use_count, 因为zero调用了set, set调用了transform, transform会check
       zero();
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         // TODO identity for dimension != 2
-         if (names.size() != 2) {
-            TAT_error("Identity matrix rank should be 2");
+
+      auto rank = names.size();
+      auto half_rank = rank / 2;
+      auto ordered_pair = std::vector<std::tuple<Name, Name>>();
+      auto ordered_pair_index = std::vector<std::tuple<Rank, Rank>>();
+      ordered_pair.reserve(half_rank);
+      ordered_pair_index.reserve(half_rank);
+      auto valid_index = std::vector<bool>(rank, true);
+      for (auto i = 0; i < rank; i++) {
+         if (valid_index[i]) {
+            const auto& name_to_find = names[i];
+            const Name* name_correspond;
+            for (auto found = pairs.begin(); found != pairs.end(); found++) {
+               if (std::get<0>(*found) == name_to_find) {
+                  name_correspond = &std::get<1>(*found);
+                  break;
+               }
+               if (std::get<1>(*found) == name_to_find) {
+                  name_correspond = &std::get<0>(*found);
+                  break;
+               }
+            }
+            ordered_pair.push_back({name_to_find, *name_correspond});
+            auto index_correspond = name_to_index.at(*name_correspond);
+            ordered_pair_index.push_back({i, index_correspond});
+            valid_index[index_correspond] = false;
          }
-         auto dimension = core->edges[0].map.begin()->second;
-         auto dimension_plus_one = dimension + 1;
-         auto& block = core->blocks.begin()->second;
-         for (Size i = 0; i < dimension; i++) {
-            block[i * dimension_plus_one] = 1;
-         }
-      } else {
-         // TODO identity for symmetry tensor
-         TAT_error("Not implement yet");
       }
+      for (auto& [symmetries, block] : core->blocks) {
+         auto dimension = std::vector<Size>(rank);
+         auto leading = std::vector<Size>(rank);
+         for (Rank i = rank; i-- > 0;) {
+            dimension[i] = core->edges[i].map[symmetries[i]];
+            if (i == rank - 1) {
+               leading[i] = 1;
+            } else {
+               leading[i] = leading[i + 1] * dimension[i + 1];
+            }
+         }
+         auto pair_dimension = std::vector<Size>();
+         auto pair_leading = std::vector<Size>();
+         pair_dimension.reserve(half_rank);
+         pair_leading.reserve(half_rank);
+         for (Rank i = 0; i < half_rank; i++) {
+            pair_dimension.push_back(dimension[std::get<0>(ordered_pair_index[i])]);
+            pair_leading.push_back(leading[std::get<0>(ordered_pair_index[i])] + leading[std::get<1>(ordered_pair_index[i])]);
+            // ordered_pair_index使用较大的leading进行从大到小排序，所以pair_leading一定降序
+         }
+         set_to_identity(block.data(), pair_dimension, pair_leading, half_rank);
+      }
+
       return *this;
    }
 

@@ -314,7 +314,6 @@ namespace TAT {
          return std::move(zero());
       }
 
-      // TODO 这个东西应该作为static的函数，类似one
       /**
        * 看作矩阵并生成单位矩阵
        * \param pairs 看作矩阵时边的配对方案
