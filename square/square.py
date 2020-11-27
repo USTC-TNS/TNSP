@@ -75,7 +75,20 @@ class SquareLattice:
         # 辅助张量
         self._auxiliaries: dict[tuple[str, int, int]] = {}
 
+    def simple_update(self, time: int, delta_t: float):
+        if self._state_type != StateType.WithEnvironment:
+            raise RuntimeError("State type is not WithEnv")
+        for _ in range(time):
+            # TODO
+            pass
+
+    def _single_term_simple_update(self):
+        # TODO
+        pass
+
     def exact_update(self, time: int, approximate_energy: float = -0.5, print_energy: bool = False) -> float:
+        if self._state_type != StateType.Exact:
+            raise RuntimeError("State type is not Exact")
         total_approximate_energy: float = abs(approximate_energy) * self.M * self.N
         energy: float = 0
         for _ in range(time):
@@ -94,6 +107,8 @@ class SquareLattice:
         return energy / (self.M * self.N)
 
     def exact_observe(self, positions: tuple[tuple[int, int], ...], observer: Union[Tensor, CTensor]) -> float:
+        if self._state_type != StateType.Exact:
+            raise RuntimeError("State type is not Exact")
         vv: Tensor = self.vector.contract_all_edge(self.vector)
         if isinstance(observer, CTensor):
             complex_vector: CTensor = self.vector.to(complex)
@@ -106,7 +121,7 @@ class SquareLattice:
             return float(vOv) / float(vv)
 
     @staticmethod
-    def check_hamiltonian_name(tensor: Tensor, body: int):
+    def _check_hamiltonian_name(tensor: Tensor, body: int):
         if {f"{i}" for i in tensor.name} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
             raise RuntimeError("Wrong hamiltonian name")
 
@@ -116,7 +131,7 @@ class SquareLattice:
 
     @single_site_hamiltonian.setter
     def single_site_hamiltonian(self, value: Tensor):
-        self.check_hamiltonian_name(value, 1)
+        self._check_hamiltonian_name(value, 1)
         for i in range(self.M):
             for j in range(self.N):
                 if ((i, j),) in self.hamiltonian:
@@ -130,7 +145,7 @@ class SquareLattice:
 
     @vertical_bond_hamiltonian.setter
     def vertical_bond_hamiltonian(self, value: Tensor):
-        self.check_hamiltonian_name(value, 2)
+        self._check_hamiltonian_name(value, 2)
         for i in range(self.M - 1):
             for j in range(self.N):
                 if ((i, j), (i + 1, j)) in self.hamiltonian:
@@ -144,7 +159,7 @@ class SquareLattice:
 
     @horizontal_bond_hamiltonian.setter
     def horizontal_bond_hamiltonian(self, value: Tensor):
-        self.check_hamiltonian_name(value, 2)
+        self._check_hamiltonian_name(value, 2)
         for i in range(self.M):
             for j in range(self.N - 1):
                 if ((i, j), (i, j + 1)) in self.hamiltonian:

@@ -26,6 +26,7 @@
 #include <pybind11/stl_bind.h>
 
 #define TAT_USE_SINGULAR_MATRIX
+#define TAT_USE_SIMPLE_NOSYMMETRY
 #include <TAT/TAT.hpp>
 
 #define TAT_LOOP_ALL_SCALAR                   \
@@ -843,6 +844,7 @@ namespace TAT {
       mpi_fake_m.def("print", [](const py::args& args, const py::kwargs& kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
       // name
+#ifndef TAT_USE_SIMPLE_NAME
       py::class_<DefaultName>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)
             .def(py::self > py::self)
@@ -850,20 +852,16 @@ namespace TAT {
             .def(py::self >= py::self)
             .def(py::self == py::self)
             .def(py::self != py::self)
-#ifdef TAT_USE_SIMPLE_NAME
-            .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.name)); })
-#else
             .def(py::init<fast_name_dataset_t::FastNameId>(), py::arg("id"), "Name with specified id directly")
             .def_readonly("id", &DefaultName::id)
             .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.id)); })
-            .def_static(
-                  "load", [](const py::bytes& bytes) { return load_fast_name_dataset(std::string(bytes)); })
+            .def_static("load", [](const py::bytes& bytes) { return load_fast_name_dataset(std::string(bytes)); })
             .def_static("dump", []() { return py::bytes(dump_fast_name_dataset()); })
-#endif
             .def_property_readonly("name", [](const DefaultName& name) { return static_cast<const std::string&>(name); })
             .def(implicit_init<DefaultName, const char*>(), py::arg("name"), "Name with specified name")
             .def("__repr__", [](const DefaultName& name) { return "Name[" + static_cast<const std::string&>(name) + "]"; })
             .def("__str__", [](const DefaultName& name) { return static_cast<const std::string&>(name); });
+#endif
       // symmetry
       auto symmetry_m = internal_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
