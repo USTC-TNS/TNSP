@@ -182,25 +182,9 @@ namespace TAT {
 #else
       Tensor() = default;
 #endif
-      Tensor(const Tensor& other) {
-         names = other.names;
-         name_to_index = other.name_to_index;
-         // core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         core = other.core;
-         TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
-      };
+      Tensor(const Tensor& other) = default;
       Tensor(Tensor&& other) noexcept = default;
-      Tensor& operator=(const Tensor& other) {
-         if (&other == this) {
-            return *this;
-         }
-         names = other.names;
-         name_to_index = other.name_to_index;
-         // core = std::make_shared<Core<ScalarType, Symmetry>>(*other.core);
-         core = other.core;
-         TAT_warning_or_error_when_copy_data("Why Copy a Tensor");
-         return *this;
-      };
+      Tensor& operator=(const Tensor& other) = default;
       Tensor& operator=(Tensor&& other) noexcept = default;
       ~Tensor() = default;
 
@@ -290,7 +274,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared");
+            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared, Copy Data Happened Here");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
