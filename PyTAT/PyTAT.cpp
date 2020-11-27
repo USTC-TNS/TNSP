@@ -409,12 +409,7 @@ namespace TAT {
                   py::return_value_policy::reference_internal)
             .def(
                   "zero", [](T& tensor) -> T& { return tensor.zero(); }, "Set all element zero", py::return_value_policy::reference_internal)
-            .def(
-                  "identity",
-                  [](T& tensor, const std::set<std::tuple<DefaultName, DefaultName>>& pair) -> T& { return tensor.identity(pair); },
-                  py::arg("pairs"),
-                  "Set tensor to identity like matrix",
-                  py::return_value_policy::reference_internal)
+            .def("identity", &T::identity, py::arg("pairs"), "Get a identity tensor with same shape")
             .def(
                   "test",
                   [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.test(first, step); },

@@ -189,17 +189,8 @@ namespace TAT {
       }
    }
 
-   // identity应该是一个static的函数么？
-   // 如果是static的, 他的接口应该类似于
-   // Tensor::identity({"D", "A", "C", "B"}, {{"A", "B", 6}, {"C", "D", 9}}})
-   // 因为我应该避免生成后还需要转置的行为, 所以vector<Name>必须保留
-   // 而Edge方面, 不得不写成tuple<Name, Name, Edge>的形式, 太麻烦了
-   // 所以像现在这样写成inplace的形式
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
-      // 不需要check use_count, 因为zero调用了set, set调用了transform, transform会check
-      zero();
-
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) const {
       auto rank = names.size();
       auto half_rank = rank / 2;
       auto ordered_pair = std::vector<std::tuple<Name, Name>>();
@@ -227,7 +218,10 @@ namespace TAT {
             valid_index[index_correspond] = false;
          }
       }
-      for (auto& [symmetries, block] : core->blocks) {
+
+      auto result = same_shape().zero();
+
+      for (auto& [symmetries, block] : result.core->blocks) {
          auto dimension = std::vector<Size>(rank);
          auto leading = std::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
@@ -250,7 +244,7 @@ namespace TAT {
          set_to_identity(block.data(), pair_dimension, pair_leading, half_rank);
       }
 
-      return *this;
+      return result;
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
@@ -264,7 +258,7 @@ namespace TAT {
       }
       auto temporary_tensor = *this * temporary_tensor_parameter;
 
-      auto result = same_shape().identity(pairs);
+      auto result = identity(pairs);
 
       auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
 

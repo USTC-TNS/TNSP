@@ -315,23 +315,14 @@ namespace TAT {
       }
 
       /**
-       * 看作矩阵并生成单位矩阵
+       * 生成相同形状的单位张量
        * \param pairs 看作矩阵时边的配对方案
        */
-      Tensor<ScalarType, Symmetry, Name>& identity(const std::set<std::tuple<Name, Name>>& pairs) &;
-
-      Tensor<ScalarType, Symmetry, Name>&& identity(const std::set<std::tuple<Name, Name>>& pairs) && {
-         return std::move(identity(pairs));
-      }
+      Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
 
 #ifdef TAT_USE_EASY_CONVERSION
       template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name>&& identity(PairSet&& pairs) && {
-         return std::move(identity({pairs.begin(), pairs.end()}));
-      }
-
-      template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name>& identity(PairSet&& pairs) & {
+      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name> identity(PairSet&& pairs) const {
          return identity({pairs.begin(), pairs.end()});
       }
 #endif
