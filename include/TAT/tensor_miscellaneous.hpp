@@ -167,6 +167,10 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
       zero();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+         // TODO identity for dimension != 2
+         if (names.size() != 2) {
+            TAT_error("Identity matrix rank should be 2");
+         }
          auto dimension = core->edges[0].map.begin()->second;
          auto dimension_plus_one = dimension + 1;
          auto& block = core->blocks.begin()->second;

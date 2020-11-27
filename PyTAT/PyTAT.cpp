@@ -27,6 +27,9 @@
 
 #define TAT_USE_SINGULAR_MATRIX
 #define TAT_USE_SIMPLE_NOSYMMETRY
+#ifndef NDEBUG
+#define TAT_USE_SIMPLE_NAME
+#endif
 #include <TAT/TAT.hpp>
 
 #define TAT_LOOP_ALL_SCALAR                   \

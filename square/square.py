@@ -78,12 +78,21 @@ class SquareLattice:
     def simple_update(self, time: int, delta_t: float):
         if self._state_type != StateType.WithEnvironment:
             raise RuntimeError("State type is not WithEnv")
+        updater: dict[tuple[tuple[int, int], ...], Tensor] = {}
+        for positions, term in self.hamiltonian.items():
+            site_number: int = len(positions)
+            merged_hamiltonian: Tensor = term.merge_edge({"I": [f"I{i}" for i in range(site_number)], "O": [f"O{i}" for i in range(site_number)]})
+            merged_exp: Tensor = merged_hamiltonian.exponential({("I", "O")}, 8)
+            updater[positions] = merged_exp.split_edge({"I": [(f"I{i}", self.dimension_physics) for i in range(site_number)], "O": [(f"O{i}", self.dimension_physics) for i in range(site_number)]})
+            # TODO use exp directly after impl in c++
         for _ in range(time):
-            # TODO
-            pass
+            for positions, term in updater.items():
+                self._single_term_simple_update(positions, term)
+            for positions, term in reversed(updater.items()):
+                self._single_term_simple_update(positions, term)
 
-    def _single_term_simple_update(self):
-        # TODO
+    def _single_term_simple_update(self, positions: tuple[tuple[int, int], ...], updater: Tensor):
+        # TODO su here, maybe long range update
         pass
 
     def exact_update(self, time: int, approximate_energy: float = -0.5, print_energy: bool = False) -> float:
@@ -102,6 +111,7 @@ class SquareLattice:
                 temporary_vector += this_term
             self.vector *= total_approximate_energy
             self.vector -= temporary_vector
+            # v <- a v - H v = (a - H) v => E = a - v'/v
             if print_energy:
                 print(energy / (self.M * self.N))
         return energy / (self.M * self.N)
@@ -263,9 +273,7 @@ class SquareLattice:
 
 
 lattice = SquareLattice(3, 3)
-lattice.state_type = StateType.Exact
+lattice.state_type = StateType.WithEnvironment
 lattice.horizontal_bond_hamiltonian = SS
 lattice.vertical_bond_hamiltonian = SS
-print(lattice.hamiltonian)
-print(lattice.exact_update(1000))
-print(lattice.exact_observe(((1, 1),), Sy))
+lattice.simple_update(1000, 0.1)
