@@ -163,21 +163,88 @@ namespace TAT {
       return result;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) & {
-      zero();
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto dimension = core->edges[0].map.begin()->second;
-         auto dimension_plus_one = dimension + 1;
-         auto& block = core->blocks.begin()->second;
-         for (Size i = 0; i < dimension; i++) {
-            block[i * dimension_plus_one] = 1;
+   /// \private
+   template<typename ScalarType>
+   void set_to_identity(ScalarType* pointer, const std::vector<Size>& dimension, const std::vector<Size>& leading, Rank rank) {
+      auto current_index = std::vector<Size>(rank, 0);
+      while (true) {
+         *pointer = 1;
+         Rank active_position = rank - 1;
+
+         current_index[active_position]++;
+         pointer += leading[active_position];
+
+         while (current_index[active_position] == dimension[active_position]) {
+            current_index[active_position] = 0;
+            pointer -= dimension[active_position] * leading[active_position];
+
+            if (active_position == 0) {
+               return;
+            }
+            active_position--;
+
+            current_index[active_position]++;
+            pointer += leading[active_position];
          }
-      } else {
-         // TODO identity for symmetry tensor
-         TAT_error("Not implement yet");
       }
-      return *this;
+   }
+
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) const {
+      auto rank = names.size();
+      auto half_rank = rank / 2;
+      auto ordered_pair = std::vector<std::tuple<Name, Name>>();
+      auto ordered_pair_index = std::vector<std::tuple<Rank, Rank>>();
+      ordered_pair.reserve(half_rank);
+      ordered_pair_index.reserve(half_rank);
+      auto valid_index = std::vector<bool>(rank, true);
+      for (Rank i = 0; i < rank; i++) {
+         if (valid_index[i]) {
+            const auto& name_to_find = names[i];
+            const Name* name_correspond = nullptr;
+            for (const auto& [name_1, name_2] : pairs) {
+               if (name_1 == name_to_find) {
+                  name_correspond = &name_2;
+                  break;
+               }
+               if (name_2 == name_to_find) {
+                  name_correspond = &name_1;
+                  break;
+               }
+            }
+            ordered_pair.push_back({name_to_find, *name_correspond});
+            auto index_correspond = name_to_index.at(*name_correspond);
+            ordered_pair_index.push_back({i, index_correspond});
+            valid_index[index_correspond] = false;
+         }
+      }
+
+      auto result = same_shape().zero();
+
+      for (auto& [symmetries, block] : result.core->blocks) {
+         auto dimension = std::vector<Size>(rank);
+         auto leading = std::vector<Size>(rank);
+         for (Rank i = rank; i-- > 0;) {
+            dimension[i] = core->edges[i].map[symmetries[i]];
+            if (i == rank - 1) {
+               leading[i] = 1;
+            } else {
+               leading[i] = leading[i + 1] * dimension[i + 1];
+            }
+         }
+         auto pair_dimension = std::vector<Size>();
+         auto pair_leading = std::vector<Size>();
+         pair_dimension.reserve(half_rank);
+         pair_leading.reserve(half_rank);
+         for (Rank i = 0; i < half_rank; i++) {
+            pair_dimension.push_back(dimension[std::get<0>(ordered_pair_index[i])]);
+            pair_leading.push_back(leading[std::get<0>(ordered_pair_index[i])] + leading[std::get<1>(ordered_pair_index[i])]);
+            // ordered_pair_index使用较大的leading进行从大到小排序，所以pair_leading一定降序
+         }
+         set_to_identity(block.data(), pair_dimension, pair_leading, half_rank);
+      }
+
+      return result;
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
@@ -191,9 +258,9 @@ namespace TAT {
       }
       auto temporary_tensor = *this * temporary_tensor_parameter;
 
-      auto result = same_shape().identity(pairs);
+      auto result = identity(pairs);
 
-      auto power_of_temporary_tensor = decltype(result)();
+      auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
 
       ScalarType series_parameter = 1;
       for (auto i = 1; i <= step; i++) {
@@ -202,7 +269,10 @@ namespace TAT {
             result += temporary_tensor;
          } else if (i == 2) {
             power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
-            result += series_parameter * power_of_temporary_tensor;
+            // result += series_parameter * power_of_temporary_tensor;
+            result = series_parameter * power_of_temporary_tensor + result;
+            // power_of_temporary_tensor相乘一次后边应该就会稳定, 这个时候将result放在+的右侧, 会使得result边的排列和左侧一样
+            // 从而在 i>2 的时候减少转置
          } else {
             power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
             result += series_parameter * power_of_temporary_tensor;
