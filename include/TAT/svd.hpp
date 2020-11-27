@@ -112,7 +112,7 @@ namespace TAT {
          auto dimension = data_source.size();
          auto dimension_plus_one = dimension + 1;
          std::fill(data_destination.begin(), data_destination.end(), 0);
-         for (auto i = 0; i < data_source.size(); i++) {
+         for (Size i = 0; i < data_source.size(); i++) {
             data_destination[i * dimension_plus_one] = data_source[i];
          }
       }

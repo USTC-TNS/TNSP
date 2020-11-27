@@ -46,7 +46,7 @@ namespace TAT {
          const Name right2 = static_cast<const std::string&>(right) + "_2";
 
          int length = line_1.size();
-         if (length != line_2.size()) {
+         if (length != int(line_2.size())) {
             TAT_error("Different Length When Do Two Line to One Line");
          }
          // std::clog << "Two Line to One Line Start\n";
@@ -54,7 +54,7 @@ namespace TAT {
          // product
          std::vector<Tensor<ScalarType, Symmetry, Name>> double_line;
          // std::clog << "double line:\n";
-         for (int i = 0; i < length; i++) {
+         for (auto i = 0; i < length; i++) {
             double_line.push_back(Tensor<ScalarType, Symmetry, Name>::contract(
                   line_1[i]->edge_rename({{left, left1}, {right, right1}}), line_2[i]->edge_rename({{left, left2}, {right, right2}}), {{down, up}}));
             // std::clog << double_line[i] << "\n";

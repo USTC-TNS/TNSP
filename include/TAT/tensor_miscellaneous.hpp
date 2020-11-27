@@ -170,7 +170,7 @@ namespace TAT {
          auto dimension = core->edges[0].map.begin()->second;
          auto dimension_plus_one = dimension + 1;
          auto& block = core->blocks.begin()->second;
-         for (auto i = 0; i < dimension; i++) {
+         for (Size i = 0; i < dimension; i++) {
             block[i * dimension_plus_one] = 1;
          }
       } else {

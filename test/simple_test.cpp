@@ -509,7 +509,3 @@ int main(const int argc, char** argv) {
    }
    return 0;
 }
-
-int simple_test() {
-   return main(1, 0);
-}

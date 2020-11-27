@@ -341,7 +341,7 @@ namespace TAT {
       free_names_and_edges_1.reserve(rank);
       free_names_and_edges_2.reserve(rank);
       result_name_2.push_back(use_qr_not_lq ? common_name_r : common_name_q);
-      for (auto i = 0; i < names.size(); i++) {
+      for (Rank i = 0; i < names.size(); i++) {
          const auto& n = names[i];
          // set.find() != set.end() => n in the set
          // (!=) == use_r_name => n in the r name

@@ -74,7 +74,7 @@ struct MPS {
    }
 
    void update_once(const Tensor& updater) {
-      for (int i = 0; i < chain.size() - 1; i++) {
+      for (unsigned i = 0; i < chain.size() - 1; i++) {
          // i and i+1
          auto AB = Tensor::contract(chain[i].edge_rename({{"Phy", "PhyA"}}), chain[i + 1].edge_rename({{"Phy", "PhyB"}}), {{"Right", "Left"}});
          auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
@@ -84,7 +84,7 @@ struct MPS {
          chain[i] = chain[i] / chain[i].norm<-1>();
          chain[i + 1] = chain[i + 1] / chain[i + 1].norm<-1>();
       }
-      for (int i = chain.size() - 1; i-- > 0;) {
+      for (unsigned i = chain.size() - 1; i-- > 0;) {
          // i+1 and i
          auto AB = Tensor::contract(chain[i + 1].edge_rename({{"Phy", "PhyA"}}), chain[i].edge_rename({{"Phy", "PhyB"}}), {{"Left", "Right"}});
          auto ABH = Tensor::contract(AB, updater, {{"PhyA", "I0"}, {"PhyB", "I1"}});
@@ -124,7 +124,7 @@ struct MPS {
          if (found != right_pool.end()) {
             return found->second;
          }
-         if (i == chain.size()) {
+         if (i == int(chain.size())) {
             return Tensor(1);
          }
          return get_right(i + 1)
@@ -152,7 +152,7 @@ struct MPS {
       std::cout << "END\n\n";
 
       double energy = 0;
-      for (int i = 0; i < chain.size() - 1; i++) {
+      for (unsigned i = 0; i < chain.size() - 1; i++) {
          energy += get_left(i - 1)
                          .contract(chain[i], {{"Right1", "Left"}})
                          .edge_rename({{"Right", "Right1"}, {"Phy", "PhyA"}})
