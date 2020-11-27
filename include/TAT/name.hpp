@@ -240,7 +240,7 @@ namespace TAT {
    template<typename Name>
    std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
       std::map<Name, Rank> result;
-      for (auto name_index = 0; name_index < names.size(); name_index++) {
+      for (Rank name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
       }
       return result;

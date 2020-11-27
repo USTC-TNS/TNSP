@@ -70,7 +70,7 @@ namespace TAT {
          auto new_result_edge = std::vector<Edge<Symmetry>>();                                                                                   \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                                               \
             new_result_edge.reserve(tensor_1.names.size());                                                                                      \
-            for (auto i = 0; i < tensor_1.names.size(); i++) {                                                                                   \
+            for (Rank i = 0; i < tensor_1.names.size(); i++) {                                                                                   \
                auto& single_new_edge = new_result_edge.emplace_back(tensor_1.core->edges[i]);                                                    \
                for (auto [symmetry, dimension] : real_tensor_2->core->edges[i].map) {                                                            \
                   auto found = single_new_edge.map.find(symmetry);                                                                               \

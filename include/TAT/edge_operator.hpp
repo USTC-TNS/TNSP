@@ -216,7 +216,8 @@ namespace TAT {
                   edge_after_split.push_back({edge_before_split[position_before_split].map});
                }
                split_flag.push_back(total_split_index++);
-               auto& this_offset = split_offset.emplace_back();
+               split_offset.emplace_back();
+               // auto& this_offset = split_offset.emplace_back();
                // 后面会判断如果没有实际上的split则不使用this_offset
                // for (const auto& [symmetry, dimension] : edge_before_split[position_before_split].map) {
                //   this_offset[{symmetry}] = {symmetry, 0};

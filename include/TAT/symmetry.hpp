@@ -104,7 +104,7 @@ namespace TAT {
       [[nodiscard]] static bool
       get_reverse_parity(const std::vector<Derived>& symmetries, const std::vector<bool>& reverse_flag, const std::vector<bool>& valid_mark) {
          auto result = false;
-         for (auto i = 0; i < symmetries.size(); i++) {
+         for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
                result ^= static_cast<bool>(symmetries[i].fermi % 2);
             }
@@ -122,8 +122,8 @@ namespace TAT {
        */
       [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
          auto result = false;
-         for (auto i = 0; i < symmetries.size(); i++) {
-            for (auto j = i + 1; j < symmetries.size(); j++) {
+         for (Rank i = 0; i < symmetries.size(); i++) {
+            for (Rank j = i + 1; j < symmetries.size(); j++) {
                if (transpose_plan[i] > transpose_plan[j]) {
                   result ^= (static_cast<bool>(symmetries[i].fermi % 2) && static_cast<bool>(symmetries[j].fermi % 2));
                }
@@ -145,7 +145,7 @@ namespace TAT {
             const std::vector<Rank>& split_merge_flag, // before merge length
             const std::vector<bool>& valid_mark) {     // after merge length
          auto result = false;
-         for (auto split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
+         for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();
               split_merge_group_position++) {
             // split_merge_group_position point to after merge position

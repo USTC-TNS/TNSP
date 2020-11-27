@@ -58,7 +58,7 @@ namespace TAT {
          const auto& vector_in_S = S.value.at(symmetry_of_s);
          auto dimension = vector_in_S.size();
 #endif
-         auto i = 0;
+         Rank i = 0;
          Size m = 1;
          for (; i < index; i++) {
             m *= core->edges[i].map.at(symmetries[i]);

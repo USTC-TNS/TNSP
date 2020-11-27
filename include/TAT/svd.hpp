@@ -259,7 +259,7 @@ namespace TAT {
       free_names_and_edges_u.reserve(rank);
       free_names_and_edges_v.reserve(rank);
       result_name_v.push_back(common_name_v);
-      for (auto i = 0; i < names.size(); i++) {
+      for (Rank i = 0; i < names.size(); i++) {
          const auto& n = names[i];
          if (free_name_set_u.find(n) != free_name_set_u.end()) {
             free_name_u.push_back(n);
@@ -336,7 +336,7 @@ namespace TAT {
       }
       auto remain_dimension_u = std::map<Symmetry, Size>();
       auto remain_dimension_v = std::map<Symmetry, Size>();
-      if (cut != -1 && cut < total_dimension) {
+      if (cut != Size(-1) && cut < total_dimension) {
          // auto remain_dimension = std::map<Symmetry, Size>();
          for (const auto& [symmetry, vector_s] : result_s) {
             remain_dimension_u[symmetry] = 0;
