@@ -315,19 +315,6 @@ namespace TAT {
       }
 
       /**
-       * 生成相同形状的单位张量
-       * \param pairs 看作矩阵时边的配对方案
-       */
-      Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
-
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name> identity(PairSet&& pairs) const {
-         return identity({pairs.begin(), pairs.end()});
-      }
-#endif
-
-      /**
        * 将张量内的数据设置为便于测试的值
        * \return 张量自身
        * \see set
@@ -625,6 +612,19 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge() const {
          return contract_all_edge(conjugate());
       }
+
+      /**
+       * 生成相同形状的单位张量
+       * \param pairs 看作矩阵时边的配对方案
+       */
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
+
+#ifdef TAT_USE_EASY_CONVERSION
+      template<typename PairSet>
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(PairSet&& pairs) const {
+         return identity({pairs.begin(), pairs.end()});
+      }
+#endif
 
       /**
        * 看作矩阵后求出矩阵指数

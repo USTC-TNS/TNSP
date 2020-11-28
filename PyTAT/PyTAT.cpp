@@ -409,7 +409,6 @@ namespace TAT {
                   py::return_value_policy::reference_internal)
             .def(
                   "zero", [](T& tensor) -> T& { return tensor.zero(); }, "Set all element zero", py::return_value_policy::reference_internal)
-            .def("identity", &T::identity, py::arg("pairs"), "Get a identity tensor with same shape")
             .def(
                   "test",
                   [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.test(first, step); },
@@ -552,6 +551,7 @@ namespace TAT {
                   [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); },
                   py::arg("another_tensor"),
                   "Contract as much as possible with another tensor on same name edges")
+            .def("identity", &T::identity, py::arg("pairs"), "Get a identity tensor with same shape")
             .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
             .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
             .def("trace", &T::trace)
