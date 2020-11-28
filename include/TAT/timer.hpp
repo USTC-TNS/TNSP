@@ -143,7 +143,7 @@ namespace TAT {
    TAT_DEFINE_TIMER(multiple)
    TAT_DEFINE_TIMER(conjugate)
    TAT_DEFINE_TIMER(trace)
-   TAT_DEFINE_TIMER(slice)
+   TAT_DEFINE_TIMER(shrink)
    TAT_DEFINE_TIMER(expand)
 #undef TAT_DEFINE_TIMER
 #endif

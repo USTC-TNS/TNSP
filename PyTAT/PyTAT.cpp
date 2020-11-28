@@ -428,7 +428,7 @@ namespace TAT {
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"),
                   py::arg("value"))
-            .def("slice", &T::slice, "Get Slice of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
+            .def("shrink", &T::shrink, "Shrink Edge of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
             .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = "Null")
             .def(
                   "to",

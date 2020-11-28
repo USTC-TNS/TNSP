@@ -29,7 +29,7 @@
 #include "mpi.hpp"
 #include "qr.hpp"
 #include "scalar.hpp"
-#include "slice_and_expand.hpp"
+#include "shrink_and_expand.hpp"
 #include "svd.hpp"
 #include "tensor_miscellaneous.hpp"
 #include "trace.hpp"

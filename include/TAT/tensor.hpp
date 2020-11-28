@@ -238,7 +238,12 @@ namespace TAT {
       expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
+      shrink(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
+
+      [[deprecated("Use shrink instead")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
+         return shrink(configure, new_name, arrow);
+      }
 
       /**
        * 产生一个与自己形状一样的张量
@@ -800,7 +805,6 @@ namespace TAT {
    // merge gemm split
    // 上一次split可以和下一次的merge合并
    // 比较重要， 可以大幅减少对称性张量的分块
-   // 需要先把svd写出来
    /*
    template<typename ScalarType, typename Symmetry, typename Name>
    struct QuasiTensor {
@@ -842,8 +846,6 @@ namespace TAT {
    // 看一下idris是如何做的
    // 需要考虑深搜不可行的问题
    // 支持inplace操作
-   // TODO: use it
-   // TODO: python bind
 
 } // namespace TAT
 #endif
