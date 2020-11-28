@@ -201,7 +201,7 @@ namespace TAT {
     * \see NameTraits
     */
    template<typename Name>
-   struct NameTraitsBase {
+   struct NameTraitsBase : std::bool_constant<true> {
       static constexpr name_out_operator<Name> write = nullptr;
       static constexpr name_in_operator<Name> read = nullptr;
       static constexpr name_out_operator<Name> print = nullptr;
@@ -212,7 +212,9 @@ namespace TAT {
     *
     * 需要特化本类型, 定义本类型的write, read, print, scan四个函数, 类型为name_out_operator<Name>和name_in_operator<Name>'
     *
-    * 如果没有将四个函数全部定义, 需要继承自NameTraitsBase<Name>以获得伪输入输出函数
+    * 需要继承自NameTraitsBase<Name>以获得默认且不会使用到的伪输入输出函数, 以及确认用来判断is_name的value
+    *
+    * \note 其实可以通过四个函数是否为nullptr来判断is_name, 但是这种方式在gcc7下无法使用
     *
     * \tparam Name 将要被当作张量边名称的类型
     *
@@ -220,7 +222,7 @@ namespace TAT {
     * \see NameTraitsBase
     */
    template<typename Name>
-   struct NameTraits : NameTraitsBase<Name> {};
+   struct NameTraits : std::bool_constant<false> {};
 
    /**
     * 判断一个类型是否可以作为Name
@@ -229,10 +231,7 @@ namespace TAT {
     * \see is_name_v
     */
    template<typename Name>
-   struct is_name :
-         std::bool_constant<
-               NameTraits<Name>::write != nullptr || NameTraits<Name>::read != nullptr || NameTraits<Name>::print != nullptr ||
-               NameTraits<Name>::scan != nullptr> {};
+   struct is_name : NameTraits<Name> {};
    template<typename Name>
    constexpr bool is_name_v = is_name<Name>::value;
 
