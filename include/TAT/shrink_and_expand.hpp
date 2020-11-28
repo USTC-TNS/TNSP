@@ -23,9 +23,7 @@
 
 #include "tensor.hpp"
 namespace TAT {
-   // TODO expand的名字还不是很好听
-   // TODO 这些都可以优化
-   // TODO 复杂的slice -> 同时slice and expand
+   // TODO 这些都可以优化，不使用contract
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
