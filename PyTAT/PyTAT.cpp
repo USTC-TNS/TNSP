@@ -843,7 +843,7 @@ namespace TAT {
 #endif // MPI
       // name
 #ifndef TAT_USE_SIMPLE_NAME
-      py::class_<DefaultName>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
+      py::class_<DefaultName>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)
             .def(py::self > py::self)
             .def(py::self <= py::self)

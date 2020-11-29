@@ -77,7 +77,7 @@ class SquareLattice:
 
     def simple_update(self, time: int, delta_t: float):
         if self._state_type != StateType.WithEnvironment:
-            raise RuntimeError("State type is not WithEnv")
+            raise ValueError("State type is not WithEnv")
         updater: dict[tuple[tuple[int, int], ...], Tensor] = {}
         for positions, term in self.hamiltonian.items():
             site_number: int = len(positions)
@@ -89,12 +89,37 @@ class SquareLattice:
                 self._single_term_simple_update(positions, term)
 
     def _single_term_simple_update(self, positions: tuple[tuple[int, int], ...], updater: Tensor):
-        # TODO su here, maybe long range update
+        if len(positions) == 1:
+            return self._single_term_simple_update_single_site(positions[0], updater)
+        if len(positions) == 2:
+            position_1, position_2 = positions
+            if position_1[0] == position_2[0]:
+                if position_1[1] == position_2[1] + 1:
+                    return self._single_term_simple_update_double_site_nearest_horizontal(position_2, updater)
+                if position_2[1] == position_1[1] + 1:
+                    return self._single_term_simple_update_double_site_nearest_horizontal(position_1, updater)
+            if position_1[1] == position_2[1]:
+                if position_1[0] == position_2[0] + 1:
+                    return self._single_term_simple_update_double_site_nearest_vertical(position_2, updater)
+                if position_2[0] == position_1[0] + 1:
+                    return self._single_term_simple_update_double_site_nearest_vertical(position_1, updater)
+        raise NotImplementedError("Unsupported simple update style")
+
+    def _single_term_simple_update_double_site_nearest_horizontal(self, position: tuple[int, int], updater: Tensor):
+        raise NotImplementedError()
         pass
+
+    def _single_term_simple_update_double_site_nearest_vertical(self, position: tuple[int, int], updater: Tensor):
+        raise NotImplementedError()
+        pass
+
+    def _single_term_simple_update_single_site(self, position: tuple[int, int], updater: Tensor):
+        i, j = position
+        self.lattice[i][j] = self.lattice[i][j].contract(updater, {("P", "I0")}).edge_rename({"O0": "P"})
 
     def exact_update(self, time: int, approximate_energy: float = -0.5, print_energy: bool = False) -> float:
         if self._state_type != StateType.Exact:
-            raise RuntimeError("State type is not Exact")
+            raise ValueError("State type is not Exact")
         total_approximate_energy: float = abs(approximate_energy) * self.M * self.N
         energy: float = 0
         for _ in range(time):
@@ -115,7 +140,7 @@ class SquareLattice:
 
     def exact_observe(self, positions: tuple[tuple[int, int], ...], observer: Union[Tensor, CTensor]) -> float:
         if self._state_type != StateType.Exact:
-            raise RuntimeError("State type is not Exact")
+            raise ValueError("State type is not Exact")
         vv: Tensor = self.vector.contract_all_edge(self.vector)
         if isinstance(observer, CTensor):
             complex_vector: CTensor = self.vector.to(complex)
@@ -130,7 +155,7 @@ class SquareLattice:
     @staticmethod
     def _check_hamiltonian_name(tensor: Tensor, body: int):
         if {f"{i}" for i in tensor.name} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
-            raise RuntimeError("Wrong hamiltonian name")
+            raise ValueError("Wrong hamiltonian name")
 
     @property
     def single_site_hamiltonian(self):
@@ -142,7 +167,7 @@ class SquareLattice:
         for i in range(self.M):
             for j in range(self.N):
                 if ((i, j),) in self.hamiltonian:
-                    raise RuntimeError("Hamiltonian term have already set")
+                    raise ValueError("Hamiltonian term have already set")
                 else:
                     self.hamiltonian[((i, j),)] = value
 
@@ -156,7 +181,7 @@ class SquareLattice:
         for i in range(self.M - 1):
             for j in range(self.N):
                 if ((i, j), (i + 1, j)) in self.hamiltonian:
-                    raise RuntimeError("Hamiltonian term have already set")
+                    raise ValueError("Hamiltonian term have already set")
                 else:
                     self.hamiltonian[(i, j), (i + 1, j)] = value
 
@@ -170,7 +195,7 @@ class SquareLattice:
         for i in range(self.M):
             for j in range(self.N - 1):
                 if ((i, j), (i, j + 1)) in self.hamiltonian:
-                    raise RuntimeError("Hamiltonian term have already set")
+                    raise ValueError("Hamiltonian term have already set")
                 else:
                     self.hamiltonian[(i, j), (i, j + 1)] = value
 
@@ -203,7 +228,7 @@ class SquareLattice:
                 self._initialize_network()
                 self._construct_environment()
             elif self._state_type == StateType.Exact:
-                raise RuntimeError("Cannot Convert WithEnv to Exact")
+                raise ValueError("Cannot Convert WithEnv to Exact")
             elif self._state_type == StateType.WithoutEnvironment:
                 self._construct_environment()
         # WithoutEnv
@@ -211,7 +236,7 @@ class SquareLattice:
             if self._state_type == StateType.NotSet:
                 self._initialize_network()
             elif self._state_type == StateType.Exact:
-                raise RuntimeError("Cannot Convert WithoutEnv to Exact")
+                raise ValueError("Cannot Convert WithoutEnv to Exact")
             elif self._state_type == StateType.WithEnvironment:
                 self._absorb_environment()
                 self.environment = {}
@@ -273,4 +298,4 @@ lattice = SquareLattice(3, 3)
 lattice.state_type = StateType.WithEnvironment
 lattice.horizontal_bond_hamiltonian = SS
 lattice.vertical_bond_hamiltonian = SS
-lattice.simple_update(1000, 0.1)
+lattice.simple_update(10, 0.1)
