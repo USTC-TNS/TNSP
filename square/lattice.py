@@ -16,27 +16,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import pickle
 from enum import Enum
 from typing import Union
-import numpy as np
 import TAT
+
+from .auxiliaries import SquareAuxiliariesSystem
+
+__all__ = ["SquareLattice", "StateType"]
 
 CTensor: type = TAT.Tensor.ZNo
 Tensor: type = TAT.Tensor.DNo
-
-Sx: Tensor = Tensor(["I0", "O0"], [2, 2])
-Sx.block[{}] = [[0, 0.5], [0.5, 0]]
-Sy: CTensor = CTensor(["I0", "O0"], [2, 2])
-Sy.block[{}] = [[0, -0.5j], [0.5j, 0]]
-Sz: Tensor = Tensor(["I0", "O0"], [2, 2])
-Sz.block[{}] = [[0.5, 0], [0, -0.5]]
-
-SxSx: Tensor = Sx.edge_rename({"I0": "I1", "O0": "O1"}).contract_all_edge(Sx).to(float)
-SySy: Tensor = Sy.edge_rename({"I0": "I1", "O0": "O1"}).contract_all_edge(Sy).to(float)
-SzSz: Tensor = Sz.edge_rename({"I0": "I1", "O0": "O1"}).contract_all_edge(Sz).to(float)
-
-SS: Tensor = SxSx + SySy + SzSz
 
 clear_line = "\u001b[2K"
 
@@ -49,16 +38,15 @@ class StateType(Enum):
 
 
 class SquareLattice:
-    __slots__ = ["M", "N", "dimension_physics", "dimension_virtual", "_state_type", "vector", "lattice", "environment", "hamiltonian", "spin", "_auxiliaries"]
+    __slots__ = ["M", "N", "dimension_physics", "dimension_virtual", "dimension_cut", "_state_type", "vector", "lattice", "environment", "hamiltonian", "spin", "_auxiliaries"]
 
-    def __init__(self, M: int, N: int, D: int = 2, d: int = 2) -> None:
+    def __init__(self, M: int, N: int, *, d: int = 2, D: int = 2, Dc: int = 2) -> None:
         # 系统自身信息
         self.M: int = M
         self.N: int = N
         self.dimension_physics: int = d
-
-        # 网络信息
         self.dimension_virtual: int = D
+        self.dimension_cut: int = Dc
 
         # 系统表示方式
         self._state_type: StateType = StateType.NotSet
@@ -75,7 +63,7 @@ class SquareLattice:
         self.spin: list[list[int]] = []
 
         # 辅助张量
-        self._auxiliaries: dict[tuple[str, int, int]] = {}
+        self._auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
 
     def simple_update(self, time: int, delta_t: float, new_dimension: int = 0):
         if self._state_type != StateType.WithEnvironment:
@@ -387,37 +375,3 @@ class SquareLattice:
                 self.vector = self.vector.contract(self.lattice[i][j].edge_rename({"D": f"D-{j}", "P": f"P-{i}-{j}"}), {("R", "L"), (f"D-{j}", "U")})
                 print("Singularity:", self.vector.norm_max())
                 self.vector /= self.vector.norm_max()
-
-
-if __name__ == "__main__":
-    import fire
-
-    fire.core.Display = lambda lines, out: out.write("\n".join(lines) + "\n")
-
-
-    def save(file_name: str, dimension: int = 2, seed: int = 0):
-        TAT.set_random_seed(seed)
-        lattice = SquareLattice(3, 3, D=dimension)
-        lattice.horizontal_bond_hamiltonian = SS
-        lattice.vertical_bond_hamiltonian = SS
-        lattice.state_type = StateType.WithEnvironment
-        with open(file_name, "wb") as file:
-            pickle.dump(TAT.Name.dump(), file)
-            pickle.dump(lattice, file)
-
-
-    def update(file_name: str, step: int, delta_t: float, new_dimension: int = 0):
-        lattice: SquareLattice = None
-        with open(file_name, "rb") as file:
-            TAT.Name.load(pickle.load(file))
-            lattice = pickle.load(file)
-        lattice.simple_update(step, delta_t, new_dimension)
-        with open(file_name, "wb") as file:
-            pickle.dump(TAT.Name.dump(), file)
-            pickle.dump(lattice, file)
-        lattice.state_type = StateType.Exact
-        print(lattice.observe_energy())
-        print(lattice.exact_update())
-
-
-    fire.Fire({"new": save, "update": update})
