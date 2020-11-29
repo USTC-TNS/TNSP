@@ -655,12 +655,13 @@ namespace TAT {
       return out < dataset.id_to_name;
    }
    inline std::istream& operator>(std::istream& in, fast_name_dataset_t& dataset) {
-      return in > dataset.id_to_name;
+      in > dataset.id_to_name;
       dataset.names_total_index = dataset.id_to_name.size();
       dataset.name_to_id.clear();
       for (auto i = 0; i < dataset.names_total_index; i++) {
          dataset.name_to_id[dataset.id_to_name[i]] = i;
       }
+      return in;
    }
    inline void load_fast_name_dataset(const std::string& input) {
       std::stringstream in(input);
