@@ -1,5 +1,5 @@
 /**
- * \file slice_and_expand.hpp
+ * \file shrink_and_expand.hpp
  *
  * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,14 +18,12 @@
  */
 
 #pragma once
-#ifndef TAT_SLICE_AND_EXPAND_HPP
-#define TAT_SLICE_AND_EXPAND_HPP
+#ifndef TAT_SHRINK_AND_EXPAND_HPP
+#define TAT_SHRINK_AND_EXPAND_HPP
 
 #include "tensor.hpp"
 namespace TAT {
-   // TODO expand的名字还不是很好听
-   // TODO 这些都可以优化
-   // TODO 复杂的slice -> 同时slice and expand
+   // TODO 这些都可以优化，不使用contract
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
@@ -96,8 +94,8 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
-      auto guard = slice_guard();
+   Tensor<ScalarType, Symmetry, Name>::shrink(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
+      auto guard = shrink_guard();
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto new_names = std::vector<Name>();

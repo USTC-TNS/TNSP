@@ -21,6 +21,8 @@
 
 #include <TAT/TAT.hpp>
 
+#include "tools.hpp"
+
 using Tensor = TAT::Tensor<float, TAT::NoSymmetry>;
 
 auto get_name(std::string alphabet) {
@@ -83,7 +85,7 @@ struct PBC {
             line_1.push_back(&up_to_down_aux.at(i).at(j));
             line_2.push_back(&lattice.at(i + 1).at(j));
          }
-         auto new_line = TAT::tools::two_line_to_one_line({"up", "down", "left", "right"}, line_1, line_2, D_cut);
+         auto new_line = tools::two_line_to_one_line({"up", "down", "left", "right"}, line_1, line_2, D_cut);
          // std::clog << "new line:\n";
          for (int j = 0; j < L; j++) {
             // std::clog << new_line[j] << "\n";

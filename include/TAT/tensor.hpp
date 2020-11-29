@@ -238,7 +238,12 @@ namespace TAT {
       expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
+      shrink(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
+
+      [[deprecated("Use shrink instead")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
+         return shrink(configure, new_name, arrow);
+      }
 
       /**
        * 产生一个与自己形状一样的张量
@@ -313,19 +318,6 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>&& zero() && {
          return std::move(zero());
       }
-
-      /**
-       * 生成相同形状的单位张量
-       * \param pairs 看作矩阵时边的配对方案
-       */
-      Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
-
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] Tensor<ScalarType, Symmetry, Name> identity(PairSet&& pairs) const {
-         return identity({pairs.begin(), pairs.end()});
-      }
-#endif
 
       /**
        * 将张量内的数据设置为便于测试的值
@@ -627,6 +619,19 @@ namespace TAT {
       }
 
       /**
+       * 生成相同形状的单位张量
+       * \param pairs 看作矩阵时边的配对方案
+       */
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
+
+#ifdef TAT_USE_EASY_CONVERSION
+      template<typename PairSet>
+      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(PairSet&& pairs) const {
+         return identity({pairs.begin(), pairs.end()});
+      }
+#endif
+
+      /**
        * 看作矩阵后求出矩阵指数
        * \param pairs 边的配对方案
        * \param step 展开近似的次数
@@ -800,7 +805,6 @@ namespace TAT {
    // merge gemm split
    // 上一次split可以和下一次的merge合并
    // 比较重要， 可以大幅减少对称性张量的分块
-   // 需要先把svd写出来
    /*
    template<typename ScalarType, typename Symmetry, typename Name>
    struct QuasiTensor {
@@ -842,8 +846,6 @@ namespace TAT {
    // 看一下idris是如何做的
    // 需要考虑深搜不可行的问题
    // 支持inplace操作
-   // TODO: use it
-   // TODO: python bind
 
 } // namespace TAT
 #endif

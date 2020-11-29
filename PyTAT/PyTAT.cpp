@@ -26,10 +26,6 @@
 #include <pybind11/stl_bind.h>
 
 #define TAT_USE_SINGULAR_MATRIX
-#define TAT_USE_SIMPLE_NOSYMMETRY
-#ifndef NDEBUG
-#define TAT_USE_SIMPLE_NAME
-#endif
 #include <TAT/TAT.hpp>
 
 #define TAT_LOOP_ALL_SCALAR                   \
@@ -409,7 +405,6 @@ namespace TAT {
                   py::return_value_policy::reference_internal)
             .def(
                   "zero", [](T& tensor) -> T& { return tensor.zero(); }, "Set all element zero", py::return_value_policy::reference_internal)
-            .def("identity", &T::identity, py::arg("pairs"), "Get a identity tensor with same shape")
             .def(
                   "test",
                   [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.test(first, step); },
@@ -429,7 +424,7 @@ namespace TAT {
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"),
                   py::arg("value"))
-            .def("slice", &T::slice, "Get Slice of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
+            .def("shrink", &T::shrink, "Shrink Edge of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
             .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = "Null")
             .def(
                   "to",
@@ -552,6 +547,7 @@ namespace TAT {
                   [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); },
                   py::arg("another_tensor"),
                   "Contract as much as possible with another tensor on same name edges")
+            .def("identity", &T::identity, py::arg("pairs"), "Get a identity tensor with same shape")
             .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
             .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
             .def("trace", &T::trace)
@@ -843,7 +839,7 @@ namespace TAT {
 #endif // MPI
       // name
 #ifndef TAT_USE_SIMPLE_NAME
-      py::class_<DefaultName>(internal_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
+      py::class_<DefaultName>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)
             .def(py::self > py::self)
             .def(py::self <= py::self)

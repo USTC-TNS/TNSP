@@ -24,41 +24,68 @@
 #include "tensor.hpp"
 
 namespace TAT {
+   // TODO 可以不转置直接trace掉, 但是写起来比较麻烦
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
       auto guard = trace_guard();
-      // TODO to implement
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
-      // 对于fermi的情况, 应是一进一出才合法
+      auto rank = names.size();
+      auto trace_rank = trace_names.size();
+      auto free_rank = rank - 2 * trace_rank;
+      // 应该转置为a_i = sum_j b_{jji}的形式, 这样局域性最好
       auto traced_names = std::set<Name>();
-      // TODO trace order maybe optimized
       auto trace_1_names = std::vector<Name>();
       auto trace_2_names = std::vector<Name>();
-      for (const auto& i : trace_names) {
-         // 对于费米子进行转向
-         if constexpr (is_fermi) {
-            if (core->edges[name_to_index.at(std::get<0>(i))].arrow) {
-               trace_1_names.push_back(std::get<0>(i));
-               trace_2_names.push_back(std::get<1>(i));
-            } else {
-               trace_1_names.push_back(std::get<1>(i));
-               trace_2_names.push_back(std::get<0>(i));
+      trace_1_names.reserve(trace_rank);
+      trace_2_names.reserve(trace_rank);
+      // 转置时尽可能保证后面rank的不变
+      auto valid_index = std::vector<bool>(rank, true);
+      for (auto i = rank; i-- > 0;) {
+         if (valid_index[i]) {
+            const auto& name_to_find = names[i];
+            const Name* name_correspond = nullptr;
+            for (const auto& [name_1, name_2] : trace_names) {
+               if (name_1 == name_to_find) {
+                  name_correspond = &name_2;
+                  break;
+               }
+               if (name_2 == name_to_find) {
+                  name_correspond = &name_1;
+                  break;
+               }
             }
-         } else {
-            trace_1_names.push_back(std::get<0>(i));
-            trace_2_names.push_back(std::get<1>(i));
+            if (name_correspond) {
+               // found in trace_names
+               // 对于费米子考虑方向, 应是一进一出才合法
+               if constexpr (is_fermi) {
+                  if (core->edges[i].arrow) {
+                     trace_1_names.push_back(name_to_find);
+                     trace_2_names.push_back(*name_correspond);
+                  } else {
+                     trace_1_names.push_back(*name_correspond);
+                     trace_2_names.push_back(name_to_find);
+                  }
+               } else {
+                  trace_1_names.push_back(*name_correspond);
+                  trace_2_names.push_back(name_to_find);
+                  // trace_1是放在前面的, 而name_correspond也确实在name_to_find前面
+               }
+               // 统计traced names
+               traced_names.insert(name_to_find);
+               traced_names.insert(*name_correspond);
+            }
          }
-         // 统计traced names
-         traced_names.insert(std::get<0>(i));
-         traced_names.insert(std::get<1>(i));
       }
       // 寻找自由脚
       auto result_names = std::vector<Name>();
       auto reverse_names = std::set<Name>();
       auto split_plan = std::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
-      for (const auto& name : names) {
+      result_names.reserve(free_rank);
+      split_plan.reserve(free_rank);
+      for (Rank i = 0; i < rank; i++) {
+         const auto& name = names[i];
          if (auto found = traced_names.find(name); found == traced_names.end()) {
-            const auto& this_edge = core->edges[name_to_index.at(name)];
+            const auto& this_edge = core->edges[i];
             result_names.push_back(name);
             split_plan.push_back({name, {this_edge.map}});
             if constexpr (is_fermi) {
@@ -76,15 +103,19 @@ namespace TAT {
             {InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
             false,
             {{{}, {}, {}, {InternalName<Name>::Trace_1}}});
+      // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
       auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
+      // 应该只有一个边, 所以也只有一个block
       const Size line_size = destination_block.size();
 
       for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
+         // 而source的形状应该是多个分块对角矩阵, 每个元素是一个向量, 我只需要把正对角的向量们求和
          auto symmetry_2 = -symmetry_1;
          auto source_block = merged_tensor.core->blocks.at({symmetry_1, symmetry_2, Symmetry()});
+         auto dimension_plus_one = dimension + 1;
          for (Size i = 0; i < dimension; i++) {
-            const ScalarType* __restrict source_data = source_block.data() + (dimension + 1) * i * line_size;
+            const ScalarType* __restrict source_data = source_block.data() + dimension_plus_one * i * line_size;
             ScalarType* __restrict destination_data = destination_block.data();
             for (Size j = 0; j < line_size; j++) {
                destination_data[j] += source_data[j];

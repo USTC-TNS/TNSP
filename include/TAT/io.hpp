@@ -154,14 +154,14 @@ namespace TAT {
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<>
-   struct NameTraits<FastName> {
+   struct NameTraits<FastName> : NameTraitsBase<FastName> {
       static constexpr name_out_operator<FastName> write = operator<;
       static constexpr name_in_operator<FastName> read = operator>;
       static constexpr name_out_operator<FastName> print = operator<<;
       static constexpr name_in_operator<FastName> scan = scan_fastname_for_name;
    };
    template<>
-   struct NameTraits<std::string> {
+   struct NameTraits<std::string> : NameTraitsBase<std::string> {
       static constexpr name_out_operator<std::string> write = operator<;
       static constexpr name_in_operator<std::string> read = operator>;
       static constexpr name_out_operator<std::string> print = std::operator<<;
@@ -655,12 +655,13 @@ namespace TAT {
       return out < dataset.id_to_name;
    }
    inline std::istream& operator>(std::istream& in, fast_name_dataset_t& dataset) {
-      return in > dataset.id_to_name;
+      in > dataset.id_to_name;
       dataset.names_total_index = dataset.id_to_name.size();
       dataset.name_to_id.clear();
       for (auto i = 0; i < dataset.names_total_index; i++) {
          dataset.name_to_id[dataset.id_to_name[i]] = i;
       }
+      return in;
    }
    inline void load_fast_name_dataset(const std::string& input) {
       std::stringstream in(input);

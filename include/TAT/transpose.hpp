@@ -253,7 +253,8 @@ namespace TAT {
    //              ^
    // 首先找到一段前后各自连续的部分，然后分块地做转置，分块的方案是cut掉这里的维度
    //
-   // TODO
+   // TODO block transpose
+   // 现在的问题是虽然block的算法我能设计，但是换成block方式时带来的多判断一次的副作用就会导致转置慢很多
    // 按照cache来split边
    // 再交替iter dim
    // 即可兼容矩阵转置的优化方式
@@ -470,53 +471,6 @@ namespace TAT {
             leading_of_destination.data(),
             rank);
    }
-
-   /*
-   inline auto find_in_leading(const std::vector<Size>& leading, Size size) {
-      for (auto i = leading.size(); i-- > 0;) {
-         if (leading[i] > size) {
-            return Size(i);
-         }
-      }
-      return Size(-1); // -1 means no split needed
-   }
-
-   // TODO 其实判断应该是下面的dimension乘上下面的leading而不是自己的leading，只不过稠密的时候他们相等
-   // 这个部分也许应该放在noone和merge那一块
-   template<typename ScalarType, bool parity>
-   void block_transpose(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
-         const Rank rank) {
-      Size block_size = 2;
-      while (block_size * block_size * sizeof(ScalarType) < l1_cache) {
-         block_size <<= 1u;
-      }
-      block_size >>= 1u;
-      auto source_split_index = find_in_leading(leadings_source, block_size);
-      if (source_split_index != -1) {
-         auto this_leading = leadings_source[source_split_index];
-         auto next_leading = leadings_source[source_split_index + 1];
-         auto this_dimension = this_leading / next_leading;
-         auto this_dimension_2 = 2;
-         while (next_leading * this_dimension_2 < block_size) {
-            this_dimension_2 <<= 1u;
-         }
-         this_dimension_2 >>= 1u;
-         auto this_dimension_1 = this_dimension / this_dimension_2;
-         if (this_dimension_1 * this_dimension_2 == this_dimension) {
-            auto middle_leading = this_dimension_2 * next_leading;
-         }
-      }
-      // 这个plan需要重新分析，很烦
-   }
-    */
 
    // 去掉dimension = 1的边
    inline auto prune_for_transpose(
@@ -735,7 +689,6 @@ namespace TAT {
                   prune_leadings_destination,
                   prune_rank);
 
-      // TODO: 需要考虑极端细致的情况
       if (parity) {
          simple_transpose<ScalarType, true>(
                data_source,
