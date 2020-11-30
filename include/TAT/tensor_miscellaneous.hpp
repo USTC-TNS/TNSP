@@ -105,6 +105,7 @@ namespace TAT {
       return result;
    }
 
+   // TODO: conjugate和merge等操作不可交换，可能需要给Edge加上一个conjugated的flag
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
       auto guard = conjugate_guard();

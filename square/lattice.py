@@ -60,7 +60,8 @@ class SquareLattice:
         self.hamiltonian: dict[tuple[tuple[int, int], ...], Tensor] = {}  # 可以是任意体哈密顿量, 哈密顿量的name方案参考自旋, 使用I0, I1, ..., O0, O1, ...
 
         # 用于网络采样的spin列表
-        self.spin: list[list[int]] = []
+        self._spin: list[list[int]] = [[0 for _ in range(self.N)] for _ in range(self.M)]
+        # TODO self.spin[i, j] = xxx will update _aux
 
         # 辅助张量
         self._auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
@@ -191,8 +192,8 @@ class SquareLattice:
         for _ in range(time):
             temporary_vector: Tensor = self.vector.same_shape().zero()
             for positions, value in self.hamiltonian.items():
-                this_term: Tensor = self.vector.contract_all_edge(value.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})).edge_rename(
-                    {f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})
+                this_term: Tensor = self.vector.contract_all_edge(value.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
+                                                                                    })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})
                 temporary_vector += this_term
             self.vector *= total_approximate_energy
             self.vector -= temporary_vector
@@ -205,19 +206,20 @@ class SquareLattice:
         return energy / (self.M * self.N)
 
     def exact_observe(self, positions: tuple[tuple[int, int], ...], observer: Union[Tensor, CTensor], calculate_denominator: bool = True) -> float:
+        # TODO 相同格点怎么办？还有设置hamiltonian的时候也应该检查一下是否是相同的格点
         if self._state_type != StateType.Exact:
             raise ValueError("State type is not Exact")
         if isinstance(observer, CTensor):
             complex_vector: CTensor = self.vector.to(complex)
-            numerator: Tensor = complex_vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})).edge_rename(
-                {f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(complex_vector)
+            numerator: Tensor = complex_vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
+                                                                                      })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(complex_vector)
             if calculate_denominator:
                 return complex(numerator).real / float(self.vector.contract_all_edge(self.vector))
             else:
                 return complex(numerator).real
         else:
-            numerator: Tensor = self.vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})).edge_rename(
-                {f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(self.vector)
+            numerator: Tensor = self.vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
+                                                                                   })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(self.vector)
             if calculate_denominator:
                 return float(numerator) / float(self.vector.contract_all_edge(self.vector))
             else:

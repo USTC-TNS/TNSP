@@ -18,8 +18,9 @@
 
 import TAT
 from .lattice import SquareLattice, StateType
+from .auxiliaries import SquareAuxiliariesSystem
 
-__all__ = ["SquareLattice", "StateType", "CTensor", "Tensor", "Sx", "Sy", "Sz", "SS"]
+__all__ = ["SquareAuxiliariesSystem", "SquareLattice", "StateType", "CTensor", "Tensor", "Sx", "Sy", "Sz", "SS"]
 
 CTensor: type = TAT.Tensor.ZNo
 Tensor: type = TAT.Tensor.DNo
