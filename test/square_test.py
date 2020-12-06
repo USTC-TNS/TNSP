@@ -28,17 +28,16 @@ if __name__ == "__main__":
 
     def save(file_name: str, dimension: int = 2, seed: int = 0):
         TAT.set_random_seed(seed)
-        lattice = SquareLattice(3, 3, D=dimension)
+        lattice = SimpleUpdateLattice(4, 4, D=dimension)
         lattice.horizontal_bond_hamiltonian = SS
         lattice.vertical_bond_hamiltonian = SS
-        lattice.state_type = StateType.WithEnvironment
         with open(file_name, "wb") as file:
             pickle.dump(TAT.Name.dump(), file)
             pickle.dump(lattice, file)
 
 
     def update(file_name: str, step: int, delta_t: float, new_dimension: int = 0):
-        lattice: SquareLattice = None
+        lattice: SimpleUpdateLattice = None
         with open(file_name, "rb") as file:
             TAT.Name.load(pickle.load(file))
             lattice = pickle.load(file)
@@ -46,9 +45,10 @@ if __name__ == "__main__":
         with open(file_name, "wb") as file:
             pickle.dump(TAT.Name.dump(), file)
             pickle.dump(lattice, file)
-        lattice.state_type = StateType.Exact
-        print(lattice.exact_observe_energy())
-        print(lattice.exact_update())
+        lattice_exact = ExactLattice(lattice)
+        print("E1",lattice_exact.observe_energy())
+        print("E2",lattice_exact.update())
+        lattice_sampling = SamplingGradientLattice(lattice, 20)
 
 
     fire.Fire({"new": save, "update": update})

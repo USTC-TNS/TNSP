@@ -56,7 +56,7 @@ for i in range(M):
         vector = vector.contract(lattice[i][j].edge_rename({"D": f"D-{j}"}), {("R", "L"), (f"D-{j}", "U")})
         vector /= vector.norm_max()
 
-r2 = vector.edge_rename({f"D-{N - 1}": "U", "R": "L"})
+r2 = vector.edge_rename({f"D-{N - 1}": "U0", "R": "L0"})
 del vector
 r2 /= r2.norm_max()
 

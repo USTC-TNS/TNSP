@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from __future__ import annotations
 import TAT
 
 __all__ = ["SquareAuxiliariesSystem"]
@@ -27,14 +28,14 @@ Tensor: type = TAT.Tensor.DNo
 class SquareAuxiliariesSystem:
     __slots__ = ["_M", "_N", "_dimension_cut", "_lattice", "_auxiliaries"]
 
-    def __init__(self, M: int, N: int, Dc: int):
+    def __init__(self, M: int, N: int, Dc: int) -> None:
         self._M: int = M
         self._N: int = N
         self._dimension_cut: int = Dc
         self._lattice: list[list[Tensor]] = [[Tensor(1) for _ in range(self._N)] for _ in range(self._M)]
         self._auxiliaries = {}
 
-    def _get_auxiliaries(self, kind: str, i: int, j: int):
+    def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
             if kind == "up-to-down":
                 if i == -1:
@@ -146,7 +147,7 @@ class SquareAuxiliariesSystem:
                 raise ValueError("Wrong Auxiliaries Kind")
         return self._auxiliaries[kind, i, j]
 
-    def __setitem__(self, position, value):
+    def __setitem__(self, position: tuple[int, int], value: Tensor) -> None:
         i, j = position
         self._refresh_line("right", j)
         self._refresh_line("left", j)
