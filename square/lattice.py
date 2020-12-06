@@ -30,6 +30,7 @@ Tensor: type = TAT.Tensor.DNo
 clear_line = "\u001b[2K"
 
 
+# TODO 分成三个类型来做，而不是这样多态
 class StateType(Enum):
     NotSet = 0
     Exact = 1
@@ -38,7 +39,8 @@ class StateType(Enum):
 
 
 class SquareLattice:
-    __slots__ = ["M", "N", "dimension_physics", "dimension_virtual", "dimension_cut", "_state_type", "vector", "lattice", "environment", "hamiltonian", "spin", "_auxiliaries"]
+    __slots__ = ["M", "N", "dimension_physics", "dimension_virtual", "dimension_cut", "_state_type", "vector", "lattice", "environment", "hamiltonian", "_spin", "_auxiliaries_double_layer",
+                 "_auxiliaries_single_layer"]
 
     def __init__(self, M: int, N: int, *, d: int = 2, D: int = 2, Dc: int = 2) -> None:
         # 系统自身信息
@@ -64,7 +66,8 @@ class SquareLattice:
         # TODO self.spin[i, j] = xxx will update _aux
 
         # 辅助张量
-        self._auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
+        self._auxiliaries_double_layer: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
+        self._auxiliaries_single_layer: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
 
     def simple_update(self, time: int, delta_t: float, new_dimension: int = 0):
         if self._state_type != StateType.WithEnvironment:
@@ -84,7 +87,6 @@ class SquareLattice:
         print(f"{clear_line}Simple update done, total_step={time}, delta_t={delta_t}, dimension={self.dimension_virtual}")
 
     def _single_term_simple_update(self, positions: tuple[tuple[int, int], ...], updater: Tensor):
-        # print(positions)
         if len(positions) == 1:
             return self._single_term_simple_update_single_site(positions[0], updater)
         if len(positions) == 2:
@@ -192,9 +194,8 @@ class SquareLattice:
         for _ in range(time):
             temporary_vector: Tensor = self.vector.same_shape().zero()
             for positions, value in self.hamiltonian.items():
-                this_term: Tensor = self.vector.contract_all_edge(value.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
-                                                                                    })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})
-                temporary_vector += this_term
+                temporary_vector += self.vector.contract_all_edge(value.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})) \
+                    .edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)})
             self.vector *= total_approximate_energy
             self.vector -= temporary_vector
             # v <- a v - H v = (a - H) v => E = a - v'/v
@@ -205,6 +206,9 @@ class SquareLattice:
                 print(energy / (self.M * self.N))
         return energy / (self.M * self.N)
 
+    def auxiliary_observe(self):
+        pass
+
     def exact_observe(self, positions: tuple[tuple[int, int], ...], observer: Union[Tensor, CTensor], calculate_denominator: bool = True) -> float:
         # TODO 相同格点怎么办？还有设置hamiltonian的时候也应该检查一下是否是相同的格点
         if self._state_type != StateType.Exact:
@@ -212,20 +216,20 @@ class SquareLattice:
         if isinstance(observer, CTensor):
             complex_vector: CTensor = self.vector.to(complex)
             numerator: Tensor = complex_vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
-                                                                                      })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(complex_vector)
+                                                                                       })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(complex_vector)
             if calculate_denominator:
                 return complex(numerator).real / float(self.vector.contract_all_edge(self.vector))
             else:
                 return complex(numerator).real
         else:
             numerator: Tensor = self.vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
-                                                                                   })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(self.vector)
+                                                                                    })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(self.vector)
             if calculate_denominator:
                 return float(numerator) / float(self.vector.contract_all_edge(self.vector))
             else:
                 return float(numerator)
 
-    def observe_energy(self) -> float:
+    def exact_observe_energy(self) -> float:
         energy = 0
         for positions, observer in self.hamiltonian.items():
             energy += float(self.exact_observe(positions, observer, False))
@@ -354,12 +358,10 @@ class SquareLattice:
         for i in range(self.M):
             for j in range(self.N - 1):
                 self.lattice[i][j] = self.lattice[i][j].multiple(self.environment[("R", i, j)], "R", "U")
-                self.lattice[i][j] /= self.lattice[i][j].norm_max()
 
         for i in range(self.M - 1):
             for j in range(self.N):
                 self.lattice[i][j] = self.lattice[i][j].multiple(self.environment[("D", i, j)], "D", "U")
-                self.lattice[i][j] /= self.lattice[i][j].norm_max()
 
     def _construct_environment(self):
         for i in range(self.M):
@@ -376,4 +378,3 @@ class SquareLattice:
             for j in range(self.N):
                 self.vector = self.vector.contract(self.lattice[i][j].edge_rename({"D": f"D-{j}", "P": f"P-{i}-{j}"}), {("R", "L"), (f"D-{j}", "U")})
                 print("Singularity:", self.vector.norm_max())
-                self.vector /= self.vector.norm_max()

@@ -47,7 +47,7 @@ if __name__ == "__main__":
             pickle.dump(TAT.Name.dump(), file)
             pickle.dump(lattice, file)
         lattice.state_type = StateType.Exact
-        print(lattice.observe_energy())
+        print(lattice.exact_observe_energy())
         print(lattice.exact_update())
 
 
