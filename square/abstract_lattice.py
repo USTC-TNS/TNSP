@@ -29,7 +29,7 @@ Tensor: type = TAT.Tensor.DNo
 class AbstractLattice:
 
     @multimethod
-    def __init__(self, M: int, N: int, d: int = 2) -> None:
+    def __init__(self, M: int, N: int, *, d: int) -> None:
         self.M: int = M
         self.N: int = N
         self.dimension_physics: int = d

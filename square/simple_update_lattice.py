@@ -20,6 +20,7 @@ from __future__ import annotations
 from multimethod import multimethod
 import TAT
 from .abstract_network_lattice import AbstractNetworkLattice
+from . import sampling_gradient_lattice
 
 __all__ = ["SimpleUpdateLattice"]
 
@@ -32,21 +33,17 @@ clear_line = "\u001b[2K"
 class SimpleUpdateLattice(AbstractNetworkLattice):
 
     @multimethod
-    def __init__(self, M: int, N: int, D: int = 2, d: int = 2):
-        super().__init__(M, N, D, d)
+    def __init__(self, M: int, N: int, *, D: int, d: int = 2):
+        super().__init__(M, N, D=D, d=d)
 
         self.environment: dict[tuple[str, int, int], Tensor] = {}
         # 第一个str可以是"D"或者"R"
 
-    # 目前multimethod不支持这个操作
-    # https://github.com/coady/multimethod/issues/18
-    """
     @multimethod
     def __init__(self, other: sampling_gradient_lattice.SamplingGradientLattice):
         super().__init__(other)
 
         self.environment: dict[tuple[str, int, int], Tensor] = {}
-    """
 
     def _construct_environment(self) -> None:
         for i in range(self.M):

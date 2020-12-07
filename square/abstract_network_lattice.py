@@ -30,8 +30,8 @@ Tensor: type = TAT.Tensor.DNo
 class AbstractNetworkLattice(AbstractLattice):
 
     @multimethod
-    def __init__(self, M: int, N: int, D: int = 2, d: int = 2):
-        super().__init__(M, N, d)
+    def __init__(self, M: int, N: int, *, D: int, d: int):
+        super().__init__(M, N, d=d)
         self.dimension_virtual: int = D
 
         # TODO better structor for two rank array

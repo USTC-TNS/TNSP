@@ -17,14 +17,12 @@
 #
 
 import pickle
+import fire
 import TAT
 from square import *
 
 if __name__ == "__main__":
-    import fire
-
     fire.core.Display = lambda lines, out: out.write("\n".join(lines) + "\n")
-
 
     def save(file_name: str, dimension: int = 2, seed: int = 0):
         TAT.set_random_seed(seed)
@@ -34,7 +32,6 @@ if __name__ == "__main__":
         with open(file_name, "wb") as file:
             pickle.dump(TAT.Name.dump(), file)
             pickle.dump(lattice, file)
-
 
     def update(file_name: str, step: int, delta_t: float, new_dimension: int = 0):
         lattice: SimpleUpdateLattice = None
@@ -46,9 +43,8 @@ if __name__ == "__main__":
             pickle.dump(TAT.Name.dump(), file)
             pickle.dump(lattice, file)
         lattice_exact = ExactLattice(lattice)
-        print("E1",lattice_exact.observe_energy())
-        print("E2",lattice_exact.update())
+        print("E1", lattice_exact.observe_energy())
+        print("E2", lattice_exact.update())
         lattice_sampling = SamplingGradientLattice(lattice, 20)
-
 
     fire.Fire({"new": save, "update": update})

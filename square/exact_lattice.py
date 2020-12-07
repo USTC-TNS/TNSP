@@ -32,8 +32,8 @@ Tensor: type = TAT.Tensor.DNo
 class ExactLattice(AbstractLattice):
 
     @multimethod
-    def __init__(self, M: int, N: int, d: int = 2) -> None:
-        super().__init__(M, N, d)
+    def __init__(self, M: int, N: int, *, d: int) -> None:
+        super().__init__(M, N, d=d)
         self.vector: Tensor = self._initialize_vector()
 
     @multimethod
@@ -90,7 +90,8 @@ class ExactLattice(AbstractLattice):
     def denominator(self) -> float:
         return float(self.vector.contract_all_edge(self.vector))
 
-    def observe_real(self, positions: tuple[tuple[int, int], ...], observer: Tensor, calculate_denominator: bool = True) -> float:
+    @multimethod
+    def observe(self, positions: tuple[tuple[int, int], ...], observer: Tensor, calculate_denominator: bool = True) -> float:
         # TODO 相同格点怎么办？还有设置hamiltonian的时候也应该检查一下是否是相同的格点
         numerator: Tensor = self.vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
                                                                                })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(self.vector)
@@ -99,7 +100,8 @@ class ExactLattice(AbstractLattice):
         else:
             return float(numerator)
 
-    def observe_complex(self, positions: tuple[tuple[int, int], ...], observer: CTensor, calculate_denominator: bool = True) -> float:
+    @multimethod
+    def observe(self, positions: tuple[tuple[int, int], ...], observer: CTensor, calculate_denominator: bool = True) -> float:
         complex_vector: CTensor = self.vector.to(complex)
         numerator: Tensor = complex_vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
                                                                                   })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(complex_vector)
@@ -107,14 +109,6 @@ class ExactLattice(AbstractLattice):
             return complex(numerator).real / float(self.vector.contract_all_edge(self.vector))
         else:
             return complex(numerator).real
-
-    def observe(self, positions: tuple[tuple[int, int], ...], observer, calculate_denominator: bool = True) -> float:
-        # multimethod现在不支持tuple[T, ...]
-        # https://github.com/coady/multimethod/issues/17
-        if isinstance(observer, CTensor):
-            return self.observe_complex(positions, observer, calculate_denominator)
-        else:
-            return self.observe_real(positions, observer, calculate_denominator)
 
     def observe_energy(self) -> float:
         energy = 0

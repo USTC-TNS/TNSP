@@ -21,7 +21,7 @@ from multimethod import multimethod
 import TAT
 from .abstract_network_lattice import AbstractNetworkLattice
 from .auxiliaries import SquareAuxiliariesSystem
-from .simple_update_lattice import SimpleUpdateLattice
+from . import simple_update_lattice
 
 __all__ = ["SamplingGradientLattice"]
 
@@ -32,8 +32,8 @@ Tensor: type = TAT.Tensor.DNo
 class SamplingGradientLattice(AbstractNetworkLattice):
 
     @multimethod
-    def __init__(self, M: int, N: int, D: int = 2, Dc: int = 2, d: int = 2):
-        super().__init__(M, N, D, d)
+    def __init__(self, M: int, N: int, *, D: int, Dc: int, d: int):
+        super().__init__(M, N, D=D, d=d)
         self.dimension_cut: int = Dc
 
         # TODO setitem?
@@ -41,7 +41,7 @@ class SamplingGradientLattice(AbstractNetworkLattice):
         self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
 
     @multimethod
-    def __init__(self, other: SimpleUpdateLattice, Dc: int = 2):
+    def __init__(self, other: simple_update_lattice.SimpleUpdateLattice, Dc: int = 2):
         super().__init__(other)
         self.dimension_cut: int = Dc
         self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
