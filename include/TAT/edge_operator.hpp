@@ -620,7 +620,10 @@ namespace TAT {
          }
       }
       // 可能会产生空的无源分块
-      result.zero();
+      if constexpr (!std::is_same_v<Symmetry, NoSymmetry>) {
+         // TODO 这部分可以优化, call zero的条件可以更加苛刻
+         result.zero();
+      }
       // 缩并时在这里产生无源分块是很正常的事, 这正是对称性ansatz所假设的, 每个张量都是对称守恒的
       // 但是缩并后, 他便可以表示两个对称性不守恒的张量的乘积, 或者说缩并后表达能力变强了, 所以会产生多余的0
       // 5. main copy loop

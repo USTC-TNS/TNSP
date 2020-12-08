@@ -17,6 +17,7 @@
 #
 
 from __future__ import annotations
+from typing import List
 from multimethod import multimethod
 import TAT
 from .abstract_network_lattice import AbstractNetworkLattice
@@ -30,6 +31,7 @@ Tensor: type = TAT.Tensor.DNo
 
 
 class SamplingGradientLattice(AbstractNetworkLattice):
+    __slots__ = ["dimension_cut", "_spin", "auxiliaries"]
 
     @multimethod
     def __init__(self, M: int, N: int, *, D: int, Dc: int, d: int):
@@ -37,20 +39,18 @@ class SamplingGradientLattice(AbstractNetworkLattice):
         self.dimension_cut: int = Dc
 
         # TODO setitem?
-        self._spin: list[list[int]] = [[0 for _ in range(self.N)] for _ in range(self.M)]
+        self._spin: List[List[int]] = [[0 for _ in range(self.N)] for _ in range(self.M)]
         self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
 
     @multimethod
-    def __init__(self, other: simple_update_lattice.SimpleUpdateLattice, Dc: int = 2):
+    def __init__(self, other: simple_update_lattice.SimpleUpdateLattice, *, Dc: int = 2):
         super().__init__(other)
         self.dimension_cut: int = Dc
         self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
 
         for i in range(self.M):
             for j in range(self.N):
-                to_multiple = self.lattice[i][j]
-                if i != self.M - 1:
-                    to_multiple = to_multiple.multiple(other.environment["D", i, j], "D", "U")
-                if j != self.N - 1:
-                    to_multiple = to_multiple.multiple(other.environment["R", i, j], "R", "U")
-                self.lattice[i][j] = to_multiple
+                to_multiple = self[i, j]
+                to_multiple = other.try_multiple(to_multiple, i, j, "D")
+                to_multiple = other.try_multiple(to_multiple, i, j, "R")
+                self[i, j] = to_multiple

@@ -24,6 +24,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#define TAT_USE_SIMPLE_NOSYMMETRY
 #define TAT_USE_SINGULAR_MATRIX
 #include <TAT/TAT.hpp>
 
@@ -781,7 +782,7 @@ namespace TAT {
       auto mpi_fake_m = tat_m.def_submodule("mpi", "mpi support for TAT");
       mpi_fake_m.def("print", [](const py::args& args, const py::kwargs& kwargs) { py::print(*args, **kwargs); });
 #endif // MPI
-      // name
+       // name
 #ifndef TAT_USE_SIMPLE_NAME
       py::class_<DefaultName>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)

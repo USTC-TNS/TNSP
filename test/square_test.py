@@ -33,7 +33,7 @@ if __name__ == "__main__":
             pickle.dump(TAT.Name.dump(), file)
             pickle.dump(lattice, file)
 
-    def update(file_name: str, step: int, delta_t: float, new_dimension: int = 0):
+    def update(file_name: str, step: int, delta_t: float, new_dimension: int):
         lattice: SimpleUpdateLattice = None
         with open(file_name, "rb") as file:
             TAT.Name.load(pickle.load(file))
@@ -45,6 +45,10 @@ if __name__ == "__main__":
         lattice_exact = ExactLattice(lattice)
         print("E1", lattice_exact.observe_energy())
         print("E2", lattice_exact.update())
-        lattice_sampling = SamplingGradientLattice(lattice, 20)
+        print()
+        for Dc in range(2, 100):
+            lattice.initialize_auxiliary(Dc)
+            print(Dc, lattice.observe_energy())
+        # lattice_sampling = SamplingGradientLattice(lattice, Dc=20)
 
     fire.Fire({"new": save, "update": update})

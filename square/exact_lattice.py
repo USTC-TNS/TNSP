@@ -17,6 +17,7 @@
 #
 
 from __future__ import annotations
+from typing import Tuple
 from multimethod import multimethod
 import TAT
 from .abstract_lattice import AbstractLattice
@@ -30,6 +31,7 @@ Tensor: type = TAT.Tensor.DNo
 
 
 class ExactLattice(AbstractLattice):
+    __slots__ = ["vector"]
 
     @multimethod
     def __init__(self, M: int, N: int, *, d: int) -> None:
@@ -43,13 +45,11 @@ class ExactLattice(AbstractLattice):
         self.vector: Tensor = Tensor(1)
         for i in range(self.M):
             for j in range(self.N):
-                to_contract = other.lattice[i][j]
-                if i != self.M - 1:
-                    to_contract = to_contract.multiple(other.environment["D", i, j], "D", "U")
-                if j != self.N - 1:
-                    to_contract = to_contract.multiple(other.environment["R", i, j], "R", "U")
+                to_contract = other[i, j]
+                to_contract = other.try_multiple(to_contract, i, j, "D")
+                to_contract = other.try_multiple(to_contract, i, j, "R")
                 self.vector = self.vector.contract(to_contract.edge_rename({"D": f"D-{j}", "P": f"P-{i}-{j}"}), {("R", "L"), (f"D-{j}", "U")})
-                print("Singularity:", self.vector.norm_max())
+                # print("Singularity:", self.vector.norm_max())
                 self.vector /= self.vector.norm_max()
 
     @multimethod
@@ -59,15 +59,16 @@ class ExactLattice(AbstractLattice):
         self.vector: Tensor = Tensor(1)
         for i in range(self.M):
             for j in range(self.N):
-                to_contract = other.lattice[i][j]
+                to_contract = other[i, j]
                 self.vector = self.vector.contract(to_contract.edge_rename({"D": f"D-{j}", "P": f"P-{i}-{j}"}), {("R", "L"), (f"D-{j}", "U")})
-                print("Singularity:", self.vector.norm_max())
+                # print("Singularity:", self.vector.norm_max())
                 self.vector /= self.vector.norm_max()
 
     def _initialize_vector(self) -> Tensor:
         name_list = [f"P-{i}-{j}" for i in range(self.M) for j in range(self.N)]
         dimension_list = [self.dimension_physics for _ in range(self.M) for _ in range(self.N)]
         self.vector = Tensor(name_list, dimension_list).randn()
+        self.vector /= self.vector.norm_max()
 
     def update(self, time: int = 1, approximate_energy: float = -0.5, print_energy: bool = False) -> float:
         total_approximate_energy: float = abs(approximate_energy) * self.M * self.N
@@ -91,22 +92,21 @@ class ExactLattice(AbstractLattice):
         return float(self.vector.contract_all_edge(self.vector))
 
     @multimethod
-    def observe(self, positions: tuple[tuple[int, int], ...], observer: Tensor, calculate_denominator: bool = True) -> float:
-        # TODO 相同格点怎么办？还有设置hamiltonian的时候也应该检查一下是否是相同的格点
+    def observe(self, positions: Tuple[Tuple[int, int], ...], observer: Tensor, calculate_denominator: bool = True) -> float:
         numerator: Tensor = self.vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
                                                                                })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(self.vector)
         if calculate_denominator:
-            return float(numerator) / float(self.vector.contract_all_edge(self.vector))
+            return float(numerator) / self.denominator()
         else:
             return float(numerator)
 
     @multimethod
-    def observe(self, positions: tuple[tuple[int, int], ...], observer: CTensor, calculate_denominator: bool = True) -> float:
+    def observe(self, positions: Tuple[Tuple[int, int], ...], observer: CTensor, calculate_denominator: bool = True) -> float:
         complex_vector: CTensor = self.vector.to(complex)
         numerator: Tensor = complex_vector.contract_all_edge(observer.edge_rename({f"I{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)
                                                                                   })).edge_rename({f"O{t}": f"P-{i}-{j}" for t, [i, j] in enumerate(positions)}).contract_all_edge(complex_vector)
         if calculate_denominator:
-            return complex(numerator).real / float(self.vector.contract_all_edge(self.vector))
+            return complex(numerator).real / self.denominator()
         else:
             return complex(numerator).real
 

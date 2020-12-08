@@ -167,6 +167,9 @@ namespace TAT {
       const int lwork_query = -1;
       float float_lwork;
       sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, &result);
+      if (result != 0) {
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
+      }
       const int lwork = int(float_lwork);
       auto work = vector<float>(lwork);
       sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
@@ -181,6 +184,9 @@ namespace TAT {
       const int lwork_query = -1;
       double float_lwork;
       dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, &result);
+      if (result != 0) {
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
+      }
       const int lwork = int(float_lwork);
       auto work = vector<double>(lwork);
       dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
@@ -203,6 +209,9 @@ namespace TAT {
       const int lwork_query = -1;
       std::complex<float> float_lwork;
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
+      if (result != 0) {
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
+      }
       const int lwork = int(float_lwork.real());
       auto work = vector<std::complex<float>>(lwork);
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
@@ -225,6 +234,9 @@ namespace TAT {
       const int lwork_query = -1;
       std::complex<double> float_lwork;
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
+      if (result != 0) {
+         TAT_warning_or_error_when_lapack_error("Error in GESVD");
+      }
       const int lwork = int(float_lwork.real());
       auto work = vector<std::complex<double>>(lwork);
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
