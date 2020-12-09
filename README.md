@@ -10,6 +10,12 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
 - [pybind11](https://github.com/pybind/pybind11)(optional for python binding)
 - mpi(optional for parallel computing)
 
+## Some other optional requirements
+- [fire-hpp](https://github.com/kongaskristjan/fire-hpp)(used in some examples)
+- [fire](https://github.com/google/python-fire)(used in some examples)
+- [multimethod](https://github.com/coady/multimethod)(used in some examples)
+- [numpy](https://github.com/numpy/numpy)(optional in python binding to export data into numpy array)
+
 ## Usage
 Just include the file [`include/TAT/TAT.hpp`](/include/TAT/TAT.hpp) and link lapack/blas or mkl at link time
 

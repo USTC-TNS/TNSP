@@ -29,6 +29,5 @@ int main() {
    result = result.broadcast(Tensor::mpi.size / 2);
    Tensor::barrier();
    std::cout << Tensor::mpi.rank << " " << result << "\n";
-   // TODO cannot use endl
    return 0;
 }

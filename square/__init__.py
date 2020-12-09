@@ -16,10 +16,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from __future__ import annotations
 import TAT
-from .lattice import SquareLattice, StateType
+from .auxiliaries import SquareAuxiliariesSystem
+from .exact_lattice import ExactLattice
+from .simple_update_lattice import SimpleUpdateLattice
+from .sampling_gradient_lattice import SamplingGradientLattice
 
-__all__ = ["SquareLattice", "StateType", "CTensor", "Tensor", "Sx", "Sy", "Sz", "SS"]
+__all__ = ["SquareAuxiliariesSystem", "ExactLattice", "SimpleUpdateLattice", "SamplingGradientLattice", "CTensor", "Tensor", "Sx", "Sy", "Sz", "SS"]
 
 CTensor: type = TAT.Tensor.ZNo
 Tensor: type = TAT.Tensor.DNo

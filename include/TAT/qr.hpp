@@ -213,6 +213,9 @@ namespace TAT {
          const int lwork_query = -1;
          ScalarType float_lwork;
          gelqf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
+         if (result != 0) {
+            TAT_error("Error in LQ");
+         }
          const int lwork = to_int(float_lwork);
          auto work = vector<ScalarType>(lwork);
          gelqf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
@@ -250,6 +253,9 @@ namespace TAT {
          const int lwork_query = -1;
          ScalarType float_lwork;
          geqrf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
+         if (result != 0) {
+            TAT_error("Error in LQ");
+         }
          const int lwork = to_int(float_lwork);
          auto work = vector<ScalarType>(lwork);
          geqrf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);

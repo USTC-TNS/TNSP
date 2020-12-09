@@ -530,7 +530,7 @@ namespace TAT {
             }
          }
          const ScalarType beta = 0;
-         if (m * n * k != 0) {
+         if (m && n && k) {
             transpose_a_list[batch_size] = put_common_2_right ? 'T' : 'N';
             transpose_b_list[batch_size] = put_common_1_right ? 'N' : 'T';
             m_list[batch_size] = n;
@@ -545,7 +545,7 @@ namespace TAT {
             c_list[batch_size] = data.data();
             ldc_list[batch_size] = n;
             batch_size++;
-         } else if (m * n != 0) {
+         } else if (m && n) {
             std::fill(data.begin(), data.end(), 0);
          }
       }
@@ -751,7 +751,7 @@ namespace TAT {
       ScalarType* data = product_result.core->blocks.begin()->second.data();
       const ScalarType* data_1 = tensor_1_merged.core->blocks.begin()->second.data();
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
-      if (m * n * k != 0) {
+      if (m && n && k) {
          vector<char> transpose_a_list(l), transpose_b_list(l);
          vector<int> m_list(l), n_list(l), k_list(l), lda_list(l), ldb_list(l), ldc_list(l);
          vector<ScalarType> alpha_list(l), beta_list(l);
@@ -788,8 +788,9 @@ namespace TAT {
                ldc_list.data(),
                l,
                true);
-      } else if (m * n != 0) {
-         std::fill(data, data + m * n * l, 0);
+      } else if (m && n) {
+         auto& result_vector = product_result.core->blocks.begin()->second;
+         std::fill(result_vector.begin(), result_vector.end(), 0);
       }
 
       auto result = Tensor<ScalarType, NoSymmetry, Name>{std::move(name_result), std::move(edge_result)};

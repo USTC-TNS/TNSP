@@ -138,7 +138,6 @@ def test_edge_rename():
     t2 = t1.edge_rename({"Left": "Up"})
     t1.test()
     print(t1)
-    print(t2)
 
 
 def test_transpose():

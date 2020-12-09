@@ -1,9 +1,13 @@
+/.vs
 /.idea
 /.vscode
 /build
+/out
 /html
 /pybind11
 /emscripten
 /include/fire.hpp
 __pycache__
 .ipynb_checkpoints
+CMakeSettings.json
+data.*

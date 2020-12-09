@@ -10,12 +10,15 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
-    - name: dependence
-      run: sudo apt-get install -y mpi-default-dev intel-mkl pybind11-dev
+    - name: mpi and mkl
+      run: sudo apt-get install -y mpi-default-dev intel-mkl
+    - name: pybind11
+      working-directory: ${{github.workspace}}
+      run: git clone https://github.com/pybind/pybind11.git
     - name: fire
       working-directory: ${{github.workspace}}/include
       run: wget https://raw.githubusercontent.com/kongaskristjan/fire-hpp/master/include/fire-hpp/fire.hpp
-    - name: directory
+    - name: build directory
       run: cmake -E make_directory ${{runner.workspace}}/build
     - name: configure
       working-directory: ${{runner.workspace}}/build
