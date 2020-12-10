@@ -409,7 +409,7 @@ namespace TAT {
             for (const auto& [symmetries, block] : core->blocks) {
                auto [iterator, success] = result.core->blocks.emplace(symmetries, block.size());
                auto& this_block = iterator->second;
-               for (Nums i = 0; i < block.size(); i++) {
+               for (Size i = 0; i < block.size(); i++) {
                   if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
                      this_block[i] = OtherScalarType(block[i].real());
                   } else {

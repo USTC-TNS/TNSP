@@ -22,6 +22,7 @@
 #define TAT_BASIC_TYPE_HPP
 
 #include <complex>
+#include <cstdint>
 #include <type_traits>
 
 namespace TAT {
@@ -30,18 +31,26 @@ namespace TAT {
     * @{
     */
 
+   // 下面三个类型原本是short, int, long
+   // 在linux(lp64)下分别是16, 32, 64
+   // 但是windows(llp64)中是16, 32, 32
+   // 在io中会出现windows和linux的输入输出互相不可读的问题
+   // 所以显式写成uintxx_t的格式
+   // TAT中还有一些地方会出现int, 一般为调用blas和lapack的地方
+   // 为32位, 在64位系统中(ilp64)和32位系统中(lp32)分别是64为和16位
+   // 所以底层的blas和lapack库不可以是ilp64或者lp32版本
    /**
     * 张量的秩的类型
     */
-   using Rank = unsigned short;
+   using Rank = uint16_t;
    /**
     * 张量分块数目和一个边上对称性数目的类型
     */
-   using Nums = unsigned int;
+   using Nums = uint32_t;
    /**
     * 张量数据维度大小和数据本身大小的类型
     */
-   using Size = unsigned long;
+   using Size = uint64_t;
 
    /**
     * Z2对称性的类型
@@ -50,11 +59,11 @@ namespace TAT {
    /**
     * U1对称性的类型
     */
-   using U1 = int;
+   using U1 = int16_t;
    /**
     * 费米子数目的类型
     */
-   using Fermi = short;
+   using Fermi = int8_t;
 
    /**
     * 费米箭头方向的类型, `false`和`true`分别表示出入

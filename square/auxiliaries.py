@@ -15,9 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-
 from __future__ import annotations
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from multimethod import multimethod
 import TAT
 
@@ -30,12 +29,117 @@ Tensor: type = TAT.Tensor.DNo
 class SquareAuxiliariesSystem:
     __slots__ = ["_M", "_N", "_dimension_cut", "_lattice", "_auxiliaries"]
 
+    @multimethod
     def __init__(self, M: int, N: int, Dc: int) -> None:
         self._M: int = M
         self._N: int = N
         self._dimension_cut: int = Dc
-        self._lattice: List[List[Tensor]] = [[Tensor(1) for _ in range(self._N)] for _ in range(self._M)]
-        self._auxiliaries = {}
+        self._lattice: List[List[Optional[Tensor]]] = [[None for _ in range(self._N)] for _ in range(self._M)]
+        self._auxiliaries: Dict[Tuple[str, int, int], Tensor] = {}
+
+    @multimethod
+    def __init__(self, other: SquareAuxiliariesSystem) -> None:
+        self._M: int = other._M
+        self._N: int = other._N
+        self._dimension_cut: int = other._dimension_cut
+        self._lattice: List[List[Optional[Tensor]]] = [[other._lattice[i][j] for j in range(self._N)] for i in range(self._M)]
+        self._auxiliaries: Dict[Tuple[str, int, int], Tensor] = other._auxiliaries.copy()
+
+    def __iadd__(self, other: SquareAuxiliariesSystem) -> SquareAuxiliariesSystem:
+        if self._M != other._M:
+            raise ValueError("Different M when combining two SquareAuxiliariesSystem")
+        if self._N != other._N:
+            raise ValueError("Different N when combining two SquareAuxiliariesSystem")
+        if self._dimension_cut != other._dimension_cut:
+            raise ValueError("Different dimension cut when combining two SquareAuxiliariesSystem")
+        for i in range(self._M):
+            for j in range(self._N):
+                if self._lattice[i][j] is not None and other._lattice[i][j] is not None:
+                    # 这里不比较是否值一样, 只要不是同一个id, 就会报错
+                    if self._lattice[i][j] is not other._lattice[i][j]:
+                        raise ValueError("Overlap tensor in lattice when combining two SquareAuxiliariesSystem")
+        self._auxiliaries |= other._auxiliaries
+        return self
+
+    def __add__(self, other: SquareAuxiliariesSystem) -> SquareAuxiliariesSystem:
+        result = SquareAuxiliariesSystem(self)
+        result += other
+        return result
+
+    def __delitem__(self, position: Tuple[int, int]) -> None:
+        i, j = position
+        self._refresh_line("right", j)
+        self._refresh_line("left", j)
+        self._refresh_line("down", i)
+        self._refresh_line("up", i)
+        for t in range(self._M):
+            if t < i:
+                self._try_to_delete_auxiliaries("down-to-up-3", t, j)
+            elif t > i:
+                self._try_to_delete_auxiliaries("up-to-down-3", t, j)
+            else:
+                self._try_to_delete_auxiliaries("down-to-up-3", t, j)
+                self._try_to_delete_auxiliaries("up-to-down-3", t, j)
+        for t in range(self._N):
+            if t < j:
+                self._try_to_delete_auxiliaries("right-to-left-3", i, t)
+            elif t > j:
+                self._try_to_delete_auxiliaries("left-to-right-3", i, t)
+            else:
+                self._try_to_delete_auxiliaries("right-to-left-3", i, t)
+                self._try_to_delete_auxiliaries("left-to-right-3", i, t)
+        self._lattice[i][j] = None
+
+    def __setitem__(self, position: Tuple[int, int], value: Tensor) -> None:
+        self.__delitem__(positoin)
+        self._lattice[i][j] = value
+
+    def _refresh_line(self, kind: str, index: int) -> None:
+        if kind == "right":
+            if index != self._N:
+                flag = False
+                for i in range(self._M):
+                    flag = self._try_to_delete_auxiliaries("left-to-right", i, index)
+                    self._try_to_delete_auxiliaries("up-to-down-3", i, index + 1)
+                    self._try_to_delete_auxiliaries("down-to-up-3", i, index + 1)
+                if flag:
+                    self._refresh_line(kind, index + 1)
+        elif kind == "left":
+            if index != -1:
+                flag = False
+                for i in range(self._M):
+                    flag = self._try_to_delete_auxiliaries("right-to-left", i, index)
+                    self._try_to_delete_auxiliaries("up-to-down-3", i, index - 1)
+                    self._try_to_delete_auxiliaries("down-to-up-3", i, index - 1)
+                if flag:
+                    self._refresh_line(kind, index - 1)
+        elif kind == "down":
+            if index != self._M:
+                flag = False
+                for j in range(self._N):
+                    flag = self._try_to_delete_auxiliaries("up-to-down", index, j)
+                    self._try_to_delete_auxiliaries("left-to-right-3", index + 1, j)
+                    self._try_to_delete_auxiliaries("right-to-left-3", index + 1, j)
+                if flag:
+                    self._refresh_line(kind, index + 1)
+        elif kind == "up":
+            if index != -1:
+                flag = False
+                for j in range(self._N):
+                    flag = self._try_to_delete_auxiliaries("down-to-up", index, j)
+                    self._try_to_delete_auxiliaries("left-to-right-3", index - 1, j)
+                    self._try_to_delete_auxiliaries("right-to-left-3", index - 1, j)
+                if flag:
+                    self._refresh_line(kind, index + 1)
+        else:
+            raise ValueError("Wrong Type in Refresh Line")
+
+    def _try_to_delete_auxiliaries(self, index: str, i: int, j: int) -> bool:
+        if (index, i, j) in self._auxiliaries:
+            del self._auxiliaries[index, i, j]
+            return True
+        else:
+            return False
 
     def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
@@ -148,77 +252,6 @@ class SquareAuxiliariesSystem:
             else:
                 raise ValueError("Wrong Auxiliaries Kind")
         return self._auxiliaries[kind, i, j]
-
-    def __setitem__(self, position: Tuple[int, int], value: Tensor) -> None:
-        i, j = position
-        self._refresh_line("right", j)
-        self._refresh_line("left", j)
-        self._refresh_line("down", i)
-        self._refresh_line("up", i)
-        for t in range(self._M):
-            if t < i:
-                self._try_to_delete_auxiliaries("down-to-up-3", t, j)
-            elif t > i:
-                self._try_to_delete_auxiliaries("up-to-down-3", t, j)
-            else:
-                self._try_to_delete_auxiliaries("down-to-up-3", t, j)
-                self._try_to_delete_auxiliaries("up-to-down-3", t, j)
-        for t in range(self._N):
-            if t < j:
-                self._try_to_delete_auxiliaries("right-to-left-3", i, t)
-            elif t > j:
-                self._try_to_delete_auxiliaries("left-to-right-3", i, t)
-            else:
-                self._try_to_delete_auxiliaries("right-to-left-3", i, t)
-                self._try_to_delete_auxiliaries("left-to-right-3", i, t)
-        self._lattice[i][j] = value
-
-    def _refresh_line(self, kind: str, index: int) -> None:
-        if kind == "right":
-            if index != self._N:
-                flag = False
-                for i in range(self._M):
-                    flag = self._try_to_delete_auxiliaries("left-to-right", i, index)
-                    self._try_to_delete_auxiliaries("up-to-down-3", i, index + 1)
-                    self._try_to_delete_auxiliaries("down-to-up-3", i, index + 1)
-                if flag:
-                    self._refresh_line(kind, index + 1)
-        elif kind == "left":
-            if index != -1:
-                flag = False
-                for i in range(self._M):
-                    flag = self._try_to_delete_auxiliaries("right-to-left", i, index)
-                    self._try_to_delete_auxiliaries("up-to-down-3", i, index - 1)
-                    self._try_to_delete_auxiliaries("down-to-up-3", i, index - 1)
-                if flag:
-                    self._refresh_line(kind, index - 1)
-        elif kind == "down":
-            if index != self._M:
-                flag = False
-                for j in range(self._N):
-                    flag = self._try_to_delete_auxiliaries("up-to-down", index, j)
-                    self._try_to_delete_auxiliaries("left-to-right-3", index + 1, j)
-                    self._try_to_delete_auxiliaries("right-to-left-3", index + 1, j)
-                if flag:
-                    self._refresh_line(kind, index + 1)
-        elif kind == "up":
-            if index != -1:
-                flag = False
-                for j in range(self._N):
-                    flag = self._try_to_delete_auxiliaries("down-to-up", index, j)
-                    self._try_to_delete_auxiliaries("left-to-right-3", index - 1, j)
-                    self._try_to_delete_auxiliaries("right-to-left-3", index - 1, j)
-                if flag:
-                    self._refresh_line(kind, index + 1)
-        else:
-            raise ValueError("Wrong Type in Refresh Line")
-
-    def _try_to_delete_auxiliaries(self, index: str, i: int, j: int) -> bool:
-        if (index, i, j) in self._auxiliaries:
-            del self._auxiliaries[index, i, j]
-            return True
-        else:
-            return False
 
     @multimethod
     def __getitem__(self, _: None) -> Tensor:

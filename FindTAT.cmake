@@ -17,7 +17,7 @@ target_compile_features(TAT INTERFACE cxx_std_17)
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
 # TAT_USE_MPI, TAT_PYTHON_MODULE, TAT_FORCE_VERSION
-# BLA_VENDOR
+# MATH_LIBRARIES, BLA_VENDOR, BLA_STATIC
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
@@ -56,22 +56,27 @@ else()
 endif()
 
 # 链接blas和lapack, 尽量使用静态链接, 如果是emscripten则链接emlapack, 需要自行放入emscripten目录下
-if(EMSCRIPTEN)
-   message("-- Use emscripten blas and lapack")
-   target_link_libraries(TAT INTERFACE ${CMAKE_SOURCE_DIR}/emscripten/liblapack.a)
-   target_link_libraries(TAT INTERFACE ${CMAKE_SOURCE_DIR}/emscripten/libblas.a)
-   target_link_libraries(TAT INTERFACE ${CMAKE_SOURCE_DIR}/emscripten/libf2c.a)
+if(DEFINED MATH_LIBRARIES)
+   message("-- Use customed math libraries")
+   target_link_libraries(TAT INTERFACE ${MATH_LIBRARIES})
 else()
-   find_package(BLAS REQUIRED)
-   find_package(LAPACK REQUIRED)
-   target_link_libraries(TAT INTERFACE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
-   # 检查是否使用了mkl
-   if(BLAS_LIBRARIES MATCHES mkl)
-      message("-- Using mkl")
-      target_compile_definitions(TAT INTERFACE TAT_USE_MKL_TRANSPOSE)
-      target_compile_definitions(TAT INTERFACE TAT_USE_MKL_GEMM_BATCH)
+   if(EMSCRIPTEN)
+      message("-- Use emscripten blas and lapack")
+      target_link_libraries(TAT INTERFACE ${CMAKE_SOURCE_DIR}/emscripten/liblapack.a)
+      target_link_libraries(TAT INTERFACE ${CMAKE_SOURCE_DIR}/emscripten/libblas.a)
+      target_link_libraries(TAT INTERFACE ${CMAKE_SOURCE_DIR}/emscripten/libf2c.a)
    else()
-      message("-- Not using mkl")
+      find_package(BLAS REQUIRED)
+      find_package(LAPACK REQUIRED)
+      target_link_libraries(TAT INTERFACE ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+      # 检查是否使用了mkl
+      if(BLAS_LIBRARIES MATCHES mkl)
+         message("-- Using mkl")
+         target_compile_definitions(TAT INTERFACE TAT_USE_MKL_TRANSPOSE)
+         target_compile_definitions(TAT INTERFACE TAT_USE_MKL_GEMM_BATCH)
+      else()
+         message("-- Not using mkl")
+      endif()
    endif()
 endif()
 

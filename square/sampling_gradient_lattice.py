@@ -15,9 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-
 from __future__ import annotations
-from typing import List
+from typing import List, Tuple
 from multimethod import multimethod
 import TAT
 from .abstract_network_lattice import AbstractNetworkLattice
@@ -30,20 +29,45 @@ CTensor: type = TAT.Tensor.ZNo
 Tensor: type = TAT.Tensor.DNo
 
 
-class SamplingGradientLattice(AbstractNetworkLattice):
-    __slots__ = ["dimension_cut", "_spin", "auxiliaries"]
+class SpinConfiguration(SquareAuxiliariesSystem):
+    __slots__ = ["lattice", "configuration"]
 
     @multimethod
-    def __init__(self, M: int, N: int, *, D: int, Dc: int, d: int):
+    def __init__(self, lattice: SamplingGradientLattice) -> None:
+        super().__init__(lattice.M, lattice.N, lattice.dimension_cut)
+        self.lattice: SamplingGradientLattice = lattice
+        self.configuration: List[List[int]] = [[-1 for _ in range(self.lattice.N)] for _ in range(self.lattice.M)]
+
+    @multimethod
+    def __init__(self, other: SpinConfiguration) -> None:
+        super().__init__(other)
+        self.lattice: SamplingGradientLattice = other.lattice
+        self.configuration: List[List[int]] = [[other.configuration[i][j] for j in range(self.lattice.N)] for i in range(self.lattice.M)]
+
+    def __setitem__(self, position: Tuple[int, int], value: int) -> None:
+        x, y = position
+        if self.configuration[x][y] != value:
+            super().__setitem__((x, y), self.lattice[x, y].shrink({"P": value}))
+
+
+class SamplingGradientLattice(AbstractNetworkLattice):
+    __slots__ = ["dimension_cut", "spin"]
+
+    @multimethod
+    def __init__(self, M: int, N: int, *, D: int, Dc: int, d: int) -> None:
         super().__init__(M, N, D=D, d=d)
         self.dimension_cut: int = Dc
 
-        # TODO setitem?
-        self._spin: List[List[int]] = [[0 for _ in range(self.N)] for _ in range(self.M)]
-        self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
+        self.spin: SpinConfiguration = SpinConfiguration(self.M, self.N, self.dimension_cut)
 
     @multimethod
-    def __init__(self, other: simple_update_lattice.SimpleUpdateLattice, *, Dc: int = 2):
+    def __init__(self, other: SamplingGradientLattice) -> None:
+        super().__init__(other)
+        self.dimension_cut: int = other.dimension_cut
+        self.spin: SpinConfiguration = SpinConfiguration(other.spin)
+
+    @multimethod
+    def __init__(self, other: simple_update_lattice.SimpleUpdateLattice, *, Dc: int = 2) -> None:
         super().__init__(other)
         self.dimension_cut: int = Dc
         self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
