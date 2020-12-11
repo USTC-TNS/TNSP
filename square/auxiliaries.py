@@ -91,7 +91,8 @@ class SquareAuxiliariesSystem:
         self._lattice[i][j] = None
 
     def __setitem__(self, position: Tuple[int, int], value: Tensor) -> None:
-        self.__delitem__(positoin)
+        self.__delitem__(position)
+        i, j = position
         self._lattice[i][j] = value
 
     def _refresh_line(self, kind: str, index: int) -> None:
@@ -141,6 +142,11 @@ class SquareAuxiliariesSystem:
         else:
             return False
 
+    # TODO: 更加详细的左右辅助矩阵, 如下面这种
+    # XX
+    # X
+    # X
+    # 以及, w(s)也应该缓存
     def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
             if kind == "up-to-down":

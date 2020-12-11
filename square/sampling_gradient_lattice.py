@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 from __future__ import annotations
-from typing import List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 from multimethod import multimethod
 import TAT
 from .abstract_network_lattice import AbstractNetworkLattice
@@ -44,10 +44,48 @@ class SpinConfiguration(SquareAuxiliariesSystem):
         self.lattice: SamplingGradientLattice = other.lattice
         self.configuration: List[List[int]] = [[other.configuration[i][j] for j in range(self.lattice.N)] for i in range(self.lattice.M)]
 
+    def __iadd__(self, other: SpinConfiguration) -> SpinConfiguration:
+        if self.lattice is not other.lattice:
+            raise ValueError("Different basic lattice when combining two spin configuration")
+        for i in range(self._M):
+            for j in range(self._N):
+                if self.configuration[i][j] != -1 and other.configuration[i][j] != -1:
+                    if self.configuration[i][j] != other.configuration[i][j]:
+                        raise ValueError("Overlap configuration when combining two spin configuration")
+        super().__iadd__(other)
+        return self
+
+    def __add__(self, other: SpinConfiguration) -> SpinConfiguration:
+        result = SpinConfiguration(other)
+        result += other
+        return result
+
+    def __delitem__(self, position: Tuple[int, int]) -> None:
+        x, y = position
+        super().__delitem__((x, y))
+        self.configuration[x][y] = -1
+
     def __setitem__(self, position: Tuple[int, int], value: int) -> None:
         x, y = position
         if self.configuration[x][y] != value:
             super().__setitem__((x, y), self.lattice[x, y].shrink({"P": value}))
+            self.configuration[x][y] = value
+
+    for signature, function in SquareAuxiliariesSystem.__getitem__.items():
+        __getitem__ = multimethod(function)
+
+    @multimethod
+    def __getitem__(self, replacement: Dict[Tuple[int, int], int]) -> Tensor:
+        # TODO 也许这里还可以再来层cache
+        real_replacement: Dict[Tuple[int, int], Tensor] = {}
+        for [x, y], spin in replacement.items():
+            if self.configuration[x, y] != spin:
+                # TODO shrink的cache
+                real_replacement[x, y] = self.lattice[x, y].shrink({"P": spin})
+        if real_replacement:
+            return super().__getitem__(real_replacement)
+        else:
+            return super().__getitem__(None)
 
 
 class SamplingGradientLattice(AbstractNetworkLattice):
@@ -78,3 +116,94 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                 to_multiple = other.try_multiple(to_multiple, i, j, "D")
                 to_multiple = other.try_multiple(to_multiple, i, j, "R")
                 self[i, j] = to_multiple
+
+    @multimethod
+    def initialize_spin(self, function: Callable[[int, int], int]) -> None:
+        for i in range(self.M):
+            for j in range(self.N):
+                self.spin[i, j] = function(i, j)
+
+    @multimethod
+    def initialize_spin(self, array: List[List[int]]) -> None:
+        self.initialize_spin(lambda i, j: array[i][j])
+
+    @multimethod
+    def initialize_spin(self) -> None:
+        self.initialize_spin(lambda i, j: (i + j) % self.d)
+
+    def _hopping_spin_single_step(self) -> None:
+        ws = float(self.spin[None])
+        for positions, hamiltonian in self.hamiltonian:
+            # positions: Tuple[Tuple[int, int], ...]
+            # hamiltonian: Tensor
+            body: int = len(positions)
+            current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
+            possible_hopping: List[Tuple[int, ...], float] = []
+            for [spins_in, spins_out], element in self._find_element(hamiltonian).items():
+                if spins_in == current_spins:
+                    possible_hopping.append((spins_out, element))
+            if possible_hopping:
+                hopping_number = len(possible_hopping)
+                spins_new, element = possible_hopping[TAT.random_uniform_int(0, hopping_number - 1)]
+                replacement = {}
+                for i in range(body):
+                    if spins_new[i] != current_spins[i]:
+                        replacement[positions[i][0], positions[i][1]] = spins_new[i]
+                wss = float(self.spin[replacement])
+                p = (wss**2) / (ws**2)
+                if TAT.random_real(0, 1) > p:
+                    ws = wss
+                    for i in range(body):
+                        self.spin[positions[i][0], positions[i][1]] = spins_new[i]
+
+    # <A> = sum(s,s') w(s) A(s,s') w(s') / sum(s) w(s)^2 = < sum(s') A(s, s') w(s')/w(s) >_(w(s)^2)
+    # <A> = < A_s >_(w(s)^2)
+    # gradient = 2 <E_s Delta_s> - 2 <E_s> <Delta_s>
+    # where Delta_s = [w(s) with hole] / w(s)
+    def markov_chain(self, step: int, observers: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]], *, calculate_gradient: bool = False) -> Dict[Any, Dict[Tuple[Tuple[int, int]]], Tensor]:
+        # 准备结果的容器
+        result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {} for kind in observers}
+        if calculate_gradient:
+            result["gradient"] = {}
+        # markov sampling
+        for t in range(step):
+            self._hopping_spin_single_step()
+            ws = float(self.spin[None])
+            for kind, group in observers.items():
+                for positions, tensor in group.items():
+                    body = len(positions)
+                    current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
+                    value = 0
+                    for [spins_in, spins_out], element in self._find_element(tensor).items():
+                        if spins_in == current_spins:
+                            wss = float(self.spin[{positions[i]: spins_out[i] for i in range(body)}])
+                            value += element * wss / ws
+                    result[kind][positions] += value
+            if calculate_gradient:
+                raise NotImplementedError("Gradient not implemented")
+
+    tensor_element_dict: Dict[int, Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]] = {}
+
+    # TODO complex version
+    def _find_element(self, tensor: Tensor) -> Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]:
+        tensor_id = id(tensor)
+        if tensor_id in self.tensor_element_dict:
+            return self.tensor_element_dict[tensor_id]
+        body = len(tensor.name) / 2
+        self._check_hamiltonian_name(tensor, body)
+        self.tensor_element_dict[tensor_id] = {}
+        result: Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float] = self.tensor_element_dict[tensor_id]
+        names = [f"I{i}" for i in range(body)] + [f"O{i}" for i in range(body)]
+        index = [0 for _ in range(2 * body)]
+        while True:
+            value: float = tensor[{names[i]: index[i] for i in range(2 * body)}]
+            if value != 0:
+                result[tuple(index[:body]), tuple(index[body:])] = value
+            active_position = 0
+            index[active_position] += 1
+            while index[active_position] == self.dimension_physics:
+                index[active_position] = 0
+                active_position += 1
+                if active_position == 2 * body:
+                    return result
+                index[active_position] += 1
