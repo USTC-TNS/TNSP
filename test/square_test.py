@@ -48,7 +48,8 @@ if __name__ == "__main__":
         print()
         lattice_sampling = SamplingGradientLattice(lattice, Dc=20)
         lattice_sampling.initialize_spin()
-        lattice_sampling.markov_chain(100, {"Energy": lattice_sampling.hamiltonian})["Energy"]
+        # lattice_sampling.ergodic({"Energy": lattice_sampling.hamiltonian})["Energy"]
+        lattice_sampling.markov_chain(10000, calculate_energy=True)
         # for Dc in range(2, 100):
         #     lattice.initialize_auxiliary(Dc)
         #     print(Dc, lattice.observe_energy())

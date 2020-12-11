@@ -143,11 +143,9 @@ class SquareAuxiliariesSystem:
             return False
 
     # TODO: 更加详细的左右辅助矩阵, 如下面这种
-    # XX
-    # X
-    # X
-    # 以及, w(s)也应该缓存
-    # update ws本来就缓存着的。。。
+    # XX X
+    # X  X
+    # X XX
     def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
             if kind == "up-to-down":

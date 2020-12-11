@@ -161,8 +161,17 @@ class SamplingGradientLattice(AbstractNetworkLattice):
     # <A> = < A_s >_(w(s)^2)
     # gradient = 2 <E_s Delta_s> - 2 <E_s> <Delta_s>
     # where Delta_s = [w(s) with hole] / w(s)
-    def markov_chain(self, step: int, observers: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]], *, calculate_gradient: bool = False) -> Dict[Any, Dict[Tuple[Tuple[int, int]]], Tensor]:
+    def markov_chain(self,
+                     step: int,
+                     observers: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {},
+                     *,
+                     calculate_energy: bool = False,
+                     calculate_gradient: bool = False) -> Dict[Any, Dict[Tuple[Tuple[int, int]]], Tensor]:
         # 准备结果的容器
+        if calculate_energy:
+            if "Energy" in observers:
+                raise ValueError("Already set energy in obesevers")
+            observers["Energy"] = self.hamiltonian
         result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {positions: 0 for positions in group} for kind, group in observers.items()}
         if calculate_gradient:
             result["gradient"] = {}
@@ -189,6 +198,41 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                 print(", Energy =", sum(result["Energy"].values()) / ((t + 1) * self.M * self.N), end="")
             print()
         return result
+
+    def ergodic(self, observers: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {}, *, calculate_energy: bool = False) -> Dict[Any, Dict[Tuple[Tuple[int, int]]], Tensor]:
+        # 准备结果的容器
+        if calculate_energy:
+            if "Energy" in observers:
+                raise ValueError("Already set energy in obesevers")
+            observers["Energy"] = self.hamiltonian
+        result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {positions: 0 for positions in group} for kind, group in observers.items()}
+        # ergodic sampling
+        sum_of_ws_square: float = 0
+        for t in range(self.dimension_physics**(self.M * self.N)):
+            print("ergodic sampling, step =", t, end="")
+            self._ergodic_spin(t)
+            ws = float(self.spin[None])
+            sum_of_ws_square += ws * ws
+            for kind, group in observers.items():
+                for positions, tensor in group.items():
+                    body: int = len(positions)
+                    current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
+                    value = 0
+                    for [spins_in, spins_out], element in self._find_element(tensor).items():
+                        if spins_in == current_spins:
+                            wss = float(self.spin[{positions[i]: spins_out[i] for i in range(body)}])
+                            value += element * wss / ws
+                    result[kind][positions] += value * ws * ws
+            if "Energy" in result:
+                print(", Energy =", sum(result["Energy"].values()) / (sum_of_ws_square * self.M * self.N), end="")
+            print()
+        return result
+
+    def _ergodic_spin(self, step: int):
+        for i in range(self.M):
+            for j in range(self.N):
+                self.spin[i, j] = step % self.dimension_physics
+                step //= self.dimension_physics
 
     tensor_element_dict: Dict[int, Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]] = {}
 
