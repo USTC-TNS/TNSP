@@ -25,7 +25,7 @@ if __name__ == "__main__":
     fire.core.Display = lambda lines, out: out.write("\n".join(lines) + "\n")
 
     def save(file_name: str, dimension: int = 2, seed: int = 0):
-        TAT.set_random_seed(seed)
+        TAT.random.seed(seed)
         lattice = SimpleUpdateLattice(4, 4, D=dimension)
         lattice.horizontal_bond_hamiltonian = SS
         lattice.vertical_bond_hamiltonian = SS
@@ -46,9 +46,11 @@ if __name__ == "__main__":
         print("E1", lattice_exact.observe_energy())
         print("E2", lattice_exact.update())
         print()
-        for Dc in range(2, 100):
-            lattice.initialize_auxiliary(Dc)
-            print(Dc, lattice.observe_energy())
-        # lattice_sampling = SamplingGradientLattice(lattice, Dc=20)
+        lattice_sampling = SamplingGradientLattice(lattice, Dc=20)
+        lattice_sampling.initialize_spin()
+        lattice_sampling.markov_chain(100, {"Energy": lattice_sampling.hamiltonian})["Energy"]
+        # for Dc in range(2, 100):
+        #     lattice.initialize_auxiliary(Dc)
+        #     print(Dc, lattice.observe_energy())
 
     fire.Fire({"new": save, "update": update})

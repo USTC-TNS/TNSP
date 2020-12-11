@@ -79,7 +79,7 @@ class SpinConfiguration(SquareAuxiliariesSystem):
         # TODO 也许这里还可以再来层cache
         real_replacement: Dict[Tuple[int, int], Tensor] = {}
         for [x, y], spin in replacement.items():
-            if self.configuration[x, y] != spin:
+            if self.configuration[x][y] != spin:
                 # TODO shrink的cache
                 real_replacement[x, y] = self.lattice[x, y].shrink({"P": spin})
         if real_replacement:
@@ -94,22 +94,20 @@ class SamplingGradientLattice(AbstractNetworkLattice):
     @multimethod
     def __init__(self, M: int, N: int, *, D: int, Dc: int, d: int) -> None:
         super().__init__(M, N, D=D, d=d)
-        self.dimension_cut: int = Dc
 
-        self.spin: SpinConfiguration = SpinConfiguration(self.M, self.N, self.dimension_cut)
+        self.dimension_cut: int = Dc
+        self.spin: SpinConfiguration = SpinConfiguration(self)
 
     @multimethod
     def __init__(self, other: SamplingGradientLattice) -> None:
         super().__init__(other)
+
         self.dimension_cut: int = other.dimension_cut
         self.spin: SpinConfiguration = SpinConfiguration(other.spin)
 
     @multimethod
     def __init__(self, other: simple_update_lattice.SimpleUpdateLattice, *, Dc: int = 2) -> None:
         super().__init__(other)
-        self.dimension_cut: int = Dc
-        self.auxiliaries: SquareAuxiliariesSystem = SquareAuxiliariesSystem(self.M, self.N, self.dimension_cut)
-
         for i in range(self.M):
             for j in range(self.N):
                 to_multiple = self[i, j]
@@ -117,23 +115,29 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                 to_multiple = other.try_multiple(to_multiple, i, j, "R")
                 self[i, j] = to_multiple
 
-    @multimethod
-    def initialize_spin(self, function: Callable[[int, int], int]) -> None:
+        self.dimension_cut: int = Dc
+        self.spin: SpinConfiguration = SpinConfiguration(self)
+
+    def _initialize_spin(self, function: Callable[[int, int], int]) -> None:
         for i in range(self.M):
             for j in range(self.N):
                 self.spin[i, j] = function(i, j)
 
     @multimethod
+    def initialize_spin(self, function: Callable[[int, int], int]) -> None:
+        self._initialize_spin(function)
+
+    @multimethod
     def initialize_spin(self, array: List[List[int]]) -> None:
-        self.initialize_spin(lambda i, j: array[i][j])
+        self._initialize_spin(lambda i, j: array[i][j])
 
     @multimethod
     def initialize_spin(self) -> None:
-        self.initialize_spin(lambda i, j: (i + j) % self.d)
+        self._initialize_spin(lambda i, j: (i + j) % self.dimension_physics)
 
     def _hopping_spin_single_step(self) -> None:
         ws = float(self.spin[None])
-        for positions, hamiltonian in self.hamiltonian:
+        for positions, hamiltonian in self.hamiltonian.items():
             # positions: Tuple[Tuple[int, int], ...]
             # hamiltonian: Tensor
             body: int = len(positions)
@@ -144,14 +148,11 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                     possible_hopping.append((spins_out, element))
             if possible_hopping:
                 hopping_number = len(possible_hopping)
-                spins_new, element = possible_hopping[TAT.random_uniform_int(0, hopping_number - 1)]
-                replacement = {}
-                for i in range(body):
-                    if spins_new[i] != current_spins[i]:
-                        replacement[positions[i][0], positions[i][1]] = spins_new[i]
+                spins_new, element = possible_hopping[TAT.random.uniform_int(0, hopping_number - 1)]
+                replacement = {positions[i]: spins_new[i] for i in range(body)}
                 wss = float(self.spin[replacement])
                 p = (wss**2) / (ws**2)
-                if TAT.random_real(0, 1) > p:
+                if TAT.random.uniform_real(0, 1) > p:
                     ws = wss
                     for i in range(body):
                         self.spin[positions[i][0], positions[i][1]] = spins_new[i]
@@ -162,16 +163,17 @@ class SamplingGradientLattice(AbstractNetworkLattice):
     # where Delta_s = [w(s) with hole] / w(s)
     def markov_chain(self, step: int, observers: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]], *, calculate_gradient: bool = False) -> Dict[Any, Dict[Tuple[Tuple[int, int]]], Tensor]:
         # 准备结果的容器
-        result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {} for kind in observers}
+        result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {positions: 0 for positions in group} for kind, group in observers.items()}
         if calculate_gradient:
             result["gradient"] = {}
         # markov sampling
         for t in range(step):
+            print("markov sampling, step =", t, end="")
             self._hopping_spin_single_step()
             ws = float(self.spin[None])
             for kind, group in observers.items():
                 for positions, tensor in group.items():
-                    body = len(positions)
+                    body: int = len(positions)
                     current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
                     value = 0
                     for [spins_in, spins_out], element in self._find_element(tensor).items():
@@ -180,7 +182,13 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                             value += element * wss / ws
                     result[kind][positions] += value
             if calculate_gradient:
+                # TODO grad
+                # does energy need special treat?
                 raise NotImplementedError("Gradient not implemented")
+            if "Energy" in result:
+                print(", Energy =", sum(result["Energy"].values()) / ((t + 1) * self.M * self.N), end="")
+            print()
+        return result
 
     tensor_element_dict: Dict[int, Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]] = {}
 
@@ -189,7 +197,7 @@ class SamplingGradientLattice(AbstractNetworkLattice):
         tensor_id = id(tensor)
         if tensor_id in self.tensor_element_dict:
             return self.tensor_element_dict[tensor_id]
-        body = len(tensor.name) / 2
+        body = len(tensor.name) // 2
         self._check_hamiltonian_name(tensor, body)
         self.tensor_element_dict[tensor_id] = {}
         result: Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float] = self.tensor_element_dict[tensor_id]

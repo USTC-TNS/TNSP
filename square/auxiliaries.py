@@ -147,6 +147,7 @@ class SquareAuxiliariesSystem:
     # X
     # X
     # 以及, w(s)也应该缓存
+    # update ws本来就缓存着的。。。
     def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
             if kind == "up-to-down":
@@ -332,8 +333,8 @@ class SquareAuxiliariesSystem:
             new_tensor = new_tensors[0]
             return self._get_auxiliaries("left-to-right-3", i, j - 1) \
                 .contract(self._get_auxiliaries("up-to-down", i - 1, j).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                .contract(new_tensor.edge_rename({"R": "R2"}), {("R2", "L")}) \
-                .contract(self._get_auxiliaries("down-to-up", i + 1, j).edge_rename({"R": "R3"}), {("R3", "L")}) \
+                .contract(new_tensor.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
+                .contract(self._get_auxiliaries("down-to-up", i + 1, j).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                 .contract(self._get_auxiliaries("right-to-left-3", i, j + 1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3")})
         if len(replacement) == 2:
             x1, y1 = positions[0]
@@ -344,39 +345,39 @@ class SquareAuxiliariesSystem:
                 if y1 + 1 == y2:
                     return self._get_auxiliaries("left-to-right-3", x1, y1 - 1) \
                         .contract(self._get_auxiliaries("up-to-down", x1 - 1, y1).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                        .contract(new_tensor_1.edge_rename({"R": "R2"}), {("R2", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L")}) \
+                        .contract(new_tensor_1.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
+                        .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("up-to-down", x2 - 1, y2).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                        .contract(new_tensor_2.edge_rename({"R": "R2"}), {("R2", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L")}) \
+                        .contract(new_tensor_2.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
+                        .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("right-to-left-3", x2, y2 + 1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3")})
                 if y2 + 1 == y1:
                     return self._get_auxiliaries("left-to-right-3", x2, y2 - 1) \
                         .contract(self._get_auxiliaries("up-to-down", x2 - 1, y2).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                        .contract(new_tensor_2.edge_rename({"R": "R2"}), {("R2", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L")}) \
+                        .contract(new_tensor_2.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
+                        .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("up-to-down", x1 - 1, y1).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                        .contract(new_tensor_1.edge_rename({"R": "R2"}), {("R2", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L")}) \
+                        .contract(new_tensor_1.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
+                        .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("right-to-left-3", x1, y1 + 1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3")})
             if y1 == y2:
                 if x1 + 1 == x2:
                     return self._get_auxiliaries("up-to-down-3", x1 - 1, y1) \
                         .contract(self._get_auxiliaries("left-to-right", x1, y1 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
-                        .contract(new_tensor_1.edge_rename({"D": "D2"}), {("D2", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
+                        .contract(new_tensor_1.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
+                        .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("left-to-right", x2, y2 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
-                        .contract(new_tensor_2.edge_rename({"D": "D2"}), {("D2", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
+                        .contract(new_tensor_2.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
+                        .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("down-to-up-3", x2 + 1, y2), {("D1", "U1"), ("D2","U2"), ("D3", "U3")})
                 if x2 + 1 == x1:
                     return self._get_auxiliaries("up-to-down-3", x2 - 1, y2) \
                         .contract(self._get_auxiliaries("left-to-right", x2, y2 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
-                        .contract(new_tensor_2.edge_rename({"D": "D2"}), {("D2", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
+                        .contract(new_tensor_2.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
+                        .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("left-to-right", x1, y1 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
-                        .contract(new_tensor_1.edge_rename({"D": "D2"}), {("D2", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
+                        .contract(new_tensor_1.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
+                        .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("down-to-up-3", x1 + 1, y1), {("D1", "U1"), ("D2","U2"), ("D3", "U3")})
         raise NotImplementedError("Unsupported getitem style")
 
