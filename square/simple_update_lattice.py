@@ -35,7 +35,7 @@ class SimpleUpdateLattice(AbstractNetworkLattice):
     __slots__ = ["environment", "auxiliary"]
 
     @multimethod
-    def __init__(self, M: int, N: int, *, D: int, d: int = 2) -> None:
+    def __init__(self, M: int, N: int, *, D: int, d: int) -> None:
         super().__init__(M, N, D=D, d=d)
 
         self.environment: Dict[Tuple[str, int, int], Tensor] = {}

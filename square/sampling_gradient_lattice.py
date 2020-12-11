@@ -28,6 +28,8 @@ __all__ = ["SamplingGradientLattice"]
 CTensor: type = TAT.Tensor.ZNo
 Tensor: type = TAT.Tensor.DNo
 
+clear_line = "\u001b[2K"
+
 
 class SpinConfiguration(SquareAuxiliariesSystem):
     __slots__ = ["lattice", "configuration"]
@@ -135,27 +137,39 @@ class SamplingGradientLattice(AbstractNetworkLattice):
     def initialize_spin(self) -> None:
         self._initialize_spin(lambda i, j: (i + j) % self.dimension_physics)
 
+    def _hopping_spin_single_step_single_term(self, ws: float, positions: Tuple[Tuple[int, int], ...], hamiltonian: Tensor) -> float:
+        body: int = len(positions)
+        current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
+        possible_hopping: List[Tuple[int, ...], float] = []
+        # 这种地方应该有一个hamiltonian list一样的东西
+        for [spins_in, spins_out], element in self._find_element(hamiltonian).items():
+            if spins_in == current_spins and spins_in != spins_out:
+                possible_hopping.append((spins_out, element))
+        if possible_hopping:
+            hopping_number = len(possible_hopping)
+            spins_new, element = possible_hopping[TAT.random.uniform_int(0, hopping_number - 1)]
+            replacement = {positions[i]: spins_new[i] for i in range(body)}
+            wss = float(self.spin[replacement])
+            p = (wss**2) / (ws**2)
+            # TODO 这里还需要统计一个额外的系数, 但是这个系数在Heisenberg模型中不存在, 所以目前没问题
+            if TAT.random.uniform_real(0, 1) < p:
+                ws = wss
+                for i in range(body):
+                    self.spin[positions[i][0], positions[i][1]] = spins_new[i]
+        return ws
+
     def _hopping_spin_single_step(self) -> None:
         ws = float(self.spin[None])
         for positions, hamiltonian in self.hamiltonian.items():
-            # positions: Tuple[Tuple[int, int], ...]
-            # hamiltonian: Tensor
-            body: int = len(positions)
-            current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
-            possible_hopping: List[Tuple[int, ...], float] = []
-            for [spins_in, spins_out], element in self._find_element(hamiltonian).items():
-                if spins_in == current_spins:
-                    possible_hopping.append((spins_out, element))
-            if possible_hopping:
-                hopping_number = len(possible_hopping)
-                spins_new, element = possible_hopping[TAT.random.uniform_int(0, hopping_number - 1)]
-                replacement = {positions[i]: spins_new[i] for i in range(body)}
-                wss = float(self.spin[replacement])
-                p = (wss**2) / (ws**2)
-                if TAT.random.uniform_real(0, 1) > p:
-                    ws = wss
-                    for i in range(body):
-                        self.spin[positions[i][0], positions[i][1]] = spins_new[i]
+            ws = self._hopping_spin_single_step_single_term(ws, positions, hamiltonian)
+        for positions, hamiltonian in reversed(list(self.hamiltonian.items())):
+            ws = self._hopping_spin_single_step_single_term(ws, positions, hamiltonian)
+
+    def equilibrate(self, step: int):
+        for t in range(step):
+            print(f"Equilibrating, total_step={step}, dimension={self.dimension_virtual}, dimension_cut={self.dimension_cut}, step={t}", end="\r")
+            self._hopping_spin_single_step()
+        print(f"{clear_line}Equilibrate done, total_step={step}, dimension={self.dimension_virtual}, dimension_cut={self.dimension_cut}")
 
     # <A> = sum(s,s') w(s) A(s,s') w(s') / sum(s) w(s)^2 = < sum(s') A(s, s') w(s')/w(s) >_(w(s)^2)
     # <A> = < A_s >_(w(s)^2)
@@ -177,8 +191,8 @@ class SamplingGradientLattice(AbstractNetworkLattice):
             result["gradient"] = {}
         # markov sampling
         for t in range(step):
-            print("markov sampling, step =", t, end="")
             self._hopping_spin_single_step()
+            print(f"Markov sampling, total_step={step}, dimension={self.dimension_virtual}, dimension_cut={self.dimension_cut}, step={t}", end="")
             ws = float(self.spin[None])
             for kind, group in observers.items():
                 for positions, tensor in group.items():
@@ -195,7 +209,15 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                 # does energy need special treat?
                 raise NotImplementedError("Gradient not implemented")
             if "Energy" in result:
-                print(", Energy =", sum(result["Energy"].values()) / ((t + 1) * self.M * self.N), end="")
+                energy_result = result["Energy"]
+                print(f", Energy={sum(energy_result.values()) / ((t + 1) * self.M * self.N)}", end="\r")
+            else:
+                print(end="\r")
+        print(f"{clear_line}Markov sample done, total_step={step}, dimension={self.dimension_virtual}, dimension_cut={self.dimension_cut}", end="")
+        if "Energy" in result:
+            energy_result = result["Energy"]
+            print(f", Energy={sum(energy_result.values()) / (step * self.M * self.N)}")
+        else:
             print()
         return result
 
@@ -208,9 +230,10 @@ class SamplingGradientLattice(AbstractNetworkLattice):
         result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {positions: 0 for positions in group} for kind, group in observers.items()}
         # ergodic sampling
         sum_of_ws_square: float = 0
-        for t in range(self.dimension_physics**(self.M * self.N)):
-            print("ergodic sampling, step =", t, end="")
+        step = self.dimension_physics**(self.M * self.N)
+        for t in range(step):
             self._ergodic_spin(t)
+            print(f"Ergodic sampling, total_step={step}, dimension={self.dimension_virtual}, dimension_cut={self.dimension_cut}, step={t}", end="")
             ws = float(self.spin[None])
             sum_of_ws_square += ws * ws
             for kind, group in observers.items():
@@ -224,7 +247,15 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                             value += element * wss / ws
                     result[kind][positions] += value * ws * ws
             if "Energy" in result:
-                print(", Energy =", sum(result["Energy"].values()) / (sum_of_ws_square * self.M * self.N), end="")
+                energy_result = result["Energy"]
+                print(f", Energy={sum(energy_result.values()) / (sum_of_ws_square * self.M * self.N)}", end="\r")
+            else:
+                print(end="\r")
+        print(f"{clear_line}Ergodic sample done, total_step={step}, dimension={self.dimension_virtual}, dimension_cut={self.dimension_cut}", end="")
+        if "Energy" in result:
+            energy_result = result["Energy"]
+            print(f", Energy={sum(energy_result.values()) / (sum_of_ws_square * self.M * self.N)}")
+        else:
             print()
         return result
 
@@ -237,6 +268,7 @@ class SamplingGradientLattice(AbstractNetworkLattice):
     tensor_element_dict: Dict[int, Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]] = {}
 
     # TODO complex version
+    # TODO 这个操作目前似乎很耗时
     def _find_element(self, tensor: Tensor) -> Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]:
         tensor_id = id(tensor)
         if tensor_id in self.tensor_element_dict:
