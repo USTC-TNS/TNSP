@@ -75,19 +75,27 @@ class SquareAuxiliariesSystem:
         for t in range(self._M):
             if t < i:
                 self._try_to_delete_auxiliaries("down-to-up-3", t, j)
+                self._try_to_delete_auxiliaries("down-to-up-3-1", t, j)
             elif t > i:
                 self._try_to_delete_auxiliaries("up-to-down-3", t, j)
+                self._try_to_delete_auxiliaries("up-to-down-3-1", t, j)
             else:
                 self._try_to_delete_auxiliaries("down-to-up-3", t, j)
                 self._try_to_delete_auxiliaries("up-to-down-3", t, j)
+                self._try_to_delete_auxiliaries("down-to-up-3-1", t, j)
+                self._try_to_delete_auxiliaries("up-to-down-3-1", t, j)
         for t in range(self._N):
             if t < j:
                 self._try_to_delete_auxiliaries("right-to-left-3", i, t)
+                self._try_to_delete_auxiliaries("right-to-left-3-1", i, t)
             elif t > j:
                 self._try_to_delete_auxiliaries("left-to-right-3", i, t)
+                self._try_to_delete_auxiliaries("left-to-right-3-1", i, t)
             else:
                 self._try_to_delete_auxiliaries("right-to-left-3", i, t)
                 self._try_to_delete_auxiliaries("left-to-right-3", i, t)
+                self._try_to_delete_auxiliaries("right-to-left-3-1", i, t)
+                self._try_to_delete_auxiliaries("left-to-right-3-1", i, t)
         self._lattice[i][j] = None
 
     def __setitem__(self, position: Tuple[int, int], value: Tensor) -> None:
@@ -103,6 +111,8 @@ class SquareAuxiliariesSystem:
                     flag = self._try_to_delete_auxiliaries("left-to-right", i, index)
                     self._try_to_delete_auxiliaries("up-to-down-3", i, index + 1)
                     self._try_to_delete_auxiliaries("down-to-up-3", i, index + 1)
+                    self._try_to_delete_auxiliaries("up-to-down-3-1", i, index + 1)
+                    self._try_to_delete_auxiliaries("down-to-up-3-1", i, index + 1)
                 if flag:
                     self._refresh_line(kind, index + 1)
         elif kind == "left":
@@ -112,6 +122,8 @@ class SquareAuxiliariesSystem:
                     flag = self._try_to_delete_auxiliaries("right-to-left", i, index)
                     self._try_to_delete_auxiliaries("up-to-down-3", i, index - 1)
                     self._try_to_delete_auxiliaries("down-to-up-3", i, index - 1)
+                    self._try_to_delete_auxiliaries("up-to-down-3-1", i, index - 1)
+                    self._try_to_delete_auxiliaries("down-to-up-3-1", i, index - 1)
                 if flag:
                     self._refresh_line(kind, index - 1)
         elif kind == "down":
@@ -121,6 +133,8 @@ class SquareAuxiliariesSystem:
                     flag = self._try_to_delete_auxiliaries("up-to-down", index, j)
                     self._try_to_delete_auxiliaries("left-to-right-3", index + 1, j)
                     self._try_to_delete_auxiliaries("right-to-left-3", index + 1, j)
+                    self._try_to_delete_auxiliaries("left-to-right-3-1", index + 1, j)
+                    self._try_to_delete_auxiliaries("right-to-left-3-1", index + 1, j)
                 if flag:
                     self._refresh_line(kind, index + 1)
         elif kind == "up":
@@ -130,6 +144,8 @@ class SquareAuxiliariesSystem:
                     flag = self._try_to_delete_auxiliaries("down-to-up", index, j)
                     self._try_to_delete_auxiliaries("left-to-right-3", index - 1, j)
                     self._try_to_delete_auxiliaries("right-to-left-3", index - 1, j)
+                    self._try_to_delete_auxiliaries("left-to-right-3-1", index - 1, j)
+                    self._try_to_delete_auxiliaries("right-to-left-3-1", index - 1, j)
                 if flag:
                     self._refresh_line(kind, index + 1)
         else:
@@ -146,6 +162,7 @@ class SquareAuxiliariesSystem:
     # XX X
     # X  X
     # X XX
+    # TODO Lazy style?
     def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
             if kind == "up-to-down":
@@ -196,6 +213,20 @@ class SquareAuxiliariesSystem:
                         self._auxiliaries[kind, t, j] = result[t]
                 else:
                     raise ValueError("Wrong Auxiliaries Position")
+            elif kind == "up-to-down-3-1":
+                if i == -1:
+                    self._auxiliaries[kind, i, j] = Tensor(1)
+                elif -1 < i < self._M:
+                    """
+                       D2 D3
+                       |  |
+                    D1R-
+                    |
+                    """
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("up-to-down-3", i - 1, j) \
+                        .contract(self._get_auxiliaries("left-to-right", i, j - 1), {("D1", "U")}).edge_rename({"D": "D1"})
+                else:
+                    raise ValueError("Wrong Auxiliaries Position In Three Line Type")
             elif kind == "up-to-down-3":
                 if i == -1:
                     self._auxiliaries[kind, i, j] = Tensor(1)
@@ -204,10 +235,23 @@ class SquareAuxiliariesSystem:
                     D1 D2 D3
                     |  |  |
                     """
-                    self._auxiliaries[kind, i, j] = self._get_auxiliaries(kind, i - 1, j) \
-                        .contract(self._get_auxiliaries("left-to-right", i, j - 1), {("D1", "U")}).edge_rename({"D": "D1"}) \
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("up-to-down-3-1", i, j) \
                         .contract(self._lattice[i][j], {("D2", "U"), ("R", "L")}).edge_rename({"D": "D2"}) \
                         .contract(self._get_auxiliaries("right-to-left", i, j + 1), {("D3", "U"), ("R", "L")}).edge_rename({"D": "D3"})
+                else:
+                    raise ValueError("Wrong Auxiliaries Position In Three Line Type")
+            elif kind == "down-to-up-3-1":
+                if i == self._M:
+                    self._auxiliaries[kind, i, j] = Tensor(1)
+                elif -1 < i < self._M:
+                    """
+                          |
+                        -LU3
+                    |  |
+                    U1 U2
+                    """
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("down-to-up-3", i + 1, j) \
+                        .contract(self._get_auxiliaries("right-to-left", i, j + 1), {("U3", "D")}).edge_rename({"U": "U3"})
                 else:
                     raise ValueError("Wrong Auxiliaries Position In Three Line Type")
             elif kind == "down-to-up-3":
@@ -218,10 +262,22 @@ class SquareAuxiliariesSystem:
                     |  |  |
                     U1 U2 U3
                     """
-                    self._auxiliaries[kind, i, j] = self._get_auxiliaries(kind, i + 1, j) \
-                        .contract(self._get_auxiliaries("left-to-right", i, j - 1), {("U1", "D")}).edge_rename({"U": "U1"}) \
-                        .contract(self._lattice[i][j], {("U2", "D"), ("R", "L")}).edge_rename({"U": "U2"}) \
-                        .contract(self._get_auxiliaries("right-to-left", i, j + 1), {("U3", "D"), ("R", "L")}).edge_rename({"U": "U3"})
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("down-to-up-3-1", i, j) \
+                        .contract(self._lattice[i][j], {("U2", "D"), ("L", "R")}).edge_rename({"U": "U2"}) \
+                        .contract(self._get_auxiliaries("left-to-right", i, j - 1), {("U1", "D"), ("L", "R")}).edge_rename({"U": "U1"})
+                else:
+                    raise ValueError("Wrong Auxiliaries Position In Three Line Type")
+            elif kind == "left-to-right-3-1":
+                if j == -1:
+                    self._auxiliaries[kind, i, j] = Tensor(1)
+                elif -1 < j < self._N:
+                    """
+                         DR1 -
+                    R2 - |
+                    R3 -
+                    """
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("left-to-right-3", i, j - 1) \
+                        .contract(self._get_auxiliaries("up-to-down", i - 1, j), {("R1", "L")}).edge_rename({"R": "R1"})
                 else:
                     raise ValueError("Wrong Auxiliaries Position In Three Line Type")
             elif kind == "left-to-right-3":
@@ -233,10 +289,22 @@ class SquareAuxiliariesSystem:
                     R2 -
                     R3 -
                     """
-                    self._auxiliaries[kind, i, j] = self._get_auxiliaries(kind, i, j - 1) \
-                        .contract(self._get_auxiliaries("up-to-down", i - 1, j), {("R1", "L")}).edge_rename({"R": "R1"}) \
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("left-to-right-3-1", i, j) \
                         .contract(self._lattice[i][j], {("R2", "L"), ("D", "U")}).edge_rename({"R": "R2"}) \
                         .contract(self._get_auxiliaries("down-to-up", i + 1, j), {("R3", "L"), ("D", "U")}).edge_rename({"R": "R3"})
+                else:
+                    raise ValueError("Wrong Auxiliaries Position In Three Line Type")
+            elif kind == "right-to-left-3-1":
+                if j == self._N:
+                    self._auxiliaries[kind, i, j] = Tensor(1)
+                elif -1 < j < self._N:
+                    """
+                          - L1
+                        | - L2
+                    - L3U
+                    """
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("right-to-left-3", i, j + 1) \
+                        .contract(self._get_auxiliaries("down-to-up", i + 1, j), {("L3", "R")}).edge_rename({"L": "L3"})
                 else:
                     raise ValueError("Wrong Auxiliaries Position In Three Line Type")
             elif kind == "right-to-left-3":
@@ -244,14 +312,13 @@ class SquareAuxiliariesSystem:
                     self._auxiliaries[kind, i, j] = Tensor(1)
                 elif -1 < j < self._N:
                     """
-                    - M
-                    - N
+                    - L1
+                    - L2
                     - L3
                     """
-                    self._auxiliaries[kind, i, j] = self._get_auxiliaries(kind, i, j + 1) \
-                        .contract(self._get_auxiliaries("up-to-down", i - 1, j), {("L1", "R")}).edge_rename({"L": "L1"}) \
-                        .contract(self._lattice[i][j], {("L2", "R"), ("D", "U")}).edge_rename({"L": "L2"}) \
-                        .contract(self._get_auxiliaries("down-to-up", i + 1, j), {("L3", "R"), ("D", "U")}).edge_rename({"L": "L3"})
+                    self._auxiliaries[kind, i, j] = self._get_auxiliaries("right-to-left-3-1", i, j) \
+                        .contract(self._lattice[i][j], {("L2", "R"), ("U", "D")}).edge_rename({"L": "L2"}) \
+                        .contract(self._get_auxiliaries("up-to-down", i - 1, j), {("L1", "R"), ("U", "D")}).edge_rename({"L": "L1"})
                 else:
                     raise ValueError("Wrong Auxiliaries Position In Three Line Type")
             else:
@@ -268,56 +335,46 @@ class SquareAuxiliariesSystem:
             return self._get_auxiliaries("left-to-right-3", self._M - 1, self._N - 1)
         if len(positions) == 1:
             i, j = positions[0]
-            return self._get_auxiliaries("left-to-right-3", i, j - 1) \
-                .contract(self._get_auxiliaries("up-to-down", i - 1, j).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                .contract(self._get_auxiliaries("down-to-up", i + 1, j).edge_rename({"R": "R3"}), {("R3", "L")}) \
-                .contract(self._get_auxiliaries("right-to-left-3", i, j + 1), {("R1", "L1"), ("R3", "L3")}) \
+            return self._get_auxiliaries("left-to-right-3-1", i, j) \
+                .contract(self._get_auxiliaries("right-to-left-3-1", i, j ), {("R1", "L1"), ("R3", "L3")}) \
                 .edge_rename({"R2": "L0", "L2": "R0", "U": "D0", "D": "U0"})
         if len(positions) == 2:
             x1, y1 = positions[0]
             x2, y2 = positions[1]
             if x1 == x2:
                 if y1 + 1 == y2:
-                    return self._get_auxiliaries("left-to-right-3", x1, y1 - 1) \
-                        .contract(self._get_auxiliaries("up-to-down", x1 - 1, y1).edge_rename({"R": "R1"}), {("R1", "L")}) \
+                    return self._get_auxiliaries("left-to-right-3-1", x1, y1) \
                         .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L")}) \
                         .edge_rename({"D": "U0", "U": "D0"}) \
                         .contract(self._get_auxiliaries("up-to-down", x2 - 1, y2).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L")}) \
-                        .edge_rename({"D": "U1", "U": "D1"}) \
-                        .contract(self._get_auxiliaries("right-to-left-3", x2, y2 + 1), {("R1", "L1"), ("R3", "L3")}) \
-                        .edge_rename({"R2": "L0", "L2": "R1"})
+                        .edge_rename({"D": "U1"}) \
+                        .contract(self._get_auxiliaries("right-to-left-3-1", x2, y2), {("R1", "L1"), ("R3", "L3")}) \
+                        .edge_rename({"R2": "L0", "L2": "R1", "U": "D1"})
                 if y2 + 1 == y1:
-                    return self._get_auxiliaries("left-to-right-3", x2, y2 - 1) \
-                        .contract(self._get_auxiliaries("up-to-down", x2 - 1, y2).edge_rename({"R": "R1"}), {("R1", "L")}) \
+                    return self._get_auxiliaries("left-to-right-3-1", x2, y2) \
                         .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L")}) \
                         .edge_rename({"D": "U1", "U": "D1"}) \
                         .contract(self._get_auxiliaries("up-to-down", x1 - 1, y1).edge_rename({"R": "R1"}), {("R1", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L")}) \
-                        .edge_rename({"D": "U0", "U": "D0"}) \
-                        .contract(self._get_auxiliaries("right-to-left-3", x1, y1 + 1), {("R1", "L1"), ("R3", "L3")}) \
-                        .edge_rename({"R2": "L1", "L2": "R0"})
+                        .edge_rename({"D": "U0"}) \
+                        .contract(self._get_auxiliaries("right-to-left-3-1", x1, y1), {("R1", "L1"), ("R3", "L3")}) \
+                        .edge_rename({"R2": "L1", "L2": "R0", "U": "D0"})
             if y1 == y2:
                 if x1 + 1 == x2:
-                    return self._get_auxiliaries("up-to-down-3", x1 - 1, y1) \
-                        .contract(self._get_auxiliaries("left-to-right", x1, y1 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
+                    return self._get_auxiliaries("up-to-down-3-1", x1, y1) \
                         .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
                         .edge_rename({"R": "L0", "L": "R0"}) \
                         .contract(self._get_auxiliaries("left-to-right", x2, y2 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
-                        .edge_rename({"R": "L1", "L": "R1"}) \
-                        .contract(self._get_auxiliaries("down-to-up-3", x2 + 1, y2), {("D1", "U1"), ("D3", "U3")}) \
-                        .edge_rename({"D2": "U0", "U2": "D1"})
+                        .edge_rename({"R": "L1"}) \
+                        .contract(self._get_auxiliaries("down-to-up-3-1", x2, y2), {("D1", "U1"), ("D3", "U3")}) \
+                        .edge_rename({"D2": "U0", "U2": "D1", "L": "R1"})
                 if x2 + 1 == x1:
-                    return self._get_auxiliaries("up-to-down-3", x2 - 1, y2) \
-                        .contract(self._get_auxiliaries("left-to-right", x2, y2 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
+                    return self._get_auxiliaries("up-to-down-3-1", x2, y2) \
                         .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
                         .edge_rename({"R": "L1", "L": "R1"}) \
                         .contract(self._get_auxiliaries("left-to-right", x1, y1 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U")}) \
-                        .edge_rename({"R": "L0", "L": "R0"}) \
-                        .contract(self._get_auxiliaries("down-to-up-3", x1 + 1, y1), {("D1", "U1"), ("D3", "U3")}) \
-                        .edge_rename({"D2": "U1", "U2": "D0"})
+                        .edge_rename({"R": "L0"}) \
+                        .contract(self._get_auxiliaries("down-to-up-3-1", x1, y1), {("D1", "U1"), ("D3", "U3")}) \
+                        .edge_rename({"D2": "U1", "U2": "D0", "L": "R0"})
         raise NotImplementedError("Unsupported getitem style")
 
     @multimethod
@@ -329,11 +386,9 @@ class SquareAuxiliariesSystem:
         if len(replacement) == 1:
             i, j = positions[0]
             new_tensor = new_tensors[0]
-            return self._get_auxiliaries("left-to-right-3", i, j - 1) \
-                .contract(self._get_auxiliaries("up-to-down", i - 1, j).edge_rename({"R": "R1"}), {("R1", "L")}) \
+            return self._get_auxiliaries("left-to-right-3-1", i, j) \
                 .contract(new_tensor.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
-                .contract(self._get_auxiliaries("down-to-up", i + 1, j).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
-                .contract(self._get_auxiliaries("right-to-left-3", i, j + 1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3")})
+                .contract(self._get_auxiliaries("right-to-left-3-1", i, j), {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U")})
         if len(replacement) == 2:
             x1, y1 = positions[0]
             x2, y2 = positions[1]
@@ -341,42 +396,34 @@ class SquareAuxiliariesSystem:
             new_tensor_2 = new_tensors[1]
             if x1 == x2:
                 if y1 + 1 == y2:
-                    return self._get_auxiliaries("left-to-right-3", x1, y1 - 1) \
-                        .contract(self._get_auxiliaries("up-to-down", x1 - 1, y1).edge_rename({"R": "R1"}), {("R1", "L")}) \
+                    return self._get_auxiliaries("left-to-right-3-1", x1, y1) \
                         .contract(new_tensor_1.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("up-to-down", x2 - 1, y2).edge_rename({"R": "R1"}), {("R1", "L")}) \
                         .contract(new_tensor_2.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left-3", x2, y2 + 1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3")})
+                        .contract(self._get_auxiliaries("right-to-left-3-1", x2, y2), {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U")})
                 if y2 + 1 == y1:
-                    return self._get_auxiliaries("left-to-right-3", x2, y2 - 1) \
-                        .contract(self._get_auxiliaries("up-to-down", x2 - 1, y2).edge_rename({"R": "R1"}), {("R1", "L")}) \
+                    return self._get_auxiliaries("left-to-right-3-1", x2, y2) \
                         .contract(new_tensor_2.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("down-to-up", x2 + 1, y2).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
                         .contract(self._get_auxiliaries("up-to-down", x1 - 1, y1).edge_rename({"R": "R1"}), {("R1", "L")}) \
                         .contract(new_tensor_1.edge_rename({"R": "R2"}), {("R2", "L"), ("D", "U")}) \
-                        .contract(self._get_auxiliaries("down-to-up", x1 + 1, y1).edge_rename({"R": "R3"}), {("R3", "L"), ("D", "U")}) \
-                        .contract(self._get_auxiliaries("right-to-left-3", x1, y1 + 1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3")})
+                        .contract(self._get_auxiliaries("right-to-left-3-1", x1, y1), {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U")})
             if y1 == y2:
                 if x1 + 1 == x2:
-                    return self._get_auxiliaries("up-to-down-3", x1 - 1, y1) \
-                        .contract(self._get_auxiliaries("left-to-right", x1, y1 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
+                    return self._get_auxiliaries("up-to-down-3-1", x1, y1) \
                         .contract(new_tensor_1.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("left-to-right", x2, y2 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
                         .contract(new_tensor_2.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up-3", x2 + 1, y2), {("D1", "U1"), ("D2","U2"), ("D3", "U3")})
+                        .contract(self._get_auxiliaries("down-to-up-3-1", x2, y2), {("D1", "U1"), ("D2", "U2"), ("D3", "U3"), ("R", "L")})
                 if x2 + 1 == x1:
-                    return self._get_auxiliaries("up-to-down-3", x2 - 1, y2) \
-                        .contract(self._get_auxiliaries("left-to-right", x2, y2 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
+                    return self._get_auxiliaries("up-to-down-3-1", x2, y2) \
                         .contract(new_tensor_2.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("right-to-left", x2, y2 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
                         .contract(self._get_auxiliaries("left-to-right", x1, y1 - 1).edge_rename({"D": "D1"}), {("D1", "U")}) \
                         .contract(new_tensor_1.edge_rename({"D": "D2"}), {("D2", "U"), ("R", "L")}) \
-                        .contract(self._get_auxiliaries("right-to-left", x1, y1 + 1).edge_rename({"D": "D3"}), {("D3", "U"), ("R", "L")}) \
-                        .contract(self._get_auxiliaries("down-to-up-3", x1 + 1, y1), {("D1", "U1"), ("D2","U2"), ("D3", "U3")})
+                        .contract(self._get_auxiliaries("down-to-up-3-1", x1, y1), {("D1", "U1"), ("D2", "U2"), ("D3", "U3"), ("R", "L")})
         raise NotImplementedError("Unsupported getitem style")
 
     @staticmethod
