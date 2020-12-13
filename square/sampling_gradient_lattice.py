@@ -142,8 +142,8 @@ class SamplingGradientLattice(AbstractNetworkLattice):
         current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
         possible_hopping: List[Tuple[int, ...], float] = []
         # 这种地方应该有一个hamiltonian list一样的东西
-        for [spins_in, spins_out], element in self._find_element(hamiltonian).items():
-            if spins_in == current_spins and spins_in != spins_out:
+        for spins_out, element in self._find_element(hamiltonian)[current_spins].items():
+            if spins_out != current_spins:
                 possible_hopping.append((spins_out, element))
         if possible_hopping:
             hopping_number = len(possible_hopping)
@@ -199,10 +199,9 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                     body: int = len(positions)
                     current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
                     value = 0
-                    for [spins_in, spins_out], element in self._find_element(tensor).items():
-                        if spins_in == current_spins:
-                            wss = float(self.spin[{positions[i]: spins_out[i] for i in range(body)}])
-                            value += element * wss / ws
+                    for spins_out, element in self._find_element(tensor)[current_spins].items():
+                        wss = float(self.spin[{positions[i]: spins_out[i] for i in range(body)}])
+                        value += element * wss / ws
                     result[kind][positions] += value
             if calculate_gradient:
                 # TODO grad
@@ -241,10 +240,9 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                     body: int = len(positions)
                     current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
                     value = 0
-                    for [spins_in, spins_out], element in self._find_element(tensor).items():
-                        if spins_in == current_spins:
-                            wss = float(self.spin[{positions[i]: spins_out[i] for i in range(body)}])
-                            value += element * wss / ws
+                    for spins_out, element in self._find_element(tensor)[current_spins].items():
+                        wss = float(self.spin[{positions[i]: spins_out[i] for i in range(body)}])
+                        value += element * wss / ws
                     result[kind][positions] += value * ws * ws
             if "Energy" in result:
                 energy_result = result["Energy"]
@@ -265,24 +263,28 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                 self.spin[i, j] = step % self.dimension_physics
                 step //= self.dimension_physics
 
-    tensor_element_dict: Dict[int, Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]] = {}
+    tensor_element_dict: Dict[int, Dict[Tuple[int, ...], Dict[Tuple[int, ...], float]]] = {}
 
     # TODO complex version
     # TODO 这个操作目前似乎很耗时
-    def _find_element(self, tensor: Tensor) -> Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float]:
+    def _find_element(self, tensor: Tensor) -> Dict[Tuple[int, ...], Dict[Tuple[int, ...], float]]:
         tensor_id = id(tensor)
         if tensor_id in self.tensor_element_dict:
             return self.tensor_element_dict[tensor_id]
         body = len(tensor.name) // 2
         self._check_hamiltonian_name(tensor, body)
         self.tensor_element_dict[tensor_id] = {}
-        result: Dict[Tuple[Tuple[int, ...], Tuple[int, ...]], float] = self.tensor_element_dict[tensor_id]
+        result: Dict[Tuple[int, ...], Dict[Tuple[int, ...], float]] = self.tensor_element_dict[tensor_id]
         names = [f"I{i}" for i in range(body)] + [f"O{i}" for i in range(body)]
         index = [0 for _ in range(2 * body)]
         while True:
             value: float = tensor[{names[i]: index[i] for i in range(2 * body)}]
             if value != 0:
-                result[tuple(index[:body]), tuple(index[body:])] = value
+                spins_in = tuple(index[:body])
+                spins_out = tuple(index[body:])
+                if spins_in not in result:
+                    result[spins_in] = {}
+                result[spins_in][spins_out] = value
             active_position = 0
             index[active_position] += 1
             while index[active_position] == self.dimension_physics:

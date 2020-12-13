@@ -158,10 +158,6 @@ class SquareAuxiliariesSystem:
         else:
             return False
 
-    # TODO: 更加详细的左右辅助矩阵, 如下面这种
-    # XX X
-    # X  X
-    # X XX
     # TODO Lazy style?
     def _get_auxiliaries(self, kind: str, i: int, j: int) -> Tensor:
         if (kind, i, j) not in self._auxiliaries:
