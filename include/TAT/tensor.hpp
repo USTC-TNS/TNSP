@@ -771,11 +771,6 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name> summary(const int root) const {
          return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       };
-
-      /**
-       * \see mpi_t
-       */
-      static mpi_t mpi;
 #endif
 
       const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;

@@ -117,7 +117,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = include/TAT docs
+INPUT                  = include/TAT include/square include/lazy.hpp docs
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.cpp \
                          *.hpp \

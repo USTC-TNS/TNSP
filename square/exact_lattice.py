@@ -71,8 +71,9 @@ class ExactLattice(AbstractLattice):
     def _initialize_vector(self) -> Tensor:
         name_list = [f"P-{i}-{j}" for i in range(self.M) for j in range(self.N)]
         dimension_list = [self.dimension_physics for _ in range(self.M) for _ in range(self.N)]
-        self.vector = Tensor(name_list, dimension_list).randn()
-        self.vector /= self.vector.norm_max()
+        vector = Tensor(name_list, dimension_list).randn()
+        vector /= vector.norm_max()
+        return vector
 
     def update(self, time: int = 1, approximate_energy: float = -0.5, print_energy: bool = False) -> float:
         total_approximate_energy: float = abs(approximate_energy) * self.M * self.N

@@ -1,5 +1,7 @@
 /**
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * \file conversion.hpp
+ *
+ * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +17,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_USE_MPI
-#error testing mpi but mpi not enabled
+#pragma once
+#ifndef SQUARE_CONVERSION_HPP
+#define SQUARE_CONVERSION_HPP
+
 #endif
-#include <TAT/TAT.hpp>
-
-using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
-
-int main() {
-   auto input = Tensor(TAT::mpi.rank);
-   auto result = input.summary(TAT::mpi.size / 2);
-   TAT::mpi.out(TAT::mpi.size / 2) << result << "\n";
-   result = result.broadcast(TAT::mpi.size / 2);
-   Tensor::barrier();
-   std::cout << TAT::mpi.rank << " " << result << "\n";
-   return 0;
-}

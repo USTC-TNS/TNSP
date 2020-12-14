@@ -558,7 +558,7 @@ namespace TAT {
                   "Reduce a tensor with commutative function into root")
             .def("summary", &T::summary, py::arg("root"), "Summation of a tensor into root")
             .def_static("barrier", &T::barrier, "MPI barrier")
-            .def_readonly_static("mpi", &T::mpi, "MPI Handle")
+            .def_readonly_static("mpi", &mpi, "MPI Handle")
 #endif
             .def_static("set_random_seed", &set_random_seed, "Set Random Seed")
             .def(
