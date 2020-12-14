@@ -42,15 +42,15 @@ namespace TAT {
    /**
     * 张量的秩的类型
     */
-   using Rank = uint16_t;
+   using Rank = std::uint16_t;
    /**
     * 张量分块数目和一个边上对称性数目的类型
     */
-   using Nums = uint32_t;
+   using Nums = std::uint32_t;
    /**
     * 张量数据维度大小和数据本身大小的类型
     */
-   using Size = uint64_t;
+   using Size = std::uint64_t;
 
    /**
     * Z2对称性的类型
@@ -59,11 +59,11 @@ namespace TAT {
    /**
     * U1对称性的类型
     */
-   using U1 = int16_t;
+   using U1 = std::int32_t;
    /**
     * 费米子数目的类型
     */
-   using Fermi = int8_t;
+   using Fermi = std::int16_t;
 
    /**
     * 费米箭头方向的类型, `false`和`true`分别表示出入

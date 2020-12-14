@@ -36,6 +36,7 @@
 #endif
 
 #include <any>
+#include <functional>
 #include <list>
 #include <memory>
 #include <tuple>
@@ -72,6 +73,9 @@ namespace lazy {
       }
 
    public:
+      /**
+       * 下游节点的列表
+       */
       std::list<std::weak_ptr<lazy_base>> downstream;
 
       virtual ~lazy_base() {}
@@ -89,10 +93,11 @@ namespace lazy {
       virtual std::any dump() = 0;
    };
 
-   template<typename Function>
+   // path的type可以有cv ref
+   template<typename Type>
    struct path : lazy_base {
    private:
-      Function function;
+      std::function<Type()> function;
 
       void release() override {}
 
@@ -104,12 +109,12 @@ namespace lazy {
          return get();
       }
 
-      path(Function&& f) : function(std::move(f)) {}
+      path(std::function<Type()>&& f) : function(std::move(f)) {}
       path() = delete;
       path(const path&) = delete;
       path(path&&) = delete;
-      path& operator=(const path<Function>&) = delete;
-      path& operator=(path<Function>&&) = delete;
+      path& operator=(const path<Type>&) = delete;
+      path& operator=(path<Type>&&) = delete;
    };
 
    template<typename Type>
@@ -162,24 +167,24 @@ namespace lazy {
       root& operator=(root<Type>&&) = delete;
    };
 
-   template<typename Function>
+   template<typename Type>
    struct node : data_lazy_base {
    private:
-      Function function;
-      using Type = std::remove_cv_t<std::remove_reference_t<std::invoke_result_t<Function>>>;
-      std::shared_ptr<const Type> value;
+      std::function<Type()> function;
+      using RealType = std::remove_cv_t<std::remove_reference_t<Type>>;
+      std::shared_ptr<const RealType> value;
 
       void release() override {
          value.reset();
       }
 
-      void set(Type&& v) {
+      void set(RealType&& v) {
          unset();
-         value.reset(new Type(std::move(v)));
+         value.reset(new RealType(std::move(v)));
       }
-      void set(const Type& v) {
+      void set(const RealType& v) {
          unset();
-         value.reset(new Type(v));
+         value.reset(new RealType(v));
       }
 
    public:
@@ -193,15 +198,15 @@ namespace lazy {
          return get();
       }
 
-      node(Function&& f) : function(std::move(f)) {}
+      node(std::function<Type()>&& f) : function(std::move(f)) {}
       node() = delete;
       node(const node&) = delete;
       node(node&&) = delete;
-      node& operator=(const node<Function>&) = delete;
-      node& operator=(node<Function>&&) = delete;
+      node& operator=(const node<Type>&) = delete;
+      node& operator=(node<Type>&&) = delete;
 
       void load(std::any v) override {
-         value = std::any_cast<std::shared_ptr<const Type>>(v);
+         value = std::any_cast<std::shared_ptr<const RealType>>(v);
       }
 
       std::any dump() override {
@@ -261,7 +266,7 @@ namespace lazy {
 
    template<typename Function, typename... Args>
    auto function_wrapper(Function&& function, Args&... args) {
-      return [=] { return function(args->get()...); };
+      return std::function([=] { return function(args->get()...); });
    }
 
    template<typename Type>
@@ -283,8 +288,10 @@ namespace lazy {
 
    template<typename Function, typename... Args>
    auto Node(Function&& function, Args&... args) {
+      // 应该返回一个值而非引用
       auto f = function_wrapper(function, args...);
-      auto result = std::make_shared<node<decltype(f)>>(std::move(f));
+      using Type = typename decltype(f)::result_type;
+      auto result = std::make_shared<node<Type>>(std::move(f));
       (args->downstream.push_back(result->shared_from_this()), ...);
       current_graph().add(result);
       return result;
@@ -292,8 +299,10 @@ namespace lazy {
 
    template<typename Function, typename... Args>
    auto Path(Function&& function, Args&... args) {
+      // 返回啥都行
       auto f = function_wrapper(function, args...);
-      auto result = std::make_shared<path<decltype(f)>>(std::move(f));
+      using Type = typename decltype(f)::result_type;
+      auto result = std::make_shared<path<Type>>(std::move(f));
       (args->downstream.push_back(result->shared_from_this()), ...);
       return result;
    }

@@ -200,12 +200,6 @@ namespace square {
          }
          return tensor;
       }
-
-      // TODO obseve and aux
-      void initialize_auxilaries(Size Dc) {
-         auxiliaries = SquareAuxiliariesSystem<T>(this->M, this->N, Dc);
-         // TODO...
-      }
    };
 } // namespace square
 
