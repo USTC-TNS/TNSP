@@ -17,7 +17,7 @@ target_compile_features(TAT INTERFACE cxx_std_17)
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
 # TAT_USE_MPI, TAT_PYTHON_MODULE, TAT_FORCE_VERSION
-# MATH_LIBRARIES, BLA_VENDOR, BLA_STATIC
+# TAT_MATH_LIBRARIES, BLA_VENDOR, BLA_STATIC
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
@@ -56,9 +56,9 @@ else()
 endif()
 
 # 链接blas和lapack, 尽量使用静态链接, 如果是emscripten则链接emlapack, 需要自行放入emscripten目录下
-if(DEFINED MATH_LIBRARIES)
+if(DEFINED TAT_MATH_LIBRARIES)
    message("-- Use customed math libraries")
-   target_link_libraries(TAT INTERFACE ${MATH_LIBRARIES})
+   target_link_libraries(TAT INTERFACE ${TAT_MATH_LIBRARIES})
 else()
    if(EMSCRIPTEN)
       message("-- Use emscripten blas and lapack")

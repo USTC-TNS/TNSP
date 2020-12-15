@@ -209,7 +209,7 @@ namespace lazy {
          auto result = Snapshot();
          for (auto iter = nodes.begin(); iter != nodes.end();) {
             if (auto ptr = iter->lock(); ptr) {
-               result.push_back(std::make_tuple(*iter, ptr->dump()));
+               result.emplace_back(*iter, ptr->dump());
                ++iter;
             } else {
                iter = nodes.erase(iter);

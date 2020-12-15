@@ -142,7 +142,7 @@ namespace square {
          auto result_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          real<T> ws = spin();
          for (unsigned long long step = 0; step < total_step; step++) {
-            real<T> ws = _markov_spin(ws);
+            ws = _markov_spin(ws);
             for (const auto& [kind, group] : observers) {
                for (const auto& [positions, tensor] : group) {
                   int body = positions.size();
@@ -172,7 +172,9 @@ namespace square {
                   auto this_energy = value / (step + 1);
                   auto this_square = energy_square_pool.at(positions) / (step + 1);
                   energy += this_energy;
-                  energy_variance_square += (this_square - this_energy * this_energy) / (step + 1 - 1);
+                  if (step != 0) {
+                     energy_variance_square += (this_square - this_energy * this_energy) / (step + 1 - 1);
+                  }
                };
                std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
                          << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / (M * N)
@@ -335,7 +337,8 @@ namespace square {
             }
             real<T> wss = spin(replacement);
             int hopping_number_s = hamiltonian_elements.at(spins_new).size();
-            real<T> p = (wss * wss * hopping_number) / (ws * ws * hopping_number_s);
+            real<T> wss_over_ws = wss / ws;
+            real<T> p = wss_over_ws * wss_over_ws * hopping_number / hopping_number_s;
             if (random::uniform<real<T>>(0, 1)() < p) {
                ws = wss;
                for (auto i = 0; i < body; i++) {

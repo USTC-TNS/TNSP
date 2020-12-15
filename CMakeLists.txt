@@ -16,7 +16,9 @@ get_directory_property(TAT_HAS_PARENT PARENT_DIRECTORY)
 
 # 尝试产生本库的python接口, 先寻找系统中的pybind11, 否则尝试使用本目录下自行放置的pybind11
 if(NOT TAT_HAS_PARENT)
-   set_target_properties(PyTAT PROPERTIES EXCLUDE_FROM_ALL OFF)
+   if(TARGET PyTAT)
+      set_target_properties(PyTAT PROPERTIES EXCLUDE_FROM_ALL OFF)
+   endif()
 
    # examples中的各个程序
    link_libraries(TAT)
