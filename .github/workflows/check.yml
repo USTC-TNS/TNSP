@@ -22,7 +22,7 @@ jobs:
       run: cmake -E make_directory ${{runner.workspace}}/build
     - name: configure
       working-directory: ${{runner.workspace}}/build
-      run: cmake ${{github.workspace}} -DTAT_PREFER_BLAS_STATIC=OFF
+      run: cmake ${{github.workspace}}
     - name: make
       working-directory: ${{runner.workspace}}/build
       run: cmake --build . --parallel
