@@ -137,6 +137,8 @@ namespace square {
             observers["Energy"] = hamiltonians;
          }
          auto result = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
+         auto result_variance_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
+         auto result_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          real<T> ws = spin();
          for (unsigned long long step = 0; step < total_step; step++) {
             real<T> ws = _markov_spin(ws);
@@ -158,40 +160,54 @@ namespace square {
                      value += element * wss / ws;
                   }
                   result[kind][positions] += value;
+                  result_square[kind][positions] += value * value;
                }
             }
             if (calculate_energy) {
                real<T> energy = 0;
+               real<T> energy_variance_square = 0;
+               const auto& energy_square_pool = result_square.at("Energy");
                for (const auto& [positions, value] : result.at("Energy")) {
-                  energy += value;
+                  auto this_energy = value / (step + 1);
+                  auto this_square = energy_square_pool.at(positions) / (step + 1);
+                  energy += this_energy;
+                  energy_variance_square += (this_square - this_energy * this_energy) / (step + 1 - 1);
                };
                std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / ((step + 1) * M * N) << "\r"
-                         << std::flush;
+                         << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / (M * N)
+                         << " with sigma=" << std::sqrt(energy_variance_square) / (M * N) << "\r" << std::flush;
             } else {
                std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
                          << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
             }
          }
+         for (auto& [kind, group] : result) {
+            const auto& group_square = result_square.at(kind);
+            for (auto& [positions, value] : group) {
+               value /= total_step;
+               auto value_square = group_square.at(positions);
+               value_square /= total_step;
+               result_variance_square[kind][positions] = (value_square - value * value) / (total_step - 1);
+            }
+         }
          if (calculate_energy) {
             real<T> energy = 0;
+            real<T> energy_variance_square = 0;
+            const auto& energy_variance_square_pool = result_variance_square.at("Energy");
             for (const auto& [positions, value] : result.at("Energy")) {
                energy += value;
+               energy_variance_square += energy_variance_square_pool.at(positions);
             };
             std::cout << clear_line << "Markov sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
-                      << ", dimension_cut=" << dimension_cut << ", Energy=" << energy / (total_step * M * N) << "\n"
+                      << ", dimension_cut=" << dimension_cut << ", Energy=" << energy / (M * N)
+                      << " with sigma=" << std::sqrt(energy_variance_square) / (M * N) << "\n"
                       << std::flush;
          } else {
             std::cout << clear_line << "Markov sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
                       << ", dimension_cut=" << dimension_cut << "\n"
                       << std::flush;
          }
-         for (auto& [kind, group] : result) {
-            for (auto& [positions, value] : group) {
-               value /= total_step;
-            }
-         }
-         return result;
+         return std::make_tuple(std::move(result), std::move(result_variance_square));
       }
 
       auto ergodic(
