@@ -46,11 +46,16 @@ namespace square {
          }
       }
 
-      void set_spin(const std::tuple<int, int>& position, int spin) {
+      void set(const std::tuple<int, int>& position, int spin) {
          auto [x, y] = position;
          if (configuration[x][y] != spin) {
-            lattice[x][y]->set(owner->lattice[x][y].shrink({{"P", spin}}));
-            configuration[x][y] = spin;
+            if (spin == -1) {
+               lattice[x][y]->unset();
+               configuration[x][y] = spin;
+            } else {
+               lattice[x][y]->set(owner->lattice[x][y].shrink({{"P", spin}}));
+               configuration[x][y] = spin;
+            }
          }
       }
 
@@ -64,6 +69,10 @@ namespace square {
          }
          return operator()(real_replacement);
       }
+
+      auto operator()() const {
+         return operator()(std::map<std::tuple<int, int>, Tensor<T>>());
+      }
    };
 
    template<typename T>
@@ -71,14 +80,299 @@ namespace square {
       Size dimension_cut;
       SpinConfiguration<T> spin;
 
+      SamplingGradientLattice() : AbstractNetworkLattice<T>(0, 0, 0, 0), dimension_cut(0), spin(this){};
+      SamplingGradientLattice(const SamplingGradientLattice<T>& other) :
+            AbstractNetworkLattice<T>(other), dimension_cut(other.dimension_cut), spin(this) {
+         for (auto i = 0; i < M; i++) {
+            for (auto j = 0; j < N; j++) {
+               spin.set({i, j}, other.spin.configuration[i][j]);
+            }
+         }
+      }
+      SamplingGradientLattice(SamplingGradientLattice<T>&& other) :
+            AbstractNetworkLattice<T>(std::move(other)), dimension_cut(other.dimension_cut), spin(this) {
+         for (auto i = 0; i < M; i++) {
+            for (auto j = 0; j < N; j++) {
+               spin.set({i, j}, other.spin.configuration[i][j]);
+            }
+         }
+      }
+      SamplingGradientLattice<T>& operator=(const SamplingGradientLattice<T>& other) {
+         if (this != &other) {
+            new (this) SamplingGradientLattice<T>(other);
+         }
+         return *this;
+      }
+      SamplingGradientLattice<T>& operator=(SamplingGradientLattice<T>&& other) {
+         if (this != &other) {
+            new (this) SamplingGradientLattice<T>(std::move(other));
+         }
+         return *this;
+      }
+
       SamplingGradientLattice(int M, int N, Size D, Size Dc, Size d) : AbstractNetworkLattice<T>(M, N, D, d), dimension_cut(Dc), spin(this) {}
 
-      SamplingGradientLattice(const SimpleUpdateLattice<T>&);
+      SamplingGradientLattice(const SimpleUpdateLattice<T>& other, Size Dc);
+
+      using AbstractNetworkLattice<T>::M;
+      using AbstractNetworkLattice<T>::N;
+      using AbstractNetworkLattice<T>::dimension_physics;
+      using AbstractNetworkLattice<T>::hamiltonians;
+      using AbstractNetworkLattice<T>::dimension_virtual;
+      using AbstractNetworkLattice<T>::lattice;
 
       void initialize_spin(std::function<int(int, int)> function) {
          for (auto i = 0; i < M; i++) {
             for (auto j = 0; j < N; j++) {
-               set_spin({i, j}, function(i, j));
+               spin.set({i, j}, function(i, j));
+            }
+         }
+      }
+
+      auto markov(
+            unsigned long long total_step,
+            std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
+            bool calculate_energy = false) {
+         if (calculate_energy) {
+            observers["Energy"] = hamiltonians;
+         }
+         auto result = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
+         real<T> ws = spin();
+         for (unsigned long long step = 0; step < total_step; step++) {
+            real<T> ws = _markov_spin(ws);
+            for (const auto& [kind, group] : observers) {
+               for (const auto& [positions, tensor] : group) {
+                  int body = positions.size();
+                  auto current_spin = std::vector<int>();
+                  for (auto i = 0; i < body; i++) {
+                     current_spin.push_back(spin.configuration[std::get<0>(positions[i])][std::get<1>(positions[i])]);
+                  }
+                  real<T> value = 0;
+
+                  for (const auto& [spins_out, element] : _find_element(*tensor).at(current_spin)) {
+                     auto map = std::map<std::tuple<int, int>, int>();
+                     for (auto i = 0; i < body; i++) {
+                        map[positions[i]] = spins_out[i];
+                     }
+                     real<T> wss = spin(map);
+                     value += element * wss / ws;
+                  }
+                  result[kind][positions] += value;
+               }
+            }
+            if (calculate_energy) {
+               real<T> energy = 0;
+               for (const auto& [positions, value] : result.at("Energy")) {
+                  energy += value;
+               };
+               std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
+                         << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / ((step + 1) * M * N) << "\r"
+                         << std::flush;
+            } else {
+               std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
+                         << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
+            }
+         }
+         if (calculate_energy) {
+            real<T> energy = 0;
+            for (const auto& [positions, value] : result.at("Energy")) {
+               energy += value;
+            };
+            std::cout << clear_line << "Markov sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << ", Energy=" << energy / (total_step * M * N) << "\n"
+                      << std::flush;
+         } else {
+            std::cout << clear_line << "Markov sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << "\n"
+                      << std::flush;
+         }
+         for (auto& [kind, group] : result) {
+            for (auto& [positions, value] : group) {
+               value /= total_step;
+            }
+         }
+         return result;
+      }
+
+      auto ergodic(
+            std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
+            bool calculate_energy = false) {
+         if (calculate_energy) {
+            observers["Energy"] = hamiltonians;
+         }
+         auto result = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
+         real<T> sum_of_ws_square = 0;
+         unsigned long long total_step = std::pow(dimension_physics, M * N);
+         for (unsigned long long step = 0; step < total_step; step++) {
+            _ergodic_spin(step);
+            real<T> ws = spin();
+            sum_of_ws_square += ws * ws;
+            for (const auto& [kind, group] : observers) {
+               for (const auto& [positions, tensor] : group) {
+                  int body = positions.size();
+                  auto current_spin = std::vector<int>();
+                  for (auto i = 0; i < body; i++) {
+                     current_spin.push_back(spin.configuration[std::get<0>(positions[i])][std::get<1>(positions[i])]);
+                  }
+                  real<T> value = 0;
+
+                  for (const auto& [spins_out, element] : _find_element(*tensor).at(current_spin)) {
+                     auto map = std::map<std::tuple<int, int>, int>();
+                     for (auto i = 0; i < body; i++) {
+                        map[positions[i]] = spins_out[i];
+                     }
+                     real<T> wss = spin(map);
+                     value += element * wss / ws;
+                  }
+                  result[kind][positions] += value * ws * ws;
+               }
+            }
+            if (calculate_energy) {
+               real<T> energy = 0;
+               for (const auto& [positions, value] : result.at("Energy")) {
+                  energy += value;
+               };
+               std::cout << clear_line << "Ergodic sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
+                         << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / (sum_of_ws_square * M * N) << "\r"
+                         << std::flush;
+            } else {
+               std::cout << clear_line << "Ergodic sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
+                         << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
+            }
+         }
+         if (calculate_energy) {
+            real<T> energy = 0;
+            for (const auto& [positions, value] : result.at("Energy")) {
+               energy += value;
+            };
+            std::cout << clear_line << "Ergodic sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << ", Energy=" << energy / (sum_of_ws_square * M * N) << "\n"
+                      << std::flush;
+         } else {
+            std::cout << clear_line << "Ergodic sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << "\n"
+                      << std::flush;
+         }
+         for (auto& [kind, group] : result) {
+            for (auto& [positions, value] : group) {
+               value /= sum_of_ws_square;
+            }
+         }
+         return result;
+      }
+
+      void _ergodic_spin(unsigned long long step) {
+         for (auto i = 0; i < M; i++) {
+            for (auto j = 0; j < N; j++) {
+               spin.set({i, j}, step % dimension_physics);
+               step /= dimension_physics;
+            }
+         }
+      }
+
+      void equilibrate(unsigned long long total_step) {
+         real<T> ws = spin();
+         for (unsigned long long step = 0; step < total_step; step++) {
+            ws = _markov_spin(ws);
+            std::cout << clear_line << "Equilibrating , total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
+         }
+         std::cout << clear_line << "Equilibrate done, total_step=" << total_step << ", dimension=" << dimension_virtual
+                   << ", dimension_cut=" << dimension_cut << "\n"
+                   << std::flush;
+      }
+
+      real<T> _markov_spin(real<T> ws) {
+         for (auto iter = hamiltonians.begin(); iter != hamiltonians.end(); ++iter) {
+            const auto& [positions, hamiltonian] = *iter;
+            ws = _markov_single_term(ws, positions, hamiltonian);
+         }
+         for (auto iter = hamiltonians.rbegin(); iter != hamiltonians.rend(); ++iter) {
+            const auto& [positions, hamiltonian] = *iter;
+            ws = _markov_single_term(ws, positions, hamiltonian);
+         }
+         return ws;
+      }
+
+      real<T>
+      _markov_single_term(real<T> ws, const std::vector<std::tuple<int, int>>& positions, const std::shared_ptr<const Tensor<T>>& hamiltonian) {
+         int body = positions.size();
+         auto current_spin = std::vector<int>();
+         for (auto i = 0; i < body; i++) {
+            current_spin.push_back(spin.configuration[std::get<0>(positions[i])][std::get<1>(positions[i])]);
+         }
+         const auto& hamiltonian_elements = _find_element(*hamiltonian);
+         const auto& possible_hopping = hamiltonian_elements.at(current_spin);
+         if (!possible_hopping.empty()) {
+            int hopping_number = possible_hopping.size();
+            auto random_index = random::uniform<int>(0, hopping_number - 1)();
+            auto iter = possible_hopping.begin();
+            for (auto i = 0; i < random_index; i++) {
+               ++iter;
+            }
+            const auto& [spins_new, element] = *iter;
+            auto replacement = std::map<std::tuple<int, int>, int>();
+            for (auto i = 0; i < body; i++) {
+               replacement[positions[i]] = spins_new[i];
+            }
+            real<T> wss = spin(replacement);
+            int hopping_number_s = hamiltonian_elements.at(spins_new).size();
+            real<T> p = (wss * wss * hopping_number) / (ws * ws * hopping_number_s);
+            if (random::uniform<real<T>>(0, 1)() < p) {
+               ws = wss;
+               for (auto i = 0; i < body; i++) {
+                  spin.set(positions[i], spins_new[i]);
+               }
+            }
+         }
+         return ws;
+      }
+
+      inline static std::map<const Tensor<T>*, std::map<std::vector<int>, std::map<std::vector<int>, T>>> tensor_element_map = {};
+
+      const std::map<std::vector<int>, std::map<std::vector<int>, T>>& _find_element(const Tensor<T>& tensor) const {
+         auto tensor_id = &tensor;
+         if (auto found = tensor_element_map.find(tensor_id); found != tensor_element_map.end()) {
+            return found->second;
+         }
+         int body = tensor.names.size() / 2;
+         auto& result = tensor_element_map[tensor_id];
+         auto names = std::vector<Name>();
+         auto index = std::vector<int>();
+         for (auto i = 0; i < body; i++) {
+            names.push_back("I" + std::to_string(i));
+            index.push_back(0);
+         }
+         for (auto i = 0; i < body; i++) {
+            names.push_back("O" + std::to_string(i));
+            index.push_back(0);
+         }
+         while (true) {
+            auto map = std::map<Name, Size>();
+            for (auto i = 0; i < 2 * body; i++) {
+               map[names[i]] = index[i];
+            }
+            auto value = tensor.const_at(map);
+            if (value != 0) {
+               auto spins_in = std::vector<int>();
+               auto spins_out = std::vector<int>();
+               for (auto i = 0; i < body; i++) {
+                  spins_in.push_back(index[i]);
+               }
+               for (auto i = body; i < 2 * body; i++) {
+                  spins_out.push_back(index[i]);
+               }
+               result[std::move(spins_in)][std::move(spins_out)] = value;
+            }
+            int active_position = 0;
+            index[active_position] += 1;
+            while (index[active_position] == dimension_physics) {
+               index[active_position] = 0;
+               active_position += 1;
+               if (active_position == 2 * body) {
+                  return result;
+               }
+               index[active_position] += 1;
             }
          }
       }

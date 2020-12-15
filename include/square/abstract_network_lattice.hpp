@@ -21,6 +21,7 @@
 #ifndef SQUARE_ABSTRACT_NETWORK_LATTICE_HPP
 #define SQUARE_ABSTRACT_NETWORK_LATTICE_HPP
 
+#include <iostream>
 #include <vector>
 
 #include "abstract_lattice.hpp"
@@ -30,6 +31,8 @@ namespace square {
    struct AbstractNetworkLattice : AbstractLattice<T> {
       Size dimension_virtual;
       std::vector<std::vector<Tensor<T>>> lattice;
+
+      AbstractNetworkLattice() = default;
 
       AbstractNetworkLattice(int M, int N, Size D, Size d) : AbstractLattice<T>(M, N, d), dimension_virtual(D) {
          for (auto i = 0; i < M; i++) {
@@ -58,6 +61,24 @@ namespace square {
          }
       }
    };
+
+   template<typename T>
+   std::ostream& operator<(std::ostream& out, const AbstractNetworkLattice<T>& lattice) {
+      using TAT::operator<;
+      out < static_cast<const AbstractLattice<T>&>(lattice);
+      out < lattice.dimension_virtual;
+      out < lattice.lattice;
+      return out;
+   }
+
+   template<typename T>
+   std::istream& operator>(std::istream& in, AbstractNetworkLattice<T>& lattice) {
+      using TAT::operator>;
+      in > static_cast<AbstractLattice<T>&>(lattice);
+      in > lattice.dimension_virtual;
+      in > lattice.lattice;
+      return in;
+   }
 } // namespace square
 
 #endif

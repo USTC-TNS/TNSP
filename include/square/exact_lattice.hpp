@@ -22,6 +22,9 @@
 #define SQUARE_EXACT_LATTICE_HPP
 
 #include <TAT/TAT.hpp>
+#include <map>
+#include <type_traits>
+#include <vector>
 
 #include "abstract_lattice.hpp"
 #include "basic.hpp"
@@ -35,6 +38,8 @@ namespace square {
       using AbstractLattice<T>::N;
       using AbstractLattice<T>::dimension_physics;
       using AbstractLattice<T>::hamiltonians;
+
+      ExactLattice() = default;
 
       ExactLattice(int M, int N, Size d) : AbstractLattice<T>(M, N, d) {
          auto name_list = std::vector<Name>();
@@ -50,7 +55,7 @@ namespace square {
       ExactLattice(const SimpleUpdateLattice<T>& other);
       ExactLattice(const SamplingGradientLattice<T>& other);
 
-      real<T> update(int total_step, real<T> approximate_energy = -0.5, bool print_energy = false) {
+      real<T> update(int total_step, real<T> approximate_energy = -0.5) {
          real<T> total_approximate_energy = std::abs(approximate_energy) * M * N;
          real<T> energy = 0;
          for (auto step = 0; step < total_step; step++) {
@@ -115,6 +120,22 @@ namespace square {
          return energy / denominator() / (M * N);
       }
    };
+
+   template<typename T>
+   std::ostream& operator<(std::ostream& out, const ExactLattice<T>& lattice) {
+      using TAT::operator<;
+      out < static_cast<const AbstractLattice<T>&>(lattice);
+      out < lattice.vector;
+      return out;
+   }
+
+   template<typename T>
+   std::istream& operator>(std::istream& in, ExactLattice<T>& lattice) {
+      using TAT::operator>;
+      in > static_cast<AbstractLattice<T>&>(lattice);
+      in > lattice.vector;
+      return in;
+   }
 } // namespace square
 
 #endif

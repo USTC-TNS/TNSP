@@ -21,16 +21,18 @@
 #ifndef SQUARE_SIMPLE_UPDATE_LATTICE_HPP
 #define SQUARE_SIMPLE_UPDATE_LATTICE_HPP
 
-#include <optional>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 #include "abstract_network_lattice.hpp"
-#include "square_auxiliaries_system.hpp"
 
 namespace square {
    template<typename T>
    struct SimpleUpdateLattice : AbstractNetworkLattice<T> {
-      std::map<std::tuple<Name, int, int>, typename Tensor<T>::SingularType> environment;
-      std::optional<SquareAuxiliariesSystem<T>> auxiliaries;
+      std::map<std::tuple<char, int, int>, typename Tensor<T>::SingularType> environment;
 
       using AbstractNetworkLattice<T>::dimension_virtual;
       using AbstractNetworkLattice<T>::lattice;
@@ -38,6 +40,8 @@ namespace square {
       using AbstractLattice<T>::N;
       using AbstractLattice<T>::dimension_physics;
       using AbstractLattice<T>::hamiltonians;
+
+      SimpleUpdateLattice() = default;
 
       SimpleUpdateLattice(int M, int N, Size D, Size d) : AbstractNetworkLattice<T>(M, N, D, d) {}
 
@@ -69,9 +73,12 @@ namespace square {
             for (auto iter = updater.rbegin(); iter != updater.rend(); ++iter) {
                _single_term_simple_update(iter->first, *(iter->second));
             }
-            std::cout << clear_line << "Simple updating, total_step=" << total_step << ", step=" << step << "\r" << std::flush;
+            std::cout << clear_line << "Simple updating, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
+                      << ", step=" << step << "\r" << std::flush;
          }
-         std::cout << clear_line << "Simple update done, total_step=" << total_step << "\n" << std::flush;
+         std::cout << clear_line << "Simple update done, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
+                   << "\n"
+                   << std::flush;
       }
 
       void _single_term_simple_update(const std::vector<std::tuple<int, int>>& positions, const Tensor<T>& updater) {
@@ -129,7 +136,7 @@ namespace square {
                                 .contract(updater, {{"P0", "I0"}, {"P1", "I1"}})
                                 .svd({"L", "O0"}, "R", "L", dimension_virtual);
          s /= s.template norm<-1>();
-         environment[{"R", i, j}] = std::move(s);
+         environment[{'R', i, j}] = std::move(s);
          u = u.contract(left_q, {{"L", "R"}}).edge_rename({{"O0", "P"}});
          u = try_multiple(u, i, j, 'L', true);
          u = try_multiple(u, i, j, 'U', true);
@@ -162,7 +169,7 @@ namespace square {
                                 .contract(updater, {{"P0", "I0"}, {"P1", "I1"}})
                                 .svd({"U", "O0"}, "D", "U", dimension_virtual);
          s /= s.template norm<-1>();
-         environment[{"D", i, j}] = std::move(s);
+         environment[{'D', i, j}] = std::move(s);
          u = u.contract(up_q, {{"U", "D"}}).edge_rename({{"O0", "P"}});
          u = try_multiple(u, i, j, 'L', true);
          u = try_multiple(u, i, j, 'U', true);
@@ -177,30 +184,58 @@ namespace square {
          lattice[i + 1][j] = std::move(v);
       }
 
-      auto try_multiple(Tensor<T> tensor, int i, int j, char direction, bool division = false) {
+      auto try_multiple(Tensor<T> tensor, int i, int j, char direction, bool division = false) const {
          if (direction == 'L') {
-            if (auto found = environment.find(std::tuple<Name, int, int>("R", i, j - 1)); found != environment.end()) {
+            if (auto found = environment.find(std::tuple<char, int, int>('R', i, j - 1)); found != environment.end()) {
                return tensor.multiple(found->second, "L", 'v', division);
             }
          }
          if (direction == 'U') {
-            if (auto found = environment.find(std::tuple<Name, int, int>("D", i - 1, j)); found != environment.end()) {
+            if (auto found = environment.find(std::tuple<char, int, int>('D', i - 1, j)); found != environment.end()) {
                return tensor.multiple(found->second, "U", 'v', division);
             }
          }
          if (direction == 'D') {
-            if (auto found = environment.find(std::tuple<Name, int, int>("D", i, j)); found != environment.end()) {
+            if (auto found = environment.find(std::tuple<char, int, int>('D', i, j)); found != environment.end()) {
                return tensor.multiple(found->second, "D", 'u', division);
             }
          }
          if (direction == 'R') {
-            if (auto found = environment.find(std::tuple<Name, int, int>("R", i, j)); found != environment.end()) {
+            if (auto found = environment.find(std::tuple<char, int, int>('R', i, j)); found != environment.end()) {
                return tensor.multiple(found->second, "R", 'u', division);
             }
          }
          return tensor;
       }
    };
+
+   template<typename T>
+   std::ostream& operator<(std::ostream& out, const SimpleUpdateLattice<T>& lattice) {
+      using TAT::operator<;
+      out < static_cast<const AbstractNetworkLattice<T>&>(lattice);
+      Size map_size = lattice.environment.size();
+      out < map_size;
+      for (const auto& [position, singular] : lattice.environment) {
+         out < position < singular;
+      }
+      return out;
+   }
+
+   template<typename T>
+   std::istream& operator>(std::istream& in, SimpleUpdateLattice<T>& lattice) {
+      using TAT::operator>;
+      in > static_cast<AbstractNetworkLattice<T>&>(lattice);
+      Size map_size;
+      in > map_size;
+      lattice.environment.clear();
+      for (auto i = 0; i < map_size; i++) {
+         std::tuple<char, int, int> position;
+         typename Tensor<T>::SingularType singular;
+         in > position > singular;
+         lattice.environment[std::move(position)] = std::move(singular);
+      }
+      return in;
+   }
 } // namespace square
 
 #endif

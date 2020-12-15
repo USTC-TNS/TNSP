@@ -35,10 +35,10 @@
 #endif
 #endif
 
+#include "basic.hpp"
+#include "conversion.hpp"
 #include "exact_lattice.hpp"
 #include "sampling_gradient_lattice.hpp"
 #include "simple_update_lattice.hpp"
-
-#include "conversion.hpp"
 
 #endif

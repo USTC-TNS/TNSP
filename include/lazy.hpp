@@ -58,10 +58,8 @@ namespace lazy {
       /**
        * 重置当前节点和下游
        */
-      void unset(bool unset_itself = true) {
-         if (unset_itself) {
-            release();
-         }
+      void unset() {
+         release();
          for (auto iter = downstream.begin(); iter != downstream.end();) {
             if (auto ptr = iter->lock(); ptr) {
                ptr->unset();
@@ -105,9 +103,6 @@ namespace lazy {
       decltype(auto) get() {
          return function();
       }
-      decltype(auto) operator*() {
-         return get();
-      }
 
       path(std::function<Type()>&& f) : function(std::move(f)) {}
       path() = delete;
@@ -130,18 +125,6 @@ namespace lazy {
       const Type& get() {
          return *value;
       }
-      const Type& operator*() {
-         return get();
-      }
-
-      root<Type>& operator=(const Type& v) {
-         set(v);
-         return *this;
-      }
-      root<Type>& operator=(Type&& v) {
-         set(std::move(v));
-         return *this;
-      }
 
       void load(std::any v) override {
          value = std::any_cast<std::shared_ptr<const Type>>(v);
@@ -150,6 +133,8 @@ namespace lazy {
       std::any dump() override {
          return std::any(value);
       }
+
+      using lazy_base::unset;
 
       void set(Type&& v) {
          unset();
@@ -193,9 +178,6 @@ namespace lazy {
             set(function());
          }
          return *value;
-      }
-      const auto& operator*() {
-         return get();
       }
 
       node(std::function<Type()>&& f) : function(std::move(f)) {}
@@ -258,7 +240,7 @@ namespace lazy {
    inline Graph& current_graph() {
       return *active_graph;
    }
-   inline void use_graph(Graph& graph) {
+   inline void use_graph(Graph& graph = default_graph) {
       active_graph = &graph;
    }
 
@@ -288,7 +270,7 @@ namespace lazy {
 
    template<typename Function, typename... Args>
    auto Node(Function&& function, Args&... args) {
-      // 应该返回一个值而非引用
+      // 应该返回一个值而非引用, 否则无法放入shared_ptr中
       auto f = function_wrapper(function, args...);
       using Type = typename decltype(f)::result_type;
       auto result = std::make_shared<node<Type>>(std::move(f));

@@ -155,6 +155,17 @@ namespace square {
    struct SimpleUpdateLattice;
    template<typename T>
    struct SamplingGradientLattice;
+
+   template<typename T>
+   std::istream&& operator>(std::istream&& in, T& v) {
+      in > v;
+      return std::move(in);
+   }
+   template<typename T>
+   std::ostream&& operator<(std::ostream&& out, const T& v) {
+      out < v;
+      return std::move(out);
+   }
 } // namespace square
 
 #endif

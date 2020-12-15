@@ -141,7 +141,6 @@ class SamplingGradientLattice(AbstractNetworkLattice):
         body: int = len(positions)
         current_spins: Tuple[int, ...] = tuple(self.spin.configuration[positions[i][0]][positions[i][1]] for i in range(body))
         possible_hopping: List[Tuple[int, ...], float] = []
-        # 这种地方应该有一个hamiltonian list一样的东西
         for spins_out, element in self._find_element(hamiltonian)[current_spins].items():
             if spins_out != current_spins:
                 possible_hopping.append((spins_out, element))
@@ -188,7 +187,12 @@ class SamplingGradientLattice(AbstractNetworkLattice):
             observers["Energy"] = self.hamiltonian
         result: Dict[Any, Dict[Tuple[Tuple[int, int], ...], Tensor]] = {kind: {positions: 0 for positions in group} for kind, group in observers.items()}
         if calculate_gradient:
-            result["gradient"] = {}
+            result["Delta"] = {}
+            result["EDelta"] = {}
+            for i in range(self.M):
+                for j in range(self.N):
+                    result["Delta"][((i, j),)] = 0
+                    result["EDelta"][((i, j),)] = 0
         # markov sampling
         for t in range(step):
             self._hopping_spin_single_step()
@@ -204,9 +208,12 @@ class SamplingGradientLattice(AbstractNetworkLattice):
                         value += element * wss / ws
                     result[kind][positions] += value
             if calculate_gradient:
-                # TODO grad
-                # does energy need special treat?
-                raise NotImplementedError("Gradient not implemented")
+                Es = sum(result["Energy"].values());
+                for i in range(self.M):
+                    for j in range(self.N):
+                        this_delta = self.spin[((i, j),)]
+                        result["Delta"][((i, j),)] += this_delta
+                        result["EDelta"][((i, j),)] += Es * this_delta
             if "Energy" in result:
                 energy_result = result["Energy"]
                 print(f", Energy={sum(energy_result.values()) / ((t + 1) * self.M * self.N)}", end="\r")

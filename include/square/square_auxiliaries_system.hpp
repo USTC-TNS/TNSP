@@ -38,7 +38,22 @@ namespace square {
       std::map<int, std::map<int, std::shared_ptr<lazy::node<Tensor<T>>>>> up_to_down_3_3, up_to_down_3_1, down_to_up_3_3, down_to_up_3_1,
             left_to_right_3_3, left_to_right_3_1, right_to_left_3_3, right_to_left_3_1;
 
-      // 此类不可复制
+      SquareAuxiliariesSystem() = default;
+      SquareAuxiliariesSystem(const SquareAuxiliariesSystem<T>& other) : SquareAuxiliariesSystem(other.M, other.N, other.dimension_cut) {
+         for (auto i = 0; i < M; i++) {
+            for (auto j = 0; j < N; j++) {
+               lattice[i][j]->set(other.lattice[i][j].get());
+            }
+         }
+      }
+      SquareAuxiliariesSystem& operator=(const SquareAuxiliariesSystem& other) {
+         if (this != &other) {
+            new (this) SquareAuxiliariesSystem(other);
+         }
+         return this;
+      }
+      SquareAuxiliariesSystem(SquareAuxiliariesSystem<T>&& other) = default;
+      SquareAuxiliariesSystem& operator=(SquareAuxiliariesSystem&& other) = default;
 
       SquareAuxiliariesSystem(int M, int N, Size Dc) : M(M), N(N), dimension_cut(Dc) {
          lazy::use_graph(graph);
@@ -53,8 +68,23 @@ namespace square {
          for (auto i = 0; i < M; i++) {
             auto this_row = _collect_line(true, i);
             up_to_down[i] = lazy::Node(
-                  [cut = dimension_cut](const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
-                     return _two_line_to_one_line("UDLR", line_1, line_2, cut);
+                  [
+#ifdef LAZY_DEBUG
+                        i,
+#endif
+                        cut = dimension_cut](
+                        const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
+#ifdef LAZY_DEBUG
+                     std::clog << "Calculating up to down two line to one line for row " << i << "\n";
+#endif
+                     auto result = _two_line_to_one_line("UDLR", line_1, line_2, cut);
+#ifdef LAZY_DEBUG
+                     for (const auto& i : result) {
+                        using TAT::operator<<;
+                        std::clog << i.names << "\n";
+                     }
+#endif
+                     return result;
                   },
                   up_to_down[i - 1],
                   this_row);
@@ -64,8 +94,23 @@ namespace square {
          for (auto i = M; i-- > 0;) {
             auto this_row = _collect_line(true, i);
             down_to_up[i] = lazy::Node(
-                  [cut = dimension_cut](const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
-                     return _two_line_to_one_line("DULR", line_1, line_2, cut);
+                  [
+#ifdef LAZY_DEBUG
+                        i,
+#endif
+                        cut = dimension_cut](
+                        const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
+#ifdef LAZY_DEBUG
+                     std::clog << "Calculating down to up two line to one line for row " << i << "\n";
+#endif
+                     auto result = _two_line_to_one_line("DULR", line_1, line_2, cut);
+#ifdef LAZY_DEBUG
+                     for (const auto& i : result) {
+                        using TAT::operator<<;
+                        std::clog << i.names << "\n";
+                     }
+#endif
+                     return result;
                   },
                   down_to_up[i + 1],
                   this_row);
@@ -75,8 +120,23 @@ namespace square {
          for (auto j = 0; j < N; j++) {
             auto this_row = _collect_line(false, j);
             left_to_right[j] = lazy::Node(
-                  [cut = dimension_cut](const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
-                     return _two_line_to_one_line("LRUD", line_1, line_2, cut);
+                  [
+#ifdef LAZY_DEBUG
+                        j,
+#endif
+                        cut = dimension_cut](
+                        const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
+#ifdef LAZY_DEBUG
+                     std::clog << "Calculating left to right two line to one line for column " << j << "\n";
+#endif
+                     auto result = _two_line_to_one_line("LRUD", line_1, line_2, cut);
+#ifdef LAZY_DEBUG
+                     for (const auto& i : result) {
+                        using TAT::operator<<;
+                        std::clog << i.names << "\n";
+                     }
+#endif
+                     return result;
                   },
                   left_to_right[j - 1],
                   this_row);
@@ -86,8 +146,23 @@ namespace square {
          for (auto j = N; j-- > 0;) {
             auto this_row = _collect_line(false, j);
             right_to_left[j] = lazy::Node(
-                  [cut = dimension_cut](const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
-                     return _two_line_to_one_line("RLUD", line_1, line_2, cut);
+                  [
+#ifdef LAZY_DEBUG
+                        j,
+#endif
+                        cut = dimension_cut](
+                        const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2) -> std::vector<Tensor<T>> {
+#ifdef LAZY_DEBUG
+                     std::clog << "Calculating right to left two line to one line for column " << j << "\n";
+#endif
+                     auto result = _two_line_to_one_line("RLUD", line_1, line_2, cut);
+#ifdef LAZY_DEBUG
+                     for (const auto& i : result) {
+                        using TAT::operator<<;
+                        std::clog << i.names << "\n";
+                     }
+#endif
+                     return result;
                   },
                   right_to_left[j + 1],
                   this_row);
@@ -100,17 +175,45 @@ namespace square {
                   left_to_right_3_3[i][j] = lazy::Node([]() { return Tensor<T>(1); });
                } else {
                   left_to_right_3_1[i][j] = lazy::Node(
-                        [j](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
-                           return last_3_3.contract(last_line[j], {{"R1", "L"}}).edge_rename({{"R", "R1"}});
+                        [
+#ifdef LAZY_DEBUG
+                              i,
+#endif
+                              j](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating left to right 3 1 for " << i << j << "\n";
+#endif
+                           auto result = last_3_3.contract(last_line[j], {{"R1", "L"}}).edge_rename({{"R", "R1"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         left_to_right_3_3[i][j - 1],
                         up_to_down[i - 1]);
                   left_to_right_3_3[i][j] = lazy::Node(
-                        [j](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
-                           return this_3_1.contract(this_site, {{"R2", "L"}, {"D", "U"}})
-                                 .edge_rename({{"R", "R2"}})
-                                 .contract(last_line[j], {{"R3", "L"}, {"D", "U"}})
-                                 .edge_rename({{"R", "R3"}});
+                        [
+#ifdef LAZY_DEBUG
+                              i,
+#endif
+                              j](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating left to right 3 3 for " << i << j << "\n";
+#endif
+                           auto result = this_3_1.contract(this_site, {{"R2", "L"}, {"D", "U"}})
+                                               .edge_rename({{"R", "R2"}})
+                                               .contract(last_line[j], {{"R3", "L"}, {"D", "U"}})
+                                               .edge_rename({{"R", "R3"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         left_to_right_3_1[i][j],
                         lattice[i][j],
@@ -124,17 +227,45 @@ namespace square {
                   right_to_left_3_3[i][j] = lazy::Node([]() { return Tensor<T>(1); });
                } else {
                   right_to_left_3_1[i][j] = lazy::Node(
-                        [j](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
-                           return last_3_3.contract(last_line[j], {{"L3", "R"}}).edge_rename({{"L", "L3"}});
+                        [
+#ifdef LAZY_DEBUG
+                              i,
+#endif
+                              j](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating right to left 3 1 for " << i << j << "\n";
+#endif
+                           auto result = last_3_3.contract(last_line[j], {{"L3", "R"}}).edge_rename({{"L", "L3"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         right_to_left_3_3[i][j + 1],
                         down_to_up[i + 1]);
                   right_to_left_3_3[i][j] = lazy::Node(
-                        [j](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
-                           return this_3_1.contract(this_site, {{"L2", "R"}, {"U", "D"}})
-                                 .edge_rename({{"L", "L2"}})
-                                 .contract(last_line[j], {{"L1", "R"}, {"U", "D"}})
-                                 .edge_rename({{"L", "L1"}});
+                        [
+#ifdef LAZY_DEBUG
+                              i,
+#endif
+                              j](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating right to left 3 3 for " << i << j << "\n";
+#endif
+                           auto result = this_3_1.contract(this_site, {{"L2", "R"}, {"U", "D"}})
+                                               .edge_rename({{"L", "L2"}})
+                                               .contract(last_line[j], {{"L1", "R"}, {"U", "D"}})
+                                               .edge_rename({{"L", "L1"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         right_to_left_3_1[i][j],
                         lattice[i][j],
@@ -150,21 +281,49 @@ namespace square {
                   up_to_down_3_3[i][j] = lazy::Node([]() { return Tensor<T>(1); });
                } else {
                   up_to_down_3_1[i][j] = lazy::Node(
-                        [i](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
-                           return last_3_3.contract(last_line[i], {{"D1", "U"}}).edge_rename({{"D", "D1"}});
+                        [
+#ifdef LAZY_DEBUG
+                              j,
+#endif
+                              i](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating up to down 3 1 for " << i << j << "\n";
+#endif
+                           auto result = last_3_3.contract(last_line[i], {{"D1", "U"}}).edge_rename({{"D", "D1"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         up_to_down_3_3[i - 1][j],
-                        up_to_down[j - 1]);
+                        left_to_right[j - 1]);
                   up_to_down_3_3[i][j] = lazy::Node(
-                        [i](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
-                           return this_3_1.contract(this_site, {{"D2", "U"}, {"R", "L"}})
-                                 .edge_rename({{"D", "D2"}})
-                                 .contract(last_line[i], {{"D3", "U"}, {"R", "L"}})
-                                 .edge_rename({{"D", "D3"}});
+                        [
+#ifdef LAZY_DEBUG
+                              j,
+#endif
+                              i](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating up to down 3 3 for " << i << j << "\n";
+#endif
+                           auto result = this_3_1.contract(this_site, {{"D2", "U"}, {"R", "L"}})
+                                               .edge_rename({{"D", "D2"}})
+                                               .contract(last_line[i], {{"D3", "U"}, {"R", "L"}})
+                                               .edge_rename({{"D", "D3"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         up_to_down_3_1[i][j],
                         lattice[i][j],
-                        down_to_up[j + 1]);
+                        right_to_left[j + 1]);
                }
             }
 
@@ -174,81 +333,107 @@ namespace square {
                   down_to_up_3_3[i][j] = lazy::Node([]() { return Tensor<T>(1); });
                } else {
                   down_to_up_3_1[i][j] = lazy::Node(
-                        [i](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
-                           return last_3_3.contract(last_line[i], {{"U3", "D"}}).edge_rename({{"U", "U3"}});
+                        [
+#ifdef LAZY_DEBUG
+                              j,
+#endif
+                              i](const Tensor<T>& last_3_3, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating down to up 3 1 for " << i << j << "\n";
+#endif
+                           auto result = last_3_3.contract(last_line[i], {{"U3", "D"}}).edge_rename({{"U", "U3"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         down_to_up_3_3[i + 1][j],
-                        down_to_up[j + 1]);
+                        right_to_left[j + 1]);
                   down_to_up_3_3[i][j] = lazy::Node(
-                        [i](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
-                           return this_3_1.contract(this_site, {{"U2", "D"}, {"L", "R"}})
-                                 .edge_rename({{"U", "U2"}})
-                                 .contract(last_line[i], {{"U1", "D"}, {"L", "R"}})
-                                 .edge_rename({{"U", "U1"}});
+                        [
+#ifdef LAZY_DEBUG
+                              j,
+#endif
+                              i](const Tensor<T>& this_3_1, const Tensor<T>& this_site, const std::vector<Tensor<T>>& last_line) {
+#ifdef LAZY_DEBUG
+                           std::clog << "Calculating down to up 3 3 for " << i << j << "\n";
+#endif
+                           auto result = this_3_1.contract(this_site, {{"U2", "D"}, {"L", "R"}})
+                                               .edge_rename({{"U", "U2"}})
+                                               .contract(last_line[i], {{"U1", "D"}, {"L", "R"}})
+                                               .edge_rename({{"U", "U1"}});
+#ifdef LAZY_DEBUG
+
+                           using TAT::operator<<;
+                           std::clog << result.names << "\n";
+
+#endif
+                           return result;
                         },
                         down_to_up_3_1[i][j],
                         lattice[i][j],
-                        up_to_down[j - 1]);
+                        left_to_right[j - 1]);
                }
             }
          }
 
-         lazy::use_graph(lazy::default_graph);
+         lazy::use_graph();
       }
 
+      // TODO hint and hole
       auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement) const {
          if (replacement.size() == 0) {
-            return left_to_right_3_3[M - 1][N - 1]->get();
+            return left_to_right_3_3.at(M - 1).at(N - 1)->get();
          } else if (replacement.size() == 1) {
             auto [i, j] = replacement.begin()->first;
             const auto& new_tensor = replacement.begin()->second;
-            return left_to_right_3_1[i][j]
-                  ->get()
+            return (left_to_right_3_1.at(i).at(j)->get())
                   .contract(new_tensor.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                  .contract(right_to_left_3_1[i][j]->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+                  .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
          } else if (replacement.size() == 2) {
-            auto [x1, y1] = replacement.begin()->first;
-            const auto& new_tensor_1 = replacement.begin()->second;
-            auto [x2, y2] = replacement.end()->first;
-            const auto& new_tensor_2 = replacement.end()->second;
+            auto iter = replacement.begin();
+            auto [x1, y1] = iter->first;
+            const auto& new_tensor_1 = iter->second;
+            ++iter;
+            auto [x2, y2] = iter->first;
+            const auto& new_tensor_2 = iter->second;
             if (x1 == x2) {
                if (y1 + 1 == y2) {
-                  return left_to_right_3_1[x1][y1]
-                        ->get()
+                  return (left_to_right_3_1.at(x1).at(y1)->get())
                         .contract(new_tensor_1.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                        .contract(down_to_up[x1 + 1]->get()[y1].edge_rename({{"R", "R3"}}), {{"R3", "L"}, {"D", "U"}})
-                        .contract(up_to_down[x2 - 1]->get()[y2].edge_rename({{"R", "R1"}}), {{"R1", "L"}})
+                        .contract(down_to_up.at(x1 + 1)->get()[y1].edge_rename({{"R", "R3"}}), {{"R3", "L"}, {"D", "U"}})
+                        .contract(up_to_down.at(x2 - 1)->get()[y2].edge_rename({{"R", "R1"}}), {{"R1", "L"}})
                         .contract(new_tensor_2.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                        .contract(right_to_left_3_1[x2][y2]->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+                        .contract(right_to_left_3_1.at(x2).at(y2)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
                }
                if (y2 + 1 == y1) {
-                  return left_to_right_3_1[x2][y2]
-                        ->get()
+                  return (left_to_right_3_1.at(x2).at(y2)->get())
                         .contract(new_tensor_2.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                        .contract(down_to_up[x2 + 1]->get()[y2].edge_rename({{"R", "R3"}}), {{"R3", "L"}, {"D", "U"}})
-                        .contract(up_to_down[x1 - 1]->get()[y1].edge_rename({{"R", "R1"}}), {{"R1", "L"}})
+                        .contract(down_to_up.at(x2 + 1)->get()[y2].edge_rename({{"R", "R3"}}), {{"R3", "L"}, {"D", "U"}})
+                        .contract(up_to_down.at(x1 - 1)->get()[y1].edge_rename({{"R", "R1"}}), {{"R1", "L"}})
                         .contract(new_tensor_1.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                        .contract(right_to_left_3_1[x1][y1]->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+                        .contract(right_to_left_3_1.at(x1).at(y1)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
                }
             }
             if (y1 == y2) {
                if (x1 + 1 == x2) {
-                  return up_to_down_3_1[x1][y1]
-                        ->get()
+                  return (up_to_down_3_1.at(x1).at(y1)->get())
                         .contract(new_tensor_1.edge_rename({{"D", "D2"}}), {{"D2", "U"}, {"R", "L"}})
-                        .contract(right_to_left[y1 + 1]->get()[x1].edge_rename({{"D", "D3"}}), {{"D3", "U"}, {"R", "L"}})
-                        .contract(left_to_right[y2 - 1]->get()[x2].edge_rename({{"D", "D1"}}), {{"D1", "U"}})
+                        .contract(right_to_left.at(y1 + 1)->get()[x1].edge_rename({{"D", "D3"}}), {{"D3", "U"}, {"R", "L"}})
+                        .contract(left_to_right.at(y2 - 1)->get()[x2].edge_rename({{"D", "D1"}}), {{"D1", "U"}})
                         .contract(new_tensor_2.edge_rename({{"D", "D2"}}), {{"D2", "U"}, {"R", "L"}})
-                        .contract(down_to_up_3_1[x2][y2]->get(), {{"D1", "U1"}, {"D2", "U2"}, {"D3", "U3"}, {"R", "L"}});
+                        .contract(down_to_up_3_1.at(x2).at(y2)->get(), {{"D1", "U1"}, {"D2", "U2"}, {"D3", "U3"}, {"R", "L"}});
                }
                if (x2 + 1 == x1) {
-                  return up_to_down_3_1[x2][y2]
-                        ->get()
+                  return (up_to_down_3_1.at(x2).at(y2)->get())
                         .contract(new_tensor_2.edge_rename({{"D", "D2"}}), {{"D2", "U"}, {"R", "L"}})
-                        .contract(right_to_left[y2 + 1]->get()[x1].edge_rename({{"D", "D3"}}), {{"D3", "U"}, {"R", "L"}})
-                        .contract(left_to_right[y1 - 1]->get()[x2].edge_rename({{"D", "D1"}}), {{"D1", "U"}})
+                        .contract(right_to_left.at(y2 + 1)->get()[x1].edge_rename({{"D", "D3"}}), {{"D3", "U"}, {"R", "L"}})
+                        .contract(left_to_right.at(y1 - 1)->get()[x2].edge_rename({{"D", "D1"}}), {{"D1", "U"}})
                         .contract(new_tensor_1.edge_rename({{"D", "D2"}}), {{"D2", "U"}, {"R", "L"}})
-                        .contract(down_to_up_3_1[x1][y1]->get(), {{"D1", "U1"}, {"D2", "U2"}, {"D3", "U3"}, {"R", "L"}});
+                        .contract(down_to_up_3_1.at(x1).at(y1)->get(), {{"D1", "U1"}, {"D2", "U2"}, {"D3", "U3"}, {"R", "L"}});
                }
             }
          }
@@ -257,12 +442,12 @@ namespace square {
 
       static std::vector<Tensor<T>>
       _two_line_to_one_line(const char* udlr_name, const std::vector<Tensor<T>>& line_1, const std::vector<const Tensor<T>*>& line_2, Size cut) {
-         auto up = udlr_name[0];
-         auto down = udlr_name[1];
-         auto left = udlr_name[2];
-         auto right = udlr_name[3];
-         std::string suffix_1 = "1";
-         std::string suffix_2 = "2";
+         std::string up = {udlr_name[0]};
+         std::string down = {udlr_name[1]};
+         std::string left = {udlr_name[2]};
+         std::string right = {udlr_name[3]};
+         char suffix_1 = '1';
+         char suffix_2 = '2';
          auto up1 = up + suffix_1;
          auto up2 = up + suffix_2;
          auto down1 = down + suffix_1;
