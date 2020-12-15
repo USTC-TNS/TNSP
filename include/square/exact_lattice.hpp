@@ -52,8 +52,8 @@ namespace square {
          vector /= vector.template norm<-1>();
       }
 
-      ExactLattice(const SimpleUpdateLattice<T>& other);
-      ExactLattice(const SamplingGradientLattice<T>& other);
+      explicit ExactLattice(const SimpleUpdateLattice<T>& other);
+      explicit ExactLattice(const SamplingGradientLattice<T>& other);
 
       real<T> update(int total_step, real<T> approximate_energy = -0.5) {
          real<T> total_approximate_energy = std::abs(approximate_energy) * M * N;

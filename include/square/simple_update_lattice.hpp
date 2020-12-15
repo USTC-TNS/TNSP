@@ -45,7 +45,7 @@ namespace square {
 
       SimpleUpdateLattice(int M, int N, Size D, Size d) : AbstractNetworkLattice<T>(M, N, D, d) {}
 
-      SimpleUpdateLattice(const SamplingGradientLattice<T>& other);
+      explicit SimpleUpdateLattice(const SamplingGradientLattice<T>& other);
 
       void update(int total_step, real<T> delta_t, Size new_dimension) {
          if (new_dimension) {
@@ -53,6 +53,7 @@ namespace square {
          }
          std::map<const Tensor<T>*, std::shared_ptr<const Tensor<T>>> updater_pool;
          std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>> updater;
+         // TODO proper update order
          for (const auto& [positions, term] : hamiltonians) {
             auto position_number = positions.size();
             auto term_pointer = &*term;

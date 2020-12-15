@@ -126,7 +126,22 @@ int main(int argc, char** argv) {
             }
             break;
          case LatticeType::Sample:
-            if (command == "ergodic") {
+            if (command == "save") {
+               std::string file_name;
+               std::cin >> file_name;
+               std::ofstream(file_name) < sampling_gradient_lattice;
+            } else if (command == "open") {
+               std::string file_name;
+               std::cin >> file_name;
+               std::ifstream(file_name) > sampling_gradient_lattice;
+            } else if (command == "new") {
+               int M, N;
+               square::Size D, Dc, d;
+               std::cin >> M >> N >> D >> Dc >> d;
+               sampling_gradient_lattice = square::SamplingGradientLattice<double>(M, N, D, Dc, d);
+               sampling_gradient_lattice.set_all_horizontal_bond(square::Common<double>::SS());
+               sampling_gradient_lattice.set_all_vertical_bond(square::Common<double>::SS());
+            } else if (command == "ergodic") {
                sampling_gradient_lattice.ergodic({}, true);
             } else if (command == "markov") {
                unsigned long long total_step;
@@ -140,6 +155,9 @@ int main(int argc, char** argv) {
             } else if (command == "exact") {
                lattice_type = LatticeType::Exact;
                exact_lattice = square::ExactLattice(sampling_gradient_lattice);
+            } else if (command == "simple") {
+               lattice_type = LatticeType::Simple;
+               simple_update_lattice = square::SimpleUpdateLattice<double>(sampling_gradient_lattice);
             } else {
                std::cerr << "Invalid Command: " << command << "\n";
                return -1;

@@ -80,22 +80,15 @@ namespace square {
       Size dimension_cut;
       SpinConfiguration<T> spin;
 
+      // spin应当只用this初始化, 随后initialize_spin即可
       SamplingGradientLattice() : AbstractNetworkLattice<T>(0, 0, 0, 0), dimension_cut(0), spin(this){};
       SamplingGradientLattice(const SamplingGradientLattice<T>& other) :
             AbstractNetworkLattice<T>(other), dimension_cut(other.dimension_cut), spin(this) {
-         for (auto i = 0; i < M; i++) {
-            for (auto j = 0; j < N; j++) {
-               spin.set({i, j}, other.spin.configuration[i][j]);
-            }
-         }
+         initialize_spin(other.spin.configuration);
       }
       SamplingGradientLattice(SamplingGradientLattice<T>&& other) :
             AbstractNetworkLattice<T>(std::move(other)), dimension_cut(other.dimension_cut), spin(this) {
-         for (auto i = 0; i < M; i++) {
-            for (auto j = 0; j < N; j++) {
-               spin.set({i, j}, other.spin.configuration[i][j]);
-            }
-         }
+         initialize_spin(other.spin.configuration);
       }
       SamplingGradientLattice<T>& operator=(const SamplingGradientLattice<T>& other) {
          if (this != &other) {
@@ -112,7 +105,7 @@ namespace square {
 
       SamplingGradientLattice(int M, int N, Size D, Size Dc, Size d) : AbstractNetworkLattice<T>(M, N, D, d), dimension_cut(Dc), spin(this) {}
 
-      SamplingGradientLattice(const SimpleUpdateLattice<T>& other, Size Dc);
+      explicit SamplingGradientLattice(const SimpleUpdateLattice<T>& other, Size Dc);
 
       using AbstractNetworkLattice<T>::M;
       using AbstractNetworkLattice<T>::N;
@@ -125,6 +118,14 @@ namespace square {
          for (auto i = 0; i < M; i++) {
             for (auto j = 0; j < N; j++) {
                spin.set({i, j}, function(i, j));
+            }
+         }
+      }
+
+      void initialize_spin(const std::vector<std::vector<int>>& configuration) {
+         for (auto i = 0; i < M; i++) {
+            for (auto j = 0; j < N; j++) {
+               spin.set({i, j}, configuration[i][j]);
             }
          }
       }
@@ -299,6 +300,7 @@ namespace square {
       }
 
       real<T> _markov_spin(real<T> ws) {
+         // TODO proper update order and use hint of aux
          for (auto iter = hamiltonians.begin(); iter != hamiltonians.end(); ++iter) {
             const auto& [positions, hamiltonian] = *iter;
             ws = _markov_single_term(ws, positions, hamiltonian);
@@ -393,6 +395,27 @@ namespace square {
          }
       }
    };
+
+   template<typename T>
+   std::ostream& operator<(std::ostream& out, const SamplingGradientLattice<T>& lattice) {
+      using TAT::operator<;
+      out < static_cast<const AbstractNetworkLattice<T>&>(lattice);
+      out < lattice.dimension_cut;
+      out < lattice.spin.configuration;
+      return out;
+   }
+
+   template<typename T>
+   std::istream& operator>(std::istream& in, SamplingGradientLattice<T>& lattice) {
+      using TAT::operator>;
+      in > static_cast<AbstractNetworkLattice<T>&>(lattice);
+      in > lattice.dimension_cut;
+      std::vector<std::vector<int>> configuration;
+      in > configuration;
+      lattice.spin = SpinConfiguration(&lattice);
+      lattice.initialize_spin(configuration);
+      return in;
+   }
 } // namespace square
 
 #endif
