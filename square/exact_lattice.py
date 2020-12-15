@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-
 from __future__ import annotations
 from typing import Tuple
 from multimethod import multimethod
 import TAT
 from .abstract_lattice import AbstractLattice
-from .simple_update_lattice import SimpleUpdateLattice
-from .sampling_gradient_lattice import SamplingGradientLattice
+from . import simple_update_lattice
+from . import sampling_gradient_lattice
 
 __all__ = ["ExactLattice"]
 
@@ -39,7 +38,12 @@ class ExactLattice(AbstractLattice):
         self.vector: Tensor = self._initialize_vector()
 
     @multimethod
-    def __init__(self, other: SimpleUpdateLattice) -> None:
+    def __init__(self, other: ExactLattice) -> None:
+        super().__init__(other)
+        self.vector: Tensor = other.vector
+
+    @multimethod
+    def __init__(self, other: simple_update_lattice.SimpleUpdateLattice) -> None:
         super().__init__(other)
 
         self.vector: Tensor = Tensor(1)
@@ -53,7 +57,7 @@ class ExactLattice(AbstractLattice):
                 self.vector /= self.vector.norm_max()
 
     @multimethod
-    def __init__(self, other: SamplingGradientLattice) -> None:
+    def __init__(self, other: sampling_gradient_lattice.SamplingGradientLattice) -> None:
         super().__init__(other)
 
         self.vector: Tensor = Tensor(1)
@@ -67,8 +71,9 @@ class ExactLattice(AbstractLattice):
     def _initialize_vector(self) -> Tensor:
         name_list = [f"P-{i}-{j}" for i in range(self.M) for j in range(self.N)]
         dimension_list = [self.dimension_physics for _ in range(self.M) for _ in range(self.N)]
-        self.vector = Tensor(name_list, dimension_list).randn()
-        self.vector /= self.vector.norm_max()
+        vector = Tensor(name_list, dimension_list).randn()
+        vector /= vector.norm_max()
+        return vector
 
     def update(self, time: int = 1, approximate_energy: float = -0.5, print_energy: bool = False) -> float:
         total_approximate_energy: float = abs(approximate_energy) * self.M * self.N

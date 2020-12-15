@@ -15,9 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-
 from __future__ import annotations
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional, Tuple
 from multimethod import multimethod
 import TAT
 from .abstract_network_lattice import AbstractNetworkLattice
@@ -36,7 +35,7 @@ class SimpleUpdateLattice(AbstractNetworkLattice):
     __slots__ = ["environment", "auxiliary"]
 
     @multimethod
-    def __init__(self, M: int, N: int, *, D: int, d: int = 2) -> None:
+    def __init__(self, M: int, N: int, *, D: int, d: int) -> None:
         super().__init__(M, N, D=D, d=d)
 
         self.environment: Dict[Tuple[str, int, int], Tensor] = {}
@@ -44,7 +43,16 @@ class SimpleUpdateLattice(AbstractNetworkLattice):
 
         self.auxiliary: Optional[SquareAuxiliariesSystem] = None
 
-    """
+    @multimethod
+    def __init__(self, other: SimpleUpdateLattice) -> None:
+        super().__init__(other)
+
+        self.environment: Dict[Tuple[str, int, int], Tensor] = other.environment.copy()
+
+        self.auxiliary: Optional[SquareAuxiliariesSystem] = None
+        if other.auxiliary is not None:
+            self.auxiliary = SquareAuxiliariesSystem(other.auxiliary)
+
     @multimethod
     def __init__(self, other: sampling_gradient_lattice.SamplingGradientLattice) -> None:
         super().__init__(other)
@@ -52,7 +60,6 @@ class SimpleUpdateLattice(AbstractNetworkLattice):
         self.environment: Dict[Tuple[str, int, int], Tensor] = {}
 
         self.auxiliary: Optional[SquareAuxiliariesSystem] = None
-    """
 
     def _construct_environment(self) -> None:
         for i in range(self.M):

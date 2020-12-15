@@ -409,7 +409,7 @@ namespace TAT {
             for (const auto& [symmetries, block] : core->blocks) {
                auto [iterator, success] = result.core->blocks.emplace(symmetries, block.size());
                auto& this_block = iterator->second;
-               for (Nums i = 0; i < block.size(); i++) {
+               for (Size i = 0; i < block.size(); i++) {
                   if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
                      this_block[i] = OtherScalarType(block[i].real());
                   } else {
@@ -771,11 +771,6 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name> summary(const int root) const {
          return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       };
-
-      /**
-       * \see mpi_t
-       */
-      static mpi_t mpi;
 #endif
 
       const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;

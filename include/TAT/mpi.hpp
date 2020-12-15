@@ -120,9 +120,6 @@ namespace TAT {
    /**@}*/
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   mpi_t Tensor<ScalarType, Symmetry, Name>::mpi;
-
-   template<typename ScalarType, typename Symmetry, typename Name>
    void Tensor<ScalarType, Symmetry, Name>::send(const int destination) const {
       auto data = dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
       MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);

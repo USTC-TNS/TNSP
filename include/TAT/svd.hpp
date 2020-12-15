@@ -27,7 +27,7 @@
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
-int sgesvd_(
+void sgesvd_(
       const char* job_u,
       const char* job_vt,
       const int* m,
@@ -42,7 +42,7 @@ int sgesvd_(
       float* work,
       const int* lwork,
       int* info);
-int dgesvd_(
+void dgesvd_(
       const char* job_u,
       const char* job_vt,
       const int* m,
@@ -57,7 +57,7 @@ int dgesvd_(
       double* work,
       const int* lwork,
       int* info);
-int cgesvd_(
+void cgesvd_(
       const char* job_u,
       const char* job_vt,
       const int* m,
@@ -73,7 +73,7 @@ int cgesvd_(
       const int* lwork,
       float* rwork,
       int* info);
-int zgesvd_(
+void zgesvd_(
       const char* job_u,
       const char* job_vt,
       const int* m,

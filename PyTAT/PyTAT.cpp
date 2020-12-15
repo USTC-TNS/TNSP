@@ -59,8 +59,8 @@
 namespace TAT {
    namespace py = pybind11;
 
-   auto random_engine = std::default_random_engine(std::random_device()());
-   void set_random_seed(unsigned long seed) {
+   inline auto random_engine = std::default_random_engine(std::random_device()());
+   inline void set_random_seed(unsigned long seed) {
       random_engine.seed(seed);
    }
 
@@ -81,7 +81,7 @@ namespace TAT {
          function_list.resize(0);
       }
    };
-   AtExit at_exit;
+   static AtExit at_exit;
 
    template<typename Type, typename Args>
    auto implicit_init() {
@@ -379,8 +379,8 @@ namespace TAT {
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"),
                   py::arg("value"))
-            .def("shrink", &T::shrink, "Shrink Edge of tensor", py::arg("configure"), py::arg("new_name") = "Null", py::arg("arrow") = false)
-            .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = "Null")
+            .def("shrink", &T::shrink, "Shrink Edge of tensor", py::arg("configure"), py::arg("new_name") = ",No_New_Name", py::arg("arrow") = false)
+            .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = ",No_Old_Name")
             .def(
                   "to",
                   [](const T& tensor, const py::object& object) -> py::object {
@@ -558,7 +558,7 @@ namespace TAT {
                   "Reduce a tensor with commutative function into root")
             .def("summary", &T::summary, py::arg("root"), "Summation of a tensor into root")
             .def_static("barrier", &T::barrier, "MPI barrier")
-            .def_readonly_static("mpi", &T::mpi, "MPI Handle")
+            .def_readonly_static("mpi", &mpi, "MPI Handle")
 #endif
             .def_static("set_random_seed", &set_random_seed, "Set Random Seed")
             .def(
@@ -753,7 +753,35 @@ namespace TAT {
       tat_m.attr("mpi_enabled") = mpi_enabled;
       auto internal_m = tat_m.def_submodule("_internal", "internal information of TAT");
       // random
-      tat_m.def("set_random_seed", &set_random_seed, "Set Random Seed");
+      auto random_m = tat_m.def_submodule("random", "random for TAT");
+      random_m.def("seed", &set_random_seed, "Set Random Seed");
+      random_m.def(
+            "uniform_int",
+            [](int min, int max) {
+               auto distribution = std::uniform_int_distribution<int>(min, max);
+               return distribution(random_engine);
+            },
+            py::arg("min") = 0,
+            py::arg("max") = 1,
+            "Get random uniform integer");
+      random_m.def(
+            "uniform_real",
+            [](double min, double max) {
+               auto distribution = std::uniform_real_distribution<double>(min, max);
+               return distribution(random_engine);
+            },
+            py::arg("min") = 0,
+            py::arg("max") = 1,
+            "Get random uniform real");
+      random_m.def(
+            "normal",
+            [](double mean, double stddev) {
+               auto distribution = std::normal_distribution<double>(mean, stddev);
+               return distribution(random_engine);
+            },
+            py::arg("mean") = 0,
+            py::arg("stddev") = 1,
+            "Get random normal real");
       // mpi
 #ifdef TAT_USE_MPI
       py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")

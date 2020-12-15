@@ -26,7 +26,7 @@
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
-int sgemm_(
+void sgemm_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -40,7 +40,7 @@ int sgemm_(
       const float* beta,
       float* c,
       const int* ldc);
-int dgemm_(
+void dgemm_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -54,7 +54,7 @@ int dgemm_(
       const double* beta,
       double* c,
       const int* ldc);
-int cgemm_(
+void cgemm_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -68,7 +68,7 @@ int cgemm_(
       const std::complex<float>* beta,
       std::complex<float>* c,
       const int* ldc);
-int zgemm_(
+void zgemm_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -84,7 +84,7 @@ int zgemm_(
       const int* ldc);
 
 #ifdef TAT_USE_MKL_GEMM_BATCH
-int sgemm_batch_(
+void sgemm_batch_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -100,7 +100,7 @@ int sgemm_batch_(
       const int* ldc,
       const int* group_count,
       const int* group_size);
-int dgemm_batch_(
+void dgemm_batch_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -116,7 +116,7 @@ int dgemm_batch_(
       const int* ldc,
       const int* group_count,
       const int* group_size);
-int cgemm_batch_(
+void cgemm_batch_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
@@ -132,7 +132,7 @@ int cgemm_batch_(
       const int* ldc,
       const int* group_count,
       const int* group_size);
-int zgemm_batch_(
+void zgemm_batch_(
       const char* transpose_a,
       const char* transpose_b,
       const int* m,
