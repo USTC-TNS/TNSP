@@ -39,6 +39,7 @@ namespace square {
             left_to_right_3_3, left_to_right_3_1, right_to_left_3_3, right_to_left_3_1;
 
       SquareAuxiliariesSystem() = default;
+
       SquareAuxiliariesSystem(const SquareAuxiliariesSystem<T>& other) : SquareAuxiliariesSystem(other.M, other.N, other.dimension_cut) {
          for (auto i = 0; i < M; i++) {
             for (auto j = 0; j < N; j++) {

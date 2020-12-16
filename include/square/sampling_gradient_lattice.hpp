@@ -36,6 +36,8 @@ namespace square {
       using SquareAuxiliariesSystem<T>::lattice;
       using SquareAuxiliariesSystem<T>::operator();
 
+      SpinConfiguration() = default;
+
       SpinConfiguration(const SamplingGradientLattice<T>* owner) :
             SquareAuxiliariesSystem<T>(owner->M, owner->N, owner->dimension_cut), owner(owner) {
          for (auto i = 0; i < M; i++) {
@@ -81,7 +83,8 @@ namespace square {
       SpinConfiguration<T> spin;
 
       // spin应当只用this初始化, 随后initialize_spin即可
-      SamplingGradientLattice() : AbstractNetworkLattice<T>(0, 0, 0, 0), dimension_cut(0), spin(this){};
+      SamplingGradientLattice() = default;
+
       SamplingGradientLattice(const SamplingGradientLattice<T>& other) :
             AbstractNetworkLattice<T>(other), dimension_cut(other.dimension_cut), spin(this) {
          initialize_spin(other.spin.configuration);
