@@ -137,6 +137,9 @@ namespace square {
             unsigned long long total_step,
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
             bool calculate_energy = false) {
+         std::cout << clear_line << "Markov sampling start, total_step=" << total_step << ", dimension=" << dimension_virtual
+                   << ", dimension_cut=" << dimension_cut << "\n"
+                   << std::flush;
          if (calculate_energy) {
             observers["Energy"] = hamiltonians;
          }
@@ -219,6 +222,8 @@ namespace square {
       auto ergodic(
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
             bool calculate_energy = false) {
+         std::cout << clear_line << "Ergodic sampling start, dimension=" << dimension_virtual << ", dimension_cut=" << dimension_cut << "\n"
+                   << std::flush;
          if (calculate_energy) {
             observers["Energy"] = hamiltonians;
          }
@@ -293,10 +298,13 @@ namespace square {
       }
 
       void equilibrate(unsigned long long total_step) {
+         std::cout << clear_line << "Equilibrating start, total_step=" << total_step << ", dimension=" << dimension_virtual
+                   << ", dimension_cut=" << dimension_cut << "\n"
+                   << std::flush;
          real<T> ws = spin();
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws);
-            std::cout << clear_line << "Equilibrating , total_step=" << total_step << ", dimension=" << dimension_virtual
+            std::cout << clear_line << "Equilibrating, total_step=" << total_step << ", dimension=" << dimension_virtual
                       << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
          }
          std::cout << clear_line << "Equilibrate done, total_step=" << total_step << ", dimension=" << dimension_virtual

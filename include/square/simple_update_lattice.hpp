@@ -51,6 +51,9 @@ namespace square {
          if (new_dimension) {
             dimension_virtual = new_dimension;
          }
+         std::cout << clear_line << "Simple updating start, total_step=" << total_step << ", dimension=" << dimension_virtual
+                   << ", delta_t=" << delta_t << "\n"
+                   << std::flush;
          std::map<const Tensor<T>*, std::shared_ptr<const Tensor<T>>> updater_pool;
          std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>> updater;
          // TODO proper update order

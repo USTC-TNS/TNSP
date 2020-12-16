@@ -56,6 +56,7 @@ namespace square {
       explicit ExactLattice(const SamplingGradientLattice<T>& other);
 
       real<T> update(int total_step, real<T> approximate_energy = -0.5) {
+         std::cout << clear_line << "Exact update done, total_step=" << total_step << "\n" << std::flush;
          real<T> total_approximate_energy = std::abs(approximate_energy) * M * N;
          real<T> energy = 0;
          for (auto step = 0; step < total_step; step++) {
