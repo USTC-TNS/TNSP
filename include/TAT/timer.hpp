@@ -124,6 +124,7 @@ namespace TAT {
       auto operator()() {
          return nullptr;
       }
+      timer(const char*) {}
    };
 #endif
 
