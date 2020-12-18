@@ -59,13 +59,16 @@ namespace square {
                lattice[x][y]->unset();
                configuration[x][y] = spin;
             } else {
+#ifdef LAZY_DEBUG
+               std::clog << "Flip at (" << x << ", " << y << ") to " << spin << "\n";
+#endif
                lattice[x][y]->set(owner->lattice[x][y].shrink({{"P", spin}}));
                configuration[x][y] = spin;
             }
          }
       }
 
-      auto operator()(const std::map<std::tuple<int, int>, int>& replacement) const {
+      auto operator()(const std::map<std::tuple<int, int>, int>& replacement, T ws, char hint = ' ') const {
          auto real_replacement = std::map<std::tuple<int, int>, Tensor<T>>();
          for (auto& [position, spin] : replacement) {
             auto [x, y] = position;
@@ -73,7 +76,11 @@ namespace square {
                real_replacement[{x, y}] = owner->lattice[x][y].shrink({{"P", spin}});
             }
          }
-         return operator()(real_replacement);
+         if (real_replacement.empty()) {
+            return Tensor<T>(ws);
+         } else {
+            return operator()(real_replacement, hint);
+         }
       }
 
       auto operator()() const {
@@ -147,7 +154,9 @@ namespace square {
       auto markov(
             unsigned long long total_step,
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
-            bool calculate_energy = false) {
+            bool calculate_energy = false,
+            bool calculate_gradient = false) {
+         // TODO gradient
          std::cout << clear_line << "Markov sampling start, total_step=" << total_step << ", dimension=" << dimension_virtual
                    << ", dimension_cut=" << dimension_cut << "\n"
                    << std::flush;
@@ -158,8 +167,9 @@ namespace square {
          auto result_variance_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          auto result_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          real<T> ws = spin();
+         auto positions_sequence = _markov_sampling_positions_sequence();
          for (unsigned long long step = 0; step < total_step; step++) {
-            ws = _markov_spin(ws);
+            ws = _markov_spin(ws, positions_sequence);
             for (const auto& [kind, group] : observers) {
                for (const auto& [positions, tensor] : group) {
                   int body = positions.size();
@@ -174,7 +184,7 @@ namespace square {
                      for (auto i = 0; i < body; i++) {
                         map[positions[i]] = spins_out[i];
                      }
-                     real<T> wss = spin(map);
+                     real<T> wss = spin(map, ws);
                      value += element * wss / ws;
                   }
                   result[kind][positions] += value;
@@ -259,7 +269,7 @@ namespace square {
                      for (auto i = 0; i < body; i++) {
                         map[positions[i]] = spins_out[i];
                      }
-                     real<T> wss = spin(map);
+                     real<T> wss = spin(map, ws);
                      value += element * wss / ws;
                   }
                   result[kind][positions] += value * ws * ws;
@@ -278,23 +288,23 @@ namespace square {
                          << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
             }
          }
+         for (auto& [kind, group] : result) {
+            for (auto& [positions, value] : group) {
+               value /= sum_of_ws_square;
+            }
+         }
          if (calculate_energy) {
             real<T> energy = 0;
             for (const auto& [positions, value] : result.at("Energy")) {
                energy += value;
             };
             std::cout << clear_line << "Ergodic sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
-                      << ", dimension_cut=" << dimension_cut << ", Energy=" << energy / (sum_of_ws_square * M * N) << "\n"
+                      << ", dimension_cut=" << dimension_cut << ", Energy=" << energy / (M * N) << "\n"
                       << std::flush;
          } else {
             std::cout << clear_line << "Ergodic sample done, total_step=" << total_step << ", dimension=" << dimension_virtual
                       << ", dimension_cut=" << dimension_cut << "\n"
                       << std::flush;
-         }
-         for (auto& [kind, group] : result) {
-            for (auto& [positions, value] : group) {
-               value /= sum_of_ws_square;
-            }
          }
          return result;
       }
@@ -313,8 +323,9 @@ namespace square {
                    << ", dimension_cut=" << dimension_cut << "\n"
                    << std::flush;
          real<T> ws = spin();
+         auto positions_sequence = _markov_sampling_positions_sequence();
          for (unsigned long long step = 0; step < total_step; step++) {
-            ws = _markov_spin(ws);
+            ws = _markov_spin(ws, positions_sequence);
             std::cout << clear_line << "Equilibrating, total_step=" << total_step << ", dimension=" << dimension_virtual
                       << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
          }
@@ -323,21 +334,66 @@ namespace square {
                    << std::flush;
       }
 
-      real<T> _markov_spin(real<T> ws) {
-         // TODO proper update order and use hint of aux
-         for (auto iter = hamiltonians.begin(); iter != hamiltonians.end(); ++iter) {
-            const auto& [positions, hamiltonian] = *iter;
-            ws = _markov_single_term(ws, positions, hamiltonian);
+      real<T> _markov_spin(real<T> ws, const std::vector<std::tuple<std::vector<std::tuple<int, int>>, char>>& positions_sequence) {
+         for (auto iter = positions_sequence.begin(); iter != positions_sequence.end(); ++iter) {
+            const auto& [positions, hint] = *iter;
+            const auto& hamiltonian = hamiltonians.at(positions);
+            ws = _markov_single_term(ws, positions, hamiltonian, hint);
          }
-         for (auto iter = hamiltonians.rbegin(); iter != hamiltonians.rend(); ++iter) {
-            const auto& [positions, hamiltonian] = *iter;
-            ws = _markov_single_term(ws, positions, hamiltonian);
+         for (auto iter = positions_sequence.rbegin(); iter != positions_sequence.rend(); ++iter) {
+            const auto& [positions, hint] = *iter;
+            const auto& hamiltonian = hamiltonians.at(positions);
+            ws = _markov_single_term(ws, positions, hamiltonian, hint);
          }
          return ws;
       }
 
-      real<T>
-      _markov_single_term(real<T> ws, const std::vector<std::tuple<int, int>>& positions, const std::shared_ptr<const Tensor<T>>& hamiltonian) {
+      auto _markov_sampling_positions_sequence() const {
+         auto result = std::vector<std::tuple<std::vector<std::tuple<int, int>>, char>>();
+         // 应该不存在常数项的hamiltonians
+         // 双点，横+竖, 单点和横向放在一起
+         for (auto i = 0; i < M; i++) {
+            for (auto j = 0; j < N; j++) {
+               if (auto found = hamiltonians.find({{i, j}}); found != hamiltonians.end()) {
+                  result.emplace_back(std::vector<std::tuple<int, int>>{{i, j}}, 'h');
+               }
+               if (auto found = hamiltonians.find({{i, j}, {i, j + 1}}); found != hamiltonians.end()) {
+                  result.emplace_back(std::vector<std::tuple<int, int>>{{i, j}, {i, j + 1}}, 'h');
+               }
+               if (auto found = hamiltonians.find({{i, j + 1}, {i, j}}); found != hamiltonians.end()) {
+                  result.emplace_back(std::vector<std::tuple<int, int>>{{i, j + 1}, {i, j}}, 'h');
+               }
+            }
+         }
+         for (auto j = 0; j < N; j++) {
+            for (auto i = 0; i < M; i++) {
+               if (auto found = hamiltonians.find({{i, j}, {i + 1, j}}); found != hamiltonians.end()) {
+                  result.emplace_back(std::vector<std::tuple<int, int>>{{i, j}, {i + 1, j}}, 'v');
+               }
+               if (auto found = hamiltonians.find({{i + 1, j}, {i, j}}); found != hamiltonians.end()) {
+                  result.emplace_back(std::vector<std::tuple<int, int>>{{i + 1, j}, {i, j}}, 'v');
+               }
+            }
+         }
+         // 其他类型和更多的格点暂时不支持
+         if (result.size() != hamiltonians.size()) {
+            throw NotImplementedError("Unsupported markov sampling style");
+         }
+         return result;
+      }
+
+      real<T> _markov_single_term(
+            real<T> ws,
+            const std::vector<std::tuple<int, int>>& positions,
+            const std::shared_ptr<const Tensor<T>>& hamiltonian,
+            char hint = ' ') {
+#ifdef LAZY_DEBUG
+         std::clog << "Hopping at ";
+         for (const auto& [x, y] : positions) {
+            std::clog << "(" << x << ", " << y << ") ";
+         }
+         std::clog << "\n";
+#endif
          int body = positions.size();
          auto current_spin = std::vector<int>();
          for (auto i = 0; i < body; i++) {
@@ -357,7 +413,7 @@ namespace square {
             for (auto i = 0; i < body; i++) {
                replacement[positions[i]] = spins_new[i];
             }
-            real<T> wss = spin(replacement);
+            real<T> wss = spin(replacement, ws, hint);
             int hopping_number_s = hamiltonian_elements.at(spins_new).size();
             real<T> wss_over_ws = wss / ws;
             real<T> p = wss_over_ws * wss_over_ws * hopping_number / hopping_number_s;

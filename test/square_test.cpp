@@ -15,7 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#define TAT_USE_SIMPLE_NAME
+// #define TAT_USE_SIMPLE_NAME
+// #define LAZY_DEBUG
 
 #include <fstream>
 #include <square/square.hpp>

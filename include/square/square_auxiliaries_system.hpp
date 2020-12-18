@@ -384,16 +384,22 @@ namespace square {
          lazy::use_graph();
       }
 
-      // TODO hint and hole
-      auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ', int hint_i = 0, int hint_j = 0) const {
+      // TODO hole
+      auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
          if (replacement.size() == 0) {
             return left_to_right_3_3.at(M - 1).at(N - 1)->get();
          } else if (replacement.size() == 1) {
             auto [i, j] = replacement.begin()->first;
             const auto& new_tensor = replacement.begin()->second;
-            return (left_to_right_3_1.at(i).at(j)->get())
-                  .contract(new_tensor.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                  .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+            if (hint_char == 'v') {
+               return (up_to_down_3_1.at(i).at(j)->get())
+                     .contract(new_tensor.edge_rename({{"D", "D2"}}), {{"D2", "U"}, {"R", "L"}})
+                     .contract(down_to_up_3_1.at(i).at(j)->get(), {{"D1", "U1"}, {"D2", "U2"}, {"D3", "U3"}, {"R", "L"}});
+            } else {
+               return (left_to_right_3_1.at(i).at(j)->get())
+                     .contract(new_tensor.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
+                     .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+            }
          } else if (replacement.size() == 2) {
             auto iter = replacement.begin();
             auto [x1, y1] = iter->first;

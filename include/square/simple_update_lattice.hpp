@@ -60,7 +60,6 @@ namespace square {
                    << std::flush;
          std::map<const Tensor<T>*, std::shared_ptr<const Tensor<T>>> updater_pool;
          std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>> updater;
-         // TODO proper update order
          for (const auto& [positions, term] : hamiltonians) {
             auto position_number = positions.size();
             auto term_pointer = &*term;
@@ -74,12 +73,17 @@ namespace square {
                updater[positions] = found->second;
             }
          }
+         auto positions_sequence = _simple_update_positions_sequence();
          for (auto step = 0; step < total_step; step++) {
-            for (auto iter = updater.begin(); iter != updater.end(); ++iter) {
-               _single_term_simple_update(iter->first, *(iter->second));
+            for (auto iter = positions_sequence.begin(); iter != positions_sequence.end(); ++iter) {
+               const auto& positions = *iter;
+               const auto& tensor = *updater.at(positions);
+               _single_term_simple_update(positions, tensor);
             }
-            for (auto iter = updater.rbegin(); iter != updater.rend(); ++iter) {
-               _single_term_simple_update(iter->first, *(iter->second));
+            for (auto iter = positions_sequence.rbegin(); iter != positions_sequence.rend(); ++iter) {
+               const auto& positions = *iter;
+               const auto& tensor = *updater.at(positions);
+               _single_term_simple_update(positions, tensor);
             }
             std::cout << clear_line << "Simple updating, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
                       << ", step=" << step << "\r" << std::flush;
@@ -87,6 +91,60 @@ namespace square {
          std::cout << clear_line << "Simple update done, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
                    << "\n"
                    << std::flush;
+      }
+
+      auto _simple_update_positions_sequence() const {
+         // 以后simple update如果要并行，下面之中每类内都是无依赖的
+         auto result = std::vector<std::vector<std::tuple<int, int>>>();
+         // 应该不存在常数项的hamiltonians
+         // 单点
+         for (const auto& [positions, tensor] : hamiltonians) {
+            if (positions.size() == 1) {
+               result.push_back(positions);
+            }
+         }
+         // 双点，分成四大类+其他
+         for (const auto& [positions, tensor] : hamiltonians) {
+            if (positions.size() == 2) {
+               const auto& [x1, y1] = positions[0];
+               const auto& [x2, y2] = positions[1];
+               if (x1 == x2 && ((y1 + 1 == y2 && y1 % 2 == 0) || (y1 == y2 + 1 && y2 % 2 == 0))) {
+                  result.push_back(positions);
+               }
+            }
+         }
+         for (const auto& [positions, tensor] : hamiltonians) {
+            if (positions.size() == 2) {
+               const auto& [x1, y1] = positions[0];
+               const auto& [x2, y2] = positions[1];
+               if (x1 == x2 && ((y1 + 1 == y2 && y1 % 2 == 1) || (y1 == y2 + 1 && y2 % 2 == 1))) {
+                  result.push_back(positions);
+               }
+            }
+         }
+         for (const auto& [positions, tensor] : hamiltonians) {
+            if (positions.size() == 2) {
+               const auto& [x1, y1] = positions[0];
+               const auto& [x2, y2] = positions[1];
+               if (y1 == y2 && ((x1 + 1 == x2 && x1 % 2 == 0) || (x1 == x2 + 1 && x2 % 2 == 0))) {
+                  result.push_back(positions);
+               }
+            }
+         }
+         for (const auto& [positions, tensor] : hamiltonians) {
+            if (positions.size() == 2) {
+               const auto& [x1, y1] = positions[0];
+               const auto& [x2, y2] = positions[1];
+               if (y1 == y2 && ((x1 + 1 == x2 && x1 % 2 == 1) || (x1 == x2 + 1 && x2 % 2 == 1))) {
+                  result.push_back(positions);
+               }
+            }
+         }
+         // 其他类型和更多的格点暂时不支持
+         if (result.size() != hamiltonians.size()) {
+            throw NotImplementedError("Unsupported simple update style");
+         }
+         return result;
       }
 
       void _single_term_simple_update(const std::vector<std::tuple<int, int>>& positions, const Tensor<T>& updater) {
