@@ -41,7 +41,11 @@ namespace square {
       using AbstractLattice<T>::dimension_physics;
       using AbstractLattice<T>::hamiltonians;
 
-      SimpleUpdateLattice() = default;
+      SimpleUpdateLattice() : AbstractNetworkLattice<T>(), environment(){};
+      SimpleUpdateLattice(const SimpleUpdateLattice<T>&) = default;
+      SimpleUpdateLattice(SimpleUpdateLattice<T>&&) = default;
+      SimpleUpdateLattice<T>& operator=(const SimpleUpdateLattice<T>&) = default;
+      SimpleUpdateLattice<T>& operator=(SimpleUpdateLattice<T>&&) = default;
 
       SimpleUpdateLattice(int M, int N, Size D, Size d) : AbstractNetworkLattice<T>(M, N, D, d) {}
 

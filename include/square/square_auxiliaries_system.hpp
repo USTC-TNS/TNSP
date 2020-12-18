@@ -38,7 +38,7 @@ namespace square {
       std::map<int, std::map<int, std::shared_ptr<lazy::node<Tensor<T>>>>> up_to_down_3_3, up_to_down_3_1, down_to_up_3_3, down_to_up_3_1,
             left_to_right_3_3, left_to_right_3_1, right_to_left_3_3, right_to_left_3_1;
 
-      SquareAuxiliariesSystem() = default;
+      SquareAuxiliariesSystem() : M(0), N(0), dimension_cut(0) {}
 
       SquareAuxiliariesSystem(const SquareAuxiliariesSystem<T>& other) : SquareAuxiliariesSystem(other.M, other.N, other.dimension_cut) {
          for (auto i = 0; i < M; i++) {
@@ -385,7 +385,7 @@ namespace square {
       }
 
       // TODO hint and hole
-      auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement) const {
+      auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ', int hint_i = 0, int hint_j = 0) const {
          if (replacement.size() == 0) {
             return left_to_right_3_3.at(M - 1).at(N - 1)->get();
          } else if (replacement.size() == 1) {

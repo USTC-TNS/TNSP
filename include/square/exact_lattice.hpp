@@ -39,7 +39,11 @@ namespace square {
       using AbstractLattice<T>::dimension_physics;
       using AbstractLattice<T>::hamiltonians;
 
-      ExactLattice() = default;
+      ExactLattice() : AbstractLattice<T>(), vector(){};
+      ExactLattice(const ExactLattice<T>&) = default;
+      ExactLattice(ExactLattice<T>&&) = default;
+      ExactLattice<T>& operator=(const ExactLattice<T>&) = default;
+      ExactLattice<T>& operator=(ExactLattice<T>&&) = default;
 
       ExactLattice(int M, int N, Size d) : AbstractLattice<T>(M, N, d) {
          auto name_list = std::vector<Name>();

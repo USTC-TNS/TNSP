@@ -36,7 +36,11 @@ namespace square {
       using SquareAuxiliariesSystem<T>::lattice;
       using SquareAuxiliariesSystem<T>::operator();
 
-      SpinConfiguration() = default;
+      SpinConfiguration() : SquareAuxiliariesSystem<T>(), owner(nullptr), configuration() {}
+      SpinConfiguration(const SpinConfiguration<T>&) = default;
+      SpinConfiguration(SpinConfiguration<T>&&) = default;
+      SpinConfiguration<T>& operator=(const SpinConfiguration<T>&) = default;
+      SpinConfiguration<T>& operator=(SpinConfiguration<T>&&) = default;
 
       SpinConfiguration(const SamplingGradientLattice<T>* owner) :
             SquareAuxiliariesSystem<T>(owner->M, owner->N, owner->dimension_cut), owner(owner) {
@@ -83,7 +87,7 @@ namespace square {
       SpinConfiguration<T> spin;
 
       // spin应当只用this初始化, 随后initialize_spin即可
-      SamplingGradientLattice() = default;
+      SamplingGradientLattice() : AbstractNetworkLattice<T>(), dimension_cut(0), spin() {}
 
       SamplingGradientLattice(const SamplingGradientLattice<T>& other) :
             AbstractNetworkLattice<T>(other), dimension_cut(other.dimension_cut), spin(this) {
@@ -116,6 +120,13 @@ namespace square {
       using AbstractNetworkLattice<T>::hamiltonians;
       using AbstractNetworkLattice<T>::dimension_virtual;
       using AbstractNetworkLattice<T>::lattice;
+
+      void set_dimension_cut(Size Dc) {
+         dimension_cut = Dc;
+         auto configuration = std::move(spin.configuration);
+         spin = SpinConfiguration<T>(this);
+         initialize_spin(configuration);
+      }
 
       void initialize_spin(std::function<int(int, int)> function) {
          for (auto i = 0; i < M; i++) {
