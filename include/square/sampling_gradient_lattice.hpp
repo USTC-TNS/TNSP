@@ -399,7 +399,7 @@ namespace square {
          for (auto i = 0; i < body; i++) {
             current_spin.push_back(spin.configuration[std::get<0>(positions[i])][std::get<1>(positions[i])]);
          }
-         const auto& hamiltonian_elements = _find_element(*hamiltonian);
+         const auto& hamiltonian_elements = _find_hopping_element(*hamiltonian);
          const auto& possible_hopping = hamiltonian_elements.at(current_spin);
          if (!possible_hopping.empty()) {
             int hopping_number = possible_hopping.size();
@@ -462,6 +462,57 @@ namespace square {
                   spins_out.push_back(index[i]);
                }
                result[std::move(spins_in)][std::move(spins_out)] = value;
+            }
+            int active_position = 0;
+            index[active_position] += 1;
+            while (index[active_position] == dimension_physics) {
+               index[active_position] = 0;
+               active_position += 1;
+               if (active_position == 2 * body) {
+                  return result;
+               }
+               index[active_position] += 1;
+            }
+         }
+      }
+
+      inline static std::map<const Tensor<T>*, std::map<std::vector<int>, std::map<std::vector<int>, T>>> tensor_hopping_element_map = {};
+
+      const std::map<std::vector<int>, std::map<std::vector<int>, T>>& _find_hopping_element(const Tensor<T>& tensor) const {
+         auto tensor_id = &tensor;
+         if (auto found = tensor_hopping_element_map.find(tensor_id); found != tensor_hopping_element_map.end()) {
+            return found->second;
+         }
+         int body = tensor.names.size() / 2;
+         auto& result = tensor_hopping_element_map[tensor_id];
+         auto names = std::vector<Name>();
+         auto index = std::vector<int>();
+         for (auto i = 0; i < body; i++) {
+            names.push_back("I" + std::to_string(i));
+            index.push_back(0);
+         }
+         for (auto i = 0; i < body; i++) {
+            names.push_back("O" + std::to_string(i));
+            index.push_back(0);
+         }
+         while (true) {
+            auto map = std::map<Name, Size>();
+            for (auto i = 0; i < 2 * body; i++) {
+               map[names[i]] = index[i];
+            }
+            auto value = tensor.const_at(map);
+            if (value != 0) {
+               auto spins_in = std::vector<int>();
+               auto spins_out = std::vector<int>();
+               for (auto i = 0; i < body; i++) {
+                  spins_in.push_back(index[i]);
+               }
+               for (auto i = body; i < 2 * body; i++) {
+                  spins_out.push_back(index[i]);
+               }
+               if (spins_in != spins_out) {
+                  result[std::move(spins_in)][std::move(spins_out)] = value;
+               }
             }
             int active_position = 0;
             index[active_position] += 1;
