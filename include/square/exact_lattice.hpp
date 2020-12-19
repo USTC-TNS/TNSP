@@ -90,7 +90,7 @@ namespace square {
       }
 
       real<T> denominator() const {
-         return vector.contract_all_edge(vector);
+         return vector.contract_all_edge(vector).template to<real<T>>();
       }
 
       template<typename C>

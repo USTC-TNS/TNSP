@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
                exact_lattice.set_all_vertical_bond(square::Common<double>::SS());
             } else if (command == "update") {
                int total_step;
-               double approximate_energy;
+               square::real<double> approximate_energy;
                std::cin >> total_step >> approximate_energy;
                exact_lattice.update(total_step, approximate_energy);
             } else if (command == "energy") {
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
                simple_update_lattice.set_all_vertical_bond(square::Common<double>::SS());
             } else if (command == "update") {
                int total_step;
-               double delta_t;
+               square::real<double> delta_t;
                square::Size new_dimension;
                std::cin >> total_step >> delta_t >> new_dimension;
                simple_update_lattice.update(total_step, delta_t, new_dimension);

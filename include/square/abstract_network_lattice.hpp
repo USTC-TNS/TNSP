@@ -60,7 +60,8 @@ namespace square {
                   name_list.push_back("R");
                   dimension_list.push_back(dimension_virtual);
                }
-               row.emplace_back(std::move(name_list), dimension_list).set(random::normal<T>(0, 1));
+               auto& tensor = row.emplace_back(std::move(name_list), dimension_list).set(random::normal<T>(0, 1));
+               tensor /= tensor.template norm<-1>();
             }
          }
       }

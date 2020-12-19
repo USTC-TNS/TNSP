@@ -77,7 +77,7 @@ namespace square {
             }
          }
          if (real_replacement.empty()) {
-            return Tensor<T>(ws);
+            return ws;
          } else {
             return operator()(real_replacement, hint);
          }
@@ -163,10 +163,12 @@ namespace square {
          if (calculate_energy) {
             observers["Energy"] = hamiltonians;
          }
+         // 观测量一定是实数
          auto result = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          auto result_variance_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          auto result_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
-         real<T> ws = spin();
+         T ws = spin();
+         std::cout << "First ws is " << ws << "\n";
          auto positions_sequence = _markov_sampling_positions_sequence();
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
@@ -184,8 +186,8 @@ namespace square {
                      for (auto i = 0; i < body; i++) {
                         map[positions[i]] = spins_out[i];
                      }
-                     real<T> wss = spin(map, ws);
-                     value += element * wss / ws;
+                     T wss = spin(map, ws);
+                     value += scalar_to<real<T>>(element * wss / ws);
                   }
                   result[kind][positions] += value;
                   result_square[kind][positions] += value * value;
@@ -253,8 +255,8 @@ namespace square {
          unsigned long long total_step = std::pow(dimension_physics, M * N);
          for (unsigned long long step = 0; step < total_step; step++) {
             _ergodic_spin(step);
-            real<T> ws = spin();
-            sum_of_ws_square += ws * ws;
+            T ws = spin();
+            sum_of_ws_square += std::norm(ws);
             for (const auto& [kind, group] : observers) {
                for (const auto& [positions, tensor] : group) {
                   int body = positions.size();
@@ -269,10 +271,10 @@ namespace square {
                      for (auto i = 0; i < body; i++) {
                         map[positions[i]] = spins_out[i];
                      }
-                     real<T> wss = spin(map, ws);
-                     value += element * wss / ws;
+                     T wss = spin(map, ws);
+                     value += scalar_to<real<T>>(element * wss / ws);
                   }
-                  result[kind][positions] += value * ws * ws;
+                  result[kind][positions] += value * std::norm(ws);
                }
             }
             if (calculate_energy) {
@@ -322,7 +324,7 @@ namespace square {
          std::cout << clear_line << "Equilibrating start, total_step=" << total_step << ", dimension=" << dimension_virtual
                    << ", dimension_cut=" << dimension_cut << "\n"
                    << std::flush;
-         real<T> ws = spin();
+         T ws = spin();
          auto positions_sequence = _markov_sampling_positions_sequence();
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
@@ -334,7 +336,7 @@ namespace square {
                    << std::flush;
       }
 
-      real<T> _markov_spin(real<T> ws, const std::vector<std::tuple<std::vector<std::tuple<int, int>>, char>>& positions_sequence) {
+      T _markov_spin(T ws, const std::vector<std::tuple<std::vector<std::tuple<int, int>>, char>>& positions_sequence) {
          for (auto iter = positions_sequence.begin(); iter != positions_sequence.end(); ++iter) {
             const auto& [positions, hint] = *iter;
             const auto& hamiltonian = hamiltonians.at(positions);
@@ -382,8 +384,8 @@ namespace square {
          return result;
       }
 
-      real<T> _markov_single_term(
-            real<T> ws,
+      T _markov_single_term(
+            T ws,
             const std::vector<std::tuple<int, int>>& positions,
             const std::shared_ptr<const Tensor<T>>& hamiltonian,
             char hint = ' ') {
@@ -413,10 +415,10 @@ namespace square {
             for (auto i = 0; i < body; i++) {
                replacement[positions[i]] = spins_new[i];
             }
-            real<T> wss = spin(replacement, ws, hint);
+            T wss = spin(replacement, ws, hint);
             int hopping_number_s = hamiltonian_elements.at(spins_new).size();
-            real<T> wss_over_ws = wss / ws;
-            real<T> p = wss_over_ws * wss_over_ws * hopping_number / hopping_number_s;
+            T wss_over_ws = wss / ws;
+            real<T> p = std::norm(wss_over_ws) * real<T>(hopping_number) / real<T>(hopping_number_s);
             if (random::uniform<real<T>>(0, 1)() < p) {
                ws = wss;
                for (auto i = 0; i < body; i++) {
@@ -452,7 +454,7 @@ namespace square {
                map[names[i]] = index[i];
             }
             auto value = tensor.const_at(map);
-            if (value != 0) {
+            if (value != T(0)) {
                auto spins_in = std::vector<int>();
                auto spins_out = std::vector<int>();
                for (auto i = 0; i < body; i++) {
@@ -501,7 +503,7 @@ namespace square {
                map[names[i]] = index[i];
             }
             auto value = tensor.const_at(map);
-            if (value != 0) {
+            if (value != T(0)) {
                auto spins_in = std::vector<int>();
                auto spins_out = std::vector<int>();
                for (auto i = 0; i < body; i++) {
@@ -512,6 +514,8 @@ namespace square {
                }
                if (spins_in != spins_out) {
                   result[std::move(spins_in)][std::move(spins_out)] = value;
+               } else {
+                  result[std::move(spins_in)];
                }
             }
             int active_position = 0;

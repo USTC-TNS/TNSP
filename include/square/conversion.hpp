@@ -35,6 +35,7 @@ namespace square {
             to_multiple = other.try_multiple(to_multiple, i, j, 'D');
             to_multiple = other.try_multiple(to_multiple, i, j, 'R');
             lattice[i][j] = std::move(to_multiple);
+            lattice[i][j] /= lattice[i][j].template norm<-1>();
          }
       }
    }

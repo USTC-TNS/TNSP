@@ -385,7 +385,7 @@ namespace square {
       }
 
       // TODO hole
-      auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
+      T operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
          if (replacement.size() == 0) {
             return right_to_left_3_3.at(0).at(0)->get();
          } else if (replacement.size() == 1) {
