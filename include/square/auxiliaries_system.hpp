@@ -1,5 +1,5 @@
 /**
- * \file square_auxiliaries_system.hpp
+ * \file auxiliaries_system.hpp
  *
  * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#ifndef SQUARE_SQUARE_AUXILIARIES_SYSTEM_HPP
-#define SQUARE_SQUARE_AUXILIARIES_SYSTEM_HPP
+#ifndef SQUARE_AUXILIARIES_SYSTEM_HPP
+#define SQUARE_AUXILIARIES_SYSTEM_HPP
 
 #include <lazy.hpp>
 

@@ -22,7 +22,7 @@
 #define SQUARE_SAMPLING_GRADIENT_LATTICE_HPP
 
 #include "abstract_network_lattice.hpp"
-#include "square_auxiliaries_system.hpp"
+#include "auxiliaries_system.hpp"
 
 namespace square {
    template<typename T>
