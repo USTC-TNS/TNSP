@@ -156,12 +156,27 @@ namespace square {
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
             bool calculate_energy = false,
             bool calculate_gradient = false) {
-         // TODO gradient
          std::cout << clear_line << "Markov sampling start, total_step=" << total_step << ", dimension=" << dimension_virtual
                    << ", dimension_cut=" << dimension_cut << "\n"
                    << std::flush;
          if (calculate_energy) {
             observers["Energy"] = hamiltonians;
+         }
+         T sum_of_Es = 0;
+         std::vector<std::vector<Tensor<T>>> holes;
+         std::vector<std::vector<Tensor<T>>> holes_with_Es;
+         std::vector<std::vector<Tensor<T>>> gradient;
+         if (calculate_gradient) {
+            for (auto i = 0; i < M; i++) {
+               auto& row_h = holes.emplace_back();
+               auto& row_e = holes_with_Es.emplace_back();
+               auto& row_g = gradient.emplace_back();
+               for (auto j = 0; j < N; j++) {
+                  row_h.push_back(lattice[i][j].same_shape().zero());
+                  row_e.push_back(lattice[i][j].same_shape().zero());
+                  row_g.push_back(lattice[i][j].same_shape().zero());
+               }
+            }
          }
          // 观测量一定是实数
          auto result = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
@@ -172,6 +187,7 @@ namespace square {
          auto positions_sequence = _markov_sampling_positions_sequence();
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
+            T Es = 0;
             for (const auto& [kind, group] : observers) {
                for (const auto& [positions, tensor] : group) {
                   int body = positions.size();
@@ -187,10 +203,27 @@ namespace square {
                         map[positions[i]] = spins_out[i];
                      }
                      T wss = spin(map, ws);
-                     value += scalar_to<real<T>>(element * wss / ws);
+                     auto this_term = element * wss / ws;
+                     // TODO 将Energy与一般观测量独立开来
+                     if (kind == "Energy") {
+                        // 用于求梯度，这个可能是复数
+                        Es += this_term;
+                     }
+                     value += scalar_to<real<T>>(this_term);
                   }
                   result[kind][positions] += value;
                   result_square[kind][positions] += value * value;
+               }
+            }
+            if (calculate_gradient) {
+               sum_of_Es += Es;
+               for (auto i = 0; i < M; i++) {
+                  for (auto j = 0; j < N; j++) {
+                     Tensor<T> raw_hole = spin({{i, j}}).edge_rename({{"L0", "L"}, {"R0", "R"}, {"U0", "U"}, {"D0", "D"}});
+                     Tensor<T> hole = (raw_hole.conjugate() / conj(ws)).expand({{"P", {spin.configuration[i][j], dimension_physics}}});
+                     holes_with_Es[i][j] += hole * Es;
+                     holes[i][j] += hole;
+                  }
                }
             }
             if (calculate_energy) {
@@ -239,7 +272,14 @@ namespace square {
                       << ", dimension_cut=" << dimension_cut << "\n"
                       << std::flush;
          }
-         return std::make_tuple(std::move(result), std::move(result_variance_square));
+         if (calculate_gradient) {
+            for (auto i = 0; i < M; i++) {
+               for (auto j = 0; j < N; j++) {
+                  gradient[i][j] = 2 * (holes_with_Es[i][j] / total_step) - 2 * (sum_of_Es / total_step) * (holes[i][j] / total_step);
+               }
+            }
+         }
+         return std::make_tuple(std::move(result), std::move(result_variance_square), std::move(gradient));
       }
 
       auto ergodic(

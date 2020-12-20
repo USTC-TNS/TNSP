@@ -54,6 +54,15 @@ namespace square {
    }
 
    template<typename T>
+   T conj(T input) {
+      if constexpr (TAT::is_complex_v<T>) {
+         return input.conj();
+      } else {
+         return input;
+      }
+   }
+
+   template<typename T>
    struct Common {
       using C = complex<T>;
 
