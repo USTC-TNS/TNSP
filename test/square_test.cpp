@@ -148,6 +148,25 @@ int main(int argc, char** argv) {
                unsigned long long total_step;
                std::cin >> total_step;
                sampling_gradient_lattice.markov(total_step, {}, true);
+            } else if (command == "gradient") {
+               unsigned long long gradient_step, markov_step;
+               square::real<double> step_size;
+               std::cin >> gradient_step >> step_size >> markov_step;
+               std::cout << "Gradient descent start, total_step=" << gradient_step << "\n" << std::flush;
+               std::cout << "\n\n\n";
+               for (unsigned long long step = 0; step < gradient_step; step++) {
+                  std::cout << "\u001b[3A"
+                            << "Gradient descenting, total_step=" << gradient_step << ", step=" << step << "\n"
+                            << std::flush;
+                  auto [energy, variance, gradient] = sampling_gradient_lattice.markov(markov_step, {}, true, true);
+                  for (auto i = 0; i < sampling_gradient_lattice.M; i++) {
+                     for (auto j = 0; j < sampling_gradient_lattice.N; j++) {
+                        sampling_gradient_lattice.lattice[i][j] -= step_size * gradient[i][j];
+                        sampling_gradient_lattice.lattice[i][j] /= sampling_gradient_lattice.lattice[i][j].norm<-1>();
+                     }
+                  }
+               }
+               std::cout << square::clear_line << "Gradient descent done, total_step=" << gradient_step << "\n" << std::flush;
             } else if (command == "equilibrate") {
                sampling_gradient_lattice.initialize_spin([](int i, int j) { return (i + j) % 2; });
                unsigned long long total_step;

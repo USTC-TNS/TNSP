@@ -156,9 +156,6 @@ namespace square {
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
             bool calculate_energy = false,
             bool calculate_gradient = false) {
-         std::cout << clear_line << "Markov sampling start, total_step=" << total_step << ", dimension=" << dimension_virtual
-                   << ", dimension_cut=" << dimension_cut << "\n"
-                   << std::flush;
          if (calculate_energy) {
             observers["Energy"] = hamiltonians;
          }
@@ -183,7 +180,9 @@ namespace square {
          auto result_variance_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          auto result_square = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          T ws = spin();
-         std::cout << "First ws is " << ws << "\n";
+         std::cout << clear_line << "Markov sampling start, total_step=" << total_step << ", dimension=" << dimension_virtual
+                   << ", dimension_cut=" << dimension_cut << ", First ws is " << ws << "\n"
+                   << std::flush;
          auto positions_sequence = _markov_sampling_positions_sequence();
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
