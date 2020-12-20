@@ -39,7 +39,11 @@ namespace square {
       using AbstractLattice<T>::dimension_physics;
       using AbstractLattice<T>::hamiltonians;
 
-      ExactLattice() = default;
+      ExactLattice() : AbstractLattice<T>(), vector(){};
+      ExactLattice(const ExactLattice<T>&) = default;
+      ExactLattice(ExactLattice<T>&&) = default;
+      ExactLattice<T>& operator=(const ExactLattice<T>&) = default;
+      ExactLattice<T>& operator=(ExactLattice<T>&&) = default;
 
       ExactLattice(int M, int N, Size d) : AbstractLattice<T>(M, N, d) {
          auto name_list = std::vector<Name>();
@@ -56,6 +60,7 @@ namespace square {
       explicit ExactLattice(const SamplingGradientLattice<T>& other);
 
       real<T> update(int total_step, real<T> approximate_energy = -0.5) {
+         std::cout << clear_line << "Exact update done, total_step=" << total_step << "\n" << std::flush;
          real<T> total_approximate_energy = std::abs(approximate_energy) * M * N;
          real<T> energy = 0;
          for (auto step = 0; step < total_step; step++) {
@@ -77,15 +82,15 @@ namespace square {
             real<T> norm_max = vector.template norm<-1>();
             energy = total_approximate_energy - norm_max;
             vector /= norm_max;
-            std::cout << clear_line << "Exact updating, total_step=" << total_step << ", step=" << step << ", Energy=" << energy / (M * N) << "\r"
-                      << std::flush;
+            std::cout << clear_line << "Exact updating, total_step=" << total_step << ", step=" << (step + 1) << ", Energy=" << energy / (M * N)
+                      << "\r" << std::flush;
          }
          std::cout << clear_line << "Exact update done, total_step=" << total_step << ", Energy=" << energy / (M * N) << "\n" << std::flush;
          return energy / (M * N);
       }
 
       real<T> denominator() const {
-         return vector.contract_all_edge(vector);
+         return vector.contract_all_edge(vector).template to<real<T>>();
       }
 
       template<typename C>

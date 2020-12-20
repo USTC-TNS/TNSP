@@ -1,5 +1,5 @@
 /**
- * \file square_auxiliaries_system.hpp
+ * \file auxiliaries_system.hpp
  *
  * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#ifndef SQUARE_SQUARE_AUXILIARIES_SYSTEM_HPP
-#define SQUARE_SQUARE_AUXILIARIES_SYSTEM_HPP
+#ifndef SQUARE_AUXILIARIES_SYSTEM_HPP
+#define SQUARE_AUXILIARIES_SYSTEM_HPP
 
 #include <lazy.hpp>
 
@@ -38,7 +38,8 @@ namespace square {
       std::map<int, std::map<int, std::shared_ptr<lazy::node<Tensor<T>>>>> up_to_down_3_3, up_to_down_3_1, down_to_up_3_3, down_to_up_3_1,
             left_to_right_3_3, left_to_right_3_1, right_to_left_3_3, right_to_left_3_1;
 
-      SquareAuxiliariesSystem() = default;
+      SquareAuxiliariesSystem() : M(0), N(0), dimension_cut(0) {}
+
       SquareAuxiliariesSystem(const SquareAuxiliariesSystem<T>& other) : SquareAuxiliariesSystem(other.M, other.N, other.dimension_cut) {
          for (auto i = 0; i < M; i++) {
             for (auto j = 0; j < N; j++) {
@@ -383,16 +384,39 @@ namespace square {
          lazy::use_graph();
       }
 
-      // TODO hint and hole
-      auto operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement) const {
+      Tensor<T> operator()(const std::vector<std::tuple<int, int>>& holes, char hint_char = ' ') const {
+         if (holes.size() == 0) {
+            return right_to_left_3_3.at(0).at(0)->get();
+         } else if (holes.size() == 1) {
+            auto [i, j] = holes.front();
+            if (hint_char == 'v') {
+               return (up_to_down_3_1.at(i).at(j)->get())
+                     .contract(down_to_up_3_1.at(i).at(j)->get(), {{"D1", "U1"}, {"D3", "U3"}})
+                     .edge_rename({{"D2", "U0"}, {"R", "L0"}, {"L", "R0"}, {"U2", "D0"}});
+            } else {
+               return (left_to_right_3_1.at(i).at(j)->get())
+                     .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R3", "L3"}})
+                     .edge_rename({{"R2", "L0"}, {"D", "U0"}, {"U", "D0"}, {"L2", "R0"}});
+            }
+         }
+         throw NotImplementedError("Unsupported holes style");
+      }
+
+      T operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
          if (replacement.size() == 0) {
-            return left_to_right_3_3.at(M - 1).at(N - 1)->get();
+            return right_to_left_3_3.at(0).at(0)->get();
          } else if (replacement.size() == 1) {
             auto [i, j] = replacement.begin()->first;
             const auto& new_tensor = replacement.begin()->second;
-            return (left_to_right_3_1.at(i).at(j)->get())
-                  .contract(new_tensor.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
-                  .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+            if (hint_char == 'v') {
+               return (up_to_down_3_1.at(i).at(j)->get())
+                     .contract(new_tensor.edge_rename({{"D", "D2"}}), {{"D2", "U"}, {"R", "L"}})
+                     .contract(down_to_up_3_1.at(i).at(j)->get(), {{"D1", "U1"}, {"D2", "U2"}, {"D3", "U3"}, {"R", "L"}});
+            } else {
+               return (left_to_right_3_1.at(i).at(j)->get())
+                     .contract(new_tensor.edge_rename({{"R", "R2"}}), {{"R2", "L"}, {"D", "U"}})
+                     .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R2", "L2"}, {"R3", "L3"}, {"D", "U"}});
+            }
          } else if (replacement.size() == 2) {
             auto iter = replacement.begin();
             auto [x1, y1] = iter->first;

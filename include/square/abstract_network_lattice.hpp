@@ -32,7 +32,11 @@ namespace square {
       Size dimension_virtual;
       std::vector<std::vector<Tensor<T>>> lattice;
 
-      AbstractNetworkLattice() = default;
+      AbstractNetworkLattice() : AbstractLattice<T>(), dimension_virtual(0), lattice(){};
+      AbstractNetworkLattice(const AbstractNetworkLattice<T>&) = default;
+      AbstractNetworkLattice(AbstractNetworkLattice<T>&&) = default;
+      AbstractNetworkLattice<T>& operator=(const AbstractNetworkLattice<T>&) = default;
+      AbstractNetworkLattice<T>& operator=(AbstractNetworkLattice<T>&&) = default;
 
       AbstractNetworkLattice(int M, int N, Size D, Size d) : AbstractLattice<T>(M, N, d), dimension_virtual(D) {
          for (auto i = 0; i < M; i++) {
@@ -56,7 +60,8 @@ namespace square {
                   name_list.push_back("R");
                   dimension_list.push_back(dimension_virtual);
                }
-               row.emplace_back(std::move(name_list), dimension_list).set(random::normal<T>(0, 1));
+               auto& tensor = row.emplace_back(std::move(name_list), dimension_list).set(random::normal<T>(0, 1));
+               tensor /= tensor.template norm<-1>();
             }
          }
       }

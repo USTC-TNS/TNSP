@@ -41,10 +41,30 @@ namespace square {
    using real = TAT::real_base_t<T>;
    template<typename T>
    using complex = std::complex<real<T>>;
+   template<typename T>
+   using real_complex = std::conditional_t<TAT::is_complex_v<T>, real<T>, complex<T>>;
+
+   template<typename O, typename I>
+   O scalar_to(I input) {
+      if constexpr (TAT::is_complex_v<I> && TAT::is_real_v<O>) {
+         return input.real();
+      } else {
+         return input;
+      }
+   }
+
+   template<typename T>
+   T conj(T input) {
+      if constexpr (TAT::is_complex_v<T>) {
+         return input.conj();
+      } else {
+         return input;
+      }
+   }
 
    template<typename T>
    struct Common {
-      using C = std::complex<TAT::real_base_t<T>>;
+      using C = complex<T>;
 
       static std::shared_ptr<const Tensor<T>> Sx() {
          static std::shared_ptr<const Tensor<T>> result = nullptr;

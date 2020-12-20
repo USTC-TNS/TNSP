@@ -37,7 +37,11 @@ namespace square {
       Size dimension_physics;
       std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>> hamiltonians;
 
-      AbstractLattice() = default;
+      AbstractLattice() : M(0), N(0), dimension_physics(0), hamiltonians(){};
+      AbstractLattice(const AbstractLattice<T>&) = default;
+      AbstractLattice(AbstractLattice<T>&&) = default;
+      AbstractLattice<T>& operator=(const AbstractLattice<T>&) = default;
+      AbstractLattice<T>& operator=(AbstractLattice<T>&&) = default;
 
       AbstractLattice(int M, int N, Size d) : M(M), N(N), dimension_physics(d) {}
 
