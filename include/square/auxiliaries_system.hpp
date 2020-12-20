@@ -384,7 +384,24 @@ namespace square {
          lazy::use_graph();
       }
 
-      // TODO hole
+      Tensor<T> operator()(const std::vector<std::tuple<int, int>>& holes, char hint_char = ' ') const {
+         if (holes.size() == 0) {
+            return right_to_left_3_3.at(0).at(0)->get();
+         } else if (holes.size() == 1) {
+            auto [i, j] = holes.front();
+            if (hint_char == 'v') {
+               return (up_to_down_3_1.at(i).at(j)->get())
+                     .contract(down_to_up_3_1.at(i).at(j)->get(), {{"D1", "U1"}, {"D3", "U3"}})
+                     .edge_rename({{"D2", "U0"}, {"R", "L0"}, {"L", "R0"}, {"U2", "D0"}});
+            } else {
+               return (left_to_right_3_1.at(i).at(j)->get())
+                     .contract(right_to_left_3_1.at(i).at(j)->get(), {{"R1", "L1"}, {"R3", "L3"}})
+                     .edge_rename({{"R2", "L0"}, {"D", "U0"}, {"U", "D0"}, {"L2", "R0"}});
+            }
+         }
+         throw NotImplementedError("Unsupported holes style");
+      }
+
       T operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
          if (replacement.size() == 0) {
             return right_to_left_3_3.at(0).at(0)->get();
