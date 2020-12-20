@@ -157,7 +157,7 @@ int main(int argc, char** argv) {
                const char* move_up = "\u001b[1A";
                for (unsigned long long step = 0; step < gradient_step; step++) {
                   std::cout << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line
-                            << "Gradient descenting, total_step=" << gradient_step << ", step=" << step << "\n"
+                            << "Gradient descenting, total_step=" << gradient_step << ", step=" << (step + 1) << "\n"
                             << std::flush;
                   auto [result, variance, gradient] = sampling_gradient_lattice.markov(markov_step, {}, true, true);
                   for (auto i = 0; i < sampling_gradient_lattice.M; i++) {

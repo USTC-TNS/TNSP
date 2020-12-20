@@ -86,7 +86,7 @@ namespace square {
                _single_term_simple_update(positions, tensor);
             }
             std::cout << clear_line << "Simple updating, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
-                      << ", step=" << step << "\r" << std::flush;
+                      << ", step=" << (step + 1) << "\r" << std::flush;
          }
          std::cout << clear_line << "Simple update done, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
                    << "\n"

@@ -82,8 +82,8 @@ namespace square {
             real<T> norm_max = vector.template norm<-1>();
             energy = total_approximate_energy - norm_max;
             vector /= norm_max;
-            std::cout << clear_line << "Exact updating, total_step=" << total_step << ", step=" << step << ", Energy=" << energy / (M * N) << "\r"
-                      << std::flush;
+            std::cout << clear_line << "Exact updating, total_step=" << total_step << ", step=" << (step + 1) << ", Energy=" << energy / (M * N)
+                      << "\r" << std::flush;
          }
          std::cout << clear_line << "Exact update done, total_step=" << total_step << ", Energy=" << energy / (M * N) << "\n" << std::flush;
          return energy / (M * N);

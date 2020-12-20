@@ -241,11 +241,11 @@ namespace square {
                   }
                };
                std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / (M * N)
+                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << ", Energy=" << energy / (M * N)
                          << " with sigma=" << std::sqrt(energy_variance_square) / (M * N) << "\r" << std::flush;
             } else {
                std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
+                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
             }
          }
          for (auto& [kind, group] : result) {
@@ -325,11 +325,11 @@ namespace square {
                   energy += value;
                };
                std::cout << clear_line << "Ergodic sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << step << ", Energy=" << energy / (sum_of_ws_square * M * N) << "\r"
-                         << std::flush;
+                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << ", Energy=" << energy / (sum_of_ws_square * M * N)
+                         << "\r" << std::flush;
             } else {
                std::cout << clear_line << "Ergodic sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
+                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
             }
          }
          for (auto& [kind, group] : result) {
@@ -371,7 +371,7 @@ namespace square {
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
             std::cout << clear_line << "Equilibrating, total_step=" << total_step << ", dimension=" << dimension_virtual
-                      << ", dimension_cut=" << dimension_cut << ", step=" << step << "\r" << std::flush;
+                      << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
          }
          std::cout << clear_line << "Equilibrate done, total_step=" << total_step << ", dimension=" << dimension_virtual
                    << ", dimension_cut=" << dimension_cut << "\n"
