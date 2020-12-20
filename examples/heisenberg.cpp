@@ -24,16 +24,20 @@
 enum struct LatticeType { Exact, Simple, Sample };
 
 int main(int argc, char** argv) {
+   bool real_cin = true;
+   std::streambuf* cinbuf = std::cin.rdbuf();
    std::ifstream config_file;
    if (argc != 1) {
       config_file.open(argv[1]);
       if (config_file.is_open()) {
          std::cin.rdbuf(config_file.rdbuf());
+         real_cin = false;
       }
    } else {
       config_file.open("INPUT");
       if (config_file.is_open()) {
          std::cin.rdbuf(config_file.rdbuf());
+         real_cin = false;
       }
    }
    // lattice
@@ -42,21 +46,39 @@ int main(int argc, char** argv) {
    square::SimpleUpdateLattice<double> simple_update_lattice;
    square::SamplingGradientLattice<double> sampling_gradient_lattice;
    while (true) {
+      if (real_cin) {
+         std::cout << "> " << std::flush;
+      }
       std::string command;
       std::cin >> command;
-      if (command == "") {
+      if (command == "exit") {
+         std::cout << "Exiting\n";
          return 0;
       }
-      if (command == "use_exact") {
-         lattice_type = LatticeType::Exact;
+      if (command == "") {
+         if (!real_cin) {
+            std::cout << "End of file, continue reading from stdin\n";
+            std::cin.rdbuf(cinbuf);
+            real_cin = true;
+         }
          continue;
-      } else if (command == "use_simple") {
-         lattice_type = LatticeType::Simple;
+      }
+      if (command == "use") {
+         std::string new_type;
+         std::cin >> new_type;
+         if (new_type == "exact") {
+            lattice_type = LatticeType::Exact;
+         } else if (new_type == "simple") {
+            lattice_type = LatticeType::Simple;
+         } else if (new_type == "sample") {
+            lattice_type = LatticeType::Sample;
+         } else {
+            std::cerr << "Unknown type: " << new_type << "\n";
+            return -1;
+         }
          continue;
-      } else if (command == "use_sample") {
-         lattice_type = LatticeType::Sample;
-         continue;
-      } else if (command == "seed") {
+      }
+      if (command == "seed") {
          unsigned long seed;
          std::cin >> seed;
          square::random::seed(seed);
@@ -67,11 +89,11 @@ int main(int argc, char** argv) {
             if (command == "save") {
                std::string file_name;
                std::cin >> file_name;
-               std::ofstream(file_name) < exact_lattice;
+               std::ofstream(file_name) < TAT::fast_name_dataset < exact_lattice;
             } else if (command == "open") {
                std::string file_name;
                std::cin >> file_name;
-               std::ifstream(file_name) > exact_lattice;
+               std::ifstream(file_name) > TAT::fast_name_dataset > exact_lattice;
             } else if (command == "new") {
                int M, N;
                square::Size d;
@@ -95,11 +117,11 @@ int main(int argc, char** argv) {
             if (command == "save") {
                std::string file_name;
                std::cin >> file_name;
-               std::ofstream(file_name) < simple_update_lattice;
+               std::ofstream(file_name) < TAT::fast_name_dataset < simple_update_lattice;
             } else if (command == "open") {
                std::string file_name;
                std::cin >> file_name;
-               std::ifstream(file_name) > simple_update_lattice;
+               std::ifstream(file_name) > TAT::fast_name_dataset > simple_update_lattice;
             } else if (command == "new") {
                int M, N;
                square::Size D, d;
@@ -130,11 +152,11 @@ int main(int argc, char** argv) {
             if (command == "save") {
                std::string file_name;
                std::cin >> file_name;
-               std::ofstream(file_name) < sampling_gradient_lattice;
+               std::ofstream(file_name) < TAT::fast_name_dataset < sampling_gradient_lattice;
             } else if (command == "open") {
                std::string file_name;
                std::cin >> file_name;
-               std::ifstream(file_name) > sampling_gradient_lattice;
+               std::ifstream(file_name) > TAT::fast_name_dataset > sampling_gradient_lattice;
             } else if (command == "new") {
                int M, N;
                square::Size D, Dc, d;
