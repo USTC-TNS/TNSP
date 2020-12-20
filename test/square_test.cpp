@@ -154,19 +154,35 @@ int main(int argc, char** argv) {
                std::cin >> gradient_step >> step_size >> markov_step;
                std::cout << "Gradient descent start, total_step=" << gradient_step << "\n" << std::flush;
                std::cout << "\n\n\n";
+               const char* move_up = "\u001b[1A";
                for (unsigned long long step = 0; step < gradient_step; step++) {
-                  std::cout << "\u001b[3A"
+                  std::cout << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line
                             << "Gradient descenting, total_step=" << gradient_step << ", step=" << step << "\n"
                             << std::flush;
-                  auto [energy, variance, gradient] = sampling_gradient_lattice.markov(markov_step, {}, true, true);
+                  auto [result, variance, gradient] = sampling_gradient_lattice.markov(markov_step, {}, true, true);
                   for (auto i = 0; i < sampling_gradient_lattice.M; i++) {
                      for (auto j = 0; j < sampling_gradient_lattice.N; j++) {
                         sampling_gradient_lattice.lattice[i][j] -= step_size * gradient[i][j];
                         sampling_gradient_lattice.lattice[i][j] /= sampling_gradient_lattice.lattice[i][j].norm<-1>();
                      }
                   }
+                  const auto& energy = result.at("Energy");
+                  const auto& energy_variance_square = variance.at("Energy");
+                  square::real<double> total_energy = 0;
+                  for (const auto& [positions, value] : energy) {
+                     total_energy += value;
+                  }
+                  square::real<double> total_energy_variance_square = 0;
+                  for (const auto& [positions, value] : energy_variance_square) {
+                     total_energy_variance_square += value;
+                  }
+                  auto site_number = sampling_gradient_lattice.M * sampling_gradient_lattice.N;
+                  std::cout << "Current Energy is " << total_energy / site_number
+                            << " with sigma=" << std::sqrt(total_energy_variance_square) / site_number << std::flush;
                }
-               std::cout << square::clear_line << "Gradient descent done, total_step=" << gradient_step << "\n" << std::flush;
+               std::cout << "\n"
+                         << "Gradient descent done, total_step=" << gradient_step << "\n"
+                         << std::flush;
             } else if (command == "equilibrate") {
                sampling_gradient_lattice.initialize_spin([](int i, int j) { return (i + j) % 2; });
                unsigned long long total_step;

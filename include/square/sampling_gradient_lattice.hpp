@@ -156,9 +156,13 @@ namespace square {
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
             bool calculate_energy = false,
             bool calculate_gradient = false) {
+         if (calculate_gradient) {
+            calculate_energy = true;
+         }
          if (calculate_energy) {
             observers["Energy"] = hamiltonians;
          }
+         // TODO 如何计算gradient的误差?
          T sum_of_Es = 0;
          std::vector<std::vector<Tensor<T>>> holes;
          std::vector<std::vector<Tensor<T>>> holes_with_Es;
@@ -188,6 +192,7 @@ namespace square {
             ws = _markov_spin(ws, positions_sequence);
             T Es = 0;
             for (const auto& [kind, group] : observers) {
+               bool is_energy = kind == "Energy";
                for (const auto& [positions, tensor] : group) {
                   int body = positions.size();
                   auto current_spin = std::vector<int>();
@@ -195,7 +200,6 @@ namespace square {
                      current_spin.push_back(spin.configuration[std::get<0>(positions[i])][std::get<1>(positions[i])]);
                   }
                   real<T> value = 0;
-
                   for (const auto& [spins_out, element] : _find_element(*tensor).at(current_spin)) {
                      auto map = std::map<std::tuple<int, int>, int>();
                      for (auto i = 0; i < body; i++) {
@@ -203,8 +207,7 @@ namespace square {
                      }
                      T wss = spin(map, ws);
                      auto this_term = element * wss / ws;
-                     // TODO 将Energy与一般观测量独立开来
-                     if (kind == "Energy") {
+                     if (is_energy) {
                         // 用于求梯度，这个可能是复数
                         Es += this_term;
                      }
