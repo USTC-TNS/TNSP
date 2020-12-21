@@ -1,6 +1,6 @@
 # [TAT](https://github.com/hzhangxyz/TAT) &middot; [![version](https://img.shields.io/github/v/tag/hzhangxyz/TAT?style=flat-square)](https://github.com/hzhangxyz/TAT/tags) [![license](https://img.shields.io/github/license/hzhangxyz/TAT?style=flat-square)](/LICENSE.md) [![build](https://img.shields.io/github/workflow/status/hzhangxyz/TAT/check?style=flat-square)](https://github.com/hzhangxyz/TAT/actions?query=workflow%3Acheck) [![document](https://img.shields.io/github/workflow/status/hzhangxyz/TAT/doxygen?color=%237f7fff&label=doc&style=flat-square)](https://hzhangxyz.github.io/TAT/index.html)
 
-TAT is a header-only c++ tensor library with support for Abelian [symmetry](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301) for tensor network
+TAT is a header-only c++ tensor library with support for Abelian [symmetry tensor](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301) and [Fermi tensor](https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153)
 
 The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it should be all uppercase
 
@@ -46,11 +46,6 @@ You can simply compile TAT with `em++`(no mpi support, no doubt), and link `libl
 You can download them from [here](https://github.com/hzhangxyz/TAT/releases/tag/v0.0.6) or compile by yourself
 
 If you are using cmake, you need to put these three files into directory `emscripten`, then run `emcmake cmake $path_to_TAT_root` which will configure it automatically
-
-## Installation (for Arch Linux users only)
-Download [PKGBUILD](/PKGBUILD) into any empty directory and run `makepkg` to build your package
-
-Then use `pacman -U TAT-xxx-x86_64.pkg.tar.zst` to install
 
 ## Links
 - [a tensor network library](https://github.com/crimestop/net)
