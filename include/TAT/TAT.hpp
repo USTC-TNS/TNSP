@@ -48,7 +48,6 @@
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
-// TAT_USE_EASY_CONVERSION tensor的各个接口可以自动转化类型 TODO 目前并不是所有接口都支持之
 // TAT_USE_NO_TIMER 禁用对常见操作进行计时
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
 // TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之

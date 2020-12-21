@@ -152,15 +152,6 @@ namespace TAT {
       Tensor(std::vector<Name> names_init, const std::vector<Int>& edges_init) :
             Tensor(std::move(names_init), {edges_init.begin(), edges_init.end()}) {}
 
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename NameType, typename EdgeType, typename = std::enable_if_t<!std::is_same_v<NameType, Name>>>
-      [[deprecated("Easy conversion supported will be dropped")]] Tensor(
-            std::vector<NameType>&& names_init,
-            std::vector<EdgeType>&& edges_init,
-            const bool auto_reverse = false) :
-            Tensor({names_init.begin(), names_init.end()}, {edges_init.begin(), edges_init.end()}, auto_reverse) {}
-#endif
-
       /**
        * 张量的复制, 默认的赋值和复制初始化不会拷贝数据，而会共用core
        * \return 复制的结果
@@ -241,7 +232,7 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
-      [[deprecated("Use shrink instead")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      [[deprecated("Use shrink instead, slice will be remove in v0.2.0")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
          return shrink(configure, new_name, arrow);
       }
@@ -350,18 +341,6 @@ namespace TAT {
 
       [[nodiscard]] const auto& const_block(const std::map<Name, Symmetry>& position = {}) const&;
 
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename Position>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] const auto& block(Position&& position) const& {
-         return block({position.begin(), position.end()});
-      }
-
-      template<typename Position>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] auto& block(Position&& position) & {
-         return block({position.begin(), position.end()});
-      }
-#endif
-
       /**
        * 获取张量中某个分块内的某个元素
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
@@ -374,18 +353,6 @@ namespace TAT {
       [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) &;
 
       [[nodiscard]] const ScalarType& const_at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
-
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename Position>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] ScalarType at(Position&& position) const& {
-         return at({position.begin(), position.end()});
-      }
-
-      template<typename Position>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] ScalarType& at(Position&& position) & {
-         return at({position.begin(), position.end()});
-      }
-#endif
 
       /**
        * 不同标量类型的张量之间的转换函数
@@ -583,20 +550,6 @@ namespace TAT {
          return contract(*this, tensor_2, std::move(contract_names));
       }
 
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename ScalarType1, typename ScalarType2, typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] static auto
-      contract(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2, PairSet&& contract_names) {
-         return contract(tensor_1, tensor_2, {contract_names.begin(), contract_names.end()});
-      };
-
-      template<typename OtherScalarType, typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] auto
-      contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, PairSet&& contract_names) const {
-         return contract(*this, tensor_2, {contract_names.begin(), contract_names.end()});
-      }
-#endif
-
       /**
        * 将一个张量与另一个张量的所有相同名称的边进行缩并
        * \param other 另一个张量
@@ -625,27 +578,12 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
 
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(PairSet&& pairs) const {
-         return identity({pairs.begin(), pairs.end()});
-      }
-#endif
-
       /**
        * 看作矩阵后求出矩阵指数
        * \param pairs 边的配对方案
        * \param step 展开近似的次数
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::set<std::tuple<Name, Name>>& pairs, int step = 2) const;
-
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      exponential(PairSet&& pairs, int step = 2) const {
-         return exponential({pairs.begin(), pairs.end()}, step);
-      }
-#endif
 
       /**
        * 生成张量的共轭张量
@@ -654,14 +592,6 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::set<std::tuple<Name, Name>>& trace_names) const;
-
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename PairSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      trace(PairSet&& trace_names) const {
-         return trace({trace_names.begin(), trace_names.end()});
-      }
-#endif
 
       using SingularType =
 #ifdef TAT_USE_SINGULAR_MATRIX
@@ -711,14 +641,6 @@ namespace TAT {
       [[nodiscard]] svd_result
       svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = Size(-1)) const;
 
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename FreeNameSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] svd_result
-      svd(FreeNameSet&& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = -1) const {
-         return svd({free_name_set_u.begin(), free_name_set_u.end()}, common_name_u, common_name_v, cut);
-      }
-#endif
-
       /**
        * 对张量进行qr分解
        * \param free_name_direction free_name_set取的方向, 为'Q'或'R'
@@ -730,14 +652,6 @@ namespace TAT {
        */
       [[nodiscard]] qr_result
       qr(char free_name_direction, const std::set<Name>& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
-
-#ifdef TAT_USE_EASY_CONVERSION
-      template<typename FreeNameSet>
-      [[deprecated("Easy conversion supported will be dropped")]] [[nodiscard]] qr_result
-      qr(char free_name_direction, FreeNameSet&& free_name_set, const Name& common_name_q, const Name& common_name_r) const {
-         return qr(free_name_direction, {free_name_set.begin(), free_name_set.end()}, common_name_q, common_name_r);
-      }
-#endif
 
 #ifdef TAT_USE_MPI
       /**
