@@ -12,6 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}")
 find_package(TAT)
 target_include_directories(TAT INTERFACE ${PROJECT_SOURCE_DIR}/include/)
+target_compile_definitions(TAT INTERFACE TAT_USE_TIMER)
 get_directory_property(TAT_HAS_PARENT PARENT_DIRECTORY)
 
 # 尝试产生本库的python接口, 先寻找系统中的pybind11, 否则尝试使用本目录下自行放置的pybind11
