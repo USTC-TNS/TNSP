@@ -29,7 +29,7 @@ namespace TAT {
     * \defgroup Timer
     * @{
     */
-#ifndef TAT_USE_NO_TIMER
+#ifdef TAT_USE_TIMER
    using time_point = std::chrono::high_resolution_clock::time_point;
    using time_duration = std::chrono::high_resolution_clock::duration;
    using time_pair = std::tuple<time_point, time_duration>;
