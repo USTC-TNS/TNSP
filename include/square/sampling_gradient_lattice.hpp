@@ -576,9 +576,11 @@ namespace square {
       in > static_cast<AbstractNetworkLattice<T>&>(lattice);
       in > lattice.dimension_cut;
       std::vector<std::vector<int>> configuration;
-      in > configuration;
       lattice.spin = SpinConfiguration(&lattice);
-      lattice.initialize_spin(configuration);
+      in > configuration;
+      if (!configuration.empty()) {
+         lattice.initialize_spin(configuration);
+      }
       return in;
    }
 } // namespace square
