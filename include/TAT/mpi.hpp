@@ -77,10 +77,6 @@ namespace TAT {
       int size = 1;
       int rank = 0;
 #ifdef TAT_USE_MPI
-      static void barrier() {
-         MPI_Barrier(MPI_COMM_WORLD);
-      }
-
       static bool initialized() noexcept {
          int result;
          MPI_Initialized(&result);
@@ -103,6 +99,111 @@ namespace TAT {
             MPI_Finalize();
          }
       }
+
+      static void barrier() {
+         MPI_Barrier(MPI_COMM_WORLD);
+      }
+
+      static constexpr int mpi_tag = 0;
+
+      template<typename Type>
+      static void send(const Type& value, const int destination) {
+         auto data = value.dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
+         MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
+      }
+
+      // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
+      template<typename Type>
+      static Type receive(const int source) {
+         auto status = MPI_Status();
+         MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
+         int length;
+         MPI_Get_count(&status, MPI_BYTE, &length);
+         auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
+         MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+         auto result = Type().load(data);
+         return result;
+      }
+
+      template<typename Type>
+      Type send_receive(const Type& value, const int source, const int destination) {
+         if (rank == source) {
+            send(value, destination);
+         }
+         if (rank == destination) {
+            return receive<Type>(source);
+         }
+         return Type();
+      }
+
+      template<typename Type>
+      Type broadcast(const Type& value, const int root) {
+         if (size == 1) {
+            return value.copy(); // rvalue
+         }
+         if (0 > root || root >= size) {
+            TAT_error("Invalid root rank when mpi broadcast");
+         }
+         const auto this_fake_rank = (size + rank - root) % size;
+         Type result;
+         // get from father
+         if (this_fake_rank != 0) {
+            const auto father_fake_rank = (this_fake_rank - 1) / 2;
+            const auto father_real_rank = (father_fake_rank + root) % size;
+            result = receive<Type>(father_real_rank);
+         } else {
+            // 自己就是root的话, 会复制一次张量
+            result = value.copy();
+         }
+         // send to son
+         const auto left_son_fake_rank = this_fake_rank * 2 + 1;
+         const auto right_son_fake_rank = this_fake_rank * 2 + 2;
+         if (left_son_fake_rank < size) {
+            const auto left_son_real_rank = (left_son_fake_rank + root) % size;
+            send(result, left_son_real_rank);
+         }
+         if (right_son_fake_rank < size) {
+            const auto right_son_real_rank = (right_son_fake_rank + root) % size;
+            send(result, right_son_real_rank);
+         }
+         return result;
+      }
+
+      template<typename Type, typename Func>
+      Type reduce(const Type& value, const int root, Func&& function) {
+         if (size == 1) {
+            return value.copy(); // rvalue
+         }
+         if (0 > root || root >= size) {
+            TAT_error("Invalid root rank when mpi reduce");
+         }
+         const auto this_fake_rank = (size + rank - root) % size;
+         Type result;
+         // get from son
+         const auto left_son_fake_rank = this_fake_rank * 2 + 1;
+         const auto right_son_fake_rank = this_fake_rank * 2 + 2;
+         if (left_son_fake_rank < size) {
+            const auto left_son_real_rank = (left_son_fake_rank + root) % size;
+            result = function(value, receive<Type>(left_son_real_rank));
+         }
+         if (right_son_fake_rank < size) {
+            const auto right_son_real_rank = (right_son_fake_rank + root) % size;
+            // 如果左儿子不存在, 那么右儿子一定不存在, 所以不必判断result是否有效
+            result = function(result, receive<Type>(right_son_real_rank));
+         }
+         // pass to father
+         if (this_fake_rank != 0) {
+            const auto father_fake_rank = (this_fake_rank - 1) / 2;
+            const auto father_real_rank = (father_fake_rank + root) % size;
+            if (left_son_fake_rank < size) {
+               send(result, father_real_rank);
+            } else {
+               send(value, father_real_rank);
+            }
+         }
+         return result;
+         // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
+      }
 #endif
       auto out(int rank_specified = 0) {
          return mpi_output_stream(std::cout, rank_specified == rank);
@@ -122,113 +223,36 @@ namespace TAT {
 
 #ifdef TAT_USE_MPI
    /// \private
-   constexpr int mpi_tag = 0;
 
    template<typename ScalarType, typename Symmetry, typename Name>
    void Tensor<ScalarType, Symmetry, Name>::send(const int destination) const {
-      auto data = dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
-      MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
+      mpi.send(*this, destination);
    }
 
-   // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::receive(const int source) {
-      auto status = MPI_Status();
-      MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
-      int length;
-      MPI_Get_count(&status, MPI_BYTE, &length);
-      auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
-      MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      auto result = Tensor<ScalarType, Symmetry, Name>().load(data);
-      return result;
+      return mpi.receive<Tensor<ScalarType, Symmetry, Name>>(source);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::send_receive(const int source, const int destination) const {
-      if (mpi.rank == source) {
-         send(destination);
-      }
-      if (mpi.rank == destination) {
-         return receive(source);
-      }
-      return Tensor<ScalarType, Symmetry, Name>();
+      return mpi.send_receive(*this, source, destination);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::broadcast(const int root) const {
-      const auto& tensor = *this;
-      if (mpi.size == 1) {
-         return tensor.copy(); // rvalue
-      }
-      if (0 > root || root >= mpi.size) {
-         TAT_error("Invalid root rank when mpi broadcast a tensor");
-      }
-      const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
-      Tensor<ScalarType, Symmetry, Name> result;
-      // get from father
-      if (this_fake_rank != 0) {
-         const auto father_fake_rank = (this_fake_rank - 1) / 2;
-         const auto father_real_rank = (father_fake_rank + root) % mpi.size;
-         result = receive(father_real_rank);
-      } else {
-         // 自己就是root的话, 会复制一次张量
-         result = tensor.copy();
-      }
-      // send to son
-      const auto left_son_fake_rank = this_fake_rank * 2 + 1;
-      const auto right_son_fake_rank = this_fake_rank * 2 + 2;
-      if (left_son_fake_rank < mpi.size) {
-         const auto left_son_real_rank = (left_son_fake_rank + root) % mpi.size;
-         result.send(left_son_real_rank);
-      }
-      if (right_son_fake_rank < mpi.size) {
-         const auto right_son_real_rank = (right_son_fake_rank + root) % mpi.size;
-         result.send(right_son_real_rank);
-      }
-      return result;
+      return mpi.broadcast(*this, root);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename Func>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::reduce(const int root, Func&& function) const {
-      const auto& tensor = *this;
-      if (mpi.size == 1) {
-         return tensor.copy(); // rvalue
-      }
-      if (0 > root || root >= mpi.size) {
-         TAT_error("Invalid root rank when mpi reduce a tensor");
-      }
-      const auto this_fake_rank = (mpi.size + mpi.rank - root) % mpi.size;
-      Tensor<ScalarType, Symmetry, Name> result;
-      // get from son
-      const auto left_son_fake_rank = this_fake_rank * 2 + 1;
-      const auto right_son_fake_rank = this_fake_rank * 2 + 2;
-      if (left_son_fake_rank < mpi.size) {
-         const auto left_son_real_rank = (left_son_fake_rank + root) % mpi.size;
-         result = function(tensor, receive(left_son_real_rank));
-      }
-      if (right_son_fake_rank < mpi.size) {
-         const auto right_son_real_rank = (right_son_fake_rank + root) % mpi.size;
-         // 如果左儿子不存在, 那么右儿子一定不存在, 所以不必判断result是否有效
-         result = function(result, receive(right_son_real_rank));
-      }
-      // pass to father
-      if (this_fake_rank != 0) {
-         const auto father_fake_rank = (this_fake_rank - 1) / 2;
-         const auto father_real_rank = (father_fake_rank + root) % mpi.size;
-         if (left_son_fake_rank < mpi.size) {
-            result.send(father_real_rank);
-         } else {
-            tensor.send(father_real_rank);
-         }
-      }
-      return result;
-      // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
+      return mpi.reduce(*this, root, function);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
    void Tensor<ScalarType, Symmetry, Name>::barrier() {
-      MPI_Barrier(MPI_COMM_WORLD);
+      mpi.barrier();
    }
 #endif
 
