@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
          continue;
       }
       if (command == "seed") {
-         unsigned long seed;
+         std::uint32_t seed;
          std::cin >> seed;
          square::random::seed(seed);
          continue;

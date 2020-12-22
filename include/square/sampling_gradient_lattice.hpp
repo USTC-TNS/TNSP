@@ -188,6 +188,7 @@ namespace square {
                    << ", dimension_cut=" << dimension_cut << ", First ws is " << ws << "\n"
                    << std::flush;
          auto positions_sequence = _markov_sampling_positions_sequence();
+         random::split_seed();
          for (unsigned long long step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
             T Es = 0;
@@ -248,6 +249,8 @@ namespace square {
                          << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
             }
          }
+         random::merge_seed();
+         // TODO reduce here
          for (auto& [kind, group] : result) {
             const auto& group_square = result_square.at(kind);
             for (auto& [positions, value] : group) {

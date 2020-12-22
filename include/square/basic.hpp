@@ -139,10 +139,51 @@ namespace square {
    };
 
    namespace random {
-      inline auto engine = std::default_random_engine(std::random_device()());
-      inline void seed(unsigned long seed) {
-         engine.seed(seed);
+      inline auto engine = std::default_random_engine();
+
+      /**
+       * 获取随机数种子
+       *
+       * 保证各个mpi进程返回值相同, 如果root进程输入非0, 则使用root进程的输入作为种子, 则生成一个,
+       */
+      std::uint32_t get_seed(std::uint32_t seed = 0) {
+         if (TAT::mpi.rank == 0) {
+            if (seed == 0) {
+               seed = std::random_device()();
+            }
+         }
+#ifdef TAT_USE_MPI
+         MPI_Bcast(&seed, /*count*/ 1, MPI_UINT32_T, /*root*/ 0, MPI_COMM_WORLD);
+#endif
+         return seed;
       }
+
+      /**
+       * 设置随机数种子
+       *
+       * 如果各个进程输入值都非0, 则格子设置随机数种子, 所以如果输入值为相同的非零值, 则会设置相同的随机数种子.
+       * 如果各个进程输入值均为0, 则生成一个相同的真随机种子.
+       * 如果有些进程为0, 有些非0, 则此函数会卡住
+       */
+      inline void seed(std::uint32_t seed) {
+         if (seed == 0) {
+            seed = get_seed();
+         }
+         engine.seed(seed);
+         TAT::mpi.out() << "Set the same random seed to " << seed << "\n";
+      }
+
+      inline void split_seed() {
+         auto new_seed = std::uniform_int_distribution<std::uint32_t>(1)(engine);
+         TAT::mpi.out() << "Split random seed\n";
+         seed(new_seed + TAT::mpi.rank);
+      }
+      inline void merge_seed() {
+         auto new_seed = std::uniform_int_distribution<std::uint32_t>(1)(engine);
+         TAT::mpi.out() << "Merge random seed\n";
+         seed(get_seed(new_seed));
+      }
+
       template<typename T>
       auto normal(T mean, T stddev) {
          if constexpr (TAT::is_complex_v<T>) {
