@@ -27,6 +27,7 @@
 
 #include "io.hpp"
 #include "tensor.hpp"
+#include "timer.hpp"
 
 #ifdef TAT_USE_MPI
 // 不可以extern "C"，因为mpi.h发现不可以被暂时屏蔽的宏__cplusplus后申明一些cpp的函数
@@ -115,6 +116,7 @@ namespace TAT {
 
       template<typename Type>
       static void send(const Type& value, const int destination) {
+         auto guard = mpi_send_guard();
          auto data = value.dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
       }
@@ -122,6 +124,7 @@ namespace TAT {
       // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
       template<typename Type>
       static Type receive(const int source) {
+         auto guard = mpi_receive_guard();
          auto status = MPI_Status();
          MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
          int length;
@@ -145,6 +148,7 @@ namespace TAT {
 
       template<typename Type>
       Type broadcast(const Type& value, const int root) {
+         auto guard = mpi_broadcast_guard();
          if (size == 1) {
             return value.copy(); // rvalue
          }
@@ -178,6 +182,7 @@ namespace TAT {
 
       template<typename Type, typename Func>
       Type reduce(const Type& value, const int root, Func&& function) {
+         auto guard = mpi_reduce_guard();
          if (size == 1) {
             return value.copy(); // rvalue
          }

@@ -229,25 +229,8 @@ namespace square {
                   }
                }
             }
-            if (calculate_energy) {
-               real<T> energy = 0;
-               real<T> energy_variance_square = 0;
-               const auto& energy_square_pool = result_square.at("Energy");
-               for (const auto& [positions, value] : result.at("Energy")) {
-                  auto this_energy = value / (step + 1);
-                  auto this_square = energy_square_pool.at(positions) / (step + 1);
-                  energy += this_energy;
-                  if (step != 0) {
-                     energy_variance_square += (this_square - this_energy * this_energy) / (step + 1 - 1);
-                  }
-               };
-               std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << ", Energy=" << energy / (M * N)
-                         << " with sigma=" << std::sqrt(energy_variance_square) / (M * N) << "\r" << std::flush;
-            } else {
-               std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
-            }
+            std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
          }
          random::merge_seed();
          // TODO reduce here

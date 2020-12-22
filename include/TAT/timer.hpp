@@ -146,6 +146,10 @@ namespace TAT {
    TAT_DEFINE_TIMER(trace)
    TAT_DEFINE_TIMER(shrink)
    TAT_DEFINE_TIMER(expand)
+   TAT_DEFINE_TIMER(mpi_send)
+   TAT_DEFINE_TIMER(mpi_receive)
+   TAT_DEFINE_TIMER(mpi_broadcast)
+   TAT_DEFINE_TIMER(mpi_reduce)
 #undef TAT_DEFINE_TIMER
 #endif
    /**@}*/
