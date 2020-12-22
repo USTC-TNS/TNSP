@@ -105,7 +105,7 @@ namespace square {
                lattice[x][y] = lattice[x][y].broadcast(root);
             }
             for (const auto& [d, x, y] : _get_related_environment(positions)) {
-               environment[{d, x, y}] = environment[{d, x, y}].broadcast(root);
+               environment[{d, x, y}] = TAT::mpi.broadcast(environment[{d, x, y}], root);
             }
          }
       }

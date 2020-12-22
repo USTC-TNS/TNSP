@@ -90,6 +90,10 @@ namespace TAT {
       Singular<ScalarType, Symmetry, Name>&& load(const std::string& string) && {
          return std::move(load(string));
       };
+
+      Singular<ScalarType, Symmetry, Name> copy() const {
+         return Singular<ScalarType, Symmetry, Name>{value};
+      }
    };
 
    /**@}*/
