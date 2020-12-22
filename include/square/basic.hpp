@@ -152,9 +152,7 @@ namespace square {
                seed = std::random_device()();
             }
          }
-#ifdef TAT_USE_MPI
          MPI_Bcast(&seed, /*count*/ 1, MPI_UINT32_T, /*root*/ 0, MPI_COMM_WORLD);
-#endif
          return seed;
       }
 
@@ -176,12 +174,12 @@ namespace square {
       inline void split_seed() {
          auto new_seed = std::uniform_int_distribution<std::uint32_t>(1)(engine);
          TAT::mpi.out() << "Split random seed\n";
-         seed(new_seed + TAT::mpi.rank);
+         engine.seed(new_seed + TAT::mpi.rank);
       }
       inline void merge_seed() {
          auto new_seed = std::uniform_int_distribution<std::uint32_t>(1)(engine);
          TAT::mpi.out() << "Merge random seed\n";
-         seed(get_seed(new_seed));
+         engine.seed(get_seed(new_seed));
       }
 
       template<typename T>
@@ -226,6 +224,26 @@ namespace square {
    std::ostream&& operator<(std::ostream&& out, const T& v) {
       out < v;
       return std::move(out);
+   }
+
+   template<typename T>
+   MPI_Datatype get_mpi_type();
+
+   template<>
+   MPI_Datatype get_mpi_type<float>() {
+      return MPI_FLOAT;
+   }
+   template<>
+   MPI_Datatype get_mpi_type<double>() {
+      return MPI_DOUBLE;
+   }
+   template<>
+   MPI_Datatype get_mpi_type<complex<float>>() {
+      return MPI_C_FLOAT_COMPLEX;
+   }
+   template<>
+   MPI_Datatype get_mpi_type<complex<double>>() {
+      return MPI_C_DOUBLE_COMPLEX;
    }
 } // namespace square
 

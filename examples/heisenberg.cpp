@@ -15,6 +15,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#undef TAT_USE_TIMER
 // #define TAT_USE_SIMPLE_NAME
 // #define LAZY_DEBUG
 
@@ -39,6 +40,9 @@ int main(int argc, char** argv) {
          std::cin.rdbuf(config_file.rdbuf());
          real_cin = false;
       }
+   }
+   if (real_cin) {
+      TAT::mpi.out() << "Input directly from stdin is not support more then one process";
    }
    // lattice
    LatticeType lattice_type = LatticeType::Simple;
@@ -167,17 +171,17 @@ int main(int argc, char** argv) {
             } else if (command == "ergodic") {
                sampling_gradient_lattice.ergodic({}, true);
             } else if (command == "markov") {
-               unsigned long long total_step;
+               std::uint64_t total_step;
                std::cin >> total_step;
                sampling_gradient_lattice.markov(total_step, {}, true);
             } else if (command == "gradient") {
-               unsigned long long gradient_step, markov_step;
+               std::uint64_t gradient_step, markov_step;
                square::real<double> step_size;
                std::cin >> gradient_step >> step_size >> markov_step;
                std::cout << "Gradient descent start, total_step=" << gradient_step << "\n" << std::flush;
                std::cout << "\n\n\n";
                const char* move_up = "\u001b[1A";
-               for (unsigned long long step = 0; step < gradient_step; step++) {
+               for (std::uint64_t step = 0; step < gradient_step; step++) {
                   std::cout << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line
                             << "Gradient descenting, total_step=" << gradient_step << ", step=" << (step + 1) << "\n"
                             << std::flush;
@@ -207,7 +211,7 @@ int main(int argc, char** argv) {
                          << std::flush;
             } else if (command == "equilibrate") {
                sampling_gradient_lattice.initialize_spin([](int i, int j) { return (i + j) % 2; });
-               unsigned long long total_step;
+               std::uint64_t total_step;
                std::cin >> total_step;
                sampling_gradient_lattice.equilibrate(total_step);
             } else if (command == "exact") {
