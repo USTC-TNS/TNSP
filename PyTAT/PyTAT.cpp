@@ -60,7 +60,7 @@ namespace TAT {
    namespace py = pybind11;
 
    inline auto random_engine = std::default_random_engine(std::random_device()());
-   inline void set_random_seed(unsigned long seed) {
+   inline void set_random_seed(unsigned int seed) {
       random_engine.seed(seed);
    }
 

@@ -34,18 +34,17 @@
 #endif
 
 namespace TAT {
-#ifdef TAT_USE_MPI
    /**
     * \defgroup MPI
     * @{
     */
+#ifdef TAT_USE_MPI
    constexpr bool mpi_enabled = true;
-
-   /// \private
-   constexpr int mpi_tag = 0;
-
+#else
+   constexpr bool mpi_enabled = false;
+#endif
    /**
-    * 对流进行包装, 包装后流只会从创建时指定的rank进程中输出
+    * 对流进行包装, 包装后流只会根据创建时指定的有效性决定是否输出
     */
    struct mpi_output_stream {
       std::ostream& out;
@@ -70,13 +69,18 @@ namespace TAT {
    };
 
    /**
-    * 一个mpi handler, 会在构造和析构时自动调用MPI_Init和MPI_Finalize, 且会获取Size和Rank信息
+    * 一个mpi handler类型, 会在构造和析构时自动调用MPI_Init和MPI_Finalize, 且会获取Size和Rank信息, 同时提供只在某个rank下有效的输出流
     *
     * 创建多个mpi_t不会产生冲突
     */
    struct mpi_t {
-      int size;
-      int rank;
+      int size = 1;
+      int rank = 0;
+#ifdef TAT_USE_MPI
+      static void barrier() {
+         MPI_Barrier(MPI_COMM_WORLD);
+      }
+
       static bool initialized() noexcept {
          int result;
          MPI_Initialized(&result);
@@ -87,8 +91,7 @@ namespace TAT {
          MPI_Finalized(&result);
          return result;
       }
-      // 因为属于Tensor的static member, 不同的模板参数会调用他多次
-      mpi_t() noexcept : size(1), rank(0) {
+      mpi_t() {
          if (!initialized()) {
             MPI_Init(nullptr, nullptr);
          }
@@ -100,6 +103,7 @@ namespace TAT {
             MPI_Finalize();
          }
       }
+#endif
       auto out(int rank_specified = 0) {
          return mpi_output_stream(std::cout, rank_specified == rank);
       }
@@ -109,15 +113,16 @@ namespace TAT {
       auto err(int rank_specified = 0) {
          return mpi_output_stream(std::cerr, rank_specified == rank);
       }
-      static void barrier() {
-         MPI_Barrier(MPI_COMM_WORLD);
-      }
    };
    /**
     * \see mpi_t
     */
    inline mpi_t mpi;
    /**@}*/
+
+#ifdef TAT_USE_MPI
+   /// \private
+   constexpr int mpi_tag = 0;
 
    template<typename ScalarType, typename Symmetry, typename Name>
    void Tensor<ScalarType, Symmetry, Name>::send(const int destination) const {
@@ -225,8 +230,6 @@ namespace TAT {
    void Tensor<ScalarType, Symmetry, Name>::barrier() {
       MPI_Barrier(MPI_COMM_WORLD);
    }
-#else
-   constexpr bool mpi_enabled = false;
 #endif
 
    inline evil_t::evil_t() noexcept {
@@ -243,21 +246,13 @@ namespace TAT {
    }
    inline evil_t::~evil_t() {
 #ifndef NDEBUG
-      try {
-#ifdef TAT_USE_MPI
-         mpi.log()
-#else
-         std::clog
-#endif
-               << console_blue << "\n\nPremature optimization is the root of all evil!\n"
-               << console_origin << "                                       --- Donald Knuth\n\n\n";
-      } catch (const std::exception&) {
-      }
+      mpi.log() << console_blue << "\n\nPremature optimization is the root of all evil!\n"
+                << console_origin << "                                       --- Donald Knuth\n\n\n";
 #endif
    }
 
    inline void TAT_log(const char* message) {
-      std::cerr << console_yellow;
+      std::clog << console_yellow;
 #ifdef TAT_USE_MPI
       if (mpi.size != 1) {
          std::clog << "[rank " << mpi.rank << "] ";
