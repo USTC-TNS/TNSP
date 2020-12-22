@@ -56,7 +56,8 @@ namespace square {
             dimension_virtual = new_dimension;
          }
          TAT::mpi.out() << clear_line << "Simple updating start, total_step=" << total_step << ", dimension=" << dimension_virtual
-                        << ", delta_t=" << delta_t << "\n";
+                        << ", delta_t=" << delta_t << "\n"
+                        << std::flush;
          std::map<const Tensor<T>*, std::shared_ptr<const Tensor<T>>> updater_pool;
          std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>> updater;
          for (const auto& [positions, term] : hamiltonians) {
@@ -81,10 +82,11 @@ namespace square {
                _single_group_simple_update(*iter, updater);
             }
             TAT::mpi.out() << clear_line << "Simple updating, total_step=" << total_step << ", dimension=" << dimension_virtual
-                           << ", delta_t=" << delta_t << ", step=" << (step + 1) << "\r";
+                           << ", delta_t=" << delta_t << ", step=" << (step + 1) << "\r" << std::flush;
          }
          TAT::mpi.out() << clear_line << "Simple update done, total_step=" << total_step << ", dimension=" << dimension_virtual
-                        << ", delta_t=" << delta_t << "\n";
+                        << ", delta_t=" << delta_t << "\n"
+                        << std::flush;
       }
 
       void _single_group_simple_update(

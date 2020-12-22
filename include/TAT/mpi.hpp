@@ -66,6 +66,13 @@ namespace TAT {
          }
          return std::move(*this);
       }
+
+      mpi_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
+         if (valid) {
+            out << func;
+         }
+         return *this;
+      }
    };
 
    /**

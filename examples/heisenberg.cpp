@@ -51,12 +51,12 @@ int main(int argc, char** argv) {
    square::SamplingGradientLattice<double> sampling_gradient_lattice;
    while (true) {
       if (real_cin) {
-         std::cout << "> " << std::flush;
+         TAT::mpi.out() << "> " << std::flush;
       }
       std::string command;
       std::cin >> command;
       if (command == "exit") {
-         std::cout << "Exiting\n";
+         TAT::mpi.out() << "Exiting\n";
          return 0;
       }
       if (command == "") {
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
          } else if (new_type == "sample") {
             lattice_type = LatticeType::Sample;
          } else {
-            std::cerr << "Unknown type: " << new_type << "\n";
+            TAT::mpi.err() << "Unknown type: " << new_type << "\n";
             return -1;
          }
          continue;
@@ -111,9 +111,9 @@ int main(int argc, char** argv) {
                std::cin >> total_step >> approximate_energy;
                exact_lattice.update(total_step, approximate_energy);
             } else if (command == "energy") {
-               std::cout << exact_lattice.observe_energy() << "\n";
+               TAT::mpi.out() << exact_lattice.observe_energy() << "\n";
             } else {
-               std::cerr << "Invalid Command: " << command << "\n";
+               TAT::mpi.err() << "Invalid Command: " << command << "\n";
                return -1;
             }
             break;
