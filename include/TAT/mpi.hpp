@@ -50,12 +50,16 @@ namespace TAT {
    struct mpi_one_output_stream {
       std::ostream& out;
       bool valid;
+      std::ostringstream string;
+      ~mpi_one_output_stream() {
+         out << string.str();
+      }
       mpi_one_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
 
       template<typename Type>
       mpi_one_output_stream& operator<<(const Type& value) & {
          if (valid) {
-            out << value;
+            string << value;
          }
          return *this;
       }
@@ -63,14 +67,14 @@ namespace TAT {
       template<typename Type>
       mpi_one_output_stream&& operator<<(const Type& value) && {
          if (valid) {
-            out << value;
+            string << value;
          }
          return std::move(*this);
       }
 
       mpi_one_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
          if (valid) {
-            out << func;
+            string << func;
          }
          return *this;
       }
@@ -81,26 +85,30 @@ namespace TAT {
     */
    struct mpi_rank_output_stream {
       std::ostream& out;
+      std::ostringstream string;
+      ~mpi_rank_output_stream() {
+         out << string.str();
+      }
       mpi_rank_output_stream(std::ostream& out, int rank) : out(out) {
          if (rank != -1) {
-            out << "[rank " << rank << "] ";
+            string << "[rank " << rank << "] ";
          }
       }
 
       template<typename Type>
       mpi_rank_output_stream& operator<<(const Type& value) & {
-         out << value;
+         string << value;
          return *this;
       }
 
       template<typename Type>
       mpi_rank_output_stream&& operator<<(const Type& value) && {
-         out << value;
+         string << value;
          return std::move(*this);
       }
 
       mpi_rank_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
-         out << func;
+         string << func;
          return *this;
       }
    };
