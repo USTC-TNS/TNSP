@@ -47,13 +47,13 @@ namespace TAT {
    /**
     * 对流进行包装, 包装后流只会根据创建时指定的有效性决定是否输出
     */
-   struct mpi_output_stream {
+   struct mpi_one_output_stream {
       std::ostream& out;
       bool valid;
-      mpi_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
+      mpi_one_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
 
       template<typename Type>
-      mpi_output_stream& operator<<(const Type& value) & {
+      mpi_one_output_stream& operator<<(const Type& value) & {
          if (valid) {
             out << value;
          }
@@ -61,17 +61,46 @@ namespace TAT {
       }
 
       template<typename Type>
-      mpi_output_stream&& operator<<(const Type& value) && {
+      mpi_one_output_stream&& operator<<(const Type& value) && {
          if (valid) {
             out << value;
          }
          return std::move(*this);
       }
 
-      mpi_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
+      mpi_one_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
          if (valid) {
             out << func;
          }
+         return *this;
+      }
+   };
+
+   /**
+    * 对流进行包装, 每次输出之前打印当前rank
+    */
+   struct mpi_rank_output_stream {
+      std::ostream& out;
+      mpi_rank_output_stream(std::ostream& out, int rank) : out(out) {
+         if (rank != -1) {
+            out << "[rank " << rank << "] ";
+         }
+      }
+
+      template<typename Type>
+      mpi_rank_output_stream& operator<<(const Type& value) & {
+         out << value;
+         return *this;
+      }
+
+      template<typename Type>
+      mpi_rank_output_stream&& operator<<(const Type& value) && {
+         out << value;
+         return std::move(*this);
+      }
+
+      mpi_rank_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
+         out << func;
          return *this;
       }
    };
@@ -118,6 +147,7 @@ namespace TAT {
       static void send(const Type& value, const int destination) {
          auto guard = mpi_send_guard();
          auto data = value.dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
+         // TODO 是不是可以立即返回?
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
       }
 
@@ -217,14 +247,24 @@ namespace TAT {
          // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
       }
 #endif
-      auto out(int rank_specified = 0) {
-         return mpi_output_stream(std::cout, rank_specified == rank);
+      auto out_one(int rank_specified = 0) {
+         return mpi_one_output_stream(std::cout, rank_specified == rank);
       }
-      auto log(int rank_specified = 0) {
-         return mpi_output_stream(std::clog, rank_specified == rank);
+      auto log_one(int rank_specified = 0) {
+         return mpi_one_output_stream(std::clog, rank_specified == rank);
       }
-      auto err(int rank_specified = 0) {
-         return mpi_output_stream(std::cerr, rank_specified == rank);
+      auto err_one(int rank_specified = 0) {
+         return mpi_one_output_stream(std::cerr, rank_specified == rank);
+      }
+
+      auto out_rank() {
+         return mpi_rank_output_stream(std::cout, size == 1 ? -1 : rank);
+      }
+      auto log_rank() {
+         return mpi_rank_output_stream(std::clog, size == 1 ? -1 : rank);
+      }
+      auto err_rank() {
+         return mpi_rank_output_stream(std::cerr, size == 1 ? -1 : rank);
       }
    };
    /**
@@ -234,8 +274,6 @@ namespace TAT {
    /**@}*/
 
 #ifdef TAT_USE_MPI
-   /// \private
-
    template<typename ScalarType, typename Symmetry, typename Name>
    void Tensor<ScalarType, Symmetry, Name>::send(const int destination) const {
       mpi.send(*this, destination);
@@ -282,29 +320,17 @@ namespace TAT {
    }
    inline evil_t::~evil_t() {
 #ifndef NDEBUG
-      mpi.log() << console_blue << "\n\nPremature optimization is the root of all evil!\n"
-                << console_origin << "                                       --- Donald Knuth\n\n\n";
+      mpi.log_one() << console_blue << "\n\nPremature optimization is the root of all evil!\n"
+                    << console_origin << "                                       --- Donald Knuth\n\n\n";
 #endif
    }
 
    inline void TAT_log(const char* message) {
-      std::clog << console_yellow;
-#ifdef TAT_USE_MPI
-      if (mpi.size != 1) {
-         std::clog << "[rank " << mpi.rank << "] ";
-      }
-#endif
-      std::clog << message << console_origin << std::endl;
+      mpi.log_rank() << console_yellow << message << console_origin << std::endl;
    }
 
    inline void TAT_warning(const char* message) {
-      std::cerr << console_red;
-#ifdef TAT_USE_MPI
-      if (mpi.size != 1) {
-         std::cerr << "[rank " << mpi.rank << "] ";
-      }
-#endif
-      std::cerr << message << console_origin << std::endl;
+      mpi.err_rank() << console_red << message << console_origin << std::endl;
    }
 
    inline void TAT_error(const char* message) {
