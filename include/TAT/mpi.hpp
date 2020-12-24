@@ -154,7 +154,9 @@ namespace TAT {
       template<typename Type>
       static void send(const Type& value, const int destination) {
          auto guard = mpi_send_guard();
-         auto data = value.dump(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
+         std::ostringstream stream;
+         stream < value;
+         auto data = stream.str(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
          // TODO 是不是可以立即返回?
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
       }
@@ -169,7 +171,9 @@ namespace TAT {
          MPI_Get_count(&status, MPI_BYTE, &length);
          auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
          MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-         auto result = Type().load(data);
+         std::istringstream stream(data);
+         auto result = Type();
+         stream > result;
          return result;
       }
 
@@ -188,7 +192,7 @@ namespace TAT {
       Type broadcast(const Type& value, const int root) {
          auto guard = mpi_broadcast_guard();
          if (size == 1) {
-            return value.copy(); // rvalue
+            return value;
          }
          if (0 > root || root >= size) {
             TAT_error("Invalid root rank when mpi broadcast");
@@ -202,7 +206,7 @@ namespace TAT {
             result = receive<Type>(father_real_rank);
          } else {
             // 自己就是root的话, 会复制一次张量
-            result = value.copy();
+            result = value;
          }
          // send to son
          const auto left_son_fake_rank = this_fake_rank * 2 + 1;
@@ -222,7 +226,7 @@ namespace TAT {
       Type reduce(const Type& value, const int root, Func&& function) {
          auto guard = mpi_reduce_guard();
          if (size == 1) {
-            return value.copy(); // rvalue
+            return value;
          }
          if (0 > root || root >= size) {
             TAT_error("Invalid root rank when mpi reduce");
