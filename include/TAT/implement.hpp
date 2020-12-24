@@ -24,6 +24,7 @@
 #include "contract.hpp"
 #include "edge_miscellaneous.hpp"
 #include "edge_operator.hpp"
+#include "exponential.hpp"
 #include "get_item.hpp"
 #include "io.hpp"
 #include "mpi.hpp"
