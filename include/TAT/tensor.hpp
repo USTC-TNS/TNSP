@@ -117,6 +117,11 @@ namespace TAT {
       using name_valid = std::enable_if_t<is_name_v<Name>>;
       // TODO: private访问控制
 
+      using scalar_t = ScalarType;
+      using symmetry_t = Symmetry;
+      using name_t = Name;
+      using edge_t = Edge<Symmetry>;
+
       /**
        * 张量的边的名称
        * \see Name
