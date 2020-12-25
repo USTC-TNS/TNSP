@@ -178,7 +178,7 @@ namespace TAT {
       }
 
       template<typename Type>
-      Type send_receive(const Type& value, const int source, const int destination) {
+      Type send_receive(const Type& value, const int source, const int destination) const {
          if (rank == source) {
             send(value, destination);
          }
@@ -189,7 +189,7 @@ namespace TAT {
       }
 
       template<typename Type>
-      Type broadcast(const Type& value, const int root) {
+      Type broadcast(const Type& value, const int root) const {
          auto guard = mpi_broadcast_guard();
          if (size == 1) {
             return value;
@@ -223,7 +223,7 @@ namespace TAT {
       }
 
       template<typename Type, typename Func>
-      Type reduce(const Type& value, const int root, Func&& function) {
+      Type reduce(const Type& value, const int root, Func&& function) const {
          auto guard = mpi_reduce_guard();
          if (size == 1) {
             return value;
