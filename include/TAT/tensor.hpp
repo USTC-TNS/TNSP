@@ -91,7 +91,7 @@ namespace TAT {
          return std::move(load(string));
       };
 
-      Singular<ScalarType, Symmetry, Name> copy() const {
+      [[nodiscard]] Singular<ScalarType, Symmetry, Name> copy() const {
          return Singular<ScalarType, Symmetry, Name>{value};
       }
    };
