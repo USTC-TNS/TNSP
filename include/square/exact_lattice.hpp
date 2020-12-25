@@ -60,7 +60,7 @@ namespace square {
       explicit ExactLattice(const SamplingGradientLattice<T>& other);
 
       real<T> update(int total_step, real<T> approximate_energy = -0.5) {
-         TAT::mpi.out() << clear_line << "Exact update done, total_step=" << total_step << "\n" << std::flush;
+         TAT::mpi.out_one() << clear_line << "Exact update done, total_step=" << total_step << "\n" << std::flush;
          real<T> total_approximate_energy = std::abs(approximate_energy) * M * N;
          real<T> energy = 0;
          for (auto step = 0; step < total_step; step++) {
@@ -82,10 +82,10 @@ namespace square {
             real<T> norm_max = vector.template norm<-1>();
             energy = total_approximate_energy - norm_max;
             vector /= norm_max;
-            TAT::mpi.out() << clear_line << "Exact updating, total_step=" << total_step << ", step=" << (step + 1) << ", Energy=" << energy / (M * N)
-                           << "\r" << std::flush;
+            TAT::mpi.out_one() << clear_line << "Exact updating, total_step=" << total_step << ", step=" << (step + 1)
+                               << ", Energy=" << energy / (M * N) << "\r" << std::flush;
          }
-         TAT::mpi.out() << clear_line << "Exact update done, total_step=" << total_step << ", Energy=" << energy / (M * N) << "\n" << std::flush;
+         TAT::mpi.out_one() << clear_line << "Exact update done, total_step=" << total_step << ", Energy=" << energy / (M * N) << "\n" << std::flush;
          return energy / (M * N);
       }
 

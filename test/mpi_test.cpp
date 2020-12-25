@@ -27,7 +27,7 @@ int main() {
    auto result = TAT::mpi.reduce(input, TAT::mpi.size / 2, [](auto a, auto b) { return a + b; });
    TAT::mpi.out_one(TAT::mpi.size / 2) << result << "\n";
    result = TAT::mpi.broadcast(result, TAT::mpi.size / 2);
-   Tensor::barrier();
+   TAT::mpi.barrier();
    TAT::mpi.out_rank() << result << "\n";
    return 0;
 }

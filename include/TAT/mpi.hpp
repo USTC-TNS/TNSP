@@ -39,11 +39,6 @@ namespace TAT {
     * \defgroup MPI
     * @{
     */
-#ifdef TAT_USE_MPI
-   constexpr bool mpi_enabled = true;
-#else
-   constexpr bool mpi_enabled = false;
-#endif
    /**
     * 对流进行包装, 包装后流只会根据创建时指定的有效性决定是否输出
     */
@@ -122,6 +117,11 @@ namespace TAT {
       int size = 1;
       int rank = 0;
 #ifdef TAT_USE_MPI
+      static constexpr bool enabled = true;
+#else
+      static constexpr bool enabled = false;
+#endif
+#ifdef TAT_USE_MPI
       static bool initialized() noexcept {
          int result;
          MPI_Initialized(&result);
@@ -178,7 +178,7 @@ namespace TAT {
       }
 
       template<typename Type>
-      Type send_receive(const Type& value, const int source, const int destination) {
+      Type send_receive(const Type& value, const int source, const int destination) const {
          if (rank == source) {
             send(value, destination);
          }
@@ -189,7 +189,7 @@ namespace TAT {
       }
 
       template<typename Type>
-      Type broadcast(const Type& value, const int root) {
+      Type broadcast(const Type& value, const int root) const {
          auto guard = mpi_broadcast_guard();
          if (size == 1) {
             return value;
@@ -223,7 +223,7 @@ namespace TAT {
       }
 
       template<typename Type, typename Func>
-      Type reduce(const Type& value, const int root, Func&& function) {
+      Type reduce(const Type& value, const int root, Func&& function) const {
          auto guard = mpi_reduce_guard();
          if (size == 1) {
             return value;

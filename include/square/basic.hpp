@@ -168,17 +168,17 @@ namespace square {
             seed = get_seed();
          }
          engine.seed(seed);
-         TAT::mpi.out() << "Set the same random seed to " << seed << "\n";
+         TAT::mpi.out_one() << "Set the same random seed to " << seed << "\n";
       }
 
       inline void split_seed() {
          auto new_seed = std::uniform_int_distribution<std::uint32_t>(1)(engine);
-         TAT::mpi.out() << "Split random seed\n";
+         TAT::mpi.out_one() << "Split random seed\n";
          engine.seed(new_seed + TAT::mpi.rank);
       }
       inline void merge_seed() {
          auto new_seed = std::uniform_int_distribution<std::uint32_t>(1)(engine);
-         TAT::mpi.out() << "Merge random seed\n";
+         TAT::mpi.out_one() << "Merge random seed\n";
          engine.seed(get_seed(new_seed));
       }
 
