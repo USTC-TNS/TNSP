@@ -141,11 +141,9 @@ namespace TAT {
 #else
    constexpr auto TAT_warning_or_error_default = TAT_warning;
 #endif
-   constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning_or_error_default;
-   constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning_or_error_default;
-   constexpr auto TAT_warning_or_error_when_reference_which_may_change = TAT_warning_or_error_default;
    constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning_or_error_default;
    constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning_or_error_default;
+   constexpr auto TAT_warning_or_error_when_copy_shared = TAT_warning_or_error_default;
 #endif
 
    /**

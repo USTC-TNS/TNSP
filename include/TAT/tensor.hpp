@@ -280,7 +280,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared, Copy Data Happened Here");
+            TAT_warning_or_error_when_copy_shared("Set tensor shared, copy happened here");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
