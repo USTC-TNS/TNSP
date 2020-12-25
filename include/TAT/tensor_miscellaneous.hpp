@@ -35,12 +35,13 @@ namespace TAT {
       } else if (direction == 'v' || direction == 'V') {
          different_direction = true;
       } else {
-         return copy();
+         TAT_warning_or_error_when_multiple_configuration_error("Direction Invalid in Multiple");
+         return *this;
       }
       const auto found = name_to_index.find(name);
       if (found == name_to_index.end()) {
-         TAT_warning_or_error_when_multiple_name_missing("Edge not Found in Multiple");
-         return copy();
+         TAT_warning_or_error_when_multiple_configuration_error("Edge not Found in Multiple");
+         return *this;
       }
       auto result = same_shape();
       auto index = found->second;
@@ -110,7 +111,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
       auto guard = conjugate_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
-         return copy();
+         return *this;
       }
       auto result_edges = std::vector<Edge<Symmetry>>();
       result_edges.reserve(names.size());
