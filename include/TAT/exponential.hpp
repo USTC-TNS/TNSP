@@ -21,30 +21,130 @@
 #ifndef TAT_EXPONENTIAL_HPP
 #define TAT_EXPONENTIAL_HPP
 
+#include <algorithm>
+#include <cmath>
+
+#include "contract.hpp"
 #include "tensor.hpp"
 #include "timer.hpp"
+#include "transpose.hpp"
+
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+extern "C" {
+void sgesv_(const int* n, const int* nrhs, float* A, const int* lda, int* ipiv, float* B, const int* ldb, int* info);
+void dgesv_(const int* n, const int* nrhs, double* A, const int* lda, int* ipiv, double* B, const int* ldb, int* info);
+void cgesv_(const int* n, const int* nrhs, std::complex<float>* A, const int* lda, int* ipiv, std::complex<float>* B, const int* ldb, int* info);
+void zgesv_(const int* n, const int* nrhs, std::complex<double>* A, const int* lda, int* ipiv, std::complex<double>* B, const int* ldb, int* info);
+}
+#endif
 
 namespace TAT {
-   template<typename T>
-   std::uint64_t max_of_zero_and_floor_of_log_2(T input) {
-      std::uint64_t result = 0;
-      std::uint64_t value = 2;
-      while (value <= input) {
-         result += 1;
-         value *= 2;
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+   template<typename ScalarType>
+   constexpr void (*gesv)(const int* n, const int* nrhs, ScalarType* A, const int* lda, int* ipiv, ScalarType* B, const int* ldb, int* info) =
+         nullptr;
+   template<>
+   inline auto gesv<float> = sgesv_;
+   template<>
+   inline auto gesv<double> = dgesv_;
+   template<>
+   inline auto gesv<std::complex<float>> = cgesv_;
+   template<>
+   inline auto gesv<std::complex<double>> = zgesv_;
+
+   template<typename ScalarType>
+   void linear_solve(int n, ScalarType* A, int nrhs, ScalarType* B) {
+      // A: n*n
+      // B: n*nrhs
+      vector<ScalarType> AT(n * n);
+      matrix_transpose(n, n, A, AT.data());
+      vector<ScalarType> BT(n * nrhs);
+      matrix_transpose(n, nrhs, B, BT.data());
+      vector<int> ipiv(n);
+      int result;
+      gesv<ScalarType>(&n, &nrhs, AT.data(), &n, ipiv.data(), BT.data(), &n, &result);
+      if (result != 0) {
+         TAT_warning_or_error_when_lapack_error("error in GESV");
+      }
+      matrix_transpose(nrhs, n, BT.data(), B);
+   }
+
+   template<typename ScalarType>
+   auto max_of_abs(const ScalarType* data, Size n) {
+      real_base_t<ScalarType> result = 0;
+      for (Size i = 0; i < n * n; i++) {
+         auto here = std::abs(data[i]);
+         result = result < here ? here : result;
       }
       return result;
    }
 
    template<typename ScalarType>
-   void matrix_exponential(Size n, ScalarType* A, ScalarType* F, int step) {
-      auto j = max_of_zero_and_floor_of_log_2(max_of_abs(A, n));
-      for (Size i = 0; i < n * n; i++) {
-         A[i] /= 1 << j;
-         // TODO.. put it into log
+   void initialize_identity_matrix(ScalarType* data, Size n) {
+      for (Size i = 0; i < n - 1; i++) {
+         *(data++) = 1;
+         for (Size j = 0; j < n; j++) {
+            *(data++) = 0;
+         }
       }
-      // TODO... 需要把exp单独拿出来放在一个文件里
+      *data = 1;
    }
+
+   template<typename ScalarType>
+   void matrix_exponential(Size n, ScalarType* A, ScalarType* F, int q) {
+      // j = max(0, 1+floor(log2(|A|_inf)))
+      auto j = std::max(0, 1 + int(std::log2(max_of_abs(A, n))));
+      // A = A/2^j
+      ScalarType parameter = ScalarType(1) / (1 << j);
+      for (Size i = 0; i < n * n; i++) {
+         A[i] *= parameter;
+      }
+      // D=I, N=I, X=I, c=1
+      vector<ScalarType> D(n * n);
+      initialize_identity_matrix(D.data(), n);
+      vector<ScalarType> N(n * n);
+      initialize_identity_matrix(N.data(), n);
+      vector<ScalarType> X1(n * n);
+      initialize_identity_matrix(X1.data(), n);
+      vector<ScalarType> X2(n * n);
+      ScalarType c = 1;
+      // for k=1:q
+      const ScalarType alpha = 1;
+      const ScalarType beta = 0;
+      for (auto k = 1; k <= q; k++) {
+         // c = (c*(q-k+1))/((2*q-k+1)*k)
+         c = (c * (q - k + 1)) / ((2 * q - k + 1) * k);
+         // X = A@X, N=N+c*X, D=D+(-1)^k*c*X
+         auto& X_old = k % 2 == 1 ? X1 : X2;
+         auto& X_new = k % 2 == 0 ? X1 : X2;
+         // new = A @ old
+         // new.T = old.T @ A.T
+         gemm<ScalarType>("N", "N", &n, &n, &n, &alpha, X_old.data(), &n, A, &n, &beta, X_new.data(), &n);
+         ScalarType d = k % 2 == 0 ? c : -c;
+         for (Size i = 0; i < n * n; i++) {
+            auto x = X_new[i];
+            N[i] += c * x;
+            D[i] += d * x;
+         }
+      }
+      // solve D@F=N for F
+      vector<ScalarType> F1(n * n);
+      vector<ScalarType> F2(n * n);
+      auto& R = j == 0 ? F : F1;
+      // D@R=N
+      linear_solve<ScalarType>(n, D.data(), n, N.data());
+      R = std::move(N);
+      // for k=1:j
+      for (auto k = 1; k <= j; j++) {
+         // F = F@F
+         auto& F_old = k % 2 == 1 ? F1 : F2;
+         auto& F_new = k == j ? F : k % 2 == 0 ? F1 : F2;
+         // new = old * old
+         // new.T = old.T * old.T
+         gemm<ScalarType>("N", "N", &n, &n, &n, &alpha, F_old.data(), &n, F_old.data(), &n, &beta, F_new.data(), &n);
+      }
+   }
+#endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
