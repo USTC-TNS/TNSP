@@ -567,6 +567,7 @@ namespace square {
       out < static_cast<const AbstractNetworkLattice<T>&>(lattice);
       out < lattice.dimension_cut;
       out < lattice.spin.configuration;
+      // TODO: output all configuration across mpi process
       return out;
    }
 
