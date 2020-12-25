@@ -44,6 +44,7 @@
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
 // TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义 TODO 进一步优化
 // TAT_USE_MKL_GEMM_BATCH 定义以使用mkl的?gemm_batch, cmake可对此进行定义
+// TAT_USE_NO_WARNING 禁用各类警告
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
@@ -135,11 +136,16 @@ namespace TAT {
    inline void TAT_error(const char* message);
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning;
-   constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning;
-   constexpr auto TAT_warning_or_error_when_reference_which_may_change = TAT_warning;
-   constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning;
-   constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning;
+#ifdef TAT_USE_NO_WARNING
+   constexpr auto TAT_warning_or_error_default = TAT_nothing;
+#else
+   constexpr auto TAT_warning_or_error_default = TAT_warning;
+#endif
+   constexpr auto TAT_warning_or_error_when_inplace_scalar = TAT_warning_or_error_default;
+   constexpr auto TAT_warning_or_error_when_inplace_transform = TAT_warning_or_error_default;
+   constexpr auto TAT_warning_or_error_when_reference_which_may_change = TAT_warning_or_error_default;
+   constexpr auto TAT_warning_or_error_when_multiple_name_missing = TAT_warning_or_error_default;
+   constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning_or_error_default;
 #endif
 
    /**
