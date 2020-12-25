@@ -39,11 +39,6 @@ namespace TAT {
     * \defgroup MPI
     * @{
     */
-#ifdef TAT_USE_MPI
-   constexpr bool mpi_enabled = true;
-#else
-   constexpr bool mpi_enabled = false;
-#endif
    /**
     * 对流进行包装, 包装后流只会根据创建时指定的有效性决定是否输出
     */
@@ -121,6 +116,11 @@ namespace TAT {
    struct mpi_t {
       int size = 1;
       int rank = 0;
+#ifdef TAT_USE_MPI
+      static constexpr bool enabled = true;
+#else
+      static constexpr bool enabled = false;
+#endif
 #ifdef TAT_USE_MPI
       static bool initialized() noexcept {
          int result;

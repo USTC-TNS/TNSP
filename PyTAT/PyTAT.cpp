@@ -731,7 +731,6 @@ namespace TAT {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       tat_m.attr("information") = information;
-      tat_m.attr("mpi_enabled") = mpi_enabled;
       auto internal_m = tat_m.def_submodule("_internal", "internal information of TAT");
       // random
       auto random_m = tat_m.def_submodule("random", "random for TAT");
@@ -762,6 +761,7 @@ namespace TAT {
             "Get random normal real");
       // mpi
       py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")
+            .def_readonly_static("enabled", &mpi_t::enabled)
             .def_readonly("rank", &mpi_t::rank)
             .def_readonly("size", &mpi_t::size)
             .def("__str__",
