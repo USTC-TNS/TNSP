@@ -108,7 +108,8 @@ namespace TAT {
    auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) & {
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-         TAT_warning_or_error_when_reference_which_may_change("Get reference which may change, use const_block to get const reference");
+         TAT_warning_or_error_when_copy_shared(
+               "Get reference which may change of shared tensor, copy happened here, use const_block to get const reference");
       }
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
@@ -132,7 +133,8 @@ namespace TAT {
    ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const std::map<Name, EdgeInfoForGetItem>& position) & {
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-         TAT_warning_or_error_when_reference_which_may_change("Get reference which may change, use const_at to get const reference");
+         TAT_warning_or_error_when_copy_shared(
+               "Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
       }
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);

@@ -55,9 +55,9 @@ namespace square {
          if (new_dimension) {
             dimension_virtual = new_dimension;
          }
-         std::cout << clear_line << "Simple updating start, total_step=" << total_step << ", dimension=" << dimension_virtual
-                   << ", delta_t=" << delta_t << "\n"
-                   << std::flush;
+         TAT::mpi.out_one() << clear_line << "Simple updating start, total_step=" << total_step << ", dimension=" << dimension_virtual
+                            << ", delta_t=" << delta_t << "\n"
+                            << std::flush;
          std::map<const Tensor<T>*, std::shared_ptr<const Tensor<T>>> updater_pool;
          std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>> updater;
          for (const auto& [positions, term] : hamiltonians) {
@@ -76,72 +76,123 @@ namespace square {
          auto positions_sequence = _simple_update_positions_sequence();
          for (auto step = 0; step < total_step; step++) {
             for (auto iter = positions_sequence.begin(); iter != positions_sequence.end(); ++iter) {
-               const auto& positions = *iter;
-               const auto& tensor = *updater.at(positions);
-               _single_term_simple_update(positions, tensor);
+               _single_group_simple_update(*iter, updater);
             }
             for (auto iter = positions_sequence.rbegin(); iter != positions_sequence.rend(); ++iter) {
-               const auto& positions = *iter;
+               _single_group_simple_update(*iter, updater);
+            }
+            TAT::mpi.out_one() << clear_line << "Simple updating, total_step=" << total_step << ", dimension=" << dimension_virtual
+                               << ", delta_t=" << delta_t << ", step=" << (step + 1) << "\r" << std::flush;
+         }
+         TAT::mpi.out_one() << clear_line << "Simple update done, total_step=" << total_step << ", dimension=" << dimension_virtual
+                            << ", delta_t=" << delta_t << "\n"
+                            << std::flush;
+      }
+
+      void _single_group_simple_update(
+            const std::vector<std::vector<std::tuple<int, int>>>& group,
+            const std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>& updater) {
+         for (auto i = 0; i < group.size(); i++) {
+            if (i % TAT::mpi.size == TAT::mpi.rank) {
+               const auto& positions = group[i];
                const auto& tensor = *updater.at(positions);
                _single_term_simple_update(positions, tensor);
             }
-            std::cout << clear_line << "Simple updating, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
-                      << ", step=" << (step + 1) << "\r" << std::flush;
          }
-         std::cout << clear_line << "Simple update done, total_step=" << total_step << ", dimension=" << dimension_virtual << ", delta_t=" << delta_t
-                   << "\n"
-                   << std::flush;
+         MPI_Barrier(MPI_COMM_WORLD);
+         for (auto i = 0; i < group.size(); i++) {
+            const auto& positions = group[i];
+            auto root = i % TAT::mpi.size;
+            for (const auto& [x, y] : positions) {
+               lattice[x][y] = TAT::mpi.broadcast(lattice[x][y], root);
+            }
+            for (const auto& [d, x, y] : _get_related_environment(positions)) {
+               environment[{d, x, y}] = TAT::mpi.broadcast(environment[{d, x, y}], root);
+            }
+         }
+      }
+
+      static std::vector<std::tuple<char, int, int>> _get_related_environment(const std::vector<std::tuple<int, int>>& positions) {
+         if (positions.size() == 1) {
+            return {};
+         }
+         if (positions.size() == 2) {
+            const auto& [x1, y1] = positions[0];
+            const auto& [x2, y2] = positions[1];
+            if (x1 == x2 && y1 + 1 == y2) {
+               return {{'R', x1, y1}};
+            }
+            if (x1 == x2 && y1 == y2 + 1) {
+               return {{'R', x2, y2}};
+            }
+            if (x1 + 1 == x2 && y1 == y2) {
+               return {{'D', x1, y1}};
+            }
+            if (x1 == x2 + 1 && y1 == y2) {
+               return {{'D', x2, y2}};
+            }
+         }
+         throw NotImplementedError("Unsupported environment style");
       }
 
       auto _simple_update_positions_sequence() const {
          // 以后simple update如果要并行，下面之中每类内都是无依赖的
-         auto result = std::vector<std::vector<std::tuple<int, int>>>();
+         auto result = std::vector<std::vector<std::vector<std::tuple<int, int>>>>();
          // 应该不存在常数项的hamiltonians
          // 单点
+         auto& group0 = result.emplace_back();
          for (const auto& [positions, tensor] : hamiltonians) {
             if (positions.size() == 1) {
-               result.push_back(positions);
+               group0.push_back(positions);
             }
          }
          // 双点，分成四大类+其他
+         auto& group1 = result.emplace_back();
          for (const auto& [positions, tensor] : hamiltonians) {
             if (positions.size() == 2) {
                const auto& [x1, y1] = positions[0];
                const auto& [x2, y2] = positions[1];
                if (x1 == x2 && ((y1 + 1 == y2 && y1 % 2 == 0) || (y1 == y2 + 1 && y2 % 2 == 0))) {
-                  result.push_back(positions);
+                  group1.push_back(positions);
                }
             }
          }
+         auto& group2 = result.emplace_back();
          for (const auto& [positions, tensor] : hamiltonians) {
             if (positions.size() == 2) {
                const auto& [x1, y1] = positions[0];
                const auto& [x2, y2] = positions[1];
                if (x1 == x2 && ((y1 + 1 == y2 && y1 % 2 == 1) || (y1 == y2 + 1 && y2 % 2 == 1))) {
-                  result.push_back(positions);
+                  group2.push_back(positions);
                }
             }
          }
+         auto& group3 = result.emplace_back();
          for (const auto& [positions, tensor] : hamiltonians) {
             if (positions.size() == 2) {
                const auto& [x1, y1] = positions[0];
                const auto& [x2, y2] = positions[1];
                if (y1 == y2 && ((x1 + 1 == x2 && x1 % 2 == 0) || (x1 == x2 + 1 && x2 % 2 == 0))) {
-                  result.push_back(positions);
+                  group3.push_back(positions);
                }
             }
          }
+         auto& group4 = result.emplace_back();
          for (const auto& [positions, tensor] : hamiltonians) {
             if (positions.size() == 2) {
                const auto& [x1, y1] = positions[0];
                const auto& [x2, y2] = positions[1];
                if (y1 == y2 && ((x1 + 1 == x2 && x1 % 2 == 1) || (x1 == x2 + 1 && x2 % 2 == 1))) {
-                  result.push_back(positions);
+                  group4.push_back(positions);
                }
             }
          }
          // 其他类型和更多的格点暂时不支持
-         if (result.size() != hamiltonians.size()) {
+         auto total_size = 0;
+         for (const auto& group : result) {
+            total_size += group.size();
+         }
+         if (total_size != hamiltonians.size()) {
             throw NotImplementedError("Unsupported simple update style");
          }
          return result;

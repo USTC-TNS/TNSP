@@ -28,39 +28,39 @@
 #define TAT_USE_SINGULAR_MATRIX
 #include <TAT/TAT.hpp>
 
-#define TAT_LOOP_ALL_SCALAR                   \
-   TAT_SINGLE_SCALAR(S, float);               \
-   TAT_SINGLE_SCALAR(D, double);              \
-   TAT_SINGLE_SCALAR(C, std::complex<float>); \
-   TAT_SINGLE_SCALAR(Z, std::complex<double>);
+#define TAT_LOOP_ALL_SCALAR                  \
+   TAT_SINGLE_SCALAR(S, float)               \
+   TAT_SINGLE_SCALAR(D, double)              \
+   TAT_SINGLE_SCALAR(C, std::complex<float>) \
+   TAT_SINGLE_SCALAR(Z, std::complex<double>)
 
-#define TAT_LOOP_ALL_SYMMETRY    \
-   TAT_SINGLE_SYMMETRY(No);      \
-   TAT_SINGLE_SYMMETRY(Z2);      \
-   TAT_SINGLE_SYMMETRY(U1);      \
-   TAT_SINGLE_SYMMETRY(Fermi);   \
-   TAT_SINGLE_SYMMETRY(FermiZ2); \
-   TAT_SINGLE_SYMMETRY(FermiU1);
+#define TAT_LOOP_ALL_SYMMETRY   \
+   TAT_SINGLE_SYMMETRY(No)      \
+   TAT_SINGLE_SYMMETRY(Z2)      \
+   TAT_SINGLE_SYMMETRY(U1)      \
+   TAT_SINGLE_SYMMETRY(Fermi)   \
+   TAT_SINGLE_SYMMETRY(FermiZ2) \
+   TAT_SINGLE_SYMMETRY(FermiU1)
 
-#define TAT_SINGLE_SYMMETRY_ALL_SCALAR(SYM)                 \
-   TAT_SINGLE_SCALAR_SYMMETRY(S, float, SYM);               \
-   TAT_SINGLE_SCALAR_SYMMETRY(D, double, SYM);              \
-   TAT_SINGLE_SCALAR_SYMMETRY(C, std::complex<float>, SYM); \
-   TAT_SINGLE_SCALAR_SYMMETRY(Z, std::complex<double>, SYM);
+#define TAT_SINGLE_SYMMETRY_ALL_SCALAR(SYM)                \
+   TAT_SINGLE_SCALAR_SYMMETRY(S, float, SYM)               \
+   TAT_SINGLE_SCALAR_SYMMETRY(D, double, SYM)              \
+   TAT_SINGLE_SCALAR_SYMMETRY(C, std::complex<float>, SYM) \
+   TAT_SINGLE_SCALAR_SYMMETRY(Z, std::complex<double>, SYM)
 
-#define TAT_LOOP_ALL_SCALAR_SYMMETRY        \
-   TAT_SINGLE_SYMMETRY_ALL_SCALAR(No);      \
-   TAT_SINGLE_SYMMETRY_ALL_SCALAR(Z2);      \
-   TAT_SINGLE_SYMMETRY_ALL_SCALAR(U1);      \
-   TAT_SINGLE_SYMMETRY_ALL_SCALAR(Fermi);   \
-   TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2); \
-   TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1);
+#define TAT_LOOP_ALL_SCALAR_SYMMETRY       \
+   TAT_SINGLE_SYMMETRY_ALL_SCALAR(No)      \
+   TAT_SINGLE_SYMMETRY_ALL_SCALAR(Z2)      \
+   TAT_SINGLE_SYMMETRY_ALL_SCALAR(U1)      \
+   TAT_SINGLE_SYMMETRY_ALL_SCALAR(Fermi)   \
+   TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2) \
+   TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1)
 
 namespace TAT {
    namespace py = pybind11;
 
    inline auto random_engine = std::default_random_engine(std::random_device()());
-   inline void set_random_seed(unsigned long seed) {
+   inline void set_random_seed(unsigned int seed) {
       random_engine.seed(seed);
    }
 
@@ -545,22 +545,6 @@ namespace TAT {
                   [](const T& tensor) { return py::bytes(tensor.dump()); },
                   // 这里必须是make_unique, 很奇怪, 可能是pybind11的bug
                   [](const py::bytes& bytes) { return to_unique(T().load(std::string(bytes))); }))
-#ifdef TAT_USE_MPI
-            .def("send", &T::send, py::arg("destination"), "Send a tensor to destination")
-            .def_static("receive", &T::receive, py::arg("source"), "Receive a tensor from source") // static ?
-            .def("send_receive", &T::send_receive, py::arg("source"), py::arg("destination"), "Send tensor from source to destination")
-            .def("broadcast", &T::broadcast, py::arg("root"), "Broadcast a tensor from root")
-            .def(
-                  "reduce",
-                  [](const T& tensor, const int root, std::function<T(T, T)>& function) { return tensor.reduce(root, function); },
-                  py::arg("root"),
-                  py::arg("function"),
-                  "Reduce a tensor with commutative function into root")
-            .def("summary", &T::summary, py::arg("root"), "Summation of a tensor into root")
-            .def_static("barrier", &T::barrier, "MPI barrier")
-            .def_readonly_static("mpi", &mpi, "MPI Handle")
-#endif
-            .def_static("set_random_seed", &set_random_seed, "Set Random Seed")
             .def(
                   "rand",
                   [](T& tensor, ScalarType min, ScalarType max) -> T& {
@@ -596,10 +580,7 @@ namespace TAT {
                   py::arg("mean") = 0,
                   py::arg("stddev") = one,
                   "Set Normal Distribution Random Number into Tensor",
-                  py::return_value_policy::reference_internal)
-            .def_readonly_static("version", &version)
-            .def_readonly_static("information", &information)
-            .def_readonly_static("mpi_enabled", &mpi_enabled);
+                  py::return_value_policy::reference_internal);
    }
 
    template<typename Symmetry, typename Element, bool IsTuple, template<typename, bool = false> class EdgeType = Edge>
@@ -750,7 +731,6 @@ namespace TAT {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       tat_m.attr("information") = information;
-      tat_m.attr("mpi_enabled") = mpi_enabled;
       auto internal_m = tat_m.def_submodule("_internal", "internal information of TAT");
       // random
       auto random_m = tat_m.def_submodule("random", "random for TAT");
@@ -758,8 +738,7 @@ namespace TAT {
       random_m.def(
             "uniform_int",
             [](int min, int max) {
-               auto distribution = std::uniform_int_distribution<int>(min, max);
-               return distribution(random_engine);
+               return [distribution = std::uniform_int_distribution<int>(min, max)]() mutable { return distribution(random_engine); };
             },
             py::arg("min") = 0,
             py::arg("max") = 1,
@@ -767,8 +746,7 @@ namespace TAT {
       random_m.def(
             "uniform_real",
             [](double min, double max) {
-               auto distribution = std::uniform_real_distribution<double>(min, max);
-               return distribution(random_engine);
+               return [distribution = std::uniform_real_distribution<double>(min, max)]() mutable { return distribution(random_engine); };
             },
             py::arg("min") = 0,
             py::arg("max") = 1,
@@ -776,18 +754,16 @@ namespace TAT {
       random_m.def(
             "normal",
             [](double mean, double stddev) {
-               auto distribution = std::normal_distribution<double>(mean, stddev);
-               return distribution(random_engine);
+               return [distribution = std::normal_distribution<double>(mean, stddev)]() mutable { return distribution(random_engine); };
             },
             py::arg("mean") = 0,
             py::arg("stddev") = 1,
             "Get random normal real");
       // mpi
-#ifdef TAT_USE_MPI
       py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")
+            .def_readonly_static("enabled", &mpi_t::enabled)
             .def_readonly("rank", &mpi_t::rank)
             .def_readonly("size", &mpi_t::size)
-            .def_static("barrier", &mpi_t::barrier)
             .def("__str__",
                  [](const mpi_t& mpi) {
                     auto out = std::stringstream();
@@ -800,17 +776,33 @@ namespace TAT {
                     out << "MPI[rank=" << mpi.rank << ", size=" << mpi.size << "]";
                     return out.str();
                  })
+#ifdef TAT_USE_MPI
+            .def_static("barrier", &mpi_t::barrier)
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM)                                                                                       \
+   .def_static("send", &mpi_t::send<Tensor<SCALAR, SYM##Symmetry>>)                                                                                \
+         .def_static("receive", &mpi_t::receive<Tensor<SCALAR, SYM##Symmetry>>)                                                                    \
+         .def("send_receive", &mpi_t::send_receive<Tensor<SCALAR, SYM##Symmetry>>)                                                                 \
+         .def("broadcast", &mpi_t::broadcast<Tensor<SCALAR, SYM##Symmetry>>)                                                                       \
+         .def("reduce",                                                                                                                            \
+              [](const mpi_t& self,                                                                                                                \
+                 const Tensor<SCALAR, SYM##Symmetry>& value,                                                                                       \
+                 const int root,                                                                                                                   \
+                 std::function<Tensor<SCALAR, SYM##Symmetry>(const Tensor<SCALAR, SYM##Symmetry>&, const Tensor<SCALAR, SYM##Symmetry>&)> func) {  \
+                 return self.reduce(value, root, func);                                                                                            \
+              })                                                                                                                                   \
+         .def("summary", [](const mpi_t& self, const Tensor<SCALAR, SYM##Symmetry>& value, const int root) {                                       \
+            return self.reduce(value, root, [](const Tensor<SCALAR, SYM##Symmetry>& a, const Tensor<SCALAR, SYM##Symmetry>& b) { return a + b; }); \
+         })
+                  TAT_LOOP_ALL_SCALAR_SYMMETRY
+#undef TAT_SINGLE_SCALAR_SYMMETRY
+#endif
             .def("print", [](const mpi_t& mpi, const py::args& args, const py::kwargs& kwargs) {
                if (mpi.rank == 0) {
                   py::print(*args, **kwargs);
                }
             });
       tat_m.attr("mpi") = mpi;
-#else
-      auto mpi_fake_m = tat_m.def_submodule("mpi", "mpi support for TAT");
-      mpi_fake_m.def("print", [](const py::args& args, const py::kwargs& kwargs) { py::print(*args, **kwargs); });
-#endif // MPI
-       // name
+      // name
 #ifndef TAT_USE_SIMPLE_NAME
       py::class_<DefaultName>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)
