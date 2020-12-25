@@ -540,14 +540,14 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    std::string Tensor<ScalarType, Symmetry, Name>::show() const {
-      std::stringstream out;
+      std::ostringstream out;
       out << *this;
       return out.str();
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
    std::string Singular<ScalarType, Symmetry, Name>::show() const {
-      std::stringstream out;
+      std::ostringstream out;
       out << *this;
       return out.str();
    }
@@ -577,7 +577,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    std::string Tensor<ScalarType, Symmetry, Name>::dump() const {
-      std::stringstream out;
+      std::ostringstream out;
       out < *this;
       return out.str();
    }
@@ -594,7 +594,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    std::string Singular<ScalarType, Symmetry, Name>::dump() const {
-      std::stringstream out;
+      std::ostringstream out;
       out < *this;
       return out.str();
    }
@@ -628,7 +628,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::load(const std::string& input) & {
-      std::stringstream in(input);
+      std::istringstream in(input);
       in > *this;
       return *this;
    }
@@ -646,7 +646,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Singular<ScalarType, Symmetry, Name>& Singular<ScalarType, Symmetry, Name>::load(const std::string& input) & {
-      std::stringstream in(input);
+      std::istringstream in(input);
       in > *this;
       return *this;
    }
@@ -664,11 +664,11 @@ namespace TAT {
       return in;
    }
    inline void load_fast_name_dataset(const std::string& input) {
-      std::stringstream in(input);
+      std::istringstream in(input);
       in > fast_name_dataset;
    }
    inline std::string dump_fast_name_dataset() {
-      std::stringstream out;
+      std::ostringstream out;
       out < fast_name_dataset;
       return out.str();
    }

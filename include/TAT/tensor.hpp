@@ -90,6 +90,10 @@ namespace TAT {
       Singular<ScalarType, Symmetry, Name>&& load(const std::string& string) && {
          return std::move(load(string));
       };
+
+      Singular<ScalarType, Symmetry, Name> copy() const {
+         return Singular<ScalarType, Symmetry, Name>{value};
+      }
    };
 
    /**@}*/
@@ -662,32 +666,35 @@ namespace TAT {
       /**
        * source调用此函数, 向destination发送一个张量
        */
-      void send(int destination) const;
+      [[deprecated("TAT::Tensor::send deprecated, use TAT::mpi.send instead")]] void send(int destination) const;
       /**
        * destination调用此函数, 从source接受一个张量
        */
-      static Tensor<ScalarType, Symmetry, Name> receive(int source);
+      [[deprecated("TAT::Tensor::receive deprecated, use TAT::mpi.receive instead")]] static Tensor<ScalarType, Symmetry, Name> receive(int source);
       /**
        * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
        */
-      Tensor<ScalarType, Symmetry, Name> send_receive(int source, int destination) const;
+      [[deprecated("TAT::Tensor::send_receive deprecated, use TAT::mpi.send_receive instead")]] Tensor<ScalarType, Symmetry, Name>
+      send_receive(int source, int destination) const;
       /**
        * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
        */
-      Tensor<ScalarType, Symmetry, Name> broadcast(int root) const;
+      [[deprecated("TAT::Tensor::broadcast deprecated, use TAT::mpi.broadcast instead")]] Tensor<ScalarType, Symmetry, Name>
+      broadcast(int root) const;
       /**
        * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
        */
       template<typename Func>
-      Tensor<ScalarType, Symmetry, Name> reduce(int root, Func&& function) const;
+      [[deprecated("TAT::Tensor::reduce deprecated, use TAT::mpi.reduce instead")]] Tensor<ScalarType, Symmetry, Name>
+      reduce(int root, Func&& function) const;
       /**
        * mpi进程间同步
        */
-      static void barrier();
+      [[deprecated("TAT::Tensor::barrier deprecated, use TAT::mpi.barrier instead")]] static void barrier();
       /*
        * 对各个进程但张量通过求和进行reduce
        */
-      Tensor<ScalarType, Symmetry, Name> summary(const int root) const {
+      [[deprecated("TAT::Tensor::summary deprecated, reduce directly")]] Tensor<ScalarType, Symmetry, Name> summary(const int root) const {
          return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       };
 #endif

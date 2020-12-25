@@ -24,10 +24,10 @@ using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 int main() {
    auto input = Tensor(TAT::mpi.rank);
-   auto result = input.summary(TAT::mpi.size / 2);
-   TAT::mpi.out(TAT::mpi.size / 2) << result << "\n";
-   result = result.broadcast(TAT::mpi.size / 2);
+   auto result = TAT::mpi.reduce(input, TAT::mpi.size / 2, [](auto a, auto b) { return a + b; });
+   TAT::mpi.out_one(TAT::mpi.size / 2) << result << "\n";
+   result = TAT::mpi.broadcast(result, TAT::mpi.size / 2);
    Tensor::barrier();
-   std::cout << TAT::mpi.rank << " " << result << "\n";
+   TAT::mpi.out_rank() << result << "\n";
    return 0;
 }

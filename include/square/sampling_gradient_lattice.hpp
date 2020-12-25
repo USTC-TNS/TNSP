@@ -152,7 +152,7 @@ namespace square {
       }
 
       auto markov(
-            unsigned long long total_step,
+            std::uint64_t total_step,
             std::map<std::string, std::map<std::vector<std::tuple<int, int>>, std::shared_ptr<const Tensor<T>>>> observers,
             bool calculate_energy = false,
             bool calculate_gradient = false) {
@@ -188,7 +188,8 @@ namespace square {
                    << ", dimension_cut=" << dimension_cut << ", First ws is " << ws << "\n"
                    << std::flush;
          auto positions_sequence = _markov_sampling_positions_sequence();
-         for (unsigned long long step = 0; step < total_step; step++) {
+         random::split_seed();
+         for (std::uint64_t step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
             T Es = 0;
             for (const auto& [kind, group] : observers) {
@@ -228,26 +229,11 @@ namespace square {
                   }
                }
             }
-            if (calculate_energy) {
-               real<T> energy = 0;
-               real<T> energy_variance_square = 0;
-               const auto& energy_square_pool = result_square.at("Energy");
-               for (const auto& [positions, value] : result.at("Energy")) {
-                  auto this_energy = value / (step + 1);
-                  auto this_square = energy_square_pool.at(positions) / (step + 1);
-                  energy += this_energy;
-                  if (step != 0) {
-                     energy_variance_square += (this_square - this_energy * this_energy) / (step + 1 - 1);
-                  }
-               };
-               std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << ", Energy=" << energy / (M * N)
-                         << " with sigma=" << std::sqrt(energy_variance_square) / (M * N) << "\r" << std::flush;
-            } else {
-               std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
-                         << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
-            }
+            std::cout << clear_line << "Markov sampling, total_step=" << total_step << ", dimension=" << dimension_virtual
+                      << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
          }
+         random::merge_seed();
+         // TODO reduce here
          for (auto& [kind, group] : result) {
             const auto& group_square = result_square.at(kind);
             for (auto& [positions, value] : group) {
@@ -277,6 +263,7 @@ namespace square {
          if (calculate_gradient) {
             for (auto i = 0; i < M; i++) {
                for (auto j = 0; j < N; j++) {
+                  // TODO reduce gradient
                   gradient[i][j] = 2 * (holes_with_Es[i][j] / total_step) - 2 * (sum_of_Es / total_step) * (holes[i][j] / total_step);
                }
             }
@@ -294,8 +281,8 @@ namespace square {
          }
          auto result = std::map<std::string, std::map<std::vector<std::tuple<int, int>>, real<T>>>();
          real<T> sum_of_ws_square = 0;
-         unsigned long long total_step = std::pow(dimension_physics, M * N);
-         for (unsigned long long step = 0; step < total_step; step++) {
+         std::uint64_t total_step = std::pow(dimension_physics, M * N);
+         for (std::uint64_t step = 0; step < total_step; step++) {
             _ergodic_spin(step);
             T ws = spin();
             sum_of_ws_square += std::norm(ws);
@@ -353,7 +340,7 @@ namespace square {
          return result;
       }
 
-      void _ergodic_spin(unsigned long long step) {
+      void _ergodic_spin(std::uint64_t step) {
          for (auto i = 0; i < M; i++) {
             for (auto j = 0; j < N; j++) {
                spin.set({i, j}, step % dimension_physics);
@@ -362,13 +349,13 @@ namespace square {
          }
       }
 
-      void equilibrate(unsigned long long total_step) {
+      void equilibrate(std::uint64_t total_step) {
          std::cout << clear_line << "Equilibrating start, total_step=" << total_step << ", dimension=" << dimension_virtual
                    << ", dimension_cut=" << dimension_cut << "\n"
                    << std::flush;
          T ws = spin();
          auto positions_sequence = _markov_sampling_positions_sequence();
-         for (unsigned long long step = 0; step < total_step; step++) {
+         for (std::uint64_t step = 0; step < total_step; step++) {
             ws = _markov_spin(ws, positions_sequence);
             std::cout << clear_line << "Equilibrating, total_step=" << total_step << ", dimension=" << dimension_virtual
                       << ", dimension_cut=" << dimension_cut << ", step=" << (step + 1) << "\r" << std::flush;
@@ -589,9 +576,11 @@ namespace square {
       in > static_cast<AbstractNetworkLattice<T>&>(lattice);
       in > lattice.dimension_cut;
       std::vector<std::vector<int>> configuration;
-      in > configuration;
       lattice.spin = SpinConfiguration(&lattice);
-      lattice.initialize_spin(configuration);
+      in > configuration;
+      if (!configuration.empty()) {
+         lattice.initialize_spin(configuration);
+      }
       return in;
    }
 } // namespace square
