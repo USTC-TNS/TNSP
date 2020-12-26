@@ -90,6 +90,10 @@ namespace TAT {
       Singular<ScalarType, Symmetry, Name>&& load(const std::string& string) && {
          return std::move(load(string));
       };
+
+      [[nodiscard]] Singular<ScalarType, Symmetry, Name> copy() const {
+         return Singular<ScalarType, Symmetry, Name>{value};
+      }
    };
 
    /**@}*/
@@ -116,6 +120,11 @@ namespace TAT {
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
       using name_valid = std::enable_if_t<is_name_v<Name>>;
       // TODO: private访问控制
+
+      using scalar_t = ScalarType;
+      using symmetry_t = Symmetry;
+      using name_t = Name;
+      using edge_t = Edge<Symmetry>;
 
       /**
        * 张量的边的名称
@@ -271,7 +280,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared, Copy Data Happened Here");
+            TAT_warning_or_error_when_copy_shared("Set tensor shared, copy happened here");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
@@ -639,7 +648,12 @@ namespace TAT {
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       [[nodiscard]] svd_result
-      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = Size(-1)) const;
+      svd(const std::set<Name>& free_name_set_u,
+          const Name& common_name_u,
+          const Name& common_name_v,
+          Size cut = Size(-1),
+          const Name& singular_name_u = InternalName<Name>::SVD_U,
+          const Name& singular_name_v = InternalName<Name>::SVD_V) const;
 
       /**
        * 对张量进行qr分解
@@ -657,32 +671,35 @@ namespace TAT {
       /**
        * source调用此函数, 向destination发送一个张量
        */
-      void send(int destination) const;
+      [[deprecated("TAT::Tensor::send deprecated, use TAT::mpi.send instead")]] void send(int destination) const;
       /**
        * destination调用此函数, 从source接受一个张量
        */
-      static Tensor<ScalarType, Symmetry, Name> receive(int source);
+      [[deprecated("TAT::Tensor::receive deprecated, use TAT::mpi.receive instead")]] static Tensor<ScalarType, Symmetry, Name> receive(int source);
       /**
        * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
        */
-      Tensor<ScalarType, Symmetry, Name> send_receive(int source, int destination) const;
+      [[deprecated("TAT::Tensor::send_receive deprecated, use TAT::mpi.send_receive instead")]] Tensor<ScalarType, Symmetry, Name>
+      send_receive(int source, int destination) const;
       /**
        * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
        */
-      Tensor<ScalarType, Symmetry, Name> broadcast(int root) const;
+      [[deprecated("TAT::Tensor::broadcast deprecated, use TAT::mpi.broadcast instead")]] Tensor<ScalarType, Symmetry, Name>
+      broadcast(int root) const;
       /**
        * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
        */
       template<typename Func>
-      Tensor<ScalarType, Symmetry, Name> reduce(int root, Func&& function) const;
+      [[deprecated("TAT::Tensor::reduce deprecated, use TAT::mpi.reduce instead")]] Tensor<ScalarType, Symmetry, Name>
+      reduce(int root, Func&& function) const;
       /**
        * mpi进程间同步
        */
-      static void barrier();
+      [[deprecated("TAT::Tensor::barrier deprecated, use TAT::mpi.barrier instead")]] static void barrier();
       /*
        * 对各个进程但张量通过求和进行reduce
        */
-      Tensor<ScalarType, Symmetry, Name> summary(const int root) const {
+      [[deprecated("TAT::Tensor::summary deprecated, reduce directly")]] Tensor<ScalarType, Symmetry, Name> summary(const int root) const {
          return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       };
 #endif

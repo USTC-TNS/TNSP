@@ -35,6 +35,10 @@
 #endif
 #endif
 
+#ifndef TAT_USE_MPI
+#error require mpi support in TAT
+#endif
+
 #include "basic.hpp"
 #include "conversion.hpp"
 #include "exact_lattice.hpp"
