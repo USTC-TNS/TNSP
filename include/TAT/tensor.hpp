@@ -648,7 +648,12 @@ namespace TAT {
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       [[nodiscard]] svd_result
-      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = Size(-1)) const;
+      svd(const std::set<Name>& free_name_set_u,
+          const Name& common_name_u,
+          const Name& common_name_v,
+          Size cut = Size(-1),
+          const Name& singular_name_u = InternalName<Name>::SVD_U,
+          const Name& singular_name_v = InternalName<Name>::SVD_V) const;
 
       /**
        * 对张量进行qr分解
