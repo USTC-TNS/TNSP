@@ -9,6 +9,7 @@
 /emscripten
 /include/fire.hpp
 /CMakeSettings.json
+/init.C
 __pycache__
 .ipynb_checkpoints
 data.*

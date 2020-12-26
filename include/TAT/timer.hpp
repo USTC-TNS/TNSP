@@ -143,6 +143,7 @@ namespace TAT {
    TAT_DEFINE_TIMER(transpose_kernel_core)
    TAT_DEFINE_TIMER(multiple)
    TAT_DEFINE_TIMER(conjugate)
+   TAT_DEFINE_TIMER(exponential)
    TAT_DEFINE_TIMER(trace)
    TAT_DEFINE_TIMER(shrink)
    TAT_DEFINE_TIMER(expand)

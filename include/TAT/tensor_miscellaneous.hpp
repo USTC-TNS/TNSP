@@ -248,43 +248,5 @@ namespace TAT {
 
       return result;
    }
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
-      real_base_t<ScalarType> norm_max = norm<-1>();
-      auto temporary_tensor_rank = 0;
-      real_base_t<ScalarType> temporary_tensor_parameter = 1;
-      while (temporary_tensor_parameter * norm_max > 1) {
-         temporary_tensor_rank += 1;
-         temporary_tensor_parameter *= 1. / 2;
-      }
-      auto temporary_tensor = *this * temporary_tensor_parameter;
-
-      auto result = identity(pairs);
-
-      auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
-
-      ScalarType series_parameter = 1;
-      for (auto i = 1; i <= step; i++) {
-         series_parameter /= i;
-         if (i == 1) {
-            result += temporary_tensor;
-         } else if (i == 2) {
-            power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
-            // result += series_parameter * power_of_temporary_tensor;
-            result = series_parameter * power_of_temporary_tensor + result;
-            // power_of_temporary_tensor相乘一次后边应该就会稳定, 这个时候将result放在+的右侧, 会使得result边的排列和左侧一样
-            // 从而在 i>2 的时候减少转置
-         } else {
-            power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
-            result += series_parameter * power_of_temporary_tensor;
-         }
-      }
-
-      for (auto i = 0; i < temporary_tensor_rank; i++) {
-         result = result.contract(result, pairs);
-      }
-      return result;
-   }
 } // namespace TAT
 #endif
