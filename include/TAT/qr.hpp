@@ -374,6 +374,17 @@ namespace TAT {
             }
          }
       }
+      if (use_r_name == use_qr_not_lq) {
+         // set is the second name
+         if (free_name_2.size() != free_name_set.size()) {
+            TAT_warning_or_error_when_name_missing("Name missing in QR");
+         }
+      } else {
+         // set is the first name
+         if (free_name_1.size() != free_name_set.size()) {
+            TAT_warning_or_error_when_name_missing("Name missing in QR");
+         }
+      }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
       auto tensor_merged = edge_operator(
             {},
