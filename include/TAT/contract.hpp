@@ -300,6 +300,7 @@ namespace TAT {
          auto found_2 = tensor_2.name_to_index.find(std::get<1>(*iterator));
          if (found_1 == tensor_1.name_to_index.end() || found_2 == tensor_2.name_to_index.end()) {
             iterator = contract_names.erase(iterator);
+            TAT_warning_or_error_when_name_missing("Name missing in contract");
          } else {
             ++iterator;
          }
@@ -588,6 +589,7 @@ namespace TAT {
          auto found_2 = tensor_2.name_to_index.find(std::get<1>(*iterator));
          if (found_1 == tensor_1.name_to_index.end() || found_2 == tensor_2.name_to_index.end()) {
             iterator = contract_names.erase(iterator);
+            TAT_warning_or_error_when_name_missing("Name missing in contract");
          } else {
             ++iterator;
          }
