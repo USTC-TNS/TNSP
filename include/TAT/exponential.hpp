@@ -53,7 +53,8 @@ namespace TAT {
    inline auto gesv<std::complex<double>> = zgesv_;
 
    template<typename ScalarType>
-   void linear_solve(int n, ScalarType* A, int nrhs, ScalarType* B) {
+   void linear_solve(int n, ScalarType* A, int nrhs, ScalarType* B, ScalarType* X) {
+      // AX=B
       // A: n*n
       // B: n*nrhs
       vector<ScalarType> AT(n * n);
@@ -66,7 +67,7 @@ namespace TAT {
       if (result != 0) {
          TAT_warning_or_error_when_lapack_error("error in GESV");
       }
-      matrix_transpose(nrhs, n, BT.data(), B);
+      matrix_transpose(nrhs, n, BT.data(), X);
    }
 
    template<typename ScalarType>
@@ -92,6 +93,7 @@ namespace TAT {
 
    template<typename ScalarType>
    void matrix_exponential(Size n, ScalarType* A, ScalarType* F, int q) {
+      int int_n = n;
       // j = max(0, 1+floor(log2(|A|_inf)))
       auto j = std::max(0, 1 + int(std::log2(max_of_abs(A, n))));
       // A = A/2^j
@@ -119,7 +121,7 @@ namespace TAT {
          auto& X_new = k % 2 == 0 ? X1 : X2;
          // new = A @ old
          // new.T = old.T @ A.T
-         gemm<ScalarType>("N", "N", &n, &n, &n, &alpha, X_old.data(), &n, A, &n, &beta, X_new.data(), &n);
+         gemm<ScalarType>("N", "N", &int_n, &int_n, &int_n, &alpha, X_old.data(), &int_n, A, &int_n, &beta, X_new.data(), &int_n);
          ScalarType d = k % 2 == 0 ? c : -c;
          for (Size i = 0; i < n * n; i++) {
             auto x = X_new[i];
@@ -130,18 +132,17 @@ namespace TAT {
       // solve D@F=N for F
       vector<ScalarType> F1(n * n);
       vector<ScalarType> F2(n * n);
-      auto& R = j == 0 ? F : F1;
+      auto* R = j == 0 ? F : F1.data();
       // D@R=N
-      linear_solve<ScalarType>(n, D.data(), n, N.data());
-      R = std::move(N);
+      linear_solve<ScalarType>(n, D.data(), n, N.data(), R);
       // for k=1:j
-      for (auto k = 1; k <= j; j++) {
+      for (auto k = 1; k <= j; k++) {
          // F = F@F
-         auto& F_old = k % 2 == 1 ? F1 : F2;
-         auto& F_new = k == j ? F : k % 2 == 0 ? F1 : F2;
+         const auto* F_old = k % 2 == 1 ? F1.data() : F2.data();
+         auto* F_new = k == j ? F : k % 2 == 0 ? F1.data() : F2.data();
          // new = old * old
          // new.T = old.T * old.T
-         gemm<ScalarType>("N", "N", &n, &n, &n, &alpha, F_old.data(), &n, F_old.data(), &n, &beta, F_new.data(), &n);
+         gemm<ScalarType>("N", "N", &int_n, &int_n, &int_n, &alpha, F_old, &int_n, F_old, &int_n, &beta, F_new, &int_n);
       }
    }
 #endif
@@ -149,43 +150,92 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
       auto guard = exponential_guard();
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         // TODO
-      }
-      real_base_t<ScalarType> norm_max = norm<-1>();
-      auto temporary_tensor_rank = 0;
-      real_base_t<ScalarType> temporary_tensor_parameter = 1;
-      while (temporary_tensor_parameter * norm_max > 1) {
-         temporary_tensor_rank += 1;
-         temporary_tensor_parameter *= 1. / 2;
-      }
-      auto temporary_tensor = *this * temporary_tensor_parameter;
 
-      auto result = identity(pairs);
+      Rank rank = names.size();
+      Rank half_rank = rank / 2;
+      auto merge_map = std::map<Name, std::vector<Name>>();
+      auto& merge_1 = merge_map["Exp1"];
+      merge_1.resize(half_rank);
+      auto& merge_2 = merge_map["Exp2"];
+      merge_2.resize(half_rank);
+      auto split_map_result = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+      auto& split_1 = split_map_result["Exp1"];
+      split_1.resize(half_rank);
+      auto& split_2 = split_map_result["Exp2"];
+      split_2.resize(half_rank);
 
-      auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
-
-      ScalarType series_parameter = 1;
-      for (auto i = 1; i <= step; i++) {
-         series_parameter /= i;
-         if (i == 1) {
-            result += temporary_tensor;
-         } else if (i == 2) {
-            power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
-            // result += series_parameter * power_of_temporary_tensor;
-            result = series_parameter * power_of_temporary_tensor + result;
-            // power_of_temporary_tensor相乘一次后边应该就会稳定, 这个时候将result放在+的右侧, 会使得result边的排列和左侧一样
-            // 从而在 i>2 的时候减少转置
-         } else {
-            power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
-            result += series_parameter * power_of_temporary_tensor;
+      auto valid_index = std::vector<bool>(rank, true);
+      Rank current_index = half_rank;
+      for (Rank i = rank; i-- > 0;) {
+         if (valid_index[i]) {
+            const auto& name_to_found = names[i];
+            for (const auto& [a, b] : pairs) {
+               if (a == name_to_found) {
+                  auto ia = name_to_index.at(a);
+                  auto ib = name_to_index.at(b);
+                  valid_index[ib] = false;
+                  current_index--;
+                  merge_1[current_index] = a;
+                  merge_2[current_index] = b;
+                  split_1[current_index] = {a, core->edges[ia].map};
+                  split_2[current_index] = {b, core->edges[ib].map};
+                  break;
+               }
+               if (b == name_to_found) {
+                  auto ia = name_to_index.at(a);
+                  auto ib = name_to_index.at(b);
+                  valid_index[ia] = false;
+                  current_index--;
+                  merge_1[current_index] = a;
+                  merge_2[current_index] = b;
+                  split_1[current_index] = {a, core->edges[ia].map};
+                  split_2[current_index] = {b, core->edges[ib].map};
+                  break;
+               }
+            }
          }
       }
-
-      for (auto i = 0; i < temporary_tensor_rank; i++) {
-         result = result.contract(result, pairs);
+      auto reverse_set = std::set<Name>();
+      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         for (Rank i = 0; i < rank; i++) {
+            if (core->edges[i].arrow) {
+               reverse_set.insert(names[i]);
+            }
+         }
       }
-      return result;
+      auto merged_names = std::vector<Name>();
+      merged_names.reserve(2);
+      auto result_names = std::vector<Name>();
+      result_names.reserve(rank);
+      if (names.empty() || names.back() == merge_1.back()) {
+         // 2 1
+         merged_names.push_back("Exp2");
+         merged_names.push_back("Exp1");
+         for (const auto& i : merge_2) {
+            result_names.push_back(i);
+         }
+         for (const auto& i : merge_1) {
+            result_names.push_back(i);
+         }
+      } else {
+         // 1 2
+         merged_names.push_back("Exp1");
+         merged_names.push_back("Exp2");
+         for (const auto& i : merge_1) {
+            result_names.push_back(i);
+         }
+         for (const auto& i : merge_2) {
+            result_names.push_back(i);
+         }
+      }
+      auto tensor_merged = edge_operator({}, {}, reverse_set, merge_map, merged_names);
+      auto result = tensor_merged.same_shape();
+      for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
+         auto& data_destination = result.core->blocks.at(symmetries);
+         auto n = core->edges[0].map.at(symmetries[0]);
+         matrix_exponential(n, data_source.data(), data_destination.data(), step);
+      }
+      return result.edge_operator({}, split_map_result, reverse_set, {}, result_names);
    }
 } // namespace TAT
 #endif
