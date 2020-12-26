@@ -35,12 +35,12 @@ namespace TAT {
       } else if (direction == 'v' || direction == 'V') {
          different_direction = true;
       } else {
-         TAT_warning_or_error_when_multiple_configuration_error("Direction Invalid in Multiple");
+         TAT_error("Direction invalid in multiple");
          return *this;
       }
       const auto found = name_to_index.find(name);
       if (found == name_to_index.end()) {
-         TAT_warning_or_error_when_multiple_configuration_error("Edge not Found in Multiple");
+         TAT_warning_or_error_when_name_missing("Name not found in multiple");
          return *this;
       }
       auto result = same_shape();
