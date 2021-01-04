@@ -97,7 +97,7 @@ namespace TAT {
       // j = max(0, 1+floor(log2(|A|_inf)))
       auto j = std::max(0, 1 + int(std::log2(max_of_abs(A, n))));
       // A = A/2^j
-      ScalarType parameter = ScalarType(1) / (1 << j);
+      ScalarType parameter = ScalarType(1) / ScalarType(1 << j);
       for (Size i = 0; i < n * n; i++) {
          A[i] *= parameter;
       }
@@ -115,7 +115,7 @@ namespace TAT {
       const ScalarType beta = 0;
       for (auto k = 1; k <= q; k++) {
          // c = (c*(q-k+1))/((2*q-k+1)*k)
-         c = (c * (q - k + 1)) / ((2 * q - k + 1) * k);
+         c = (c * ScalarType(q - k + 1)) / ScalarType((2 * q - k + 1) * k);
          // X = A@X, N=N+c*X, D=D+(-1)^k*c*X
          auto& X_old = k % 2 == 1 ? X1 : X2;
          auto& X_new = k % 2 == 0 ? X1 : X2;
