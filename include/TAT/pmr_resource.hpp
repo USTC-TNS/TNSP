@@ -22,6 +22,7 @@
 #define TAT_PMR_RESOURCE_HPP
 
 #include <memory_resource>
+// TODO gcc不支持, 需要自己写一个类似的东西
 
 namespace TAT {
    template<int buffer_size>

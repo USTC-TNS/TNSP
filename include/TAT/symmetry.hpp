@@ -101,8 +101,12 @@ namespace TAT {
        * 即统计symmetries中为奇, reverse_flag中为true, valid_mark中为true的数目的奇偶性
        * \see Tensor::edge_operator
        */
-      [[nodiscard]] static bool
-      get_reverse_parity(const std::vector<Derived>& symmetries, const std::vector<bool>& reverse_flag, const std::vector<bool>& valid_mark) {
+      template<typename Allocator1, typename Allocator2, typename Allocator3>
+      [[nodiscard]] static bool get_reverse_parity(
+            const std::vector<Derived, Allocator1>& symmetries,
+            const std::vector<bool, Allocator2>& reverse_flag,
+            const std::vector<bool, Allocator3>& valid_mark) {
+         // TODO 签名可以被c++20的concept简化
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
@@ -120,7 +124,9 @@ namespace TAT {
        * 转置的parity总是有效的, 而翻转和split, merge涉及的两个张量只会有一侧有效, 毕竟这是单个张量的操作
        * \see Tensor::edge_operator
        */
-      [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
+      template<typename Allocator1, typename Allocator2>
+      [[nodiscard]] static bool
+      get_transpose_parity(const std::vector<Derived, Allocator1>& symmetries, const std::vector<Rank, Allocator2>& transpose_plan) {
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             for (Rank j = i + 1; j < symmetries.size(); j++) {
@@ -140,10 +146,11 @@ namespace TAT {
        *
        * \note 实际上每一个merge或split操作都是一个全翻转, 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
        */
+      template<typename Allocator1, typename Allocator2, typename Allocator3>
       [[nodiscard]] static bool get_split_merge_parity(
-            const std::vector<Derived>& symmetries,    // before merge length
-            const std::vector<Rank>& split_merge_flag, // before merge length
-            const std::vector<bool>& valid_mark) {     // after merge length
+            const std::vector<Derived, Allocator1>& symmetries,    // before merge length
+            const std::vector<Rank, Allocator2>& split_merge_flag, // before merge length
+            const std::vector<bool, Allocator3>& valid_mark) {     // after merge length
          auto result = false;
          for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();
@@ -318,7 +325,7 @@ namespace TAT {
    }
 #endif
 
-   // 此处将可被c++20的operator<=>替换
+   // TODO 此处将可被c++20的operator<=>替换
    // 生成每个对称性的对称性的比较运算符重载
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #define TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, OP, EXP)         \
