@@ -21,30 +21,53 @@
 #ifndef TAT_PMR_RESOURCE_HPP
 #define TAT_PMR_RESOURCE_HPP
 
+// TODO 虽然pmr在c++17中, 但是gcc 7并不支持pmr, 所以增加一个使用boost的选项
+#ifdef TAT_USE_BOOST_PMR
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#else
 #include <memory_resource>
-// TODO gcc不支持, 需要自己写一个类似的东西
+#endif
 
 namespace TAT {
+#ifdef TAT_USE_BOOST_PMR
+   namespace pmr {
+      using boost::container::pmr::get_default_resource;
+      using boost::container::pmr::memory_resource;
+      using boost::container::pmr::monotonic_buffer_resource;
+      using boost::container::pmr::polymorphic_allocator;
+      using boost::container::pmr::set_default_resource;
+
+      template<typename T>
+      using vector = std::vector<T, polymorphic_allocator<T>>;
+
+      template<typename Key, typename T, typename Compare = std::less<Key>>
+      using map = std::map<Key, T, Compare, polymorphic_allocator<std::pair<const Key, T>>>;
+
+   } // namespace pmr
+#else
+   namespace pmr = std::pmr;
+#endif
+
    template<int buffer_size>
    struct scope_resource {
       std::byte buffer[buffer_size];
-      std::pmr::monotonic_buffer_resource resource;
-      std::pmr::memory_resource* upstream;
-      scope_resource() : resource(buffer, sizeof(buffer)), upstream(std::pmr::set_default_resource(&resource)) {}
+      pmr::monotonic_buffer_resource resource;
+      pmr::memory_resource* upstream;
+      scope_resource() : resource(buffer, sizeof(buffer)), upstream(pmr::set_default_resource(&resource)) {}
       ~scope_resource() {
-         std::pmr::set_default_resource(upstream);
+         pmr::set_default_resource(upstream);
       }
    };
 
    template<typename buffer_type>
    struct scope_resource_adapter {
       buffer_type& buffer;
-      std::pmr::monotonic_buffer_resource resource;
-      std::pmr::memory_resource* upstream;
-      scope_resource_adapter(buffer_type& buff) :
-            buffer(buff), resource(buffer, sizeof(buffer)), upstream(std::pmr::set_default_resource(&resource)) {}
+      pmr::monotonic_buffer_resource resource;
+      pmr::memory_resource* upstream;
+      scope_resource_adapter(buffer_type& buff) : buffer(buff), resource(buffer, sizeof(buffer)), upstream(pmr::set_default_resource(&resource)) {}
       ~scope_resource_adapter() {
-         std::pmr::set_default_resource(upstream);
+         pmr::set_default_resource(upstream);
       }
    };
 } // namespace TAT
