@@ -1,7 +1,7 @@
 /**
  * \file svd.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,7 +95,8 @@ void zgesvd_(
 namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename ScalarType, typename Symmetry, typename Name>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name> singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular) {
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+   singular_to_tensor(const std::map<Symmetry, vector<real_base_t<ScalarType>>>& singular, const Name& singular_name_u, const Name& singular_name_v) {
       auto symmetries = std::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
          auto dimension = values.size();
@@ -106,7 +107,7 @@ namespace TAT {
          symmetries[0].arrow = false;
          symmetries[1].arrow = true;
       }
-      auto result = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::SVD_U, InternalName<Name>::SVD_V}, std::move(symmetries));
+      auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
       for (auto& [symmetries, data_destination] : result.core->blocks) {
          const auto& data_source = singular.at(symmetries[1]);
          auto dimension = data_source.size();
@@ -247,9 +248,13 @@ namespace TAT {
 #endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   typename Tensor<ScalarType, Symmetry, Name>::svd_result
-   Tensor<ScalarType, Symmetry, Name>::svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut)
-         const {
+   typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd(
+         const std::set<Name>& free_name_set_u,
+         const Name& common_name_u,
+         const Name& common_name_v,
+         Size cut,
+         const Name& singular_name_u,
+         const Name& singular_name_v) const {
       auto guard = svd_guard();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
@@ -294,6 +299,9 @@ namespace TAT {
                }
             }
          }
+      }
+      if (free_name_u.size() != free_name_set_u.size()) {
+         TAT_warning_or_error_when_name_missing("Name missing in SVD");
       }
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
@@ -408,7 +416,7 @@ namespace TAT {
       return {
             std::move(u),
 #ifdef TAT_USE_SINGULAR_MATRIX
-            singular_to_tensor<ScalarType, Symmetry, Name>(result_s),
+            singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v),
 #else
             {std::move(result_s)},
 #endif

@@ -1,7 +1,7 @@
 /**
  * \file timer.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -143,6 +143,7 @@ namespace TAT {
    TAT_DEFINE_TIMER(transpose_kernel_core)
    TAT_DEFINE_TIMER(multiple)
    TAT_DEFINE_TIMER(conjugate)
+   TAT_DEFINE_TIMER(exponential)
    TAT_DEFINE_TIMER(trace)
    TAT_DEFINE_TIMER(shrink)
    TAT_DEFINE_TIMER(expand)

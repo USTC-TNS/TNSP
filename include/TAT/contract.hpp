@@ -1,7 +1,7 @@
 /**
  * \file contract.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -300,6 +300,7 @@ namespace TAT {
          auto found_2 = tensor_2.name_to_index.find(std::get<1>(*iterator));
          if (found_1 == tensor_1.name_to_index.end() || found_2 == tensor_2.name_to_index.end()) {
             iterator = contract_names.erase(iterator);
+            TAT_warning_or_error_when_name_missing("Name missing in contract");
          } else {
             ++iterator;
          }
@@ -588,6 +589,7 @@ namespace TAT {
          auto found_2 = tensor_2.name_to_index.find(std::get<1>(*iterator));
          if (found_1 == tensor_1.name_to_index.end() || found_2 == tensor_2.name_to_index.end()) {
             iterator = contract_names.erase(iterator);
+            TAT_warning_or_error_when_name_missing("Name missing in contract");
          } else {
             ++iterator;
          }

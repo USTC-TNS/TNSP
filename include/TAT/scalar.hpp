@@ -1,7 +1,7 @@
 /**
  * \file scalar.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -140,7 +140,7 @@ namespace TAT {
       auto guard = scalar_inplace_guard();                                                                                                       \
       if (tensor_1.core.use_count() != 1) {                                                                                                      \
          tensor_1.core = std::make_shared<Core<ScalarType1, Symmetry>>(*tensor_1.core);                                                          \
-         TAT_warning_or_error_when_inplace_scalar("Inplace Operator On Tensor Shared");                                                          \
+         TAT_warning_or_error_when_copy_shared("Inplace operator on tensor shared, copy happened here");                                         \
       }                                                                                                                                          \
       if (tensor_2.is_scalar()) {                                                                                                                \
          const auto& y = ScalarType2(tensor_2);                                                                                                  \

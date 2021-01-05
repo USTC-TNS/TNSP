@@ -1,7 +1,7 @@
 /**
  * \file tensor.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,7 +91,7 @@ namespace TAT {
          return std::move(load(string));
       };
 
-      Singular<ScalarType, Symmetry, Name> copy() const {
+      [[nodiscard]] Singular<ScalarType, Symmetry, Name> copy() const {
          return Singular<ScalarType, Symmetry, Name>{value};
       }
    };
@@ -280,7 +280,7 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-            TAT_warning_or_error_when_inplace_transform("Set Tensor Shared, Copy Data Happened Here");
+            TAT_warning_or_error_when_copy_shared("Set tensor shared, copy happened here");
          }
          for (auto& [_, block] : core->blocks) {
             std::transform(block.begin(), block.end(), block.begin(), function);
@@ -648,7 +648,12 @@ namespace TAT {
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       [[nodiscard]] svd_result
-      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Size cut = Size(-1)) const;
+      svd(const std::set<Name>& free_name_set_u,
+          const Name& common_name_u,
+          const Name& common_name_v,
+          Size cut = Size(-1),
+          const Name& singular_name_u = InternalName<Name>::SVD_U,
+          const Name& singular_name_v = InternalName<Name>::SVD_V) const;
 
       /**
        * 对张量进行qr分解

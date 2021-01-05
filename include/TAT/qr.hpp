@@ -1,7 +1,7 @@
 /**
  * \file qr.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -372,6 +372,17 @@ namespace TAT {
                   reversed_set_origin.insert(n);
                }
             }
+         }
+      }
+      if (use_r_name == use_qr_not_lq) {
+         // set is the second name
+         if (free_name_2.size() != free_name_set.size()) {
+            TAT_warning_or_error_when_name_missing("Name missing in QR");
+         }
+      } else {
+         // set is the first name
+         if (free_name_1.size() != free_name_set.size()) {
+            TAT_warning_or_error_when_name_missing("Name missing in QR");
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);

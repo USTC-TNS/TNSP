@@ -1,7 +1,7 @@
 /**
  * \file tensor_miscellaneous.hpp
  *
- * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,12 +35,13 @@ namespace TAT {
       } else if (direction == 'v' || direction == 'V') {
          different_direction = true;
       } else {
-         return copy();
+         TAT_error("Direction invalid in multiple");
+         return *this;
       }
       const auto found = name_to_index.find(name);
       if (found == name_to_index.end()) {
-         TAT_warning_or_error_when_multiple_name_missing("Edge not Found in Multiple");
-         return copy();
+         TAT_warning_or_error_when_name_missing("Name not found in multiple");
+         return *this;
       }
       auto result = same_shape();
       auto index = found->second;
@@ -110,7 +111,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
       auto guard = conjugate_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
-         return copy();
+         return *this;
       }
       auto result_edges = std::vector<Edge<Symmetry>>();
       result_edges.reserve(names.size());
@@ -245,44 +246,6 @@ namespace TAT {
          set_to_identity(block.data(), pair_dimension, pair_leading, half_rank);
       }
 
-      return result;
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
-      real_base_t<ScalarType> norm_max = norm<-1>();
-      auto temporary_tensor_rank = 0;
-      real_base_t<ScalarType> temporary_tensor_parameter = 1;
-      while (temporary_tensor_parameter * norm_max > 1) {
-         temporary_tensor_rank += 1;
-         temporary_tensor_parameter *= 1. / 2;
-      }
-      auto temporary_tensor = *this * temporary_tensor_parameter;
-
-      auto result = identity(pairs);
-
-      auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
-
-      ScalarType series_parameter = 1;
-      for (auto i = 1; i <= step; i++) {
-         series_parameter /= i;
-         if (i == 1) {
-            result += temporary_tensor;
-         } else if (i == 2) {
-            power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
-            // result += series_parameter * power_of_temporary_tensor;
-            result = series_parameter * power_of_temporary_tensor + result;
-            // power_of_temporary_tensor相乘一次后边应该就会稳定, 这个时候将result放在+的右侧, 会使得result边的排列和左侧一样
-            // 从而在 i>2 的时候减少转置
-         } else {
-            power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
-            result += series_parameter * power_of_temporary_tensor;
-         }
-      }
-
-      for (auto i = 0; i < temporary_tensor_rank; i++) {
-         result = result.contract(result, pairs);
-      }
       return result;
    }
 } // namespace TAT

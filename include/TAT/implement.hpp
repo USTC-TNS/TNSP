@@ -1,7 +1,7 @@
 /**
  * \file implement.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 #include "contract.hpp"
 #include "edge_miscellaneous.hpp"
 #include "edge_operator.hpp"
+#include "exponential.hpp"
 #include "get_item.hpp"
 #include "io.hpp"
 #include "mpi.hpp"
