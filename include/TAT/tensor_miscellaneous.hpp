@@ -28,7 +28,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
-      auto guard = multiple_guard();
+      auto timer_guard = multiple_guard();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;
@@ -109,7 +109,7 @@ namespace TAT {
    // TODO: conjugate和merge等操作不可交换，可能需要给Edge加上一个conjugated的flag
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
-      auto guard = conjugate_guard();
+      auto timer_guard = conjugate_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return *this;
       }

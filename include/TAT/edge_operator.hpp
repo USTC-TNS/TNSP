@@ -60,7 +60,7 @@ namespace TAT {
          const bool apply_parity,
          const std::array<SetName2, 4>& parity_exclude_name,
          const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all) const {
-      auto guard = transpose_guard();
+      auto timer_guard = transpose_guard();
       auto pmr_guard = scope_resource<>();
       // vector<std::byte> buffer(1 << 15);
       // auto pmr_guard = scope_resource_adapter(buffer.data(), buffer.size() * sizeof(std::byte));

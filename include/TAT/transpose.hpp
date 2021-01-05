@@ -126,7 +126,7 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
-      auto guard = transpose_kernel_core_guard();
+      auto timer_guard = transpose_kernel_core_guard();
 
       // 经过测试使用mkl的transpose有时会变慢
 #if 0
@@ -188,7 +188,7 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
-      auto guard = transpose_kernel_core_guard();
+      auto timer_guard = transpose_kernel_core_guard();
 
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
@@ -642,7 +642,7 @@ namespace TAT {
          Rank rank,
          Size total_size,
          bool parity) {
-      auto guard = transpose_kernel_guard();
+      auto timer_guard = transpose_kernel_guard();
 
       if (total_size == 0) {
          return;

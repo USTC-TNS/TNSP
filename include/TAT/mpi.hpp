@@ -141,7 +141,7 @@ namespace TAT {
 
       template<typename Type>
       static void send(const Type& value, const int destination) {
-         auto guard = mpi_send_guard();
+         auto timer_guard = mpi_send_guard();
          std::ostringstream stream;
          stream < value;
          auto data = stream.str(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
@@ -152,7 +152,7 @@ namespace TAT {
       // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
       template<typename Type>
       static Type receive(const int source) {
-         auto guard = mpi_receive_guard();
+         auto timer_guard = mpi_receive_guard();
          auto status = MPI_Status();
          MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
          int length;
@@ -178,7 +178,7 @@ namespace TAT {
 
       template<typename Type>
       Type broadcast(const Type& value, const int root) const {
-         auto guard = mpi_broadcast_guard();
+         auto timer_guard = mpi_broadcast_guard();
          if (size == 1) {
             return value;
          }
@@ -212,7 +212,7 @@ namespace TAT {
 
       template<typename Type, typename Func>
       Type reduce(const Type& value, const int root, Func&& function) const {
-         auto guard = mpi_reduce_guard();
+         auto timer_guard = mpi_reduce_guard();
          if (size == 1) {
             return value;
          }

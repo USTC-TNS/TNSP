@@ -28,7 +28,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const SetNameAndName& trace_names) const {
-      auto guard = trace_guard();
+      auto timer_guard = trace_guard();
       auto pmr_guard = scope_resource<>();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto rank = names.size();

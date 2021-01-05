@@ -317,7 +317,7 @@ namespace TAT {
          const SetName& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
-      auto guard = qr_guard();
+      auto timer_guard = qr_guard();
       auto pmr_guard = scope_resource<>();
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;

@@ -149,7 +149,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
-      auto guard = exponential_guard();
+      auto timer_guard = exponential_guard();
 
       Rank rank = names.size();
       Rank half_rank = rank / 2;

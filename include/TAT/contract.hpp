@@ -278,7 +278,7 @@ namespace TAT {
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
          SetNameAndName&& contract_names) {
-      auto guard = contract_guard();
+      auto timer_guard = contract_guard();
       auto pmr_guard = scope_resource<>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return contract_with_fuse(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
