@@ -39,7 +39,11 @@ namespace TAT {
          const std::array<std::set<Name>, 4>& parity_exclude_name,
          const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all) const {
       auto guard = transpose_guard();
-      auto pmr_guard = scope_resource<1 << 20>();
+      // on windows stack size is 1MB(1<<20), and on linux, stack size is 8M(1<<23)
+      // use 1/4 of stack size
+      // auto pmr_guard = scope_resource<1 << 18>();
+      vector<std::byte> buffer(1 << 20);
+      auto pmr_guard = scope_resource_adapter(buffer.data(), buffer.size() * sizeof(std::byte));
       // step 1: rename and cut
       // step 2: split
       // step 3: reverse
