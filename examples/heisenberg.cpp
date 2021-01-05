@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
    square::SamplingGradientLattice<double> sampling_gradient_lattice;
    while (true) {
       if (real_cin) {
-         TAT::mpi.out_one() << "> " << std::flush;
+         TAT::mpi.out_one() << "> ";
       }
       std::string command;
       std::cin >> command;
@@ -178,13 +178,12 @@ int main(int argc, char** argv) {
                std::uint64_t gradient_step, markov_step;
                square::real<double> step_size;
                std::cin >> gradient_step >> step_size >> markov_step;
-               TAT::mpi.out_one() << "Gradient descent start, total_step=" << gradient_step << "\n" << std::flush;
+               TAT::mpi.out_one() << "Gradient descent start, total_step=" << gradient_step << "\n";
                TAT::mpi.out_one() << "\n\n\n";
                const char* move_up = "\u001b[1A";
                for (std::uint64_t step = 0; step < gradient_step; step++) {
                   TAT::mpi.out_one() << move_up << "\r" << square::clear_line << move_up << "\r" << square::clear_line << move_up << "\r"
-                                     << square::clear_line << "Gradient descenting, total_step=" << gradient_step << ", step=" << (step + 1) << "\n"
-                                     << std::flush;
+                                     << square::clear_line << "Gradient descenting, total_step=" << gradient_step << ", step=" << (step + 1) << "\n";
                   auto [result, variance, gradient] = sampling_gradient_lattice.markov(markov_step, {}, true, true);
                   for (auto i = 0; i < sampling_gradient_lattice.M; i++) {
                      for (auto j = 0; j < sampling_gradient_lattice.N; j++) {
@@ -204,11 +203,10 @@ int main(int argc, char** argv) {
                   }
                   auto site_number = sampling_gradient_lattice.M * sampling_gradient_lattice.N;
                   TAT::mpi.out_one() << "Current Energy is " << total_energy / site_number
-                                     << " with sigma=" << std::sqrt(total_energy_variance_square) / site_number << std::flush;
+                                     << " with sigma=" << std::sqrt(total_energy_variance_square) / site_number;
                }
                TAT::mpi.out_one() << "\n"
-                                  << "Gradient descent done, total_step=" << gradient_step << "\n"
-                                  << std::flush;
+                                  << "Gradient descent done, total_step=" << gradient_step << "\n";
             } else if (command == "equilibrate") {
                sampling_gradient_lattice.initialize_spin([](int i, int j) { return (i + j) % 2; });
                std::uint64_t total_step;

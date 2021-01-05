@@ -1,7 +1,7 @@
 /**
  * \file mpi.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ namespace TAT {
       bool valid;
       std::ostringstream string;
       ~mpi_one_output_stream() {
-         out << string.str();
+         out << string.str() << std::flush;
       }
       mpi_one_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
 
@@ -66,13 +66,6 @@ namespace TAT {
          }
          return std::move(*this);
       }
-
-      mpi_one_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
-         if (valid) {
-            string << func;
-         }
-         return *this;
-      }
    };
 
    /**
@@ -82,7 +75,7 @@ namespace TAT {
       std::ostream& out;
       std::ostringstream string;
       ~mpi_rank_output_stream() {
-         out << string.str();
+         out << string.str() << std::flush;
       }
       mpi_rank_output_stream(std::ostream& out, int rank) : out(out) {
          if (rank != -1) {
@@ -100,11 +93,6 @@ namespace TAT {
       mpi_rank_output_stream&& operator<<(const Type& value) && {
          string << value;
          return std::move(*this);
-      }
-
-      mpi_rank_output_stream& operator<<(std::ostream& (*func)(std::ostream&)) {
-         string << func;
-         return *this;
       }
    };
 
@@ -338,11 +326,11 @@ namespace TAT {
    }
 
    inline void TAT_log(const char* message) {
-      mpi.log_rank() << console_yellow << message << console_origin << std::endl;
+      mpi.log_rank() << console_yellow << message << console_origin << '\n';
    }
 
    inline void TAT_warning(const char* message) {
-      mpi.err_rank() << console_red << message << console_origin << std::endl;
+      mpi.err_rank() << console_red << message << console_origin << '\n';
    }
 
    inline void TAT_error(const char* message) {
