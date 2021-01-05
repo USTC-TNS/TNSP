@@ -35,13 +35,10 @@ namespace TAT {
       }
    };
 
-   template<typename buffer_type>
    struct scope_resource_adapter {
-      buffer_type& buffer;
       std::pmr::monotonic_buffer_resource resource;
       std::pmr::memory_resource* upstream;
-      scope_resource_adapter(buffer_type& buff) :
-            buffer(buff), resource(buffer, sizeof(buffer)), upstream(std::pmr::set_default_resource(&resource)) {}
+      scope_resource_adapter(void* buffer, std::size_t size) : resource(buffer, size), upstream(std::pmr::set_default_resource(&resource)) {}
       ~scope_resource_adapter() {
          std::pmr::set_default_resource(upstream);
       }
