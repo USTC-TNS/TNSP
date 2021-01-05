@@ -106,7 +106,7 @@ namespace square {
          static std::shared_ptr<const Tensor<T>> result = nullptr;
          if (!result) {
             auto single = Sx();
-            result = std::make_shared<const Tensor<T>>(single->edge_rename({{"I0", "I1"}, {"O0", "O1"}}).contract_all_edge(*single));
+            result = std::make_shared<const Tensor<T>>(single->edge_rename({{"I0", "I1"}, {"O0", "O1"}}).contract(*single, {}));
          }
          return result;
       }
@@ -115,7 +115,7 @@ namespace square {
          static std::shared_ptr<const Tensor<T>> result = nullptr;
          if (!result) {
             auto single = Sy();
-            result = std::make_shared<const Tensor<T>>(single->edge_rename({{"I0", "I1"}, {"O0", "O1"}}).contract_all_edge(*single).template to<T>());
+            result = std::make_shared<const Tensor<T>>(single->edge_rename({{"I0", "I1"}, {"O0", "O1"}}).contract(*single, {}).template to<T>());
          }
          return result;
       }
@@ -124,7 +124,7 @@ namespace square {
          static std::shared_ptr<const Tensor<T>> result = nullptr;
          if (!result) {
             auto single = Sz();
-            result = std::make_shared<const Tensor<T>>(single->edge_rename({{"I0", "I1"}, {"O0", "O1"}}).contract_all_edge(*single));
+            result = std::make_shared<const Tensor<T>>(single->edge_rename({{"I0", "I1"}, {"O0", "O1"}}).contract(*single, {}));
          }
          return result;
       }
