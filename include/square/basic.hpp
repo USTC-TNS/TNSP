@@ -168,7 +168,7 @@ namespace square {
             seed = get_seed();
          }
          engine.seed(seed);
-         TAT::mpi.out_one() << "Set the same random seed to " << seed << "\n";
+         TAT::mpi.out_one() << "Set the random seed to " << seed << "\n";
       }
 
       inline void split_seed() {
