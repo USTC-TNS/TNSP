@@ -113,7 +113,7 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return *this;
       }
-      auto result_edges = std::vector<Edge<Symmetry>>();
+      auto result_edges = pmr::vector<Edge<Symmetry>>();
       result_edges.reserve(names.size());
       for (const auto& edge : core->edges) {
          auto& result_edge = result_edges.emplace_back();
@@ -124,11 +124,11 @@ namespace TAT {
             result_edge.map[-symmetry] = dimension;
          }
       }
-      auto transpose_flag = std::vector<Rank>(names.size(), 0);
-      auto valid_flag = std::vector<bool>(1, true);
+      auto transpose_flag = pmr::vector<Rank>(names.size(), 0);
+      auto valid_flag = pmr::vector<bool>(1, true);
       auto result = Tensor<ScalarType, Symmetry, Name>(names, result_edges);
       for (const auto& [symmetries, block] : core->blocks) {
-         auto result_symmetries = std::vector<Symmetry>();
+         auto result_symmetries = typename decltype(core->blocks)::key_type();
          for (const auto& symmetry : symmetries) {
             result_symmetries.push_back(-symmetry);
          }
@@ -166,9 +166,9 @@ namespace TAT {
    }
 
    /// \private
-   template<typename ScalarType>
-   void set_to_identity(ScalarType* pointer, const std::vector<Size>& dimension, const std::vector<Size>& leading, Rank rank) {
-      auto current_index = std::vector<Size>(rank, 0);
+   template<typename ScalarType, typename VectorSize>
+   void set_to_identity(ScalarType* pointer, const VectorSize& dimension, const VectorSize& leading, Rank rank) {
+      auto current_index = VectorSize(rank, 0);
       while (true) {
          *pointer = 1;
          Rank active_position = rank - 1;
@@ -192,14 +192,15 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) const {
+   template<typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const SetNameAndName& pairs) const {
       auto rank = names.size();
       auto half_rank = rank / 2;
-      auto ordered_pair = std::vector<std::tuple<Name, Name>>();
-      auto ordered_pair_index = std::vector<std::tuple<Rank, Rank>>();
+      auto ordered_pair = pmr::vector<std::tuple<Name, Name>>();
+      auto ordered_pair_index = pmr::vector<std::tuple<Rank, Rank>>();
       ordered_pair.reserve(half_rank);
       ordered_pair_index.reserve(half_rank);
-      auto valid_index = std::vector<bool>(rank, true);
+      auto valid_index = pmr::vector<bool>(rank, true);
       for (Rank i = 0; i < rank; i++) {
          if (valid_index[i]) {
             const auto& name_to_find = names[i];
@@ -224,8 +225,8 @@ namespace TAT {
       auto result = same_shape().zero();
 
       for (auto& [symmetries, block] : result.core->blocks) {
-         auto dimension = std::vector<Size>(rank);
-         auto leading = std::vector<Size>(rank);
+         auto dimension = pmr::vector<Size>(rank);
+         auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
             dimension[i] = core->edges[i].map[symmetries[i]];
             if (i == rank - 1) {
@@ -234,8 +235,8 @@ namespace TAT {
                leading[i] = leading[i + 1] * dimension[i + 1];
             }
          }
-         auto pair_dimension = std::vector<Size>();
-         auto pair_leading = std::vector<Size>();
+         auto pair_dimension = pmr::vector<Size>();
+         auto pair_leading = pmr::vector<Size>();
          pair_dimension.reserve(half_rank);
          pair_leading.reserve(half_rank);
          for (Rank i = 0; i < half_rank; i++) {

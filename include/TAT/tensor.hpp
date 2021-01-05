@@ -484,14 +484,16 @@ namespace TAT {
        * \return 仅仅改变了边的名称的张量, 与原张量共享Core
        * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator, 而是实现一个小功能的edge_rename
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_rename(const std::map<Name, Name>& dictionary) const;
+      template<typename MapNameName = std::map<Name, Name>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_rename(const MapNameName& dictionary) const;
 
       /**
        * 对张量进行转置
        * \param target_names 转置后的目标边的名称顺序
        * \return 转置后的结果张量
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(std::vector<Name> target_names) const;
+      template<typename VectorName = std::vector<Name>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(const VectorName& target_names) const;
 
       /**
        * 将费米张量的一些边进行反转
@@ -500,8 +502,9 @@ namespace TAT {
        * \param parity_exclude_name 与apply_parity行为相反的边名集合
        * \return 反转后的结果张量
        */
+      template<typename SetName1 = std::set<Name>, typename SetName2 = std::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      reverse_edge(const std::set<Name>& reversed_name, bool apply_parity = false, const std::set<Name>& parity_exclude_name = {}) const;
+      reverse_edge(const SetName1& reversed_name, bool apply_parity = false, const SetName2& parity_exclude_name = {}) const;
 
       /**
        * 合并张量的一些边
@@ -512,11 +515,12 @@ namespace TAT {
        * \return 合并边后的结果张量
        * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
        */
+      template<typename MapNameVectorName = std::map<Name, std::vector<Name>>, typename SetName = std::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
-            std::map<Name, std::vector<Name>> merge,
+            MapNameVectorName merge,
             bool apply_parity = false,
-            const std::set<Name>& parity_exclude_name_merge = {},
-            const std::set<Name>& parity_exclude_name_reverse = {}) const;
+            const SetName& parity_exclude_name_merge = {},
+            const SetName& parity_exclude_name_reverse = {}) const;
 
       /**
        * 分裂张量的一些边
@@ -525,10 +529,11 @@ namespace TAT {
        * \param parity_exclude_name_split split过程中与apply_parity不符的例外
        * \return 分裂边后的结果张量
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> split_edge(
-            std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split,
-            bool apply_parity = false,
-            const std::set<Name>& parity_exclude_name_split = {}) const;
+      template<
+            typename MapNameVectorNameAndEdge = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename SetName = std::set<Name>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      split_edge(MapNameVectorNameAndEdge split, bool apply_parity = false, const SetName& parity_exclude_name_split = {}) const;
 
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
       /**
@@ -600,7 +605,8 @@ namespace TAT {
        * 生成相同形状的单位张量
        * \param pairs 看作矩阵时边的配对方案
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const std::set<std::tuple<Name, Name>>& pairs) const;
+      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const SetNameAndName& pairs) const;
 
       /**
        * 看作矩阵后求出矩阵指数
@@ -615,7 +621,8 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
 
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::set<std::tuple<Name, Name>>& trace_names) const;
+      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const SetNameAndName& trace_names) const;
 
       using SingularType =
 #ifdef TAT_USE_SINGULAR_MATRIX
