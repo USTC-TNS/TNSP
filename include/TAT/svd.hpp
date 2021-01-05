@@ -95,9 +95,9 @@ void zgesvd_(
 
 namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
    [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-   singular_to_tensor(const pmr::map<Symmetry, vector<real_base_t<ScalarType>>>& singular, const Name& singular_name_u, const Name& singular_name_v) {
+   singular_to_tensor(const SingularValue& singular, const Name& singular_name_u, const Name& singular_name_v) {
       auto symmetries = pmr::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
          auto dimension = values.size();
@@ -335,7 +335,7 @@ namespace TAT {
             put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           pmr::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = std::map<Symmetry, vector<real_base_t<ScalarType>>>();
+      auto result_s = typename Singular<ScalarType, Symmetry, Name>::singular_map();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.core->blocks.at(symmetries).data();
          auto* data_v = tensor_2.core->blocks.at(symmetries).data();

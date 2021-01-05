@@ -41,6 +41,9 @@ namespace TAT {
    struct fake_map {
       using iterator = fake_map*;
       using const_iterator = const fake_map*;
+      using key_type = Key;
+      using mapped_type = Value;
+
       Key first;
       Value second;
       fake_map() : second() {}
