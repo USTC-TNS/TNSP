@@ -13,6 +13,14 @@ add_library(TAT INTERFACE)
 
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
 target_compile_features(TAT INTERFACE cxx_std_17)
+include(CheckIncludeFileCXX)
+check_include_file_cxx(memory_resource HAVE_PMR)
+if(NOT ${HAVE_FILE})
+   target_compile_definitions(TAT INTERFACE TAT_USE_BOOST_PMR)
+   find_package(Boost REQUIRED COMPONENTS container)
+   target_include_directories(TAT INTERFACE ${Boost_INCLUDE_DIRS})
+   target_link_libraries(TAT INTERFACE ${Boost_LIBRARIES})
+endif()
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS

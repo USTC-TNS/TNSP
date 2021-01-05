@@ -44,12 +44,12 @@
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
 // TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义 TODO 进一步优化
 // TAT_USE_MKL_GEMM_BATCH 定义以使用mkl的?gemm_batch, cmake可对此进行定义
+// TAT_USE_BOOST_PMR 对于gcc<9, pmr并不支持, 需要使用boost, cmake可对此进行定义
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_TIMER 对常见操作进行计时
-// TAT_USE_BOOST_PMR 对于gcc<9, pmr并不支持, 需要使用boost
 // TAT_ERROR_BITS 将各类警告转换为异常
 // TAT_NOTHING_BITS 将各类警告转换为静默
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
