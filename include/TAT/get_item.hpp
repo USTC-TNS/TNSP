@@ -25,9 +25,9 @@
 
 namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename Symmetry, typename Name>
-   [[nodiscard]] auto get_block_for_get_item(const std::map<Name, Symmetry>& position, const std::vector<Name>& names) {
-      auto symmetries = std::vector<Symmetry>();
+   template<typename VectorSymmetry, typename MapNameSymmetry, typename VectorName>
+   [[nodiscard]] auto get_block_for_get_item(const MapNameSymmetry& position, const VectorName& names) {
+      auto symmetries = VectorSymmetry();
       symmetries.reserve(names.size());
       for (const auto& name : names) {
          if (auto found = position.find(name); found != position.end()) {
@@ -39,12 +39,11 @@ namespace TAT {
       return symmetries;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   [[nodiscard]] auto
-   get_offset_for_get_item(const std::map<Name, Size>& position, const std::vector<Name>& names, const Core<ScalarType, Symmetry>& core) {
+   template<typename AuxiliaryVectorSize, typename MapNameSize, typename VectorName, typename Core>
+   [[nodiscard]] auto get_offset_for_get_item(const MapNameSize& position, const VectorName& names, const Core& core) {
       const auto rank = Rank(names.size());
-      auto scalar_position = std::vector<Size>();
-      auto dimensions = std::vector<Size>();
+      auto scalar_position = AuxiliaryVectorSize();
+      auto dimensions = AuxiliaryVectorSize();
       scalar_position.reserve(rank);
       dimensions.reserve(rank);
       for (auto i = 0; i < rank; i++) {
@@ -63,15 +62,13 @@ namespace TAT {
       return offset;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   [[nodiscard]] auto get_block_and_offset_for_get_item(
-         const std::map<Name, std::tuple<Symmetry, Size>>& position,
-         const std::vector<Name>& names,
-         const Core<ScalarType, Symmetry>& core) {
+   template<typename AuxiliaryVectorSize, typename MapNameSymmetryAndSize, typename VectorName, typename Core>
+   [[nodiscard]] auto get_block_and_offset_for_get_item(const MapNameSymmetryAndSize& position, const VectorName& names, const Core& core) {
       const auto rank = Rank(core.edges.size());
-      auto symmetries = std::vector<Symmetry>();
-      auto scalar_position = std::vector<Size>();
-      auto dimensions = std::vector<Size>();
+      using VectorSymmetry = typename decltype(core.blocks)::key_type;
+      auto symmetries = VectorSymmetry();
+      auto scalar_position = AuxiliaryVectorSize();
+      auto dimensions = AuxiliaryVectorSize();
       symmetries.reserve(rank);
       scalar_position.reserve(rank);
       dimensions.reserve(rank);
@@ -96,16 +93,18 @@ namespace TAT {
 #endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   const auto& Tensor<ScalarType, Symmetry, Name>::const_block(const std::map<Name, Symmetry>& position) const& {
+   template<typename MapNameSymmetry>
+   const auto& Tensor<ScalarType, Symmetry, Name>::const_block(const MapNameSymmetry& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
-      auto symmetry = get_block_for_get_item(position, names);
+      auto symmetry = get_block_for_get_item<typename decltype(core->blocks)::key_type>(position, names);
       return core->blocks.at(symmetry);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   auto& Tensor<ScalarType, Symmetry, Name>::block(const std::map<Name, Symmetry>& position) & {
+   template<typename MapNameSymmetry>
+   auto& Tensor<ScalarType, Symmetry, Name>::block(const MapNameSymmetry& position) & {
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
          TAT_warning_or_error_when_copy_shared(
@@ -114,33 +113,35 @@ namespace TAT {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
-      auto symmetry = get_block_for_get_item(position, names);
+      auto symmetry = get_block_for_get_item<typename decltype(core->blocks)::key_type>(position, names);
       return core->blocks.at(symmetry);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+   template<typename MapNamePointOfEdge>
+   const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const MapNamePointOfEdge& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto offset = get_offset_for_get_item(position, names, *core);
+         auto offset = get_offset_for_get_item<std::vector<Size>>(position, names, *core);
          return core->blocks.begin()->second[offset];
       } else {
-         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, names, *core);
+         auto [symmetry, offset] = get_block_and_offset_for_get_item<std::vector<Size>>(position, names, *core);
          return core->blocks.at(symmetry)[offset];
       }
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const std::map<Name, EdgeInfoForGetItem>& position) & {
+   template<typename MapNamePointOfEdge>
+   ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const MapNamePointOfEdge& position) & {
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
          TAT_warning_or_error_when_copy_shared(
                "Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
       }
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto offset = get_offset_for_get_item(position, names, *core);
+         auto offset = get_offset_for_get_item<std::vector<Size>>(position, names, *core);
          return core->blocks.begin()->second[offset];
       } else {
-         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, names, *core);
+         auto [symmetry, offset] = get_block_and_offset_for_get_item<std::vector<Size>>(position, names, *core);
          return core->blocks.at(symmetry)[offset];
       }
    }

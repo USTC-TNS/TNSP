@@ -27,11 +27,11 @@
 
 namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
-   template<bool split_edge_is_pointer>
+   template<bool split_edge_is_pointer, typename MapNameName, typename SetName>
    [[nodiscard]] Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::edge_operator(
-         const std::map<Name, Name>& rename_map,
+         const MapNameName& rename_map,
          const std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, split_edge_is_pointer>>>>& split_map,
-         const std::set<Name>& reversed_name,
+         const SetName& reversed_name,
          const std::map<Name, std::vector<Name>>& merge_map,
          std::vector<Name> new_names,
          const bool apply_parity,

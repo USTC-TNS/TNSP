@@ -260,8 +260,8 @@ namespace TAT {
        * \note 参见std::transform
        * \see transform
        */
-      template<typename Transform>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> map(Transform&& function) const {
+      template<typename Function>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> map(Function&& function) const {
          auto result = same_shape();
          for (auto& [symmetries, block] : core->blocks) {
             std::transform(block.begin(), block.end(), result.core->blocks.at(symmetries).begin(), function);
@@ -276,8 +276,8 @@ namespace TAT {
        * \note 参见std::transform
        * \see map
        */
-      template<typename Transform>
-      Tensor<ScalarType, Symmetry, Name>& transform(Transform&& function) & {
+      template<typename Function>
+      Tensor<ScalarType, Symmetry, Name>& transform(Function&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
             TAT_warning_or_error_when_copy_shared("Set tensor shared, copy happened here");
@@ -287,8 +287,8 @@ namespace TAT {
          }
          return *this;
       }
-      template<typename Transform>
-      Tensor<ScalarType, Symmetry, Name>&& transform(Transform&& function) && {
+      template<typename Function>
+      Tensor<ScalarType, Symmetry, Name>&& transform(Function&& function) && {
          return std::move(transform(function));
       }
 
@@ -342,26 +342,34 @@ namespace TAT {
        * \return 一个不可变的一维数组
        * \see get_block_for_get_item
        */
-      [[nodiscard]] const auto& block(const std::map<Name, Symmetry>& position = {}) const& {
+      template<typename MapNameSymmetry = std::map<Name, Symmetry>>
+      [[nodiscard]] const auto& block(const MapNameSymmetry& position = {}) const& {
          return const_block(position);
       }
 
-      [[nodiscard]] auto& block(const std::map<Name, Symmetry>& position = {}) &;
+      template<typename MapNameSymmetry = std::map<Name, Symmetry>>
+      [[nodiscard]] auto& block(const MapNameSymmetry& position = {}) &;
 
-      [[nodiscard]] const auto& const_block(const std::map<Name, Symmetry>& position = {}) const&;
+      template<typename MapNameSymmetry = std::map<Name, Symmetry>>
+      [[nodiscard]] const auto& const_block(const MapNameSymmetry& position = {}) const&;
+
+      using PointOfEdge = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
 
       /**
        * 获取张量中某个分块内的某个元素
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
        * \note position对于无对称性张量, 为边名到维度的映射表, 对于有对称性的张量, 是边名到对称性和相应维度的映射表
        */
-      [[nodiscard]] const ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) const& {
+      template<typename MapNamePointOfEdge = std::map<Name, PointOfEdge>>
+      [[nodiscard]] const ScalarType& at(const MapNamePointOfEdge& position) const& {
          return const_at(position);
       }
 
-      [[nodiscard]] ScalarType& at(const std::map<Name, EdgeInfoForGetItem>& position) &;
+      template<typename MapNamePointOfEdge = std::map<Name, PointOfEdge>>
+      [[nodiscard]] ScalarType& at(const MapNamePointOfEdge& position) &;
 
-      [[nodiscard]] const ScalarType& const_at(const std::map<Name, EdgeInfoForGetItem>& position) const&;
+      template<typename MapNamePointOfEdge = std::map<Name, PointOfEdge>>
+      [[nodiscard]] const ScalarType& const_at(const MapNamePointOfEdge& position) const&;
 
       /**
        * 不同标量类型的张量之间的转换函数
@@ -455,11 +463,11 @@ namespace TAT {
        * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
        * \note 本函数对转置外不标准的腿的输入是脆弱的
        */
-      template<bool split_edge_is_pointer = false>
+      template<bool split_edge_is_pointer = false, typename MapNameName = std::map<Name, Name>, typename SetName = std::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
-            const std::map<Name, Name>& rename_map,
+            const MapNameName& rename_map,
             const std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, split_edge_is_pointer>>>>& split_map,
-            const std::set<Name>& reversed_name,
+            const SetName& reversed_name,
             const std::map<Name, std::vector<Name>>& merge_map,
             std::vector<Name> new_names,
             bool apply_parity = false,
