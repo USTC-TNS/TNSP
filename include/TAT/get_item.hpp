@@ -21,6 +21,7 @@
 #ifndef TAT_GET_ITEM_HPP
 #define TAT_GET_ITEM_HPP
 
+#include "pmr_resource.hpp"
 #include "tensor.hpp"
 
 namespace TAT {
@@ -39,11 +40,11 @@ namespace TAT {
       return symmetries;
    }
 
-   template<typename AuxiliaryVectorSize, typename MapNameSize, typename VectorName, typename Core>
+   template<typename MapNameSize, typename VectorName, typename Core>
    [[nodiscard]] auto get_offset_for_get_item(const MapNameSize& position, const VectorName& names, const Core& core) {
       const auto rank = Rank(names.size());
-      auto scalar_position = AuxiliaryVectorSize();
-      auto dimensions = AuxiliaryVectorSize();
+      auto scalar_position = pmr::vector<Size>();
+      auto dimensions = pmr::vector<Size>();
       scalar_position.reserve(rank);
       dimensions.reserve(rank);
       for (auto i = 0; i < rank; i++) {
@@ -62,13 +63,13 @@ namespace TAT {
       return offset;
    }
 
-   template<typename AuxiliaryVectorSize, typename MapNameSymmetryAndSize, typename VectorName, typename Core>
+   template<typename MapNameSymmetryAndSize, typename VectorName, typename Core>
    [[nodiscard]] auto get_block_and_offset_for_get_item(const MapNameSymmetryAndSize& position, const VectorName& names, const Core& core) {
       const auto rank = Rank(core.edges.size());
       using VectorSymmetry = typename decltype(core.blocks)::key_type;
       auto symmetries = VectorSymmetry();
-      auto scalar_position = AuxiliaryVectorSize();
-      auto dimensions = AuxiliaryVectorSize();
+      auto scalar_position = pmr::vector<Size>();
+      auto dimensions = pmr::vector<Size>();
       symmetries.reserve(rank);
       scalar_position.reserve(rank);
       dimensions.reserve(rank);
@@ -121,10 +122,10 @@ namespace TAT {
    template<typename MapNamePointOfEdge>
    const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const MapNamePointOfEdge& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto offset = get_offset_for_get_item<std::vector<Size>>(position, names, *core);
+         auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
       } else {
-         auto [symmetry, offset] = get_block_and_offset_for_get_item<std::vector<Size>>(position, names, *core);
+         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, names, *core);
          return core->blocks.at(symmetry)[offset];
       }
    }
@@ -138,10 +139,10 @@ namespace TAT {
                "Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
       }
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         auto offset = get_offset_for_get_item<std::vector<Size>>(position, names, *core);
+         auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
       } else {
-         auto [symmetry, offset] = get_block_and_offset_for_get_item<std::vector<Size>>(position, names, *core);
+         auto [symmetry, offset] = get_block_and_offset_for_get_item(position, names, *core);
          return core->blocks.at(symmetry)[offset];
       }
    }

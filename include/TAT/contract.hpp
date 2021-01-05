@@ -21,6 +21,7 @@
 #ifndef TAT_CONTRACT_HPP
 #define TAT_CONTRACT_HPP
 
+#include "pmr_resource.hpp"
 #include "tensor.hpp"
 #include "timer.hpp"
 
@@ -258,37 +259,38 @@ namespace TAT {
 #endif
 
    /// \private
-   template<typename ScalarType, typename Name>
+   template<typename ScalarType, typename Name, typename SetNameAndName>
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names);
+         SetNameAndName&& contract_names);
 
    /// \private
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names);
+         SetNameAndName&& contract_names);
 
    template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
+         SetNameAndName&& contract_names) {
       auto guard = contract_guard();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         return contract_with_fuse(tensor_1, tensor_2, std::move(contract_names));
+         return contract_with_fuse(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
       } else {
-         return contract_without_fuse(tensor_1, tensor_2, std::move(contract_names));
+         return contract_without_fuse(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
       }
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
+         SetNameAndName&& contract_names) {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       // 为未来split做准备
@@ -576,11 +578,11 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Name>
+   template<typename ScalarType, typename Name, typename SetNameAndName>
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
+         SetNameAndName&& contract_names) {
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
       // 删除不存在的名称, 即在name tuple list中但不在names中
@@ -595,8 +597,8 @@ namespace TAT {
          }
       }
       const auto common_rank = contract_names.size();
-      std::set<Name> contract_names_1;
-      std::set<Name> contract_names_2;
+      pmr::set<Name> contract_names_1;
+      pmr::set<Name> contract_names_2;
       for (const auto& [name_1, name_2] : contract_names) {
          contract_names_1.insert(name_1);
          contract_names_2.insert(name_2);

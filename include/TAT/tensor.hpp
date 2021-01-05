@@ -534,37 +534,40 @@ namespace TAT {
        * \param contract_names 两个张量将要缩并掉的边的名称
        * \return 缩并后的张量
        */
+      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
       [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-            std::set<std::tuple<Name, Name>> contract_names);
+            SetNameAndName&& contract_names);
 
-      template<typename ScalarType1, typename ScalarType2>
+      template<typename ScalarType1, typename ScalarType2, typename SetNameAndName = std::set<std::tuple<Name, Name>>>
       [[nodiscard]] static auto contract(
             const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
-            std::set<std::tuple<Name, Name>> contract_names) {
+            SetNameAndName&& contract_names) {
          using ResultScalarType = std::common_type_t<ScalarType1, ScalarType2>;
          using ResultTensor = Tensor<ResultScalarType, Symmetry, Name>;
          if constexpr (std::is_same_v<ResultScalarType, ScalarType1>) {
             if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
-               return ResultTensor::contract(tensor_1, tensor_2, std::move(contract_names));
+               return ResultTensor::contract(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
             } else {
-               return ResultTensor::contract(tensor_1, tensor_2.template to<ResultScalarType>(), std::move(contract_names));
+               return ResultTensor::contract(tensor_1, tensor_2.template to<ResultScalarType>(), std::forward<SetNameAndName>(contract_names));
             }
          } else {
             if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
-               return ResultTensor::contract(tensor_1.template to<ResultScalarType>(), tensor_2, std::move(contract_names));
+               return ResultTensor::contract(tensor_1.template to<ResultScalarType>(), tensor_2, std::forward<SetNameAndName>(contract_names));
             } else {
                return ResultTensor::contract(
-                     tensor_1.template to<ResultScalarType>(), tensor_2.template to<ResultScalarType>(), std::move(contract_names));
+                     tensor_1.template to<ResultScalarType>(),
+                     tensor_2.template to<ResultScalarType>(),
+                     std::forward<SetNameAndName>(contract_names));
             }
          }
       }
 
-      template<typename OtherScalarType>
-      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, std::set<std::tuple<Name, Name>> contract_names) const {
-         return contract(*this, tensor_2, std::move(contract_names));
+      template<typename OtherScalarType, typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, SetNameAndName&& contract_names) const {
+         return contract(*this, tensor_2, std::forward<SetNameAndName>(contract_names));
       }
 
       /**
@@ -727,12 +730,9 @@ namespace TAT {
    /**@}*/
 
    /// \private
-   template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name>
-   [[nodiscard]] auto contract(
-         const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
-      return tensor_1.contract(tensor_2, std::move(contract_names));
+   template<typename Tensor1, typename Tensor2, typename SetNameAndName = std::set<std::tuple<typename Tensor1::name_t, typename Tensor2::name_t>>>
+   [[nodiscard]] auto contract(const Tensor1& tensor_1, const Tensor2& tensor_2, SetNameAndName&& contract_names) {
+      return tensor_1.contract(tensor_2, std::forward<SetNameAndName>(contract_names));
    }
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
