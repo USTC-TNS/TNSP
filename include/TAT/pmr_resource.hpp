@@ -49,7 +49,10 @@ namespace TAT {
    namespace pmr = std::pmr;
 #endif
 
-   template<int buffer_size>
+   // on windows stack size is 1MB(1<<20), and on linux, stack size is 8M(1<<23)
+   constexpr std::size_t default_buffer_size = 1 << 15;
+
+   template<std::size_t buffer_size = default_buffer_size>
    struct scope_resource {
       std::byte buffer[buffer_size];
       pmr::monotonic_buffer_resource resource;
