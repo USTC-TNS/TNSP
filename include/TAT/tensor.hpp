@@ -465,6 +465,7 @@ namespace TAT {
             typename MapNameVectorNameAndEdge = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
             typename SetName1 = std::set<Name>,
             typename MapNameVectorName = std::map<Name, std::vector<Name>>,
+            typename VectorName = std::vector<Name>,
             typename SetName2 = std::set<Name>,
             typename MapNameMapSymmetrySize = std::map<Name, std::map<Symmetry, Size>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
@@ -472,7 +473,7 @@ namespace TAT {
             const MapNameVectorNameAndEdge& split_map,
             const SetName1& reversed_name,
             const MapNameVectorName& merge_map,
-            decltype(names) new_names,
+            const VectorName& new_names,
             bool apply_parity = false,
             const std::array<SetName2, 4>& parity_exclude_name = {{{}, {}, {}, {}}},
             const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all = {}) const;
@@ -661,8 +662,9 @@ namespace TAT {
        * \see svd_result
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
+      template<typename SetName = std::set<Name>>
       [[nodiscard]] svd_result
-      svd(const std::set<Name>& free_name_set_u,
+      svd(const SetName& free_name_set_u,
           const Name& common_name_u,
           const Name& common_name_v,
           Size cut = Size(-1),
@@ -678,8 +680,8 @@ namespace TAT {
        * \return qr的结果
        * \see qr_result
        */
-      [[nodiscard]] qr_result
-      qr(char free_name_direction, const std::set<Name>& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
+      template<typename SetName = std::set<Name>>
+      [[nodiscard]] qr_result qr(char free_name_direction, const SetName& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
 
 #ifdef TAT_USE_MPI
       /**

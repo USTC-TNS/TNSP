@@ -27,12 +27,28 @@
 #include "transpose.hpp"
 
 namespace TAT {
+   template<typename Vector1, typename Vector2>
+   bool is_same_vector(const Vector1& vector1, const Vector2& vector2) {
+      auto size1 = vector1.size();
+      auto size2 = vector2.size();
+      if (size1 != size2) {
+         return false;
+      }
+      for (auto i = 1; i < size1; i++) {
+         if (vector1[i] != vector2[i]) {
+            return false;
+         }
+      }
+      return true;
+   }
+
    template<typename ScalarType, typename Symmetry, typename Name>
    template<
          typename MapNameName,
          typename MapNameVectorNameAndEdge,
          typename SetName1,
          typename MapNameVectorName,
+         typename VectorName,
          typename SetName2,
          typename MapNameMapSymmetrySize>
    [[nodiscard]] Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::edge_operator(
@@ -40,7 +56,7 @@ namespace TAT {
          const MapNameVectorNameAndEdge& split_map,
          const SetName1& reversed_name,
          const MapNameVectorName& merge_map,
-         decltype(names) new_names,
+         const VectorName& new_names,
          const bool apply_parity,
          const std::array<SetName2, 4>& parity_exclude_name,
          const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all) const {
@@ -112,11 +128,11 @@ namespace TAT {
 
       // 1.2 检查是否不需要做任何操作 -> rename_edge
       // check no change
-      if (name_before_split == new_names && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
+      if (is_same_vector(name_before_split, new_names) && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
           edge_and_symmetries_to_cut_before_all.empty()) {
          // share the core
          auto result = Tensor<ScalarType, Symmetry, Name>();
-         result.names = std::move(new_names);
+         result.names = {new_names.begin(), new_names.end()};
          result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
          result.core = core; // 因为是rename edge所以不拷贝
          // check_valid_name(result.names, result.core->edges.size());
@@ -283,7 +299,7 @@ namespace TAT {
 
       // create res names
       auto result = Tensor<ScalarType, Symmetry, Name>();
-      result.names = std::move(new_names);
+      result.names = {new_names.begin(), new_names.end()};
       result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
 
       // 1.4 transpose之后的rank, name
