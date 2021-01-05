@@ -425,15 +425,15 @@ namespace TAT {
       if constexpr (is_fermi) {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
-      auto new_tensor_1 = tensor_1.template edge_operator<true>(
+      auto new_tensor_1 = tensor_1.template edge_operator(
             {{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
-            {{InternalName<Name>::QR_1, free_names_and_edges_1}},
+            std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_1, free_names_and_edges_1}},
             reversed_set_1,
             {},
             result_name_1);
-      auto new_tensor_2 = tensor_2.template edge_operator<true>(
+      auto new_tensor_2 = tensor_2.template edge_operator(
             {{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
-            {{InternalName<Name>::QR_2, free_names_and_edges_2}},
+            std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_2, free_names_and_edges_2}},
             reversed_set_2,
             {},
             result_name_2,

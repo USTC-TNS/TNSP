@@ -397,18 +397,18 @@ namespace TAT {
          reversed_set_u.insert(common_name_u);
       }
       // 这里会自动cut
-      auto u = tensor_u.template edge_operator<true>(
+      auto u = tensor_u.template edge_operator(
             {{InternalName<Name>::SVD_V, common_name_u}},
-            {{InternalName<Name>::SVD_U, free_names_and_edges_u}},
+            std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_U, free_names_and_edges_u}},
             reversed_set_u,
             {},
             result_name_u,
             false,
             {{{}, put_v_right ? std::set<Name>{} : std::set<Name>{common_name_u}, {}, {}}},
             {{InternalName<Name>::SVD_V, remain_dimension_u}});
-      auto v = tensor_v.template edge_operator<true>(
+      auto v = tensor_v.template edge_operator(
             {{InternalName<Name>::SVD_U, common_name_v}},
-            {{InternalName<Name>::SVD_V, free_names_and_edges_v}},
+            std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_V, free_names_and_edges_v}},
             reversed_set_v,
             {},
             result_name_v,

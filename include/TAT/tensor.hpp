@@ -150,16 +150,13 @@ namespace TAT {
        * \param auto_reverse 费米对称性是否自动根据是否有负值整个反转
        * \see Core
        */
-      Tensor(std::vector<Name> names_init, std::vector<Edge<Symmetry>> edges_init, const bool auto_reverse = false) :
-            names(std::move(names_init)),
-            name_to_index(construct_name_to_index<std::map<Name, Rank>>(names)),
-            core(std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges_init), auto_reverse)) {
+      template<typename VectorName = std::vector<Name>, typename VectorEdge = std::vector<Edge<Symmetry>>>
+      Tensor(const VectorName& names_init, const VectorEdge& edges_init, const bool auto_reverse = false) :
+            names(names_init.begin(), names_init.end()),
+            name_to_index(construct_name_to_index<decltype(name_to_index)>(names)),
+            core(std::make_shared<Core<ScalarType, Symmetry>>(edges_init, auto_reverse)) {
          check_valid_name(names, core->edges.size());
       }
-
-      template<typename Int = Size, typename = std::enable_if_t<std::is_same_v<Symmetry, NoSymmetry> && !std::is_same_v<Int, Edge<Symmetry>>>>
-      Tensor(std::vector<Name> names_init, const std::vector<Int>& edges_init) :
-            Tensor(std::move(names_init), {edges_init.begin(), edges_init.end()}) {}
 
       /**
        * 张量的复制, 默认的赋值和复制初始化不会拷贝数据，而会共用core
@@ -463,16 +460,22 @@ namespace TAT {
        * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
        * \note 本函数对转置外不标准的腿的输入是脆弱的
        */
-      template<bool split_edge_is_pointer = false, typename MapNameName = std::map<Name, Name>, typename SetName = std::set<Name>>
+      template<
+            typename MapNameName = std::map<Name, Name>,
+            typename MapNameVectorNameAndEdge = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename SetName1 = std::set<Name>,
+            typename MapNameVectorName = std::map<Name, std::vector<Name>>,
+            typename SetName2 = std::set<Name>,
+            typename MapNameMapSymmetrySize = std::map<Name, std::map<Symmetry, Size>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
             const MapNameName& rename_map,
-            const std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry, split_edge_is_pointer>>>>& split_map,
-            const SetName& reversed_name,
-            const std::map<Name, std::vector<Name>>& merge_map,
-            std::vector<Name> new_names,
+            const MapNameVectorNameAndEdge& split_map,
+            const SetName1& reversed_name,
+            const MapNameVectorName& merge_map,
+            decltype(names) new_names,
             bool apply_parity = false,
-            const std::array<std::set<Name>, 4>& parity_exclude_name = {{{}, {}, {}, {}}},
-            const std::map<Name, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) const;
+            const std::array<SetName2, 4>& parity_exclude_name = {{{}, {}, {}, {}}},
+            const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all = {}) const;
 
       /**
        * 对张量边的名称进行重命名
