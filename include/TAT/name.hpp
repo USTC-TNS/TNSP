@@ -237,7 +237,7 @@ namespace TAT {
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename MapNameRank, typename VectorName>
-   auto construct_name_to_index(const VectorName& names) {
+   MapNameRank construct_name_to_index(const VectorName& names) {
       MapNameRank result;
       for (Rank name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
@@ -245,17 +245,21 @@ namespace TAT {
       return result;
    }
 
-   template<typename Name>
-   bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      const auto result_duplicated = names.size() == std::set<Name>(names.begin(), names.end()).size();
-      const auto result_length = names.size() == rank;
-      if (!result_duplicated) {
-         TAT_error("Duplicated names in name list");
-      }
-      if (!result_length) {
+   template<typename VectorName>
+   bool check_valid_name(const VectorName& names, const Rank& rank) {
+      if (names.size() != rank) {
          TAT_error("Wrong name list length which no equals to expected length");
+         return false;
       }
-      return result_duplicated && result_length;
+      for (Rank i = 0; i < rank; i++) {
+         for (Rank j = i + 1; j < rank; j++) {
+            if (names[i] == names[j]) {
+               TAT_error("Duplicated names in name list");
+               return false;
+            }
+         }
+      }
+      return true;
    }
 #endif
    /**@}*/
