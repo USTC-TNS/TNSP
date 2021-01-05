@@ -392,8 +392,8 @@ namespace TAT {
             {},
             {},
             reversed_set_origin,
-            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::QR_1, free_name_1}, {InternalName<Name>::QR_2, free_name_2}},
-            {InternalName<Name>::QR_1, InternalName<Name>::QR_2});
+            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::QR_1, std::move(free_name_1)}, {InternalName<Name>::QR_2, std::move(free_name_2)}},
+            pmr::vector<Name>{InternalName<Name>::QR_1, InternalName<Name>::QR_2});
       // call lapack
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
@@ -428,14 +428,14 @@ namespace TAT {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
       auto new_tensor_1 = tensor_1.edge_operator(
-            {{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_1, free_names_and_edges_1}},
+            pmr::map<Name, Name>{{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
             {},
             result_name_1);
       auto new_tensor_2 = tensor_2.edge_operator(
-            {{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_2, free_names_and_edges_2}},
+            pmr::map<Name, Name>{{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
             reversed_set_2,
             {},
             result_name_2,

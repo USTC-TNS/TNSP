@@ -209,7 +209,7 @@ namespace TAT {
    inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
 #endif
 
-   template<typename ScalarType>
+   template<typename ScalarType, bool same_shape>
    void gemm_batch(
          const char* transpose_a,
          const char* transpose_b,
@@ -224,14 +224,13 @@ namespace TAT {
          const ScalarType* beta,
          ScalarType** c,
          const int* ldc,
-         const int& batch_size,
-         bool same_shape = false) {
+         const int& batch_size) {
       auto kernel_guard = contract_kernel_guard();
       if (batch_size == 1) {
          gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
       } else {
 #ifdef TAT_USE_MKL_GEMM_BATCH
-         if (same_shape) {
+         if constexpr (same_shape) {
             int group_count = 1;
             mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
          } else {
@@ -239,8 +238,15 @@ namespace TAT {
             mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
          }
 #else
-         for (auto i = 0; i < batch_size; i++) {
-            gemm<ScalarType>(&transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
+         if constexpr (same_shape) {
+            for (auto i = 0; i < batch_size; i++) {
+               gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
+            }
+         } else {
+            for (auto i = 0; i < batch_size; i++) {
+               gemm<ScalarType>(
+                     &transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
+            }
          }
 #endif
       }
@@ -481,21 +487,24 @@ namespace TAT {
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
+      auto common_name_1_set = pmr::set<Name>(common_name_1.begin(), common_name_1.end());
       auto tensor_1_merged = tensor_1.edge_operator(
             {},
             {},
             reversed_set_1,
-            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::Contract_1, free_name_1}, {InternalName<Name>::Contract_2, common_name_1}},
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Contract_1, std::move(free_name_1)}, {InternalName<Name>::Contract_2, std::move(common_name_1)}},
             put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1},
             false,
-            std::array<pmr::set<Name>, 4>{{{}, pmr::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {InternalName<Name>::Contract_2}}},
+            std::array<pmr::set<Name>, 4>{{{}, std::move(common_name_1_set), {}, {InternalName<Name>::Contract_2}}},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             reversed_set_2,
-            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::Contract_2, free_name_2}, {InternalName<Name>::Contract_1, common_name_2}},
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Contract_2, std::move(free_name_2)}, {InternalName<Name>::Contract_1, std::move(common_name_2)}},
             put_common_2_right ? pmr::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             false,
@@ -553,7 +562,7 @@ namespace TAT {
             std::fill(data.begin(), data.end(), 0);
          }
       }
-      gemm_batch<ScalarType>(
+      gemm_batch<ScalarType, false>(
             transpose_a_list.data(),
             transpose_b_list.data(),
             m_list.data(),
@@ -570,7 +579,7 @@ namespace TAT {
             batch_size);
 
       if constexpr (is_no_symmetry) {
-         auto result = Tensor<ScalarType, Symmetry, Name>{std::move(name_result), std::move(edge_result)};
+         auto result = Tensor<ScalarType, Symmetry, Name>{name_result, edge_result};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
@@ -724,8 +733,8 @@ namespace TAT {
             {},
             {},
             pmr::map<Name, pmr::vector<Name>>{
-                  {InternalName<Name>::Contract_1, free_name_1},
-                  {InternalName<Name>::Contract_2, common_name_1},
+                  {InternalName<Name>::Contract_1, std::move(free_name_1)},
+                  {InternalName<Name>::Contract_2, std::move(common_name_1)},
                   {InternalName<Name>::Contract_0, fuse_names_list}},
             put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
@@ -734,9 +743,9 @@ namespace TAT {
             {},
             {},
             pmr::map<Name, pmr::vector<Name>>{
-                  {InternalName<Name>::Contract_2, free_name_2},
-                  {InternalName<Name>::Contract_1, common_name_2},
-                  {InternalName<Name>::Contract_0, fuse_names_list}},
+                  {InternalName<Name>::Contract_2, std::move(free_name_2)},
+                  {InternalName<Name>::Contract_1, std::move(common_name_2)},
+                  {InternalName<Name>::Contract_0, std::move(fuse_names_list)}},
             put_common_2_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2});
       // calculate_product
@@ -759,48 +768,34 @@ namespace TAT {
       const ScalarType* data_1 = tensor_1_merged.core->blocks.begin()->second.data();
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
       if (m && n && k) {
-         vector<char> transpose_a_list(l), transpose_b_list(l);
-         vector<int> m_list(l), n_list(l), k_list(l), lda_list(l), ldb_list(l), ldc_list(l);
-         vector<ScalarType> alpha_list(l), beta_list(l);
-         vector<const ScalarType*> a_list(l), b_list(l);
-         vector<ScalarType*> c_list(l);
+         pmr::vector<const ScalarType*> a_list(l), b_list(l);
+         pmr::vector<ScalarType*> c_list(l);
          for (auto i = 0; i < l; i++) {
-            transpose_a_list[i] = put_common_2_right ? 'T' : 'N';
-            transpose_b_list[i] = put_common_1_right ? 'N' : 'T';
-            m_list[i] = n;
-            n_list[i] = m;
-            k_list[i] = k;
-            alpha_list[i] = alpha;
             a_list[i] = data_2 + k * n * i;
-            lda_list[i] = put_common_2_right ? k : n;
             b_list[i] = data_1 + m * k * i;
-            ldb_list[i] = put_common_1_right ? k : m;
-            beta_list[i] = beta;
             c_list[i] = data + m * n * i;
-            ldc_list[i] = n;
          }
-         gemm_batch<ScalarType>(
-               transpose_a_list.data(),
-               transpose_b_list.data(),
-               m_list.data(),
-               n_list.data(),
-               k_list.data(),
-               alpha_list.data(),
+         gemm_batch<ScalarType, true>(
+               put_common_2_right ? "T" : "N",
+               put_common_1_right ? "N" : "T",
+               &n,
+               &m,
+               &k,
+               &alpha,
                a_list.data(),
-               lda_list.data(),
+               put_common_2_right ? &k : &n,
                b_list.data(),
-               ldb_list.data(),
-               beta_list.data(),
+               put_common_1_right ? &k : &m,
+               &beta,
                c_list.data(),
-               ldc_list.data(),
-               l,
-               true);
+               &n,
+               l);
       } else if (m && n) {
          auto& result_vector = product_result.core->blocks.begin()->second;
          std::fill(result_vector.begin(), result_vector.end(), 0);
       }
 
-      auto result = Tensor<ScalarType, NoSymmetry, Name>{std::move(name_result), std::move(edge_result)};
+      auto result = Tensor<ScalarType, NoSymmetry, Name>{name_result, edge_result};
       result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
       return result;
    }

@@ -51,9 +51,9 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename SetName1, typename SetName2>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::reverse_edge(const SetName1& reversed_name, const bool apply_parity, const SetName2& parity_exclude_name)
-         const {
-      return edge_operator({}, {}, reversed_name, {}, names, apply_parity, std::array<SetName2, 4>{{{}, parity_exclude_name, {}, {}}});
+   Tensor<ScalarType, Symmetry, Name>::reverse_edge(const SetName1& reversed_name, const bool apply_parity, SetName2&& parity_exclude_name) const {
+      return edge_operator(
+            {}, {}, reversed_name, {}, names, apply_parity, std::array<SetName2, 4>{{{}, std::forward<SetName2>(parity_exclude_name), {}, {}}});
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
@@ -61,8 +61,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::merge_edge(
          MapNameVectorName merge,
          const bool apply_parity,
-         const SetName& parity_exclude_name_merge,
-         const SetName& parity_exclude_name_reverse) const {
+         SetName&& parity_exclude_name_merge,
+         SetName&& parity_exclude_name_reverse) const {
       // delete edge from names_before_merge if not exist
       for (auto& [name_after_merge, names_before_merge] : merge) {
          auto new_names_before_merge = decltype(names_before_merge)();
@@ -106,13 +106,19 @@ namespace TAT {
       }
       std::reverse(target_name.begin(), target_name.end());
       return edge_operator(
-            {}, {}, {}, merge, target_name, apply_parity, std::array<SetName, 4>{{{}, {}, parity_exclude_name_reverse, parity_exclude_name_merge}});
+            {},
+            {},
+            {},
+            merge,
+            target_name,
+            apply_parity,
+            std::array<SetName, 4>{{{}, {}, std::forward<SetName>(parity_exclude_name_reverse), std::forward<SetName>(parity_exclude_name_merge)}});
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename MapNameVectorNameAndEdge, typename SetName>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::split_edge(MapNameVectorNameAndEdge split, const bool apply_parity, const SetName& parity_exclude_name_split)
+   Tensor<ScalarType, Symmetry, Name>::split_edge(MapNameVectorNameAndEdge split, const bool apply_parity, SetName&& parity_exclude_name_split)
          const {
       // 删除不存在的边
       // 根据edge_operator中的操作, 这应该是多余的, 不在names中的元素会自动忽略
@@ -135,7 +141,8 @@ namespace TAT {
             target_name.push_back(n);
          }
       }
-      return edge_operator({}, split, {}, {}, target_name, apply_parity, std::array<SetName, 4>{{parity_exclude_name_split, {}, {}, {}}});
+      return edge_operator(
+            {}, split, {}, {}, target_name, apply_parity, std::array<SetName, 4>{{std::forward<SetName>(parity_exclude_name_split), {}, {}, {}}});
    }
 } // namespace TAT
 #endif

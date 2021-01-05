@@ -312,7 +312,8 @@ namespace TAT {
             {},
             {},
             reversed_set_origin,
-            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::SVD_U, free_name_u}, {InternalName<Name>::SVD_V, free_name_v}},
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::SVD_U, std::move(free_name_u)}, {InternalName<Name>::SVD_V, std::move(free_name_v)}},
             put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           pmr::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U});
       // tensor -> SVD_U -O- SVD_V
@@ -399,23 +400,23 @@ namespace TAT {
       }
       // 这里会自动cut
       auto u = tensor_u.edge_operator(
-            {{InternalName<Name>::SVD_V, common_name_u}},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_U, free_names_and_edges_u}},
+            pmr::map<Name, Name>{{InternalName<Name>::SVD_V, common_name_u}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
             {},
             result_name_u,
             false,
             std::array<pmr::set<Name>, 4>{{{}, put_v_right ? pmr::set<Name>{} : pmr::set<Name>{common_name_u}, {}, {}}},
-            pmr::map<Name, pmr::map<Symmetry, Size>>{{InternalName<Name>::SVD_V, remain_dimension_u}});
+            pmr::map<Name, pmr::map<Symmetry, Size>>{{InternalName<Name>::SVD_V, std::move(remain_dimension_u)}});
       auto v = tensor_v.edge_operator(
-            {{InternalName<Name>::SVD_U, common_name_v}},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_V, free_names_and_edges_v}},
+            pmr::map<Name, Name>{{InternalName<Name>::SVD_U, common_name_v}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,
             {},
             result_name_v,
             false,
             std::array<pmr::set<Name>, 4>{{{}, {}, {}, {}}},
-            pmr::map<Name, pmr::map<Symmetry, Size>>{{InternalName<Name>::SVD_U, remain_dimension_v}});
+            pmr::map<Name, pmr::map<Symmetry, Size>>{{InternalName<Name>::SVD_U, std::move(remain_dimension_v)}});
       return {
             std::move(u),
 #ifdef TAT_USE_SINGULAR_MATRIX

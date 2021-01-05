@@ -35,8 +35,6 @@
 #include "symmetry.hpp"
 
 namespace TAT {
-   struct mpi_t;
-
    /**
     * \defgroup Singular
     * @{
@@ -504,7 +502,7 @@ namespace TAT {
        */
       template<typename SetName1 = std::set<Name>, typename SetName2 = std::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      reverse_edge(const SetName1& reversed_name, bool apply_parity = false, const SetName2& parity_exclude_name = {}) const;
+      reverse_edge(const SetName1& reversed_name, bool apply_parity = false, SetName2&& parity_exclude_name = {}) const;
 
       /**
        * 合并张量的一些边
@@ -519,8 +517,8 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
             MapNameVectorName merge,
             bool apply_parity = false,
-            const SetName& parity_exclude_name_merge = {},
-            const SetName& parity_exclude_name_reverse = {}) const;
+            SetName&& parity_exclude_name_merge = {},
+            SetName&& parity_exclude_name_reverse = {}) const;
 
       /**
        * 分裂张量的一些边
@@ -533,7 +531,7 @@ namespace TAT {
             typename MapNameVectorNameAndEdge = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
             typename SetName = std::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      split_edge(MapNameVectorNameAndEdge split, bool apply_parity = false, const SetName& parity_exclude_name_split = {}) const;
+      split_edge(MapNameVectorNameAndEdge split, bool apply_parity = false, SetName&& parity_exclude_name_split = {}) const;
 
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
       /**

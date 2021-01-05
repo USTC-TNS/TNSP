@@ -102,12 +102,12 @@ namespace TAT {
             {},
             reverse_names,
             pmr::map<Name, pmr::vector<Name>>{
-                  {InternalName<Name>::Trace_1, trace_1_names},
-                  {InternalName<Name>::Trace_2, trace_2_names},
+                  {InternalName<Name>::Trace_1, std::move(trace_1_names)},
+                  {InternalName<Name>::Trace_2, std::move(trace_2_names)},
                   {InternalName<Name>::Trace_3, result_names}},
-            {InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
+            pmr::vector<Name>{InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
             false,
-            {{{}, {}, {}, {InternalName<Name>::Trace_1}}});
+            std::array<pmr::set<Name>, 4>{{{}, {}, {}, {InternalName<Name>::Trace_1}}});
       // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
       auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
@@ -128,7 +128,7 @@ namespace TAT {
          }
       }
       auto result = traced_tensor.edge_operator(
-            {}, pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, split_plan}}, reverse_names, {}, result_names);
+            {}, pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, std::move(split_plan)}}, reverse_names, {}, result_names);
       return result;
    }
 } // namespace TAT
