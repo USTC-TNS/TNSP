@@ -151,6 +151,7 @@ namespace TAT {
    template<typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const SetNameAndName& pairs, int step) const {
       auto timer_guard = exponential_guard();
+      auto pmr_guard = scope_resource<>();
 
       Rank rank = names.size();
       Rank half_rank = rank / 2;

@@ -29,6 +29,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       auto timer_guard = multiple_guard();
+      auto pmr_guard = scope_resource<>();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;
@@ -110,6 +111,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
       auto timer_guard = conjugate_guard();
+      auto pmr_guard = scope_resource<>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return *this;
       }
