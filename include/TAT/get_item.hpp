@@ -119,8 +119,8 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   template<typename MapNamePointOfEdge>
-   const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const MapNamePointOfEdge& position) const& {
+   template<typename MapNameEdgePoint>
+   const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const MapNameEdgePoint& position) const& {
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
@@ -131,8 +131,8 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   template<typename MapNamePointOfEdge>
-   ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const MapNamePointOfEdge& position) & {
+   template<typename MapNameEdgePoint>
+   ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const MapNameEdgePoint& position) & {
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
          TAT_warning_or_error_when_copy_shared(

@@ -226,20 +226,22 @@ namespace TAT {
          return core->blocks.begin()->second.front();
       }
 
-      using EdgeInfoForGetItem = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
-      using EdgeInfoWithArrowForExpand = std::conditional_t<
+      using EdgePoint = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
+      using EdgePointWithArrow = std::conditional_t<
             std::is_same_v<Symmetry, NoSymmetry>,
             std::tuple<Size, Size>,
             std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
+      template<typename ExpandConfigure = std::map<Name, EdgePointWithArrow>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
+      expand(const ExpandConfigure& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
 
+      template<typename ShrinkConfigure = std::map<Name, EdgePoint>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      shrink(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
+      shrink(const ShrinkConfigure& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
       [[deprecated("Use shrink instead, slice will be remove in v0.2.0")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      slice(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
+      slice(const std::map<Name, EdgePoint>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
          return shrink(configure, new_name, arrow);
       }
 
@@ -350,23 +352,21 @@ namespace TAT {
       template<typename MapNameSymmetry = std::map<Name, Symmetry>>
       [[nodiscard]] const auto& const_block(const MapNameSymmetry& position = {}) const&;
 
-      using PointOfEdge = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
-
       /**
        * 获取张量中某个分块内的某个元素
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
        * \note position对于无对称性张量, 为边名到维度的映射表, 对于有对称性的张量, 是边名到对称性和相应维度的映射表
        */
-      template<typename MapNamePointOfEdge = std::map<Name, PointOfEdge>>
-      [[nodiscard]] const ScalarType& at(const MapNamePointOfEdge& position) const& {
+      template<typename MapNameEdgePoint = std::map<Name, EdgePoint>>
+      [[nodiscard]] const ScalarType& at(const MapNameEdgePoint& position) const& {
          return const_at(position);
       }
 
-      template<typename MapNamePointOfEdge = std::map<Name, PointOfEdge>>
-      [[nodiscard]] ScalarType& at(const MapNamePointOfEdge& position) &;
+      template<typename MapNameEdgePoint = std::map<Name, EdgePoint>>
+      [[nodiscard]] ScalarType& at(const MapNameEdgePoint& position) &;
 
-      template<typename MapNamePointOfEdge = std::map<Name, PointOfEdge>>
-      [[nodiscard]] const ScalarType& const_at(const MapNamePointOfEdge& position) const&;
+      template<typename MapNameEdgePoint = std::map<Name, EdgePoint>>
+      [[nodiscard]] const ScalarType& const_at(const MapNameEdgePoint& position) const&;
 
       /**
        * 不同标量类型的张量之间的转换函数
@@ -611,9 +611,10 @@ namespace TAT {
       /**
        * 看作矩阵后求出矩阵指数
        * \param pairs 边的配对方案
-       * \param step 展开近似的次数
+       * \param step 迭代步数
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::set<std::tuple<Name, Name>>& pairs, int step = 2) const;
+      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const SetNameAndName& pairs, int step = 2) const;
 
       /**
        * 生成张量的共轭张量
