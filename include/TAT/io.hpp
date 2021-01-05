@@ -468,7 +468,7 @@ namespace TAT {
    std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       ignore_util(in, ':');
       in >> tensor.names;
-      tensor.name_to_index = construct_name_to_index(tensor.names);
+      tensor.name_to_index = construct_name_to_index<std::map<Name, Rank>>(tensor.names);
       ignore_util(in, ':');
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();
       in >> tensor.core->edges;
@@ -602,7 +602,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
       in > names;
-      name_to_index = construct_name_to_index(names);
+      name_to_index = construct_name_to_index<std::map<Name, Rank>>(names);
       core = std::make_shared<Core<ScalarType, Symmetry>>();
       in > core->edges;
       check_valid_name(names, core->edges.size());
