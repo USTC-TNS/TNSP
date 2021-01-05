@@ -1,7 +1,7 @@
 /**
  * \file auxiliaries_system.hpp
  *
- * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
