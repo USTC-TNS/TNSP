@@ -107,7 +107,7 @@ namespace TAT {
          // share the core
          auto result = Tensor<ScalarType, Symmetry, Name>();
          result.names = std::move(new_names);
-         result.name_to_index = construct_name_to_index(result.names);
+         result.name_to_index = construct_name_to_index<std::map<Name, Rank>>(result.names);
          result.core = core; // 因为是rename edge所以不拷贝
          // check_valid_name(result.names, result.core->edges.size());
          return result;
@@ -274,7 +274,7 @@ namespace TAT {
       // create res names
       auto result = Tensor<ScalarType, Symmetry, Name>();
       result.names = std::move(new_names);
-      result.name_to_index = construct_name_to_index(result.names);
+      result.name_to_index = construct_name_to_index<std::map<Name, Rank>>(result.names);
 
       // 1.4 transpose之后的rank, name
 
@@ -318,7 +318,7 @@ namespace TAT {
 
       // 1.5 转置方案
       // to be easy, create name_to_index for name_3
-      auto name_to_index_after_split = construct_name_to_index(name_after_split);
+      auto name_to_index_after_split = construct_name_to_index<std::map<Name, Rank>>(name_after_split);
       // create plan of two way
       auto plan_source_to_destination = std::vector<Rank>(rank_at_transpose);
       auto plan_destination_to_source = std::vector<Rank>(rank_at_transpose);

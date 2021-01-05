@@ -152,7 +152,7 @@ namespace TAT {
        */
       Tensor(std::vector<Name> names_init, std::vector<Edge<Symmetry>> edges_init, const bool auto_reverse = false) :
             names(std::move(names_init)),
-            name_to_index(construct_name_to_index(names)),
+            name_to_index(construct_name_to_index<std::map<Name, Rank>>(names)),
             core(std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges_init), auto_reverse)) {
          check_valid_name(names, core->edges.size());
       }

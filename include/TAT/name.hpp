@@ -236,9 +236,9 @@ namespace TAT {
    constexpr bool is_name_v = is_name<Name>::value;
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename Name>
-   std::map<Name, Rank> construct_name_to_index(const std::vector<Name>& names) {
-      std::map<Name, Rank> result;
+   template<typename MapNameRank, typename VectorName>
+   auto construct_name_to_index(const VectorName& names) {
+      MapNameRank result;
       for (Rank name_index = 0; name_index < names.size(); name_index++) {
          result[names[name_index]] = name_index;
       }

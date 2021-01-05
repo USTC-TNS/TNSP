@@ -37,7 +37,7 @@ namespace TAT {
             return position->second;
          }
       });
-      result.name_to_index = construct_name_to_index(result.names);
+      result.name_to_index = construct_name_to_index<std::map<Name, Rank>>(result.names);
       return result;
    }
 
