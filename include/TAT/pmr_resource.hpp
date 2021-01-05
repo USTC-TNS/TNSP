@@ -44,6 +44,8 @@ namespace TAT {
       template<typename Key, typename T, typename Compare = std::less<Key>>
       using map = std::map<Key, T, Compare, polymorphic_allocator<std::pair<const Key, T>>>;
 
+      template<class Key, class Compare = std::less<Key>>
+      using set = std::set<Key, Compare, polymorphic_allocator<Key>>;
    } // namespace pmr
 #else
    namespace pmr = std::pmr;

@@ -21,6 +21,7 @@
 #ifndef TAT_SVD_HPP
 #define TAT_SVD_HPP
 
+#include "pmr_resource.hpp"
 #include "tensor.hpp"
 #include "timer.hpp"
 #include "transpose.hpp"
@@ -256,12 +257,13 @@ namespace TAT {
          const Name& singular_name_u,
          const Name& singular_name_v) const {
       auto guard = svd_guard();
+      auto pmr_guard = scope_resource<>();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
       // merge
-      auto free_name_u = std::vector<Name>();
-      auto free_name_v = std::vector<Name>();
+      auto free_name_u = pmr::vector<Name>();
+      auto free_name_v = pmr::vector<Name>();
       auto reversed_set_u = std::set<Name>();
       auto reversed_set_v = std::set<Name>();
       auto reversed_set_origin = std::set<Name>();
@@ -354,8 +356,8 @@ namespace TAT {
       for (const auto& [symmetry, vector_s] : result_s) {
          total_dimension += vector_s.size();
       }
-      auto remain_dimension_u = std::map<Symmetry, Size>();
-      auto remain_dimension_v = std::map<Symmetry, Size>();
+      auto remain_dimension_u = pmr::map<Symmetry, Size>();
+      auto remain_dimension_v = pmr::map<Symmetry, Size>();
       if (cut != Size(-1) && cut < total_dimension) {
          // auto remain_dimension = std::map<Symmetry, Size>();
          for (const auto& [symmetry, vector_s] : result_s) {
