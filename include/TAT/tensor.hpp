@@ -581,7 +581,7 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge(const Tensor<ScalarType, Symmetry, Name>& other) const {
          // other不含有的边会在contract中自动删除
-         auto contract_names = std::set<std::tuple<Name, Name>>();
+         auto contract_names = pmr::set<std::tuple<Name, Name>>();
          for (const auto& i : names) {
             contract_names.insert({i, i});
          }
