@@ -580,6 +580,7 @@ namespace TAT {
        * \return 缩并后的结果
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge(const Tensor<ScalarType, Symmetry, Name>& other) const {
+         auto pmr_guard = scope_resource<1 << 10>();
          // other不含有的边会在contract中自动删除
          auto contract_names = pmr::set<std::tuple<Name, Name>>();
          for (const auto& i : names) {

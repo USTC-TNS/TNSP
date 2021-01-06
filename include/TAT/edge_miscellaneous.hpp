@@ -63,6 +63,7 @@ namespace TAT {
          const bool apply_parity,
          SetName&& parity_exclude_name_merge,
          SetName&& parity_exclude_name_reverse) const {
+      auto pmr_guard = scope_resource<1 << 10>();
       // delete edge from names_before_merge if not exist
       for (auto& [name_after_merge, names_before_merge] : merge) {
          auto new_names_before_merge = decltype(names_before_merge)();
@@ -120,6 +121,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::split_edge(MapNameVectorNameAndEdge split, const bool apply_parity, SetName&& parity_exclude_name_split)
          const {
+      auto pmr_guard = scope_resource<1 << 10>();
       // 删除不存在的边
       // 根据edge_operator中的操作, 这应该是多余的, 不在names中的元素会自动忽略
       for (auto iterator = split.begin(); iterator != split.end();) {

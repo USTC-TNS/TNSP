@@ -62,8 +62,6 @@ namespace TAT {
          const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all) const {
       auto timer_guard = transpose_guard();
       auto pmr_guard = scope_resource<>();
-      // vector<std::byte> buffer(1 << 15);
-      // auto pmr_guard = scope_resource_adapter(buffer.data(), buffer.size() * sizeof(std::byte));
       // step 1: rename and cut
       // step 2: split
       // step 3: reverse
