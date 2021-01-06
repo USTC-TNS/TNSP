@@ -282,8 +282,7 @@ namespace TAT {
          return;
       }
       using Symmetry = typename T::symmetry_type;
-      using MapIteratorList = std::vector<typename T::edge_map::const_iterator>;
-      auto symmetry_iterator_list = MapIteratorList();
+      auto symmetry_iterator_list = pmr::vector<typename T::edge_map::const_iterator>();
       symmetry_iterator_list.reserve(rank);
       for (auto i = 0; i != rank; ++i) {
          const auto& map = edges[i].map;
@@ -315,7 +314,6 @@ namespace TAT {
    template<typename T>
    [[nodiscard]] auto initialize_block_symmetries_with_check(const T& edges) {
       using Symmetry = typename T::value_type::symmetry_type;
-      using MapIteratorList = std::vector<typename T::value_type::edge_map::const_iterator>;
       Rank rank = edges.size();
       auto result = pmr::vector<std::tuple<pmr::vector<Symmetry>, Size>>();
       auto symmetries = pmr::vector<Symmetry>(rank);
@@ -327,7 +325,7 @@ namespace TAT {
                result.push_back({pmr::vector<Symmetry>{}, 1});
             },
             []() {},
-            [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
+            [&](const auto& symmetry_iterator_list, Rank minimum_changed) {
                auto symmetry_summary = Symmetry();
                for (const auto& symmetry_iterator : symmetry_iterator_list) {
                   symmetry_summary += symmetry_iterator->first;

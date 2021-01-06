@@ -215,7 +215,7 @@ namespace TAT {
                         this_offset[pmr::vector<Symmetry>{}] = {Symmetry(), 0};
                      },
                      []() {},
-                     [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
+                     [&](const auto& symmetry_iterator_list, Rank minimum_changed) {
                         for (auto i = minimum_changed; i < split_rank; i++) {
                            const auto& symmetry_iterator = symmetry_iterator_list[i];
                            accumulated_symmetries[i] = symmetry_iterator->first + (i ? accumulated_symmetries[i - 1] : Symmetry());
@@ -443,7 +443,7 @@ namespace TAT {
                         this_offset[pmr::vector<Symmetry>{}] = {Symmetry(), 0};
                      },
                      []() {},
-                     [&](const MapIteratorList& symmetry_iterator_list, const Rank minimum_changed) {
+                     [&](const auto& symmetry_iterator_list, const Rank minimum_changed) {
                         for (auto i = minimum_changed; i < merge_rank; i++) {
                            const auto& symmetry_iterator = symmetry_iterator_list[i];
                            accumulated_symmetries[i] = symmetry_iterator->first + (i ? accumulated_symmetries[i - 1] : Symmetry());
