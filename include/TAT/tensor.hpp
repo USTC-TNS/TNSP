@@ -32,6 +32,7 @@
 #include "core.hpp"
 #include "edge.hpp"
 #include "name.hpp"
+#include "pmr_resource.hpp"
 #include "symmetry.hpp"
 
 namespace TAT {
@@ -205,7 +206,7 @@ namespace TAT {
           const std::vector<Symmetry>& edge_symmetry = {},
           const std::vector<Arrow>& edge_arrow = {}) {
          auto rank = names_init.size();
-         auto result = Tensor(std::move(names_init), get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
+         auto result = Tensor(names_init, get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
          result.core->blocks.begin()->second.front() = number;
          return result;
       }
@@ -230,16 +231,16 @@ namespace TAT {
             std::tuple<Size, Size>,
             std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
-      template<typename ExpandConfigure = std::map<Name, EdgePointWithArrow>>
+      template<typename ExpandConfigure = pmr::map<Name, EdgePointWithArrow>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       expand(const ExpandConfigure& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
 
-      template<typename ShrinkConfigure = std::map<Name, EdgePoint>>
+      template<typename ShrinkConfigure = pmr::map<Name, EdgePoint>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(const ShrinkConfigure& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
       [[deprecated("Use shrink instead, slice will be remove in v0.2.0")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      slice(const std::map<Name, EdgePoint>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
+      slice(const pmr::map<Name, EdgePoint>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
          return shrink(configure, new_name, arrow);
       }
 
@@ -339,15 +340,15 @@ namespace TAT {
        * \return 一个不可变的一维数组
        * \see get_block_for_get_item
        */
-      template<typename MapNameSymmetry = std::map<Name, Symmetry>>
+      template<typename MapNameSymmetry = pmr::map<Name, Symmetry>>
       [[nodiscard]] const auto& block(const MapNameSymmetry& position = {}) const& {
          return const_block(position);
       }
 
-      template<typename MapNameSymmetry = std::map<Name, Symmetry>>
+      template<typename MapNameSymmetry = pmr::map<Name, Symmetry>>
       [[nodiscard]] auto& block(const MapNameSymmetry& position = {}) &;
 
-      template<typename MapNameSymmetry = std::map<Name, Symmetry>>
+      template<typename MapNameSymmetry = pmr::map<Name, Symmetry>>
       [[nodiscard]] const auto& const_block(const MapNameSymmetry& position = {}) const&;
 
       /**
@@ -355,15 +356,15 @@ namespace TAT {
        * \param position 分块每个子边对应的对称性值以及元素在此子边上的位置
        * \note position对于无对称性张量, 为边名到维度的映射表, 对于有对称性的张量, 是边名到对称性和相应维度的映射表
        */
-      template<typename MapNameEdgePoint = std::map<Name, EdgePoint>>
+      template<typename MapNameEdgePoint = pmr::map<Name, EdgePoint>>
       [[nodiscard]] const ScalarType& at(const MapNameEdgePoint& position) const& {
          return const_at(position);
       }
 
-      template<typename MapNameEdgePoint = std::map<Name, EdgePoint>>
+      template<typename MapNameEdgePoint = pmr::map<Name, EdgePoint>>
       [[nodiscard]] ScalarType& at(const MapNameEdgePoint& position) &;
 
-      template<typename MapNameEdgePoint = std::map<Name, EdgePoint>>
+      template<typename MapNameEdgePoint = pmr::map<Name, EdgePoint>>
       [[nodiscard]] const ScalarType& const_at(const MapNameEdgePoint& position) const&;
 
       /**
@@ -459,12 +460,12 @@ namespace TAT {
        * \note 本函数对转置外不标准的腿的输入是脆弱的
        */
       template<
-            typename MapNameName = std::map<Name, Name>,
-            typename MapNameVectorNameAndEdge = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
-            typename SetName1 = std::set<Name>,
-            typename MapNameVectorName = std::map<Name, std::vector<Name>>,
-            typename VectorName = std::vector<Name>,
-            typename SetName2 = std::set<Name>,
+            typename MapNameName = pmr::map<Name, Name>,
+            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename SetName1 = pmr::set<Name>,
+            typename MapNameVectorName = pmr::map<Name, std::vector<Name>>,
+            typename VectorName = pmr::vector<Name>,
+            typename SetName2 = pmr::set<Name>,
             typename MapNameMapSymmetrySize = std::map<Name, std::map<Symmetry, Size>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
             const MapNameName& rename_map,
@@ -482,7 +483,7 @@ namespace TAT {
        * \return 仅仅改变了边的名称的张量, 与原张量共享Core
        * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator, 而是实现一个小功能的edge_rename
        */
-      template<typename MapNameName = std::map<Name, Name>>
+      template<typename MapNameName = pmr::map<Name, Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_rename(const MapNameName& dictionary) const;
 
       /**
@@ -490,7 +491,7 @@ namespace TAT {
        * \param target_names 转置后的目标边的名称顺序
        * \return 转置后的结果张量
        */
-      template<typename VectorName = std::vector<Name>>
+      template<typename VectorName = pmr::vector<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(const VectorName& target_names) const;
 
       /**
@@ -500,7 +501,7 @@ namespace TAT {
        * \param parity_exclude_name 与apply_parity行为相反的边名集合
        * \return 反转后的结果张量
        */
-      template<typename SetName1 = std::set<Name>, typename SetName2 = std::set<Name>>
+      template<typename SetName1 = pmr::set<Name>, typename SetName2 = pmr::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       reverse_edge(const SetName1& reversed_name, bool apply_parity = false, SetName2&& parity_exclude_name = {}) const;
 
@@ -513,7 +514,7 @@ namespace TAT {
        * \return 合并边后的结果张量
        * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
        */
-      template<typename MapNameVectorName = std::map<Name, std::vector<Name>>, typename SetName = std::set<Name>>
+      template<typename MapNameVectorName = pmr::map<Name, std::vector<Name>>, typename SetName = pmr::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
             MapNameVectorName merge,
             bool apply_parity = false,
@@ -528,8 +529,8 @@ namespace TAT {
        * \return 分裂边后的结果张量
        */
       template<
-            typename MapNameVectorNameAndEdge = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
-            typename SetName = std::set<Name>>
+            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename SetName = pmr::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       split_edge(MapNameVectorNameAndEdge split, bool apply_parity = false, SetName&& parity_exclude_name_split = {}) const;
 
@@ -541,13 +542,13 @@ namespace TAT {
        * \param contract_names 两个张量将要缩并掉的边的名称
        * \return 缩并后的张量
        */
-      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
             SetNameAndName&& contract_names);
 
-      template<typename ScalarType1, typename ScalarType2, typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      template<typename ScalarType1, typename ScalarType2, typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] static auto contract(
             const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
@@ -572,7 +573,7 @@ namespace TAT {
          }
       }
 
-      template<typename OtherScalarType, typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      template<typename OtherScalarType, typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, SetNameAndName&& contract_names) const {
          return contract(*this, tensor_2, std::forward<SetNameAndName>(contract_names));
       }
@@ -603,7 +604,7 @@ namespace TAT {
        * 生成相同形状的单位张量
        * \param pairs 看作矩阵时边的配对方案
        */
-      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const SetNameAndName& pairs) const;
 
       /**
@@ -611,7 +612,7 @@ namespace TAT {
        * \param pairs 边的配对方案
        * \param step 迭代步数
        */
-      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const SetNameAndName& pairs, int step = 2) const;
 
       /**
@@ -620,7 +621,7 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
 
-      template<typename SetNameAndName = std::set<std::tuple<Name, Name>>>
+      template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const SetNameAndName& trace_names) const;
 
       using SingularType =
@@ -668,7 +669,7 @@ namespace TAT {
        * \see svd_result
        * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
-      template<typename SetName = std::set<Name>>
+      template<typename SetName = pmr::set<Name>>
       [[nodiscard]] svd_result
       svd(const SetName& free_name_set_u,
           const Name& common_name_u,
@@ -686,7 +687,7 @@ namespace TAT {
        * \return qr的结果
        * \see qr_result
        */
-      template<typename SetName = std::set<Name>>
+      template<typename SetName = pmr::set<Name>>
       [[nodiscard]] qr_result qr(char free_name_direction, const SetName& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
 
 #ifdef TAT_USE_MPI
@@ -741,7 +742,7 @@ namespace TAT {
    /**@}*/
 
    /// \private
-   template<typename Tensor1, typename Tensor2, typename SetNameAndName = std::set<std::tuple<typename Tensor1::name_t, typename Tensor2::name_t>>>
+   template<typename Tensor1, typename Tensor2, typename SetNameAndName = pmr::set<std::tuple<typename Tensor1::name_t, typename Tensor2::name_t>>>
    [[nodiscard]] auto contract(const Tensor1& tensor_1, const Tensor2& tensor_2, SetNameAndName&& contract_names) {
       return tensor_1.contract(tensor_2, std::forward<SetNameAndName>(contract_names));
    }
