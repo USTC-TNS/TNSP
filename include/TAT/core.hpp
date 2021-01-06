@@ -147,7 +147,7 @@ namespace TAT {
          // 生成数据
          auto symmetries_list = initialize_block_symmetries_with_check(edges);
          for (auto& [symmetries, size] : symmetries_list) {
-            blocks[symmetries] = vector<ScalarType>(size);
+            blocks[{symmetries.begin(), symmetries.end()}] = vector<ScalarType>(size);
          }
          // 删除不在block中用到的symmetry
          const Rank rank = edges.size();

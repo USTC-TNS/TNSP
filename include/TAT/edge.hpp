@@ -25,6 +25,7 @@
 #include <set>
 
 #include "basic_type.hpp"
+#include "pmr_resource.hpp"
 #include "symmetry.hpp"
 
 namespace TAT {
@@ -316,14 +317,14 @@ namespace TAT {
       using Symmetry = typename T::value_type::symmetry_type;
       using MapIteratorList = std::vector<typename T::value_type::edge_map::const_iterator>;
       Rank rank = edges.size();
-      auto result = std::vector<std::tuple<std::vector<Symmetry>, Size>>();
-      auto symmetries = std::vector<Symmetry>(rank);
-      auto sizes = std::vector<Size>(rank);
+      auto result = pmr::vector<std::tuple<pmr::vector<Symmetry>, Size>>();
+      auto symmetries = pmr::vector<Symmetry>(rank);
+      auto sizes = pmr::vector<Size>(rank);
       loop_edge(
             edges.data(),
             rank,
             [&result]() {
-               result.push_back({std::vector<Symmetry>{}, 1});
+               result.push_back({pmr::vector<Symmetry>{}, 1});
             },
             []() {},
             [&](const MapIteratorList& symmetry_iterator_list, Rank minimum_changed) {
@@ -358,13 +359,13 @@ namespace TAT {
    constexpr bool is_edge_v = is_edge<T>::value;
 
    /// \private
-   template<typename Symmetry>
-   [[nodiscard]] std::vector<Edge<Symmetry>>
-   get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
+   template<typename VectorSymmetry, typename VectorArrow>
+   [[nodiscard]] auto get_edge_from_edge_symmetry_and_arrow(const VectorSymmetry& edge_symmetry, const VectorArrow& edge_arrow, Rank rank) {
+      using Symmetry = typename VectorSymmetry::value_type;
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         return std::vector<Edge<Symmetry>>(rank, {1});
+         return pmr::vector<Edge<Symmetry>>(rank, {1});
       } else {
-         auto result = std::vector<Edge<Symmetry>>();
+         auto result = pmr::vector<Edge<Symmetry>>();
          result.reserve(rank);
          for (auto i = 0; i < rank; i++) {
             if constexpr (is_fermi_symmetry_v<Symmetry>) {

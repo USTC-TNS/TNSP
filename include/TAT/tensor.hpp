@@ -149,7 +149,7 @@ namespace TAT {
        * \param auto_reverse 费米对称性是否自动根据是否有负值整个反转
        * \see Core
        */
-      template<typename VectorName = std::vector<Name>, typename VectorEdge = std::vector<Edge<Symmetry>>>
+      template<typename VectorName = pmr::vector<Name>, typename VectorEdge = pmr::vector<Edge<Symmetry>>>
       Tensor(const VectorName& names_init, const VectorEdge& edges_init, const bool auto_reverse = false) :
             names(names_init.begin(), names_init.end()),
             name_to_index(construct_name_to_index<decltype(name_to_index)>(names)),
@@ -200,11 +200,9 @@ namespace TAT {
        * \param edge_symmetry 如果系统含有对称性, 则需要设置此值
        * \param edge_arrow 如果系统对称性为fermi对称性, 则需要设置此值
        */
+      template<typename VectorName = pmr::vector<Name>, typename VectorSymmetry = pmr::vector<Symmetry>, typename VectorArrow = pmr::vector<Arrow>>
       [[nodiscard]] static Tensor<ScalarType, Symmetry, Name>
-      one(ScalarType number,
-          std::vector<Name> names_init,
-          const std::vector<Symmetry>& edge_symmetry = {},
-          const std::vector<Arrow>& edge_arrow = {}) {
+      one(ScalarType number, const VectorName& names_init, const VectorSymmetry& edge_symmetry = {}, const VectorArrow& edge_arrow = {}) {
          auto rank = names_init.size();
          auto result = Tensor(names_init, get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
          result.core->blocks.begin()->second.front() = number;

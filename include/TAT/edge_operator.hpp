@@ -557,7 +557,8 @@ namespace TAT {
                }
             }
             if (success) {
-               data_before_transpose_to_source[symmetries_before_transpose] = {std::move(symmetries), std::move(offsets)};
+               data_before_transpose_to_source[{symmetries_before_transpose.begin(), symmetries_before_transpose.end()}] = {
+                     std::move(symmetries), std::move(offsets)};
             }
          }
       } else {
@@ -598,7 +599,8 @@ namespace TAT {
                }
             }
             if (success) {
-               data_after_transpose_to_destination[symmetries_after_transpose] = {std::move(symmetries), std::move(offsets)};
+               data_after_transpose_to_destination[{symmetries_after_transpose.begin(), symmetries_after_transpose.end()}] = {
+                     std::move(symmetries), std::move(offsets)};
             }
          }
       } else {
