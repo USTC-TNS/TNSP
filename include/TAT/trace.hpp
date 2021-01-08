@@ -75,6 +75,8 @@ namespace TAT {
                // 统计traced names
                traced_names.insert(name_to_find);
                traced_names.insert(*name_correspond);
+               auto index_correspond = name_to_index.at(*name_correspond);
+               valid_index[index_correspond] = false;
             }
          }
       }
