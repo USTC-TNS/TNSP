@@ -102,6 +102,10 @@ namespace TAT {
     * @{
     */
 
+   /// \private
+   template<typename ScalarType, typename Symmetry, typename Name>
+   struct TensorShape;
+
    /**
     * 张量类型
     *
@@ -142,6 +146,10 @@ namespace TAT {
        * \note 因为重命名边的操作很常见, 为了避免复制, 使用shared_ptr封装Core
        */
       std::shared_ptr<Core<ScalarType, Symmetry>> core;
+
+      TensorShape<ScalarType, Symmetry, Name> shape() {
+         return {this};
+      }
 
       /**
        * 根据张量边的名称和形状构造张量, 分块将自动根据对称性进行处理
@@ -726,6 +734,12 @@ namespace TAT {
          std::set<std::tuple<Name, Name>> contract_names) {
       return tensor_1.contract(tensor_2, std::move(contract_names));
    }
+
+   /// \private
+   template<typename ScalarType, typename Symmetry, typename Name>
+   struct TensorShape {
+      Tensor<ScalarType, Symmetry, Name>* owner;
+   };
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
    // 因为contract的操作是这样的
