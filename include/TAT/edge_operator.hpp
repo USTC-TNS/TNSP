@@ -492,7 +492,7 @@ namespace TAT {
       // the code above is dealing with edge_5 and res_Edge and reversed_flag_dst
 
       // put res_edge into res
-      result.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(result_edge));
+      result.core = std::make_shared<Core<ScalarType, Symmetry>>(result_edge);
       check_valid_name(result.names, result.core->edges.size());
       // edge_6
       const auto& edge_after_merge = result.core->edges;

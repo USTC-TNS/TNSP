@@ -30,13 +30,20 @@
 #endif
 
 namespace TAT {
-#ifdef TAT_USE_BOOST_PMR
    namespace pmr {
-      using boost::container::pmr::get_default_resource;
-      using boost::container::pmr::memory_resource;
-      using boost::container::pmr::monotonic_buffer_resource;
-      using boost::container::pmr::polymorphic_allocator;
-      using boost::container::pmr::set_default_resource;
+      namespace pmr_source =
+#ifdef TAT_USE_BOOST_PMR
+            boost::container::pmr
+#else
+            std::pmr
+#endif
+            ;
+
+      using pmr_source::get_default_resource;
+      using pmr_source::memory_resource;
+      using pmr_source::monotonic_buffer_resource;
+      using pmr_source::polymorphic_allocator;
+      using pmr_source::set_default_resource;
 
       template<typename T>
       using vector = std::vector<T, polymorphic_allocator<T>>;
@@ -47,9 +54,6 @@ namespace TAT {
       template<class Key, class Compare = std::less<Key>>
       using set = std::set<Key, Compare, polymorphic_allocator<Key>>;
    } // namespace pmr
-#else
-   namespace pmr = std::pmr;
-#endif
 
    // on windows stack size is 1MB(1<<20), and on linux, stack size is 8M(1<<23)
    constexpr std::size_t default_buffer_size = 1 << 15;
@@ -65,6 +69,7 @@ namespace TAT {
       }
    };
 
+#if 0
    struct scope_resource_adapter {
       pmr::monotonic_buffer_resource resource;
       pmr::memory_resource* upstream;
@@ -73,5 +78,6 @@ namespace TAT {
          pmr::set_default_resource(upstream);
       }
    };
+#endif
 } // namespace TAT
 #endif
