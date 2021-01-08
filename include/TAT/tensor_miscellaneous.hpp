@@ -83,8 +83,11 @@ namespace TAT {
 #else
                   auto v = vector_in_S[b];
 #endif
+                  const auto* data_source_block = &data_source[(a * k + b) * n];
+                  auto* data_destination_block = &data_destination[(a * k + b) * n];
+#pragma simd
                   for (Size c = 0; c < n; c++) {
-                     *(data_destination++) = *(data_source++) / v;
+                     data_destination_block[c] = data_source_block[c] / v;
                   }
                }
             }
@@ -96,8 +99,11 @@ namespace TAT {
 #else
                   auto v = vector_in_S[b];
 #endif
+                  const auto* data_source_block = &data_source[(a * k + b) * n];
+                  auto* data_destination_block = &data_destination[(a * k + b) * n];
+#pragma simd
                   for (Size c = 0; c < n; c++) {
-                     *(data_destination++) = *(data_source++) * v;
+                     data_destination_block[c] = data_source_block[c] * v;
                   }
                }
             }
