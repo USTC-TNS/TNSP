@@ -435,7 +435,8 @@ namespace square {
          if (!possible_hopping.empty()) {
             int hopping_number = possible_hopping.size();
             auto random_index = random::uniform<int>(0, hopping_number - 1)();
-            auto iter = std::advance(possible_hopping.begin(), random_index);
+            auto iter = possible_hopping.begin();
+            std::advance(iter, random_index);
             const auto& [spins_new, element] = *iter;
             auto replacement = std::map<std::tuple<int, int>, int>();
             for (auto i = 0; i < body; i++) {
