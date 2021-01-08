@@ -96,6 +96,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename MapNameSymmetry>
    const auto& Tensor<ScalarType, Symmetry, Name>::const_block(const MapNameSymmetry& position) const& {
+      auto pmr_guard = scope_resource<1 << 10>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return core->blocks.begin()->second;
       }
@@ -106,6 +107,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename MapNameSymmetry>
    auto& Tensor<ScalarType, Symmetry, Name>::block(const MapNameSymmetry& position) & {
+      auto pmr_guard = scope_resource<1 << 10>();
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
          TAT_warning_or_error_when_copy_shared(
@@ -121,6 +123,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename MapNameEdgePoint>
    const ScalarType& Tensor<ScalarType, Symmetry, Name>::const_at(const MapNameEdgePoint& position) const& {
+      auto pmr_guard = scope_resource<1 << 10>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          auto offset = get_offset_for_get_item(position, names, *core);
          return core->blocks.begin()->second[offset];
@@ -133,6 +136,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename MapNameEdgePoint>
    ScalarType& Tensor<ScalarType, Symmetry, Name>::at(const MapNameEdgePoint& position) & {
+      auto pmr_guard = scope_resource<1 << 10>();
       if (core.use_count() != 1) {
          core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
          TAT_warning_or_error_when_copy_shared(
