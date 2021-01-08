@@ -90,7 +90,7 @@ namespace TAT {
       auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
-      return contract_all_edge(helper);
+      return helper.contract_all_edge(*this);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
@@ -149,7 +149,7 @@ namespace TAT {
       auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
-      return contract_all_edge(helper);
+      return helper.contract_all_edge(*this);
    }
 } // namespace TAT
 #endif
