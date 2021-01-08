@@ -29,6 +29,10 @@
 #include <memory_resource>
 #endif
 
+#include <map>
+#include <set>
+#include <vector>
+
 namespace TAT {
    namespace pmr {
       namespace pmr_source =
@@ -39,11 +43,32 @@ namespace TAT {
 #endif
             ;
 
-      using pmr_source::get_default_resource;
       using pmr_source::memory_resource;
       using pmr_source::monotonic_buffer_resource;
-      using pmr_source::polymorphic_allocator;
-      using pmr_source::set_default_resource;
+
+      inline memory_resource* default_resource = pmr_source::new_delete_resource();
+      inline memory_resource* get_default_resource() {
+         return default_resource;
+      }
+      inline memory_resource* set_default_resource(memory_resource* input) {
+         auto result = default_resource;
+         default_resource = input;
+         return result;
+      }
+
+      template<typename T>
+      struct polymorphic_allocator : pmr_source::polymorphic_allocator<T> {
+         polymorphic_allocator() noexcept : pmr_source::polymorphic_allocator<T>(get_default_resource()) {}
+         polymorphic_allocator(const polymorphic_allocator& other) = default;
+         template<typename U>
+         polymorphic_allocator(const polymorphic_allocator<U>& other) noexcept :
+               pmr_source::polymorphic_allocator<T>(static_cast<const pmr_source::polymorphic_allocator<T>&>(other)) {}
+         polymorphic_allocator(memory_resource* r) : pmr_source::polymorphic_allocator<T>(r) {}
+
+         polymorphic_allocator<T> select_on_container_copy_construction() const {
+            return polymorphic_allocator<T>();
+         }
+      };
 
       template<typename T>
       using vector = std::vector<T, polymorphic_allocator<T>>;
