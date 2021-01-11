@@ -42,7 +42,7 @@ namespace TAT {
       return true;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<
          typename MapNameName,
          typename MapNameVectorNameAndEdge,
@@ -51,7 +51,7 @@ namespace TAT {
          typename VectorName,
          typename SetName2,
          typename MapNameMapSymmetrySize>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::edge_operator(
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::edge_operator(
          const MapNameName& rename_map,
          const MapNameVectorNameAndEdge& split_map,
          const SetName1& reversed_name,
@@ -129,7 +129,7 @@ namespace TAT {
       if (is_same_vector(name_before_split, new_names) && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
           edge_and_symmetries_to_cut_before_all.empty()) {
          // share the core
-         auto result = Tensor<ScalarType, Symmetry, Name>();
+         auto result = Tensor<ScalarType, Symmetry, Name, Allocator>();
          result.names = {new_names.begin(), new_names.end()};
          result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
          result.core = core; // 因为是rename edge所以不拷贝
@@ -296,7 +296,7 @@ namespace TAT {
       const auto& edge_before_transpose = is_fermi && !reversed_name.empty() ? fermi_edge_before_transpose : edge_after_split;
 
       // create res names
-      auto result = Tensor<ScalarType, Symmetry, Name>();
+      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>();
       result.names = {new_names.begin(), new_names.end()};
       result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
 

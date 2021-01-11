@@ -265,24 +265,24 @@ namespace TAT {
 #endif
 
    /// \private
-   template<typename ScalarType, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, NoSymmetry, Name, Allocator> contract_with_fuse(
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names);
 
    /// \private
-   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name, Allocator> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names);
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::contract(
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
          SetNameAndName&& contract_names) {
       auto timer_guard = contract_guard();
       auto pmr_guard = scope_resource<>();
@@ -293,10 +293,10 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name, Allocator> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names) {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
@@ -511,7 +511,7 @@ namespace TAT {
             std::array<pmr::set<Name>, 4>{{{}, {}, {}, {}}},
             delete_2);
       // calculate_product
-      auto product_result = Tensor<ScalarType, Symmetry, Name>(
+      auto product_result = Tensor<ScalarType, Symmetry, Name, Allocator>(
             {InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
       // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
@@ -579,7 +579,7 @@ namespace TAT {
             batch_size);
 
       if constexpr (is_no_symmetry) {
-         auto result = Tensor<ScalarType, Symmetry, Name>{name_result, edge_result};
+         auto result = Tensor<ScalarType, Symmetry, Name, Allocator>{name_result, edge_result};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
@@ -588,10 +588,10 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, NoSymmetry, Name, Allocator> contract_with_fuse(
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names) {
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
@@ -749,7 +749,7 @@ namespace TAT {
             put_common_2_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2});
       // calculate_product
-      auto product_result = Tensor<ScalarType, NoSymmetry, Name>(
+      auto product_result = Tensor<ScalarType, NoSymmetry, Name, Allocator>(
             {InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             {std::move(tensor_1_merged.core->edges[0]),
              std::move(tensor_1_merged.core->edges[1 + !put_common_1_right]),
@@ -795,7 +795,7 @@ namespace TAT {
          std::fill(result_vector.begin(), result_vector.end(), 0);
       }
 
-      auto result = Tensor<ScalarType, NoSymmetry, Name>{name_result, edge_result};
+      auto result = Tensor<ScalarType, NoSymmetry, Name, Allocator>{name_result, edge_result};
       result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
       return result;
    }

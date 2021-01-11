@@ -147,9 +147,10 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const SetNameAndName& pairs, int step) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::exponential(const SetNameAndName& pairs, int step) const {
       auto timer_guard = exponential_guard();
       auto pmr_guard = scope_resource<>();
 

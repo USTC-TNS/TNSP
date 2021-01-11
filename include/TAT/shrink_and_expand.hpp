@@ -24,9 +24,10 @@
 #include "tensor.hpp"
 namespace TAT {
    // TODO 这些都可以优化，不使用contract
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename ExpandConfigure>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::expand(const ExpandConfigure& configure, const Name& old_name) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::expand(const ExpandConfigure& configure, const Name& old_name) const {
       auto timer_guard = expand_guard();
       auto pmr_guard = scope_resource<>();
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
@@ -87,16 +88,16 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
+      auto helper = Tensor<ScalarType, Symmetry, Name, Allocator>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return helper.contract_all_edge(*this);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename ShrinkConfigure>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::shrink(const ShrinkConfigure& configure, const Name& new_name, Arrow arrow) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::shrink(const ShrinkConfigure& configure, const Name& new_name, Arrow arrow) const {
       auto timer_guard = shrink_guard();
       auto pmr_guard = scope_resource<>();
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
@@ -146,7 +147,7 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
+      auto helper = Tensor<ScalarType, Symmetry, Name, Allocator>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return helper.contract_all_edge(*this);

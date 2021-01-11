@@ -73,9 +73,9 @@ namespace TAT {
 #undef TAT_CALL_MULTIPLE_SMALL_N
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       auto timer_guard = multiple_guard();
       auto pmr_guard = scope_resource<>();
       bool different_direction;
@@ -151,8 +151,8 @@ namespace TAT {
    }
 
    // TODO: conjugate和merge等操作不可交换，可能需要给Edge加上一个conjugated的flag
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::conjugate() const {
       auto timer_guard = conjugate_guard();
       auto pmr_guard = scope_resource<>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
@@ -171,7 +171,7 @@ namespace TAT {
       }
       auto transpose_flag = pmr::vector<Rank>(names.size(), 0);
       auto valid_flag = pmr::vector<bool>(1, true);
-      auto result = Tensor<ScalarType, Symmetry, Name>(names, result_edges);
+      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>(names, result_edges);
       for (const auto& [symmetries, block] : core->blocks) {
          auto result_symmetries = typename decltype(core->blocks)::key_type();
          for (const auto& symmetry : symmetries) {
@@ -236,9 +236,9 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const SetNameAndName& pairs) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::identity(const SetNameAndName& pairs) const {
       auto rank = names.size();
       auto half_rank = rank / 2;
       auto ordered_pair = pmr::vector<std::tuple<Name, Name>>();

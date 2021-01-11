@@ -25,9 +25,9 @@
 
 namespace TAT {
    // TODO 可以不转置直接trace掉, 但是写起来比较麻烦
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const SetNameAndName& trace_names) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::trace(const SetNameAndName& trace_names) const {
       auto timer_guard = trace_guard();
       auto pmr_guard = scope_resource<>();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
@@ -111,7 +111,7 @@ namespace TAT {
             false,
             std::array<pmr::set<Name>, 4>{{{}, {}, {}, {InternalName<Name>::Trace_1}}});
       // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
-      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
+      auto traced_tensor = Tensor<ScalarType, Symmetry, Name, Allocator>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
       // 应该只有一个边, 所以也只有一个block
       const Size line_size = destination_block.size();

@@ -95,8 +95,8 @@ void zgesvd_(
 
 namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SingularValue>
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
    singular_to_tensor(const SingularValue& singular, const Name& singular_name_u, const Name& singular_name_v) {
       auto symmetries = pmr::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
@@ -108,7 +108,7 @@ namespace TAT {
          symmetries[0].arrow = false;
          symmetries[1].arrow = true;
       }
-      auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
+      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>({singular_name_u, singular_name_v}, std::move(symmetries));
       for (auto& [symmetries, data_destination] : result.core->blocks) {
          const auto& data_source = singular.at(symmetries[1]);
          auto dimension = data_source.size();
@@ -248,9 +248,9 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetName>
-   typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd(
+   typename Tensor<ScalarType, Symmetry, Name, Allocator>::svd_result Tensor<ScalarType, Symmetry, Name, Allocator>::svd(
          const SetName& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
@@ -328,15 +328,15 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name, Allocator>{
             put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           pmr::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name, Allocator>{
             put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           pmr::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = typename Singular<ScalarType, Symmetry, Name>::singular_map();
+      auto result_s = typename Singular<ScalarType, Symmetry, Name, Allocator>::singular_map();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.core->blocks.at(symmetries).data();
          auto* data_v = tensor_2.core->blocks.at(symmetries).data();
