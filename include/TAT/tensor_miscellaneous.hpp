@@ -25,9 +25,8 @@
 #include "timer.hpp"
 
 namespace TAT {
-
-   template<bool division, bool use_inc, typename ScalarType>
-   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarType* S, const Size& inc) {
+   template<Size n, bool division, bool use_inc, typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel_small_n(Size m, Size k, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S, const Size& inc) {
       for (Size a = 0; a < m; a++) {
          for (Size b = 0; b < k; b++) {
             Size offset = b;
@@ -46,6 +45,48 @@ namespace TAT {
             }
          }
       }
+   }
+
+   template<bool division, bool use_inc, typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S, const Size& inc) {
+#define TAT_CALL_MULTIPLE_SMALL_N(N)                                                              \
+   case N:                                                                                        \
+      multiple_kernel_small_n<N, division, use_inc>(m, k, data_destination, data_source, S, inc); \
+      break;
+      switch (n) {
+         case 0:
+            break;
+            TAT_CALL_MULTIPLE_SMALL_N(1);
+            TAT_CALL_MULTIPLE_SMALL_N(2);
+            TAT_CALL_MULTIPLE_SMALL_N(3);
+            TAT_CALL_MULTIPLE_SMALL_N(4);
+            TAT_CALL_MULTIPLE_SMALL_N(5);
+            TAT_CALL_MULTIPLE_SMALL_N(6);
+            TAT_CALL_MULTIPLE_SMALL_N(7);
+            TAT_CALL_MULTIPLE_SMALL_N(8);
+            TAT_CALL_MULTIPLE_SMALL_N(9);
+            TAT_CALL_MULTIPLE_SMALL_N(10);
+         default:
+            for (Size a = 0; a < m; a++) {
+               for (Size b = 0; b < k; b++) {
+                  Size offset = b;
+                  if constexpr (use_inc) {
+                     offset *= inc;
+                  }
+                  auto v = S[offset];
+                  const auto* data_source_block = &data_source[(a * k + b) * n];
+                  auto* data_destination_block = &data_destination[(a * k + b) * n];
+                  for (Size c = 0; c < n; c++) {
+                     if constexpr (division) {
+                        data_destination_block[c] = data_source_block[c] / v;
+                     } else {
+                        data_destination_block[c] = data_source_block[c] * v;
+                     }
+                  }
+               }
+            }
+      }
+#undef TAT_CALL_MULTIPLE_SMALL_N
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
