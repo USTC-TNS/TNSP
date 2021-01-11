@@ -472,163 +472,6 @@ namespace TAT {
             rank);
    }
 
-   // 去掉dimension = 1的边
-   inline auto prune_for_transpose(
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank& rank) {
-      pmr::vector<bool> is_one_source;
-      pmr::vector<bool> is_one_destination;
-      is_one_source.reserve(rank);
-      is_one_destination.reserve(rank);
-      for (Rank i = 0; i < rank; i++) {
-         is_one_source.push_back(dimensions_source[i] == 1);
-      }
-      for (Rank i = 0; i < rank; i++) {
-         is_one_destination.push_back(dimensions_destination[i] == 1);
-      }
-      pmr::vector<Rank> accumulated_one_source;
-      pmr::vector<Rank> accumulated_one_destination;
-      accumulated_one_source.reserve(rank);
-      accumulated_one_destination.reserve(rank);
-      accumulated_one_source.push_back(is_one_source.front());
-      for (Rank i = 1; i < rank; i++) {
-         accumulated_one_source.push_back(accumulated_one_source[i - 1] + Rank(is_one_source[i]));
-      }
-      accumulated_one_destination.push_back(is_one_destination.front());
-      for (Rank i = 1; i < rank; i++) {
-         accumulated_one_destination.push_back(accumulated_one_destination[i - 1] + Rank(is_one_destination[i]));
-      }
-
-      pmr::vector<Rank> result_plan_source_to_destination;
-      pmr::vector<Rank> result_plan_destination_to_source;
-      result_plan_source_to_destination.reserve(rank); // 会冗余, 无所谓
-      result_plan_destination_to_source.reserve(rank);
-      for (Rank i = 0; i < rank; i++) {
-         if (!is_one_source[i]) {
-            result_plan_source_to_destination.push_back(plan_source_to_destination[i] - accumulated_one_destination[plan_source_to_destination[i]]);
-         }
-      }
-      for (Rank i = 0; i < rank; i++) {
-         if (!is_one_destination[i]) {
-            result_plan_destination_to_source.push_back(plan_destination_to_source[i] - accumulated_one_source[plan_destination_to_source[i]]);
-         }
-      }
-      auto result_rank = Rank(result_plan_destination_to_source.size());
-
-      pmr::vector<Size> result_dimensions_source;
-      pmr::vector<Size> result_dimensions_destination;
-      pmr::vector<Size> result_leadings_source;
-      pmr::vector<Size> result_leadings_destination;
-      result_dimensions_source.reserve(result_rank);
-      result_dimensions_destination.reserve(result_rank);
-      result_leadings_source.reserve(result_rank);
-      result_leadings_destination.reserve(result_rank);
-      for (Rank i = 0; i < rank; i++) {
-         if (dimensions_source[i] != 1) {
-            result_dimensions_source.push_back(dimensions_source[i]);
-            result_leadings_source.push_back(leadings_source[i]);
-         }
-      }
-      for (Rank i = 0; i < rank; i++) {
-         if (dimensions_destination[i] != 1) {
-            result_dimensions_destination.push_back(dimensions_destination[i]);
-            result_leadings_destination.push_back(leadings_destination[i]);
-         }
-      }
-      return std::make_tuple(
-            std::move(result_plan_source_to_destination),
-            std::move(result_plan_destination_to_source),
-            std::move(result_dimensions_source),
-            std::move(result_dimensions_destination),
-            std::move(result_leadings_source),
-            std::move(result_leadings_destination),
-            result_rank);
-   }
-
-   inline auto merging_for_transpose(
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank& rank) {
-      pmr::vector<bool> merging_source_to_destination(rank, false);
-      pmr::vector<bool> merging_destination_to_source(rank, false);
-      for (Rank i = 1; i < rank; i++) {
-         if (const auto j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
-                                                           leadings_source[i - 1] == leadings_source[i] * dimensions_source[i] &&
-                                                           leadings_destination[j - 1] == leadings_destination[j] * dimensions_destination[j]) {
-            merging_source_to_destination[i] = true;
-            merging_destination_to_source[plan_source_to_destination[i]] = true;
-         }
-      }
-
-      pmr::vector<Rank> accumulated_merging_source_to_destination;
-      pmr::vector<Rank> accumulated_merging_destination_to_source;
-      accumulated_merging_source_to_destination.reserve(rank);
-      accumulated_merging_destination_to_source.reserve(rank);
-      accumulated_merging_source_to_destination.push_back(0);
-      for (Rank i = 1; i < rank; i++) {
-         accumulated_merging_source_to_destination.push_back(
-               accumulated_merging_source_to_destination.back() + Rank(merging_source_to_destination[i]));
-      }
-      accumulated_merging_destination_to_source.push_back(0);
-      for (Rank i = 1; i < rank; i++) {
-         accumulated_merging_destination_to_source.push_back(
-               accumulated_merging_destination_to_source.back() + Rank(merging_destination_to_source[i]));
-      }
-      pmr::vector<Rank> result_plan_source_to_destination;
-      pmr::vector<Rank> result_plan_destination_to_source;
-      result_plan_source_to_destination.reserve(rank); // 会冗余, 无所谓
-      result_plan_destination_to_source.reserve(rank);
-      for (Rank i = 0; i < rank; i++) {
-         if (!merging_source_to_destination[i]) {
-            result_plan_source_to_destination.push_back(
-                  plan_source_to_destination[i] - accumulated_merging_destination_to_source[plan_source_to_destination[i]]);
-         }
-      }
-      for (Rank i = 0; i < rank; i++) {
-         if (!merging_destination_to_source[i]) {
-            result_plan_destination_to_source.push_back(
-                  plan_destination_to_source[i] - accumulated_merging_source_to_destination[plan_destination_to_source[i]]);
-         }
-      }
-      auto result_rank = Rank(result_plan_source_to_destination.size());
-      pmr::vector<Size> result_dimensions_source(result_rank);
-      pmr::vector<Size> result_dimensions_destination(result_rank);
-      pmr::vector<Size> result_leadings_source(result_rank);
-      pmr::vector<Size> result_leadings_destination(result_rank);
-      for (Rank i = result_rank, j = rank; i-- > 0;) {
-         result_leadings_source[i] = leadings_source[--j];
-         result_dimensions_source[i] = dimensions_source[j];
-         while (merging_source_to_destination[j]) {
-            result_dimensions_source[i] *= dimensions_source[--j];
-         }
-      }
-      for (Rank i = result_rank, j = rank; i-- > 0;) {
-         result_leadings_destination[i] = leadings_destination[--j];
-         result_dimensions_destination[i] = dimensions_destination[j];
-         while (merging_destination_to_source[j]) {
-            result_dimensions_destination[i] *= dimensions_destination[--j];
-         }
-      }
-
-      return std::make_tuple(
-            std::move(result_plan_source_to_destination),
-            std::move(result_plan_destination_to_source),
-            std::move(result_dimensions_source),
-            std::move(result_dimensions_destination),
-            std::move(result_leadings_source),
-            std::move(result_leadings_destination),
-            result_rank);
-   }
-
    template<typename ScalarType>
    void do_transpose(
          const ScalarType* data_source,
@@ -657,60 +500,28 @@ namespace TAT {
       }
       // rank != 0, dimension != 0
 
-      auto [prune_plan_source_to_destination,
-            prune_plan_destination_to_source,
-            prune_dimensions_source,
-            prune_dimensions_destination,
-            prune_leadings_source,
-            prune_leadings_destination,
-            prune_rank] =
-            prune_for_transpose(
-                  plan_source_to_destination,
-                  plan_destination_to_source,
-                  dimensions_source,
-                  dimensions_destination,
-                  leadings_source,
-                  leadings_destination,
-                  rank);
-
-      auto [real_plan_source_to_destination,
-            real_plan_destination_to_source,
-            real_dimensions_source,
-            real_dimensions_destination,
-            real_leadings_source,
-            real_leadings_destination,
-            real_rank] =
-            merging_for_transpose(
-                  prune_plan_source_to_destination,
-                  prune_plan_destination_to_source,
-                  prune_dimensions_source,
-                  prune_dimensions_destination,
-                  prune_leadings_source,
-                  prune_leadings_destination,
-                  prune_rank);
-
       if (parity) {
          simple_transpose<ScalarType, true>(
                data_source,
                data_destination,
-               real_plan_source_to_destination,
-               real_plan_destination_to_source,
-               real_dimensions_source,
-               real_dimensions_destination,
-               real_leadings_source,
-               real_leadings_destination,
-               real_rank);
+               plan_source_to_destination,
+               plan_destination_to_source,
+               dimensions_source,
+               dimensions_destination,
+               leadings_source,
+               leadings_destination,
+               rank);
       } else {
          simple_transpose<ScalarType, false>(
                data_source,
                data_destination,
-               real_plan_source_to_destination,
-               real_plan_destination_to_source,
-               real_dimensions_source,
-               real_dimensions_destination,
-               real_leadings_source,
-               real_leadings_destination,
-               real_rank);
+               plan_source_to_destination,
+               plan_destination_to_source,
+               dimensions_source,
+               dimensions_destination,
+               leadings_source,
+               leadings_destination,
+               rank);
       }
    }
 
