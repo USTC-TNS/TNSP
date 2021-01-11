@@ -1,7 +1,7 @@
 /**
  * \file timer.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ namespace TAT {
     * 使用timer_stack对各个关注的函数进行计时，将统计调用其他函数的时间和自身的时间
     *
     * 如果希望增加自定义的计时器, 在全局空间定义`timer some_function_guard("some function_name");`,
-    * 在计时处添加`auto guard = some_function_guard();`即可, 计时器会统计自构建到析构间的时间
+    * 在计时处添加`auto timer_guard = some_function_guard();`即可, 计时器会统计自构建到析构间的时间
     *
     * \see timer_stack
     */
@@ -143,6 +143,7 @@ namespace TAT {
    TAT_DEFINE_TIMER(transpose_kernel_core)
    TAT_DEFINE_TIMER(multiple)
    TAT_DEFINE_TIMER(conjugate)
+   TAT_DEFINE_TIMER(exponential)
    TAT_DEFINE_TIMER(trace)
    TAT_DEFINE_TIMER(shrink)
    TAT_DEFINE_TIMER(expand)

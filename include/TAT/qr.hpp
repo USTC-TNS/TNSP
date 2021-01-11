@@ -1,7 +1,7 @@
 /**
  * \file qr.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -311,12 +311,14 @@ namespace TAT {
 #endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename SetName>
    typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr(
          char free_name_direction,
-         const std::set<Name>& free_name_set,
+         const SetName& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
-      auto guard = qr_guard();
+      auto timer_guard = qr_guard();
+      auto pmr_guard = scope_resource<>();
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -331,15 +333,15 @@ namespace TAT {
       };
       bool use_qr_not_lq = names.empty() || ((free_name_set.find(names.back()) != free_name_set.end()) == use_r_name);
       // merge
-      auto free_name_1 = std::vector<Name>();
-      auto free_name_2 = std::vector<Name>();
-      auto reversed_set_1 = std::set<Name>();
-      auto reversed_set_2 = std::set<Name>();
-      auto reversed_set_origin = std::set<Name>();
-      auto result_name_1 = std::vector<Name>();
-      auto result_name_2 = std::vector<Name>();
-      auto free_names_and_edges_1 = std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
-      auto free_names_and_edges_2 = std::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
+      auto free_name_1 = pmr::vector<Name>();
+      auto free_name_2 = pmr::vector<Name>();
+      auto reversed_set_1 = pmr::set<Name>();
+      auto reversed_set_2 = pmr::set<Name>();
+      auto reversed_set_origin = pmr::set<Name>();
+      auto result_name_1 = pmr::vector<Name>();
+      auto result_name_2 = pmr::vector<Name>();
+      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
+      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
       free_name_1.reserve(rank);
       free_name_2.reserve(rank);
       result_name_1.reserve(rank + 1);
@@ -374,13 +376,24 @@ namespace TAT {
             }
          }
       }
+      if (use_r_name == use_qr_not_lq) {
+         // set is the second name
+         if (free_name_2.size() != free_name_set.size()) {
+            TAT_warning_or_error_when_name_missing("Name missing in QR");
+         }
+      } else {
+         // set is the first name
+         if (free_name_1.size() != free_name_set.size()) {
+            TAT_warning_or_error_when_name_missing("Name missing in QR");
+         }
+      }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
       auto tensor_merged = edge_operator(
             {},
             {},
             reversed_set_origin,
-            {{InternalName<Name>::QR_1, free_name_1}, {InternalName<Name>::QR_2, free_name_2}},
-            {InternalName<Name>::QR_1, InternalName<Name>::QR_2});
+            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::QR_1, std::move(free_name_1)}, {InternalName<Name>::QR_2, std::move(free_name_2)}},
+            pmr::vector<Name>{InternalName<Name>::QR_1, InternalName<Name>::QR_2});
       // call lapack
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
@@ -414,20 +427,20 @@ namespace TAT {
       if constexpr (is_fermi) {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
-      auto new_tensor_1 = tensor_1.template edge_operator<true>(
-            {{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
-            {{InternalName<Name>::QR_1, free_names_and_edges_1}},
+      auto new_tensor_1 = tensor_1.edge_operator(
+            pmr::map<Name, Name>{{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
             {},
             result_name_1);
-      auto new_tensor_2 = tensor_2.template edge_operator<true>(
-            {{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
-            {{InternalName<Name>::QR_2, free_names_and_edges_2}},
+      auto new_tensor_2 = tensor_2.edge_operator(
+            pmr::map<Name, Name>{{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
             reversed_set_2,
             {},
             result_name_2,
             false,
-            {{{}, use_qr_not_lq ? std::set<Name>{} : std::set<Name>{common_name_q}, {}, {}}});
+            std::array<pmr::set<Name>, 4>{{{}, use_qr_not_lq ? pmr::set<Name>{} : pmr::set<Name>{common_name_q}, {}, {}}});
       return {std::move(use_qr_not_lq ? new_tensor_1 : new_tensor_2), std::move(use_qr_not_lq ? new_tensor_2 : new_tensor_1)};
    }
 } // namespace TAT

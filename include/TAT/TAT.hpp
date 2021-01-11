@@ -1,7 +1,7 @@
 /**
  * \file TAT.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,12 +44,14 @@
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
 // TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义 TODO 进一步优化
 // TAT_USE_MKL_GEMM_BATCH 定义以使用mkl的?gemm_batch, cmake可对此进行定义
-// TAT_USE_NO_WARNING 禁用各类警告
+// TAT_USE_BOOST_PMR 对于gcc<9, pmr并不支持, 需要使用boost, cmake可对此进行定义
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_TIMER 对常见操作进行计时
+// TAT_ERROR_BITS 将各类警告转换为异常
+// TAT_NOTHING_BITS 将各类警告转换为静默
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
 // TAT_USE_L3_CACHE 转置中默认不使用l3_cache, 设置以使用之
 
@@ -69,7 +71,7 @@ namespace TAT {
 #ifdef TAT_VERSION
          TAT_VERSION
 #else
-         "0.1.1"
+         "0.1.2"
 #endif
          ;
 
@@ -89,7 +91,7 @@ namespace TAT {
                                     ", " TAT_COMPILER_INFORMATION
 #endif
                                     ")\n"
-                                    "Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+                                    "Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
                                     "This is free software; see the source for copying conditions.  There is NO\n"
                                     "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 
@@ -136,14 +138,23 @@ namespace TAT {
    inline void TAT_error(const char* message);
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+
 #ifdef TAT_USE_NO_WARNING
-   constexpr auto TAT_warning_or_error_default = TAT_nothing;
-#else
-   constexpr auto TAT_warning_or_error_default = TAT_warning;
+// TODO delete this deprecated macro
+#pragma message("TAT_USE_NO_WARNING is deprecated, define TAT_NOTHING_BITS=7 instead")
+#define TAT_NOTHING_BITS 7
 #endif
-   constexpr auto TAT_warning_or_error_when_multiple_configuration_error = TAT_warning_or_error_default;
-   constexpr auto TAT_warning_or_error_when_lapack_error = TAT_warning_or_error_default;
-   constexpr auto TAT_warning_or_error_when_copy_shared = TAT_warning_or_error_default;
+
+#ifndef TAT_ERROR_BITS
+#define TAT_ERROR_BITS 0
+#endif
+#ifndef TAT_NOTHING_BITS
+#define TAT_NOTHING_BITS 0
+#endif
+
+   constexpr auto TAT_warning_or_error_when_lapack_error = TAT_ERROR_BITS & 1 ? TAT_error : TAT_NOTHING_BITS & 1 ? TAT_nothing : TAT_warning;
+   constexpr auto TAT_warning_or_error_when_name_missing = TAT_ERROR_BITS & 2 ? TAT_error : TAT_NOTHING_BITS & 2 ? TAT_nothing : TAT_warning;
+   constexpr auto TAT_warning_or_error_when_copy_shared = TAT_ERROR_BITS & 4 ? TAT_error : TAT_NOTHING_BITS & 4 ? TAT_nothing : TAT_warning;
 #endif
 
    /**

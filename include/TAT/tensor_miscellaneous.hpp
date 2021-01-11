@@ -1,7 +1,7 @@
 /**
  * \file tensor_miscellaneous.hpp
  *
- * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,22 +25,71 @@
 #include "timer.hpp"
 
 namespace TAT {
+   template<Size n, typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel_small_n(Size m, Size k, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
+      for (Size a = 0; a < m; a++) {
+         for (Size b = 0; b < k; b++) {
+            auto v = S[b];
+            const auto* data_source_block = &data_source[(a * k + b) * n];
+            auto* data_destination_block = &data_destination[(a * k + b) * n];
+            for (Size c = 0; c < n; c++) {
+               data_destination_block[c] = data_source_block[c] * v;
+            }
+         }
+      }
+   }
+
+   template<typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
+#define TAT_CALL_MULTIPLE_SMALL_N(N)                                      \
+   case N:                                                                \
+      multiple_kernel_small_n<N>(m, k, data_destination, data_source, S); \
+      break;
+      switch (n) {
+         case 0:
+            break;
+            TAT_CALL_MULTIPLE_SMALL_N(1);
+            TAT_CALL_MULTIPLE_SMALL_N(2);
+            TAT_CALL_MULTIPLE_SMALL_N(3);
+            TAT_CALL_MULTIPLE_SMALL_N(4);
+            TAT_CALL_MULTIPLE_SMALL_N(5);
+            TAT_CALL_MULTIPLE_SMALL_N(6);
+            TAT_CALL_MULTIPLE_SMALL_N(7);
+            TAT_CALL_MULTIPLE_SMALL_N(8);
+            TAT_CALL_MULTIPLE_SMALL_N(9);
+            TAT_CALL_MULTIPLE_SMALL_N(10);
+         default:
+            for (Size a = 0; a < m; a++) {
+               for (Size b = 0; b < k; b++) {
+                  auto v = S[b];
+                  const auto* data_source_block = &data_source[(a * k + b) * n];
+                  auto* data_destination_block = &data_destination[(a * k + b) * n];
+                  for (Size c = 0; c < n; c++) {
+                     data_destination_block[c] = data_source_block[c] * v;
+                  }
+               }
+            }
+      }
+#undef TAT_CALL_MULTIPLE_SMALL_N
+   }
+
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
-      auto guard = multiple_guard();
+      auto timer_guard = multiple_guard();
+      auto pmr_guard = scope_resource<>();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;
       } else if (direction == 'v' || direction == 'V') {
          different_direction = true;
       } else {
-         TAT_warning_or_error_when_multiple_configuration_error("Direction Invalid in Multiple");
+         TAT_error("Direction invalid in multiple");
          return *this;
       }
       const auto found = name_to_index.find(name);
       if (found == name_to_index.end()) {
-         TAT_warning_or_error_when_multiple_configuration_error("Edge not Found in Multiple");
+         TAT_warning_or_error_when_name_missing("Name not found in multiple");
          return *this;
       }
       auto result = same_shape();
@@ -75,33 +124,27 @@ namespace TAT {
          const auto* data_source = block_source.data();
          auto* data_destination = block_destination.data();
 
+         vector<typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type> realS(k);
+         const auto* pointS = realS.data();
          if (division) {
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
+            for (Size i = 0; i < k; i++) {
 #ifdef TAT_USE_SINGULAR_MATRIX
-                  auto v = vector_in_S[b * dimension_plus_one];
+               realS[i] = 1 / vector_in_S[i * dimension_plus_one];
 #else
-                  auto v = vector_in_S[b];
+               realS[i] = 1 / vector_in_S[i];
 #endif
-                  for (Size c = 0; c < n; c++) {
-                     *(data_destination++) = *(data_source++) / v;
-                  }
-               }
             }
          } else {
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
 #ifdef TAT_USE_SINGULAR_MATRIX
-                  auto v = vector_in_S[b * dimension_plus_one];
-#else
-                  auto v = vector_in_S[b];
-#endif
-                  for (Size c = 0; c < n; c++) {
-                     *(data_destination++) = *(data_source++) * v;
-                  }
-               }
+            for (Size i = 0; i < k; i++) {
+               realS[i] = vector_in_S[i * dimension_plus_one];
             }
+#else
+            pointS = vector_in_S.data();
+#endif
          }
+
+         multiple_kernel(m, k, n, data_destination, data_source, pointS);
       }
       return result;
    }
@@ -109,11 +152,12 @@ namespace TAT {
    // TODO: conjugate和merge等操作不可交换，可能需要给Edge加上一个conjugated的flag
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
-      auto guard = conjugate_guard();
+      auto timer_guard = conjugate_guard();
+      auto pmr_guard = scope_resource<>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return *this;
       }
-      auto result_edges = std::vector<Edge<Symmetry>>();
+      auto result_edges = pmr::vector<Edge<Symmetry>>();
       result_edges.reserve(names.size());
       for (const auto& edge : core->edges) {
          auto& result_edge = result_edges.emplace_back();
@@ -124,11 +168,11 @@ namespace TAT {
             result_edge.map[-symmetry] = dimension;
          }
       }
-      auto transpose_flag = std::vector<Rank>(names.size(), 0);
-      auto valid_flag = std::vector<bool>(1, true);
+      auto transpose_flag = pmr::vector<Rank>(names.size(), 0);
+      auto valid_flag = pmr::vector<bool>(1, true);
       auto result = Tensor<ScalarType, Symmetry, Name>(names, result_edges);
       for (const auto& [symmetries, block] : core->blocks) {
-         auto result_symmetries = std::vector<Symmetry>();
+         auto result_symmetries = typename decltype(core->blocks)::key_type();
          for (const auto& symmetry : symmetries) {
             result_symmetries.push_back(-symmetry);
          }
@@ -166,9 +210,9 @@ namespace TAT {
    }
 
    /// \private
-   template<typename ScalarType>
-   void set_to_identity(ScalarType* pointer, const std::vector<Size>& dimension, const std::vector<Size>& leading, Rank rank) {
-      auto current_index = std::vector<Size>(rank, 0);
+   template<typename ScalarType, typename VectorSize>
+   void set_to_identity(ScalarType* pointer, const VectorSize& dimension, const VectorSize& leading, Rank rank) {
+      auto current_index = VectorSize(rank, 0);
       while (true) {
          *pointer = 1;
          Rank active_position = rank - 1;
@@ -192,14 +236,15 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::tuple<Name, Name>>& pairs) const {
+   template<typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::identity(const SetNameAndName& pairs) const {
       auto rank = names.size();
       auto half_rank = rank / 2;
-      auto ordered_pair = std::vector<std::tuple<Name, Name>>();
-      auto ordered_pair_index = std::vector<std::tuple<Rank, Rank>>();
+      auto ordered_pair = pmr::vector<std::tuple<Name, Name>>();
+      auto ordered_pair_index = pmr::vector<std::tuple<Rank, Rank>>();
       ordered_pair.reserve(half_rank);
       ordered_pair_index.reserve(half_rank);
-      auto valid_index = std::vector<bool>(rank, true);
+      auto valid_index = pmr::vector<bool>(rank, true);
       for (Rank i = 0; i < rank; i++) {
          if (valid_index[i]) {
             const auto& name_to_find = names[i];
@@ -224,8 +269,8 @@ namespace TAT {
       auto result = same_shape().zero();
 
       for (auto& [symmetries, block] : result.core->blocks) {
-         auto dimension = std::vector<Size>(rank);
-         auto leading = std::vector<Size>(rank);
+         auto dimension = pmr::vector<Size>(rank);
+         auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
             dimension[i] = core->edges[i].map[symmetries[i]];
             if (i == rank - 1) {
@@ -234,8 +279,8 @@ namespace TAT {
                leading[i] = leading[i + 1] * dimension[i + 1];
             }
          }
-         auto pair_dimension = std::vector<Size>();
-         auto pair_leading = std::vector<Size>();
+         auto pair_dimension = pmr::vector<Size>();
+         auto pair_leading = pmr::vector<Size>();
          pair_dimension.reserve(half_rank);
          pair_leading.reserve(half_rank);
          for (Rank i = 0; i < half_rank; i++) {
@@ -246,44 +291,6 @@ namespace TAT {
          set_to_identity(block.data(), pair_dimension, pair_leading, half_rank);
       }
 
-      return result;
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
-      real_base_t<ScalarType> norm_max = norm<-1>();
-      auto temporary_tensor_rank = 0;
-      real_base_t<ScalarType> temporary_tensor_parameter = 1;
-      while (temporary_tensor_parameter * norm_max > 1) {
-         temporary_tensor_rank += 1;
-         temporary_tensor_parameter *= 1. / 2;
-      }
-      auto temporary_tensor = *this * temporary_tensor_parameter;
-
-      auto result = identity(pairs);
-
-      auto power_of_temporary_tensor = Tensor<ScalarType, Symmetry, Name>();
-
-      ScalarType series_parameter = 1;
-      for (auto i = 1; i <= step; i++) {
-         series_parameter /= i;
-         if (i == 1) {
-            result += temporary_tensor;
-         } else if (i == 2) {
-            power_of_temporary_tensor = temporary_tensor.contract(temporary_tensor, pairs);
-            // result += series_parameter * power_of_temporary_tensor;
-            result = series_parameter * power_of_temporary_tensor + result;
-            // power_of_temporary_tensor相乘一次后边应该就会稳定, 这个时候将result放在+的右侧, 会使得result边的排列和左侧一样
-            // 从而在 i>2 的时候减少转置
-         } else {
-            power_of_temporary_tensor = power_of_temporary_tensor.contract(temporary_tensor, pairs);
-            result += series_parameter * power_of_temporary_tensor;
-         }
-      }
-
-      for (auto i = 0; i < temporary_tensor_rank; i++) {
-         result = result.contract(result, pairs);
-      }
       return result;
    }
 } // namespace TAT

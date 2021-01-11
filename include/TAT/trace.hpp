@@ -1,7 +1,7 @@
 /**
  * \file trace.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,20 +26,22 @@
 namespace TAT {
    // TODO 可以不转置直接trace掉, 但是写起来比较麻烦
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::set<std::tuple<Name, Name>>& trace_names) const {
-      auto guard = trace_guard();
+   template<typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const SetNameAndName& trace_names) const {
+      auto timer_guard = trace_guard();
+      auto pmr_guard = scope_resource<>();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto rank = names.size();
       auto trace_rank = trace_names.size();
       auto free_rank = rank - 2 * trace_rank;
       // 应该转置为a_i = sum_j b_{jji}的形式, 这样局域性最好
-      auto traced_names = std::set<Name>();
-      auto trace_1_names = std::vector<Name>();
-      auto trace_2_names = std::vector<Name>();
+      auto traced_names = pmr::set<Name>();
+      auto trace_1_names = pmr::vector<Name>();
+      auto trace_2_names = pmr::vector<Name>();
       trace_1_names.reserve(trace_rank);
       trace_2_names.reserve(trace_rank);
       // 转置时尽可能保证后面rank的不变
-      auto valid_index = std::vector<bool>(rank, true);
+      auto valid_index = pmr::vector<bool>(rank, true);
       for (auto i = rank; i-- > 0;) {
          if (valid_index[i]) {
             const auto& name_to_find = names[i];
@@ -79,9 +81,9 @@ namespace TAT {
          }
       }
       // 寻找自由脚
-      auto result_names = std::vector<Name>();
-      auto reverse_names = std::set<Name>();
-      auto split_plan = std::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      auto result_names = pmr::vector<Name>();
+      auto reverse_names = pmr::set<Name>();
+      auto split_plan = pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
       result_names.reserve(free_rank);
       split_plan.reserve(free_rank);
       for (Rank i = 0; i < rank; i++) {
@@ -101,10 +103,13 @@ namespace TAT {
             {},
             {},
             reverse_names,
-            {{InternalName<Name>::Trace_1, trace_1_names}, {InternalName<Name>::Trace_2, trace_2_names}, {InternalName<Name>::Trace_3, result_names}},
-            {InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Trace_1, std::move(trace_1_names)},
+                  {InternalName<Name>::Trace_2, std::move(trace_2_names)},
+                  {InternalName<Name>::Trace_3, result_names}},
+            pmr::vector<Name>{InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
             false,
-            {{{}, {}, {}, {InternalName<Name>::Trace_1}}});
+            std::array<pmr::set<Name>, 4>{{{}, {}, {}, {InternalName<Name>::Trace_1}}});
       // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
       auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
@@ -124,7 +129,8 @@ namespace TAT {
             }
          }
       }
-      auto result = traced_tensor.edge_operator({}, {{InternalName<Name>::Trace_3, split_plan}}, reverse_names, {}, result_names);
+      auto result = traced_tensor.edge_operator(
+            {}, pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, std::move(split_plan)}}, reverse_names, {}, result_names);
       return result;
    }
 } // namespace TAT

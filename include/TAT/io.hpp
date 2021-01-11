@@ -1,7 +1,7 @@
 /**
  * \file io.hpp
  *
- * Copyright (C) 2019-2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -441,6 +441,15 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
+   std::ostream& operator<<(std::ostream& out, const TensorShape<ScalarType, Symmetry, Name>& shape) {
+      const auto& tensor = *shape.owner;
+      out << '{' << console_green << "names" << console_origin << ':';
+      out << tensor.names << ',';
+      out << console_green << "edges" << console_origin << ':';
+      out << tensor.core->edges << '}';
+      return out;
+   }
+   template<typename ScalarType, typename Symmetry, typename Name>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names << ',';
@@ -468,7 +477,7 @@ namespace TAT {
    std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       ignore_util(in, ':');
       in >> tensor.names;
-      tensor.name_to_index = construct_name_to_index(tensor.names);
+      tensor.name_to_index = construct_name_to_index<std::map<Name, Rank>>(tensor.names);
       ignore_util(in, ':');
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();
       in >> tensor.core->edges;
@@ -602,7 +611,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
       in > names;
-      name_to_index = construct_name_to_index(names);
+      name_to_index = construct_name_to_index<std::map<Name, Rank>>(names);
       core = std::make_shared<Core<ScalarType, Symmetry>>();
       in > core->edges;
       check_valid_name(names, core->edges.size());

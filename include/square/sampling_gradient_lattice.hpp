@@ -1,7 +1,7 @@
 /**
  * \file sampling_gradient_lattice.hpp
  *
- * Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -436,9 +436,7 @@ namespace square {
             int hopping_number = possible_hopping.size();
             auto random_index = random::uniform<int>(0, hopping_number - 1)();
             auto iter = possible_hopping.begin();
-            for (auto i = 0; i < random_index; i++) {
-               ++iter;
-            }
+            std::advance(iter, random_index);
             const auto& [spins_new, element] = *iter;
             auto replacement = std::map<std::tuple<int, int>, int>();
             for (auto i = 0; i < body; i++) {
@@ -567,6 +565,7 @@ namespace square {
       out < static_cast<const AbstractNetworkLattice<T>&>(lattice);
       out < lattice.dimension_cut;
       out < lattice.spin.configuration;
+      // TODO: output all configuration across mpi process
       return out;
    }
 

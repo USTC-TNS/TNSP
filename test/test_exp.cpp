@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,11 +14,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include <TAT/TAT.hpp>
 
-using Tensor = typename TAT::Tensor<float, TAT::NoSymmetry>;
+using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 int main() {
-   auto a = Tensor({"A", "B"}, {160000, 400}).test();
-   auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
+   auto A = Tensor({"i", "j"}, {3, 3}).test();
+   for (auto step = 1; step < 10; step++) {
+      auto B = A.exponential({{"i", "j"}}, step);
+      std::cout << B << "\n";
+   }
+   return 0;
 }
