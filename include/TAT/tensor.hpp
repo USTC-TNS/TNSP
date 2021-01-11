@@ -594,7 +594,7 @@ namespace TAT {
          for (const auto& i : names) {
             contract_names.insert({i, i});
          }
-         return contract(other, contract_names);
+         return contract(other, std::move(contract_names));
       }
 
       /**

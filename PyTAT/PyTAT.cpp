@@ -416,7 +416,10 @@ namespace TAT {
             .def("norm_num", &T::template norm<0>, "Get 0 norm, namely number of element, note: not check whether equal to 0")
             .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
             .def("norm_2", &T::template norm<2>, "Get 2 norm")
-            .def("edge_rename", &T::edge_rename, py::arg("name_dictionary"), "Rename names of edges, which will not copy data")
+            .def("edge_rename",
+                 &T::template edge_rename<std::map<DefaultName, DefaultName>>,
+                 py::arg("name_dictionary"),
+                 "Rename names of edges, which will not copy data")
             .def("transpose",
                  &T::template transpose<std::vector<DefaultName>>,
                  py::arg("new_names"),
@@ -447,7 +450,7 @@ namespace TAT {
                      const std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>& split_map,
                      const std::set<DefaultName>& reversed_name,
                      const std::map<DefaultName, std::vector<DefaultName>>& merge_map,
-                     std::vector<DefaultName> new_names,
+                     const std::vector<DefaultName>& new_names,
                      const bool apply_parity,
                      std::set<DefaultName> parity_exclude_name_split_set,
                      std::set<DefaultName> parity_exclude_name_reverse_set,
@@ -459,12 +462,13 @@ namespace TAT {
                            split_map,
                            reversed_name,
                            merge_map,
-                           std::move(new_names),
+                           new_names,
                            apply_parity,
-                           {std::move(parity_exclude_name_split_set),
-                            std::move(parity_exclude_name_reverse_set),
-                            std::move(parity_exclude_name_reverse_before_merge_set),
-                            std::move(parity_exclude_name_merge_set)},
+                           std::array<std::set<DefaultName>, 4>{
+                                 std::move(parity_exclude_name_split_set),
+                                 std::move(parity_exclude_name_reverse_set),
+                                 std::move(parity_exclude_name_reverse_before_merge_set),
+                                 std::move(parity_exclude_name_merge_set)},
                            edge_and_symmetries_to_cut_before_all);
                   },
                   py::arg("rename_map"),
@@ -479,11 +483,14 @@ namespace TAT {
                   py::arg("parity_exclude_name_merge_set") = py::set(),
                   py::arg("edge_and_symmetries_to_cut_before_all") = py::dict(),
                   "Tensor Edge Operator")
-            .def("contract",
-                 &T::template contract<std::set<std::tuple<DefaultName, DefaultName>>>,
-                 py::arg("another_tensor"),
-                 py::arg("contract_names"),
-                 "Contract two tensors")
+            .def(
+                  "contract",
+                  [](const T& tensor_1, const T& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) {
+                     return tensor_1.contract(tensor_2, std::move(contract_names));
+                  },
+                  py::arg("another_tensor"),
+                  py::arg("contract_names"),
+                  "Contract two tensors")
             .def(
                   "contract_all_edge", [](const T& tensor) { return tensor.contract_all_edge(); }, "Contract all edge with conjugate tensor")
             .def(
@@ -491,7 +498,7 @@ namespace TAT {
                   [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); },
                   py::arg("another_tensor"),
                   "Contract as much as possible with another tensor on same name edges")
-            .def("identity", &T::identity, py::arg("pairs"), "Get a identity tensor with same shape")
+            .def("identity", &T::template identity<std::set<std::tuple<DefaultName, DefaultName>>>, py::arg("pairs"), "Get a identity tensor with same shape")
             .def("exponential",
                  &T::template exponential<std::set<std::tuple<DefaultName, DefaultName>>>,
                  py::arg("pairs"),

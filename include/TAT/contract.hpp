@@ -269,14 +269,14 @@ namespace TAT {
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
-         SetNameAndName&& contract_names);
+         SetNameAndName contract_names);
 
    /// \private
    template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         SetNameAndName&& contract_names);
+         SetNameAndName contract_names);
 
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename SetNameAndName>
@@ -297,7 +297,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         SetNameAndName&& contract_names) {
+         SetNameAndName contract_names) {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       // 为未来split做准备
@@ -592,7 +592,7 @@ namespace TAT {
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
-         SetNameAndName&& contract_names) {
+         SetNameAndName contract_names) {
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
       // 删除不存在的名称, 即在name tuple list中但不在names中
