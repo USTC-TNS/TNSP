@@ -25,6 +25,29 @@
 #include "timer.hpp"
 
 namespace TAT {
+
+   template<bool division, bool use_inc, typename ScalarType>
+   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarType* S, const Size& inc) {
+      for (Size a = 0; a < m; a++) {
+         for (Size b = 0; b < k; b++) {
+            Size offset = b;
+            if constexpr (use_inc) {
+               offset *= inc;
+            }
+            auto v = S[offset];
+            const auto* data_source_block = &data_source[(a * k + b) * n];
+            auto* data_destination_block = &data_destination[(a * k + b) * n];
+            for (Size c = 0; c < n; c++) {
+               if constexpr (division) {
+                  data_destination_block[c] = data_source_block[c] / v;
+               } else {
+                  data_destination_block[c] = data_source_block[c] * v;
+               }
+            }
+         }
+      }
+   }
+
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
@@ -76,39 +99,19 @@ namespace TAT {
          const auto* data_source = block_source.data();
          auto* data_destination = block_destination.data();
 
+#ifdef TAT_USE_SINGULAR_MATRIX
          if (division) {
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
-#ifdef TAT_USE_SINGULAR_MATRIX
-                  auto v = vector_in_S[b * dimension_plus_one];
-#else
-                  auto v = vector_in_S[b];
-#endif
-                  const auto* data_source_block = &data_source[(a * k + b) * n];
-                  auto* data_destination_block = &data_destination[(a * k + b) * n];
-#pragma simd
-                  for (Size c = 0; c < n; c++) {
-                     data_destination_block[c] = data_source_block[c] / v;
-                  }
-               }
-            }
+            multiple_kernel<true, true>(m, k, n, data_destination, data_source, vector_in_S.data(), dimension_plus_one);
          } else {
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
-#ifdef TAT_USE_SINGULAR_MATRIX
-                  auto v = vector_in_S[b * dimension_plus_one];
-#else
-                  auto v = vector_in_S[b];
-#endif
-                  const auto* data_source_block = &data_source[(a * k + b) * n];
-                  auto* data_destination_block = &data_destination[(a * k + b) * n];
-#pragma simd
-                  for (Size c = 0; c < n; c++) {
-                     data_destination_block[c] = data_source_block[c] * v;
-                  }
-               }
-            }
+            multiple_kernel<false, true>(m, k, n, data_destination, data_source, vector_in_S.data(), dimension_plus_one);
          }
+#else
+         if (division) {
+            multiple_kernel<true, false>(m, k, n, data_destination, data_source, vector_in_S.data(), 0);
+         } else {
+            multiple_kernel<false, false>(m, k, n, data_destination, data_source, vector_in_S.data(), 0);
+         }
+#endif
       }
       return result;
    }
