@@ -124,14 +124,15 @@ namespace TAT {
          const auto* data_source = block_source.data();
          auto* data_destination = block_destination.data();
 
-         vector<typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type> realS(k);
+         using ScalarTypeS = typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type;
+         vector<ScalarTypeS> realS(k);
          const auto* pointS = realS.data();
          if (division) {
             for (Size i = 0; i < k; i++) {
 #ifdef TAT_USE_SINGULAR_MATRIX
-               realS[i] = 1 / vector_in_S[i * dimension_plus_one];
+               realS[i] = ScalarTypeS(1) / vector_in_S[i * dimension_plus_one];
 #else
-               realS[i] = 1 / vector_in_S[i];
+               realS[i] = ScalarTypeS(1) / vector_in_S[i];
 #endif
             }
          } else {
