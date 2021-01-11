@@ -25,17 +25,18 @@
 namespace TAT {
    // TODO 这些都可以优化，不使用contract
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::expand(const std::map<Name, EdgeInfoWithArrowForExpand>& configure, const Name& old_name) const {
-      auto guard = expand_guard();
+   template<typename ExpandConfigure>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::expand(const ExpandConfigure& configure, const Name& old_name) const {
+      auto timer_guard = expand_guard();
+      auto pmr_guard = scope_resource<>();
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
       //            std::is_same_v<Symmetry, NoSymmetry>,
       //            std::tuple<Size, Size>,
       //            std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
-      auto new_names = std::vector<Name>();
-      auto new_edges = std::vector<Edge<Symmetry>>();
+      auto new_names = pmr::vector<Name>();
+      auto new_edges = pmr::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
       new_names.reserve(reserve_size);
       new_edges.reserve(reserve_size);
@@ -86,20 +87,22 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
+      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return helper.contract_all_edge(*this);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ShrinkConfigure>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::shrink(const std::map<Name, EdgeInfoForGetItem>& configure, const Name& new_name, Arrow arrow) const {
-      auto guard = shrink_guard();
+   Tensor<ScalarType, Symmetry, Name>::shrink(const ShrinkConfigure& configure, const Name& new_name, Arrow arrow) const {
+      auto timer_guard = shrink_guard();
+      auto pmr_guard = scope_resource<>();
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
-      auto new_names = std::vector<Name>();
-      auto new_edges = std::vector<Edge<Symmetry>>();
+      auto new_names = pmr::vector<Name>();
+      auto new_edges = pmr::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
       new_names.reserve(reserve_size);
       new_edges.reserve(reserve_size);
@@ -143,7 +146,7 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
+      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return helper.contract_all_edge(*this);

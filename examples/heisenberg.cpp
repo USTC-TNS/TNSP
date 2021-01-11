@@ -15,7 +15,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-// #undef TAT_USE_TIMER
+#undef TAT_USE_TIMER
+#define TAT_USE_SIMPLE_NOSYMMETRY
 // #define TAT_USE_SIMPLE_NAME
 // #define LAZY_DEBUG
 

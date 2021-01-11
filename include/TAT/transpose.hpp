@@ -126,7 +126,7 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
-      auto guard = transpose_kernel_core_guard();
+      auto timer_guard = transpose_kernel_core_guard();
 
       // 经过测试使用mkl的transpose有时会变慢
 #if 0
@@ -147,7 +147,7 @@ namespace TAT {
 
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
-      std::vector<Size> index_list(rank, 0);
+      pmr::vector<Size> index_list(rank, 0);
       while (true) {
          if constexpr (parity) {
             *current_destination = -*current_source;
@@ -188,11 +188,11 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
-      auto guard = transpose_kernel_core_guard();
+      auto timer_guard = transpose_kernel_core_guard();
 
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
-      std::vector<Size> index_list(rank, 0);
+      pmr::vector<Size> index_list(rank, 0);
       while (true) {
          if constexpr (parity) {
             *current_destination = -*current_source;
@@ -260,14 +260,14 @@ namespace TAT {
    // 即可兼容矩阵转置的优化方式
 
    inline auto simple_configure(
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank rank) {
-      auto leadings_source_by_destination = std::vector<Size>();
+      auto leadings_source_by_destination = pmr::vector<Size>();
       leadings_source_by_destination.reserve(rank);
       for (auto i = 0; i < rank; i++) {
          auto j = plan_destination_to_source[i];
@@ -278,18 +278,18 @@ namespace TAT {
    }
 
    inline auto inturn_configure(
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank rank) {
-      auto mask_source = std::vector<bool>(rank, false);
-      auto mask_destination = std::vector<bool>(rank, false);
-      auto real_dimensions = std::vector<Size>(rank);
-      auto real_leadings_source = std::vector<Size>(rank);
-      auto real_leadings_destination = std::vector<Size>(rank);
+      auto mask_source = pmr::vector<bool>(rank, false);
+      auto mask_destination = pmr::vector<bool>(rank, false);
+      auto real_dimensions = pmr::vector<Size>(rank);
+      auto real_leadings_source = pmr::vector<Size>(rank);
+      auto real_leadings_destination = pmr::vector<Size>(rank);
 
       bool source_exhausted = false;
       bool destination_exhausted = false;
@@ -340,12 +340,12 @@ namespace TAT {
    void simple_transpose(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank rank) {
       auto [dimension, leading_of_source, leading_of_destination] = simple_configure(
             plan_source_to_destination,
@@ -356,8 +356,8 @@ namespace TAT {
             leadings_destination,
             rank);
 
-      auto checked_index = std::vector<Rank>(rank, rank);
-      auto incomplete_dimension = std::vector<Size>(rank, 0);
+      auto checked_index = pmr::vector<Rank>(rank, rank);
+      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
 
       tensor_transpose_kernel<ScalarType, parity>(
             data_source,
@@ -374,12 +374,12 @@ namespace TAT {
    void simple_transpose_with_block(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank rank) {
       auto [dimension, leading_of_source, leading_of_destination] = simple_configure(
             plan_source_to_destination,
@@ -390,8 +390,8 @@ namespace TAT {
             leadings_destination,
             rank);
 
-      auto checked_index = std::vector<Rank>(rank, rank);
-      auto incomplete_dimension = std::vector<Size>(rank, 0);
+      auto checked_index = pmr::vector<Rank>(rank, rank);
+      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
 
       tensor_transpose_kernel_with_block<ScalarType, parity>(
             data_source,
@@ -408,12 +408,12 @@ namespace TAT {
    void inturn_transpose(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank rank) {
       auto [dimension, leading_of_source, leading_of_destination] = inturn_configure(
             plan_source_to_destination,
@@ -424,8 +424,8 @@ namespace TAT {
             leadings_destination,
             rank);
 
-      auto checked_index = std::vector<Rank>(rank, rank);
-      auto incomplete_dimension = std::vector<Size>(rank, 0);
+      auto checked_index = pmr::vector<Rank>(rank, rank);
+      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
 
       tensor_transpose_kernel<ScalarType, parity>(
             data_source,
@@ -442,12 +442,12 @@ namespace TAT {
    void inturn_transpose_with_block(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank rank) {
       auto [dimension, leading_of_source, leading_of_destination] = inturn_configure(
             plan_source_to_destination,
@@ -458,8 +458,8 @@ namespace TAT {
             leadings_destination,
             rank);
 
-      auto checked_index = std::vector<Rank>(rank, rank);
-      auto incomplete_dimension = std::vector<Size>(rank, 0);
+      auto checked_index = pmr::vector<Rank>(rank, rank);
+      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
 
       tensor_transpose_kernel_with_block<ScalarType, parity>(
             data_source,
@@ -474,15 +474,15 @@ namespace TAT {
 
    // 去掉dimension = 1的边
    inline auto prune_for_transpose(
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank& rank) {
-      std::vector<bool> is_one_source;
-      std::vector<bool> is_one_destination;
+      pmr::vector<bool> is_one_source;
+      pmr::vector<bool> is_one_destination;
       is_one_source.reserve(rank);
       is_one_destination.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
@@ -491,8 +491,8 @@ namespace TAT {
       for (Rank i = 0; i < rank; i++) {
          is_one_destination.push_back(dimensions_destination[i] == 1);
       }
-      std::vector<Rank> accumulated_one_source;
-      std::vector<Rank> accumulated_one_destination;
+      pmr::vector<Rank> accumulated_one_source;
+      pmr::vector<Rank> accumulated_one_destination;
       accumulated_one_source.reserve(rank);
       accumulated_one_destination.reserve(rank);
       accumulated_one_source.push_back(is_one_source.front());
@@ -504,8 +504,8 @@ namespace TAT {
          accumulated_one_destination.push_back(accumulated_one_destination[i - 1] + Rank(is_one_destination[i]));
       }
 
-      std::vector<Rank> result_plan_source_to_destination;
-      std::vector<Rank> result_plan_destination_to_source;
+      pmr::vector<Rank> result_plan_source_to_destination;
+      pmr::vector<Rank> result_plan_destination_to_source;
       result_plan_source_to_destination.reserve(rank); // 会冗余, 无所谓
       result_plan_destination_to_source.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
@@ -520,10 +520,10 @@ namespace TAT {
       }
       auto result_rank = Rank(result_plan_destination_to_source.size());
 
-      std::vector<Size> result_dimensions_source;
-      std::vector<Size> result_dimensions_destination;
-      std::vector<Size> result_leadings_source;
-      std::vector<Size> result_leadings_destination;
+      pmr::vector<Size> result_dimensions_source;
+      pmr::vector<Size> result_dimensions_destination;
+      pmr::vector<Size> result_leadings_source;
+      pmr::vector<Size> result_leadings_destination;
       result_dimensions_source.reserve(result_rank);
       result_dimensions_destination.reserve(result_rank);
       result_leadings_source.reserve(result_rank);
@@ -551,15 +551,15 @@ namespace TAT {
    }
 
    inline auto merging_for_transpose(
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          const Rank& rank) {
-      std::vector<bool> merging_source_to_destination(rank, false);
-      std::vector<bool> merging_destination_to_source(rank, false);
+      pmr::vector<bool> merging_source_to_destination(rank, false);
+      pmr::vector<bool> merging_destination_to_source(rank, false);
       for (Rank i = 1; i < rank; i++) {
          if (const auto j = plan_source_to_destination[i]; i != 0 && j != 0 && j - 1 == plan_source_to_destination[i - 1] &&
                                                            leadings_source[i - 1] == leadings_source[i] * dimensions_source[i] &&
@@ -569,8 +569,8 @@ namespace TAT {
          }
       }
 
-      std::vector<Rank> accumulated_merging_source_to_destination;
-      std::vector<Rank> accumulated_merging_destination_to_source;
+      pmr::vector<Rank> accumulated_merging_source_to_destination;
+      pmr::vector<Rank> accumulated_merging_destination_to_source;
       accumulated_merging_source_to_destination.reserve(rank);
       accumulated_merging_destination_to_source.reserve(rank);
       accumulated_merging_source_to_destination.push_back(0);
@@ -583,8 +583,8 @@ namespace TAT {
          accumulated_merging_destination_to_source.push_back(
                accumulated_merging_destination_to_source.back() + Rank(merging_destination_to_source[i]));
       }
-      std::vector<Rank> result_plan_source_to_destination;
-      std::vector<Rank> result_plan_destination_to_source;
+      pmr::vector<Rank> result_plan_source_to_destination;
+      pmr::vector<Rank> result_plan_destination_to_source;
       result_plan_source_to_destination.reserve(rank); // 会冗余, 无所谓
       result_plan_destination_to_source.reserve(rank);
       for (Rank i = 0; i < rank; i++) {
@@ -600,10 +600,10 @@ namespace TAT {
          }
       }
       auto result_rank = Rank(result_plan_source_to_destination.size());
-      std::vector<Size> result_dimensions_source(result_rank);
-      std::vector<Size> result_dimensions_destination(result_rank);
-      std::vector<Size> result_leadings_source(result_rank);
-      std::vector<Size> result_leadings_destination(result_rank);
+      pmr::vector<Size> result_dimensions_source(result_rank);
+      pmr::vector<Size> result_dimensions_destination(result_rank);
+      pmr::vector<Size> result_leadings_source(result_rank);
+      pmr::vector<Size> result_leadings_destination(result_rank);
       for (Rank i = result_rank, j = rank; i-- > 0;) {
          result_leadings_source[i] = leadings_source[--j];
          result_dimensions_source[i] = dimensions_source[j];
@@ -633,16 +633,16 @@ namespace TAT {
    void do_transpose(
          const ScalarType* data_source,
          ScalarType* data_destination,
-         const std::vector<Rank>& plan_source_to_destination,
-         const std::vector<Rank>& plan_destination_to_source,
-         const std::vector<Size>& dimensions_source,
-         const std::vector<Size>& dimensions_destination,
-         const std::vector<Size>& leadings_source,
-         const std::vector<Size>& leadings_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
          Rank rank,
          Size total_size,
          bool parity) {
-      auto guard = transpose_kernel_guard();
+      auto timer_guard = transpose_kernel_guard();
 
       if (total_size == 0) {
          return;
@@ -716,9 +716,9 @@ namespace TAT {
 
    template<typename ScalarType>
    void matrix_transpose(Size m, Size n, const ScalarType* const source, ScalarType* const destination) {
-      auto dimension = std::vector<Size>{m, n};
-      auto leading_source = std::vector<Size>{n, 1};
-      auto leading_destination = std::vector<Size>{1, m};
+      auto dimension = pmr::vector<Size>{m, n};
+      auto leading_source = pmr::vector<Size>{n, 1};
+      auto leading_destination = pmr::vector<Size>{1, m};
       tensor_transpose_kernel<ScalarType, false>(
             source, destination, dimension.data(), nullptr, nullptr, leading_source.data(), leading_destination.data(), 2);
    }

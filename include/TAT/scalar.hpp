@@ -32,7 +32,7 @@ namespace TAT {
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                                                      \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name>                                                        \
    [[nodiscard]] auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) {             \
-      auto guard = scalar_outplace_guard();                                                                                                      \
+      auto timer_guard = scalar_outplace_guard();                                                                                                \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                                           \
       if (tensor_1.is_scalar()) {                                                                                                                \
          const auto& x = ScalarType1(tensor_1);                                                                                                  \
@@ -67,7 +67,7 @@ namespace TAT {
             real_tensor_2 = &new_tensor_2;                                                                                                       \
          }                                                                                                                                       \
          auto real_result_edge = &tensor_1.core->edges;                                                                                          \
-         auto new_result_edge = std::vector<Edge<Symmetry>>();                                                                                   \
+         auto new_result_edge = decltype(tensor_1.core->edges)();                                                                                \
          if (tensor_1.core->edges != real_tensor_2->core->edges) {                                                                               \
             new_result_edge.reserve(tensor_1.names.size());                                                                                      \
             for (Rank i = 0; i < tensor_1.names.size(); i++) {                                                                                   \
@@ -137,7 +137,7 @@ namespace TAT {
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2)                                                                                             \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name>                                                        \
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
-      auto guard = scalar_inplace_guard();                                                                                                       \
+      auto timer_guard = scalar_inplace_guard();                                                                                                 \
       if (tensor_1.core.use_count() != 1) {                                                                                                      \
          tensor_1.core = std::make_shared<Core<ScalarType1, Symmetry>>(*tensor_1.core);                                                          \
          TAT_warning_or_error_when_copy_shared("Inplace operator on tensor shared, copy happened here");                                         \

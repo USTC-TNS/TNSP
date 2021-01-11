@@ -148,23 +148,25 @@ namespace TAT {
 #endif
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::tuple<Name, Name>>& pairs, int step) const {
-      auto guard = exponential_guard();
+   template<typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const SetNameAndName& pairs, int step) const {
+      auto timer_guard = exponential_guard();
+      auto pmr_guard = scope_resource<>();
 
       Rank rank = names.size();
       Rank half_rank = rank / 2;
-      auto merge_map = std::map<Name, std::vector<Name>>();
+      auto merge_map = pmr::map<Name, pmr::vector<Name>>();
       auto& merge_1 = merge_map["Exp1"];
       merge_1.resize(half_rank);
       auto& merge_2 = merge_map["Exp2"];
       merge_2.resize(half_rank);
-      auto split_map_result = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
       auto& split_1 = split_map_result["Exp1"];
       split_1.resize(half_rank);
       auto& split_2 = split_map_result["Exp2"];
       split_2.resize(half_rank);
 
-      auto valid_index = std::vector<bool>(rank, true);
+      auto valid_index = pmr::vector<bool>(rank, true);
       Rank current_index = half_rank;
       for (Rank i = rank; i-- > 0;) {
          if (valid_index[i]) {
@@ -195,7 +197,7 @@ namespace TAT {
             }
          }
       }
-      auto reverse_set = std::set<Name>();
+      auto reverse_set = pmr::set<Name>();
       if constexpr (is_fermi_symmetry_v<Symmetry>) {
          for (Rank i = 0; i < rank; i++) {
             if (core->edges[i].arrow) {
@@ -203,9 +205,9 @@ namespace TAT {
             }
          }
       }
-      auto merged_names = std::vector<Name>();
+      auto merged_names = pmr::vector<Name>();
       merged_names.reserve(2);
-      auto result_names = std::vector<Name>();
+      auto result_names = pmr::vector<Name>();
       result_names.reserve(rank);
       if (names.empty() || names.back() == merge_1.back()) {
          // 2 1

@@ -72,7 +72,7 @@ namespace TAT {
     * 使用timer_stack对各个关注的函数进行计时，将统计调用其他函数的时间和自身的时间
     *
     * 如果希望增加自定义的计时器, 在全局空间定义`timer some_function_guard("some function_name");`,
-    * 在计时处添加`auto guard = some_function_guard();`即可, 计时器会统计自构建到析构间的时间
+    * 在计时处添加`auto timer_guard = some_function_guard();`即可, 计时器会统计自构建到析构间的时间
     *
     * \see timer_stack
     */

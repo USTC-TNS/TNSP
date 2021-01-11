@@ -101,12 +101,12 @@ namespace TAT {
        * 即统计symmetries中为奇, reverse_flag中为true, valid_mark中为true的数目的奇偶性
        * \see Tensor::edge_operator
        */
-      [[nodiscard]] static bool
-      get_reverse_parity(const std::vector<Derived>& symmetries, const std::vector<bool>& reverse_flag, const std::vector<bool>& valid_mark) {
+      template<typename VectorSymmetry, typename VectorBool1, typename VectorBool2>
+      [[nodiscard]] static bool get_reverse_parity(const VectorSymmetry& symmetries, const VectorBool1& reverse_flag, const VectorBool2& valid_mark) {
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
-               result ^= static_cast<bool>(symmetries[i].fermi % 2);
+               result ^= bool(symmetries[i].fermi % 2);
             }
          }
          return result;
@@ -120,12 +120,13 @@ namespace TAT {
        * 转置的parity总是有效的, 而翻转和split, merge涉及的两个张量只会有一侧有效, 毕竟这是单个张量的操作
        * \see Tensor::edge_operator
        */
-      [[nodiscard]] static bool get_transpose_parity(const std::vector<Derived>& symmetries, const std::vector<Rank>& transpose_plan) {
+      template<typename VectorSymmetry, typename VectorRank>
+      [[nodiscard]] static bool get_transpose_parity(const VectorSymmetry& symmetries, const VectorRank& transpose_plan) {
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             for (Rank j = i + 1; j < symmetries.size(); j++) {
                if (transpose_plan[i] > transpose_plan[j]) {
-                  result ^= (static_cast<bool>(symmetries[i].fermi % 2) && static_cast<bool>(symmetries[j].fermi % 2));
+                  result ^= (bool(symmetries[i].fermi % 2) && bool(symmetries[j].fermi % 2));
                }
             }
          }
@@ -140,10 +141,11 @@ namespace TAT {
        *
        * \note 实际上每一个merge或split操作都是一个全翻转, 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
        */
+      template<typename VectorSymmetry, typename VectorRank, typename VectorBool>
       [[nodiscard]] static bool get_split_merge_parity(
-            const std::vector<Derived>& symmetries,    // before merge length
-            const std::vector<Rank>& split_merge_flag, // before merge length
-            const std::vector<bool>& valid_mark) {     // after merge length
+            const VectorSymmetry& symmetries,   // before merge length
+            const VectorRank& split_merge_flag, // before merge length
+            const VectorBool& valid_mark) {     // after merge length
          auto result = false;
          for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();
@@ -161,7 +163,7 @@ namespace TAT {
                   sum_of_parity += this_parity;
                   sum_of_parity_square += this_parity * this_parity;
                }
-               result ^= static_cast<bool>(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
+               result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
             }
             split_merge_begin_position = split_merge_end_position;
          }
@@ -318,7 +320,7 @@ namespace TAT {
    }
 #endif
 
-   // 此处将可被c++20的operator<=>替换
+   // TODO 此处将可被c++20的operator<=>替换
    // 生成每个对称性的对称性的比较运算符重载
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #define TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, OP, EXP)         \

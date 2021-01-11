@@ -21,6 +21,7 @@
 #ifndef TAT_CONTRACT_HPP
 #define TAT_CONTRACT_HPP
 
+#include "pmr_resource.hpp"
 #include "tensor.hpp"
 #include "timer.hpp"
 
@@ -208,7 +209,7 @@ namespace TAT {
    inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
 #endif
 
-   template<typename ScalarType>
+   template<typename ScalarType, bool same_shape>
    void gemm_batch(
          const char* transpose_a,
          const char* transpose_b,
@@ -223,30 +224,36 @@ namespace TAT {
          const ScalarType* beta,
          ScalarType** c,
          const int* ldc,
-         const int& batch_size,
-         bool same_shape = false) {
+         const int& batch_size) {
       auto kernel_guard = contract_kernel_guard();
       if (batch_size == 1) {
          gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
       } else {
 #ifdef TAT_USE_MKL_GEMM_BATCH
-         if (same_shape) {
+         if constexpr (same_shape) {
             int group_count = 1;
             mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
          } else {
-            std::vector<int> group_size(batch_size, 1);
+            pmr::vector<int> group_size(batch_size, 1);
             mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
          }
 #else
-         for (auto i = 0; i < batch_size; i++) {
-            gemm<ScalarType>(&transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
+         if constexpr (same_shape) {
+            for (auto i = 0; i < batch_size; i++) {
+               gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
+            }
+         } else {
+            for (auto i = 0; i < batch_size; i++) {
+               gemm<ScalarType>(
+                     &transpose_a[i], &transpose_b[i], &m[i], &n[i], &k[i], &alpha[i], a[i], &lda[i], b[i], &ldb[i], &beta[i], c[i], &ldc[i]);
+            }
          }
 #endif
       }
    }
 
-   template<int i, typename Name>
-   auto find_in_contract_names(const std::set<std::tuple<Name, Name>>& contract_names, const Name& name) {
+   template<int i, typename Name, typename SetNameAndName>
+   auto find_in_contract_names(const SetNameAndName& contract_names, const Name& name) {
       auto iterator = contract_names.begin();
       for (; iterator != contract_names.end(); ++iterator) {
          if (std::get<i>(*iterator) == name) {
@@ -258,37 +265,39 @@ namespace TAT {
 #endif
 
    /// \private
-   template<typename ScalarType, typename Name>
+   template<typename ScalarType, typename Name, typename SetNameAndName>
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names);
+         SetNameAndName contract_names);
 
    /// \private
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names);
+         SetNameAndName contract_names);
 
    template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
-      auto guard = contract_guard();
+         SetNameAndName&& contract_names) {
+      auto timer_guard = contract_guard();
+      auto pmr_guard = scope_resource<>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         return contract_with_fuse(tensor_1, tensor_2, std::move(contract_names));
+         return contract_with_fuse(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
       } else {
-         return contract_without_fuse(tensor_1, tensor_2, std::move(contract_names));
+         return contract_without_fuse(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
       }
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
+         SetNameAndName contract_names) {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       // 为未来split做准备
@@ -306,8 +315,8 @@ namespace TAT {
          }
       }
       const auto common_rank = contract_names.size();
-      std::set<Name> contract_names_1;
-      std::set<Name> contract_names_2;
+      pmr::set<Name> contract_names_1;
+      pmr::set<Name> contract_names_2;
       for (const auto& [name_1, name_2] : contract_names) {
          contract_names_1.insert(name_1);
          contract_names_2.insert(name_2);
@@ -320,19 +329,19 @@ namespace TAT {
       // }
       // 需要反转成 - + - -
       // 事后恢复两侧的边
-      auto reversed_set_1 = std::set<Name>();           // 第一个张量merge时反转表
-      auto reversed_set_2 = std::set<Name>();           // 第二个张量merge时反转表
-      auto edge_result = std::vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      auto reversed_set_1 = pmr::set<Name>();           // 第一个张量merge时反转表
+      auto reversed_set_2 = pmr::set<Name>();           // 第二个张量merge时反转表
+      auto edge_result = pmr::vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
       if constexpr (is_no_symmetry) {
          edge_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       }
-      auto split_map_result = std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
-      auto reversed_set_result = std::set<Name>();                                                 // 最后split时的反转标
-      auto name_result = std::vector<Name>();                                                      // 最后split后的name
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
+      auto reversed_set_result = pmr::set<Name>();                                                 // 最后split时的反转标
+      auto name_result = pmr::vector<Name>();                                                      // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       split_map_result[InternalName<Name>::Contract_1].reserve(rank_1 - common_rank);
       split_map_result[InternalName<Name>::Contract_2].reserve(rank_2 - common_rank);
-      auto free_name_1 = std::vector<Name>(); // 第一个张量的自由边, merge时使用
+      auto free_name_1 = pmr::vector<Name>(); // 第一个张量的自由边, merge时使用
       free_name_1.reserve(rank_1 - common_rank);
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
@@ -361,7 +370,7 @@ namespace TAT {
          }
       }
       const auto free_rank_1 = free_name_1.size();
-      auto free_name_2 = std::vector<Name>(); // 第二个张量的自由边, merge时使用
+      auto free_name_2 = pmr::vector<Name>(); // 第二个张量的自由边, merge时使用
       free_name_2.reserve(rank_2 - common_rank);
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
@@ -391,8 +400,8 @@ namespace TAT {
       }
       const auto free_rank_2 = free_name_2.size();
       // 确定转置方案
-      auto common_name_1 = std::vector<Name>(); // 第一个张量的公共边, merge时使用
-      auto common_name_2 = std::vector<Name>(); // 第二个张量的公共边, merge时使用
+      auto common_name_1 = pmr::vector<Name>(); // 第一个张量的公共边, merge时使用
+      auto common_name_2 = pmr::vector<Name>(); // 第二个张量的公共边, merge时使用
       common_name_1.reserve(common_rank);
       common_name_2.reserve(common_rank);
       bool put_common_1_right;
@@ -437,8 +446,8 @@ namespace TAT {
          // 所以尽量大张量放在后侧
       }
       // 确定交错的对称性
-      auto delete_1 = std::map<Name, std::map<Symmetry, Size>>();
-      auto delete_2 = std::map<Name, std::map<Symmetry, Size>>();
+      auto delete_1 = pmr::map<Name, pmr::map<Symmetry, Size>>();
+      auto delete_2 = pmr::map<Name, pmr::map<Symmetry, Size>>();
       if constexpr (!is_no_symmetry) {
          for (Rank i = 0; i < common_rank; i++) {
             auto name_1 = common_name_1[i];
@@ -454,7 +463,7 @@ namespace TAT {
                   }
                }
 #endif
-               auto delete_map = std::map<Symmetry, Size>();
+               auto delete_map = pmr::map<Symmetry, Size>();
                for (const auto& [symmetry, dimension] : edge_this.map) {
                   auto found = edge_other.map.find(-symmetry);
                   if (found != edge_other.map.end()) {
@@ -478,25 +487,28 @@ namespace TAT {
       }
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
+      auto common_name_1_set = pmr::set<Name>(common_name_1.begin(), common_name_1.end());
       auto tensor_1_merged = tensor_1.edge_operator(
             {},
             {},
             reversed_set_1,
-            {{InternalName<Name>::Contract_1, free_name_1}, {InternalName<Name>::Contract_2, common_name_1}},
-            put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
-                                 std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1},
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Contract_1, std::move(free_name_1)}, {InternalName<Name>::Contract_2, std::move(common_name_1)}},
+            put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
+                                 pmr::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1},
             false,
-            {{{}, std::set<Name>(common_name_1.begin(), common_name_1.end()), {}, {InternalName<Name>::Contract_2}}},
+            std::array<pmr::set<Name>, 4>{{{}, std::move(common_name_1_set), {}, {InternalName<Name>::Contract_2}}},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             reversed_set_2,
-            {{InternalName<Name>::Contract_2, free_name_2}, {InternalName<Name>::Contract_1, common_name_2}},
-            put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
-                                 std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Contract_2, std::move(free_name_2)}, {InternalName<Name>::Contract_1, std::move(common_name_2)}},
+            put_common_2_right ? pmr::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
+                                 pmr::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             false,
-            {{{}, {}, {}, {}}},
+            std::array<pmr::set<Name>, 4>{{{}, {}, {}, {}}},
             delete_2);
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry, Name>(
@@ -516,8 +528,8 @@ namespace TAT {
 
       for (auto& [symmetries, data] : product_result.core->blocks) {
          // m k n
-         auto symmetries_1 = put_common_1_right ? symmetries : std::vector<Symmetry>{symmetries[1], symmetries[0]};
-         auto symmetries_2 = put_common_2_right ? std::vector<Symmetry>{symmetries[1], symmetries[0]} : symmetries;
+         auto symmetries_1 = put_common_1_right ? symmetries : decltype(symmetries){symmetries[1], symmetries[0]};
+         auto symmetries_2 = put_common_2_right ? decltype(symmetries){symmetries[1], symmetries[0]} : symmetries;
          const auto& data_1 = tensor_1_merged.core->blocks.at(symmetries_1);
          const auto& data_2 = tensor_2_merged.core->blocks.at(symmetries_2);
          const int m = product_result.core->edges[0].map.at(symmetries[0]);
@@ -550,7 +562,7 @@ namespace TAT {
             std::fill(data.begin(), data.end(), 0);
          }
       }
-      gemm_batch<ScalarType>(
+      gemm_batch<ScalarType, false>(
             transpose_a_list.data(),
             transpose_b_list.data(),
             m_list.data(),
@@ -567,7 +579,7 @@ namespace TAT {
             batch_size);
 
       if constexpr (is_no_symmetry) {
-         auto result = Tensor<ScalarType, Symmetry, Name>{std::move(name_result), std::move(edge_result)};
+         auto result = Tensor<ScalarType, Symmetry, Name>{name_result, edge_result};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
@@ -576,11 +588,11 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Name>
+   template<typename ScalarType, typename Name, typename SetNameAndName>
    Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
          const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
-         std::set<std::tuple<Name, Name>> contract_names) {
+         SetNameAndName contract_names) {
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
       // 删除不存在的名称, 即在name tuple list中但不在names中
@@ -595,8 +607,8 @@ namespace TAT {
          }
       }
       const auto common_rank = contract_names.size();
-      std::set<Name> contract_names_1;
-      std::set<Name> contract_names_2;
+      pmr::set<Name> contract_names_1;
+      pmr::set<Name> contract_names_2;
       for (const auto& [name_1, name_2] : contract_names) {
          contract_names_1.insert(name_1);
          contract_names_2.insert(name_2);
@@ -605,7 +617,7 @@ namespace TAT {
          TAT_error("Duplicated Contract Name");
       }
       // 确认fuse name即相同名称的边
-      std::set<Name> fuse_names;
+      pmr::set<Name> fuse_names;
       for (const auto& name : tensor_1.names) {
          const auto in_tensor_2 = tensor_2.name_to_index.find(name) != tensor_2.name_to_index.end();
          const auto in_contract_1 = contract_names_1.find(name) != contract_names_1.end();
@@ -616,13 +628,13 @@ namespace TAT {
       }
       const auto fuse_rank = fuse_names.size();
       // 准备方案
-      auto edge_result = std::vector<Edge<NoSymmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      auto edge_result = pmr::vector<Edge<NoSymmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
       edge_result.reserve(rank_1 + rank_2 - 2 * common_rank - fuse_rank);
-      auto name_result = std::vector<Name>(); // 最后split后的name
+      auto name_result = pmr::vector<Name>(); // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank - fuse_rank);
 
       // 首先安排fuse name到结果的最前面, 这里并没有考虑顺序，也许这样不好，但是维度很大应该没问题
-      std::vector<Name> fuse_names_list;
+      pmr::vector<Name> fuse_names_list;
       fuse_names_list.reserve(fuse_rank);
       for (const auto& name : fuse_names) {
          name_result.push_back(name);
@@ -635,7 +647,7 @@ namespace TAT {
          edge_result.push_back(edge_1);
       }
 
-      auto free_name_1 = std::vector<Name>(); // 第一个张量的自由边, merge时使用
+      auto free_name_1 = pmr::vector<Name>(); // 第一个张量的自由边, merge时使用
       free_name_1.reserve(rank_1 - common_rank - fuse_rank);
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
@@ -650,7 +662,7 @@ namespace TAT {
          }
       }
       const auto free_rank_1 = free_name_1.size();
-      auto free_name_2 = std::vector<Name>(); // 第二个张量的自由边, merge时使用
+      auto free_name_2 = pmr::vector<Name>(); // 第二个张量的自由边, merge时使用
       free_name_2.reserve(rank_2 - common_rank);
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
@@ -666,8 +678,8 @@ namespace TAT {
       }
       const auto free_rank_2 = free_name_2.size();
       // 确定转置方案
-      auto common_name_1 = std::vector<Name>(); // 第一个张量的公共边, merge时使用
-      auto common_name_2 = std::vector<Name>(); // 第二个张量的公共边, merge时使用
+      auto common_name_1 = pmr::vector<Name>(); // 第一个张量的公共边, merge时使用
+      auto common_name_2 = pmr::vector<Name>(); // 第二个张量的公共边, merge时使用
       common_name_1.reserve(common_rank);
       common_name_2.reserve(common_rank);
       bool put_common_1_right;
@@ -720,20 +732,22 @@ namespace TAT {
             {},
             {},
             {},
-            {{InternalName<Name>::Contract_1, free_name_1},
-             {InternalName<Name>::Contract_2, common_name_1},
-             {InternalName<Name>::Contract_0, fuse_names_list}},
-            put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
-                                 std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Contract_1, std::move(free_name_1)},
+                  {InternalName<Name>::Contract_2, std::move(common_name_1)},
+                  {InternalName<Name>::Contract_0, fuse_names_list}},
+            put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
+                                 pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
       auto tensor_2_merged = tensor_2.edge_operator(
             {},
             {},
             {},
-            {{InternalName<Name>::Contract_2, free_name_2},
-             {InternalName<Name>::Contract_1, common_name_2},
-             {InternalName<Name>::Contract_0, fuse_names_list}},
-            put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
-                                 std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2});
+            pmr::map<Name, pmr::vector<Name>>{
+                  {InternalName<Name>::Contract_2, std::move(free_name_2)},
+                  {InternalName<Name>::Contract_1, std::move(common_name_2)},
+                  {InternalName<Name>::Contract_0, std::move(fuse_names_list)}},
+            put_common_2_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
+                                 pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2});
       // calculate_product
       auto product_result = Tensor<ScalarType, NoSymmetry, Name>(
             {InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
@@ -754,48 +768,34 @@ namespace TAT {
       const ScalarType* data_1 = tensor_1_merged.core->blocks.begin()->second.data();
       const ScalarType* data_2 = tensor_2_merged.core->blocks.begin()->second.data();
       if (m && n && k) {
-         vector<char> transpose_a_list(l), transpose_b_list(l);
-         vector<int> m_list(l), n_list(l), k_list(l), lda_list(l), ldb_list(l), ldc_list(l);
-         vector<ScalarType> alpha_list(l), beta_list(l);
-         vector<const ScalarType*> a_list(l), b_list(l);
-         vector<ScalarType*> c_list(l);
+         pmr::vector<const ScalarType*> a_list(l), b_list(l);
+         pmr::vector<ScalarType*> c_list(l);
          for (auto i = 0; i < l; i++) {
-            transpose_a_list[i] = put_common_2_right ? 'T' : 'N';
-            transpose_b_list[i] = put_common_1_right ? 'N' : 'T';
-            m_list[i] = n;
-            n_list[i] = m;
-            k_list[i] = k;
-            alpha_list[i] = alpha;
             a_list[i] = data_2 + k * n * i;
-            lda_list[i] = put_common_2_right ? k : n;
             b_list[i] = data_1 + m * k * i;
-            ldb_list[i] = put_common_1_right ? k : m;
-            beta_list[i] = beta;
             c_list[i] = data + m * n * i;
-            ldc_list[i] = n;
          }
-         gemm_batch<ScalarType>(
-               transpose_a_list.data(),
-               transpose_b_list.data(),
-               m_list.data(),
-               n_list.data(),
-               k_list.data(),
-               alpha_list.data(),
+         gemm_batch<ScalarType, true>(
+               put_common_2_right ? "T" : "N",
+               put_common_1_right ? "N" : "T",
+               &n,
+               &m,
+               &k,
+               &alpha,
                a_list.data(),
-               lda_list.data(),
+               put_common_2_right ? &k : &n,
                b_list.data(),
-               ldb_list.data(),
-               beta_list.data(),
+               put_common_1_right ? &k : &m,
+               &beta,
                c_list.data(),
-               ldc_list.data(),
-               l,
-               true);
+               &n,
+               l);
       } else if (m && n) {
          auto& result_vector = product_result.core->blocks.begin()->second;
          std::fill(result_vector.begin(), result_vector.end(), 0);
       }
 
-      auto result = Tensor<ScalarType, NoSymmetry, Name>{std::move(name_result), std::move(edge_result)};
+      auto result = Tensor<ScalarType, NoSymmetry, Name>{name_result, edge_result};
       result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
       return result;
    }
