@@ -32,7 +32,7 @@ endif()
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
-set(TAT_FORCE_VERSION 0.1.1 CACHE STRING "Force set TAT version")
+set(TAT_FORCE_VERSION 0.1.2 CACHE STRING "Force set TAT version")
 
 # 下面四个宏全部都是在build PyTAT时才会用到
 target_compile_definitions(TAT INTERFACE TAT_VERSION="${TAT_FORCE_VERSION}")
