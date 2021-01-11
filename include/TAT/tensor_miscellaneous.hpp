@@ -25,6 +25,54 @@
 #include "timer.hpp"
 
 namespace TAT {
+   template<Size n, typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel_small_n(Size m, Size k, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
+      for (Size a = 0; a < m; a++) {
+         for (Size b = 0; b < k; b++) {
+            auto v = S[b];
+            const auto* data_source_block = &data_source[(a * k + b) * n];
+            auto* data_destination_block = &data_destination[(a * k + b) * n];
+            for (Size c = 0; c < n; c++) {
+               data_destination_block[c] = data_source_block[c] * v;
+            }
+         }
+      }
+   }
+
+   template<typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
+#define TAT_CALL_MULTIPLE_SMALL_N(N)                                      \
+   case N:                                                                \
+      multiple_kernel_small_n<N>(m, k, data_destination, data_source, S); \
+      break;
+      switch (n) {
+         case 0:
+            break;
+            TAT_CALL_MULTIPLE_SMALL_N(1);
+            TAT_CALL_MULTIPLE_SMALL_N(2);
+            TAT_CALL_MULTIPLE_SMALL_N(3);
+            TAT_CALL_MULTIPLE_SMALL_N(4);
+            TAT_CALL_MULTIPLE_SMALL_N(5);
+            TAT_CALL_MULTIPLE_SMALL_N(6);
+            TAT_CALL_MULTIPLE_SMALL_N(7);
+            TAT_CALL_MULTIPLE_SMALL_N(8);
+            TAT_CALL_MULTIPLE_SMALL_N(9);
+            TAT_CALL_MULTIPLE_SMALL_N(10);
+         default:
+            for (Size a = 0; a < m; a++) {
+               for (Size b = 0; b < k; b++) {
+                  auto v = S[b];
+                  const auto* data_source_block = &data_source[(a * k + b) * n];
+                  auto* data_destination_block = &data_destination[(a * k + b) * n];
+                  for (Size c = 0; c < n; c++) {
+                     data_destination_block[c] = data_source_block[c] * v;
+                  }
+               }
+            }
+      }
+#undef TAT_CALL_MULTIPLE_SMALL_N
+   }
+
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
@@ -76,39 +124,27 @@ namespace TAT {
          const auto* data_source = block_source.data();
          auto* data_destination = block_destination.data();
 
+         vector<typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type> realS(k);
+         const auto* pointS = realS.data();
          if (division) {
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
+            for (Size i = 0; i < k; i++) {
 #ifdef TAT_USE_SINGULAR_MATRIX
-                  auto v = vector_in_S[b * dimension_plus_one];
+               realS[i] = 1 / vector_in_S[i * dimension_plus_one];
 #else
-                  auto v = vector_in_S[b];
+               realS[i] = 1 / vector_in_S[i];
 #endif
-                  const auto* data_source_block = &data_source[(a * k + b) * n];
-                  auto* data_destination_block = &data_destination[(a * k + b) * n];
-#pragma simd
-                  for (Size c = 0; c < n; c++) {
-                     data_destination_block[c] = data_source_block[c] / v;
-                  }
-               }
             }
          } else {
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
 #ifdef TAT_USE_SINGULAR_MATRIX
-                  auto v = vector_in_S[b * dimension_plus_one];
-#else
-                  auto v = vector_in_S[b];
-#endif
-                  const auto* data_source_block = &data_source[(a * k + b) * n];
-                  auto* data_destination_block = &data_destination[(a * k + b) * n];
-#pragma simd
-                  for (Size c = 0; c < n; c++) {
-                     data_destination_block[c] = data_source_block[c] * v;
-                  }
-               }
+            for (Size i = 0; i < k; i++) {
+               realS[i] = vector_in_S[i * dimension_plus_one];
             }
+#else
+            pointS = vector_in_S.data();
+#endif
          }
+
+         multiple_kernel(m, k, n, data_destination, data_source, pointS);
       }
       return result;
    }
