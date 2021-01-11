@@ -308,7 +308,7 @@ namespace TAT {
       }
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
-      auto tensor_merged = edge_operator(
+      auto tensor_merged = edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             reversed_set_origin,
@@ -399,7 +399,7 @@ namespace TAT {
          reversed_set_u.insert(common_name_u);
       }
       // 这里会自动cut
-      auto u = tensor_u.edge_operator(
+      auto u = tensor_u.template edge_operator<Allocator>(
             pmr::map<Name, Name>{{InternalName<Name>::SVD_V, common_name_u}},
             pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
@@ -408,7 +408,7 @@ namespace TAT {
             false,
             std::array<pmr::set<Name>, 4>{{{}, put_v_right ? pmr::set<Name>{} : pmr::set<Name>{common_name_u}, {}, {}}},
             pmr::map<Name, pmr::map<Symmetry, Size>>{{InternalName<Name>::SVD_V, std::move(remain_dimension_u)}});
-      auto v = tensor_v.edge_operator(
+      auto v = tensor_v.template edge_operator<Allocator>(
             pmr::map<Name, Name>{{InternalName<Name>::SVD_U, common_name_v}},
             pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,

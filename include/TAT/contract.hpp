@@ -488,7 +488,7 @@ namespace TAT {
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
       auto common_name_1_set = pmr::set<Name>(common_name_1.begin(), common_name_1.end());
-      auto tensor_1_merged = tensor_1.edge_operator(
+      auto tensor_1_merged = tensor_1.template edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             reversed_set_1,
@@ -499,7 +499,7 @@ namespace TAT {
             false,
             std::array<pmr::set<Name>, 4>{{{}, std::move(common_name_1_set), {}, {InternalName<Name>::Contract_2}}},
             delete_1);
-      auto tensor_2_merged = tensor_2.edge_operator(
+      auto tensor_2_merged = tensor_2.template edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             reversed_set_2,
@@ -578,12 +578,13 @@ namespace TAT {
             ldc_list.data(),
             batch_size);
 
-      if constexpr (is_no_symmetry) {
+      if constexpr (is_no_symmetry && false) {
+         // TODO move data check between allocator
          auto result = Tensor<ScalarType, Symmetry, Name, Allocator>{name_result, edge_result};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
-         auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
+         auto result = product_result.template edge_operator<Allocator>({}, split_map_result, reversed_set_result, {}, std::move(name_result));
          return result;
       }
    }

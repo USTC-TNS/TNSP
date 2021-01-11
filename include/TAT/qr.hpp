@@ -388,7 +388,7 @@ namespace TAT {
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
-      auto tensor_merged = edge_operator(
+      auto tensor_merged = edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             reversed_set_origin,
@@ -427,13 +427,13 @@ namespace TAT {
       if constexpr (is_fermi) {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
-      auto new_tensor_1 = tensor_1.edge_operator(
+      auto new_tensor_1 = tensor_1.template edge_operator<Allocator>(
             pmr::map<Name, Name>{{InternalName<Name>::QR_2, use_qr_not_lq ? common_name_q : common_name_r}},
             pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
             {},
             result_name_1);
-      auto new_tensor_2 = tensor_2.edge_operator(
+      auto new_tensor_2 = tensor_2.template edge_operator<Allocator>(
             pmr::map<Name, Name>{{InternalName<Name>::QR_1, use_qr_not_lq ? common_name_r : common_name_q}},
             pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
             reversed_set_2,

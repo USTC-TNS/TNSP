@@ -44,6 +44,8 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<
+         template<typename>
+         class ResultAllocator,
          typename MapNameName,
          typename MapNameVectorNameAndEdge,
          typename SetName1,
@@ -51,7 +53,7 @@ namespace TAT {
          typename VectorName,
          typename SetName2,
          typename MapNameMapSymmetrySize>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::edge_operator(
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, ResultAllocator> Tensor<ScalarType, Symmetry, Name, Allocator>::edge_operator(
          const MapNameName& rename_map,
          const MapNameVectorNameAndEdge& split_map,
          const SetName1& reversed_name,
@@ -126,15 +128,17 @@ namespace TAT {
 
       // 1.2 检查是否不需要做任何操作 -> rename_edge
       // check no change
-      if (is_same_vector(name_before_split, new_names) && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
-          edge_and_symmetries_to_cut_before_all.empty()) {
-         // share the core
-         auto result = Tensor<ScalarType, Symmetry, Name, Allocator>();
-         result.names = {new_names.begin(), new_names.end()};
-         result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
-         result.core = core; // 因为是rename edge所以不拷贝
-         // check_valid_name(result.names, result.core->edges.size());
-         return result;
+      if constexpr (std::is_same_v<Allocator<std::byte>, ResultAllocator<std::byte>>) {
+         if (is_same_vector(name_before_split, new_names) && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
+             edge_and_symmetries_to_cut_before_all.empty()) {
+            // share the core
+            auto result = Tensor<ScalarType, Symmetry, Name, ResultAllocator>();
+            result.names = {new_names.begin(), new_names.end()};
+            result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
+            result.core = core; // 因为是rename edge所以不拷贝
+            // check_valid_name(result.names, result.core->edges.size());
+            return result;
+         }
       }
 
       auto real_edge_before_split = decltype(core->edges)();
@@ -296,7 +300,7 @@ namespace TAT {
       const auto& edge_before_transpose = is_fermi && !reversed_name.empty() ? fermi_edge_before_transpose : edge_after_split;
 
       // create res names
-      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>();
+      auto result = Tensor<ScalarType, Symmetry, Name, ResultAllocator>();
       result.names = {new_names.begin(), new_names.end()};
       result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
 

@@ -472,6 +472,7 @@ namespace TAT {
        * \note 本函数对转置外不标准的腿的输入是脆弱的
        */
       template<
+            template<typename> class ResultAllocator = Allocator,
             typename MapNameName = pmr::map<Name, Name>,
             typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
             typename SetName1 = pmr::set<Name>,
@@ -479,7 +480,7 @@ namespace TAT {
             typename VectorName = pmr::vector<Name>,
             typename SetName2 = pmr::set<Name>,
             typename MapNameMapSymmetrySize = std::map<Name, std::map<Symmetry, Size>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> edge_operator(
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, ResultAllocator> edge_operator(
             const MapNameName& rename_map,
             const MapNameVectorNameAndEdge& split_map,
             const SetName1& reversed_name,
