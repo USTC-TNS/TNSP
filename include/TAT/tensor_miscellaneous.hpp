@@ -25,33 +25,25 @@
 #include "timer.hpp"
 
 namespace TAT {
-   template<Size n, bool division, bool use_inc, typename ScalarType, typename ScalarTypeS>
-   void multiple_kernel_small_n(Size m, Size k, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S, const Size& inc) {
+   template<Size n, typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel_small_n(Size m, Size k, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
       for (Size a = 0; a < m; a++) {
          for (Size b = 0; b < k; b++) {
-            Size offset = b;
-            if constexpr (use_inc) {
-               offset *= inc;
-            }
-            auto v = S[offset];
+            auto v = S[b];
             const auto* data_source_block = &data_source[(a * k + b) * n];
             auto* data_destination_block = &data_destination[(a * k + b) * n];
             for (Size c = 0; c < n; c++) {
-               if constexpr (division) {
-                  data_destination_block[c] = data_source_block[c] / v;
-               } else {
-                  data_destination_block[c] = data_source_block[c] * v;
-               }
+               data_destination_block[c] = data_source_block[c] * v;
             }
          }
       }
    }
 
-   template<bool division, bool use_inc, typename ScalarType, typename ScalarTypeS>
-   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S, const Size& inc) {
-#define TAT_CALL_MULTIPLE_SMALL_N(N)                                                              \
-   case N:                                                                                        \
-      multiple_kernel_small_n<N, division, use_inc>(m, k, data_destination, data_source, S, inc); \
+   template<typename ScalarType, typename ScalarTypeS>
+   void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
+#define TAT_CALL_MULTIPLE_SMALL_N(N)                                      \
+   case N:                                                                \
+      multiple_kernel_small_n<N>(m, k, data_destination, data_source, S); \
       break;
       switch (n) {
          case 0:
@@ -69,19 +61,11 @@ namespace TAT {
          default:
             for (Size a = 0; a < m; a++) {
                for (Size b = 0; b < k; b++) {
-                  Size offset = b;
-                  if constexpr (use_inc) {
-                     offset *= inc;
-                  }
-                  auto v = S[offset];
+                  auto v = S[b];
                   const auto* data_source_block = &data_source[(a * k + b) * n];
                   auto* data_destination_block = &data_destination[(a * k + b) * n];
                   for (Size c = 0; c < n; c++) {
-                     if constexpr (division) {
-                        data_destination_block[c] = data_source_block[c] / v;
-                     } else {
-                        data_destination_block[c] = data_source_block[c] * v;
-                     }
+                     data_destination_block[c] = data_source_block[c] * v;
                   }
                }
             }
@@ -140,19 +124,27 @@ namespace TAT {
          const auto* data_source = block_source.data();
          auto* data_destination = block_destination.data();
 
+         vector<typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type> realS(k);
+         const auto* pointS = realS.data();
+         if (division) {
+            for (Size i = 0; i < k; i++) {
 #ifdef TAT_USE_SINGULAR_MATRIX
-         if (division) {
-            multiple_kernel<true, true>(m, k, n, data_destination, data_source, vector_in_S.data(), dimension_plus_one);
-         } else {
-            multiple_kernel<false, true>(m, k, n, data_destination, data_source, vector_in_S.data(), dimension_plus_one);
-         }
+               realS[i] = 1 / vector_in_S[i * dimension_plus_one];
 #else
-         if (division) {
-            multiple_kernel<true, false>(m, k, n, data_destination, data_source, vector_in_S.data(), 0);
-         } else {
-            multiple_kernel<false, false>(m, k, n, data_destination, data_source, vector_in_S.data(), 0);
-         }
+               realS[i] = 1 / vector_in_S[i];
 #endif
+            }
+         } else {
+#ifdef TAT_USE_SINGULAR_MATRIX
+            for (Size i = 0; i < k; i++) {
+               realS[i] = vector_in_S[i * dimension_plus_one];
+            }
+#else
+            pointS = vector_in_S.data();
+#endif
+         }
+
+         multiple_kernel(m, k, n, data_destination, data_source, pointS);
       }
       return result;
    }
