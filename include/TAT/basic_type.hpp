@@ -23,7 +23,14 @@
 
 #include <complex>
 #include <cstdint>
+#include <deque>
+#include <list>
+#include <map>
+#include <set>
 #include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 namespace TAT {
    /**
@@ -114,6 +121,37 @@ namespace TAT {
    struct is_real : std::is_same<T, real_base_t<T>> {};
    template<typename T>
    constexpr bool is_real_v = is_real<T>::value;
+
+   template<typename Container, typename T>
+   struct is_set_of : std::bool_constant<false> {};
+   template<typename T, typename Compare, typename Allocator>
+   struct is_set_of<std::set<T, Compare, Allocator>, T> : std::bool_constant<true> {};
+   template<typename T, typename Compare, typename Allocator>
+   struct is_set_of<std::unordered_set<T, Compare, Allocator>, T> : std::bool_constant<true> {};
+   template<typename Container, typename T>
+   constexpr bool is_set_of_v = is_set_of<Container, T>::value;
+
+   template<typename Container, typename T>
+   struct is_list_of : std::bool_constant<false> {};
+   template<typename T, typename Allocator>
+   struct is_list_of<std::vector<T, Allocator>, T> : std::bool_constant<true> {};
+   template<typename T, typename Allocator>
+   struct is_list_of<std::list<T, Allocator>, T> : std::bool_constant<true> {};
+   template<typename T, typename Allocator>
+   struct is_list_of<std::deque<T, Allocator>, T> : std::bool_constant<true> {};
+   template<typename T, std::size_t size>
+   struct is_list_of<std::array<T, size>, T> : std::bool_constant<true> {};
+   template<typename Container, typename T>
+   constexpr bool is_list_of_v = is_list_of<Container, T>::value;
+
+   template<typename Container, typename Key, typename T>
+   struct is_map_of : std::bool_constant<false> {};
+   template<typename Key, typename T, typename Compare, typename Allocator>
+   struct is_map_of<std::map<Key, T, Compare, Allocator>, Key, T> : std::bool_constant<true> {};
+   template<typename Key, typename T, typename Compare, typename Allocator>
+   struct is_map_of<std::unordered_map<Key, T, Compare, Allocator>, Key, T> : std::bool_constant<true> {};
+   template<typename Container, typename Key, typename T>
+   constexpr bool is_map_of_v = is_map_of<Container, Key, T>::value;
 
    /**@}*/
 } // namespace TAT
