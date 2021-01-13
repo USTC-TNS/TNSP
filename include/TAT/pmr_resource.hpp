@@ -56,19 +56,52 @@ namespace TAT {
          return result;
       }
 
+      // 和std::pmr::polymorphic_allocator几乎一模一样
+      // 和std::pmr::polymorphic_allocator的初始化时的默认resource不同, 使用的是自己的thread unsafe版本
       template<typename T>
-      struct polymorphic_allocator : pmr_source::polymorphic_allocator<T> {
-         polymorphic_allocator() noexcept : pmr_source::polymorphic_allocator<T>(get_default_resource()) {}
+      struct polymorphic_allocator {
+         memory_resource* _M_resource;
+
+         using value_type = T;
+         polymorphic_allocator() noexcept : polymorphic_allocator(get_default_resource()) {}
          polymorphic_allocator(const polymorphic_allocator& other) = default;
          template<typename U>
-         polymorphic_allocator(const polymorphic_allocator<U>& other) noexcept :
-               pmr_source::polymorphic_allocator<T>(static_cast<const pmr_source::polymorphic_allocator<T>&>(other)) {}
-         polymorphic_allocator(memory_resource* r) : pmr_source::polymorphic_allocator<T>(r) {}
+         polymorphic_allocator(const polymorphic_allocator<U>& other) noexcept : polymorphic_allocator(other.resource()) {}
+         polymorphic_allocator(memory_resource* r) : _M_resource(r) {}
+
+         polymorphic_allocator<T>& operator=(const polymorphic_allocator<T>&) = delete;
+
+         T* allocate(std::size_t n) {
+            return static_cast<T*>(resource()->allocate(n * sizeof(T), alignof(T)));
+         }
+
+         void deallocate(T* p, std::size_t n) {
+            resource()->deallocate(p, n * sizeof(T), alignof(T));
+         }
+
+         template<class U, class... Args>
+         void construct(U* p, Args&&... args) {
+            new (p) U(std::forward<Args>(args)...);
+         }
+
+         template<class U>
+         void destroy(U* p) {
+            p->~U();
+         }
 
          polymorphic_allocator<T> select_on_container_copy_construction() const {
             return polymorphic_allocator<T>();
          }
+
+         memory_resource* resource() const {
+            return _M_resource;
+         }
       };
+
+      template<class T1, class T2>
+      bool operator==(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
+         return *lhs.resource() == *rhs.resource();
+      }
 
       template<typename T>
       using vector = std::vector<T, polymorphic_allocator<T>>;
