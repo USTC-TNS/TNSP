@@ -232,7 +232,7 @@ namespace TAT {
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = result.core->blocks.at(symmetries);
-         auto n = core->edges[0].map.at(symmetries[0]);
+         auto n = tensor_merged.core->edges[0].map.at(symmetries[0]);
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator({}, split_map_result, reverse_set, {}, result_names);
