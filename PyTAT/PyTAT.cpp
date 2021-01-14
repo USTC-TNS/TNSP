@@ -417,7 +417,9 @@ namespace TAT {
             .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
             .def("norm_2", &T::template norm<2>, "Get 2 norm")
             .def("edge_rename",
-                 &T::template edge_rename<std::map<DefaultName, DefaultName>>,
+                 [](const T& tensor, const std::map<DefaultName, DefaultName>& dictionary) {
+                    return tensor.edge_rename(dictionary);
+                 },
                  py::arg("name_dictionary"),
                  "Rename names of edges, which will not copy data")
             .def("transpose",
