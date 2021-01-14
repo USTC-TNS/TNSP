@@ -99,7 +99,7 @@ namespace TAT {
             }
          }
       }
-      auto merged_tensor = edge_operator(
+      auto merged_tensor = edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             reverse_names,
@@ -129,7 +129,7 @@ namespace TAT {
             }
          }
       }
-      auto result = traced_tensor.edge_operator(
+      auto result = traced_tensor.template edge_operator<Allocator>(
             {}, pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, std::move(split_plan)}}, reverse_names, {}, result_names);
       return result;
    }

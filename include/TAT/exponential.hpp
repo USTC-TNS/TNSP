@@ -231,14 +231,14 @@ namespace TAT {
             result_names.push_back(i);
          }
       }
-      auto tensor_merged = edge_operator({}, {}, reverse_set, merge_map, merged_names);
+      auto tensor_merged = edge_operator<pmr::polymorphic_allocator>({}, {}, reverse_set, merge_map, merged_names);
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = result.core->blocks.at(symmetries);
          auto n = tensor_merged.core->edges[0].map.at(symmetries[0]);
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
-      return result.edge_operator({}, split_map_result, reverse_set, {}, result_names);
+      return result.template edge_operator<Allocator>({}, split_map_result, reverse_set, {}, result_names);
    }
 } // namespace TAT
 #endif

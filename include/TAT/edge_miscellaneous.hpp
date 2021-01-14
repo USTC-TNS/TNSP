@@ -49,7 +49,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename VectorName>
    Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::transpose(const VectorName& target_names) const {
-      return edge_operator({}, {}, {}, {}, target_names);
+      return edge_operator<Allocator>({}, {}, {}, {}, target_names);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
@@ -57,7 +57,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name, Allocator>
    Tensor<ScalarType, Symmetry, Name, Allocator>::reverse_edge(const SetName1& reversed_name, const bool apply_parity, SetName2&& parity_exclude_name)
          const {
-      return edge_operator(
+      return edge_operator<Allocator>(
             {}, {}, reversed_name, {}, names, apply_parity, std::array<SetName2, 4>{{{}, std::forward<SetName2>(parity_exclude_name), {}, {}}});
    }
 
@@ -111,7 +111,7 @@ namespace TAT {
          }
       }
       std::reverse(target_name.begin(), target_name.end());
-      return edge_operator(
+      return edge_operator<Allocator>(
             {},
             {},
             {},
@@ -149,7 +149,7 @@ namespace TAT {
             target_name.push_back(n);
          }
       }
-      return edge_operator(
+      return edge_operator<Allocator>(
             {}, split, {}, {}, target_name, apply_parity, std::array<SetName, 4>{{std::forward<SetName>(parity_exclude_name_split), {}, {}, {}}});
    }
 } // namespace TAT

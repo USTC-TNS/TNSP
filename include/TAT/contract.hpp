@@ -729,7 +729,7 @@ namespace TAT {
 
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
-      auto tensor_1_merged = tensor_1.edge_operator(
+      auto tensor_1_merged = tensor_1.template edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             {},
@@ -739,7 +739,7 @@ namespace TAT {
                   {InternalName<Name>::Contract_0, fuse_names_list}},
             put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
-      auto tensor_2_merged = tensor_2.edge_operator(
+      auto tensor_2_merged = tensor_2.template edge_operator<pmr::polymorphic_allocator>(
             {},
             {},
             {},
