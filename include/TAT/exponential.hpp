@@ -157,14 +157,14 @@ namespace TAT {
       Rank rank = names.size();
       Rank half_rank = rank / 2;
       auto merge_map = pmr::map<Name, pmr::vector<Name>>();
-      auto& merge_1 = merge_map["Exp1"];
+      auto& merge_1 = merge_map[InternalName<Name>::Exp_1];
       merge_1.resize(half_rank);
-      auto& merge_2 = merge_map["Exp2"];
+      auto& merge_2 = merge_map[InternalName<Name>::Exp_2];
       merge_2.resize(half_rank);
       auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
-      auto& split_1 = split_map_result["Exp1"];
+      auto& split_1 = split_map_result[InternalName<Name>::Exp_1];
       split_1.resize(half_rank);
-      auto& split_2 = split_map_result["Exp2"];
+      auto& split_2 = split_map_result[InternalName<Name>::Exp_2];
       split_2.resize(half_rank);
 
       auto valid_index = pmr::vector<bool>(rank, true);
@@ -212,8 +212,8 @@ namespace TAT {
       result_names.reserve(rank);
       if (names.empty() || names.back() == merge_1.back()) {
          // 2 1
-         merged_names.push_back("Exp2");
-         merged_names.push_back("Exp1");
+         merged_names.push_back(InternalName<Name>::Exp_2);
+         merged_names.push_back(InternalName<Name>::Exp_1);
          for (const auto& i : merge_2) {
             result_names.push_back(i);
          }
@@ -222,8 +222,8 @@ namespace TAT {
          }
       } else {
          // 1 2
-         merged_names.push_back("Exp1");
-         merged_names.push_back("Exp2");
+         merged_names.push_back(InternalName<Name>::Exp_1);
+         merged_names.push_back(InternalName<Name>::Exp_2);
          for (const auto& i : merge_1) {
             result_names.push_back(i);
          }
@@ -235,7 +235,7 @@ namespace TAT {
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = result.core->blocks.at(symmetries);
-         auto n = core->edges[0].map.at(symmetries[0]);
+         auto n = tensor_merged.core->edges[0].map.at(symmetries[0]);
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator({}, split_map_result, reverse_set, {}, result_names);

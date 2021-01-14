@@ -26,19 +26,23 @@
 namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename MapNameName>
-   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::edge_rename(const MapNameName& dictionary) const {
-      // too easy so not use edge_operator
-      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>{};
+   auto Tensor<ScalarType, Symmetry, Name, Allocator>::edge_rename(const MapNameName& dictionary) const {
+      using ResultName = typename MapNameName::mapped_type;
+      auto result = Tensor<ScalarType, Symmetry, ResultName, Allocator>{};
       result.core = core;
       result.names.reserve(names.size());
       std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](const Name& name) {
          if (auto position = dictionary.find(name); position == dictionary.end()) {
-            return name;
+            if constexpr (std::is_same_v<ResultName, Name>) {
+               return name;
+            } else {
+               TAT_error("New names not found in edge_rename which change type of name");
+            }
          } else {
             return position->second;
          }
       });
-      result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
+      result.name_to_index = construct_name_to_index<decltype(result.name_to_index)>(result.names);
       return result;
    }
 

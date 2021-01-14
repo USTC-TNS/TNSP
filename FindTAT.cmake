@@ -13,17 +13,6 @@ add_library(TAT INTERFACE)
 
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
 target_compile_features(TAT INTERFACE cxx_std_17)
-include(CheckIncludeFileCXX)
-check_include_file_cxx(memory_resource HAVE_PMR)
-if(${HAVE_PMR})
-   message("-- std::pmr supported")
-else()
-   message("-- std::pmr not supported, use boost instead")
-   target_compile_definitions(TAT INTERFACE TAT_USE_BOOST_PMR)
-   find_package(Boost REQUIRED COMPONENTS container)
-   target_include_directories(TAT INTERFACE ${Boost_INCLUDE_DIRS})
-   target_link_libraries(TAT INTERFACE ${Boost_LIBRARIES})
-endif()
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
@@ -32,7 +21,7 @@ endif()
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
-set(TAT_FORCE_VERSION 0.1.2 CACHE STRING "Force set TAT version")
+set(TAT_FORCE_VERSION dev CACHE STRING "Force set TAT version")
 
 # 下面四个宏全部都是在build PyTAT时才会用到
 target_compile_definitions(TAT INTERFACE TAT_VERSION="${TAT_FORCE_VERSION}")

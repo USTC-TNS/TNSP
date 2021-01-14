@@ -497,7 +497,7 @@ namespace TAT {
        * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator, 而是实现一个小功能的edge_rename
        */
       template<typename MapNameName = pmr::map<Name, Name>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> edge_rename(const MapNameName& dictionary) const;
+      [[nodiscard]] auto edge_rename(const MapNameName& dictionary) const;
 
       /**
        * 对张量进行转置
