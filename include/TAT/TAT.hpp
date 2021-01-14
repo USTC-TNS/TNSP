@@ -44,7 +44,6 @@
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
 // TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义 TODO 进一步优化
 // TAT_USE_MKL_GEMM_BATCH 定义以使用mkl的?gemm_batch, cmake可对此进行定义
-// TAT_USE_BOOST_PMR 对于gcc<9, pmr并不支持, 需要使用boost, cmake可对此进行定义
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
@@ -71,7 +70,7 @@ namespace TAT {
 #ifdef TAT_VERSION
          TAT_VERSION
 #else
-         "0.1.2"
+         "0.1.3"
 #endif
          ;
 
