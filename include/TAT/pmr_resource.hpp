@@ -56,6 +56,9 @@ namespace TAT {
       bool operator==(const memory_resource& a, const memory_resource& b) noexcept {
          return &a == &b || a.is_equal(b);
       }
+      bool operator!=(const memory_resource& a, const memory_resource& b) noexcept {
+         return !(a == b);
+      }
 
       inline memory_resource* get_default_resource();
       inline memory_resource* set_default_resource(memory_resource* input);
@@ -221,6 +224,10 @@ namespace TAT {
       template<class T1, class T2>
       bool operator==(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
          return *lhs.resource() == *rhs.resource();
+      }
+      template<class T1, class T2>
+      bool operator!=(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
+         return !(lhs == rhs);
       }
 
       template<typename T>
