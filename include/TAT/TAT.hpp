@@ -70,7 +70,7 @@ namespace TAT {
 #ifdef TAT_VERSION
          TAT_VERSION
 #else
-         "0.1.2"
+         "0.1.3"
 #endif
          ;
 
