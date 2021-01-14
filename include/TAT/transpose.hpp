@@ -121,8 +121,6 @@ namespace TAT {
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
          const Size* const __restrict dimension,
-         const Rank* const __restrict,
-         const Size* const __restrict,
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank) {
@@ -178,72 +176,7 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, bool parity>
-   void tensor_transpose_kernel_with_block(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         Size* const __restrict dimension,
-         const Rank* const __restrict checked_index,
-         Size* const __restrict incomplete_dimension,
-         const Size* const __restrict leading_source,
-         const Size* const __restrict leading_destination,
-         const Rank rank) {
-      auto timer_guard = transpose_kernel_core_guard();
-
-      const ScalarType* current_source = data_source;
-      ScalarType* current_destination = data_destination;
-      pmr::vector<Size> index_list(rank, 0);
-      while (true) {
-         if constexpr (parity) {
-            *current_destination = -*current_source;
-         } else {
-            *current_destination = *current_source;
-         }
-
-         Rank active_position = rank - 1;
-
-         index_list[active_position]++;
-         current_source += leading_source[active_position];
-         current_destination += leading_destination[active_position];
-
-         // index_list[active_position] == dimension[active_position]
-         // 变成
-         // active_checked_position = checked_index[active_position]
-         // if active_checked_position == rank
-         //    then index_list[active_position] == dimension[active_position]
-         //    else if index_list[active_checked_position] == dimension[active_checked_position] - 1
-         //         then index_list[active_position] == incomplete_dimension[active_position]
-         //         else index_list[active_position] == dimension[active_position]
-
-         while (index_list[active_position] == dimension[active_position]) {
-            index_list[active_position] = 0;
-            current_source -= dimension[active_position] * leading_source[active_position];
-            current_destination -= dimension[active_position] * leading_destination[active_position];
-            if (Rank active_checked_position = checked_index[active_position]; active_checked_position != rank) {
-               auto temporary = dimension[active_checked_position];
-               dimension[active_checked_position] = incomplete_dimension[active_checked_position];
-               incomplete_dimension[active_checked_position] = temporary;
-            }
-
-            if (active_position == 0) {
-               return;
-            }
-            active_position--;
-
-            index_list[active_position]++;
-            current_source += leading_source[active_position];
-            current_destination += leading_destination[active_position];
-         }
-
-         if (index_list[active_position] == dimension[active_position] - 1) {
-            if (Rank active_checked_position = checked_index[active_position]; active_checked_position != rank) {
-               auto temporary = dimension[active_checked_position];
-               dimension[active_checked_position] = incomplete_dimension[active_checked_position];
-               incomplete_dimension[active_checked_position] = temporary;
-            }
-         }
-      }
-   }
+   // TODO 更好的转置方法?
    // TODO: l3太大了, 所以只按着l2和l1来划分, 这样合适么
    // 注意，现在这段代码被我暂时删掉了
    //
@@ -259,7 +192,10 @@ namespace TAT {
    // 再交替iter dim
    // 即可兼容矩阵转置的优化方式
 
-   inline auto simple_configure(
+   template<typename ScalarType, bool parity>
+   void simple_transpose(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
          const pmr::vector<Rank>& plan_source_to_destination,
          const pmr::vector<Rank>& plan_destination_to_source,
          const pmr::vector<Size>& dimensions_source,
@@ -274,202 +210,8 @@ namespace TAT {
          leadings_source_by_destination.push_back(leadings_source[j]);
       }
 
-      return std::make_tuple(dimensions_destination, leadings_source_by_destination, leadings_destination);
-   }
-
-   inline auto inturn_configure(
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank rank) {
-      auto mask_source = pmr::vector<bool>(rank, false);
-      auto mask_destination = pmr::vector<bool>(rank, false);
-      auto real_dimensions = pmr::vector<Size>(rank);
-      auto real_leadings_source = pmr::vector<Size>(rank);
-      auto real_leadings_destination = pmr::vector<Size>(rank);
-
-      bool source_exhausted = false;
-      bool destination_exhausted = false;
-      for (auto current_index = rank, current_index_source = rank, current_index_destination = rank; current_index-- > 0;) {
-         if (current_index_destination != rank &&
-             (current_index_source == rank || (destination_exhausted || (!source_exhausted && leadings_destination[current_index_destination] >
-                                                                                                    leadings_source[current_index_source])))) {
-            // add src
-            do {
-               current_index_source--;
-            } while (mask_source[current_index_source]);
-            auto response_index_destination = plan_source_to_destination[current_index_source];
-
-            real_dimensions[current_index] = dimensions_source[current_index_source];
-            real_leadings_source[current_index] = leadings_source[current_index_source];
-            real_leadings_destination[current_index] = leadings_destination[response_index_destination];
-
-            mask_destination[response_index_destination] = true;
-            mask_source[current_index_source] = true;
-
-            if (current_index_source == 0) {
-               source_exhausted = true;
-            }
-         } else {
-            // add dst
-            do {
-               current_index_destination--;
-            } while (mask_destination[current_index_destination]);
-            auto response_index_source = plan_destination_to_source[current_index_destination];
-
-            real_dimensions[current_index] = dimensions_destination[current_index_destination];
-            real_leadings_destination[current_index] = leadings_destination[current_index_destination];
-            real_leadings_source[current_index] = leadings_source[response_index_source];
-
-            mask_source[response_index_source] = true;
-            mask_destination[current_index_destination] = true;
-
-            if (current_index_destination == 0) {
-               destination_exhausted = true;
-            }
-         }
-      }
-
-      return std::make_tuple(std::move(real_dimensions), std::move(real_leadings_source), std::move(real_leadings_destination));
-   }
-
-   template<typename ScalarType, bool parity>
-   void simple_transpose(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank rank) {
-      auto [dimension, leading_of_source, leading_of_destination] = simple_configure(
-            plan_source_to_destination,
-            plan_destination_to_source,
-            dimensions_source,
-            dimensions_destination,
-            leadings_source,
-            leadings_destination,
-            rank);
-
-      auto checked_index = pmr::vector<Rank>(rank, rank);
-      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
-
       tensor_transpose_kernel<ScalarType, parity>(
-            data_source,
-            data_destination,
-            dimension.data(),
-            checked_index.data(),
-            incomplete_dimension.data(),
-            leading_of_source.data(),
-            leading_of_destination.data(),
-            rank);
-   }
-
-   template<typename ScalarType, bool parity>
-   void simple_transpose_with_block(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank rank) {
-      auto [dimension, leading_of_source, leading_of_destination] = simple_configure(
-            plan_source_to_destination,
-            plan_destination_to_source,
-            dimensions_source,
-            dimensions_destination,
-            leadings_source,
-            leadings_destination,
-            rank);
-
-      auto checked_index = pmr::vector<Rank>(rank, rank);
-      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
-
-      tensor_transpose_kernel_with_block<ScalarType, parity>(
-            data_source,
-            data_destination,
-            dimension.data(),
-            checked_index.data(),
-            incomplete_dimension.data(),
-            leading_of_source.data(),
-            leading_of_destination.data(),
-            rank);
-   }
-
-   template<typename ScalarType, bool parity>
-   void inturn_transpose(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank rank) {
-      auto [dimension, leading_of_source, leading_of_destination] = inturn_configure(
-            plan_source_to_destination,
-            plan_destination_to_source,
-            dimensions_source,
-            dimensions_destination,
-            leadings_source,
-            leadings_destination,
-            rank);
-
-      auto checked_index = pmr::vector<Rank>(rank, rank);
-      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
-
-      tensor_transpose_kernel<ScalarType, parity>(
-            data_source,
-            data_destination,
-            dimension.data(),
-            checked_index.data(),
-            incomplete_dimension.data(),
-            leading_of_source.data(),
-            leading_of_destination.data(),
-            rank);
-   }
-
-   template<typename ScalarType, bool parity>
-   void inturn_transpose_with_block(
-         const ScalarType* const __restrict data_source,
-         ScalarType* const __restrict data_destination,
-         const pmr::vector<Rank>& plan_source_to_destination,
-         const pmr::vector<Rank>& plan_destination_to_source,
-         const pmr::vector<Size>& dimensions_source,
-         const pmr::vector<Size>& dimensions_destination,
-         const pmr::vector<Size>& leadings_source,
-         const pmr::vector<Size>& leadings_destination,
-         const Rank rank) {
-      auto [dimension, leading_of_source, leading_of_destination] = inturn_configure(
-            plan_source_to_destination,
-            plan_destination_to_source,
-            dimensions_source,
-            dimensions_destination,
-            leadings_source,
-            leadings_destination,
-            rank);
-
-      auto checked_index = pmr::vector<Rank>(rank, rank);
-      auto incomplete_dimension = pmr::vector<Size>(rank, 0);
-
-      tensor_transpose_kernel_with_block<ScalarType, parity>(
-            data_source,
-            data_destination,
-            dimension.data(),
-            checked_index.data(),
-            incomplete_dimension.data(),
-            leading_of_source.data(),
-            leading_of_destination.data(),
-            rank);
+            data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
    }
 
    template<typename ScalarType>
@@ -530,8 +272,7 @@ namespace TAT {
       auto dimension = pmr::vector<Size>{m, n};
       auto leading_source = pmr::vector<Size>{n, 1};
       auto leading_destination = pmr::vector<Size>{1, m};
-      tensor_transpose_kernel<ScalarType, false>(
-            source, destination, dimension.data(), nullptr, nullptr, leading_source.data(), leading_destination.data(), 2);
+      tensor_transpose_kernel<ScalarType, false>(source, destination, dimension.data(), leading_source.data(), leading_destination.data(), 2);
    }
 #endif
 } // namespace TAT
