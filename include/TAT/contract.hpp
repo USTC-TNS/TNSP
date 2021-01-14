@@ -331,13 +331,13 @@ namespace TAT {
       // 事后恢复两侧的边
       auto reversed_set_1 = pmr::set<Name>();           // 第一个张量merge时反转表
       auto reversed_set_2 = pmr::set<Name>();           // 第二个张量merge时反转表
-      auto edge_result = std::vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      auto edge_result = pmr::vector<Edge<Symmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
       if constexpr (is_no_symmetry) {
          edge_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       }
       auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
       auto reversed_set_result = pmr::set<Name>();                                                 // 最后split时的反转标
-      auto name_result = std::vector<Name>();                                                      // 最后split后的name
+      auto name_result = pmr::vector<Name>();                                                      // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       split_map_result[InternalName<Name>::Contract_1].reserve(rank_1 - common_rank);
       split_map_result[InternalName<Name>::Contract_2].reserve(rank_2 - common_rank);
@@ -579,10 +579,9 @@ namespace TAT {
             batch_size);
 
       if constexpr (is_no_symmetry) {
-         product_result.name_to_index = construct_name_to_index<decltype(product_result.name_to_index)>(name_result);
-         product_result.names = std::move(name_result);
-         product_result.core->edges = std::move(edge_result);
-         return product_result;
+         auto result = Tensor<ScalarType, Symmetry, Name>{name_result, edge_result};
+         result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
+         return result;
       } else {
          auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
          return result;
@@ -629,9 +628,9 @@ namespace TAT {
       }
       const auto fuse_rank = fuse_names.size();
       // 准备方案
-      auto edge_result = std::vector<Edge<NoSymmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
+      auto edge_result = pmr::vector<Edge<NoSymmetry>>(); // 无对称性的时候不需要split方案直接获取最后的edge
       edge_result.reserve(rank_1 + rank_2 - 2 * common_rank - fuse_rank);
-      auto name_result = std::vector<Name>(); // 最后split后的name
+      auto name_result = pmr::vector<Name>(); // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank - fuse_rank);
 
       // 首先安排fuse name到结果的最前面, 这里并没有考虑顺序，也许这样不好，但是维度很大应该没问题
@@ -796,10 +795,9 @@ namespace TAT {
          std::fill(result_vector.begin(), result_vector.end(), 0);
       }
 
-      product_result.name_to_index = construct_name_to_index<decltype(product_result.name_to_index)>(name_result);
-      product_result.names = std::move(name_result);
-      product_result.core->edges = std::move(edge_result);
-      return product_result;
+      auto result = Tensor<ScalarType, NoSymmetry, Name>{name_result, edge_result};
+      result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
+      return result;
    }
 } // namespace TAT
 #endif
