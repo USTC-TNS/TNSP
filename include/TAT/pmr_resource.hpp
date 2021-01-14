@@ -61,11 +61,11 @@ namespace TAT {
       inline memory_resource* set_default_resource(memory_resource* input);
 
       struct new_delete_resource : memory_resource {
-         void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-            return ::operator new(bytes, std::align_val_t(alignment));
+         void* do_allocate(std::size_t bytes, std::size_t) override {
+            return new std::byte[bytes];
          }
-         virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
-            ::operator delete(p);
+         virtual void do_deallocate(void* p, std::size_t, std::size_t) override {
+            delete[]((std::byte*)p);
          }
          virtual bool do_is_equal(const memory_resource& other) const noexcept override {
             return this == &other;
