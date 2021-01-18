@@ -199,8 +199,8 @@ namespace TAT {
                auto& tensor = py::cast<T&>(b.tensor);
                auto& block = tensor.block(b.position);
                const Rank rank = tensor.names.size();
-               auto dimensions = std::vector<int>(rank);
-               auto leadings = std::vector<int>(rank);
+               auto dimensions = std::vector<Size>(rank);
+               auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
                   dimensions[i] = tensor.core->edges[i].map.at(b.position[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
@@ -229,8 +229,8 @@ namespace TAT {
                }
                auto& block = tensor.block(position_map);
                const Rank rank = tensor.names.size();
-               auto dimensions = std::vector<int>(rank);
-               auto leadings = std::vector<int>(rank);
+               auto dimensions = std::vector<Size>(rank);
+               auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
                   dimensions[i] = tensor.core->edges[i].map.at(position_map[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
@@ -242,8 +242,8 @@ namespace TAT {
                      leadings[i] = leadings[i + 1] * dimensions[i + 1];
                   }
                }
-               auto real_dimensions = std::vector<int>(rank);
-               auto real_leadings = std::vector<int>(rank);
+               auto real_dimensions = std::vector<Size>(rank);
+               auto real_leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
                   auto j = tensor.name_to_index.at(std::get<0>(b.position[i]));
                   real_dimensions[i] = dimensions[j];
