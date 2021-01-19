@@ -53,10 +53,10 @@ namespace TAT {
          virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) = 0;
          virtual bool do_is_equal(const memory_resource& other) const noexcept = 0;
       };
-      bool operator==(const memory_resource& a, const memory_resource& b) noexcept {
+      inline bool operator==(const memory_resource& a, const memory_resource& b) noexcept {
          return &a == &b || a.is_equal(b);
       }
-      bool operator!=(const memory_resource& a, const memory_resource& b) noexcept {
+      inline bool operator!=(const memory_resource& a, const memory_resource& b) noexcept {
          return !(a == b);
       }
 
