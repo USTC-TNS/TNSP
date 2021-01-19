@@ -470,7 +470,7 @@ namespace TAT {
             typename MapNameVectorName = pmr::map<Name, std::vector<Name>>,
             typename VectorName = pmr::vector<Name>,
             typename SetName2 = pmr::set<Name>,
-            typename MapNameMapSymmetrySize = std::map<Name, std::map<Symmetry, Size>>>
+            typename MapNameMapSymmetrySize = pmr::map<Name, std::map<Symmetry, Size>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
             const MapNameName& rename_map,
             const MapNameVectorNameAndEdge& split_map,

@@ -944,7 +944,7 @@ namespace TAT {
          return tensor_m.attr((scalar + fermi + symmetry).c_str());
       });
       auto py_module_type = py::type::of(tat_m);
-      auto py_type = py::type::of(py_module_type);
+      auto py_type = py::module_::import("builtins").attr("type");
       py::dict callable_type_dict;
       callable_type_dict["__call__"] = internal_m.attr("hub");
       py::list base_types;
