@@ -123,7 +123,8 @@ namespace TAT {
          const Size* const __restrict dimension,
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
-         const Rank rank) {
+         const Rank rank,
+         const Rank hint_rank = 0) {
       auto timer_guard = transpose_kernel_core_guard();
 
       // 经过测试使用mkl的transpose有时会变慢
@@ -149,10 +150,14 @@ namespace TAT {
       while (true) {
          Rank active_position = rank - 1;
 
+         // TODO 小矩阵形式的特化
          if constexpr (loop_last) {
             // 只有最后的维度相同且leading为1的时候才会进入此分支
-            auto last_dimension = index_list[active_position] = dimension[active_position];
-            for (auto i = 0; i < last_dimension; i++) {
+            // 如果只有最后一维的话, hint_rank = rank-1
+            active_position = hint_rank;
+            index_list[active_position] = dimension[active_position];
+            auto line_size = dimension[active_position] * leading_destination[active_position];
+            for (auto i = 0; i < line_size; i++) {
                if constexpr (parity) {
                   *(current_destination++) = -*(current_source++);
                } else {
@@ -223,13 +228,24 @@ namespace TAT {
       }
 
       if (leadings_source_by_destination[rank - 1] == 1 && leadings_destination[rank - 1] == 1) {
+         Rank line_rank = rank - 1;
+         Size expect_leading = 1;
+         while (expect_leading *= dimensions_destination[line_rank],
+                leadings_source_by_destination[line_rank - 1] == expect_leading && leadings_destination[line_rank - 1] == expect_leading) {
+            if (line_rank == 0) {
+               // 完全线性copy
+               break;
+            }
+            line_rank--;
+         }
          tensor_transpose_kernel<ScalarType, parity, true>(
                data_source,
                data_destination,
                dimensions_destination.data(),
                leadings_source_by_destination.data(),
                leadings_destination.data(),
-               rank);
+               rank,
+               line_rank);
       } else {
          tensor_transpose_kernel<ScalarType, parity>(
                data_source,
@@ -327,8 +343,18 @@ namespace TAT {
       }
 
       if (real_leadings_source[rank - 1] == 1 && real_leadings_destination[rank - 1] == 1) {
+         Rank line_rank = rank - 1;
+         Size expect_leading = 1;
+         while (expect_leading *= real_dimensions[line_rank],
+                real_leadings_source[line_rank - 1] == expect_leading && real_leadings_destination[line_rank - 1] == expect_leading) {
+            if (line_rank == 0) {
+               // 完全线性copy
+               break;
+            }
+            line_rank--;
+         }
          tensor_transpose_kernel<ScalarType, parity, true>(
-               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank, line_rank);
       } else {
          tensor_transpose_kernel<ScalarType, parity>(
                data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
@@ -388,7 +414,7 @@ namespace TAT {
                   rank);
          }
       } else {
-         if (total_size * sizeof(ScalarType) < l3_cache) {
+         if (total_size * sizeof(ScalarType) < l1_cache) {
             simple_transpose<ScalarType, false>(
                   data_source,
                   data_destination,
