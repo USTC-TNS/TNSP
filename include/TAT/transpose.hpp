@@ -238,23 +238,20 @@ namespace TAT {
             }
             line_rank--;
          }
-         tensor_transpose_kernel<ScalarType, parity, true>(
-               data_source,
-               data_destination,
-               dimensions_destination.data(),
-               leadings_source_by_destination.data(),
-               leadings_destination.data(),
-               rank,
-               line_rank);
-      } else {
-         tensor_transpose_kernel<ScalarType, parity>(
-               data_source,
-               data_destination,
-               dimensions_destination.data(),
-               leadings_source_by_destination.data(),
-               leadings_destination.data(),
-               rank);
+         if (expect_leading >= minimum_line_size) {
+            tensor_transpose_kernel<ScalarType, parity, true>(
+                  data_source,
+                  data_destination,
+                  dimensions_destination.data(),
+                  leadings_source_by_destination.data(),
+                  leadings_destination.data(),
+                  rank,
+                  line_rank);
+            return;
+         }
       }
+      tensor_transpose_kernel<ScalarType, parity>(
+            data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
    }
 
    template<typename ScalarType, bool parity>
@@ -353,12 +350,20 @@ namespace TAT {
             }
             line_rank--;
          }
-         tensor_transpose_kernel<ScalarType, parity, true>(
-               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank, line_rank);
-      } else {
-         tensor_transpose_kernel<ScalarType, parity>(
-               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+         if (expect_leading >= minimum_line_size) {
+            tensor_transpose_kernel<ScalarType, parity, true>(
+                  data_source,
+                  data_destination,
+                  real_dimensions.data(),
+                  real_leadings_source.data(),
+                  real_leadings_destination.data(),
+                  rank,
+                  line_rank);
+            return;
+         }
       }
+      tensor_transpose_kernel<ScalarType, parity>(
+            data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
    }
 
    template<typename ScalarType>
@@ -390,6 +395,7 @@ namespace TAT {
       // rank != 0, dimension != 0
 
       if (parity) {
+         // 小于l1_cache的系统不需要inturn
          if (total_size * sizeof(ScalarType) < l1_cache) {
             simple_transpose<ScalarType, true>(
                   data_source,
