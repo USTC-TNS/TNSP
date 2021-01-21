@@ -116,7 +116,7 @@ namespace TAT {
    // 这个是最简单的张量转置中实际搬运数据的部分，numpy也是这么写的，区别在于dimension和两个leading的顺序是可以一同交换的
    // numpy保证destination的leading是降序的， simple_transpose就是这么调用tensor_transpose_kernel的
    // 另外一个正在写的inturn_transpose是src dst轮流来, 可能会对cache更加友好, 日后还会根据cache大小split边，这样类似于矩阵转置中的预分块
-   template<typename ScalarType, bool parity>
+   template<typename ScalarType, bool parity, bool loop_last = false>
    void tensor_transpose_kernel(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
@@ -147,17 +147,29 @@ namespace TAT {
       ScalarType* current_destination = data_destination;
       pmr::vector<Size> index_list(rank, 0);
       while (true) {
-         if constexpr (parity) {
-            *current_destination = -*current_source;
-         } else {
-            *current_destination = *current_source;
-         }
-
          Rank active_position = rank - 1;
 
-         index_list[active_position]++;
-         current_source += leading_source[active_position];
-         current_destination += leading_destination[active_position];
+         if constexpr (loop_last) {
+            // 只有最后的维度相同且leading为1的时候才会进入此分支
+            auto last_dimension = index_list[active_position] = dimension[active_position];
+            for (auto i = 0; i < last_dimension; i++) {
+               if constexpr (parity) {
+                  *(current_destination++) = -*(current_source++);
+               } else {
+                  *(current_destination++) = *(current_source++);
+               }
+            }
+         } else {
+            if constexpr (parity) {
+               *current_destination = -*current_source;
+            } else {
+               *current_destination = *current_source;
+            }
+
+            index_list[active_position]++;
+            current_source += leading_source[active_position];
+            current_destination += leading_destination[active_position];
+         }
 
          while (index_list[active_position] == dimension[active_position]) {
             index_list[active_position] = 0;
@@ -210,8 +222,23 @@ namespace TAT {
          leadings_source_by_destination.push_back(leadings_source[j]);
       }
 
-      tensor_transpose_kernel<ScalarType, parity>(
-            data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
+      if (leadings_source_by_destination[rank - 1] == 1 && leadings_destination[rank - 1] == 1) {
+         tensor_transpose_kernel<ScalarType, parity, true>(
+               data_source,
+               data_destination,
+               dimensions_destination.data(),
+               leadings_source_by_destination.data(),
+               leadings_destination.data(),
+               rank);
+      } else {
+         tensor_transpose_kernel<ScalarType, parity>(
+               data_source,
+               data_destination,
+               dimensions_destination.data(),
+               leadings_source_by_destination.data(),
+               leadings_destination.data(),
+               rank);
+      }
    }
 
    template<typename ScalarType, bool parity>
@@ -299,16 +326,13 @@ namespace TAT {
          }
       }
 
-#if 0
-      show_vector(plan_source_to_destination, "Plan src to dst");
-      show_vector(plan_destination_to_source, "Plan dst to src");
-      show_vector(real_dimensions, "Dims");
-      show_vector(real_leadings_source, "LD src");
-      show_vector(real_leadings_destination, "LD dst");
-#endif
-
-      tensor_transpose_kernel<ScalarType, parity>(
-            data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+      if (real_leadings_source[rank - 1] == 1 && real_leadings_destination[rank - 1] == 1) {
+         tensor_transpose_kernel<ScalarType, parity, true>(
+               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+      } else {
+         tensor_transpose_kernel<ScalarType, parity>(
+               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+      }
    }
 
    template<typename ScalarType>
@@ -340,7 +364,7 @@ namespace TAT {
       // rank != 0, dimension != 0
 
       if (parity) {
-         if (total_size * sizeof(ScalarType) < l3_cache) {
+         if (total_size * sizeof(ScalarType) < l1_cache) {
             simple_transpose<ScalarType, true>(
                   data_source,
                   data_destination,
