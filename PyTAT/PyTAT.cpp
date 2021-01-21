@@ -267,9 +267,9 @@ namespace TAT {
             ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def_readonly("name", &T::names, "Names of all edge of the tensor")
             .def_property_readonly(
-                  "edge", [](const T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
+                  "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
             .def_property_readonly(
-                  "data", [](const T& tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
+                  "data", [](T& tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
             .def(py::self + py::self)
             .def(ScalarType() + py::self)
             .def(py::self + ScalarType())

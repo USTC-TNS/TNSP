@@ -33,6 +33,7 @@
 #include "edge.hpp"
 #include "name.hpp"
 #include "pmr_resource.hpp"
+#include "propagate_const.hpp"
 #include "symmetry.hpp"
 
 namespace TAT {
@@ -144,7 +145,7 @@ namespace TAT {
        * \see Core
        * \note 因为重命名边的操作很常见, 为了避免复制, 使用shared_ptr封装Core
        */
-      std::shared_ptr<Core<ScalarType, Symmetry>> core;
+      propagate_const_shared_ptr<Core<ScalarType, Symmetry>> core;
 
       TensorShape<ScalarType, Symmetry, Name> shape() {
          return {this};

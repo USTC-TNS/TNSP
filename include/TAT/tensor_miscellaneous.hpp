@@ -273,7 +273,7 @@ namespace TAT {
          auto dimension = pmr::vector<Size>(rank);
          auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
-            dimension[i] = core->edges[i].map[symmetries[i]];
+            dimension[i] = core->edges[i].map.at(symmetries[i]);
             if (i == rank - 1) {
                leading[i] = 1;
             } else {
