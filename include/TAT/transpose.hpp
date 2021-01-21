@@ -214,6 +214,103 @@ namespace TAT {
             data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
    }
 
+   template<typename ScalarType, bool parity>
+   void inturn_transpose(
+         const ScalarType* const __restrict data_source,
+         ScalarType* const __restrict data_destination,
+         const pmr::vector<Rank>& plan_source_to_destination,
+         const pmr::vector<Rank>& plan_destination_to_source,
+         const pmr::vector<Size>& dimensions_source,
+         const pmr::vector<Size>& dimensions_destination,
+         const pmr::vector<Size>& leadings_source,
+         const pmr::vector<Size>& leadings_destination,
+         const Rank rank) {
+      auto mask_source = pmr::vector<bool>(rank, false);
+      auto mask_destination = pmr::vector<bool>(rank, false);
+      auto real_dimensions = pmr::vector<Size>(rank);
+      auto real_leadings_source = pmr::vector<Size>(rank);
+      auto real_leadings_destination = pmr::vector<Size>(rank);
+
+      bool source_exhausted = false;
+      bool destination_exhausted = false;
+
+      Rank current_index = rank;
+      Rank current_index_source = rank - 1;
+      Rank current_index_destination = rank - 1;
+
+      auto use_source = [&]() {
+         auto response_index_destination = plan_source_to_destination[current_index_source];
+
+         real_dimensions[current_index] = dimensions_source[current_index_source];
+         real_leadings_source[current_index] = leadings_source[current_index_source];
+         real_leadings_destination[current_index] = leadings_destination[response_index_destination];
+
+         mask_destination[response_index_destination] = true;
+         while (mask_destination[current_index_destination]) {
+            if (current_index_destination == 0) {
+               destination_exhausted = true;
+               break;
+            }
+            current_index_destination--;
+         }
+
+         do {
+            if (current_index_source == 0) {
+               source_exhausted = true;
+               break;
+            }
+            current_index_source--;
+         } while (mask_source[current_index_source]);
+      };
+      auto use_destination = [&]() {
+         auto response_index_source = plan_destination_to_source[current_index_destination];
+
+         real_dimensions[current_index] = dimensions_destination[current_index_destination];
+         real_leadings_destination[current_index] = leadings_destination[current_index_destination];
+         real_leadings_source[current_index] = leadings_source[response_index_source];
+
+         mask_source[response_index_source] = true;
+         while (mask_source[current_index_source]) {
+            if (current_index_source == 0) {
+               source_exhausted = true;
+               break;
+            }
+            current_index_source--;
+         }
+
+         do {
+            if (current_index_destination == 0) {
+               destination_exhausted = true;
+               break;
+            }
+            current_index_destination--;
+         } while (mask_destination[current_index_destination]);
+      };
+
+      while (current_index-- > 0) {
+         if (destination_exhausted) {
+            use_source();
+         } else if (source_exhausted) {
+            use_destination();
+         } else if (leadings_destination[current_index_destination] > leadings_source[current_index_source]) {
+            use_source();
+         } else {
+            use_destination();
+         }
+      }
+
+#if 0
+      show_vector(plan_source_to_destination, "Plan src to dst");
+      show_vector(plan_destination_to_source, "Plan dst to src");
+      show_vector(real_dimensions, "Dims");
+      show_vector(real_leadings_source, "LD src");
+      show_vector(real_leadings_destination, "LD dst");
+#endif
+
+      tensor_transpose_kernel<ScalarType, parity>(
+            data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
+   }
+
    template<typename ScalarType>
    void do_transpose(
          const ScalarType* data_source,
@@ -243,27 +340,53 @@ namespace TAT {
       // rank != 0, dimension != 0
 
       if (parity) {
-         simple_transpose<ScalarType, true>(
-               data_source,
-               data_destination,
-               plan_source_to_destination,
-               plan_destination_to_source,
-               dimensions_source,
-               dimensions_destination,
-               leadings_source,
-               leadings_destination,
-               rank);
+         if (total_size * sizeof(ScalarType) < l3_cache) {
+            simple_transpose<ScalarType, true>(
+                  data_source,
+                  data_destination,
+                  plan_source_to_destination,
+                  plan_destination_to_source,
+                  dimensions_source,
+                  dimensions_destination,
+                  leadings_source,
+                  leadings_destination,
+                  rank);
+         } else {
+            inturn_transpose<ScalarType, true>(
+                  data_source,
+                  data_destination,
+                  plan_source_to_destination,
+                  plan_destination_to_source,
+                  dimensions_source,
+                  dimensions_destination,
+                  leadings_source,
+                  leadings_destination,
+                  rank);
+         }
       } else {
-         simple_transpose<ScalarType, false>(
-               data_source,
-               data_destination,
-               plan_source_to_destination,
-               plan_destination_to_source,
-               dimensions_source,
-               dimensions_destination,
-               leadings_source,
-               leadings_destination,
-               rank);
+         if (total_size * sizeof(ScalarType) < l3_cache) {
+            simple_transpose<ScalarType, false>(
+                  data_source,
+                  data_destination,
+                  plan_source_to_destination,
+                  plan_destination_to_source,
+                  dimensions_source,
+                  dimensions_destination,
+                  leadings_source,
+                  leadings_destination,
+                  rank);
+         } else {
+            inturn_transpose<ScalarType, false>(
+                  data_source,
+                  data_destination,
+                  plan_source_to_destination,
+                  plan_destination_to_source,
+                  dimensions_source,
+                  dimensions_destination,
+                  leadings_source,
+                  leadings_destination,
+                  rank);
+         }
       }
    }
 
