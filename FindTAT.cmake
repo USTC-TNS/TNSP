@@ -11,6 +11,11 @@ cmake_minimum_required(VERSION 3.13)
 # 设置TAT library
 add_library(TAT INTERFACE)
 
+# 寻找TAT header path
+find_path(TAT_INCLUDE_PATH NAMES "TAT/TAT.hpp" HINTS ${PROJECT_SOURCE_DIR}/include/ ${CMAKE_SOURCE_DIR}/include/ REQUIRED)
+message("-- TAT headers found at ${TAT_INCLUDE_PATH}")
+target_include_directories(TAT INTERFACE ${TAT_INCLUDE_PATH})
+
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
 target_compile_features(TAT INTERFACE cxx_std_17)
 
@@ -21,7 +26,7 @@ target_compile_features(TAT INTERFACE cxx_std_17)
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
-set(TAT_FORCE_VERSION dev CACHE STRING "Force set TAT version")
+set(TAT_FORCE_VERSION 0.1.4 CACHE STRING "Force set TAT version")
 
 # 下面四个宏全部都是在build PyTAT时才会用到
 target_compile_definitions(TAT INTERFACE TAT_VERSION="${TAT_FORCE_VERSION}")
@@ -93,6 +98,9 @@ if(NOT EMSCRIPTEN)
       set(TAT_BUILD_PYTAT ON)
    else()
       message("-- Disable python since pybind11 not found, try install pybind11 or put it into TAT directory")
+   endif()
+   if(NOT EXISTS ${PROJECT_SOURCE_DIR}/PyTAT/PyTAT.cpp)
+      set(TAT_BUILD_PYTAT OFF)
    endif()
 endif()
 if(TAT_BUILD_PYTAT)
