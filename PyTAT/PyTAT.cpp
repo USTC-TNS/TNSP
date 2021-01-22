@@ -19,12 +19,13 @@
 
 namespace TAT {
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
-   void dealing_##SCALARSHORT##SYM(                          \
+   void dealing_Tensor_##SCALARSHORT##SYM(                   \
          py::module_& tensor_m,                              \
          py::module_& block_m,                               \
          const std::string& scalar_short_name,               \
          const std::string& scalar_name,                     \
-         const std::string& symmetry_short_name);
+         const std::string& symmetry_short_name);            \
+   void dealing_MPI_##SCALARSHORT##SYM(py::class_<mpi_t>& py_mpi_t);
    TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
 
@@ -65,47 +66,35 @@ namespace TAT {
             py::arg("stddev") = 1,
             "Get random normal real");
       // mpi
-      py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")
-            .def_readonly_static("enabled", &mpi_t::enabled)
-            .def_readonly("rank", &mpi_t::rank)
-            .def_readonly("size", &mpi_t::size)
-            .def("__str__",
-                 [](const mpi_t& mpi) {
-                    auto out = std::stringstream();
-                    out << "[rank=" << mpi.rank << ", size=" << mpi.size << "]";
-                    return out.str();
-                 })
-            .def("__repr__",
-                 [](const mpi_t& mpi) {
-                    auto out = std::stringstream();
-                    out << "MPI[rank=" << mpi.rank << ", size=" << mpi.size << "]";
-                    return out.str();
-                 })
+      auto py_mpi_t = py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")
+                            .def_readonly_static("enabled", &mpi_t::enabled)
+                            .def_readonly("rank", &mpi_t::rank)
+                            .def_readonly("size", &mpi_t::size)
+                            .def("__str__",
+                                 [](const mpi_t& mpi) {
+                                    auto out = std::stringstream();
+                                    out << "[rank=" << mpi.rank << ", size=" << mpi.size << "]";
+                                    return out.str();
+                                 })
+                            .def("__repr__",
+                                 [](const mpi_t& mpi) {
+                                    auto out = std::stringstream();
+                                    out << "MPI[rank=" << mpi.rank << ", size=" << mpi.size << "]";
+                                    return out.str();
+                                 })
+                            .def("print",
+                                 [](const mpi_t& mpi, const py::args& args, const py::kwargs& kwargs) {
+                                    if (mpi.rank == 0) {
+                                       py::print(*args, **kwargs);
+                                    }
+                                 })
 #ifdef TAT_USE_MPI
-            .def_static("barrier", &mpi_t::barrier)
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM)                                                                                       \
-   .def_static("send", &mpi_t::send<Tensor<SCALAR, SYM##Symmetry>>)                                                                                \
-         .def_static("receive", &mpi_t::receive<Tensor<SCALAR, SYM##Symmetry>>)                                                                    \
-         .def("send_receive", &mpi_t::send_receive<Tensor<SCALAR, SYM##Symmetry>>)                                                                 \
-         .def("broadcast", &mpi_t::broadcast<Tensor<SCALAR, SYM##Symmetry>>)                                                                       \
-         .def("reduce",                                                                                                                            \
-              [](const mpi_t& self,                                                                                                                \
-                 const Tensor<SCALAR, SYM##Symmetry>& value,                                                                                       \
-                 const int root,                                                                                                                   \
-                 std::function<Tensor<SCALAR, SYM##Symmetry>(const Tensor<SCALAR, SYM##Symmetry>&, const Tensor<SCALAR, SYM##Symmetry>&)> func) {  \
-                 return self.reduce(value, root, func);                                                                                            \
-              })                                                                                                                                   \
-         .def("summary", [](const mpi_t& self, const Tensor<SCALAR, SYM##Symmetry>& value, const int root) {                                       \
-            return self.reduce(value, root, [](const Tensor<SCALAR, SYM##Symmetry>& a, const Tensor<SCALAR, SYM##Symmetry>& b) { return a + b; }); \
-         })
-                  TAT_LOOP_ALL_SCALAR_SYMMETRY
-#undef TAT_SINGLE_SCALAR_SYMMETRY
+                            .def_static("barrier", &mpi_t::barrier)
 #endif
-            .def("print", [](const mpi_t& mpi, const py::args& args, const py::kwargs& kwargs) {
-               if (mpi.rank == 0) {
-                  py::print(*args, **kwargs);
-               }
-            });
+            ;
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_MPI_##SCALARSHORT##SYM(py_mpi_t);
+      TAT_LOOP_ALL_SCALAR_SYMMETRY
+#undef TAT_SINGLE_SCALAR_SYMMETRY
       tat_m.attr("mpi") = mpi;
       // name
 #ifndef TAT_USE_SIMPLE_NAME
@@ -166,8 +155,7 @@ namespace TAT {
       // tensor
       auto tensor_m = tat_m.def_submodule("Tensor", "Tensors for TAT");
       auto block_m = internal_m.def_submodule("Block", "Block of Tensor for TAT");
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_##SCALARSHORT##SYM(tensor_m, block_m, #SCALARSHORT, #SCALAR, #SYM);
-      // declare_tensor<SCALAR, SYM##Symmetry>(tensor_m, block_m, #SCALARSHORT, #SCALAR, #SYM);
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_Tensor_##SCALARSHORT##SYM(tensor_m, block_m, #SCALARSHORT, #SCALAR, #SYM);
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
