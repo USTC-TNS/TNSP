@@ -116,19 +116,26 @@ namespace TAT {
       // 应该只有一个边, 所以也只有一个block
       const Size line_size = destination_block.size();
 
-      for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
-         // 而source的形状应该是多个分块对角矩阵, 每个元素是一个向量, 我只需要把正对角的向量们求和
-         auto symmetry_2 = -symmetry_1;
-         auto source_block = merged_tensor.core->blocks.at({symmetry_1, symmetry_2, Symmetry()});
-         auto dimension_plus_one = dimension + 1;
-         for (Size i = 0; i < dimension; i++) {
-            const ScalarType* __restrict source_data = source_block.data() + dimension_plus_one * i * line_size;
-            ScalarType* __restrict destination_data = destination_block.data();
-            for (Size j = 0; j < line_size; j++) {
-               destination_data[j] += source_data[j];
-            }
-         }
-      }
+      const auto const_line_size_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(line_size);
+      std::visit(
+            [&](const auto& const_line_size) {
+               const auto line_size = const_line_size.value();
+               for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
+                  // 而source的形状应该是多个分块对角矩阵, 每个元素是一个向量, 我只需要把正对角的向量们求和
+                  auto symmetry_2 = -symmetry_1;
+                  auto source_block = merged_tensor.core->blocks.at({symmetry_1, symmetry_2, Symmetry()});
+                  auto dimension_plus_one = dimension + 1;
+                  for (Size i = 0; i < dimension; i++) {
+                     const ScalarType* __restrict source_data = source_block.data() + dimension_plus_one * i * line_size;
+                     ScalarType* __restrict destination_data = destination_block.data();
+                     for (Size j = 0; j < line_size; j++) {
+                        destination_data[j] += source_data[j];
+                     }
+                  }
+               }
+            },
+            const_line_size_variant);
+
       auto result = traced_tensor.edge_operator(
             {}, pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, std::move(split_plan)}}, reverse_names, {}, result_names);
       return result;
