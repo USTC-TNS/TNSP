@@ -158,13 +158,16 @@ namespace TAT {
             // 如果只有最后一维的话, line_rank = rank-1
             active_position = line_rank;
             index_list[active_position] = dimension[active_position];
-            for (auto i = 0; i < line_size.value(); i++) {
+            const Size line_size_value = line_size.value();
+            for (Size i = 0; i < line_size_value; i++) {
                if constexpr (parity) {
-                  *(current_destination++) = -*(current_source++);
+                  current_destination[i] = -current_source[i];
                } else {
-                  *(current_destination++) = *(current_source++);
+                  current_destination[i] = current_source[i];
                }
             }
+            current_source += line_size_value;
+            current_destination += line_size_value;
          } else {
             if constexpr (parity) {
                *current_destination = -*current_source;
