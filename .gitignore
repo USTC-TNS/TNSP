@@ -10,7 +10,6 @@
 /include/fire.hpp
 /CMakeSettings.json
 /init.C
-/PyTAT/.dealing_*.cpp
 __pycache__
 .ipynb_checkpoints
 data.*
