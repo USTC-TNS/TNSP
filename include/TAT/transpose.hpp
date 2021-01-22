@@ -69,7 +69,7 @@ namespace TAT {
 
 #ifdef TAT_USE_MKL_TRANSPOSE
    template<>
-   void mkl_transpose<float>(
+   inline void mkl_transpose<float>(
          const int dimension_of_M,
          const int dimension_of_N,
          const float* const data_source,
@@ -80,7 +80,7 @@ namespace TAT {
       mkl_somatcopy_("R", "T", &dimension_of_M, &dimension_of_N, &alpha, data_source, &leading_source, data_destination, &leading_destination);
    }
    template<>
-   void mkl_transpose<double>(
+   inline void mkl_transpose<double>(
          const int dimension_of_M,
          const int dimension_of_N,
          const double* const data_source,
@@ -91,7 +91,7 @@ namespace TAT {
       mkl_domatcopy_("R", "T", &dimension_of_M, &dimension_of_N, &alpha, data_source, &leading_source, data_destination, &leading_destination);
    }
    template<>
-   void mkl_transpose<std::complex<float>>(
+   inline void mkl_transpose<std::complex<float>>(
          const int dimension_of_M,
          const int dimension_of_N,
          const std::complex<float>* const data_source,
@@ -102,7 +102,7 @@ namespace TAT {
       mkl_comatcopy_("R", "T", &dimension_of_M, &dimension_of_N, &alpha, data_source, &leading_source, data_destination, &leading_destination);
    }
    template<>
-   void mkl_transpose<std::complex<double>>(
+   inline void mkl_transpose<std::complex<double>>(
          const int dimension_of_M,
          const int dimension_of_N,
          const std::complex<double>* const data_source,
