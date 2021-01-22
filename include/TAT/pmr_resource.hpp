@@ -244,6 +244,8 @@ namespace TAT {
    } // namespace pmr
 
    // on windows stack size is 1MB(1<<20), and on linux, stack size is 8M(1<<23)
+   // 这个buffer应当仅仅用于零碎的变量
+   // 对于tensor中的数据, 在一些背景下很容易有几百兆以上的大小
    constexpr std::size_t default_buffer_size = 1 << 15;
 
    template<std::size_t buffer_size = default_buffer_size>
