@@ -21,56 +21,28 @@
 #ifndef TAT_TENSOR_MISCELLANEOUS_HPP
 #define TAT_TENSOR_MISCELLANEOUS_HPP
 
+#include "const_integral.hpp"
 #include "tensor.hpp"
 #include "timer.hpp"
 
 namespace TAT {
-   template<Size n, typename ScalarType, typename ScalarTypeS>
-   void multiple_kernel_small_n(Size m, Size k, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
-      for (Size a = 0; a < m; a++) {
-         for (Size b = 0; b < k; b++) {
-            auto v = S[b];
-            const auto* data_source_block = &data_source[(a * k + b) * n];
-            auto* data_destination_block = &data_destination[(a * k + b) * n];
-            for (Size c = 0; c < n; c++) {
-               data_destination_block[c] = data_source_block[c] * v;
-            }
-         }
-      }
-   }
-
    template<typename ScalarType, typename ScalarTypeS>
    void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
-#define TAT_CALL_MULTIPLE_SMALL_N(N)                                      \
-   case N:                                                                \
-      multiple_kernel_small_n<N>(m, k, data_destination, data_source, S); \
-      break;
-      switch (n) {
-         case 0:
-            break;
-            TAT_CALL_MULTIPLE_SMALL_N(1);
-            TAT_CALL_MULTIPLE_SMALL_N(2);
-            TAT_CALL_MULTIPLE_SMALL_N(3);
-            TAT_CALL_MULTIPLE_SMALL_N(4);
-            TAT_CALL_MULTIPLE_SMALL_N(5);
-            TAT_CALL_MULTIPLE_SMALL_N(6);
-            TAT_CALL_MULTIPLE_SMALL_N(7);
-            TAT_CALL_MULTIPLE_SMALL_N(8);
-            TAT_CALL_MULTIPLE_SMALL_N(9);
-            TAT_CALL_MULTIPLE_SMALL_N(10);
-         default:
-            for (Size a = 0; a < m; a++) {
-               for (Size b = 0; b < k; b++) {
-                  auto v = S[b];
-                  const auto* data_source_block = &data_source[(a * k + b) * n];
-                  auto* data_destination_block = &data_destination[(a * k + b) * n];
-                  for (Size c = 0; c < n; c++) {
-                     data_destination_block[c] = data_source_block[c] * v;
+      auto const_n_varaint = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(n);
+      std::visit(
+            [&m, &k, &data_destination, &data_source, &S](const auto& const_n) {
+               for (Size a = 0; a < m; a++) {
+                  for (Size b = 0; b < k; b++) {
+                     auto v = S[b];
+                     const auto* data_source_block = &data_source[(a * k + b) * const_n.value()];
+                     auto* data_destination_block = &data_destination[(a * k + b) * const_n.value()];
+                     for (Size c = 0; c < const_n.value(); c++) {
+                        data_destination_block[c] = data_source_block[c] * v;
+                     }
                   }
                }
-            }
-      }
-#undef TAT_CALL_MULTIPLE_SMALL_N
+            },
+            const_n_varaint);
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
@@ -273,7 +245,7 @@ namespace TAT {
          auto dimension = pmr::vector<Size>(rank);
          auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
-            dimension[i] = core->edges[i].map[symmetries[i]];
+            dimension[i] = core->edges[i].map.at(symmetries[i]);
             if (i == rank - 1) {
                leading[i] = 1;
             } else {

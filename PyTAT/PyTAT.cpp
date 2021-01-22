@@ -199,8 +199,8 @@ namespace TAT {
                auto& tensor = py::cast<T&>(b.tensor);
                auto& block = tensor.block(b.position);
                const Rank rank = tensor.names.size();
-               auto dimensions = std::vector<int>(rank);
-               auto leadings = std::vector<int>(rank);
+               auto dimensions = std::vector<Size>(rank);
+               auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
                   dimensions[i] = tensor.core->edges[i].map.at(b.position[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
@@ -229,8 +229,8 @@ namespace TAT {
                }
                auto& block = tensor.block(position_map);
                const Rank rank = tensor.names.size();
-               auto dimensions = std::vector<int>(rank);
-               auto leadings = std::vector<int>(rank);
+               auto dimensions = std::vector<Size>(rank);
+               auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
                   dimensions[i] = tensor.core->edges[i].map.at(position_map[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
@@ -242,8 +242,8 @@ namespace TAT {
                      leadings[i] = leadings[i + 1] * dimensions[i + 1];
                   }
                }
-               auto real_dimensions = std::vector<int>(rank);
-               auto real_leadings = std::vector<int>(rank);
+               auto real_dimensions = std::vector<Size>(rank);
+               auto real_leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
                   auto j = tensor.name_to_index.at(std::get<0>(b.position[i]));
                   real_dimensions[i] = dimensions[j];
@@ -267,9 +267,9 @@ namespace TAT {
             ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def_readonly("name", &T::names, "Names of all edge of the tensor")
             .def_property_readonly(
-                  "edge", [](const T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
+                  "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
             .def_property_readonly(
-                  "data", [](const T& tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
+                  "data", [](T& tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
             .def(py::self + py::self)
             .def(ScalarType() + py::self)
             .def(py::self + ScalarType())
@@ -944,7 +944,7 @@ namespace TAT {
          return tensor_m.attr((scalar + fermi + symmetry).c_str());
       });
       auto py_module_type = py::type::of(tat_m);
-      auto py_type = py::type::of(py_module_type);
+      auto py_type = py::module_::import("builtins").attr("type");
       py::dict callable_type_dict;
       callable_type_dict["__call__"] = internal_m.attr("hub");
       py::list base_types;

@@ -70,7 +70,7 @@ namespace TAT {
 #ifdef TAT_VERSION
          TAT_VERSION
 #else
-         "0.1.3"
+         "0.1.4"
 #endif
          ;
 
@@ -186,6 +186,11 @@ namespace TAT {
          4718592
 #endif
          ;
+
+   /**
+    * 转置中使用, 一条线长度小于此值时, 才尝试使用向量化的复制
+    */
+   constexpr unsigned long minimum_line_size = 16;
    /**@}*/
 } // namespace TAT
 
