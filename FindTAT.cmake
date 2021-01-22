@@ -11,6 +11,11 @@ cmake_minimum_required(VERSION 3.13)
 # 设置TAT library
 add_library(TAT INTERFACE)
 
+# 寻找TAT header path
+find_path(TAT_INCLUDE_PATH NAMES "TAT/TAT.hpp" HINTS ${PROJECT_SOURCE_DIR}/include/ ${CMAKE_SOURCE_DIR}/include/ REQUIRED)
+message("-- TAT headers found at ${TAT_INCLUDE_PATH}")
+target_include_directories(TAT INTERFACE ${TAT_INCLUDE_PATH})
+
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
 target_compile_features(TAT INTERFACE cxx_std_17)
 
