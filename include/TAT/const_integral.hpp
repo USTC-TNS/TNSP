@@ -34,6 +34,8 @@ namespace TAT {
       value_type value() const {
          return m_value;
       }
+      static constexpr bool is_static = false;
+      static constexpr bool is_dynamic = true;
    };
 
    template<auto StaticValue>
@@ -41,9 +43,11 @@ namespace TAT {
       using value_type = decltype(StaticValue);
       Integer() {}
       Integer(value_type v) {}
-      value_type value() const {
+      static value_type value() {
          return StaticValue;
       }
+      static constexpr bool is_static = true;
+      static constexpr bool is_dynamic = false;
    };
 
    template<typename T>

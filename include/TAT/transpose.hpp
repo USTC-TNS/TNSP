@@ -24,6 +24,7 @@
 #include <tuple>
 
 #include "basic_type.hpp"
+#include "const_integral.hpp"
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #ifdef TAT_USE_MKL_TRANSPOSE
@@ -116,7 +117,7 @@ namespace TAT {
    // 这个是最简单的张量转置中实际搬运数据的部分，numpy也是这么写的，区别在于dimension和两个leading的顺序是可以一同交换的
    // numpy保证destination的leading是降序的， simple_transpose就是这么调用tensor_transpose_kernel的
    // 另外一个正在写的inturn_transpose是src dst轮流来, 可能会对cache更加友好, 日后还会根据cache大小split边，这样类似于矩阵转置中的预分块
-   template<typename ScalarType, bool parity, bool loop_last = false>
+   template<typename ScalarType, bool parity, bool loop_last = false, typename LineSizeType = int>
    void tensor_transpose_kernel(
          const ScalarType* const __restrict data_source,
          ScalarType* const __restrict data_destination,
@@ -124,7 +125,8 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination,
          const Rank rank,
-         const Rank hint_rank = 0) {
+         const Rank line_rank = 0,
+         const LineSizeType line_size = 0) {
       auto timer_guard = transpose_kernel_core_guard();
 
       // 经过测试使用mkl的transpose有时会变慢
@@ -153,11 +155,10 @@ namespace TAT {
          // TODO 小矩阵形式的特化
          if constexpr (loop_last) {
             // 只有最后的维度相同且leading为1的时候才会进入此分支
-            // 如果只有最后一维的话, hint_rank = rank-1
-            active_position = hint_rank;
+            // 如果只有最后一维的话, line_rank = rank-1
+            active_position = line_rank;
             index_list[active_position] = dimension[active_position];
-            auto line_size = dimension[active_position] * leading_destination[active_position];
-            for (auto i = 0; i < line_size; i++) {
+            for (auto i = 0; i < line_size.value(); i++) {
                if constexpr (parity) {
                   *(current_destination++) = -*(current_source++);
                } else {
@@ -238,20 +239,29 @@ namespace TAT {
             }
             line_rank--;
          }
-         if (expect_leading >= minimum_line_size) {
-            tensor_transpose_kernel<ScalarType, parity, true>(
-                  data_source,
-                  data_destination,
-                  dimensions_destination.data(),
-                  leadings_source_by_destination.data(),
-                  leadings_destination.data(),
-                  rank,
-                  line_rank);
-            return;
-         }
+         auto const_expect_leading_varaint = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
+         std::visit(
+               [&](const auto& const_expect_leading) {
+                  tensor_transpose_kernel<ScalarType, parity, true>(
+                        data_source,
+                        data_destination,
+                        dimensions_destination.data(),
+                        leadings_source_by_destination.data(),
+                        leadings_destination.data(),
+                        rank,
+                        line_rank,
+                        const_expect_leading);
+               },
+               const_expect_leading_varaint);
+      } else {
+         tensor_transpose_kernel<ScalarType, parity>(
+               data_source,
+               data_destination,
+               dimensions_destination.data(),
+               leadings_source_by_destination.data(),
+               leadings_destination.data(),
+               rank);
       }
-      tensor_transpose_kernel<ScalarType, parity>(
-            data_source, data_destination, dimensions_destination.data(), leadings_source_by_destination.data(), leadings_destination.data(), rank);
    }
 
    template<typename ScalarType, bool parity>
@@ -350,20 +360,24 @@ namespace TAT {
             }
             line_rank--;
          }
-         if (expect_leading >= minimum_line_size) {
-            tensor_transpose_kernel<ScalarType, parity, true>(
-                  data_source,
-                  data_destination,
-                  real_dimensions.data(),
-                  real_leadings_source.data(),
-                  real_leadings_destination.data(),
-                  rank,
-                  line_rank);
-            return;
-         }
+         auto const_expect_leading_varaint = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
+         std::visit(
+               [&](const auto& const_expect_leading) {
+                  tensor_transpose_kernel<ScalarType, parity, true>(
+                        data_source,
+                        data_destination,
+                        real_dimensions.data(),
+                        real_leadings_source.data(),
+                        real_leadings_destination.data(),
+                        rank,
+                        line_rank,
+                        const_expect_leading);
+               },
+               const_expect_leading_varaint);
+      } else {
+         tensor_transpose_kernel<ScalarType, parity>(
+               data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
       }
-      tensor_transpose_kernel<ScalarType, parity>(
-            data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
    }
 
    template<typename ScalarType>
