@@ -26,7 +26,7 @@ jobs:
       run: cmake ${{github.workspace}}
     - name: make
       working-directory: ${{runner.workspace}}/build
-      run: cmake --build . --parallel 20
+      run: cmake --build . --parallel 4
     - name: test simple_test
       working-directory: ${{runner.workspace}}/build
       run: ./simple_test
