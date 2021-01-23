@@ -2,22 +2,24 @@ cmake_minimum_required(VERSION 3.13)
 
 project(TAT LANGUAGES CXX)
 
-string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
-string(REGEX REPLACE "-O[23]" "-Ofast" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+string(REGEX REPLACE "-O[23]" "-Ofast -march=native" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+string(REGEX REPLACE "-O[23]" "-Ofast -march=native" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+string(REGEX REPLACE "-O[23]" "-Ofast -march=native" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
+string(REGEX REPLACE "-O[23]" "-Ofast -march=native" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}")
 find_package(TAT)
-target_include_directories(TAT INTERFACE ${PROJECT_SOURCE_DIR}/include/)
-get_directory_property(TAT_HAS_PARENT PARENT_DIRECTORY)
 
 # 尝试产生本库的python接口, 先寻找系统中的pybind11, 否则尝试使用本目录下自行放置的pybind11
+get_directory_property(TAT_HAS_PARENT PARENT_DIRECTORY)
 if(NOT TAT_HAS_PARENT)
    if(TARGET PyTAT)
       set_target_properties(PyTAT PROPERTIES EXCLUDE_FROM_ALL OFF)
+   endif()
+   if(TARGET NoTAT)
+      set_target_properties(NoTAT PROPERTIES EXCLUDE_FROM_ALL OFF)
    endif()
 
    # examples中的各个程序

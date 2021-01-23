@@ -62,7 +62,9 @@ namespace TAT {
             new_edges.push_back({{{symmetry, dimension}}});
          }
       }
+      auto contract_names = pmr::set<std::tuple<Name, Name>>();
       if (old_name != InternalName<Name>::No_Old_Name) {
+         contract_names.insert({old_name, old_name});
          new_names.push_back(old_name);
          // 调整使得可以缩并
          auto& old_edge = core->edges[name_to_index.at(old_name)];
@@ -91,7 +93,7 @@ namespace TAT {
       auto helper = Tensor<ScalarType, Symmetry, Name, Allocator>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
-      return helper.contract_all_edge(*this);
+      return contract(helper, std::move(contract_names));
    }
 
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
@@ -109,6 +111,7 @@ namespace TAT {
       new_edges.reserve(reserve_size);
       auto total_symmetry = Symmetry();
       Size total_offset = 0;
+      auto contract_names = pmr::set<std::tuple<Name, Name>>();
       for (const auto& name : names) {
          if (auto found_position = configure.find(name); found_position != configure.end()) {
             const auto& position = found_position->second;
@@ -126,6 +129,7 @@ namespace TAT {
             total_offset *= dimension;
             total_offset += index;
             new_names.push_back(name);
+            contract_names.insert({name, name});
             if constexpr (is_fermi) {
                new_edges.push_back({!this_edge.arrow, {{-symmetry, dimension}}});
             } else {
@@ -150,7 +154,7 @@ namespace TAT {
       auto helper = Tensor<ScalarType, Symmetry, Name, Allocator>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
-      return helper.contract_all_edge(*this);
+      return contract(helper, std::move(contract_names));
    }
 } // namespace TAT
 #endif

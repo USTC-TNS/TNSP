@@ -6,6 +6,7 @@ jobs:
   check:
 
     runs-on: ubuntu-20.04
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
 
     steps:
     - name: checkout
@@ -25,7 +26,7 @@ jobs:
       run: cmake ${{github.workspace}}
     - name: make
       working-directory: ${{runner.workspace}}/build
-      run: cmake --build . --parallel
+      run: cmake --build . --parallel 4
     - name: test simple_test
       working-directory: ${{runner.workspace}}/build
       run: ./simple_test

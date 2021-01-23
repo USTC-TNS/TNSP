@@ -36,7 +36,7 @@ For other customed python module name, define `TAT_PYTHON_MODULE` as cmake varia
 
 If you are familiar with [pybind11](https://pybind11.readthedocs.io/en/stable/compiling.html#building-manually), you can compile [`python/TAT.cpp`](/python/TAT.cpp) directly with correct flag
 
-Please notice that for some old mpi version(for example, openmpi 2.1.1 in ubuntu 18.04 LTS), you need to load mpi dynamic shared library manually before `import TAT`, The way to load it manually is `import ctypes` and `ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)`
+Read [this](/PyTAT/README.md) for document of python binding
 
 ## Use with [emscripten](https://emscripten.org/)
 If you want to run a program using TAT in browser, which is very useful for demonstration

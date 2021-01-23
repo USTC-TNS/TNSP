@@ -33,6 +33,7 @@
 #include "edge.hpp"
 #include "name.hpp"
 #include "pmr_resource.hpp"
+#include "propagate_const.hpp"
 #include "symmetry.hpp"
 
 namespace TAT {
@@ -152,7 +153,7 @@ namespace TAT {
        * \see Core
        * \note 因为重命名边的操作很常见, 为了避免复制, 使用shared_ptr封装Core
        */
-      std::shared_ptr<Core<ScalarType, Symmetry>> core;
+      propagate_const_shared_ptr<Core<ScalarType, Symmetry>> core;
 
       TensorShape<ScalarType, Symmetry, Name, Allocator> shape() {
          return {this};
@@ -479,7 +480,7 @@ namespace TAT {
             typename MapNameVectorName = pmr::map<Name, std::vector<Name>>,
             typename VectorName = pmr::vector<Name>,
             typename SetName2 = pmr::set<Name>,
-            typename MapNameMapSymmetrySize = std::map<Name, std::map<Symmetry, Size>>>
+            typename MapNameMapSymmetrySize = pmr::map<Name, std::map<Symmetry, Size>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name, ResultAllocator> edge_operator(
             const MapNameName& rename_map,
             const MapNameVectorNameAndEdge& split_map,
@@ -620,7 +621,12 @@ namespace TAT {
        * \param pairs 看作矩阵时边的配对方案
        */
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> identity(const SetNameAndName& pairs) const;
+      Tensor<ScalarType, Symmetry, Name, Allocator>& identity(const SetNameAndName& pairs) &;
+
+      template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& identity(const SetNameAndName& pairs) && {
+         return std::move(identity(pairs));
+      }
 
       /**
        * 看作矩阵后求出矩阵指数
