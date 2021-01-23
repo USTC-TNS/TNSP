@@ -18,8 +18,8 @@ if(NOT TAT_HAS_PARENT)
    if(TARGET PyTAT)
       set_target_properties(PyTAT PROPERTIES EXCLUDE_FROM_ALL OFF)
    endif()
-   if(TARGET PyTATLight)
-      set_target_properties(PyTATLight PROPERTIES EXCLUDE_FROM_ALL OFF)
+   if(TARGET NoTAT)
+      set_target_properties(NoTAT PROPERTIES EXCLUDE_FROM_ALL OFF)
    endif()
 
    # examples中的各个程序
