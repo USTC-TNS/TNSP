@@ -611,7 +611,12 @@ namespace TAT {
        * \param pairs 看作矩阵时边的配对方案
        */
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> identity(const SetNameAndName& pairs) const;
+      Tensor<ScalarType, Symmetry, Name>& identity(const SetNameAndName& pairs) &;
+
+      template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
+      Tensor<ScalarType, Symmetry, Name>&& identity(const SetNameAndName& pairs) && {
+         return std::move(identity(pairs));
+      }
 
       /**
        * 看作矩阵后求出矩阵指数

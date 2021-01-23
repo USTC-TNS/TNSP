@@ -301,9 +301,7 @@ print((U.multiple(S, "U", 'u').contract(V, {("U", "V")}) - A).norm_max())
 ### Identity, exponential and trace
 
 ```py
-# please notice that identity is OUTPLACE operator
-# so the following word create a tensor first and create
-# an other same shape tensor with identity matrix content.
+# Please notice that identity is INPLACE operator
 # For any i, j, k, l, we have
 # `A[{"i":i, "j":j, "k":k, "l":l}] = delta(i,l) * delta(j,k)`
 A = Tensor(["i","j","k","l"],[2,3,3,2]).identity({("i", "l"), ("j", "k")})

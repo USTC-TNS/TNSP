@@ -262,7 +262,7 @@ namespace TAT {
             .def_property_readonly(
                   "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
             .def_property_readonly(
-                  "data", [](T& tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
+                  "data", [](T & tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
             .def(py::self + py::self)
             .def(ScalarType() + py::self)
             .def(py::self + ScalarType())
@@ -409,12 +409,11 @@ namespace TAT {
             .def("norm_num", &T::template norm<0>, "Get 0 norm, namely number of element, note: not check whether equal to 0")
             .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
             .def("norm_2", &T::template norm<2>, "Get 2 norm")
-            .def("edge_rename",
-                 [](const T& tensor, const std::map<DefaultName, DefaultName>& dictionary) {
-                    return tensor.edge_rename(dictionary);
-                 },
-                 py::arg("name_dictionary"),
-                 "Rename names of edges, which will not copy data")
+            .def(
+                  "edge_rename",
+                  [](const T& tensor, const std::map<DefaultName, DefaultName>& dictionary) { return tensor.edge_rename(dictionary); },
+                  py::arg("name_dictionary"),
+                  "Rename names of edges, which will not copy data")
             .def("transpose",
                  &T::template transpose<std::vector<DefaultName>>,
                  py::arg("new_names"),
@@ -493,7 +492,11 @@ namespace TAT {
                   [](const T& tensor, const T& other) { return tensor.contract_all_edge(other); },
                   py::arg("another_tensor"),
                   "Contract as much as possible with another tensor on same name edges")
-            .def("identity", &T::template identity<std::set<std::tuple<DefaultName, DefaultName>>>, py::arg("pairs"), "Get a identity tensor with same shape")
+            .def(
+                  "identity",
+                  [](T& tensor, std::set<std::tuple<DefaultName, DefaultName>>& pairs) -> T& { return tensor.identity(pairs); },
+                  py::arg("pairs"),
+                  "Get a identity tensor with same shape")
             .def("exponential",
                  &T::template exponential<std::set<std::tuple<DefaultName, DefaultName>>>,
                  py::arg("pairs"),
