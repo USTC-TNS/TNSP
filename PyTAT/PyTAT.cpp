@@ -29,11 +29,11 @@ namespace TAT {
    TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
 
-#ifdef TAT_PYTHON_MODULE
-   PYBIND11_MODULE(TAT_PYTHON_MODULE, tat_m) {
-#else
-   PYBIND11_MODULE(TAT, tat_m) {
+#ifndef TAT_PYTHON_MODULE
+#define TAT_PYTHON_MODULE TAT
 #endif
+
+   PYBIND11_MODULE(TAT_PYTHON_MODULE, tat_m) {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       tat_m.attr("information") = information;
