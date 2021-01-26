@@ -17,13 +17,14 @@
 
 #include <TAT/TAT.hpp>
 
+#include "run_test.hpp"
+
 using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
-int main() {
+void run_test() {
    auto A = Tensor({"i", "j"}, {3, 3}).test();
    for (auto step = 1; step < 10; step++) {
       auto B = A.exponential({{"i", "j"}}, step);
       std::cout << B << "\n";
    }
-   return 0;
 }
