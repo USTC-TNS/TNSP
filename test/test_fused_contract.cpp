@@ -17,9 +17,11 @@
 
 #include <TAT/TAT.hpp>
 
+#include "run_test.hpp"
+
 using namespace TAT;
 
-int main() {
+void run_test() {
    auto a = Tensor<>({"A", "B", "C"}, {2, 3, 5}).test();
    auto b = Tensor<>({"A", "B", "D"}, {2, 3, 7}).test();
    auto c = Tensor<>::contract(a, b, {{"B", "B"}});
@@ -29,6 +31,6 @@ int main() {
    auto b1 = b.shrink({{"A", 1}});
    auto c0 = c.shrink({{"A", 0}});
    auto c1 = c.shrink({{"A", 1}});
-   std::cout << a0.contract_all_edge(b0) - c0 << "\n";
-   std::cout << a1.contract_all_edge(b1) - c1 << "\n";
+   std::cout << a0.contract(b0, {{"B", "B"}}) - c0 << "\n";
+   std::cout << a1.contract(b1, {{"B", "B"}}) - c1 << "\n";
 }
