@@ -8,7 +8,6 @@ so first, let us introduce normal tensor interface of PyTAT.
 
 ## NoTAT
 
-
 NoTAT is a subset of PyTAT with only normal tensor support,
 which means you can replace all `NoTAT` to `TAT` in this section.
 
