@@ -18,7 +18,9 @@
 #include <TAT/TAT.hpp>
 #include <sstream>
 
-int main() {
+#include "run_test.hpp"
+
+void run_test() {
    using namespace TAT;
    Tensor<> a;
    Tensor<double, U1Symmetry> b;
