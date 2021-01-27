@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,19 +15,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_USE_MPI
-#error testing mpi but mpi not enabled
-#endif
-#include <TAT/TAT.hpp>
+#include <iostream>
+#include <lazy.hpp>
 
-using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
+#include "run_test.hpp"
 
-int main() {
-   auto input = Tensor(TAT::mpi.rank);
-   auto result = TAT::mpi.reduce(input, TAT::mpi.size / 2, [](auto a, auto b) { return a + b; });
-   TAT::mpi.out_one(TAT::mpi.size / 2) << result << "\n";
-   result = TAT::mpi.broadcast(result, TAT::mpi.size / 2);
-   TAT::mpi.barrier();
-   TAT::mpi.out_rank() << result << "\n";
-   return 0;
+void run_test() {
+   auto a = lazy::Root(1);
+   auto b = lazy::Root(2);
+   std::cout << a->get() << "\n";
+   std::cout << b->get() << "\n";
+   auto c = lazy::Path([](int a, int b) { return a + b; }, a, b);
+   auto d = lazy::Node([](int c, int a) { return c * a; }, c, a);
+   std::cout << d->get() << "\n";
+   a->set(233);
+   std::cout << d->get() << "\n";
+   auto snap = lazy::default_graph.dump();
+   b->set(666);
+   std::cout << d->get() << "\n";
+   lazy::default_graph.load(snap);
+   std::cout << d->get() << "\n";
 }

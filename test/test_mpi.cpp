@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,11 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+#ifndef TAT_USE_MPI
+#error testing mpi but mpi not enabled
+#endif
 #include <TAT/TAT.hpp>
 
-using Tensor = typename TAT::Tensor<float, TAT::NoSymmetry>;
+#include "run_test.hpp"
 
-int main() {
-   auto a = Tensor({"A", "B"}, {160000, 400}).test();
-   auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
+using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
+
+void run_test() {
+   auto input = Tensor(TAT::mpi.rank);
+   auto result = TAT::mpi.reduce(input, TAT::mpi.size / 2, [](auto a, auto b) { return a + b; });
+   TAT::mpi.out_one(TAT::mpi.size / 2) << result << "\n";
+   result = TAT::mpi.broadcast(result, TAT::mpi.size / 2);
+   TAT::mpi.barrier();
+   TAT::mpi.out_rank() << result << "\n";
 }
