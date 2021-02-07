@@ -15,22 +15,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <TAT/TAT.hpp>
-#include <sstream>
+#include <iostream>
+#include <lazy.hpp>
 
 #include "run_test.hpp"
 
 void run_test() {
-   using namespace TAT;
-   Tensor<> a;
-   Tensor<double, U1Symmetry> b;
-   char c, d;
-   std::stringstream(
-         "{names:[L.*&^eft,R--..ight],edges:[3,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11]}?{names:[A,B,C,D],edges:[{-2:1,-1:1,0:1},{0:1,1:2},{0:2,1:2},{-"
-         "2:2,-1:1,0:2}],blocks:{[-2,1,1,0]:[0,1,2,3,4,5,6,7],[-1,0,1,0]:[8,9,10,11],[-1,1,0,0]:[12,13,14,15,16,17,18,19],[-1,1,1,-1]:[20,21,22,23],["
-         "0,0,0,0]:[24,25,26,27],[0,0,1,-1]:[28,29],[0,1,0,-1]:[30,31,32,33],[0,1,1,-2]:[34,35,36,37,38,39,40,41]}}*") >>
-         a >> c >> b >> d;
-   std::cout << a << std::endl;
-   std::cout << b << std::endl;
-   std::cout << c << d << std::endl;
+   auto a = lazy::Root(1);
+   auto b = lazy::Root(2);
+   std::cout << a->get() << "\n";
+   std::cout << b->get() << "\n";
+   auto c = lazy::Path([](int a, int b) { return a + b; }, a, b);
+   auto d = lazy::Node([](int c, int a) { return c * a; }, c, a);
+   std::cout << d->get() << "\n";
+   a->set(233);
+   std::cout << d->get() << "\n";
+   auto snap = lazy::default_graph.dump();
+   b->set(666);
+   std::cout << d->get() << "\n";
+   lazy::default_graph.load(snap);
+   std::cout << d->get() << "\n";
 }

@@ -14,11 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include <TAT/TAT.hpp>
+
+#include "run_test.hpp"
 
 using Tensor = typename TAT::Tensor<float, TAT::NoSymmetry>;
 
-int main() {
+void run_test() {
    auto a = Tensor({"A", "B"}, {5, 10}).test();
    std::cout << a << '\n';
    {

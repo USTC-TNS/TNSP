@@ -17,6 +17,8 @@
 
 #include <TAT/TAT.hpp>
 
+#include "run_test.hpp"
+
 namespace net {
    using pss = std::pair<std::string, std::string>;
 
@@ -29,11 +31,11 @@ namespace TAT {
    using net::pss;
 
    template<>
-   const pss InternalName<pss>::Default_0 = {"Internal", "0"};
+   [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_0 = {"Internal", "0"};
    template<>
-   const pss InternalName<pss>::Default_1 = {"Internal", "1"};
+   [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_1 = {"Internal", "1"};
    template<>
-   const pss InternalName<pss>::Default_2 = {"Internal", "2"};
+   [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_2 = {"Internal", "2"};
 
    template<>
    struct NameTraits<pss> : NameTraitsBase<pss> {
@@ -54,9 +56,10 @@ namespace net {
       std::cout << s.U << "\n";
       std::cout << s.S << "\n";
       std::cout << s.V << "\n";
+      std::cout << s.V.edge_rename(std::map<pss, std::string>{{{"A", "V"}, "V"}}) << "\n";
    }
 } // namespace net
 
-int main() {
+void run_test() {
    net::f();
 }

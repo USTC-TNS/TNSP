@@ -19,12 +19,14 @@
 
 #include "run_test.hpp"
 
-using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
-
 void run_test() {
-   auto A = Tensor({"i", "j"}, {3, 3}).test();
-   for (auto step = 1; step < 10; step++) {
-      auto B = A.exponential({{"i", "j"}}, step);
-      std::cout << B << "\n";
-   }
+   auto t =
+         TAT::Tensor<double, TAT::U1Symmetry>{
+               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               .test(2)
+               .to<std::complex<double>>();
+   std::cout << t.norm<-1>() << "\n";
+   std::cout << t.norm<0>() << "\n";
+   std::cout << t.norm<1>() << "\n";
+   std::cout << t.norm<2>() << "\n";
 }

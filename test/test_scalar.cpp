@@ -15,19 +15,21 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef TAT_USE_MPI
-#error testing mpi but mpi not enabled
-#endif
 #include <TAT/TAT.hpp>
 
-using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
+#include "run_test.hpp"
 
-int main() {
-   auto input = Tensor(TAT::mpi.rank);
-   auto result = TAT::mpi.reduce(input, TAT::mpi.size / 2, [](auto a, auto b) { return a + b; });
-   TAT::mpi.out_one(TAT::mpi.size / 2) << result << "\n";
-   result = TAT::mpi.broadcast(result, TAT::mpi.size / 2);
-   TAT::mpi.barrier();
-   TAT::mpi.out_rank() << result << "\n";
-   return 0;
+void run_test() {
+   auto t = TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}};
+   t.test();
+   std::cout << t + 1.0 << "\n";
+   std::cout << 1.0 / t << "\n";
+
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(0, 0.1);
+   std::cout << a + b << "\n";
+   std::cout << a - b << "\n";
+   std::cout << a * b << "\n";
+   std::cout << a / b << "\n";
+   std::cout << a + b.transpose({"Right", "Left"}) << "\n";
 }
