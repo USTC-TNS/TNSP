@@ -15,20 +15,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <fstream>
-#include <iostream>
-#include <sstream>
-
 #include <TAT/TAT.hpp>
 
-#define RUN_TEST(x)                 \
-   do {                             \
-      std::cout << "# " #x << "\n"; \
-      x();                          \
-      std::cout << "\n";            \
-   } while (false)
+#include "run_test.hpp"
 
-void test_trace() {
+void run_test() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C", "D", "E"}, {2, 3, 2, 3, 4}).test().trace({{"A", "C"}, {"B", "D"}}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {2, 2, 3}).test().trace({{"A", "B"}}) << "\n";
    auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {4, 3, 5}).test();
@@ -107,20 +98,4 @@ void test_trace() {
                 << "\n";
       // TODO 这里问题有点大
    } while (false);
-}
-
-int main(const int argc, char** argv) {
-   std::stringstream out;
-   auto cout_buf = std::cout.rdbuf();
-   if (argc != 1) {
-      std::cout.rdbuf(out.rdbuf());
-   }
-   // RUN_TEST(test_trace);
-   if (argc != 1) {
-      std::cout.rdbuf(cout_buf);
-      std::ifstream fout(argv[1]);
-      std::string sout((std::istreambuf_iterator<char>(fout)), std::istreambuf_iterator<char>());
-      return sout != out.str();
-   }
-   return 0;
 }
