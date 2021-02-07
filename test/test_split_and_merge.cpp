@@ -17,7 +17,7 @@
 
 #include <TAT/TAT.hpp>
 
-#include "run_Test.hpp"
+#include "run_test.hpp"
 
 void run_test() {
    const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.set([]() {
