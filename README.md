@@ -79,6 +79,123 @@ and their dimensions are `3` and `4`, then print tensor `A` to `std::cout`.
 
 Please notice that TAT will NOT initialize content of tensor when create it.
 
+#### Access element of tensor
+
+You can easily access elements of tensor by a map from name of edge to index
+
+```c++
+// Create a tensor and initialize it to zero
+auto A = TAT::Tensor<double, TAT::NoSymmetry>({"i", "j"}, {3, 4}).zero();
+// Set an element of tensor A to 3
+A.at({{"i", 2}, {"j", 2}}) = 3;
+// print tensor A
+std::cout << A << "\n";
+```
+
+#### Scalar operators
+
+You can do scalar operators directly
+
+```c++
+// Create two rank-1 tensors
+auto A = TAT::Tensor<double, TAT::NoSymmetry>({"i"}, {4});
+auto B = TAT::Tensor<double, TAT::NoSymmetry>({"i"}, {4});
+// A kind of low level value setter, directly set array of tensor content
+A.block() = {1, 2, 3, 4};
+B.block() = {10, 20, 30, 40};
+
+// Add two tensor
+std::cout << A + B << "\n";
+
+// A number over a tensor
+std::cout << 1 / A << "\n";
+```
+
+#### Rank-0 tensor and number
+
+You can convert between rank-0 tensor and number directly
+
+```c++
+// Directly initialize a tensor with a number
+auto A = TAT::Tensor<double, TAT::NoSymmetry>(233);
+
+// Convert rank-0 tensor to number
+double a = A;
+```
+
+#### Explicitly copy
+
+```c++
+auto A = TAT::Tensor<double, TAT::NoSymmetry>(233);
+// By default, assigning a tensor to another tensor
+// will let two tensor share the same data blocks
+auto B = A;
+// data of B is not changed when execute `A.at({}) = 1`
+// but data copy happened implicitly and a warning will
+// be thrown.
+A.at({}) = 1;
+
+auto C = TAT::Tensor<double, TAT::NoSymmetry>(233);
+// Explicitly copy of tensor C
+auto D = C.copy();
+// No warning will be thrown
+C.at({}) = 1;
+```
+
+#### Create same shape tensor
+
+```c++
+auto A = TAT::Tensor<double, TAT::NoSymmetry>({"i", "j"}, {2, 2});
+A.block() = {1, 2, 3, 4};
+// tensor B copy the shape of A but not content of A
+auto B = A.same_shape();
+std::cout << B << "\n";
+```
+
+#### Map and transform
+
+```c++
+using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
+auto A = Tensor({"i", "j"}, {2, 2});
+// Another easy test data setter for tensor
+// which will fill meanless test data into tensor
+A.test();
+// Every element is transformed by a function inplacely
+A.transform([](auto x){ return x * x; });
+std::cout << A << "\n";
+
+// Every element is transformed by a function outplacely
+auto B = A.map([](auto x){ return x + 1; });
+std::cout << B << "\n";
+std::cout << A << "\n";
+```
+
+#### Type conversion
+
+```c++
+// decltype(A) is TAT::Tensor<double, TAT::NoSymmetry>
+auto A = TAT::Tensor<double, TAT::NoSymmetry>(233);
+// Convert A to an complex tensor
+// decltype(B) is  TAT::Tensor<std::complex<double>, TAT::NoSymmetry>
+auto B = A.to<std::complex<double>>();
+```
+
+#### Norm
+
+#### Contract
+
+#### Merge and split edge
+
+#### Edge rename and transpose
+
+#### SVD and QR decomposition
+
+#### Identity, exponential and trace
+
+#### IO
+
+#### Fill random number into tensor
+
 ## Links
 
 - [a tensor network library](https://github.com/crimestop/net)
