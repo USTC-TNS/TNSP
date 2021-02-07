@@ -22,7 +22,7 @@ from .exact_lattice import ExactLattice
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_gradient_lattice import SamplingGradientLattice
 
-__all__ = ["SquareAuxiliariesSystem", "ExactLattice", "SimpleUpdateLattice", "SamplingGradientLattice", "CTensor", "Tensor", "Sx", "Sy", "Sz", "SS"]
+__all__ = ["SquareAuxiliariesSystem", "ExactLattice", "SimpleUpdateLattice", "SamplingGradientLattice", "CTensor", "Tensor", "Sx", "Sy", "Sz", "SxSx", "SySy", "SzSz", "SS"]
 
 CTensor: type = TAT.Tensor.ZNo
 Tensor: type = TAT.Tensor.DNo
