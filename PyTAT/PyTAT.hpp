@@ -329,7 +329,7 @@ namespace TAT {
                  py::arg("edges"),
                  py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
-            .def(implicit_init<T, ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
+            .def(py::init<ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
             .def(py::init<>([](const std::string& string) {
                     auto ss = std::stringstream(string);
                     auto result = T();
