@@ -346,6 +346,8 @@ namespace TAT {
                   py::arg("edge_arrow") = py::list(),
                   "Create tensor with high rank but containing only one element")
             .def("copy", &T::copy, "Deep copy a tensor")
+            .def("__copy__", &T::copy)
+            .def("__deepcopy__", &T::copy)
             .def("same_shape", &T::same_shape, "Create a tensor with same shape")
             .def("map", &T::template map<std::function<ScalarType(ScalarType)>>, py::arg("function"), "Out-place map every element of a tensor")
             .def(
