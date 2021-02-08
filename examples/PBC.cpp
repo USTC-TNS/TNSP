@@ -61,7 +61,7 @@ struct PBC {
                   lattice.at(i).at(j).edge_rename({{"up", up(j)}, {"down", down(j)}, {"left", left(i)}, {"right", right(i)}}), contract_names);
          }
       }
-      return result;
+      return float(result);
    }
 
    float contract_with_two_line_to_one_line(TAT::Size D_cut) const {
@@ -103,7 +103,7 @@ struct PBC {
       std::clog << result << "\n";
       std::clog << result.trace({{"left", "right"}}) << "\n";
       // TODO here rank 0 issue
-      return result.trace({{"left", "right"}});
+      return float(result.trace({{"left", "right"}}));
    }
 };
 

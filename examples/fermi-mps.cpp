@@ -153,19 +153,19 @@ struct MPS {
 
       double energy = 0;
       for (unsigned i = 0; i < chain.size() - 1; i++) {
-         energy += get_left(i - 1)
-                         .contract(chain[i], {{"Right1", "Left"}})
-                         .edge_rename({{"Right", "Right1"}, {"Phy", "PhyA"}})
-                         .contract(chain[i + 1], {{"Right1", "Left"}})
-                         .edge_rename({{"Right", "Right1"}, {"Phy", "PhyB"}})
-                         .contract(hamiltonian, {{"PhyA", "I0"}, {"PhyB", "I1"}})
-                         .contract(conjugate_chain[i], {{"Right2", "Left"}, {"O0", "Phy"}})
-                         .edge_rename({{"Right", "Right2"}})
-                         .contract(conjugate_chain[i], {{"Right2", "Left"}, {"O1", "Phy"}})
-                         .edge_rename({{"Right", "Right2"}})
-                         .contract(get_right(i + 2), {{"Right1", "Left1"}, {"Right2", "Left2"}});
+         energy += double(get_left(i - 1)
+                                .contract(chain[i], {{"Right1", "Left"}})
+                                .edge_rename({{"Right", "Right1"}, {"Phy", "PhyA"}})
+                                .contract(chain[i + 1], {{"Right1", "Left"}})
+                                .edge_rename({{"Right", "Right1"}, {"Phy", "PhyB"}})
+                                .contract(hamiltonian, {{"PhyA", "I0"}, {"PhyB", "I1"}})
+                                .contract(conjugate_chain[i], {{"Right2", "Left"}, {"O0", "Phy"}})
+                                .edge_rename({{"Right", "Right2"}})
+                                .contract(conjugate_chain[i], {{"Right2", "Left"}, {"O1", "Phy"}})
+                                .edge_rename({{"Right", "Right2"}})
+                                .contract(get_right(i + 2), {{"Right1", "Left1"}, {"Right2", "Left2"}}));
       }
-      energy /= get_right(0);
+      energy /= double(get_right(0));
       return energy / chain.size();
       // TODO: problem, write u1 mps first
    }

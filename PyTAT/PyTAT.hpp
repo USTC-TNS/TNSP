@@ -297,7 +297,7 @@ namespace TAT {
          tensor_t.def("__complex__", [](const T& tensor) { return ScalarType(tensor); });
       } else {
          tensor_t.def("__float__", [](const T& tensor) { return ScalarType(tensor); });
-         tensor_t.def("__complex__", [](const T& tensor) { return std::complex<ScalarType>(tensor); });
+         tensor_t.def("__complex__", [](const T& tensor) { return std::complex<ScalarType>(ScalarType(tensor)); });
       }
       tensor_t
 #undef TAT_LOOP_OPERATOR
