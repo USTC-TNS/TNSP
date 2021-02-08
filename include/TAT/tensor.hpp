@@ -198,7 +198,7 @@ namespace TAT {
        * 创建秩为零的张量
        * \param number 秩为零的张量拥有的唯一一个元素的值
        */
-      Tensor(ScalarType number) : Tensor({}, {}) {
+      explicit Tensor(ScalarType number) : Tensor({}, {}) {
          core->blocks.begin()->second.front() = number;
       }
 
@@ -225,7 +225,7 @@ namespace TAT {
       /**
        * 秩为一的张量转化为其中唯一一个元素的标量类型
        */
-      operator ScalarType() const {
+      explicit operator ScalarType() const {
          if (!is_scalar()) {
             TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
