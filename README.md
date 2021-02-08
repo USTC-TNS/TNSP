@@ -182,19 +182,157 @@ auto B = A.to<std::complex<double>>();
 
 #### Norm
 
+```c++
+auto A = Tensor({"i"}, {10}).test();
+// Get maximum norm
+std::cout << A.norm<-1>() <<"\n";
+// Get 0 norm
+std::cout << A.norm<0>() <<"\n";
+// Get 1 norm
+std::cout << A.norm<1>() <<"\n";
+// Get 2 norm
+std::cout << A.norm<2>() <<"\n";
+```
+
 #### Contract
+
+```c++
+auto A = Tensor({"i", "j", "k"}, {2, 3, 4}).test();
+auto B = Tensor({"a", "b", "c", "d"}, {2, 5, 3, 6}).test();
+// Contract edge i of A and edge a of B, edge j of A and edge c of B
+auto C = A.contract(B, {{"i", "a"}, {"j", "c"}});
+std::cout << C << "\n";
+```
 
 #### Merge and split edge
 
+```c++
+auto A = Tensor({"i", "j", "k"}, {2, 3, 4}).test();
+// Merge edge i and edge j into a single edge a,
+// and Merge no edge to get a trivial edge b
+auto B = A.merge_edge({{"a", {"i", "j"}}, {"b", {}}});
+std::cout << B << "\n";
+
+// Split edge a back to edge i and edge j, and split
+// trivial edge b to no edge
+auto C = B.split_edge({{"b", {}}, {"a", {{"i", 2}, {"j", 3}}}});
+std::cout << C << "\n";
+```
+
 #### Edge rename and transpose
+
+```c++
+auto A = Tensor({"i", "j", "k"}, {2, 3, 4}).test();
+// Rename edge i to edge x
+auto B = A.edge_rename({{"i", "x"}});
+std::cout << B << "\n";
+// `edge_rename` is an outplace operator
+std::cout << A << "\n";
+
+// Transpose tensor A with specific order
+auto C = A.transpose({"k", "j", "i"});
+std::cout << C << "\n";
+```
 
 #### SVD and QR decomposition
 
+##### QR decomposition
+
+```c++
+auto A = Tensor({"i", "j", "k"}, {2, 3, 4}).test();
+// Do QR decomposition, specify Q matrix edge is edge k
+// You can also write is as `Q, R = A.qr('r', {"i", "j"}, "Q", "R")`
+// The last two argument is the name of new edges generated
+// by QR decomposition
+auto [Q, R] = A.qr('q', {"k"}, "Q", "R");
+// Q is an unitary matrix, which edge name is Q and k
+std::cout << Q.edge_rename({{"Q", "Q1"}}).contract(Q.edge_rename({{"Q", "Q2"}}), {{"k", "k"}}) << "\n";
+// Q R - A is 0
+std::cout << (Q.contract(R, {{"Q", "R"}}) - A).norm<-1>() << "\n";
+```
+
+##### SVD decomposition
+
+```c++
+// Do SVD decomposition with cut=3, if cut not specified,
+// svd will not cut the edge.
+// The first argument is edge set of matrix U, SVD does not
+// supply function to specify edge set of matrix V like what
+// is done in QR since SVD is symmetric between U and V.
+// The later two argument is new edges generated
+auto [U, S, V] = A.svd({"k"}, "U", "V", 3);
+// U is an rank-3 unitary matrix
+std::cout << U.edge_rename({{"U", "U1"}}).contract(U.edge_rename({{"U", "U2"}}), {{"k", "k"}}) << "\n";
+// U S V - A is a small value
+// please notice that S is an diagnalized matrix so contract is
+// not support, use multiple which is designed for this
+// situation instead. Its interface is
+// `matrix_U.multiple(Singular, matrix_U_edge_name, 'u')` or
+// `matrix_V.multiple(Singular, matrix_V_edge_name, 'v')`,
+// multiple is an outplace operator
+std::cout << (U.multiple(S, "U", 'u').contract(V, {{"U", "V"}}) - A).norm<-1>() << "\n";
+
+// Here A is a real tensor, if it is complex tensor, you may
+// need outplace operator `U.conjugate()` to get conjugate
+// tensor of unitary matrix
+```
+
 #### Identity, exponential and trace
+
+```c++
+// Please notice that identity is INPLACE operator
+// For any i, j, k, l, we have
+// `A[{"i":i, "j":j, "k":k, "l":l}] = delta(i,l) * delta(j,k)`
+auto A = Tensor({"i","j","k","l"},{2,3,3,2}).identity({{"i", "l"}, {"j", "k"}});
+
+// calculate matrix exponential B = exp(A)
+// second argument is iteration steps, with default value 2
+auto B = A.exponential({{"i", "l"}, {"j", "k"}}, 4);
+
+// Calculate trace or partial trace of a tenso
+// Here it calculate `A[{"i":i, "j":j, "k":k, "l":l}] * delta(i,l) * delta(j,k)`
+auto C = A.trace({{"i", "l"}, {"j", "k"}});
+```
 
 #### IO
 
+You can direclty read/write/load/dump tensor from/to a stream.
+
+```c++
+auto A = Tensor({"i","j","k","l"},{2,3,3,2}).identity({{"i", "l"}, {"j", "k"}});
+std::stringstream text_stream;
+// use operator<< to write to a stream
+text_stream << A;
+std::cout << text_stream.str() << "\n";
+Tensor B;
+// use operatoor>> to read from a stream
+text_stream >> B;
+
+std::stringstream binary_stream;
+// use operator< to dump to a stream
+binary_stream < A;
+Tensor C;
+// use operator> to load from a stream
+binary_stream > C;
+```
+
 #### Fill random number into tensor
+
+c++ have its own way to generate random number, see [this](https://en.cppreference.com/w/cpp/numeric/random).
+So TAT will use this to generate random tensor.
+
+`Tensor::set` is an inplace operator with one function as its argument,
+its will call this function to get every element of the tensor.
+It will be used to get random tensor with help of c++ own random library.
+
+```c++
+std::random_device rd;
+auto seed = rd();
+std::default_random_engine engine(seed);
+std::normal_distribution<double> dist{0, 1};
+auto A = Tensor({"i", "j", "k"}, {2, 3, 4}).set([&](){ return dist(engine); });
+std::cout << A << "\n";
+```
 
 ## Links
 
