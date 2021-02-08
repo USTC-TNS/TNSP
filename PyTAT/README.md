@@ -6,11 +6,14 @@ which is a c++ tensor library with support for symmetry tensor.
 Its interface for symmetry tensor and normal tensor are similar,
 so first, let us introduce normal tensor interface of PyTAT.
 
-## NoTAT
+## No Symemtry Tensor
 
+No Symmetry Tensor is a tensor without any symmetry,
+which is just a normal tensor, so let us begin from this.
 
 NoTAT is a subset of PyTAT with only normal tensor support,
-which means you can replace all `NoTAT` to `TAT` in this section.
+which means if you use only no symmetry tensor, you can replace
+`import TAT` to `import NoTAT as TAT` for light weight package
 
 ### Create tensor
 
@@ -18,12 +21,12 @@ Here is a example to create a tensor.
 
 ```py
 # Import package before any other things
-import NoTAT
+import TAT
 
 # TAT does not support mixing different basic scalar type tensor
 # So you need to get type of some specific type tensor first
 # Supported type are "float", "float32", "complex", "complex32"
-Tensor = NoTAT(float)
+Tensor = TAT(float)
 
 # Create a rank-2 tensor with edge names as "i" and "j", and its
 # dimension is 3 and 4
@@ -195,11 +198,11 @@ A = Tensor(["i", "j"], [2, 2]).set(lambda :233)
 
 ```py
 A = Tensor(233)
-# Type of A is <class 'NoTAT.Tensor.DNo'>
+# Type of A is <class 'TAT.Tensor.DNo'>
 print(type(A))
 # Convert A to an complex tensor
 B = A.to(complex)
-# Type of B is <class 'NoTAT.Tensor.ZNo'>
+# Type of B is <class 'TAT.Tensor.ZNo'>
 print(type(B))
 ```
 
@@ -334,7 +337,7 @@ we implement a builtin random tensor generator.
 
 ```py
 # Set random seed
-NoTAT.random.seed(233)
+TAT.random.seed(233)
 
 # Generate uniform distribution data between 0 and 1
 # into tensor A
@@ -361,6 +364,10 @@ print(A.block[["i","j","k","l"]][0, 1] - B.block[["k", "l"]])
 C = B.expand({"i": (0, 2), "j": (1, 3)})
 print(repr(C))
 ```
+
+## Symemtry Tensor
+
+## Fermi Tensor
 
 ## FAQ
 

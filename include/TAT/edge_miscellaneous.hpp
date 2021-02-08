@@ -37,6 +37,7 @@ namespace TAT {
                return name;
             } else {
                TAT_error("New names not found in edge_rename which change type of name");
+               return ResultName();
             }
          } else {
             return position->second;

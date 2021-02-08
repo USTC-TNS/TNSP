@@ -510,14 +510,18 @@ namespace TAT {
                      const std::set<DefaultName>& free_name_set_u,
                      const DefaultName& common_name_u,
                      const DefaultName& common_name_v,
-                     Size cut) {
-                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, cut);
+                     Size cut,
+                     const DefaultName& singular_name_u,
+                     const DefaultName& singular_name_v) {
+                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, cut, singular_name_u, singular_name_v);
                      return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
                   },
                   py::arg("free_name_set_u"),
                   py::arg("common_name_u"),
                   py::arg("common_name_v"),
                   py::arg("cut") = Size(-1),
+                  py::arg("singular_name_u") = DefaultName("DefaultSingularNameU"),
+                  py::arg("singular_name_v") = DefaultName("DefaultSingularNameV"),
                   "Singular value decomposition")
             .def(
                   "qr",

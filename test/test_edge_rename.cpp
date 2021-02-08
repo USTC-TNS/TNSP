@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2020-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,11 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
 #include <TAT/TAT.hpp>
 
-using Tensor = typename TAT::Tensor<float, TAT::NoSymmetry>;
+#include "run_test.hpp"
 
-int main() {
-   auto a = Tensor({"A", "B"}, {160000, 400}).test();
-   auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
+void run_test() {
+   auto t1 = TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}};
+   auto t2 = t1.edge_rename({{"Left", "Up"}});
+   t1.test();
+   std::cout << t1 << "\n";
+   // std::cout << t2 << "\n";
 }

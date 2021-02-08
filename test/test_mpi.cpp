@@ -15,6 +15,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifndef TAT_USE_MPI
+#error testing mpi but mpi not enabled
+#endif
 #include <TAT/TAT.hpp>
 
 #include "run_test.hpp"
@@ -22,9 +25,10 @@
 using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 void run_test() {
-   auto A = Tensor({"i", "j"}, {3, 3}).test();
-   for (auto step = 1; step < 10; step++) {
-      auto B = A.exponential({{"i", "j"}}, step);
-      std::cout << B << "\n";
-   }
+   auto input = Tensor(TAT::mpi.rank);
+   auto result = TAT::mpi.reduce(input, TAT::mpi.size / 2, [](auto a, auto b) { return a + b; });
+   TAT::mpi.out_one(TAT::mpi.size / 2) << result << "\n";
+   result = TAT::mpi.broadcast(result, TAT::mpi.size / 2);
+   TAT::mpi.barrier();
+   TAT::mpi.out_rank() << result << "\n";
 }
