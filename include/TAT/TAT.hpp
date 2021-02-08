@@ -140,7 +140,7 @@ namespace TAT {
 
 #ifdef TAT_USE_NO_WARNING
 // TODO delete this deprecated macro
-#pragma message("TAT_USE_NO_WARNING is deprecated, define TAT_NOTHING_BITS=7 instead")
+#pragma message("TAT_USE_NO_WARNING is deprecated, define TAT_NOTHING_BITS=7 instead, TAT_USE_NO_WARNING will be removed in v0.2.0")
 #define TAT_NOTHING_BITS 7
 #endif
 
