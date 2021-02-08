@@ -477,14 +477,20 @@ namespace TAT {
                   py::arg("parity_exclude_name_merge_set") = py::set(),
                   py::arg("edge_and_symmetries_to_cut_before_all") = py::dict(),
                   "Tensor Edge Operator")
-            .def(
-                  "contract",
-                  [](const T& tensor_1, const T& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) {
-                     return tensor_1.contract(tensor_2, std::move(contract_names));
-                  },
-                  py::arg("another_tensor"),
-                  py::arg("contract_names"),
-                  "Contract two tensors")
+#define TAT_LOOP_CONTRACT(ANOTHERSCALAR)                                                                                                         \
+   def(                                                                                                                                          \
+         "contract",                                                                                                                             \
+         [](const T& tensor_1, const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) { \
+            return tensor_1.contract(tensor_2, std::move(contract_names));                                                                       \
+         },                                                                                                                                      \
+         py::arg("another_tensor"),                                                                                                              \
+         py::arg("contract_names"),                                                                                                              \
+         "Contract two tensors")
+            .TAT_LOOP_CONTRACT(float)
+            .TAT_LOOP_CONTRACT(double)
+            .TAT_LOOP_CONTRACT(std::complex<float>)
+            .TAT_LOOP_CONTRACT(std::complex<double>)
+#undef TAT_LOOP_CONTRACT
             .def(
                   "contract_all_edge", [](const T& tensor) { return tensor.contract_all_edge(); }, "Contract all edge with conjugate tensor")
             .def(
