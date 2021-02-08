@@ -56,7 +56,8 @@ If you are using cmake, you need to put these three files into directory `emscri
 
 ### No Symmetry Tensor
 
-No Symmetry Tensor is a tensor without any symmetry, which is just a normal tensor, so let us begin from this
+No Symmetry Tensor is a tensor without any symmetry,
+which is just a normal tensor, so let us begin from this
 In `TAT`, use
 
 ```c++
@@ -333,6 +334,10 @@ std::normal_distribution<double> dist{0, 1};
 auto A = Tensor({"i", "j", "k"}, {2, 3, 4}).set([&](){ return dist(engine); });
 std::cout << A << "\n";
 ```
+
+### Symmetry Tensor
+
+### Fermi Tensor
 
 ## Links
 
