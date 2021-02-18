@@ -29,17 +29,7 @@
 namespace TAT {
    template<typename Vector1, typename Vector2>
    bool is_same_vector(const Vector1& vector1, const Vector2& vector2) {
-      auto size1 = vector1.size();
-      auto size2 = vector2.size();
-      if (size1 != size2) {
-         return false;
-      }
-      for (auto i = 1; i < size1; i++) {
-         if (vector1[i] != vector2[i]) {
-            return false;
-         }
-      }
-      return true;
+      return std::equal(vector1.begin(), vector1.end(), vector2.begin(), vector2.end());
    }
 
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
