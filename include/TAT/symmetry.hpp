@@ -85,6 +85,13 @@ namespace TAT {
    template<typename Derived>
    struct bose_symmetry : bose_symmetry_base {};
 
+   inline bool fermi_to_bool(Fermi number) {
+      return bool(number % 2);
+   }
+   inline bool fermi_to_bool(Parity number) {
+      return number;
+   }
+
    /**
     * 费米对称性的公有方法集
     */
@@ -106,7 +113,7 @@ namespace TAT {
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
-               result ^= bool(symmetries[i].fermi % 2);
+               result ^= fermi_to_bool(symmetries[i].fermi);
             }
          }
          return result;
@@ -126,7 +133,7 @@ namespace TAT {
          for (Rank i = 0; i < symmetries.size(); i++) {
             for (Rank j = i + 1; j < symmetries.size(); j++) {
                if (transpose_plan[i] > transpose_plan[j]) {
-                  result ^= (bool(symmetries[i].fermi % 2) && bool(symmetries[j].fermi % 2));
+                  result ^= (fermi_to_bool(symmetries[i].fermi) && fermi_to_bool(symmetries[j].fermi));
                }
             }
          }
@@ -139,7 +146,8 @@ namespace TAT {
        * \param split_merge_flag merge或split的方案
        * \param valid_mark 各个merge或split的有效性
        *
-       * \note 实际上每一个merge或split操作都是一个全翻转, 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
+       * \note 实际上每一个merge或split操作都是一个全翻转,
+       * 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
        */
       template<typename VectorSymmetry, typename VectorRank, typename VectorBool>
       [[nodiscard]] static bool get_split_merge_parity(
@@ -156,8 +164,8 @@ namespace TAT {
                split_merge_end_position++;
             }
             if (valid_mark[split_merge_group_position]) {
-               auto sum_of_parity = 0;
-               auto sum_of_parity_square = 0;
+               auto sum_of_parity = 0l;
+               auto sum_of_parity_square = 0l;
                for (auto position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
                   auto this_parity = symmetries[position_in_group].fermi;
                   sum_of_parity += this_parity;
@@ -320,6 +328,85 @@ namespace TAT {
    }
 #endif
 
+   /**
+    * 费米奇偶的无对称性
+    */
+   struct ParitySymmetry : fermi_symmetry<ParitySymmetry> {
+      Parity fermi;
+
+      ParitySymmetry(const Parity fermi = false) : fermi(fermi) {}
+
+      [[nodiscard]] auto information() const {
+         return fermi;
+      }
+   };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+   inline ParitySymmetry operator+(const ParitySymmetry& symmetry_1, const ParitySymmetry& symmetry_2) {
+      return ParitySymmetry(symmetry_1.fermi ^ symmetry_2.fermi);
+   }
+   inline ParitySymmetry& operator+=(ParitySymmetry& symmetry_1, const ParitySymmetry& symmetry_2) {
+      symmetry_1.fermi ^= symmetry_2.fermi;
+      return symmetry_1;
+   }
+   inline ParitySymmetry operator-(const ParitySymmetry& symmetry) {
+      return ParitySymmetry(symmetry.fermi);
+   }
+#endif
+
+   /**
+    * 费米奇偶的Z2对称性
+    */
+   struct ParityZ2Symmetry : fermi_symmetry<ParityZ2Symmetry> {
+      Parity fermi;
+      Z2 z2;
+
+      ParityZ2Symmetry(const Parity fermi = false, const Z2 z2 = false) : fermi(fermi), z2(z2) {}
+
+      [[nodiscard]] auto information() const {
+         return std::tie(fermi, z2);
+      }
+   };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+   inline ParityZ2Symmetry operator+(const ParityZ2Symmetry& symmetry_1, const ParityZ2Symmetry& symmetry_2) {
+      return ParityZ2Symmetry(symmetry_1.fermi ^ symmetry_2.fermi, symmetry_1.z2 ^ symmetry_2.z2);
+   }
+   inline ParityZ2Symmetry& operator+=(ParityZ2Symmetry& symmetry_1, const ParityZ2Symmetry& symmetry_2) {
+      symmetry_1.fermi ^= symmetry_2.fermi;
+      symmetry_1.z2 ^= symmetry_2.z2;
+      return symmetry_1;
+   }
+   inline ParityZ2Symmetry operator-(const ParityZ2Symmetry& symmetry) {
+      return ParityZ2Symmetry(symmetry.fermi, symmetry.z2);
+   }
+#endif
+
+   /**
+    * 费米奇偶的U1对称性
+    */
+   struct ParityU1Symmetry : fermi_symmetry<ParityU1Symmetry> {
+      Parity fermi;
+      U1 u1;
+
+      ParityU1Symmetry(const Parity fermi = false, const U1 u1 = 0) : fermi(fermi), u1(u1) {}
+
+      [[nodiscard]] auto information() const {
+         return std::tie(fermi, u1);
+      }
+   };
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+   inline ParityU1Symmetry operator+(const ParityU1Symmetry& symmetry_1, const ParityU1Symmetry& symmetry_2) {
+      return ParityU1Symmetry(symmetry_1.fermi ^ symmetry_2.fermi, symmetry_1.u1 + symmetry_2.u1);
+   }
+   inline ParityU1Symmetry& operator+=(ParityU1Symmetry& symmetry_1, const ParityU1Symmetry& symmetry_2) {
+      symmetry_1.fermi ^= symmetry_2.fermi;
+      symmetry_1.u1 += symmetry_2.u1;
+      return symmetry_1;
+   }
+   inline ParityU1Symmetry operator-(const ParityU1Symmetry& symmetry) {
+      return ParityU1Symmetry(symmetry.fermi, -symmetry.u1);
+   }
+#endif
+
    // TODO 此处将可被c++20的operator<=>替换
    // 生成每个对称性的对称性的比较运算符重载
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
@@ -341,6 +428,9 @@ namespace TAT {
    TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiSymmetry)
    TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiZ2Symmetry)
    TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiU1Symmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(ParitySymmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(ParityZ2Symmetry)
+   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(ParityU1Symmetry)
 #undef TAT_DEFINE_SYMMETRY_ALL_OPERATOR
 #undef TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR
 #endif

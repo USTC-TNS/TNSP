@@ -71,6 +71,10 @@ namespace TAT {
     * 费米子数目的类型
     */
    using Fermi = std::int16_t;
+   /**
+    * 费米子奇偶的类型
+    */
+   using Parity = bool;
 
    /**
     * 费米箭头方向的类型, `false`和`true`分别表示出入
@@ -96,10 +100,10 @@ namespace TAT {
     * \see real_base_t
     */
    template<typename T>
-   struct real_base : std::conditional<is_scalar<T>::value, T, void> {};
+   struct real_base : std::conditional<std::is_scalar<T>::value, T, void> {};
    /// \private
    template<typename T>
-   struct real_base<std::complex<T>> : std::conditional<is_scalar<T>::value, T, void> {};
+   struct real_base<std::complex<T>> : std::conditional<std::is_scalar<T>::value, T, void> {};
    template<typename T>
    using real_base_t = typename real_base<T>::type;
 
