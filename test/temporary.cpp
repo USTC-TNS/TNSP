@@ -19,7 +19,17 @@
 
 #include <TAT/TAT.hpp>
 
+template<typename T>
+void print(const T& a) {
+   for (const auto& i : a) {
+      std::cout << i << ' ';
+   }
+   std::cout << '\n';
+}
+
 int main() {
-   TAT::Edge<TAT::FermiSymmetry, TAT::pmr::polymorphic_allocator, false> a;
-   TAT::Core<double, TAT::FermiSymmetry, TAT::pmr::polymorphic_allocator> b({{-1, 0, 1}, {-1, 0, 1}});
+   TAT::Tensor<double, TAT::FermiSymmetry> b({"i", "j"}, {{{0, 2}, {1, 2}}, {{-1, 2}, {0, 2}}});
+   b.test(233);
+   std::cout << b << "\n";
+   print(b.core->storage);
 }

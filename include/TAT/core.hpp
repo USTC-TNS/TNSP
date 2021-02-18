@@ -108,21 +108,28 @@ namespace TAT {
     */
    template<typename ScalarType, typename Symmetry, template<typename> class Allocator = std::allocator>
    struct Core {
+      using edge_type = Edge<Symmetry, Allocator>;
       using symmetry_vector = std::vector<Symmetry, Allocator<Symmetry>>;
+      using edge_vector = std::vector<edge_type, Allocator<edge_type>>;
+      using content_vector = pmr::content_vector<ScalarType>;
       /**
        * 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
        * \see Edge
        */
-      std::vector<Edge<Symmetry, Allocator>, Allocator<Edge<Symmetry, Allocator>>> edges = {};
+      edge_vector edges = {};
 
-      using normal_map = std::
-            map<symmetry_vector, vector<ScalarType>, std::less<symmetry_vector>, Allocator<std::pair<const symmetry_vector, vector<ScalarType>>>>;
-      using fake_block_map = fake_map<symmetry_vector, vector<ScalarType>>;
+      using normal_map =
+            std::map<symmetry_vector, content_vector, std::less<symmetry_vector>, Allocator<std::pair<const symmetry_vector, content_vector>>>;
+      using fake_block_map = fake_map<symmetry_vector, content_vector>;
 #ifdef TAT_USE_SIMPLE_NOSYMMETRY
       using block_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
 #else
       using block_map = normal_map;
 #endif
+
+      std::vector<ScalarType, Allocator<ScalarType>> storage;
+      pmr::monotonic_buffer_resource* resource;
+
       /**
        * 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
        * 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
@@ -138,7 +145,6 @@ namespace TAT {
        */
       template<typename VectorEdge = pmr::vector<Edge<Symmetry>>>
       Core(const VectorEdge& initial_edge, [[maybe_unused]] const bool auto_reverse = false) : edges(initial_edge.begin(), initial_edge.end()) {
-         auto pmr_guard = scope_resource<1 << 10>();
          // 自动翻转边
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
             if (auto_reverse) {
@@ -148,12 +154,19 @@ namespace TAT {
             }
          }
          // 生成数据
-         auto symmetries_list = initialize_block_symmetries_with_check(edges);
-         for (auto& [symmetries, size] : symmetries_list) {
-            blocks[{symmetries.begin(), symmetries.end()}] = vector<ScalarType>(size);
+         const auto symmetries_list = initialize_block_symmetries_with_check(edges);
+         Size total_size = 0;
+         for (const auto& [symmetries, size] : symmetries_list) {
+            total_size += size;
+         }
+         storage.resize(total_size);
+         resource = new pmr::monotonic_buffer_resource(storage.data(), total_size * sizeof(ScalarType));
+         for (const auto& [symmetries, size] : symmetries_list) {
+            blocks.emplace(symmetry_vector(symmetries.begin(), symmetries.end()), content_vector(size, resource));
          }
          // 删除不在block中用到的symmetry
          const Rank rank = edges.size();
+         auto pmr_guard = scope_resource<1 << 10>();
          auto edge_mark = pmr::vector<pmr::map<Symmetry, bool>>();
          edge_mark.reserve(rank);
          for (const auto& edge : edges) {
