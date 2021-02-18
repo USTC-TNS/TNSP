@@ -79,12 +79,12 @@ namespace square {
          if (real_replacement.empty()) {
             return ws;
          } else {
-            return operator()(real_replacement, hint);
+            return T(operator()(real_replacement, hint));
          }
       }
 
       auto operator()() const {
-         return operator()(std::map<std::tuple<int, int>, Tensor<T>>());
+         return T(operator()(std::map<std::tuple<int, int>, Tensor<T>>()));
       }
    };
 

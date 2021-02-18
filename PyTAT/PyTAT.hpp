@@ -254,35 +254,53 @@ namespace TAT {
       if constexpr (is_complex_v<ScalarType>) {
          one = ScalarType(1, 1);
       }
-      py::class_<T>(
-            tensor_m,
-            tensor_name.c_str(),
-            ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
-            .def_readonly("name", &T::names, "Names of all edge of the tensor")
-            .def_property_readonly(
-                  "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
-            .def_property_readonly(
-                  "data", [](T & tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
-            .def(py::self + py::self)
-            .def(ScalarType() + py::self)
-            .def(py::self + ScalarType())
-            .def(py::self += py::self)
-            .def(py::self += ScalarType())
-            .def(py::self - py::self)
-            .def(ScalarType() - py::self)
-            .def(py::self - ScalarType())
-            .def(py::self -= py::self)
-            .def(py::self -= ScalarType())
-            .def(py::self * py::self)
-            .def(ScalarType() * py::self)
-            .def(py::self * ScalarType())
-            .def(py::self *= py::self)
-            .def(py::self *= ScalarType())
-            .def(py::self / py::self)
-            .def(ScalarType() / py::self)
-            .def(py::self / ScalarType())
-            .def(py::self /= py::self)
-            .def(py::self /= ScalarType())
+      auto tensor_t = py::class_<T>(
+                            tensor_m,
+                            tensor_name.c_str(),
+                            ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
+                            .def_readonly("name", &T::names, "Names of all edge of the tensor")
+                            .def_property_readonly(
+                                  "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
+                            .def_property_readonly(
+                                  "data", [](T & tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
+                            .def(ScalarType() + py::self)
+                            .def(py::self + ScalarType())
+                            .def(py::self += ScalarType())
+                            .def(ScalarType() - py::self)
+                            .def(py::self - ScalarType())
+                            .def(py::self -= ScalarType())
+                            .def(ScalarType() * py::self)
+                            .def(py::self * ScalarType())
+                            .def(py::self *= ScalarType())
+                            .def(ScalarType() / py::self)
+                            .def(py::self / ScalarType())
+                            .def(py::self /= ScalarType())
+#define TAT_LOOP_OPERATOR(ANOTHERSCALAR)                    \
+   def(py::self + Tensor<ANOTHERSCALAR, Symmetry>())        \
+         .def(py::self - Tensor<ANOTHERSCALAR, Symmetry>()) \
+         .def(py::self* Tensor<ANOTHERSCALAR, Symmetry>())  \
+         .def(py::self / Tensor<ANOTHERSCALAR, Symmetry>())
+                            .TAT_LOOP_OPERATOR(float)
+                            .TAT_LOOP_OPERATOR(double)
+                            .TAT_LOOP_OPERATOR(std::complex<float>)
+                            .TAT_LOOP_OPERATOR(std::complex<double>)
+#undef TAT_LOOP_OPERATOR
+#define TAT_LOOP_OPERATOR(ANOTHERSCALAR)                     \
+   def(py::self += Tensor<ANOTHERSCALAR, Symmetry>())        \
+         .def(py::self -= Tensor<ANOTHERSCALAR, Symmetry>()) \
+         .def(py::self *= Tensor<ANOTHERSCALAR, Symmetry>()) \
+         .def(py::self /= Tensor<ANOTHERSCALAR, Symmetry>())
+                            .TAT_LOOP_OPERATOR(float)
+                            .TAT_LOOP_OPERATOR(double);
+      if constexpr (is_complex_v<ScalarType>) {
+         tensor_t.TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
+         tensor_t.def("__complex__", [](const T& tensor) { return ScalarType(tensor); });
+      } else {
+         tensor_t.def("__float__", [](const T& tensor) { return ScalarType(tensor); });
+         tensor_t.def("__complex__", [](const T& tensor) { return std::complex<ScalarType>(ScalarType(tensor)); });
+      }
+      tensor_t
+#undef TAT_LOOP_OPERATOR
             .def("__str__",
                  [](const T& tensor) {
                     if (tensor.is_valid()) {
@@ -311,7 +329,7 @@ namespace TAT {
                  py::arg("edges"),
                  py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
-            .def(implicit_init<T, ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
+            .def(py::init<ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
             .def(py::init<>([](const std::string& string) {
                     auto ss = std::stringstream(string);
                     auto result = T();
@@ -327,8 +345,9 @@ namespace TAT {
                   py::arg("edge_symmetry") = py::list(),
                   py::arg("edge_arrow") = py::list(),
                   "Create tensor with high rank but containing only one element")
-            .def(is_complex_v<ScalarType> ? "__complex__" : "__float__", [](const T& tensor) -> ScalarType { return tensor; })
             .def("copy", &T::copy, "Deep copy a tensor")
+            .def("__copy__", &T::copy)
+            .def("__deepcopy__", &T::copy)
             .def("same_shape", &T::same_shape, "Create a tensor with same shape")
             .def("map", &T::template map<std::function<ScalarType(ScalarType)>>, py::arg("function"), "Out-place map every element of a tensor")
             .def(
@@ -477,14 +496,20 @@ namespace TAT {
                   py::arg("parity_exclude_name_merge_set") = py::set(),
                   py::arg("edge_and_symmetries_to_cut_before_all") = py::dict(),
                   "Tensor Edge Operator")
-            .def(
-                  "contract",
-                  [](const T& tensor_1, const T& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) {
-                     return tensor_1.contract(tensor_2, std::move(contract_names));
-                  },
-                  py::arg("another_tensor"),
-                  py::arg("contract_names"),
-                  "Contract two tensors")
+#define TAT_LOOP_CONTRACT(ANOTHERSCALAR)                                                                                                         \
+   def(                                                                                                                                          \
+         "contract",                                                                                                                             \
+         [](const T& tensor_1, const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) { \
+            return tensor_1.contract(tensor_2, std::move(contract_names));                                                                       \
+         },                                                                                                                                      \
+         py::arg("another_tensor"),                                                                                                              \
+         py::arg("contract_names"),                                                                                                              \
+         "Contract two tensors")
+            .TAT_LOOP_CONTRACT(float)
+            .TAT_LOOP_CONTRACT(double)
+            .TAT_LOOP_CONTRACT(std::complex<float>)
+            .TAT_LOOP_CONTRACT(std::complex<double>)
+#undef TAT_LOOP_CONTRACT
             .def(
                   "contract_all_edge", [](const T& tensor) { return tensor.contract_all_edge(); }, "Contract all edge with conjugate tensor")
             .def(

@@ -29,6 +29,23 @@ namespace TAT {
     * \defgroup Scalar
     * @{
     */
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL)                                                                                                     \
+   template<                                                                                                                                     \
+         typename ScalarType1,                                                                                                                   \
+         typename ScalarType2,                                                                                                                   \
+         typename = std::enable_if_t<                                                                                                            \
+               is_scalar_v<ScalarType1> && is_scalar_v<ScalarType2> &&                                                                           \
+               (is_complex_v<ScalarType1> || is_complex_v<ScalarType2>)&&(!std::is_same_v<real_base_t<ScalarType1>, real_base_t<ScalarType2>>)>> \
+   inline auto OP(const ScalarType1& a, const ScalarType2& b) {                                                                                  \
+      using t = std::common_type_t<decltype(a), decltype(b)>;                                                                                    \
+      return EVAL;                                                                                                                               \
+   }
+   TAT_DEFINE_SCALAR_OPERATOR(operator+, t(a) + t(b))
+   TAT_DEFINE_SCALAR_OPERATOR(operator-, t(a) - t(b))
+   TAT_DEFINE_SCALAR_OPERATOR(operator*, t(a) * t(b))
+   TAT_DEFINE_SCALAR_OPERATOR(operator/, t(a) / t(b))
+#undef TAT_DEFINE_SCALAR_OPERATOR
+
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3)                                                                                \
    template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name, template<typename> class Allocator>              \
    [[nodiscard]] auto OP(                                                                                                                  \
@@ -148,7 +165,14 @@ namespace TAT {
 #undef TAT_DEFINE_SCALAR_OPERATOR
 
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2)                                                                                             \
-   template<typename ScalarType1, typename ScalarType2, typename Symmetry, typename Name, template<typename> class Allocator>                    \
+   template<                                                                                                                                     \
+         typename ScalarType1,                                                                                                                   \
+         typename ScalarType2,                                                                                                                   \
+         typename Symmetry,                                                                                                                      \
+         typename Name,                                                                                                                          \
+         template<typename>                                                                                                                      \
+         class Allocator,                                                                                                                        \
+         typename = std::enable_if_t<is_complex_v<ScalarType1> || is_real_v<ScalarType2>>>                                                       \
    Tensor<ScalarType1, Symmetry, Name, Allocator>& OP(                                                                                           \
          Tensor<ScalarType1, Symmetry, Name, Allocator>& tensor_1, const Tensor<ScalarType2, Symmetry, Name, Allocator>& tensor_2) {             \
       auto timer_guard = scalar_inplace_guard();                                                                                                 \
@@ -181,7 +205,7 @@ namespace TAT {
          typename Name,                                                                                                                          \
          template<typename>                                                                                                                      \
          class Allocator,                                                                                                                        \
-         typename = std::enable_if_t<is_scalar_v<ScalarType2>>>                                                                                  \
+         typename = std::enable_if_t<is_scalar_v<ScalarType2> && (is_complex_v<ScalarType1> || is_real_v<ScalarType2>)>>                         \
    Tensor<ScalarType1, Symmetry, Name, Allocator>& OP(Tensor<ScalarType1, Symmetry, Name, Allocator>& tensor_1, const ScalarType2& number_2) {   \
       auto timer_guard = scalar_inplace_guard();                                                                                                 \
       if (tensor_1.core.use_count() != 1) {                                                                                                      \
@@ -204,7 +228,7 @@ namespace TAT {
          typename Name,                                                                                                                          \
          template<typename>                                                                                                                      \
          class Allocator,                                                                                                                        \
-         typename = std::enable_if_t<is_scalar_v<ScalarType2>>>                                                                                  \
+         typename = std::enable_if_t<is_scalar_v<ScalarType2> && (is_complex_v<ScalarType1> || is_real_v<ScalarType2>)>>                         \
    Singular<ScalarType1, Symmetry, Name, Allocator>& OP(Singular<ScalarType1, Symmetry, Name, Allocator>& singular, const ScalarType2& number) { \
       auto timer_guard = scalar_inplace_guard();                                                                                                 \
       const auto& y = number;                                                                                                                    \

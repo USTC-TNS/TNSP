@@ -402,7 +402,7 @@ namespace square {
          throw NotImplementedError("Unsupported holes style");
       }
 
-      T operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
+      Tensor<T> operator()(const std::map<std::tuple<int, int>, Tensor<T>>& replacement, char hint_char = ' ') const {
          if (replacement.size() == 0) {
             return right_to_left_3_3.at(0).at(0)->get();
          } else if (replacement.size() == 1) {

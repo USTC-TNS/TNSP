@@ -69,7 +69,7 @@ struct PBC {
                   lattice.at(i).at(j).edge_rename({{"up", up(j)}, {"down", down(j)}, {"left", left(i)}, {"right", right(i)}}), contract_names);
          }
       }
-      return result;
+      return float(result);
    }
 
    float contract_with_two_line_to_one_line(TAT::Size D_cut) const {
@@ -97,7 +97,7 @@ struct PBC {
          result = result.contract(up_to_down_aux[L - 1][j], {{"right", "left"}});
       }
       // std::cout << result << "\n";
-      return result;
+      return float(result);
    }
 };
 
