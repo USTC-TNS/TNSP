@@ -121,7 +121,7 @@ namespace TAT {
    /**
     * \see Edge
     */
-   template<typename Symmetry, bool is_pointer = false, template<typename> class Allocator = std::allocator>
+   template<typename Symmetry, template<typename> class Allocator = std::allocator, bool is_pointer = false>
    struct BoseEdge {
       using symmetry_type = Symmetry;
       using real_edge_map = std::map<Symmetry, Size, std::less<Symmetry>, Allocator<std::pair<const Symmetry, Size>>>;
@@ -170,17 +170,17 @@ namespace TAT {
        */
       BoseEdge(const Size dimension) : map({{Symmetry(), dimension}}) {}
    };
-   template<typename Symmetry, bool is_pointer, template<typename> class Allocator1, template<typename> class Allocator2>
-   bool operator==(const BoseEdge<Symmetry, is_pointer, Allocator1>& edge_1, const BoseEdge<Symmetry, is_pointer, Allocator2>& edge_2) {
+   template<typename Symmetry, template<typename> class Allocator1, template<typename> class Allocator2, bool is_pointer>
+   bool operator==(const BoseEdge<Symmetry, Allocator1, is_pointer>& edge_1, const BoseEdge<Symmetry, Allocator2, is_pointer>& edge_2) {
       return std::equal(edge_1.map.begin(), edge_1.map.end(), edge_2.map.begin(), edge_2.map.end());
    }
 
    /**
     * \see Edge
     */
-   template<typename Symmetry, bool is_pointer = false, template<typename> class Allocator = std::allocator>
-   struct FermiEdge : BoseEdge<Symmetry, is_pointer, Allocator> {
-      using base_class = BoseEdge<Symmetry, is_pointer, Allocator>;
+   template<typename Symmetry, template<typename> class Allocator = std::allocator, bool is_pointer = false>
+   struct FermiEdge : BoseEdge<Symmetry, Allocator, is_pointer> {
+      using base_class = BoseEdge<Symmetry, Allocator, is_pointer>;
       using base_class::map;
 
       /**
@@ -232,32 +232,33 @@ namespace TAT {
          return false;
       }
    };
-   template<typename Symmetry, bool is_pointer, template<typename> class Allocator1, template<typename> class Allocator2>
-   bool operator==(const FermiEdge<Symmetry, is_pointer, Allocator1>& edge_1, const FermiEdge<Symmetry, is_pointer, Allocator2>& edge_2) {
+   template<typename Symmetry, template<typename> class Allocator1, template<typename> class Allocator2, bool is_pointer = false>
+   bool operator==(const FermiEdge<Symmetry, Allocator1, is_pointer>& edge_1, const FermiEdge<Symmetry, Allocator2, is_pointer>& edge_2) {
       return edge_1.arrow == edge_2.arrow && std::equal(edge_1.map.begin(), edge_1.map.end(), edge_2.map.begin(), edge_2.map.end());
    }
 
-   template<typename Symmetry, bool is_pointer>
-   using EdgeBase = std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry, is_pointer>, BoseEdge<Symmetry, is_pointer>>;
+   template<typename Symmetry, template<typename> class Allocator, bool is_pointer>
+   using EdgeBase =
+         std::conditional_t<is_fermi_symmetry_v<Symmetry>, FermiEdge<Symmetry, Allocator, is_pointer>, BoseEdge<Symmetry, Allocator, is_pointer>>;
    /**
     * 张量的边的形状的类型, 是一个Symmetry到Size的映射表, 如果是费米对称性, 还会含有一个箭头方向
     * \tparam Symmetry 张量所拥有的对称性
     * \tparam is_pointer map是否为引用而非真是存储着数据的伪边
     * \see BoseEdge, FermiEdge
     */
-   template<typename Symmetry, bool is_pointer = false>
-   struct Edge : EdgeBase<Symmetry, is_pointer> {
+   template<typename Symmetry, template<typename> class Allocator = std::allocator, bool is_pointer = false>
+   struct Edge : EdgeBase<Symmetry, Allocator, is_pointer> {
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
 
-      using EdgeBase<Symmetry, is_pointer>::EdgeBase;
+      using EdgeBase<Symmetry, Allocator, is_pointer>::EdgeBase;
    };
 
    /**
     * 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
     */
-   template<typename Symmetry>
-   using EdgePointer = Edge<Symmetry, true>;
+   template<typename Symmetry, template<typename> class Allocator = std::allocator>
+   using EdgePointer = Edge<Symmetry, Allocator, true>;
 
    /**
     * 对一个边的形状列表进行枚举分块, 并做一些其他操作
@@ -346,8 +347,8 @@ namespace TAT {
    template<typename T>
    struct is_edge : std::bool_constant<false> {};
    /// \private
-   template<typename T>
-   struct is_edge<Edge<T>> : std::bool_constant<true> {};
+   template<typename T, template<typename> class Allocator>
+   struct is_edge<Edge<T, Allocator>> : std::bool_constant<true> {};
    template<typename T>
    constexpr bool is_edge_v = is_edge<T>::value;
 

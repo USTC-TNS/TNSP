@@ -106,7 +106,7 @@ namespace TAT {
     * \tparam Symmetry 张量所拥有的对称性
     * \note Core的存在是为了让边的名称的重命名节省时间
     */
-   template<typename ScalarType, typename Symmetry>
+   template<typename ScalarType, typename Symmetry, template<typename> class Allocator = std::allocator>
    struct Core {
       /**
        * 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
