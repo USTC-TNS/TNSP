@@ -23,6 +23,8 @@
 
 #include <tuple>
 
+#include "basic_type.hpp"
+
 namespace TAT {
    /**
     * \defgroup Symmetry
@@ -33,63 +35,92 @@ namespace TAT {
     * @{
     */
 
-   /**
-    * 所有对称性类型的基类, 用于判断一个类型是否是对称性类型
-    */
-   struct symmetry_base {};
-   /**
-    * 所有玻色对称性的基类, 用来判断一个类型是否是玻色对称性
-    */
-   struct bose_symmetry_base : symmetry_base {};
-   /**
-    * 所有费米对称性的基类, 用来判断一个类型是否是费米对称性
-    */
-   struct fermi_symmetry_base : symmetry_base {};
+   template<typename T>
+   struct fermi_wrap {};
 
-   /**
-    * 判断一个类型是否是对称性类型
-    *
-    * \tparam T 如果`T`是对称性类型, 则`value`为`true`
-    * \see is_symmetry_v
-    */
    template<typename T>
-   struct is_symmetry : std::is_base_of<symmetry_base, T> {};
+   struct fermi_unwrap : type_identity<T> {};
    template<typename T>
-   constexpr bool is_symmetry_v = is_symmetry<T>::value;
+   struct fermi_unwrap<fermi_wrap<T>> : type_identity<T> {};
+   template<typename T>
+   using fermi_unwrap_t = typename fermi_unwrap<T>::type;
 
-   /**
-    * 判断一个类型是否是玻色对称性类型
-    *
-    * \tparam T 如果`T`是玻色对称性类型, 则`value`为`true`
-    * \see is_bose_symmetry_v
-    */
    template<typename T>
-   struct is_bose_symmetry : std::is_base_of<bose_symmetry_base, T> {};
+   struct fermi_wrapped : std::bool_constant<false> {};
    template<typename T>
-   constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
+   struct fermi_wrapped<fermi_wrap<T>> : std::bool_constant<true> {};
+   template<typename T>
+   constexpr bool fermi_wrapped_v = fermi_wrapped<T>::value;
 
-   /**
-    * 判断一个类型是否是费米对称性类型
-    *
-    * \tparam T 如果`T`是费米对称性类型, 则`value`为`true`
-    * \see is_fermi_symmetry_v
-    */
-   template<typename T>
-   struct is_fermi_symmetry : std::is_base_of<fermi_symmetry_base, T> {};
-   template<typename T>
-   constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
+   template<typename... T>
+   struct general_symmetry : std::tuple<fermi_unwrap_t<T>...> {
+      using self_class = general_symmetry<T...>;
+      using base_class = std::tuple<fermi_unwrap_t<T>...>;
+      static constexpr int length = sizeof...(T);
+      static constexpr std::array<bool, length> is_fermi = {fermi_wrapped_v<T>...};
+      static constexpr bool is_fermi_symmetry = (fermi_wrapped_v<T> || ...);
+      using index_sequence = std::index_sequence_for<T...>;
 
-   /**
-    * 玻色对称性的公有方法集, 并不存在
-    */
-   template<typename Derived>
-   struct bose_symmetry : bose_symmetry_base {};
+      template<typename... Args>
+      base_class construct_symmetry_tuple(const Args&... args) {
+         if constexpr (sizeof...(Args) == length) {
+            return base_class(args...);
+         } else {
+            return construct_symmetry_tuple(args..., 0);
+         }
+      }
+      template<typename... Args, std::enable_if_t<sizeof...(Args) <= length && (std::is_integral_v<Args> && ...), int> = 0>
+      general_symmetry(const Args&... args) : base_class(construct_symmetry_tuple(args...)) {}
 
-   /**
-    * 费米对称性的公有方法集
-    */
-   template<typename Derived>
-   struct fermi_symmetry : fermi_symmetry_base {
+      template<typename Item>
+      static Item& inplace_plus_item(Item& a, const Item& b) {
+         if constexpr (std::is_same_v<Item, bool>) {
+            return a ^= b;
+         } else {
+            return a += b;
+         }
+      }
+      template<std::size_t... Is>
+      static self_class& inplace_plus_symmetry(self_class& symmetry_1, const self_class& symmetry_2, std::index_sequence<Is...>) {
+         (inplace_plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2)), ...);
+         return symmetry_1;
+      }
+      self_class& operator+=(const self_class& other_symmetry) & {
+         return inplace_plus_symmetry(*this, other_symmetry, index_sequence());
+      }
+
+      template<typename Item>
+      static Item plus_item(const Item& a, const Item& b) {
+         if constexpr (std::is_same_v<Item, bool>) {
+            return a ^ b;
+         } else {
+            return a + b;
+         }
+      }
+      template<size_t... Is>
+      static self_class plus_symmetry(const self_class& symmetry_1, const self_class& symmetry_2, std::index_sequence<Is...>) {
+         self_class(plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2))...);
+      }
+      self_class operator+(const self_class& other_symmetry) const& {
+         return plus_symmetry(*this, other_symmetry, index_sequence());
+      }
+
+      template<typename Item>
+      static Item minus_item(const Item& a) {
+         if constexpr (std::is_same_v<Item, bool>) {
+            return a;
+         } else {
+            return -a;
+         }
+      }
+      template<size_t... Is>
+      static self_class minus_symmetry(const self_class& symmetry, std::index_sequence<Is...>) {
+         self_class(minus_item(std::get<Is>(symmetry))...);
+      }
+      self_class operator-() const& {
+         return minus_symmetry(*this, index_sequence());
+      }
+
       /**
        * 给出翻转各边时产生的parity
        *
@@ -171,179 +202,47 @@ namespace TAT {
       }
    };
 
-   /**
-    * 无对称性
-    */
-   struct NoSymmetry : bose_symmetry<NoSymmetry> {
-      [[nodiscard]] auto information() const {
-         return 0;
-      }
-   };
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   inline NoSymmetry operator+(const NoSymmetry&, const NoSymmetry&) {
-      return NoSymmetry();
-   }
-   inline NoSymmetry& operator+=(NoSymmetry& symmetry, const NoSymmetry&) {
-      return symmetry;
-   }
-   inline NoSymmetry operator-(const NoSymmetry&) {
-      return NoSymmetry();
-   }
-#endif
+   using NoSymmetry = general_symmetry<>;
+   using Z2Symmetry = general_symmetry<Z2>;
+   using U1Symmetry = general_symmetry<U1>;
+   using FermiSymmetry = general_symmetry<fermi_wrap<U1>>;
+   using FermiZ2Symmetry = general_symmetry<fermi_wrap<U1>, Z2>;
+   using FermiU1Symmetry = general_symmetry<fermi_wrap<U1>, U1>;
 
    /**
-    * Z2对称性
+    * 判断一个类型是否是对称性类型
+    *
+    * \tparam T 如果`T`是对称性类型, 则`value`为`true`
+    * \see is_symmetry_v
     */
-   struct Z2Symmetry : bose_symmetry<Z2Symmetry> {
-      Z2 z2;
-
-      Z2Symmetry(const Z2 z2 = false) : z2(z2) {}
-
-      [[nodiscard]] auto information() const {
-         return z2;
-      }
-   };
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   inline Z2Symmetry operator+(const Z2Symmetry& symmetry_1, const Z2Symmetry& symmetry_2) {
-      return Z2Symmetry(symmetry_1.z2 ^ symmetry_2.z2);
-   }
-   inline Z2Symmetry& operator+=(Z2Symmetry& symmetry_1, const Z2Symmetry& symmetry_2) {
-      symmetry_1.z2 ^= symmetry_2.z2;
-      return symmetry_1;
-   }
-   inline Z2Symmetry operator-(const Z2Symmetry& symmetry) {
-      return Z2Symmetry(symmetry.z2);
-   }
-#endif
+   template<typename T>
+   struct is_symmetry : std::bool_constant<false> {};
+   template<typename... T>
+   struct is_symmetry<general_symmetry<T...>> : std::bool_constant<true> {};
+   template<typename T>
+   constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
    /**
-    * U1对称性
+    * 判断一个类型是否是玻色对称性类型
+    *
+    * \tparam T 如果`T`是玻色对称性类型, 则`value`为`true`
+    * \see is_bose_symmetry_v
     */
-   struct U1Symmetry : bose_symmetry<U1Symmetry> {
-      U1 u1;
-
-      U1Symmetry(const U1 u1 = 0) : u1(u1) {}
-
-      [[nodiscard]] auto information() const {
-         return u1;
-      }
-   };
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   inline U1Symmetry operator+(const U1Symmetry& symmetry_1, const U1Symmetry& symmetry_2) {
-      return U1Symmetry(symmetry_1.u1 + symmetry_2.u1);
-   }
-   inline U1Symmetry& operator+=(U1Symmetry& symmetry_1, const U1Symmetry& symmetry_2) {
-      symmetry_1.u1 += symmetry_2.u1;
-      return symmetry_1;
-   }
-   inline U1Symmetry operator-(const U1Symmetry& symmetry) {
-      return U1Symmetry(-symmetry.u1);
-   }
-#endif
+   template<typename T>
+   struct is_bose_symmetry : std::bool_constant<!T::is_fermi_symmetry> {};
+   template<typename T>
+   constexpr bool is_bose_symmetry_v = is_bose_symmetry<T>::value;
 
    /**
-    * 费米的无对称性
+    * 判断一个类型是否是费米对称性类型
+    *
+    * \tparam T 如果`T`是费米对称性类型, 则`value`为`true`
+    * \see is_fermi_symmetry_v
     */
-   struct FermiSymmetry : fermi_symmetry<FermiSymmetry> {
-      Fermi fermi;
-
-      FermiSymmetry(const Fermi fermi = 0) : fermi(fermi) {}
-
-      [[nodiscard]] auto information() const {
-         return fermi;
-      }
-   };
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   inline FermiSymmetry operator+(const FermiSymmetry& symmetry_1, const FermiSymmetry& symmetry_2) {
-      return FermiSymmetry(symmetry_1.fermi + symmetry_2.fermi);
-   }
-   inline FermiSymmetry& operator+=(FermiSymmetry& symmetry_1, const FermiSymmetry& symmetry_2) {
-      symmetry_1.fermi += symmetry_2.fermi;
-      return symmetry_1;
-   }
-   inline FermiSymmetry operator-(const FermiSymmetry& symmetry) {
-      return FermiSymmetry(-symmetry.fermi);
-   }
-#endif
-
-   /**
-    * 费米的Z2对称性
-    */
-   struct FermiZ2Symmetry : fermi_symmetry<FermiZ2Symmetry> {
-      Fermi fermi;
-      Z2 z2;
-
-      FermiZ2Symmetry(const Fermi fermi = 0, const Z2 z2 = false) : fermi(fermi), z2(z2) {}
-
-      [[nodiscard]] auto information() const {
-         return std::tie(fermi, z2);
-      }
-   };
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   inline FermiZ2Symmetry operator+(const FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) {
-      return FermiZ2Symmetry(symmetry_1.fermi + symmetry_2.fermi, symmetry_1.z2 ^ symmetry_2.z2);
-   }
-   inline FermiZ2Symmetry& operator+=(FermiZ2Symmetry& symmetry_1, const FermiZ2Symmetry& symmetry_2) {
-      symmetry_1.fermi += symmetry_2.fermi;
-      symmetry_1.z2 ^= symmetry_2.z2;
-      return symmetry_1;
-   }
-   inline FermiZ2Symmetry operator-(const FermiZ2Symmetry& symmetry) {
-      return FermiZ2Symmetry(-symmetry.fermi, symmetry.z2);
-   }
-#endif
-
-   /**
-    * 费米的U1对称性
-    */
-   struct FermiU1Symmetry : fermi_symmetry<FermiU1Symmetry> {
-      Fermi fermi;
-      U1 u1;
-
-      FermiU1Symmetry(const Fermi fermi = 0, const U1 u1 = 0) : fermi(fermi), u1(u1) {}
-
-      [[nodiscard]] auto information() const {
-         return std::tie(fermi, u1);
-      }
-   };
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   inline FermiU1Symmetry operator+(const FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) {
-      return FermiU1Symmetry(symmetry_1.fermi + symmetry_2.fermi, symmetry_1.u1 + symmetry_2.u1);
-   }
-   inline FermiU1Symmetry& operator+=(FermiU1Symmetry& symmetry_1, const FermiU1Symmetry& symmetry_2) {
-      symmetry_1.fermi += symmetry_2.fermi;
-      symmetry_1.u1 += symmetry_2.u1;
-      return symmetry_1;
-   }
-   inline FermiU1Symmetry operator-(const FermiU1Symmetry& symmetry) {
-      return FermiU1Symmetry(-symmetry.fermi, -symmetry.u1);
-   }
-#endif
-
-   // TODO 此处将可被c++20的operator<=>替换
-   // 生成每个对称性的对称性的比较运算符重载
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-#define TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, OP, EXP)         \
-   inline bool OP(const SYM& symmetry_1, const SYM& symmetry_2) { \
-      return EXP;                                                 \
-   }
-#define TAT_DEFINE_SYMMETRY_ALL_OPERATOR(SYM)                                                                 \
-   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator==, symmetry_1.information() == symmetry_2.information()) \
-   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator!=, symmetry_1.information() != symmetry_2.information()) \
-   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator>=, symmetry_1.information() >= symmetry_2.information()) \
-   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator<=, symmetry_1.information() <= symmetry_2.information()) \
-   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator>, symmetry_1.information() > symmetry_2.information())   \
-   TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR(SYM, operator<, symmetry_1.information() < symmetry_2.information())
-
-   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(NoSymmetry)
-   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(Z2Symmetry)
-   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(U1Symmetry)
-   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiSymmetry)
-   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiZ2Symmetry)
-   TAT_DEFINE_SYMMETRY_ALL_OPERATOR(FermiU1Symmetry)
-#undef TAT_DEFINE_SYMMETRY_ALL_OPERATOR
-#undef TAT_DEFINE_SINGLE_SYMMETRY_OPERATOR
-#endif
+   template<typename T>
+   struct is_fermi_symmetry : std::bool_constant<T::is_fermi_symmetry> {};
+   template<typename T>
+   constexpr bool is_fermi_symmetry_v = is_fermi_symmetry<T>::value;
    /**@}*/
 } // namespace TAT
 #endif

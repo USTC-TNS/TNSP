@@ -59,7 +59,7 @@ namespace TAT {
       return std::move(out);
    }
 
-   inline void ignore_util(std::istream& in, char end) {
+   inline void ignore_until(std::istream& in, char end) {
       in.ignore(std::numeric_limits<std::streamsize>::max(), end);
    }
 
@@ -223,7 +223,7 @@ namespace TAT {
    template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T> || is_name_v<T>>>
    std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       list.clear();
-      ignore_util(in, '[');
+      ignore_until(in, '[');
       if (in.peek() == ']') {
          // empty list
          in.get(); // 获取']'
@@ -318,24 +318,24 @@ namespace TAT {
          in >> edge.map[NoSymmetry()];
       } else {
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            ignore_util(in, ':');
+            ignore_until(in, ':');
             in >> edge.arrow;
          }
          edge.map.clear();
-         ignore_util(in, '{');
+         ignore_until(in, '{');
          if (in.peek() != '}') {
             // not empty
             do {
                Symmetry symmetry;
                in >> symmetry;
-               ignore_util(in, ':');
+               ignore_until(in, ':');
                in >> edge.map[symmetry];
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
          }
          if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            ignore_util(in, '}');
+            ignore_until(in, '}');
          }
       }
       return in;
@@ -367,59 +367,40 @@ namespace TAT {
       return in;
    }
 
-   inline std::ostream& operator<<(std::ostream& out, const NoSymmetry&) {
+   template<typename Symmetry, std::size_t... Is>
+   void print_symmetry_sequence(std::ostream& out, const Symmetry& symmetry, std::index_sequence<Is...>) {
+      (((Is == 0 ? out : out << ',') << std::get<Is>(symmetry)), ...);
+   }
+   template<typename... T>
+   std::ostream& operator<<(std::ostream& out, const general_symmetry<T...>& symmetry) {
+      using Symmetry = general_symmetry<T...>;
+      if constexpr (Symmetry::length != 0) {
+         if constexpr (Symmetry::length == 1) {
+            out << std::get<0>(symmetry);
+         } else {
+            out << '(';
+            print_symmetry_sequence(out, symmetry, Symmetry::index_sequence());
+            out << ')';
+         }
+      }
       return out;
    }
-   inline std::istream& operator>>(std::istream& in, NoSymmetry&) {
-      return in;
+   template<typename Symmetry, std::size_t... Is>
+   void scan_symmetry_sequence(std::istream& in, Symmetry& symmetry, std::index_sequence<Is...>) {
+      (((Is == 0 ? in : (ignore_until(in, ','), in)) >> std::get<Is>(symmetry)), ...);
    }
-   inline std::ostream& operator<<(std::ostream& out, const Z2Symmetry& symmetry) {
-      out << symmetry.z2;
-      return out;
-   }
-   inline std::istream& operator>>(std::istream& in, Z2Symmetry& symmetry) {
-      in >> symmetry.z2;
-      return in;
-   }
-   inline std::ostream& operator<<(std::ostream& out, const U1Symmetry& symmetry) {
-      out << symmetry.u1;
-      return out;
-   }
-   inline std::istream& operator>>(std::istream& in, U1Symmetry& symmetry) {
-      in >> symmetry.u1;
-      return in;
-   }
-   inline std::ostream& operator<<(std::ostream& out, const FermiSymmetry& symmetry) {
-      out << symmetry.fermi;
-      return out;
-   }
-   inline std::istream& operator>>(std::istream& in, FermiSymmetry& symmetry) {
-      in >> symmetry.fermi;
-      return in;
-   }
-   inline std::ostream& operator<<(std::ostream& out, const FermiZ2Symmetry& symmetry) {
-      out << '(' << symmetry.fermi << ',' << symmetry.z2 << ')';
-      return out;
-   }
-   inline std::istream& operator>>(std::istream& in, FermiZ2Symmetry& symmetry) {
-      ignore_util(in, '(');
-      in >> symmetry.fermi;
-      ignore_util(in, ',');
-      in >> symmetry.z2;
-      ignore_util(in, ')');
-      return in;
-   }
-
-   inline std::ostream& operator<<(std::ostream& out, const FermiU1Symmetry& symmetry) {
-      out << '(' << symmetry.fermi << ',' << symmetry.u1 << ')';
-      return out;
-   }
-   inline std::istream& operator>>(std::istream& in, FermiU1Symmetry& symmetry) {
-      ignore_util(in, '(');
-      in >> symmetry.fermi;
-      ignore_util(in, ',');
-      in >> symmetry.u1;
-      ignore_util(in, ')');
+   template<typename... T>
+   std::istream& operator>>(std::istream& in, general_symmetry<T...>& symmetry) {
+      using Symmetry = general_symmetry<T...>;
+      if constexpr (Symmetry::length != 0) {
+         if constexpr (Symmetry::length == 1) {
+            in >> std::get<0>(symmetry);
+         } else {
+            ignore_until(in, '(');
+            scan_symmetry_sequence(in, symmetry, Symmetry::index_sequence());
+            ignore_until(in, ')');
+         }
+      }
       return in;
    }
 
@@ -475,32 +456,32 @@ namespace TAT {
    }
    template<typename ScalarType, typename Symmetry, typename Name>
    std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
-      ignore_util(in, ':');
+      ignore_until(in, ':');
       in >> tensor.names;
       tensor.name_to_index = construct_name_to_index<std::map<Name, Rank>>(tensor.names);
-      ignore_util(in, ':');
+      ignore_until(in, ':');
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();
       in >> tensor.core->edges;
       check_valid_name(tensor.names, tensor.core->edges.size());
-      ignore_util(in, ':');
+      ignore_until(in, ':');
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          // change begin();
          in >> tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), NoSymmetry())];
       } else {
          // core是刚刚创建的所以不需要clear blocks
-         ignore_util(in, '{');
+         ignore_until(in, '{');
          if (in.peek() != '}') {
             do {
                std::vector<Symmetry> symmetries;
                in >> symmetries;
-               ignore_util(in, ':');
+               ignore_until(in, ':');
                in >> tensor.core->blocks[std::move(symmetries)];
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
          }
       }
-      ignore_util(in, '}');
+      ignore_until(in, '}');
       return in;
    }
 
@@ -532,12 +513,12 @@ namespace TAT {
          in >> value[NoSymmetry()];
       } else {
          value.clear();
-         ignore_util(in, '{');
+         ignore_until(in, '{');
          if (in.peek() != '}') {
             do {
                Symmetry symmetry;
                in >> symmetry;
-               ignore_util(in, ':');
+               ignore_until(in, ':');
                in >> value[symmetry];
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
