@@ -154,14 +154,14 @@ namespace TAT {
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<>
-   struct NameTraits<FastName> : NameTraitsBase<FastName> {
+   struct NameTraits<FastName> {
       static constexpr name_out_operator<FastName> write = operator<;
       static constexpr name_in_operator<FastName> read = operator>;
       static constexpr name_out_operator<FastName> print = operator<<;
       static constexpr name_in_operator<FastName> scan = scan_fastname_for_name;
    };
    template<>
-   struct NameTraits<std::string> : NameTraitsBase<std::string> {
+   struct NameTraits<std::string> {
       static constexpr name_out_operator<std::string> write = operator<;
       static constexpr name_in_operator<std::string> read = operator>;
       static constexpr name_out_operator<std::string> print = std::operator<<;

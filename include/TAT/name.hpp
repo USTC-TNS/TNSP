@@ -21,9 +21,11 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace TAT {
@@ -47,7 +49,7 @@ namespace TAT {
       /**
        * Name中用于标号的类型
        */
-      using FastNameId = int;
+      using FastNameId = std::uint32_t;
 
       /**
        * Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
@@ -202,33 +204,22 @@ namespace TAT {
    template<typename Name>
    using name_in_operator = std::istream& (*)(std::istream&, Name&);
 
-   /**
-    * Name的伪输出输出的默认函数, 里面含有四个无效的输出输出函数, 如果不覆盖, 则不能调用
-    * \see NameTraits
-    */
-   template<typename Name>
-   struct NameTraitsBase : std::bool_constant<true> {
-      static constexpr name_out_operator<Name> write = nullptr;
-      static constexpr name_in_operator<Name> read = nullptr;
-      static constexpr name_out_operator<Name> print = nullptr;
-      static constexpr name_in_operator<Name> scan = nullptr;
-   };
+   TAT_CHECK_MEMBER(write)
+   TAT_CHECK_MEMBER(read)
+   TAT_CHECK_MEMBER(print)
+   TAT_CHECK_MEMBER(scan)
+
    /**
     * 对于每个将要被使用做Name的类型, 需要设置其输入输出方式
     *
     * 需要特化本类型, 定义本类型的write, read, print, scan四个函数, 类型为name_out_operator<Name>和name_in_operator<Name>'
     *
-    * 需要继承自NameTraitsBase<Name>以获得默认且不会使用到的伪输入输出函数, 以及确认用来判断is_name的value
-    *
-    * \note 其实可以通过四个函数是否为nullptr来判断is_name, 但是这种方式在gcc7下无法使用
-    *
     * \tparam Name 将要被当作张量边名称的类型
     *
     * \see name_out_operator, name_in_operator
-    * \see NameTraitsBase
     */
    template<typename Name>
-   struct NameTraits : std::bool_constant<false> {};
+   struct NameTraits;
 
    /**
     * 判断一个类型是否可以作为Name
@@ -237,7 +228,9 @@ namespace TAT {
     * \see is_name_v
     */
    template<typename Name>
-   struct is_name : NameTraits<Name> {};
+   struct is_name :
+         std::bool_constant<
+               has_write_v<NameTraits<Name>> || has_read_v<NameTraits<Name>> || has_print_v<NameTraits<Name>> || has_scan_v<NameTraits<Name>>> {};
    template<typename Name>
    constexpr bool is_name_v = is_name<Name>::value;
 

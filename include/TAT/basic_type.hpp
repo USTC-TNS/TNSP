@@ -157,6 +157,14 @@ namespace TAT {
    template<typename Container, typename Key, typename T>
    constexpr bool is_map_of_v = is_map_of<Container, Key, T>::value;
 
+#define TAT_CHECK_MEMBER(NAME)                                           \
+   template<typename T, typename = int>                                  \
+   struct has_##NAME : std::false_type {};                               \
+   template<typename T>                                                  \
+   struct has_##NAME<T, decltype((void)T::NAME, 0)> : std::true_type {}; \
+   template<typename T>                                                  \
+   constexpr bool has_##NAME##_v = has_##NAME<T>::value;
+
    /**@}*/
 } // namespace TAT
 #endif
