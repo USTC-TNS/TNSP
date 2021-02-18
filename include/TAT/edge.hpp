@@ -121,6 +121,8 @@ namespace TAT {
    /**
     * \see Edge
     */
+   TAT_CHECK_MEMBER(map)
+
    template<typename Symmetry, template<typename> class Allocator = std::allocator, bool is_pointer = false>
    struct BoseEdge {
       using symmetry_type = Symmetry;
@@ -140,6 +142,9 @@ namespace TAT {
       BoseEdge& operator=(const BoseEdge&) = default;
       BoseEdge& operator=(BoseEdge&&) noexcept = default;
       ~BoseEdge() = default;
+
+      template<typename OtherEdge, std::enable_if_t<has_map_v<OtherEdge>, int> = 0>
+      BoseEdge(const OtherEdge& edge) : BoseEdge(edge.map) {}
 
       /**
        * 由对称性到维度的映射表直接构造
