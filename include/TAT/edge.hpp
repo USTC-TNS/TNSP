@@ -130,6 +130,7 @@ namespace TAT {
       using map_t = real_map_t;
 #endif
       std::conditional_t<is_pointer, const map_t&, map_t> map;
+      // TODO bool conjuugated;
 
       edge_map_t() = default;
       edge_map_t(const edge_map_t&) = default;

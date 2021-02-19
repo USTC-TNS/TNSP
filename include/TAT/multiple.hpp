@@ -98,7 +98,7 @@ namespace TAT {
          auto* data_destination = block_destination.data();
 
          using ScalarTypeS = typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type;
-         vector<ScalarTypeS> realS(k);
+         pmr::content_vector<ScalarTypeS> realS(k);
          const auto* pointS = realS.data();
          if (division) {
             for (Size i = 0; i < k; i++) {

@@ -518,12 +518,12 @@ namespace TAT {
       auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
 
       auto max_batch_size = product_result.core->blocks.size();
-      vector<char> transpose_a_list(max_batch_size), transpose_b_list(max_batch_size);
-      vector<int> m_list(max_batch_size), n_list(max_batch_size), k_list(max_batch_size), lda_list(max_batch_size), ldb_list(max_batch_size),
-            ldc_list(max_batch_size);
-      vector<ScalarType> alpha_list(max_batch_size), beta_list(max_batch_size);
-      vector<const ScalarType*> a_list(max_batch_size), b_list(max_batch_size);
-      vector<ScalarType*> c_list(max_batch_size);
+      pmr::content_vector<char> transpose_a_list(max_batch_size), transpose_b_list(max_batch_size);
+      pmr::content_vector<int> m_list(max_batch_size), n_list(max_batch_size), k_list(max_batch_size), lda_list(max_batch_size),
+            ldb_list(max_batch_size), ldc_list(max_batch_size);
+      pmr::content_vector<ScalarType> alpha_list(max_batch_size), beta_list(max_batch_size);
+      pmr::content_vector<const ScalarType*> a_list(max_batch_size), b_list(max_batch_size);
+      pmr::content_vector<ScalarType*> c_list(max_batch_size);
       int batch_size = 0;
 
       for (auto& [symmetries, data] : product_result.core->blocks) {

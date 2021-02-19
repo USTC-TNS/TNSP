@@ -53,8 +53,9 @@ namespace TAT {
          typename Name = DefaultName,
          template<typename> class Allocator = std::allocator>
    struct Singular {
-      using normal_map = std::map<Symmetry, vector<real_base_t<ScalarType>>>;
-      using fake_singular_map = fake_map<Symmetry, vector<real_base_t<ScalarType>>>;
+      // TODO Singular storage
+      using normal_map = std::map<Symmetry, std::vector<real_base_t<ScalarType>>>;
+      using fake_singular_map = fake_map<Symmetry, std::vector<real_base_t<ScalarType>>>;
 #ifdef TAT_USE_SIMPLE_NOSYMMETRY
       using singular_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_singular_map, normal_map>;
 #else
