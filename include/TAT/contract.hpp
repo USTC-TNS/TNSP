@@ -538,7 +538,7 @@ namespace TAT {
          ScalarType alpha = 1;
          if constexpr (is_fermi) {
             // 因为并非标准- + - -产生的符号
-            if ((put_common_2_right ^ !put_common_1_right) && bool(symmetries[0].fermi % 2)) {
+            if ((put_common_2_right ^ !put_common_1_right) && symmetries[0].total_parity()) {
                alpha = -1;
             }
          }

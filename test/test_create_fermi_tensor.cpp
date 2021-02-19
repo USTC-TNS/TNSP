@@ -29,6 +29,8 @@ void run_test() {
                   TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
                   .test(2)
          << "\n";
+   auto a = TAT::Tensor<double, TAT::FermiU1Symmetry>{
+         {"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true};
    std::cout
          << TAT::Tensor<
                   double,

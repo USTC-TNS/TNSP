@@ -379,7 +379,7 @@ namespace TAT {
             out << std::get<0>(symmetry);
          } else {
             out << '(';
-            print_symmetry_sequence(out, symmetry, Symmetry::index_sequence());
+            print_symmetry_sequence(out, symmetry, typename Symmetry::index_sequence());
             out << ')';
          }
       }
@@ -397,7 +397,7 @@ namespace TAT {
             in >> std::get<0>(symmetry);
          } else {
             ignore_until(in, '(');
-            scan_symmetry_sequence(in, symmetry, Symmetry::index_sequence());
+            scan_symmetry_sequence(in, symmetry, typename Symmetry::index_sequence());
             ignore_until(in, ')');
          }
       }
