@@ -190,11 +190,11 @@ namespace TAT {
     */
    template<typename Symmetry, template<typename> class Allocator = std::allocator, bool is_pointer = false>
    struct Edge : edge_map_t<Symmetry, Allocator, is_pointer>, edge_arrow_t<Symmetry::is_fermi_symmetry> {
-      using edge_map_t = edge_map_t<Symmetry, Allocator, is_pointer>;
-      using edge_arrow_t = edge_arrow_t<Symmetry::is_fermi_symmetry>;
+      using base_map_t = edge_map_t<Symmetry, Allocator, is_pointer>;
+      using base_arrow_t = edge_arrow_t<Symmetry::is_fermi_symmetry>;
 
-      using edge_arrow_t::arrow;
-      using edge_map_t::map;
+      using base_arrow_t::arrow;
+      using base_map_t::map;
 
       Edge() = default;
       Edge(const Edge&) = default;
@@ -204,14 +204,14 @@ namespace TAT {
       ~Edge() = default;
 
       template<typename T>
-      Edge(T&& arg) : edge_map_t(arg) {}
-      Edge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : edge_map_t(map) {}
-      Edge(const std::initializer_list<Symmetry>& symmetries) : edge_map_t(symmetries) {}
+      Edge(T&& arg) : base_map_t(arg) {}
+      Edge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : base_map_t(map) {}
+      Edge(const std::initializer_list<Symmetry>& symmetries) : base_map_t(symmetries) {}
 
       template<typename T>
-      Edge(Arrow arrow, T&& arg) : edge_map_t(arg), edge_arrow_t(arrow) {}
-      Edge(Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : edge_map_t(map), edge_arrow_t(arrow) {}
-      Edge(Arrow arrow, const std::initializer_list<Symmetry>& symmetries) : edge_map_t(symmetries), edge_arrow_t(arrow) {}
+      Edge(Arrow arrow, T&& arg) : base_map_t(arg), base_arrow_t(arrow) {}
+      Edge(Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : base_map_t(map), base_arrow_t(arrow) {}
+      Edge(Arrow arrow, const std::initializer_list<Symmetry>& symmetries) : base_map_t(symmetries), base_arrow_t(arrow) {}
 
       /**
        * 由费米子数自动构造箭头方向, 虽然这个不一定需要一致, 仅仅在只含有一个Fermi对称性时有效
