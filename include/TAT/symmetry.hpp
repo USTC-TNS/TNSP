@@ -194,7 +194,7 @@ namespace TAT {
       template<std::size_t Index>
       static void update_symmetry_result_single_item(bool& result, const self_t& symmetry_1, const self_t& symmetry_2) {
          if constexpr (is_fermi_item[Index]) {
-            result ^= symmetry_1.get_item_parity<Index>() ^ symmetry_2.get_item_parity<Index>();
+            result ^= symmetry_1.get_item_parity<Index>() && symmetry_2.get_item_parity<Index>();
          }
       }
       template<std::size_t... Is>
