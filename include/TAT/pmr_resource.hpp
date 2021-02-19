@@ -181,55 +181,58 @@ namespace TAT {
 
       // 和std::pmr::polymorphic_allocator几乎一模一样
       // 和std::pmr::polymorphic_allocator的初始化时的默认resource不同, 使用的是自己的thread unsafe版本
-      template<bool try_not_initialize>
-      struct polymorphic_allocator_space {
-         template<typename T>
-         struct polymorphic_allocator {
-            memory_resource* m_resource;
+      template<typename Derived, typename T, bool try_not_initialize>
+      struct polymorphic_allocator_base {
+         memory_resource* m_resource;
 
-            using value_type = T;
-            polymorphic_allocator() noexcept : polymorphic_allocator(get_default_resource()) {}
-            polymorphic_allocator(const polymorphic_allocator& other) = default;
-            template<typename U>
-            polymorphic_allocator(const polymorphic_allocator<U>& other) noexcept : polymorphic_allocator(other.resource()) {}
-            polymorphic_allocator(memory_resource* r) : m_resource(r) {}
+         using value_type = T;
+         polymorphic_allocator_base() noexcept : polymorphic_allocator_base(get_default_resource()) {}
+         polymorphic_allocator_base(const polymorphic_allocator_base& other) = default;
+         template<typename DerivedAllocator, typename U>
+         polymorphic_allocator_base(const polymorphic_allocator_base<DerivedAllocator, U, try_not_initialize>& other) noexcept :
+               polymorphic_allocator_base(other.resource()) {}
+         polymorphic_allocator_base(memory_resource* r) : m_resource(r) {}
 
-            polymorphic_allocator<T>& operator=(const polymorphic_allocator<T>&) = delete;
+         polymorphic_allocator_base<Derived, T, try_not_initialize>&
+         operator=(const polymorphic_allocator_base<Derived, T, try_not_initialize>&) = delete;
 
-            T* allocate(std::size_t n) {
-               return static_cast<T*>(resource()->allocate(n * sizeof(T), alignof(T)));
+         T* allocate(std::size_t n) {
+            return static_cast<T*>(resource()->allocate(n * sizeof(T), alignof(T)));
+         }
+
+         void deallocate(T* p, std::size_t n) {
+            resource()->deallocate(p, n * sizeof(T), alignof(T));
+         }
+
+         template<class U, class... Args>
+         void construct([[maybe_unused]] U* p, Args&&... args) {
+            if constexpr (!(try_not_initialize && (sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
+               new (p) U(std::forward<Args>(args)...);
             }
+         }
 
-            void deallocate(T* p, std::size_t n) {
-               resource()->deallocate(p, n * sizeof(T), alignof(T));
-            }
+         template<class U>
+         void destroy(U* p) {
+            p->~U();
+         }
 
-            template<class U, class... Args>
-            void construct([[maybe_unused]] U* p, Args&&... args) {
-               if constexpr (!(try_not_initialize && (sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
-                  new (p) U(std::forward<Args>(args)...);
-               }
-            }
+         Derived select_on_container_copy_construction() const {
+            return Derived();
+         }
 
-            template<class U>
-            void destroy(U* p) {
-               p->~U();
-            }
-
-            polymorphic_allocator<T> select_on_container_copy_construction() const {
-               return polymorphic_allocator<T>();
-            }
-
-            memory_resource* resource() const {
-               return m_resource;
-            }
-         };
+         memory_resource* resource() const {
+            return m_resource;
+         }
       };
 
       template<typename T>
-      using polymorphic_allocator = polymorphic_allocator_space<false>::polymorphic_allocator<T>;
+      struct polymorphic_allocator : polymorphic_allocator_base<polymorphic_allocator<T>, T, false> {
+         using polymorphic_allocator_base<polymorphic_allocator<T>, T, false>::polymorphic_allocator_base;
+      };
       template<typename T>
-      using polymorphic_allocator_without_initialize = polymorphic_allocator_space<true>::polymorphic_allocator<T>;
+      struct polymorphic_allocator_without_initialize : polymorphic_allocator_base<polymorphic_allocator_without_initialize<T>, T, true> {
+         using polymorphic_allocator_base<polymorphic_allocator_without_initialize<T>, T, true>::polymorphic_allocator_base;
+      };
 
       template<class T1, class T2>
       bool operator==(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {

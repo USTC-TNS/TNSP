@@ -19,6 +19,7 @@
 
 #include "run_test.hpp"
 void run_test() {
+   using TAT::operator<<; // print vector need operator in TAT
    std::cout
          << TAT::Tensor<double, TAT::FermiSymmetry>{{"Left", "Right", "Up"}, {{{0, 1}, {1, 2}}, {{-1, 1}, {-2, 3}, {0, 2}}, {{0, 3}, {1, 1}}}, true}
                   .test(2)
