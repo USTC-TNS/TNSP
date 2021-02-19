@@ -81,6 +81,13 @@ namespace TAT {
     */
    using Arrow = bool;
 
+   template<class T>
+   struct type_identity {
+      using type = T;
+   };
+   template<class T>
+   using type_identity_t = typename type_identity<T>::type;
+
    /**
     * 判断一个类型是否是标量类型, 修复了`std::scalar`不能判断`std::complex`的问题
     * \tparam T 如果`T`是标量类型, 则`value`为`true`

@@ -214,7 +214,7 @@ namespace TAT {
       FermiEdge(Arrow arrow, const std::initializer_list<Symmetry>& symmetries) : base_class(symmetries), arrow(arrow) {}
 
       /**
-       * 由费米子数自动构造箭头方向, 虽然这个不一定需要一致
+       * 由费米子数自动构造箭头方向, 虽然这个不一定需要一致, 仅仅在只含有一个Fermi对称性时有效
        */
       void possible_reverse() {
          for (const auto& [symmetry, size] : map) {
