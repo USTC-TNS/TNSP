@@ -116,7 +116,7 @@ namespace TAT {
       // 应该只有一个边, 所以也只有一个block
       const Size line_size = destination_block.size();
 
-      const auto const_line_size_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(line_size);
+      const auto const_line_size_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(line_size);
       std::visit(
             [&](const auto& const_line_size) {
                const auto line_size = const_line_size.value();

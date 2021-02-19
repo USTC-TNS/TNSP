@@ -28,7 +28,7 @@
 namespace TAT {
    template<typename ScalarType, typename ScalarTypeS>
    void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
-      const auto const_n_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(n);
+      const auto const_n_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(n);
       std::visit(
             [&](const auto& const_n) {
                const auto n = const_n.value();

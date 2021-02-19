@@ -67,14 +67,6 @@ namespace TAT {
     * U1对称性的类型
     */
    using U1 = std::int32_t;
-   /**
-    * 费米子数目的类型
-    */
-   using Fermi = std::int16_t;
-   /**
-    * 费米子奇偶的类型
-    */
-   using Parity = bool;
 
    /**
     * 费米箭头方向的类型, `false`和`true`分别表示出入
