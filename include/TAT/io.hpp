@@ -372,8 +372,8 @@ namespace TAT {
       (((Is == 0 ? out : out << ',') << std::get<Is>(symmetry)), ...);
    }
    template<typename... T>
-   std::ostream& operator<<(std::ostream& out, const general_symmetry<T...>& symmetry) {
-      using Symmetry = general_symmetry<T...>;
+   std::ostream& operator<<(std::ostream& out, const symmetry_t<T...>& symmetry) {
+      using Symmetry = symmetry_t<T...>;
       if constexpr (Symmetry::length != 0) {
          if constexpr (Symmetry::length == 1) {
             out << std::get<0>(symmetry);
@@ -390,8 +390,8 @@ namespace TAT {
       (((Is == 0 ? in : (ignore_until(in, ','), in)) >> std::get<Is>(symmetry)), ...);
    }
    template<typename... T>
-   std::istream& operator>>(std::istream& in, general_symmetry<T...>& symmetry) {
-      using Symmetry = general_symmetry<T...>;
+   std::istream& operator>>(std::istream& in, symmetry_t<T...>& symmetry) {
+      using Symmetry = symmetry_t<T...>;
       if constexpr (Symmetry::length != 0) {
          if constexpr (Symmetry::length == 1) {
             in >> std::get<0>(symmetry);

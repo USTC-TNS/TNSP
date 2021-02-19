@@ -218,7 +218,7 @@ namespace TAT {
        */
       void possible_reverse() {
          for (const auto& [symmetry, size] : map) {
-            if (symmetry.first_fermi() < 0) {
+            if (symmetry.get_first_parity() < 0) {
                arrow ^= true;
                return;
             }
@@ -230,7 +230,7 @@ namespace TAT {
        */
       [[nodiscard]] bool arrow_valid() const {
          for (const auto& [symmetry, size] : map) {
-            if (symmetry.first_fermi() != 0) {
+            if (symmetry.get_first_parity() != 0) {
                return true;
             }
          }

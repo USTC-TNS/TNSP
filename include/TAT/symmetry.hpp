@@ -53,25 +53,32 @@ namespace TAT {
    constexpr bool fermi_wrapped_v = fermi_wrapped<T>::value;
 
    template<typename... T>
-   struct general_symmetry : std::tuple<fermi_unwrap_t<T>...> {
-      using self_class = general_symmetry<T...>;
-      using base_class = std::tuple<fermi_unwrap_t<T>...>;
+   struct symmetry_t : std::tuple<fermi_unwrap_t<T>...> {
+   private:
+      using self_t = symmetry_t<T...>;
+
+   public:
+      using base_tuple = std::tuple<fermi_unwrap_t<T>...>;
       static constexpr int length = sizeof...(T);
-      static constexpr std::array<bool, length> is_fermi = {fermi_wrapped_v<T>...};
+      static constexpr std::array<bool, length> is_fermi_item = {fermi_wrapped_v<T>...};
       static constexpr bool is_fermi_symmetry = (fermi_wrapped_v<T> || ...);
       using index_sequence = std::index_sequence_for<T...>;
 
+   private:
       template<typename... Args>
-      base_class construct_symmetry_tuple(const Args&... args) {
+      base_tuple construct_base_tuple(const Args&... args) {
          if constexpr (sizeof...(Args) == length) {
-            return base_class(args...);
+            return base_tuple(args...);
          } else {
-            return construct_symmetry_tuple(args..., 0);
+            return construct_base_tuple(args..., 0);
          }
       }
-      template<typename... Args, std::enable_if_t<sizeof...(Args) <= length && (std::is_integral_v<Args> && ...), int> = 0>
-      general_symmetry(const Args&... args) : base_class(construct_symmetry_tuple(args...)) {}
 
+   public:
+      template<typename... Args, std::enable_if_t<sizeof...(Args) <= length && (std::is_integral_v<Args> && ...), int> = 0>
+      symmetry_t(const Args&... args) : base_tuple(construct_base_tuple(args...)) {}
+
+   private:
       template<typename Item>
       static Item& inplace_plus_item(Item& a, const Item& b) {
          if constexpr (std::is_same_v<Item, bool>) {
@@ -81,14 +88,17 @@ namespace TAT {
          }
       }
       template<std::size_t... Is>
-      static self_class& inplace_plus_symmetry(self_class& symmetry_1, const self_class& symmetry_2, std::index_sequence<Is...>) {
+      static self_t& inplace_plus_symmetry(self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
          (inplace_plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2)), ...);
          return symmetry_1;
       }
-      self_class& operator+=(const self_class& other_symmetry) & {
+
+   public:
+      self_t& operator+=(const self_t& other_symmetry) & {
          return inplace_plus_symmetry(*this, other_symmetry, index_sequence());
       }
 
+   private:
       template<typename Item>
       static Item plus_item(const Item& a, const Item& b) {
          if constexpr (std::is_same_v<Item, bool>) {
@@ -98,13 +108,16 @@ namespace TAT {
          }
       }
       template<size_t... Is>
-      static self_class plus_symmetry(const self_class& symmetry_1, const self_class& symmetry_2, std::index_sequence<Is...>) {
-         return self_class(plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2))...);
+      static self_t plus_symmetry(const self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
+         return self_t(plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2))...);
       }
-      self_class operator+(const self_class& other_symmetry) const& {
+
+   public:
+      self_t operator+(const self_t& other_symmetry) const& {
          return plus_symmetry(*this, other_symmetry, index_sequence());
       }
 
+   private:
       template<typename Item>
       static Item minus_item(const Item& a) {
          if constexpr (std::is_same_v<Item, bool>) {
@@ -114,71 +127,43 @@ namespace TAT {
          }
       }
       template<size_t... Is>
-      static self_class minus_symmetry(const self_class& symmetry, std::index_sequence<Is...>) {
-         return self_class(minus_item(std::get<Is>(symmetry))...);
+      static self_t minus_symmetry(const self_t& symmetry, std::index_sequence<Is...>) {
+         return self_t(minus_item(std::get<Is>(symmetry))...);
       }
-      self_class operator-() const& {
+
+   public:
+      self_t operator-() const& {
          return minus_symmetry(*this, index_sequence());
       }
 
-      template<typename Number, typename = std::enable_if_t<std::is_integral_v<Number>>>
-      static bool fermi_to_bool(Number number) {
-         return bool(number % 2);
-      }
-      static bool fermi_to_bool(bool number) {
-         return number;
-      }
-
-      template<std::size_t Index, typename Symmetry>
-      static void update_symmetry_result_single_term(bool& result, const Symmetry& symmetry) {
-         if constexpr (Symmetry::is_fermi[Index]) {
-            result ^= fermi_to_bool(std::get<Index>(symmetry));
-         }
-      }
-      template<typename Symmetry, std::size_t... Is>
-      static void update_symmetry_result(bool& result, const Symmetry& symmetry, std::index_sequence<Is...>) {
-         (update_symmetry_result_single_term<Is>(result, symmetry), ...);
-      }
-
-      template<std::size_t Index, typename Symmetry>
-      static void update_symmetry_result_single_term(bool& result, const Symmetry& symmetry_1, const Symmetry& symmetry_2) {
-         if constexpr (Symmetry::is_fermi[Index]) {
-            result ^= fermi_to_bool(std::get<Index>(symmetry_1)) ^ fermi_to_bool(std::get<Index>(symmetry_2));
-         }
-      }
-      template<typename Symmetry, std::size_t... Is>
-      static void update_symmetry_result(bool& result, const Symmetry& symmetry_1, const Symmetry& symmetry_2, std::index_sequence<Is...>) {
-         (update_symmetry_result_single_term<Is>(result, symmetry_1, symmetry_2), ...);
-      }
-
-      template<std::size_t Index, typename VectorSymmetry>
-      static void update_symmetry_result_single_term(
-            bool& result,
-            const VectorSymmetry& symmetries,
-            Rank split_merge_begin_position,
-            Rank split_merge_end_position) {
-         using Symmetry = typename VectorSymmetry::value_type;
-         if constexpr (Symmetry::is_fermi[Index]) {
-            auto sum_of_parity = 0l;
-            auto sum_of_parity_square = 0l;
-            for (auto position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
-               auto this_parity = std::get<Index>(symmetries[position_in_group]);
-               sum_of_parity += this_parity;
-               sum_of_parity_square += this_parity * this_parity;
+   public:
+      template<std::size_t Index>
+      bool get_item_parity() const {
+         if constexpr (is_fermi_item[Index]) {
+            const auto quantum_number = std::get<Index>(*this);
+            if constexpr (std::is_same_v<decltype(quantum_number), bool>) {
+               return quantum_number;
+            } else {
+               return bool(quantum_number % 2);
             }
-            result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
+         } else {
+            return false;
          }
       }
-      template<typename VectorSymmetry, std::size_t... Is>
-      static void update_symmetry_result(
-            bool& result,
-            const VectorSymmetry& symmetries,
-            Rank split_merge_begin_position,
-            Rank split_merge_end_position,
-            std::index_sequence<Is...>) {
-         (update_symmetry_result_single_term<Is>(result, symmetries, split_merge_begin_position, split_merge_end_position), ...);
+
+   private:
+      template<std::size_t Index>
+      static void update_symmetry_result_single_item(bool& result, const self_t& symmetry) {
+         if constexpr (is_fermi_item[Index]) {
+            result ^= symmetry.template get_item_parity<Index>();
+         }
+      }
+      template<std::size_t... Is>
+      static void update_symmetry_result(bool& result, const self_t& symmetry, std::index_sequence<Is...>) {
+         (update_symmetry_result_single_item<Is>(result, symmetry), ...);
       }
 
+   public:
       /**
        * 给出翻转各边时产生的parity
        *
@@ -190,17 +175,34 @@ namespace TAT {
        * 即统计symmetries中为奇, reverse_flag中为true, valid_mark中为true的数目的奇偶性
        * \see Tensor::edge_operator
        */
-      template<typename VectorSymmetry, typename VectorBool1, typename VectorBool2>
+      template<
+            typename VectorSymmetry,
+            typename VectorBool1,
+            typename VectorBool2,
+            typename = std::enable_if_t<is_list_of_v<VectorSymmetry, self_t> && is_list_of_v<VectorBool1, bool> && is_list_of_v<VectorBool2, bool>>>
       [[nodiscard]] static bool get_reverse_parity(const VectorSymmetry& symmetries, const VectorBool1& reverse_flag, const VectorBool2& valid_mark) {
-         using Symmetry = typename VectorSymmetry::value_type;
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
-               update_symmetry_result(result, symmetries[i], typename Symmetry::index_sequence());
+               update_symmetry_result(result, symmetries[i], index_sequence());
             }
          }
          return result;
       }
+
+   private:
+      template<std::size_t Index>
+      static void update_symmetry_result_single_item(bool& result, const self_t& symmetry_1, const self_t& symmetry_2) {
+         if constexpr (is_fermi_item[Index]) {
+            result ^= symmetry_1.get_item_parity<Index>() ^ symmetry_2.get_item_parity<Index>();
+         }
+      }
+      template<std::size_t... Is>
+      static void update_symmetry_result(bool& result, const self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
+         (update_symmetry_result_single_item<Is>(result, symmetry_1, symmetry_2), ...);
+      }
+
+   public:
       /**
        * 给出转置时产生的parity
        *
@@ -210,19 +212,51 @@ namespace TAT {
        * 转置的parity总是有效的, 而翻转和split, merge涉及的两个张量只会有一侧有效, 毕竟这是单个张量的操作
        * \see Tensor::edge_operator
        */
-      template<typename VectorSymmetry, typename VectorRank>
+      template<
+            typename VectorSymmetry,
+            typename VectorRank,
+            typename = std::enable_if_t<is_list_of_v<VectorSymmetry, self_t> && is_list_of_v<VectorRank, Rank>>>
       [[nodiscard]] static bool get_transpose_parity(const VectorSymmetry& symmetries, const VectorRank& transpose_plan) {
-         using Symmetry = typename VectorSymmetry::value_type;
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             for (Rank j = i + 1; j < symmetries.size(); j++) {
                if (transpose_plan[i] > transpose_plan[j]) {
-                  update_symmetry_result(result, symmetries[i], symmetries[j], typename Symmetry::index_sequence());
+                  update_symmetry_result(result, symmetries[i], symmetries[j], index_sequence());
                }
             }
          }
          return result;
       }
+
+   private:
+      template<std::size_t Index, typename VectorSymmetry, typename = std::enable_if_t<is_list_of_v<VectorSymmetry, self_t>>>
+      static void update_symmetry_result_single_item(
+            bool& result,
+            const VectorSymmetry& symmetries,
+            Rank split_merge_begin_position,
+            Rank split_merge_end_position) {
+         if constexpr (is_fermi_item[Index]) {
+            auto sum_of_parity = 0l;
+            auto sum_of_parity_square = 0l;
+            for (auto position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
+               auto this_parity = std::get<Index>(symmetries[position_in_group]);
+               sum_of_parity += this_parity;
+               sum_of_parity_square += this_parity * this_parity;
+            }
+            result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
+         }
+      }
+      template<typename VectorSymmetry, std::size_t... Is, typename = std::enable_if_t<is_list_of_v<VectorSymmetry, self_t>>>
+      static void update_symmetry_result(
+            bool& result,
+            const VectorSymmetry& symmetries,
+            Rank split_merge_begin_position,
+            Rank split_merge_end_position,
+            std::index_sequence<Is...>) {
+         (update_symmetry_result_single_item<Is>(result, symmetries, split_merge_begin_position, split_merge_end_position), ...);
+      }
+
+   public:
       /**
        * 给出merge或split时产生的parity
        *
@@ -233,12 +267,15 @@ namespace TAT {
        * \note 实际上每一个merge或split操作都是一个全翻转,
        * 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
        */
-      template<typename VectorSymmetry, typename VectorRank, typename VectorBool>
+      template<
+            typename VectorSymmetry,
+            typename VectorRank,
+            typename VectorBool,
+            typename = std::enable_if_t<is_list_of_v<VectorSymmetry, self_t> && is_list_of_v<VectorRank, Rank> && is_list_of_v<VectorBool, bool>>>
       [[nodiscard]] static bool get_split_merge_parity(
             const VectorSymmetry& symmetries,   // before merge length
             const VectorRank& split_merge_flag, // before merge length
             const VectorBool& valid_mark) {     // after merge length
-         using Symmetry = typename VectorSymmetry::value_type;
          auto result = false;
          for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();
@@ -249,52 +286,51 @@ namespace TAT {
                split_merge_end_position++;
             }
             if (valid_mark[split_merge_group_position]) {
-               update_symmetry_result(result, symmetries, split_merge_begin_position, split_merge_end_position, typename Symmetry::index_sequence());
+               update_symmetry_result(result, symmetries, split_merge_begin_position, split_merge_end_position, index_sequence());
             }
             split_merge_begin_position = split_merge_end_position;
          }
          return result;
       }
 
+   private:
       template<std::size_t Head, std::size_t... Tail>
-      auto loop_to_find_fermi() const {
-         if constexpr (is_fermi[Head]) {
+      auto loop_to_get_first_parity_item() const {
+         if constexpr (is_fermi_item[Head]) {
             return std::get<Head>(*this);
          } else {
-            return loop_to_find_fermi<Tail...>();
+            return loop_to_get_first_parity_item<Tail...>();
          }
       }
       template<std::size_t... Is>
-      auto loop_to_find_fermi_wrap(std::index_sequence<Is...>) const {
-         return loop_to_find_fermi<Is...>();
-      }
-      auto first_fermi() const {
-         return loop_to_find_fermi_wrap(index_sequence());
+      auto loop_to_get_first_parity(std::index_sequence<Is...>) const {
+         return loop_to_get_first_parity_item<Is...>();
       }
 
-      template<std::size_t Index>
-      auto single_term_parity() const {
-         if constexpr (is_fermi[Index]) {
-            return fermi_to_bool(std::get<Index>(*this));
-         } else {
-            return false;
-         }
+   public:
+      auto get_first_parity() const {
+         return loop_to_get_first_parity(index_sequence());
       }
+
+   private:
       template<std::size_t... Is>
-      auto loop_to_find_parity_wrap(std::index_sequence<Is...>) const {
-         return (single_term_parity<Is>() ^ ...);
+      auto loop_to_get_total_parity(std::index_sequence<Is...>) const {
+         return (get_item_parity<Is>() ^ ...);
       }
-      auto total_parity() const {
-         return loop_to_find_parity_wrap(index_sequence());
+
+   public:
+      // TODO: 多个fermion时应该如何做?
+      auto get_total_parity() const {
+         return loop_to_get_total_parity(index_sequence());
       }
    };
 
-   using NoSymmetry = general_symmetry<>;
-   using Z2Symmetry = general_symmetry<Z2>;
-   using U1Symmetry = general_symmetry<U1>;
-   using FermiSymmetry = general_symmetry<fermi_wrap<U1>>;
-   using FermiZ2Symmetry = general_symmetry<fermi_wrap<U1>, Z2>;
-   using FermiU1Symmetry = general_symmetry<fermi_wrap<U1>, U1>;
+   using NoSymmetry = symmetry_t<>;
+   using Z2Symmetry = symmetry_t<Z2>;
+   using U1Symmetry = symmetry_t<U1>;
+   using FermiSymmetry = symmetry_t<fermi_wrap<U1>>;
+   using FermiZ2Symmetry = symmetry_t<fermi_wrap<U1>, Z2>;
+   using FermiU1Symmetry = symmetry_t<fermi_wrap<U1>, U1>;
 
    /**
     * 判断一个类型是否是对称性类型
@@ -305,7 +341,7 @@ namespace TAT {
    template<typename T>
    struct is_symmetry : std::bool_constant<false> {};
    template<typename... T>
-   struct is_symmetry<general_symmetry<T...>> : std::bool_constant<true> {};
+   struct is_symmetry<symmetry_t<T...>> : std::bool_constant<true> {};
    template<typename T>
    constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
