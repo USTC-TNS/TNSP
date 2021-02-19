@@ -39,7 +39,7 @@ namespace TAT {
 
    template<>
    struct NameTraits<pss> {
-      static constexpr name_out_operator<pss> print = net::operator<<;
+      static constexpr name_out_operator_t<pss> print = net::operator<<;
    };
 } // namespace TAT
 

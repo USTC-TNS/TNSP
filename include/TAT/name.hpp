@@ -43,25 +43,25 @@ namespace TAT {
     */
    /**
     * FastName使用的映射表类型
-    * \see fast_name_dataset
+    * \see fastname_dataset
     */
-   struct fast_name_dataset_t {
+   struct fastname_dataset_t {
       /**
        * Name中用于标号的类型
        */
-      using FastNameId = std::uint32_t;
+      using fast_name_id_t = std::uint32_t;
 
       /**
        * Name的全局计数, 每当新建一个Name都会是指递增并获取一个关于Name的字符串唯一的标号
        */
-      FastNameId names_total_index = 1;
+      fast_name_id_t fastname_number = 1;
 
       /**
        * Name的字符串到标号的映射表
        *
        * \note 这个参数放在Name类外面, 是为了在gdb中显示得比较好看
        */
-      std::map<std::string, FastNameId> name_to_id = {{"", 0}};
+      std::map<std::string, fast_name_id_t> name_to_id = {{"", 0}};
       /**
        * 标号到Name的字符串的映射表
        */
@@ -72,32 +72,32 @@ namespace TAT {
     *
     * \see FastName
     */
-   inline auto fast_name_dataset = fast_name_dataset_t();
+   inline auto fastname_dataset = fastname_dataset_t();
 
    /**
     * 用于给张量的边命名的类型FastName, 新建FastName的时候可以选定标号, 也可以选定字符串作为名称, FastName将自动保证标号和名称的一一对应
-    * \note 一个FastName拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有fast_name_dataset.names_total_index维护目前已分配的标号量,
-    * 新建一个字符串的FastName时将递增fast_name_dataset.names_total_index并获取一个唯一的标号
-    * \see fast_name_dataset
+    * \note 一个FastName拥有一个标号, 而每个标号对应一个双向唯一的字符串作为名字, 有fastname_dataset.fastname_number维护目前已分配的标号量,
+    * 新建一个字符串的FastName时将递增fastname_dataset.fastname_number并获取一个唯一的标号
+    * \see fastname_dataset
     */
    struct FastName {
       /**
        * FastName的标号
        */
-      fast_name_dataset_t::FastNameId id = 0; // 默认为空串, 行为和std::string一致
+      fastname_dataset_t::fast_name_id_t id = 0; // 默认为空串, 行为和std::string一致
       FastName() = default;
-      FastName(const fast_name_dataset_t::FastNameId id) noexcept : id(id) {}
+      FastName(const fastname_dataset_t::fast_name_id_t id) noexcept : id(id) {}
       FastName(const char* name) noexcept : FastName(std::string(name)) {}
       FastName(const std::string& name) noexcept {
-         if (const auto position = fast_name_dataset.name_to_id.find(name); position == fast_name_dataset.name_to_id.end()) {
-            id = fast_name_dataset.name_to_id[name] = fast_name_dataset.names_total_index++;
-            fast_name_dataset.id_to_name.push_back(name);
+         if (const auto found = fastname_dataset.name_to_id.find(name); found == fastname_dataset.name_to_id.end()) {
+            id = fastname_dataset.name_to_id[name] = fastname_dataset.fastname_number++;
+            fastname_dataset.id_to_name.push_back(name);
          } else {
-            id = position->second;
+            id = found->second;
          }
       }
       operator const std::string&() const {
-         return fast_name_dataset.id_to_name[id];
+         return fastname_dataset.id_to_name[id];
       }
    };
 
@@ -200,9 +200,9 @@ namespace TAT {
 #endif
 
    template<typename Name>
-   using name_out_operator = std::ostream& (*)(std::ostream&, const Name&);
+   using name_out_operator_t = std::ostream& (*)(std::ostream&, const Name&);
    template<typename Name>
-   using name_in_operator = std::istream& (*)(std::istream&, Name&);
+   using name_in_operator_t = std::istream& (*)(std::istream&, Name&);
 
    TAT_CHECK_MEMBER(write)
    TAT_CHECK_MEMBER(read)

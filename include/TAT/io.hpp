@@ -111,7 +111,7 @@ namespace TAT {
    // 而输入的话会重载std::string的输入问题不大
    // 对于二进制io在tensor处处理了问题也不大
    inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      return out << fast_name_dataset.id_to_name[name.id];
+      return out << fastname_dataset.id_to_name[name.id];
    }
 
    inline bool valid_name_character(char c) {
@@ -155,17 +155,17 @@ namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<>
    struct NameTraits<FastName> {
-      static constexpr name_out_operator<FastName> write = operator<;
-      static constexpr name_in_operator<FastName> read = operator>;
-      static constexpr name_out_operator<FastName> print = operator<<;
-      static constexpr name_in_operator<FastName> scan = scan_fastname_for_name;
+      static constexpr name_out_operator_t<FastName> write = operator<;
+      static constexpr name_in_operator_t<FastName> read = operator>;
+      static constexpr name_out_operator_t<FastName> print = operator<<;
+      static constexpr name_in_operator_t<FastName> scan = scan_fastname_for_name;
    };
    template<>
    struct NameTraits<std::string> {
-      static constexpr name_out_operator<std::string> write = operator<;
-      static constexpr name_in_operator<std::string> read = operator>;
-      static constexpr name_out_operator<std::string> print = std::operator<<;
-      static constexpr name_in_operator<std::string> scan = scan_string_for_name;
+      static constexpr name_out_operator_t<std::string> write = operator<;
+      static constexpr name_in_operator_t<std::string> read = operator>;
+      static constexpr name_out_operator_t<std::string> print = std::operator<<;
+      static constexpr name_in_operator_t<std::string> scan = scan_string_for_name;
    };
 
    template<typename T>
@@ -641,25 +641,25 @@ namespace TAT {
       return *this;
    }
 
-   inline std::ostream& operator<(std::ostream& out, const fast_name_dataset_t& dataset) {
+   inline std::ostream& operator<(std::ostream& out, const fastname_dataset_t& dataset) {
       return out < dataset.id_to_name;
    }
-   inline std::istream& operator>(std::istream& in, fast_name_dataset_t& dataset) {
+   inline std::istream& operator>(std::istream& in, fastname_dataset_t& dataset) {
       in > dataset.id_to_name;
-      dataset.names_total_index = dataset.id_to_name.size();
+      dataset.fastname_number = dataset.id_to_name.size();
       dataset.name_to_id.clear();
-      for (auto i = 0; i < dataset.names_total_index; i++) {
+      for (auto i = 0; i < dataset.fastname_number; i++) {
          dataset.name_to_id[dataset.id_to_name[i]] = i;
       }
       return in;
    }
-   inline void load_fast_name_dataset(const std::string& input) {
+   inline void load_fastname_dataset(const std::string& input) {
       std::istringstream in(input);
-      in > fast_name_dataset;
+      in > fastname_dataset;
    }
-   inline std::string dump_fast_name_dataset() {
+   inline std::string dump_fastname_dataset() {
       std::ostringstream out;
-      out < fast_name_dataset;
+      out < fastname_dataset;
       return out.str();
    }
 
