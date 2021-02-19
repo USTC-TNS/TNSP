@@ -270,8 +270,8 @@ namespace TAT {
       auto reversed_set_origin = pmr::set<Name>();
       auto result_name_u = pmr::vector<Name>();
       auto result_name_v = pmr::vector<Name>();
-      auto free_names_and_edges_u = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>();
-      auto free_names_and_edges_v = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>();
+      auto free_names_and_edges_u = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
+      auto free_names_and_edges_v = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
       free_name_u.reserve(rank);
       free_name_v.reserve(rank);
       result_name_u.reserve(rank + 1);
@@ -399,7 +399,7 @@ namespace TAT {
       // 这里会自动cut
       auto u = tensor_u.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>>{
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
                   {InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
             {},
@@ -409,7 +409,7 @@ namespace TAT {
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
       auto v = tensor_v.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>>{
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
                   {InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,
             {},

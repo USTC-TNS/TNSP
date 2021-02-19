@@ -335,9 +335,9 @@ namespace TAT {
       if constexpr (is_no_symmetry) {
          edge_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       }
-      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
-      auto reversed_set_result = pmr::set<Name>();                                                 // 最后split时的反转标
-      auto name_result = pmr::vector<Name>();                                                      // 最后split后的name
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>>(); // split方案
+      auto reversed_set_result = pmr::set<Name>();                                                   // 最后split时的反转标
+      auto name_result = pmr::vector<Name>();                                                        // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       split_map_result[InternalName<Name>::Contract_1].reserve(rank_1 - common_rank);
       split_map_result[InternalName<Name>::Contract_2].reserve(rank_2 - common_rank);

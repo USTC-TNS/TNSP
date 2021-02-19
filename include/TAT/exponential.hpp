@@ -161,7 +161,7 @@ namespace TAT {
       merge_1.resize(half_rank);
       auto& merge_2 = merge_map[InternalName<Name>::Exp_2];
       merge_2.resize(half_rank);
-      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>>();
       auto& split_1 = split_map_result[InternalName<Name>::Exp_1];
       split_1.resize(half_rank);
       auto& split_2 = split_map_result[InternalName<Name>::Exp_2];

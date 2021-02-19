@@ -83,7 +83,7 @@ namespace TAT {
       // 寻找自由脚
       auto result_names = pmr::vector<Name>();
       auto reverse_names = pmr::set<Name>();
-      auto split_plan = pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      auto split_plan = pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>();
       result_names.reserve(free_rank);
       split_plan.reserve(free_rank);
       for (Rank i = 0; i < rank; i++) {

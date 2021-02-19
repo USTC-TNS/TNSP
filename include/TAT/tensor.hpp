@@ -475,7 +475,7 @@ namespace TAT {
       template<
             template<typename> class ResultAllocator = Allocator,
             typename MapNameName = pmr::map<Name, Name>,
-            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, edge_map_t<Symmetry>>>>,
             typename SetName1 = pmr::set<Name>,
             typename MapNameVectorName = pmr::map<Name, std::vector<Name>>,
             typename VectorName = pmr::vector<Name>,
@@ -543,7 +543,7 @@ namespace TAT {
        * \return 分裂边后的结果张量
        */
       template<
-            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, edge_map_t<Symmetry>>>>,
             typename SetName = pmr::set<Name>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
       split_edge(MapNameVectorNameAndEdge split, bool apply_parity = false, SetName&& parity_exclude_name_split = {}) const;
@@ -803,7 +803,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    struct QuasiTensor {
       Tensor<ScalarType, Symmetry, Name, Allocator> tensor;
-      std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split_map;
+      std::map<Name, std::vector<std::tuple<Name, edge_map_t<Symmetry>>>> split_map;
       std::set<Name> reversed_set;
       std::vector<Name> res_name;
 

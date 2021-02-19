@@ -340,8 +340,8 @@ namespace TAT {
       auto reversed_set_origin = pmr::set<Name>();
       auto result_name_1 = pmr::vector<Name>();
       auto result_name_2 = pmr::vector<Name>();
-      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>();
-      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>();
+      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
+      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
       free_name_1.reserve(rank);
       free_name_2.reserve(rank);
       result_name_1.reserve(rank + 1);
@@ -431,14 +431,14 @@ namespace TAT {
       }
       auto new_tensor_1 = tensor_1.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>>{
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
                   {InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
             {},
             result_name_1);
       auto new_tensor_2 = tensor_2.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, Allocator, true>>>>{
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
                   {InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
             reversed_set_2,
             {},
