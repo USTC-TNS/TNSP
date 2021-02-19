@@ -176,6 +176,44 @@ namespace TAT {
    constexpr bool is_symmetry_vector_v = is_symmetry_vector<T>::value;
 #endif
 
+   template<typename T, typename A>
+   std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
+      Size count = list.size();
+      out < count;
+      if constexpr (std::is_trivially_destructible_v<T>) {
+         out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
+      } else {
+         for (const auto& i : list) {
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::write(out, i);
+            } else {
+               out < i;
+            }
+         }
+      }
+      return out;
+   }
+   template<typename T, typename A>
+   std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
+      list.clear();
+      Size count;
+      in > count;
+      if constexpr (std::is_trivially_destructible_v<T>) {
+         list.resize(count);
+         in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
+      } else {
+         for (Size i = 0; i < count; i++) {
+            auto& item = list.emplace_back();
+            if constexpr (is_name_v<T>) {
+               NameTraits<T>::read(in, item);
+            } else {
+               in > item;
+            }
+         }
+      }
+      return in;
+   }
+
    template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
       Size size = map.size();
@@ -242,44 +280,6 @@ namespace TAT {
             char next = in.get();
             if (next == ']') {
                break;
-            }
-         }
-      }
-      return in;
-   }
-
-   template<typename T, typename A>
-   std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
-      Size count = list.size();
-      out < count;
-      if constexpr (std::is_trivially_destructible_v<T>) {
-         out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
-      } else {
-         for (const auto& i : list) {
-            if constexpr (is_name_v<T>) {
-               NameTraits<T>::write(out, i);
-            } else {
-               out < i;
-            }
-         }
-      }
-      return out;
-   }
-   template<typename T, typename A>
-   std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
-      list.clear();
-      Size count;
-      in > count;
-      if constexpr (std::is_trivially_destructible_v<T>) {
-         list.resize(count);
-         in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
-      } else {
-         for (Size i = 0; i < count; i++) {
-            auto& item = list.emplace_back();
-            if constexpr (is_name_v<T>) {
-               NameTraits<T>::read(in, item);
-            } else {
-               in > item;
             }
          }
       }
