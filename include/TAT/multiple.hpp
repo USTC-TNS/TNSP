@@ -50,7 +50,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name, Allocator>
    Tensor<ScalarType, Symmetry, Name, Allocator>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       auto timer_guard = multiple_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;

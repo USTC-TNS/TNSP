@@ -29,7 +29,7 @@ namespace TAT {
    template<typename SetNameAndName>
    Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::trace(const SetNameAndName& trace_names) const {
       auto timer_guard = trace_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto rank = names.size();
       auto trace_rank = trace_names.size();

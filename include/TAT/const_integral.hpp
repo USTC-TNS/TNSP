@@ -26,7 +26,7 @@
 
 namespace TAT {
    namespace const_integral {
-      template<auto StaticValue, typename DynamicType = void>
+      template<auto, typename DynamicType = void>
       struct const_integral_t {
          using value_type = DynamicType;
          value_type m_value;
@@ -52,7 +52,7 @@ namespace TAT {
       };
 
       template<typename T>
-      const_integral_t(T v) -> const_integral_t<0, T>;
+      const_integral_t(T) -> const_integral_t<0, T>;
 
       template<typename R, typename T>
       R to_const_integral_helper(T value) {

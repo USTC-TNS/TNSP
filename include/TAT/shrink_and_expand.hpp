@@ -29,7 +29,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name, Allocator>
    Tensor<ScalarType, Symmetry, Name, Allocator>::expand(const ExpandConfigure& configure, const Name& old_name) const {
       auto timer_guard = expand_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
       //            std::is_same_v<Symmetry, NoSymmetry>,
       //            std::tuple<Size, Size>,
@@ -101,7 +101,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name, Allocator>
    Tensor<ScalarType, Symmetry, Name, Allocator>::shrink(const ShrinkConfigure& configure, const Name& new_name, Arrow arrow) const {
       auto timer_guard = shrink_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto new_names = pmr::vector<Name>();

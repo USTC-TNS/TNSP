@@ -29,7 +29,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::conjugate() const {
       auto timer_guard = conjugate_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry> && is_real_v<ScalarType>) {
          return *this;
       }

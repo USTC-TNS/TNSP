@@ -272,8 +272,20 @@ namespace TAT {
    // 对于tensor中的数据, 在一些背景下很容易有几百兆以上的大小
    constexpr std::size_t default_buffer_size = 1 << 15;
 
-   template<std::size_t buffer_size = default_buffer_size>
+   template<std::size_t, bool dynamic = false>
    struct scope_resource {
+      std::byte* buffer;
+      pmr::monotonic_buffer_resource resource;
+      pmr::memory_resource* upstream;
+      scope_resource(std::size_t size) :
+            buffer(new std::byte[size]), resource(buffer, size * sizeof(std::byte)), upstream(pmr::set_default_resource(&resource)) {}
+      ~scope_resource() {
+         pmr::set_default_resource(upstream);
+         delete[] buffer;
+      }
+   };
+   template<std::size_t buffer_size>
+   struct scope_resource<buffer_size, false> {
       std::byte buffer[buffer_size];
       pmr::monotonic_buffer_resource resource;
       pmr::memory_resource* upstream;
@@ -282,5 +294,6 @@ namespace TAT {
          pmr::set_default_resource(upstream);
       }
    };
+   scope_resource(std::size_t)->scope_resource<0, true>;
 } // namespace TAT
 #endif

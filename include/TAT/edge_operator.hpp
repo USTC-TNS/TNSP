@@ -53,7 +53,7 @@ namespace TAT {
          const std::array<SetName2, 4>& parity_exclude_name,
          const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all) const {
       auto timer_guard = transpose_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       // step 1: rename and cut
       // step 2: split
       // step 3: reverse
