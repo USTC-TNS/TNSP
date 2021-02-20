@@ -451,7 +451,7 @@ namespace TAT {
                  py::arg("parity_exclude_name_reverse_set") = py::set(),
                  "Merge several edges of the tensor into ones")
             .def("split_edge",
-                 &T::template split_edge<std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>, std::set<DefaultName>>,
+                 &T::template split_edge<std::map<DefaultName, std::vector<std::tuple<DefaultName, edge_map_t<Symmetry>>>>, std::set<DefaultName>>,
                  py::arg("split_map"),
                  py::arg("apply_parity") = false,
                  py::arg("parity_exclude_name_split_set") = py::set(),
@@ -460,7 +460,7 @@ namespace TAT {
                   "edge_operator",
                   [](const T& tensor,
                      const std::map<DefaultName, DefaultName>& rename_map,
-                     const std::map<DefaultName, std::vector<std::tuple<DefaultName, BoseEdge<Symmetry>>>>& split_map,
+                     const std::map<DefaultName, std::vector<std::tuple<DefaultName, edge_map_t<Symmetry>>>>& split_map,
                      const std::set<DefaultName>& reversed_name,
                      const std::map<DefaultName, std::vector<DefaultName>>& merge_map,
                      const std::vector<DefaultName>& new_names,
@@ -622,7 +622,11 @@ namespace TAT {
                   py::return_value_policy::reference_internal);
    }
 
-   template<typename Symmetry, typename Element, bool IsTuple, template<typename, bool = false> class EdgeType = Edge>
+   template<
+         typename Symmetry,
+         typename Element,
+         bool IsTuple,
+         template<typename, template<typename> class = std::allocator, bool = false> class EdgeType = Edge>
    auto declare_edge(py::module_& edge_m, const char* name) {
       auto result = py::class_<EdgeType<Symmetry>>(edge_m, name, ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def_readonly("map", &EdgeType<Symmetry>::map)
@@ -744,7 +748,7 @@ namespace TAT {
             .def(py::self + py::self)
             .def(py::self += py::self)
             .def(-py::self)
-            .def("__hash__", [](const Symmetry& symmetry) { return py::hash(py::cast(symmetry.information())); })
+            .def("__hash__", [](const Symmetry& symmetry) { return py::hash(py::cast(static_cast<const typename Symmetry::base_tuple&>(symmetry))); })
             .def("__repr__",
                  [=](const Symmetry& symmetry) {
                     auto out = std::stringstream();

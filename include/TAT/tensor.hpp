@@ -279,7 +279,7 @@ namespace TAT {
       template<typename Function>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> map(Function&& function) const {
          auto result = same_shape();
-         std::transform(core->storage.begin(), core.storage.end(), result.core->storage.begin(), function);
+         std::transform(core->storage.begin(), core->storage.end(), result.core->storage.begin(), function);
          return result;
       }
 

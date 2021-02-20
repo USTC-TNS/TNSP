@@ -157,7 +157,7 @@ namespace TAT {
       auto timer_guard = scalar_outplace_guard();                                                                                          \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>;                                                                     \
       const auto& x = number_1;                                                                                                            \
-      const ScalarType1* __restrict b = tensor_2.core->storage.data();                                                                     \
+      const ScalarType2* __restrict b = tensor_2.core->storage.data();                                                                     \
       auto result = Tensor<ScalarType, Symmetry, Name, Allocator>{tensor_2.names, tensor_2.core->edges};                                   \
       ScalarType* __restrict c = result.core->storage.data();                                                                              \
       const auto size = result.core->storage.size();                                                                                       \

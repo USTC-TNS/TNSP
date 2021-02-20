@@ -105,11 +105,11 @@ namespace TAT {
             .def(py::self >= py::self)
             .def(py::self == py::self)
             .def(py::self != py::self)
-            .def(py::init<fast_name_dataset_t::FastNameId>(), py::arg("id"), "Name with specified id directly")
+            .def(py::init<fastname_dataset_t::fast_name_id_t>(), py::arg("id"), "Name with specified id directly")
             .def_readonly("id", &DefaultName::id)
             .def("__hash__", [](const DefaultName& name) { return py::hash(py::cast(name.id)); })
-            .def_static("load", [](const py::bytes& bytes) { return load_fast_name_dataset(std::string(bytes)); })
-            .def_static("dump", []() { return py::bytes(dump_fast_name_dataset()); })
+            .def_static("load", [](const py::bytes& bytes) { return load_fastname_dataset(std::string(bytes)); })
+            .def_static("dump", []() { return py::bytes(dump_fastname_dataset()); })
             .def_property_readonly("name", [](const DefaultName& name) { return static_cast<const std::string&>(name); })
             .def(implicit_init<DefaultName, const char*>(), py::arg("name"), "Name with specified name")
             .def("__repr__", [](const DefaultName& name) { return "Name[" + static_cast<const std::string&>(name) + "]"; })
@@ -118,40 +118,44 @@ namespace TAT {
       // symmetry
       auto symmetry_m = internal_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
       declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
-      declare_symmetry<Z2Symmetry>(symmetry_m, "Z2").def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2")).def_readonly("z2", &Z2Symmetry::z2);
-      declare_symmetry<U1Symmetry>(symmetry_m, "U1").def(implicit_init<U1Symmetry, U1>(), py::arg("u1")).def_readonly("u1", &U1Symmetry::u1);
+      declare_symmetry<Z2Symmetry>(symmetry_m, "Z2")
+            .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
+            .def_property_readonly("z2", [](const Z2Symmetry& symmetry) { return std::get<0>(symmetry); });
+      declare_symmetry<U1Symmetry>(symmetry_m, "U1")
+            .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
+            .def_property_readonly("u1", [](const U1Symmetry& symmetry) { return std::get<0>(symmetry); });
       declare_symmetry<FermiSymmetry>(symmetry_m, "Fermi")
-            .def(implicit_init<FermiSymmetry, Fermi>(), py::arg("fermi"))
-            .def_readonly("fermi", &FermiSymmetry::fermi);
+            .def(implicit_init<FermiSymmetry, U1>(), py::arg("fermi"))
+            .def_property_readonly("fermi", [](const FermiSymmetry& symmetry) { return std::get<0>(symmetry); });
       declare_symmetry<FermiZ2Symmetry>(symmetry_m, "FermiZ2")
-            .def(py::init<Fermi, Z2>(), py::arg("fermi"), py::arg("z2"))
-            .def(implicit_init<FermiZ2Symmetry, const std::tuple<Fermi, Z2>&>(
-                       [](const std::tuple<Fermi, Z2>& p) { return std::make_from_tuple<FermiZ2Symmetry>(p); }),
+            .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
+            .def(implicit_init<FermiZ2Symmetry, const std::tuple<U1, Z2>&>(
+                       [](const std::tuple<U1, Z2>& p) { return std::make_from_tuple<FermiZ2Symmetry>(p); }),
                  py::arg("tuple_of_fermi_z2"))
-            .def_readonly("fermi", &FermiZ2Symmetry::fermi)
-            .def_readonly("z2", &FermiZ2Symmetry::z2);
+            .def_property_readonly("fermi", [](const FermiZ2Symmetry& symmetry) { return std::get<0>(symmetry); })
+            .def_property_readonly("z2", [](const FermiZ2Symmetry& symmetry) { return std::get<1>(symmetry); });
       declare_symmetry<FermiU1Symmetry>(symmetry_m, "FermiU1")
-            .def(py::init<Fermi, U1>(), py::arg("fermi"), py::arg("u1"))
-            .def(implicit_init<FermiU1Symmetry, const std::tuple<Fermi, U1>&>(
-                       [](const std::tuple<Fermi, U1>& p) { return std::make_from_tuple<FermiU1Symmetry>(p); }),
+            .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
+            .def(implicit_init<FermiU1Symmetry, const std::tuple<U1, U1>&>(
+                       [](const std::tuple<U1, U1>& p) { return std::make_from_tuple<FermiU1Symmetry>(p); }),
                  py::arg("tuple_of_fermi_u1"))
-            .def_readonly("fermi", &FermiU1Symmetry::fermi)
-            .def_readonly("u1", &FermiU1Symmetry::u1);
+            .def_property_readonly("fermi", [](const FermiU1Symmetry& symmetry) { return std::get<0>(symmetry); })
+            .def_property_readonly("u1", [](const FermiU1Symmetry& symmetry) { return std::get<1>(symmetry); });
       // edge
       auto edge_m = internal_m.def_submodule("Edge", "Edges of all kinds of symmetries for TAT");
       declare_edge<NoSymmetry, void, false>(edge_m, "No");
       declare_edge<Z2Symmetry, Z2, false>(edge_m, "Z2");
       declare_edge<U1Symmetry, U1, false>(edge_m, "U1");
-      declare_edge<FermiSymmetry, Fermi, false>(edge_m, "Fermi");
-      declare_edge<FermiZ2Symmetry, std::tuple<Fermi, Z2>, true>(edge_m, "FermiZ2");
-      declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true>(edge_m, "FermiU1");
+      declare_edge<FermiSymmetry, U1, false>(edge_m, "Fermi");
+      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true>(edge_m, "FermiZ2");
+      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true>(edge_m, "FermiU1");
       auto bose_edge_m = edge_m.def_submodule("NoArrow", "Edges without Arrow Even for Fermi Symmetry");
-      declare_edge<NoSymmetry, void, false, BoseEdge>(bose_edge_m, "No");
-      declare_edge<Z2Symmetry, Z2, false, BoseEdge>(bose_edge_m, "Z2");
-      declare_edge<U1Symmetry, U1, false, BoseEdge>(bose_edge_m, "U1");
-      declare_edge<FermiSymmetry, Fermi, false, BoseEdge>(bose_edge_m, "Fermi");
-      declare_edge<FermiZ2Symmetry, std::tuple<Fermi, Z2>, true, BoseEdge>(bose_edge_m, "FermiZ2");
-      declare_edge<FermiU1Symmetry, std::tuple<Fermi, U1>, true, BoseEdge>(bose_edge_m, "FermiU1");
+      declare_edge<NoSymmetry, void, false, edge_map_t>(bose_edge_m, "No");
+      declare_edge<Z2Symmetry, Z2, false, edge_map_t>(bose_edge_m, "Z2");
+      declare_edge<U1Symmetry, U1, false, edge_map_t>(bose_edge_m, "U1");
+      declare_edge<FermiSymmetry, U1, false, edge_map_t>(bose_edge_m, "Fermi");
+      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true, edge_map_t>(bose_edge_m, "FermiZ2");
+      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_map_t>(bose_edge_m, "FermiU1");
       // tensor
       auto tensor_m = tat_m.def_submodule("Tensor", "Tensors for TAT");
       auto block_m = internal_m.def_submodule("Block", "Block of Tensor for TAT");

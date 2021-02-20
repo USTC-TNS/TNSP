@@ -56,9 +56,9 @@ namespace TAT {
    struct symmetry_t : std::tuple<fermi_unwrap_t<T>...> {
    private:
       using self_t = symmetry_t<T...>;
-      using base_tuple = std::tuple<fermi_unwrap_t<T>...>;
 
    public:
+      using base_tuple = std::tuple<fermi_unwrap_t<T>...>;
       static constexpr int length = sizeof...(T);
       static constexpr std::array<bool, length> is_fermi_item = {fermi_wrapped_v<T>...};
       static constexpr bool is_fermi_symmetry = (fermi_wrapped_v<T> || ...);
