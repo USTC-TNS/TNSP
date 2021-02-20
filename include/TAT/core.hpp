@@ -95,8 +95,7 @@ namespace TAT {
       core_blocks_t() = delete;
       core_blocks_t(const core_blocks_t& other) : storage(other.storage.size()), resource(storage.data(), storage.size() * sizeof(ScalarType)) {
          for (const auto& [symmetries, block] : other.blocks) {
-            auto& this_block = blocks.emplace(symmetries, content_vector(block.size(), &resource)).first->second;
-            std::copy(block.begin(), block.end(), this_block.begin());
+            blocks.emplace(symmetries, content_vector(block, &resource));
          }
       }
       // core_blocks_t(core_blocks_t&&) = default;
@@ -151,7 +150,7 @@ namespace TAT {
          }
       }
 
-      Core() = default;
+      Core() = delete;
       Core(const Core&) = default;
       Core(Core&&) = default;
       Core& operator=(const Core&) = default;

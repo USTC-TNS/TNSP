@@ -56,9 +56,9 @@ namespace TAT {
    struct symmetry_t : std::tuple<fermi_unwrap_t<T>...> {
    private:
       using self_t = symmetry_t<T...>;
+      using base_tuple = std::tuple<fermi_unwrap_t<T>...>;
 
    public:
-      using base_tuple = std::tuple<fermi_unwrap_t<T>...>;
       static constexpr int length = sizeof...(T);
       static constexpr std::array<bool, length> is_fermi_item = {fermi_wrapped_v<T>...};
       static constexpr bool is_fermi_symmetry = (fermi_wrapped_v<T> || ...);
@@ -155,7 +155,7 @@ namespace TAT {
       template<std::size_t Index>
       static void update_symmetry_result_single_item(bool& result, const self_t& symmetry) {
          if constexpr (is_fermi_item[Index]) {
-            result ^= symmetry.template get_item_parity<Index>();
+            result ^= symmetry.get_item_parity<Index>();
          }
       }
       template<std::size_t... Is>
@@ -237,13 +237,10 @@ namespace TAT {
             Rank split_merge_end_position) {
          if constexpr (is_fermi_item[Index]) {
             auto sum_of_parity = 0l;
-            auto sum_of_parity_square = 0l;
             for (auto position_in_group = split_merge_begin_position; position_in_group < split_merge_end_position; position_in_group++) {
-               auto this_parity = std::get<Index>(symmetries[position_in_group]);
-               sum_of_parity += this_parity;
-               sum_of_parity_square += this_parity * this_parity;
+               sum_of_parity += symmetries[position_in_group].template get_item_parity<Index>();
             }
-            result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity_square) / 2) % 2);
+            result ^= bool(((sum_of_parity * sum_of_parity - sum_of_parity) / 2) % 2);
          }
       }
       template<typename VectorSymmetry, std::size_t... Is, typename = std::enable_if_t<is_list_of_v<VectorSymmetry, self_t>>>
