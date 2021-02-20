@@ -94,7 +94,8 @@ namespace TAT {
       }
       template<typename T>
       std::pair<iterator, bool> emplace(const Key&, T&& arg) {
-         second = Value(std::forward<T>(arg));
+         second.~Value();
+         new (&second) Value(std::forward<T>(arg));
          return {this, true};
       }
       Size size() const {
