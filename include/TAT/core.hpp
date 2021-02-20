@@ -71,7 +71,7 @@ namespace TAT {
 #endif
 
       std::vector<ScalarType, Allocator<ScalarType>> storage;
-      pmr::monotonic_buffer_resource resource;
+      monotonic_buffer_resource resource;
 
       /**
        * 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
@@ -98,9 +98,16 @@ namespace TAT {
             blocks.emplace(symmetries, content_vector(block, &resource));
          }
       }
-      // core_blocks_t(core_blocks_t&&) = default;
-      // core_blocks_t& operator=(const core_blocks_t&) = default;
-      // core_blocks_t& operator=(core_blocks_t&&) = default;
+      // storage内容移动, 如果storage的Allocator比较糟糕, 标准库仍然保证storage自己的allocator会被移动到新的core中
+      // pmr resource原本不可以复制构造, TAT中增加了一个移动构造函数
+      core_blocks_t(core_blocks_t&& other) : storage(std::move(other.storage)), resource(std::move(other.resource)) {
+         for (const auto& [symmetries, block] : other.blocks) {
+            // storage已经被移动, 只需要按照原来的顺序创建vector, 内容会自动填充
+            blocks.emplace(symmetries, content_vector(block.size(), &resource));
+         }
+      }
+      core_blocks_t& operator=(const core_blocks_t&) = delete;
+      core_blocks_t& operator=(core_blocks_t&&) = delete;
    };
 
    /**
@@ -153,8 +160,8 @@ namespace TAT {
       Core() = delete;
       Core(const Core&) = default;
       Core(Core&&) = default;
-      Core& operator=(const Core&) = default;
-      Core& operator=(Core&&) = default;
+      Core& operator=(const Core&) = delete;
+      Core& operator=(Core&&) = delete;
       ~Core() = default;
    };
    /**@}*/

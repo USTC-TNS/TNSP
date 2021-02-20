@@ -25,53 +25,51 @@
 #include <variant>
 
 namespace TAT {
-   namespace const_integral {
-      template<auto, typename DynamicType = void>
-      struct const_integral_t {
-         using value_type = DynamicType;
-         value_type m_value;
-         const_integral_t() = delete;
-         const_integral_t(value_type v) : m_value(v) {}
-         value_type value() const {
-            return m_value;
-         }
-         static constexpr bool is_static = false;
-         static constexpr bool is_dynamic = true;
-      };
-
-      template<auto StaticValue>
-      struct const_integral_t<StaticValue, void> {
-         using value_type = decltype(StaticValue);
-         const_integral_t() {}
-         const_integral_t(value_type v) {}
-         static constexpr value_type value() {
-            return StaticValue;
-         }
-         static constexpr bool is_static = true;
-         static constexpr bool is_dynamic = false;
-      };
-
-      template<typename T>
-      const_integral_t(T) -> const_integral_t<0, T>;
-
-      template<typename R, typename T>
-      R to_const_integral_helper(T value) {
-         return const_integral_t(value);
+   template<auto, typename DynamicType = void>
+   struct const_integral_t {
+      using value_type = DynamicType;
+      value_type m_value;
+      const_integral_t() = delete;
+      const_integral_t(value_type v) : m_value(v) {}
+      value_type value() const {
+         return m_value;
       }
-      template<typename R, typename T, T first_value, T... possible_value>
-      R to_const_integral_helper(T value) {
-         if (first_value == value) {
-            return const_integral_t<first_value>();
-         } else {
-            return to_const_integral_helper<R, T, possible_value...>(value);
-         }
+      static constexpr bool is_static = false;
+      static constexpr bool is_dynamic = true;
+   };
+
+   template<auto StaticValue>
+   struct const_integral_t<StaticValue, void> {
+      using value_type = decltype(StaticValue);
+      const_integral_t() {}
+      const_integral_t(value_type v) {}
+      static constexpr value_type value() {
+         return StaticValue;
       }
-   } // namespace const_integral
+      static constexpr bool is_static = true;
+      static constexpr bool is_dynamic = false;
+   };
+
+   template<typename T>
+   const_integral_t(T) -> const_integral_t<0, T>;
+
+   template<typename R, typename T>
+   R to_const_integral_helper(T value) {
+      return const_integral_t(value);
+   }
+   template<typename R, typename T, T first_value, T... possible_value>
+   R to_const_integral_helper(T value) {
+      if (first_value == value) {
+         return const_integral_t<first_value>();
+      } else {
+         return to_const_integral_helper<R, T, possible_value...>(value);
+      }
+   }
 
    template<typename T, T... possible_value>
    auto to_const_integral(T value) {
-      using result_type = std::variant<const_integral::const_integral_t<0, T>, const_integral::const_integral_t<possible_value>...>;
-      return const_integral::to_const_integral_helper<result_type, T, possible_value...>(value);
+      using result_type = std::variant<const_integral_t<0, T>, const_integral_t<possible_value>...>;
+      return to_const_integral_helper<result_type, T, possible_value...>(value);
    }
 } // namespace TAT
 

@@ -53,9 +53,11 @@ namespace TAT {
          typename Name = DefaultName,
          template<typename> class Allocator = std::allocator>
    struct Singular {
-      // TODO Singular storage
-      using normal_map = std::map<Symmetry, std::vector<real_base_t<ScalarType>>>;
-      using fake_singular_map = fake_map<Symmetry, std::vector<real_base_t<ScalarType>>>;
+      using real_scalar_t = real_base_t<ScalarType>;
+      using scalar_vector_t = std::vector<real_scalar_t, Allocator<real_scalar_t>>;
+      // TODO: Singular storage
+      using normal_map = std::map<Symmetry, scalar_vector_t, std::less<Symmetry>, Allocator<std::pair<const Symmetry, scalar_vector_t>>>;
+      using fake_singular_map = fake_map<Symmetry, std::vector<real_scalar_t, Allocator<real_scalar_t>>>;
 #ifdef TAT_USE_SIMPLE_NOSYMMETRY
       using singular_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_singular_map, normal_map>;
 #else
@@ -64,9 +66,9 @@ namespace TAT {
       singular_map value;
 
       template<int p>
-      [[nodiscard]] real_base_t<ScalarType> norm() const {
+      [[nodiscard]] real_scalar_t norm() const {
          if constexpr (p == -1) {
-            real_base_t<ScalarType> maximum = 0;
+            real_scalar_t maximum = 0;
             for (const auto& [symmetry, singulars] : value) {
                for (const auto& element : singulars) {
                   auto absolute = std::abs(element);
@@ -75,7 +77,7 @@ namespace TAT {
             }
             return maximum;
          } else if constexpr (p == 1) {
-            real_base_t<ScalarType> summation = 0;
+            real_scalar_t summation = 0;
             for (const auto& [symmetry, singulars] : value) {
                for (const auto& element : singulars) {
                   auto absolute = std::abs(element);

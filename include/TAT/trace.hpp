@@ -99,7 +99,7 @@ namespace TAT {
             }
          }
       }
-      auto merged_tensor = edge_operator<pmr::polymorphic_allocator>(
+      auto merged_tensor = edge_operator<polymorphic_allocator>(
             {},
             {},
             reverse_names,

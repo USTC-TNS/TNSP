@@ -388,7 +388,7 @@ namespace TAT {
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
-      auto tensor_merged = edge_operator<pmr::polymorphic_allocator>(
+      auto tensor_merged = edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_origin,

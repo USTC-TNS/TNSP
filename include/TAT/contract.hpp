@@ -488,7 +488,7 @@ namespace TAT {
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
       auto common_name_1_set = pmr::set<Name>(common_name_1.begin(), common_name_1.end());
-      auto tensor_1_merged = tensor_1.template edge_operator<pmr::polymorphic_allocator>(
+      auto tensor_1_merged = tensor_1.template edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_1,
@@ -499,7 +499,7 @@ namespace TAT {
             false,
             std::array<pmr::set<Name>, 4>{{{}, std::move(common_name_1_set), {}, {InternalName<Name>::Contract_2}}},
             delete_1);
-      auto tensor_2_merged = tensor_2.template edge_operator<pmr::polymorphic_allocator>(
+      auto tensor_2_merged = tensor_2.template edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_2,
@@ -729,7 +729,7 @@ namespace TAT {
 
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
-      auto tensor_1_merged = tensor_1.template edge_operator<pmr::polymorphic_allocator>(
+      auto tensor_1_merged = tensor_1.template edge_operator<polymorphic_allocator>(
             {},
             {},
             {},
@@ -739,7 +739,7 @@ namespace TAT {
                   {InternalName<Name>::Contract_0, fuse_names_list}},
             put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
-      auto tensor_2_merged = tensor_2.template edge_operator<pmr::polymorphic_allocator>(
+      auto tensor_2_merged = tensor_2.template edge_operator<polymorphic_allocator>(
             {},
             {},
             {},

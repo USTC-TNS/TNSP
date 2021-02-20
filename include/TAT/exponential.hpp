@@ -231,7 +231,7 @@ namespace TAT {
             result_names.push_back(i);
          }
       }
-      auto tensor_merged = edge_operator<pmr::polymorphic_allocator>({}, {}, reverse_set, merge_map, merged_names);
+      auto tensor_merged = edge_operator<polymorphic_allocator>({}, {}, reverse_set, merge_map, merged_names);
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = result.core->blocks.at(symmetries);

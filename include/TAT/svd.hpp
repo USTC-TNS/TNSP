@@ -308,7 +308,7 @@ namespace TAT {
       }
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
-      auto tensor_merged = edge_operator<pmr::polymorphic_allocator>(
+      auto tensor_merged = edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_origin,
@@ -344,7 +344,7 @@ namespace TAT {
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
          // TODO used in singular
-         auto s = std::vector<real_base_t<ScalarType>>(k);
+         auto s = std::vector<real_base_t<ScalarType>, Allocator<real_base_t<ScalarType>>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);

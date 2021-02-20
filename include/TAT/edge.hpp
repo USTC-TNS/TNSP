@@ -204,12 +204,12 @@ namespace TAT {
       ~Edge() = default;
 
       template<typename T>
-      Edge(T&& arg) : base_map_t(arg) {}
+      Edge(T&& arg) : base_map_t(std::forward<T>(arg)) {}
       Edge(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : base_map_t(map) {}
       Edge(const std::initializer_list<Symmetry>& symmetries) : base_map_t(symmetries) {}
 
       template<typename T>
-      Edge(Arrow arrow, T&& arg) : base_map_t(arg), base_arrow_t(arrow) {}
+      Edge(Arrow arrow, T&& arg) : base_map_t(std::forward<T>(arg)), base_arrow_t(arrow) {}
       Edge(Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map) : base_map_t(map), base_arrow_t(arrow) {}
       Edge(Arrow arrow, const std::initializer_list<Symmetry>& symmetries) : base_map_t(symmetries), base_arrow_t(arrow) {}
 
