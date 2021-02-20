@@ -25,12 +25,12 @@
 #include <variant>
 
 namespace TAT {
-   template<auto StaticValue, typename DynamicType = void>
-   struct Integer {
+   template<auto, typename DynamicType = void>
+   struct const_integral_t {
       using value_type = DynamicType;
       value_type m_value;
-      Integer() = delete;
-      Integer(value_type v) : m_value(v) {}
+      const_integral_t() = delete;
+      const_integral_t(value_type v) : m_value(v) {}
       value_type value() const {
          return m_value;
       }
@@ -39,11 +39,11 @@ namespace TAT {
    };
 
    template<auto StaticValue>
-   struct Integer<StaticValue, void> {
+   struct const_integral_t<StaticValue, void> {
       using value_type = decltype(StaticValue);
-      Integer() {}
-      Integer(value_type v) {}
-      static value_type value() {
+      const_integral_t() {}
+      const_integral_t(value_type v) {}
+      static constexpr value_type value() {
          return StaticValue;
       }
       static constexpr bool is_static = true;
@@ -51,28 +51,25 @@ namespace TAT {
    };
 
    template<typename T>
-   Integer(T v) -> Integer<0, T>;
-
-   template<typename T, T... possible_value>
-   using to_const_result = std::variant<Integer<0, T>, Integer<possible_value>...>;
+   const_integral_t(T) -> const_integral_t<0, T>;
 
    template<typename R, typename T>
-   R to_const_helper(T value) {
-      return Integer(value);
+   R to_const_integral_helper(T value) {
+      return const_integral_t(value);
    }
    template<typename R, typename T, T first_value, T... possible_value>
-   R to_const_helper(T value) {
+   R to_const_integral_helper(T value) {
       if (first_value == value) {
-         return Integer<first_value>();
+         return const_integral_t<first_value>();
       } else {
-         return to_const_helper<R, T, possible_value...>(value);
+         return to_const_integral_helper<R, T, possible_value...>(value);
       }
    }
 
    template<typename T, T... possible_value>
-   auto to_const(T value) {
-      using result_type = to_const_result<T, possible_value...>;
-      return to_const_helper<result_type, T, possible_value...>(value);
+   auto to_const_integral(T value) {
+      using result_type = std::variant<const_integral_t<0, T>, const_integral_t<possible_value>...>;
+      return to_const_integral_helper<result_type, T, possible_value...>(value);
    }
 } // namespace TAT
 

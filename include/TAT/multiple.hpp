@@ -28,7 +28,7 @@
 namespace TAT {
    template<typename ScalarType, typename ScalarTypeS>
    void multiple_kernel(Size m, Size k, Size n, ScalarType* data_destination, const ScalarType* data_source, const ScalarTypeS* S) {
-      const auto const_n_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(n);
+      const auto const_n_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(n);
       std::visit(
             [&](const auto& const_n) {
                const auto n = const_n.value();
@@ -46,11 +46,11 @@ namespace TAT {
             const_n_variant);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       auto timer_guard = multiple_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;
@@ -98,7 +98,7 @@ namespace TAT {
          auto* data_destination = block_destination.data();
 
          using ScalarTypeS = typename std::remove_cv_t<std::remove_reference_t<decltype(vector_in_S)>>::value_type;
-         vector<ScalarTypeS> realS(k);
+         pmr::content_vector<ScalarTypeS> realS(k);
          const auto* pointS = realS.data();
          if (division) {
             for (Size i = 0; i < k; i++) {

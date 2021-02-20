@@ -25,11 +25,11 @@
 
 namespace TAT {
    // TODO 可以不转置直接trace掉, 但是写起来比较麻烦
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const SetNameAndName& trace_names) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::trace(const SetNameAndName& trace_names) const {
       auto timer_guard = trace_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       auto rank = names.size();
       auto trace_rank = trace_names.size();
@@ -83,7 +83,7 @@ namespace TAT {
       // 寻找自由脚
       auto result_names = pmr::vector<Name>();
       auto reverse_names = pmr::set<Name>();
-      auto split_plan = pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>();
+      auto split_plan = pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>();
       result_names.reserve(free_rank);
       split_plan.reserve(free_rank);
       for (Rank i = 0; i < rank; i++) {
@@ -99,7 +99,7 @@ namespace TAT {
             }
          }
       }
-      auto merged_tensor = edge_operator(
+      auto merged_tensor = edge_operator<polymorphic_allocator>(
             {},
             {},
             reverse_names,
@@ -111,12 +111,12 @@ namespace TAT {
             false,
             std::array<pmr::set<Name>, 4>{{{}, {}, {}, {InternalName<Name>::Trace_1}}});
       // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
-      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
+      auto traced_tensor = Tensor<ScalarType, Symmetry, Name, Allocator>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
       // 应该只有一个边, 所以也只有一个block
       const Size line_size = destination_block.size();
 
-      const auto const_line_size_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(line_size);
+      const auto const_line_size_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(line_size);
       std::visit(
             [&](const auto& const_line_size) {
                const auto line_size = const_line_size.value();
@@ -136,7 +136,7 @@ namespace TAT {
             },
             const_line_size_variant);
 
-      auto result = traced_tensor.edge_operator(
+      auto result = traced_tensor.template edge_operator<Allocator>(
             {}, pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, std::move(split_plan)}}, reverse_names, {}, result_names);
       return result;
    }

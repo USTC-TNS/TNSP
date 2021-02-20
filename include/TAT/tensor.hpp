@@ -47,10 +47,17 @@ namespace TAT {
     *
     * \see Tensor::svd
     */
-   template<typename ScalarType = double, typename Symmetry = NoSymmetry, typename Name = DefaultName>
+   template<
+         typename ScalarType = double,
+         typename Symmetry = NoSymmetry,
+         typename Name = DefaultName,
+         template<typename> class Allocator = std::allocator>
    struct Singular {
-      using normal_map = std::map<Symmetry, vector<real_base_t<ScalarType>>>;
-      using fake_singular_map = fake_map<Symmetry, vector<real_base_t<ScalarType>>>;
+      using real_scalar_t = real_base_t<ScalarType>;
+      using scalar_vector_t = std::vector<real_scalar_t, Allocator<real_scalar_t>>;
+      // TODO: Singular storage
+      using normal_map = std::map<Symmetry, scalar_vector_t, std::less<Symmetry>, Allocator<std::pair<const Symmetry, scalar_vector_t>>>;
+      using fake_singular_map = fake_map<Symmetry, std::vector<real_scalar_t, Allocator<real_scalar_t>>>;
 #ifdef TAT_USE_SIMPLE_NOSYMMETRY
       using singular_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_singular_map, normal_map>;
 #else
@@ -59,9 +66,9 @@ namespace TAT {
       singular_map value;
 
       template<int p>
-      [[nodiscard]] real_base_t<ScalarType> norm() const {
+      [[nodiscard]] real_scalar_t norm() const {
          if constexpr (p == -1) {
-            real_base_t<ScalarType> maximum = 0;
+            real_scalar_t maximum = 0;
             for (const auto& [symmetry, singulars] : value) {
                for (const auto& element : singulars) {
                   auto absolute = std::abs(element);
@@ -70,7 +77,7 @@ namespace TAT {
             }
             return maximum;
          } else if constexpr (p == 1) {
-            real_base_t<ScalarType> summation = 0;
+            real_scalar_t summation = 0;
             for (const auto& [symmetry, singulars] : value) {
                for (const auto& element : singulars) {
                   auto absolute = std::abs(element);
@@ -86,13 +93,13 @@ namespace TAT {
 
       [[nodiscard]] std::string show() const;
       [[nodiscard]] std::string dump() const;
-      Singular<ScalarType, Symmetry, Name>& load(const std::string&) &;
-      Singular<ScalarType, Symmetry, Name>&& load(const std::string& string) && {
+      Singular<ScalarType, Symmetry, Name, Allocator>& load(const std::string&) &;
+      Singular<ScalarType, Symmetry, Name, Allocator>&& load(const std::string& string) && {
          return std::move(load(string));
       };
 
-      [[nodiscard]] Singular<ScalarType, Symmetry, Name> copy() const {
-         return Singular<ScalarType, Symmetry, Name>{value};
+      [[nodiscard]] Singular<ScalarType, Symmetry, Name, Allocator> copy() const {
+         return Singular<ScalarType, Symmetry, Name, Allocator>{value};
       }
    };
 
@@ -103,7 +110,7 @@ namespace TAT {
     */
 
    /// \private
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    struct TensorShape;
 
    /**
@@ -118,7 +125,11 @@ namespace TAT {
     * \tparam Symmetry 张量所满足的对称性
     * \tparam Name 张量的边的名称类型
     */
-   template<typename ScalarType = double, typename Symmetry = NoSymmetry, typename Name = DefaultName>
+   template<
+         typename ScalarType = double,
+         typename Symmetry = NoSymmetry,
+         typename Name = DefaultName,
+         template<typename> class Allocator = std::allocator>
    struct Tensor {
       using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
       using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
@@ -147,7 +158,7 @@ namespace TAT {
        */
       propagate_const_shared_ptr<Core<ScalarType, Symmetry>> core;
 
-      TensorShape<ScalarType, Symmetry, Name> shape() {
+      TensorShape<ScalarType, Symmetry, Name, Allocator> shape() {
          return {this};
       }
 
@@ -171,8 +182,8 @@ namespace TAT {
        * \return 复制的结果
        * \see core
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> copy() const {
-         Tensor<ScalarType, Symmetry, Name> result;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> copy() const {
+         Tensor<ScalarType, Symmetry, Name, Allocator> result;
          result.names = names;
          result.name_to_index = name_to_index;
          result.core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
@@ -199,7 +210,7 @@ namespace TAT {
        * \param number 秩为零的张量拥有的唯一一个元素的值
        */
       explicit Tensor(ScalarType number) : Tensor({}, {}) {
-         core->blocks.begin()->second.front() = number;
+         core->storage.front() = number;
       }
 
       /**
@@ -210,16 +221,16 @@ namespace TAT {
        * \param edge_arrow 如果系统对称性为fermi对称性, 则需要设置此值
        */
       template<typename VectorName = pmr::vector<Name>, typename VectorSymmetry = pmr::vector<Symmetry>, typename VectorArrow = pmr::vector<Arrow>>
-      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name>
+      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name, Allocator>
       one(ScalarType number, const VectorName& names_init, const VectorSymmetry& edge_symmetry = {}, const VectorArrow& edge_arrow = {}) {
          auto rank = names_init.size();
          auto result = Tensor(names_init, get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
-         result.core->blocks.begin()->second.front() = number;
+         result.core->storage.front() = number;
          return result;
       }
 
       [[nodiscard]] bool is_scalar() const {
-         return core->blocks.size() == 1 && core->blocks.begin()->second.size() == 1;
+         return core->storage.size() == 1;
       }
 
       /**
@@ -229,7 +240,7 @@ namespace TAT {
          if (!is_scalar()) {
             TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
-         return core->blocks.begin()->second.front();
+         return core->storage.front();
       }
 
       using EdgePoint = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
@@ -239,14 +250,14 @@ namespace TAT {
             std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
       template<typename ExpandConfigure = pmr::map<Name, EdgePointWithArrow>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
       expand(const ExpandConfigure& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
 
       template<typename ShrinkConfigure = pmr::map<Name, EdgePoint>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
       shrink(const ShrinkConfigure& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
-      [[deprecated("Use shrink instead, slice will be remove in v0.2.0")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      [[deprecated("Use shrink instead, slice will be remove in v0.2.0")]] [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
       slice(const pmr::map<Name, EdgePoint>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
          return shrink(configure, new_name, arrow);
       }
@@ -255,8 +266,8 @@ namespace TAT {
        * 产生一个与自己形状一样的张量
        * \return 一个未初始化数据内容的张量
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> same_shape() const {
-         return Tensor<ScalarType, Symmetry, Name>(names, core->edges);
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> same_shape() const {
+         return Tensor<ScalarType, Symmetry, Name, Allocator>(names, core->edges);
       }
       /**
        * 对张量的每个数据元素做同样的非原地的变换
@@ -266,11 +277,9 @@ namespace TAT {
        * \see transform
        */
       template<typename Function>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> map(Function&& function) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> map(Function&& function) const {
          auto result = same_shape();
-         for (auto& [symmetries, block] : core->blocks) {
-            std::transform(block.begin(), block.end(), result.core->blocks.at(symmetries).begin(), function);
-         }
+         std::transform(core->storage.begin(), core->storage.end(), result.core->storage.begin(), function);
          return result;
       }
 
@@ -282,18 +291,16 @@ namespace TAT {
        * \see map
        */
       template<typename Function>
-      Tensor<ScalarType, Symmetry, Name>& transform(Function&& function) & {
+      Tensor<ScalarType, Symmetry, Name, Allocator>& transform(Function&& function) & {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
             TAT_warning_or_error_when_copy_shared("Set tensor shared, copy happened here");
          }
-         for (auto& [_, block] : core->blocks) {
-            std::transform(block.begin(), block.end(), block.begin(), function);
-         }
+         std::transform(core->storage.begin(), core->storage.end(), core->storage.begin(), function);
          return *this;
       }
       template<typename Function>
-      Tensor<ScalarType, Symmetry, Name>&& transform(Function&& function) && {
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& transform(Function&& function) && {
          return std::move(transform(function));
       }
 
@@ -304,12 +311,12 @@ namespace TAT {
        * \see transform
        */
       template<typename Generator>
-      Tensor<ScalarType, Symmetry, Name>& set(Generator&& generator) & {
+      Tensor<ScalarType, Symmetry, Name, Allocator>& set(Generator&& generator) & {
          transform([&](ScalarType _) { return generator(); });
          return *this;
       }
       template<typename Generator>
-      Tensor<ScalarType, Symmetry, Name>&& set(Generator&& generator) && {
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& set(Generator&& generator) && {
          return std::move(set(generator));
       }
 
@@ -318,10 +325,10 @@ namespace TAT {
        * \return 张量自身
        * \see set
        */
-      Tensor<ScalarType, Symmetry, Name>& zero() & {
+      Tensor<ScalarType, Symmetry, Name, Allocator>& zero() & {
          return set([]() { return 0; });
       }
-      Tensor<ScalarType, Symmetry, Name>&& zero() && {
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& zero() && {
          return std::move(zero());
       }
 
@@ -330,14 +337,14 @@ namespace TAT {
        * \return 张量自身
        * \see set
        */
-      Tensor<ScalarType, Symmetry, Name>& test(ScalarType first = 0, ScalarType step = 1) & {
+      Tensor<ScalarType, Symmetry, Name, Allocator>& test(ScalarType first = 0, ScalarType step = 1) & {
          return set([&first, step]() {
             auto result = first;
             first += step;
             return result;
          });
       }
-      Tensor<ScalarType, Symmetry, Name>&& test(ScalarType first = 0, ScalarType step = 1) && {
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& test(ScalarType first = 0, ScalarType step = 1) && {
          return std::move(test(first, step));
       }
 
@@ -380,28 +387,26 @@ namespace TAT {
        * \return 转换后的张量
        */
       template<typename OtherScalarType, typename = std::enable_if_t<is_scalar_v<OtherScalarType>>>
-      [[nodiscard]] Tensor<OtherScalarType, Symmetry, Name> to() const {
+      [[nodiscard]] Tensor<OtherScalarType, Symmetry, Name, Allocator> to() const {
          if constexpr (std::is_same_v<ScalarType, OtherScalarType>) {
-            auto result = Tensor<ScalarType, Symmetry, Name>{};
+            auto result = Tensor<ScalarType, Symmetry, Name, Allocator>{};
             result.names = names;
             result.name_to_index = name_to_index;
             result.core = core;
             return result;
          } else {
-            auto result = Tensor<OtherScalarType, Symmetry, Name>{};
+            auto result = Tensor<OtherScalarType, Symmetry, Name, Allocator>{};
             result.names = names;
             result.name_to_index = name_to_index;
-            result.core = std::make_shared<Core<OtherScalarType, Symmetry>>();
-            result.core->edges = core->edges;
-            for (const auto& [symmetries, block] : core->blocks) {
-               auto [iterator, success] = result.core->blocks.emplace(symmetries, block.size());
-               auto& this_block = iterator->second;
-               for (Size i = 0; i < block.size(); i++) {
-                  if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
-                     this_block[i] = OtherScalarType(block[i].real());
-                  } else {
-                     this_block[i] = OtherScalarType(block[i]);
-                  }
+            result.core = std::make_shared<Core<OtherScalarType, Symmetry>>(core->edges);
+            const ScalarType* __restrict y = core->storage.data();
+            OtherScalarType* __restrict x = result.core->storage.data();
+            const auto size = core->storage.size();
+            for (Size i = 0; i < size; i++) {
+               if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
+                  x[i] = OtherScalarType(y[i].real());
+               } else {
+                  x[i] = OtherScalarType(y[i]);
                }
             }
             return result;
@@ -417,30 +422,24 @@ namespace TAT {
       [[nodiscard]] real_base_t<ScalarType> norm() const {
          real_base_t<ScalarType> result = 0;
          if constexpr (p == -1) {
-            for (const auto& [_, block] : core->blocks) {
-               for (const auto& number : block) {
-                  if (auto absolute_value = std::abs(number); absolute_value > result) {
-                     result = absolute_value;
-                  }
+            for (const auto& number : core->storage) {
+               if (auto absolute_value = std::abs(number); absolute_value > result) {
+                  result = absolute_value;
                }
             }
          } else if constexpr (p == 0) {
-            for (const auto& [_, block] : core->blocks) {
-               result += real_base_t<ScalarType>(block.size());
-            }
+            result += real_base_t<ScalarType>(core->storage.size());
          } else {
-            for (const auto& [_, block] : core->blocks) {
-               for (const auto& number : block) {
-                  if constexpr (p == 1) {
-                     result += std::abs(number);
-                  } else if constexpr (p == 2) {
-                     result += std::norm(number);
+            for (const auto& number : core->storage) {
+               if constexpr (p == 1) {
+                  result += std::abs(number);
+               } else if constexpr (p == 2) {
+                  result += std::norm(number);
+               } else {
+                  if constexpr (p % 2 == 0 && is_real_v<ScalarType>) {
+                     result += std::pow(number, p);
                   } else {
-                     if constexpr (p % 2 == 0 && is_real_v<ScalarType>) {
-                        result += std::pow(number, p);
-                     } else {
-                        result += std::pow(std::abs(number), p);
-                     }
+                     result += std::pow(std::abs(number), p);
                   }
                }
             }
@@ -465,14 +464,15 @@ namespace TAT {
        * \note 本函数对转置外不标准的腿的输入是脆弱的
        */
       template<
+            template<typename> class ResultAllocator = Allocator,
             typename MapNameName = pmr::map<Name, Name>,
-            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, edge_map_t<Symmetry>>>>,
             typename SetName1 = pmr::set<Name>,
             typename MapNameVectorName = pmr::map<Name, std::vector<Name>>,
             typename VectorName = pmr::vector<Name>,
             typename SetName2 = pmr::set<Name>,
             typename MapNameMapSymmetrySize = pmr::map<Name, std::map<Symmetry, Size>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, ResultAllocator> edge_operator(
             const MapNameName& rename_map,
             const MapNameVectorNameAndEdge& split_map,
             const SetName1& reversed_name,
@@ -497,7 +497,7 @@ namespace TAT {
        * \return 转置后的结果张量
        */
       template<typename VectorName = pmr::vector<Name>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(const VectorName& target_names) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> transpose(const VectorName& target_names) const;
 
       /**
        * 将费米张量的一些边进行反转
@@ -507,7 +507,7 @@ namespace TAT {
        * \return 反转后的结果张量
        */
       template<typename SetName1 = pmr::set<Name>, typename SetName2 = pmr::set<Name>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
       reverse_edge(const SetName1& reversed_name, bool apply_parity = false, SetName2&& parity_exclude_name = {}) const;
 
       /**
@@ -520,7 +520,7 @@ namespace TAT {
        * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
        */
       template<typename MapNameVectorName = pmr::map<Name, std::vector<Name>>, typename SetName = pmr::set<Name>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> merge_edge(
             MapNameVectorName merge,
             bool apply_parity = false,
             SetName&& parity_exclude_name_merge = {},
@@ -534,9 +534,9 @@ namespace TAT {
        * \return 分裂边后的结果张量
        */
       template<
-            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>>,
+            typename MapNameVectorNameAndEdge = pmr::map<Name, std::vector<std::tuple<Name, edge_map_t<Symmetry>>>>,
             typename SetName = pmr::set<Name>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
       split_edge(MapNameVectorNameAndEdge split, bool apply_parity = false, SetName&& parity_exclude_name_split = {}) const;
 
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
@@ -548,18 +548,18 @@ namespace TAT {
        * \return 缩并后的张量
        */
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
-            const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-            const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name, Allocator> contract(
+            const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+            const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
             SetNameAndName&& contract_names);
 
       template<typename ScalarType1, typename ScalarType2, typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
       [[nodiscard]] static auto contract(
-            const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
-            const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
+            const Tensor<ScalarType1, Symmetry, Name, Allocator>& tensor_1,
+            const Tensor<ScalarType2, Symmetry, Name, Allocator>& tensor_2,
             SetNameAndName&& contract_names) {
          using ResultScalarType = std::common_type_t<ScalarType1, ScalarType2>;
-         using ResultTensor = Tensor<ResultScalarType, Symmetry, Name>;
+         using ResultTensor = Tensor<ResultScalarType, Symmetry, Name, Allocator>;
          if constexpr (std::is_same_v<ResultScalarType, ScalarType1>) {
             if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
                return ResultTensor::contract(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
@@ -579,7 +579,7 @@ namespace TAT {
       }
 
       template<typename OtherScalarType, typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, SetNameAndName&& contract_names) const {
+      [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name, Allocator>& tensor_2, SetNameAndName&& contract_names) const {
          return contract(*this, tensor_2, std::forward<SetNameAndName>(contract_names));
       }
 
@@ -588,7 +588,8 @@ namespace TAT {
        * \param other 另一个张量
        * \return 缩并后的结果
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge(const Tensor<ScalarType, Symmetry, Name>& other) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
+      contract_all_edge(const Tensor<ScalarType, Symmetry, Name, Allocator>& other) const {
          auto pmr_guard = scope_resource<1 << 10>();
          // other不含有的边会在contract中自动删除
          auto contract_names = pmr::set<std::tuple<Name, Name>>();
@@ -602,7 +603,7 @@ namespace TAT {
        * 张量与自己的共轭进行尽可能的缩并
        * \return 缩并后的结果
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge() const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> contract_all_edge() const {
          return contract_all_edge(conjugate());
       }
 
@@ -611,10 +612,10 @@ namespace TAT {
        * \param pairs 看作矩阵时边的配对方案
        */
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      Tensor<ScalarType, Symmetry, Name>& identity(const SetNameAndName& pairs) &;
+      Tensor<ScalarType, Symmetry, Name, Allocator>& identity(const SetNameAndName& pairs) &;
 
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      Tensor<ScalarType, Symmetry, Name>&& identity(const SetNameAndName& pairs) && {
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& identity(const SetNameAndName& pairs) && {
          return std::move(identity(pairs));
       }
 
@@ -624,22 +625,22 @@ namespace TAT {
        * \param step 迭代步数
        */
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const SetNameAndName& pairs, int step = 2) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> exponential(const SetNameAndName& pairs, int step = 2) const;
 
       /**
        * 生成张量的共轭张量
        * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> conjugate() const;
 
       template<typename SetNameAndName = pmr::set<std::tuple<Name, Name>>>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const SetNameAndName& trace_names) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> trace(const SetNameAndName& trace_names) const;
 
       using SingularType =
 #ifdef TAT_USE_SINGULAR_MATRIX
-            Tensor<ScalarType, Symmetry, Name>
+            Tensor<ScalarType, Symmetry, Name, Allocator>
 #else
-            Singular<ScalarType, Symmetry, Name>
+            Singular<ScalarType, Symmetry, Name, Allocator>
 #endif
             ;
       /**
@@ -647,17 +648,17 @@ namespace TAT {
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
       struct svd_result {
-         Tensor<ScalarType, Symmetry, Name> U;
+         Tensor<ScalarType, Symmetry, Name, Allocator> U;
          SingularType S;
-         Tensor<ScalarType, Symmetry, Name> V;
+         Tensor<ScalarType, Symmetry, Name, Allocator> V;
       };
 
       /**
        * 张量qr的结果类型
        */
       struct qr_result {
-         Tensor<ScalarType, Symmetry, Name> Q;
-         Tensor<ScalarType, Symmetry, Name> R;
+         Tensor<ScalarType, Symmetry, Name, Allocator> Q;
+         Tensor<ScalarType, Symmetry, Name, Allocator> R;
       };
 
       /**
@@ -668,7 +669,8 @@ namespace TAT {
        * \param division 如果为真, 则进行除法而不是乘法
        * \return 缩并的结果
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> multiple(const SingularType& S, const Name& name, char direction, bool division = false) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
+      multiple(const SingularType& S, const Name& name, char direction, bool division = false) const;
 
       /**
        * 对张量进行svd分解
@@ -712,7 +714,8 @@ namespace TAT {
       [[deprecated("TAT::Tensor::receive deprecated, and will be removed in v0.2.0, use TAT::mpi.receive instead")]] static Tensor<
             ScalarType,
             Symmetry,
-            Name>
+            Name,
+            Allocator>
       receive(int source);
       /**
        * 像简单类型一样使用mpi但send和receive, 调用后, 一个destination返回source调用时输入tensor, 其他进程返回空张量
@@ -720,19 +723,27 @@ namespace TAT {
       [[deprecated("TAT::Tensor::send_receive deprecated, and will be removed in v0.2.0, use TAT::mpi.send_receive instead")]] Tensor<
             ScalarType,
             Symmetry,
-            Name>
+            Name,
+            Allocator>
       send_receive(int source, int destination) const;
       /**
        * 从root进程分发张量, 使用简单的树形分发, 必须所有进程一起调用这个函数
        */
-      [[deprecated(
-            "TAT::Tensor::broadcast deprecated, and will be removed in v0.2.0, use TAT::mpi.broadcast instead")]] Tensor<ScalarType, Symmetry, Name>
+      [[deprecated("TAT::Tensor::broadcast deprecated, and will be removed in v0.2.0, use TAT::mpi.broadcast instead")]] Tensor<
+            ScalarType,
+            Symmetry,
+            Name,
+            Allocator>
       broadcast(int root) const;
       /**
        * 向root进程reduce张量, 使用简单的树形reduce, 必须所有进程一起调用这个函数, 最后root进程返回全部reduce的结果, 其他进程为中间结果一般无意义
        */
       template<typename Func>
-      [[deprecated("TAT::Tensor::reduce deprecated, and will be removed in v0.2.0, use TAT::mpi.reduce instead")]] Tensor<ScalarType, Symmetry, Name>
+      [[deprecated("TAT::Tensor::reduce deprecated, and will be removed in v0.2.0, use TAT::mpi.reduce instead")]] Tensor<
+            ScalarType,
+            Symmetry,
+            Name,
+            Allocator>
       reduce(int root, Func&& function) const;
       /**
        * mpi进程间同步
@@ -741,21 +752,22 @@ namespace TAT {
       /*
        * 对各个进程但张量通过求和进行reduce
        */
-      [[deprecated("TAT::Tensor::summary deprecated, and will be removed in v0.2.0, use reduce directly")]] Tensor<ScalarType, Symmetry, Name>
+      [[deprecated(
+            "TAT::Tensor::summary deprecated, and will be removed in v0.2.0, use reduce directly")]] Tensor<ScalarType, Symmetry, Name, Allocator>
       summary(const int root) const {
          return reduce(root, [](const auto& tensor_1, const auto& tensor_2) { return tensor_1 + tensor_2; });
       };
 #endif
 
-      const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;
-      const Tensor<ScalarType, Symmetry, Name>& data_put(std::ostream&) const;
-      Tensor<ScalarType, Symmetry, Name>& meta_get(std::istream&);
-      Tensor<ScalarType, Symmetry, Name>& data_get(std::istream&);
+      const Tensor<ScalarType, Symmetry, Name, Allocator>& meta_put(std::ostream&) const;
+      const Tensor<ScalarType, Symmetry, Name, Allocator>& data_put(std::ostream&) const;
+      Tensor<ScalarType, Symmetry, Name, Allocator>& meta_get(std::istream&);
+      Tensor<ScalarType, Symmetry, Name, Allocator>& data_get(std::istream&);
 
       [[nodiscard]] std::string show() const;
       [[nodiscard]] std::string dump() const;
-      Tensor<ScalarType, Symmetry, Name>& load(const std::string&) &;
-      Tensor<ScalarType, Symmetry, Name>&& load(const std::string& string) && {
+      Tensor<ScalarType, Symmetry, Name, Allocator>& load(const std::string&) &;
+      Tensor<ScalarType, Symmetry, Name, Allocator>&& load(const std::string& string) && {
          return std::move(load(string));
       };
    };
@@ -768,9 +780,9 @@ namespace TAT {
    }
 
    /// \private
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    struct TensorShape {
-      Tensor<ScalarType, Symmetry, Name>* owner;
+      Tensor<ScalarType, Symmetry, Name, Allocator>* owner;
    };
 
    // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
@@ -779,23 +791,23 @@ namespace TAT {
    // 上一次split可以和下一次的merge合并
    // 比较重要， 可以大幅减少对称性张量的分块
    /*
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    struct QuasiTensor {
-      Tensor<ScalarType, Symmetry, Name> tensor;
-      std::map<Name, std::vector<std::tuple<Name, BoseEdge<Symmetry>>>> split_map;
+      Tensor<ScalarType, Symmetry, Name, Allocator> tensor;
+      std::map<Name, std::vector<std::tuple<Name, edge_map_t<Symmetry>>>> split_map;
       std::set<Name> reversed_set;
       std::vector<Name> res_name;
 
       QuasiTensor
 
-      operator Tensor<ScalarType, Symmetry, Name>() && {
+      operator Tensor<ScalarType, Symmetry, Name, Allocator>() && {
          return tensor.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
       }
-      operator Tensor<ScalarType, Symmetry, Name>() const& {
+      operator Tensor<ScalarType, Symmetry, Name, Allocator>() const& {
          return tensor.edge_operator({}, split_map, reversed_set, {}, res_name);
       }
 
-      Tensor<ScalarType, Symmetry, Name> merge_again(
+      Tensor<ScalarType, Symmetry, Name, Allocator> merge_again(
             const std::set<Name>& merge_reversed_set,
             const std::map<Name, std::vector<Name>>& merge_map,
             std::vector<Name>&& merge_res_name,
@@ -811,7 +823,7 @@ namespace TAT {
                false,
                {{{}, split_parity_mark, {}, merge_parity_mark}});
       }
-      QuasiTensor<ScalarType, Symmetry, Name>
+      QuasiTensor<ScalarType, Symmetry, Name, Allocator>
    };
    */
 

@@ -274,34 +274,35 @@ namespace TAT {
    /**@}*/
 
 #ifdef TAT_USE_MPI
-   template<typename ScalarType, typename Symmetry, typename Name>
-   void Tensor<ScalarType, Symmetry, Name>::send(const int destination) const {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   void Tensor<ScalarType, Symmetry, Name, Allocator>::send(const int destination) const {
       mpi.send(*this, destination);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::receive(const int source) {
-      return mpi.receive<Tensor<ScalarType, Symmetry, Name>>(source);
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::receive(const int source) {
+      return mpi.receive<Tensor<ScalarType, Symmetry, Name, Allocator>>(source);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::send_receive(const int source, const int destination) const {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::send_receive(const int source, const int destination) const {
       return mpi.send_receive(*this, source, destination);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::broadcast(const int root) const {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::broadcast(const int root) const {
       return mpi.broadcast(*this, root);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename Func>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::reduce(const int root, Func&& function) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::reduce(const int root, Func&& function) const {
       return mpi.reduce(*this, root, function);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
-   void Tensor<ScalarType, Symmetry, Name>::barrier() {
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
+   void Tensor<ScalarType, Symmetry, Name, Allocator>::barrier() {
       mpi.barrier();
    }
 #endif

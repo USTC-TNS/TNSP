@@ -38,8 +38,8 @@ namespace TAT {
    [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_2 = {"Internal", "2"};
 
    template<>
-   struct NameTraits<pss> : NameTraitsBase<pss> {
-      static constexpr name_out_operator<pss> print = net::operator<<;
+   struct NameTraits<pss> {
+      static constexpr name_out_operator_t<pss> print = net::operator<<;
    };
 } // namespace TAT
 

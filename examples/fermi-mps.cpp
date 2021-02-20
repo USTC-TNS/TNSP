@@ -52,8 +52,8 @@ struct MPS {
    void update(int time, double delta_t, int step) {
       static const auto identity = [&]() {
          auto res = hamiltonian.same_shape().zero();
-         for (TAT::Fermi i = 0; i < 2; i++) {
-            for (TAT::Fermi j = 0; j < 2; j++) {
+         for (TAT::U1 i = 0; i < 2; i++) {
+            for (TAT::U1 j = 0; j < 2; j++) {
                res.block({{"I0", -i}, {"O0", i}, {"I1", -j}, {"O1", j}})[0] = 1;
             }
          }

@@ -209,7 +209,7 @@ namespace TAT {
          // XXX   X  XXX    XQQ
          // XXX = XX XXX -> XXQ
          int result;
-         auto tau = vector<ScalarType>(min);
+         auto tau = pmr::content_vector<ScalarType>(min);
          const int lwork_query = -1;
          ScalarType float_lwork;
          gelqf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
@@ -217,7 +217,7 @@ namespace TAT {
             TAT_error("Error in LQ");
          }
          const int lwork = to_int(float_lwork);
-         auto work = vector<ScalarType>(lwork);
+         auto work = pmr::content_vector<ScalarType>(lwork);
          gelqf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
             TAT_error("Error in LQ");
@@ -249,7 +249,7 @@ namespace TAT {
          // XXX   XX XXX    XXX
          // XXX = XX  XX -> QXX
          int result;
-         auto tau = vector<ScalarType>(min);
+         auto tau = pmr::content_vector<ScalarType>(min);
          const int lwork_query = -1;
          ScalarType float_lwork;
          geqrf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
@@ -257,7 +257,7 @@ namespace TAT {
             TAT_error("Error in LQ");
          }
          const int lwork = to_int(float_lwork);
-         auto work = vector<ScalarType>(lwork);
+         auto work = pmr::content_vector<ScalarType>(lwork);
          geqrf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
          if (result != 0) {
             TAT_error("Error in QR");
@@ -297,9 +297,9 @@ namespace TAT {
       // 有时可能多转置一下更快，参见svd中的做法
       // 经过初步测试m > n看起来最好
       if (m > n) {
-         auto new_data = vector<ScalarType>(n * m);
-         auto old_data_1 = vector<ScalarType>(n * min);
-         auto old_data_2 = vector<ScalarType>(min * m);
+         auto new_data = pmr::content_vector<ScalarType>(n * m);
+         auto old_data_1 = pmr::content_vector<ScalarType>(n * min);
+         auto old_data_2 = pmr::content_vector<ScalarType>(min * m);
          matrix_transpose(m, n, data, new_data.data());
          calculate_qr_kernel(n, m, min, max, new_data.data(), old_data_1.data(), old_data_2.data(), !use_qr_not_lq);
          matrix_transpose(n, min, old_data_1.data(), data_2);
@@ -310,15 +310,15 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetName>
-   typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr(
+   typename Tensor<ScalarType, Symmetry, Name, Allocator>::qr_result Tensor<ScalarType, Symmetry, Name, Allocator>::qr(
          char free_name_direction,
          const SetName& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
       auto timer_guard = qr_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -340,8 +340,8 @@ namespace TAT {
       auto reversed_set_origin = pmr::set<Name>();
       auto result_name_1 = pmr::vector<Name>();
       auto result_name_2 = pmr::vector<Name>();
-      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
-      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
+      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
+      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
       free_name_1.reserve(rank);
       free_name_2.reserve(rank);
       result_name_1.reserve(rank + 1);
@@ -388,7 +388,7 @@ namespace TAT {
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
-      auto tensor_merged = edge_operator(
+      auto tensor_merged = edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_origin,
@@ -404,10 +404,10 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name, Allocator>{
             {InternalName<Name>::QR_1, use_qr_not_lq ? common_name_q : common_name_r},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name, Allocator>{
             {use_qr_not_lq ? common_name_r : common_name_q, InternalName<Name>::QR_2},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       for (auto& [symmetries, block] : tensor_merged.core->blocks) {
@@ -429,15 +429,17 @@ namespace TAT {
       if constexpr (is_fermi) {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
-      auto new_tensor_1 = tensor_1.edge_operator(
+      auto new_tensor_1 = tensor_1.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
+                  {InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
             {},
             result_name_1);
-      auto new_tensor_2 = tensor_2.edge_operator(
+      auto new_tensor_2 = tensor_2.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
+                  {InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
             reversed_set_2,
             {},
             result_name_2,

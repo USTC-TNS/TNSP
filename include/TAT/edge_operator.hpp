@@ -29,21 +29,13 @@
 namespace TAT {
    template<typename Vector1, typename Vector2>
    bool is_same_vector(const Vector1& vector1, const Vector2& vector2) {
-      auto size1 = vector1.size();
-      auto size2 = vector2.size();
-      if (size1 != size2) {
-         return false;
-      }
-      for (auto i = 1; i < size1; i++) {
-         if (vector1[i] != vector2[i]) {
-            return false;
-         }
-      }
-      return true;
+      return std::equal(vector1.begin(), vector1.end(), vector2.begin(), vector2.end());
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<
+         template<typename>
+         class ResultAllocator,
          typename MapNameName,
          typename MapNameVectorNameAndEdge,
          typename SetName1,
@@ -51,7 +43,7 @@ namespace TAT {
          typename VectorName,
          typename SetName2,
          typename MapNameMapSymmetrySize>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::edge_operator(
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, ResultAllocator> Tensor<ScalarType, Symmetry, Name, Allocator>::edge_operator(
          const MapNameName& rename_map,
          const MapNameVectorNameAndEdge& split_map,
          const SetName1& reversed_name,
@@ -61,7 +53,7 @@ namespace TAT {
          const std::array<SetName2, 4>& parity_exclude_name,
          const MapNameMapSymmetrySize& edge_and_symmetries_to_cut_before_all) const {
       auto timer_guard = transpose_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       // step 1: rename and cut
       // step 2: split
       // step 3: reverse
@@ -126,15 +118,17 @@ namespace TAT {
 
       // 1.2 检查是否不需要做任何操作 -> rename_edge
       // check no change
-      if (is_same_vector(name_before_split, new_names) && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
-          edge_and_symmetries_to_cut_before_all.empty()) {
-         // share the core
-         auto result = Tensor<ScalarType, Symmetry, Name>();
-         result.names = {new_names.begin(), new_names.end()};
-         result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
-         result.core = core; // 因为是rename edge所以不拷贝
-         // check_valid_name(result.names, result.core->edges.size());
-         return result;
+      if constexpr (std::is_same_v<Allocator<std::byte>, ResultAllocator<std::byte>>) {
+         if (is_same_vector(name_before_split, new_names) && split_map.empty() && reversed_name.empty() && merge_map.empty() &&
+             edge_and_symmetries_to_cut_before_all.empty()) {
+            // share the core
+            auto result = Tensor<ScalarType, Symmetry, Name, ResultAllocator>();
+            result.names = {new_names.begin(), new_names.end()};
+            result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
+            result.core = core; // 因为是rename edge所以不拷贝
+            // check_valid_name(result.names, result.core->edges.size());
+            return result;
+         }
       }
 
       auto real_edge_before_split = decltype(core->edges)();
@@ -296,7 +290,7 @@ namespace TAT {
       const auto& edge_before_transpose = is_fermi && !reversed_name.empty() ? fermi_edge_before_transpose : edge_after_split;
 
       // create res names
-      auto result = Tensor<ScalarType, Symmetry, Name>();
+      auto result = Tensor<ScalarType, Symmetry, Name, ResultAllocator>();
       result.names = {new_names.begin(), new_names.end()};
       result.name_to_index = construct_name_to_index<decltype(name_to_index)>(result.names);
 

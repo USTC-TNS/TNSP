@@ -28,77 +28,87 @@
 
 namespace TAT {
    /**
-    * \defgroup Miscellaneous
-    * @{
-    */
-   /**
-    * 用于不初始化的`vector`的`allocator`, 仅用于张量数据的存储
-    *
-    * \see vector
-    */
-   template<typename T>
-   struct allocator_without_initialize : std::allocator<T> {
-      template<typename U>
-      struct rebind {
-         using other = allocator_without_initialize<U>;
-      };
-
-      /**
-       * 初始化函数, 如果没有参数, 且类型T可以被平凡的析构, 则不做任何初始化操作, 否则进行正常的就地初始化
-       * \tparam Args 初始化的参数类型
-       * \param pointer 被初始化的值的地址
-       * \param arguments 初始化的参数
-       * \note c++20废弃了std::allocator<T>的construct, 但是c++20的行为是检测allocator是否有construct, 有则调用没有则自己construct, 所以没关系
-       */
-      template<typename... Args>
-      void construct([[maybe_unused]] T* pointer, Args&&... arguments) {
-         if constexpr (!((sizeof...(arguments) == 0) && (std::is_trivially_destructible_v<T>))) {
-            new (pointer) T(std::forward<Args>(arguments)...);
-         }
-      }
-
-      /**
-       * 对齐地分配内存, 对齐方式`lcm(1024, alignof(T))`
-       */
-      T* allocate(std::size_t n) {
-         constexpr auto align = std::align_val_t(std::lcm(1024, alignof(T)));
-         return (T*)operator new(n * sizeof(T), align);
-      }
-
-      /**
-       * 释放对齐分配的内存
-       */
-      void deallocate(T* p, std::size_t n) {
-         constexpr auto align = std::align_val_t(std::lcm(1024, alignof(T)));
-         operator delete(p, align);
-      }
-
-      allocator_without_initialize() = default;
-      template<typename U>
-      explicit allocator_without_initialize(allocator_without_initialize<U>) {}
-   };
-
-   /**
-    * 尽可能不做初始化的vector容器
-    * \see allocator_without_initialize
-    * \note 为了其他部分与stl兼容性, 仅在张量的数据处使用
-    */
-   template<typename T>
-   struct vector : std::vector<T, allocator_without_initialize<T>> {
-      using std::vector<T, allocator_without_initialize<T>>::vector;
-
-      vector(const std::vector<T>& other) : vector(other.begin(), other.end()) {}
-      operator std::vector<T>() const {
-         using Base = std::vector<T, allocator_without_initialize<T>>;
-         return std::vector<T>(Base::cbegin(), Base::cend());
-      }
-   };
-
-   /**@}*/
-   /**
     * \defgroup Tensor
     * @{
     */
+   template<typename ScalarType, typename Symmetry, template<typename> class Allocator = std::allocator>
+   struct core_edges_t {
+      using edge_type = Edge<Symmetry, Allocator>;
+      using edge_vector = std::vector<edge_type, Allocator<edge_type>>;
+
+      /**
+       * 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
+       * \see Edge
+       */
+      edge_vector edges = {};
+
+      template<typename VectorEdge = pmr::vector<Edge<Symmetry>>>
+      core_edges_t(const VectorEdge& initial_edge, [[maybe_unused]] const bool auto_reverse = false) :
+            edges(initial_edge.begin(), initial_edge.end()) {
+         // 自动翻转边
+         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            if (auto_reverse) {
+               for (auto& edge : edges) {
+                  edge.possible_reverse();
+               }
+            }
+         }
+      }
+   };
+
+   template<typename ScalarType, typename Symmetry, template<typename> class Allocator = std::allocator>
+   struct core_blocks_t {
+      using symmetry_vector = std::vector<Symmetry, Allocator<Symmetry>>;
+      using content_vector = pmr::content_vector<ScalarType>;
+
+      using normal_map =
+            std::map<symmetry_vector, content_vector, std::less<symmetry_vector>, Allocator<std::pair<const symmetry_vector, content_vector>>>;
+      using fake_block_map = fake_map<symmetry_vector, content_vector>;
+#ifdef TAT_USE_SIMPLE_NOSYMMETRY
+      using block_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
+#else
+      using block_map = normal_map;
+#endif
+
+      std::vector<ScalarType, Allocator<ScalarType>> storage;
+      monotonic_buffer_resource resource;
+
+      /**
+       * 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
+       * 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
+       */
+      block_map blocks = {};
+
+      template<typename SymmetriesList>
+      core_blocks_t(const SymmetriesList& symmetries_list) :
+            storage(std::accumulate(
+                  symmetries_list.begin(),
+                  symmetries_list.end(),
+                  0,
+                  [](const Size total_size, const auto& p) { return total_size + std::get<1>(p); })),
+            resource(storage.data(), storage.size() * sizeof(ScalarType)) {
+         for (const auto& [symmetries, size] : symmetries_list) {
+            blocks.emplace(symmetry_vector(symmetries.begin(), symmetries.end()), content_vector(size, &resource));
+         }
+      }
+
+      core_blocks_t() = delete;
+      core_blocks_t(const core_blocks_t& other) : storage(other.storage.size()), resource(storage.data(), storage.size() * sizeof(ScalarType)) {
+         for (const auto& [symmetries, block] : other.blocks) {
+            blocks.emplace(symmetries, content_vector(block, &resource));
+         }
+      }
+      // storage内容移动, 如果storage的Allocator比较糟糕, 标准库仍然保证storage自己的allocator会被移动到新的core中
+      // pmr resource原本不可以复制构造, TAT中增加了一个移动构造函数
+      core_blocks_t(core_blocks_t&& other) : storage(std::move(other.storage)), resource(std::move(other.resource)) {
+         for (const auto& [symmetries, block] : other.blocks) {
+            // storage已经被移动, 只需要按照原来的顺序创建vector, 内容会自动填充
+            blocks.emplace(symmetries, content_vector(block.size(), &resource));
+         }
+      }
+      core_blocks_t& operator=(const core_blocks_t&) = delete;
+      core_blocks_t& operator=(core_blocks_t&&) = delete;
+   };
 
    /**
     * 记录了张量的核心数据的类型, 核心数据指的是除了角标名称之外的信息, 包括边的形状, 以及张量内本身的数据
@@ -106,26 +116,11 @@ namespace TAT {
     * \tparam Symmetry 张量所拥有的对称性
     * \note Core的存在是为了让边的名称的重命名节省时间
     */
-   template<typename ScalarType, typename Symmetry>
-   struct Core {
-      /**
-       * 张量的形状, 是边的形状的列表, 列表长度为张量的秩, 每个边是一个对称性值到子边长度的映射表
-       * \see Edge
-       */
-      std::vector<Edge<Symmetry>> edges = {};
-
-      using normal_map = std::map<std::vector<Symmetry>, vector<ScalarType>>;
-      using fake_block_map = fake_map<std::vector<Symmetry>, vector<ScalarType>>;
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY
-      using block_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
-#else
-      using block_map = normal_map;
-#endif
-      /**
-       * 张量内本身的数据, 是对称性列表到数据列表的映射表, 数据列表就是张量内本身的数据,
-       * 而对称性列表表示此子块各个子边在各自的边上所对应的对称性值
-       */
-      block_map blocks = {};
+   template<typename ScalarType, typename Symmetry, template<typename> class Allocator = std::allocator>
+   struct Core : core_edges_t<ScalarType, Symmetry, Allocator>, core_blocks_t<ScalarType, Symmetry, Allocator> {
+      using core_edges_t<ScalarType, Symmetry, Allocator>::edges;
+      using core_blocks_t<ScalarType, Symmetry, Allocator>::blocks;
+      using core_blocks_t<ScalarType, Symmetry, Allocator>::storage;
 
       /**
        * 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块
@@ -135,23 +130,12 @@ namespace TAT {
        * \note 将会自动删除不出现于数据中的对称性
        */
       template<typename VectorEdge = pmr::vector<Edge<Symmetry>>>
-      Core(const VectorEdge& initial_edge, [[maybe_unused]] const bool auto_reverse = false) : edges(initial_edge.begin(), initial_edge.end()) {
-         auto pmr_guard = scope_resource<1 << 10>();
-         // 自动翻转边
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            if (auto_reverse) {
-               for (auto& edge : edges) {
-                  edge.possible_reverse();
-               }
-            }
-         }
-         // 生成数据
-         auto symmetries_list = initialize_block_symmetries_with_check(edges);
-         for (auto& [symmetries, size] : symmetries_list) {
-            blocks[{symmetries.begin(), symmetries.end()}] = vector<ScalarType>(size);
-         }
+      Core(const VectorEdge& initial_edge, [[maybe_unused]] const bool auto_reverse = false) :
+            core_edges_t<ScalarType, Symmetry, Allocator>(initial_edge, auto_reverse),
+            core_blocks_t<ScalarType, Symmetry, Allocator>(initialize_block_symmetries_with_check(edges)) {
          // 删除不在block中用到的symmetry
          const Rank rank = edges.size();
+         auto pmr_guard = scope_resource<1 << 10>();
          auto edge_mark = pmr::vector<pmr::map<Symmetry, bool>>();
          edge_mark.reserve(rank);
          for (const auto& edge : edges) {
@@ -174,11 +158,11 @@ namespace TAT {
          }
       }
 
-      Core() = default;
+      Core() = delete;
       Core(const Core&) = default;
       Core(Core&&) = default;
-      Core& operator=(const Core&) = default;
-      Core& operator=(Core&&) = default;
+      Core& operator=(const Core&) = delete;
+      Core& operator=(Core&&) = delete;
       ~Core() = default;
    };
    /**@}*/

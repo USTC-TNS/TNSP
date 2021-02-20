@@ -57,11 +57,11 @@ namespace TAT {
       // AX=B
       // A: n*n
       // B: n*nrhs
-      vector<ScalarType> AT(n * n);
+      pmr::content_vector<ScalarType> AT(n * n);
       matrix_transpose(n, n, A, AT.data());
-      vector<ScalarType> BT(n * nrhs);
+      pmr::content_vector<ScalarType> BT(n * nrhs);
       matrix_transpose(n, nrhs, B, BT.data());
-      vector<int> ipiv(n);
+      pmr::content_vector<int> ipiv(n);
       int result;
       gesv<ScalarType>(&n, &nrhs, AT.data(), &n, ipiv.data(), BT.data(), &n, &result);
       if (result != 0) {
@@ -102,13 +102,13 @@ namespace TAT {
          A[i] *= parameter;
       }
       // D=I, N=I, X=I, c=1
-      vector<ScalarType> D(n * n);
+      pmr::content_vector<ScalarType> D(n * n);
       initialize_identity_matrix(D.data(), n);
-      vector<ScalarType> N(n * n);
+      pmr::content_vector<ScalarType> N(n * n);
       initialize_identity_matrix(N.data(), n);
-      vector<ScalarType> X1(n * n);
+      pmr::content_vector<ScalarType> X1(n * n);
       initialize_identity_matrix(X1.data(), n);
-      vector<ScalarType> X2(n * n);
+      pmr::content_vector<ScalarType> X2(n * n);
       ScalarType c = 1;
       // for k=1:q
       const ScalarType alpha = 1;
@@ -130,8 +130,8 @@ namespace TAT {
          }
       }
       // solve D@F=N for F
-      vector<ScalarType> F1(n * n);
-      vector<ScalarType> F2(n * n);
+      pmr::content_vector<ScalarType> F1(n * n);
+      pmr::content_vector<ScalarType> F2(n * n);
       auto* R = j == 0 ? F : F1.data();
       // D@R=N
       linear_solve<ScalarType>(n, D.data(), n, N.data(), R);
@@ -147,11 +147,12 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const SetNameAndName& pairs, int step) const {
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::exponential(const SetNameAndName& pairs, int step) const {
       auto timer_guard = exponential_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
 
       Rank rank = names.size();
       Rank half_rank = rank / 2;
@@ -160,7 +161,7 @@ namespace TAT {
       merge_1.resize(half_rank);
       auto& merge_2 = merge_map[InternalName<Name>::Exp_2];
       merge_2.resize(half_rank);
-      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>();
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>>();
       auto& split_1 = split_map_result[InternalName<Name>::Exp_1];
       split_1.resize(half_rank);
       auto& split_2 = split_map_result[InternalName<Name>::Exp_2];
@@ -230,14 +231,14 @@ namespace TAT {
             result_names.push_back(i);
          }
       }
-      auto tensor_merged = edge_operator({}, {}, reverse_set, merge_map, merged_names);
+      auto tensor_merged = edge_operator<polymorphic_allocator>({}, {}, reverse_set, merge_map, merged_names);
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = result.core->blocks.at(symmetries);
          auto n = tensor_merged.core->edges[0].map.at(symmetries[0]);
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
-      return result.edge_operator({}, split_map_result, reverse_set, {}, result_names);
+      return result.template edge_operator<Allocator>({}, split_map_result, reverse_set, {}, result_names);
    }
 } // namespace TAT
 #endif

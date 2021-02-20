@@ -24,12 +24,11 @@
 #include "tensor.hpp"
 
 namespace TAT {
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename MapNameName>
-   auto Tensor<ScalarType, Symmetry, Name>::edge_rename(const MapNameName& dictionary) const {
-      // too easy so not use edge_operator
+   auto Tensor<ScalarType, Symmetry, Name, Allocator>::edge_rename(const MapNameName& dictionary) const {
       using ResultName = typename MapNameName::mapped_type;
-      auto result = Tensor<ScalarType, Symmetry, ResultName>{};
+      auto result = Tensor<ScalarType, Symmetry, ResultName, Allocator>{};
       result.core = core;
       result.names.reserve(names.size());
       std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](const Name& name) {
@@ -48,23 +47,24 @@ namespace TAT {
       return result;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename VectorName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::transpose(const VectorName& target_names) const {
-      return edge_operator({}, {}, {}, {}, target_names);
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::transpose(const VectorName& target_names) const {
+      return edge_operator<Allocator>({}, {}, {}, {}, target_names);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetName1, typename SetName2>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::reverse_edge(const SetName1& reversed_name, const bool apply_parity, SetName2&& parity_exclude_name) const {
-      return edge_operator(
+   Tensor<ScalarType, Symmetry, Name, Allocator>
+   Tensor<ScalarType, Symmetry, Name, Allocator>::reverse_edge(const SetName1& reversed_name, const bool apply_parity, SetName2&& parity_exclude_name)
+         const {
+      return edge_operator<Allocator>(
             {}, {}, reversed_name, {}, names, apply_parity, std::array<SetName2, 4>{{{}, std::forward<SetName2>(parity_exclude_name), {}, {}}});
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename MapNameVectorName, typename SetName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::merge_edge(
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::merge_edge(
          MapNameVectorName merge,
          const bool apply_parity,
          SetName&& parity_exclude_name_merge,
@@ -112,7 +112,7 @@ namespace TAT {
          }
       }
       std::reverse(target_name.begin(), target_name.end());
-      return edge_operator(
+      return edge_operator<Allocator>(
             {},
             {},
             {},
@@ -122,11 +122,12 @@ namespace TAT {
             std::array<SetName, 4>{{{}, {}, std::forward<SetName>(parity_exclude_name_reverse), std::forward<SetName>(parity_exclude_name_merge)}});
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename MapNameVectorNameAndEdge, typename SetName>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::split_edge(MapNameVectorNameAndEdge split, const bool apply_parity, SetName&& parity_exclude_name_split)
-         const {
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::split_edge(
+         MapNameVectorNameAndEdge split,
+         const bool apply_parity,
+         SetName&& parity_exclude_name_split) const {
       auto pmr_guard = scope_resource<1 << 10>();
       // 删除不存在的边
       // 根据edge_operator中的操作, 这应该是多余的, 不在names中的元素会自动忽略
@@ -149,7 +150,7 @@ namespace TAT {
             target_name.push_back(n);
          }
       }
-      return edge_operator(
+      return edge_operator<Allocator>(
             {}, split, {}, {}, target_name, apply_parity, std::array<SetName, 4>{{std::forward<SetName>(parity_exclude_name_split), {}, {}, {}}});
    }
 } // namespace TAT

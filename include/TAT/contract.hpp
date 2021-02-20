@@ -265,27 +265,27 @@ namespace TAT {
 #endif
 
    /// \private
-   template<typename ScalarType, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, NoSymmetry, Name, Allocator> contract_with_fuse(
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names);
 
    /// \private
-   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name, Allocator> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names);
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::contract(
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
          SetNameAndName&& contract_names) {
       auto timer_guard = contract_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          return contract_with_fuse(tensor_1, tensor_2, std::forward<SetNameAndName>(contract_names));
       } else {
@@ -293,10 +293,10 @@ namespace TAT {
       }
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, Symmetry, Name, Allocator> contract_without_fuse(
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names) {
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
@@ -335,9 +335,9 @@ namespace TAT {
       if constexpr (is_no_symmetry) {
          edge_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       }
-      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry>>>>(); // split方案
-      auto reversed_set_result = pmr::set<Name>();                                                 // 最后split时的反转标
-      auto name_result = pmr::vector<Name>();                                                      // 最后split后的name
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>>(); // split方案
+      auto reversed_set_result = pmr::set<Name>();                                                   // 最后split时的反转标
+      auto name_result = pmr::vector<Name>();                                                        // 最后split后的name
       name_result.reserve(rank_1 + rank_2 - 2 * common_rank);
       split_map_result[InternalName<Name>::Contract_1].reserve(rank_1 - common_rank);
       split_map_result[InternalName<Name>::Contract_2].reserve(rank_2 - common_rank);
@@ -488,7 +488,7 @@ namespace TAT {
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
       auto common_name_1_set = pmr::set<Name>(common_name_1.begin(), common_name_1.end());
-      auto tensor_1_merged = tensor_1.edge_operator(
+      auto tensor_1_merged = tensor_1.template edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_1,
@@ -499,7 +499,7 @@ namespace TAT {
             false,
             std::array<pmr::set<Name>, 4>{{{}, std::move(common_name_1_set), {}, {InternalName<Name>::Contract_2}}},
             delete_1);
-      auto tensor_2_merged = tensor_2.edge_operator(
+      auto tensor_2_merged = tensor_2.template edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_2,
@@ -511,19 +511,19 @@ namespace TAT {
             std::array<pmr::set<Name>, 4>{{{}, {}, {}, {}}},
             delete_2);
       // calculate_product
-      auto product_result = Tensor<ScalarType, Symmetry, Name>(
+      auto product_result = Tensor<ScalarType, Symmetry, Name, Allocator>(
             {InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             {std::move(tensor_1_merged.core->edges[!put_common_1_right]), std::move(tensor_2_merged.core->edges[!put_common_2_right])});
       // 因取了T1和T2的edge，所以会自动去掉merge后仍然存在的交错边
       auto common_edge = std::move(tensor_1_merged.core->edges[put_common_1_right]);
 
       auto max_batch_size = product_result.core->blocks.size();
-      vector<char> transpose_a_list(max_batch_size), transpose_b_list(max_batch_size);
-      vector<int> m_list(max_batch_size), n_list(max_batch_size), k_list(max_batch_size), lda_list(max_batch_size), ldb_list(max_batch_size),
-            ldc_list(max_batch_size);
-      vector<ScalarType> alpha_list(max_batch_size), beta_list(max_batch_size);
-      vector<const ScalarType*> a_list(max_batch_size), b_list(max_batch_size);
-      vector<ScalarType*> c_list(max_batch_size);
+      pmr::content_vector<char> transpose_a_list(max_batch_size), transpose_b_list(max_batch_size);
+      pmr::content_vector<int> m_list(max_batch_size), n_list(max_batch_size), k_list(max_batch_size), lda_list(max_batch_size),
+            ldb_list(max_batch_size), ldc_list(max_batch_size);
+      pmr::content_vector<ScalarType> alpha_list(max_batch_size), beta_list(max_batch_size);
+      pmr::content_vector<const ScalarType*> a_list(max_batch_size), b_list(max_batch_size);
+      pmr::content_vector<ScalarType*> c_list(max_batch_size);
       int batch_size = 0;
 
       for (auto& [symmetries, data] : product_result.core->blocks) {
@@ -538,7 +538,7 @@ namespace TAT {
          ScalarType alpha = 1;
          if constexpr (is_fermi) {
             // 因为并非标准- + - -产生的符号
-            if ((put_common_2_right ^ !put_common_1_right) && bool(symmetries[0].fermi % 2)) {
+            if ((put_common_2_right ^ !put_common_1_right) && symmetries[0].get_total_parity()) {
                alpha = -1;
             }
          }
@@ -578,20 +578,21 @@ namespace TAT {
             ldc_list.data(),
             batch_size);
 
-      if constexpr (is_no_symmetry) {
-         auto result = Tensor<ScalarType, Symmetry, Name>{name_result, edge_result};
+      if constexpr (is_no_symmetry && false) {
+         // TODO move data check between allocator
+         auto result = Tensor<ScalarType, Symmetry, Name, Allocator>{name_result, edge_result};
          result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
          return result;
       } else {
-         auto result = product_result.edge_operator({}, split_map_result, reversed_set_result, {}, std::move(name_result));
+         auto result = product_result.template edge_operator<Allocator>({}, split_map_result, reversed_set_result, {}, std::move(name_result));
          return result;
       }
    }
 
-   template<typename ScalarType, typename Name, typename SetNameAndName>
-   Tensor<ScalarType, NoSymmetry, Name> contract_with_fuse(
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_1,
-         const Tensor<ScalarType, NoSymmetry, Name>& tensor_2,
+   template<typename ScalarType, typename Name, template<typename> class Allocator, typename SetNameAndName>
+   Tensor<ScalarType, NoSymmetry, Name, Allocator> contract_with_fuse(
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_1,
+         const Tensor<ScalarType, NoSymmetry, Name, Allocator>& tensor_2,
          SetNameAndName contract_names) {
       const Rank rank_1 = tensor_1.names.size();
       const Rank rank_2 = tensor_2.names.size();
@@ -728,7 +729,7 @@ namespace TAT {
 
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
-      auto tensor_1_merged = tensor_1.edge_operator(
+      auto tensor_1_merged = tensor_1.template edge_operator<polymorphic_allocator>(
             {},
             {},
             {},
@@ -738,7 +739,7 @@ namespace TAT {
                   {InternalName<Name>::Contract_0, fuse_names_list}},
             put_common_1_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1});
-      auto tensor_2_merged = tensor_2.edge_operator(
+      auto tensor_2_merged = tensor_2.template edge_operator<polymorphic_allocator>(
             {},
             {},
             {},
@@ -749,7 +750,7 @@ namespace TAT {
             put_common_2_right ? pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
                                  pmr::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2});
       // calculate_product
-      auto product_result = Tensor<ScalarType, NoSymmetry, Name>(
+      auto product_result = Tensor<ScalarType, NoSymmetry, Name, Allocator>(
             {InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             {std::move(tensor_1_merged.core->edges[0]),
              std::move(tensor_1_merged.core->edges[1 + !put_common_1_right]),
@@ -795,7 +796,7 @@ namespace TAT {
          std::fill(result_vector.begin(), result_vector.end(), 0);
       }
 
-      auto result = Tensor<ScalarType, NoSymmetry, Name>{name_result, edge_result};
+      auto result = Tensor<ScalarType, NoSymmetry, Name, Allocator>{name_result, edge_result};
       result.core->blocks.begin()->second = std::move(product_result.core->blocks.begin()->second);
       return result;
    }

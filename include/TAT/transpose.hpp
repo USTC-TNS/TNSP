@@ -242,7 +242,7 @@ namespace TAT {
             }
             line_rank--;
          }
-         const auto const_expect_leading_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
+         const auto const_expect_leading_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
          std::visit(
                [&](const auto& const_expect_leading) {
                   tensor_transpose_kernel<ScalarType, parity, true>(
@@ -363,7 +363,7 @@ namespace TAT {
             }
             line_rank--;
          }
-         auto const_expect_leading_variant = to_const<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
+         auto const_expect_leading_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
          std::visit(
                [&](const auto& const_expect_leading) {
                   tensor_transpose_kernel<ScalarType, parity, true>(

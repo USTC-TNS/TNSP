@@ -94,11 +94,11 @@ int main(int argc, char** argv) {
             if (command == "save") {
                std::string file_name;
                std::cin >> file_name;
-               std::ofstream(file_name) < TAT::fast_name_dataset < exact_lattice;
+               std::ofstream(file_name) < TAT::fastname_dataset < exact_lattice;
             } else if (command == "open") {
                std::string file_name;
                std::cin >> file_name;
-               std::ifstream(file_name) > TAT::fast_name_dataset > exact_lattice;
+               std::ifstream(file_name) > TAT::fastname_dataset > exact_lattice;
             } else if (command == "new") {
                int M, N;
                square::Size d;
@@ -122,11 +122,11 @@ int main(int argc, char** argv) {
             if (command == "save") {
                std::string file_name;
                std::cin >> file_name;
-               std::ofstream(file_name) < TAT::fast_name_dataset < simple_update_lattice;
+               std::ofstream(file_name) < TAT::fastname_dataset < simple_update_lattice;
             } else if (command == "open") {
                std::string file_name;
                std::cin >> file_name;
-               std::ifstream(file_name) > TAT::fast_name_dataset > simple_update_lattice;
+               std::ifstream(file_name) > TAT::fastname_dataset > simple_update_lattice;
             } else if (command == "new") {
                int M, N;
                square::Size D, d;
@@ -157,11 +157,11 @@ int main(int argc, char** argv) {
             if (command == "save") {
                std::string file_name;
                std::cin >> file_name;
-               std::ofstream(file_name) < TAT::fast_name_dataset < sampling_gradient_lattice;
+               std::ofstream(file_name) < TAT::fastname_dataset < sampling_gradient_lattice;
             } else if (command == "open") {
                std::string file_name;
                std::cin >> file_name;
-               std::ifstream(file_name) > TAT::fast_name_dataset > sampling_gradient_lattice;
+               std::ifstream(file_name) > TAT::fastname_dataset > sampling_gradient_lattice;
             } else if (command == "new") {
                int M, N;
                square::Size D, Dc, d;

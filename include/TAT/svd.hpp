@@ -95,8 +95,8 @@ void zgesvd_(
 
 namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SingularValue>
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
    singular_to_tensor(const SingularValue& singular, const Name& singular_name_u, const Name& singular_name_v) {
       auto symmetries = pmr::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
@@ -108,7 +108,7 @@ namespace TAT {
          symmetries[0].arrow = false;
          symmetries[1].arrow = true;
       }
-      auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
+      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>({singular_name_u, singular_name_v}, std::move(symmetries));
       for (auto& [symmetries, data_destination] : result.core->blocks) {
          const auto& data_source = singular.at(symmetries[1]);
          auto dimension = data_source.size();
@@ -145,9 +145,9 @@ namespace TAT {
       auto kernel_guard = svd_kernel_guard();
       // 经过初步测试m > n比m < n和false要好, true是显然更糟糕的
       if (m > n) {
-         auto new_a = vector<ScalarType>(n * m);
-         auto old_u = vector<ScalarType>(n * min);
-         auto old_vt = vector<ScalarType>(min * m);
+         auto new_a = pmr::content_vector<ScalarType>(n * m);
+         auto old_u = pmr::content_vector<ScalarType>(n * min);
+         auto old_vt = pmr::content_vector<ScalarType>(min * m);
          // new_a = a^T
          // u s vt = a
          // vt^T s u^T = a^T
@@ -173,7 +173,7 @@ namespace TAT {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
       const int lwork = int(float_lwork);
-      auto work = vector<float>(lwork);
+      auto work = pmr::content_vector<float>(lwork);
       sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
       if (result != 0) {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
@@ -190,7 +190,7 @@ namespace TAT {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
       const int lwork = int(float_lwork);
-      auto work = vector<double>(lwork);
+      auto work = pmr::content_vector<double>(lwork);
       dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
       if (result != 0) {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
@@ -207,7 +207,7 @@ namespace TAT {
          float* s,
          std::complex<float>* vt) {
       int result;
-      auto rwork = vector<float>(5 * min);
+      auto rwork = pmr::content_vector<float>(5 * min);
       const int lwork_query = -1;
       std::complex<float> float_lwork;
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
@@ -215,7 +215,7 @@ namespace TAT {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
       const int lwork = int(float_lwork.real());
-      auto work = vector<std::complex<float>>(lwork);
+      auto work = pmr::content_vector<std::complex<float>>(lwork);
       cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
       if (result != 0) {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
@@ -232,7 +232,7 @@ namespace TAT {
          double* s,
          std::complex<double>* vt) {
       int result;
-      auto rwork = vector<double>(5 * min);
+      auto rwork = pmr::content_vector<double>(5 * min);
       const int lwork_query = -1;
       std::complex<double> float_lwork;
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
@@ -240,7 +240,7 @@ namespace TAT {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
       }
       const int lwork = int(float_lwork.real());
-      auto work = vector<std::complex<double>>(lwork);
+      auto work = pmr::content_vector<std::complex<double>>(lwork);
       zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
       if (result != 0) {
          TAT_warning_or_error_when_lapack_error("Error in GESVD");
@@ -248,9 +248,9 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name>
+   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    template<typename SetName>
-   typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd(
+   typename Tensor<ScalarType, Symmetry, Name, Allocator>::svd_result Tensor<ScalarType, Symmetry, Name, Allocator>::svd(
          const SetName& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
@@ -258,7 +258,7 @@ namespace TAT {
          const Name& singular_name_u,
          const Name& singular_name_v) const {
       auto timer_guard = svd_guard();
-      auto pmr_guard = scope_resource<>();
+      auto pmr_guard = scope_resource<default_buffer_size>();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
       constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
       const auto rank = names.size();
@@ -270,8 +270,8 @@ namespace TAT {
       auto reversed_set_origin = pmr::set<Name>();
       auto result_name_u = pmr::vector<Name>();
       auto result_name_v = pmr::vector<Name>();
-      auto free_names_and_edges_u = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
-      auto free_names_and_edges_v = pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>();
+      auto free_names_and_edges_u = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
+      auto free_names_and_edges_v = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
       free_name_u.reserve(rank);
       free_name_v.reserve(rank);
       result_name_u.reserve(rank + 1);
@@ -308,7 +308,7 @@ namespace TAT {
       }
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
-      auto tensor_merged = edge_operator(
+      auto tensor_merged = edge_operator<polymorphic_allocator>(
             {},
             {},
             reversed_set_origin,
@@ -328,13 +328,13 @@ namespace TAT {
          common_edge_1.map[sym[1]] = k;
          common_edge_2.map[sym[0]] = k;
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name, Allocator>{
             put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, common_name_u} : pmr::vector<Name>{InternalName<Name>::SVD_V, common_name_v},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name, Allocator>{
             put_v_right ? pmr::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : pmr::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = typename Singular<ScalarType, Symmetry, Name>::singular_map();
+      auto result_s = typename Singular<ScalarType, Symmetry, Name, Allocator>::singular_map();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.core->blocks.at(symmetries).data();
          auto* data_v = tensor_2.core->blocks.at(symmetries).data();
@@ -343,7 +343,8 @@ namespace TAT {
          const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
-         auto s = vector<real_base_t<ScalarType>>(k);
+         // TODO used in singular
+         auto s = std::vector<real_base_t<ScalarType>, Allocator<real_base_t<ScalarType>>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
@@ -397,18 +398,20 @@ namespace TAT {
          reversed_set_u.insert(common_name_u);
       }
       // 这里会自动cut
-      auto u = tensor_u.edge_operator(
+      auto u = tensor_u.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
+                  {InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
             {},
             result_name_u,
             false,
             std::array<pmr::set<Name>, 4>{{{}, put_v_right ? pmr::set<Name>{} : pmr::set<Name>{common_name_u}, {}, {}}},
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
-      auto v = tensor_v.edge_operator(
+      auto v = tensor_v.template edge_operator<Allocator>(
             {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, BoseEdge<Symmetry, true>>>>{{InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
+                  {InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,
             {},
             result_name_v,
@@ -418,7 +421,7 @@ namespace TAT {
       return {
             std::move(u),
 #ifdef TAT_USE_SINGULAR_MATRIX
-            singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v),
+            singular_to_tensor<ScalarType, Symmetry, Name, Allocator>(result_s, singular_name_u, singular_name_v),
 #else
             {std::move(result_s)},
 #endif
