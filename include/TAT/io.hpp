@@ -460,13 +460,16 @@ namespace TAT {
       in >> tensor.names;
       tensor.name_to_index = construct_name_to_index<std::map<Name, Rank>>(tensor.names);
       ignore_until(in, ':');
-      tensor.core = std::make_shared<Core<ScalarType, Symmetry>>();
-      in >> tensor.core->edges;
+      pmr::vector<Edge<Symmetry>> edges;
+      in >> edges;
+      tensor.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
       check_valid_name(tensor.names, tensor.core->edges.size());
       ignore_until(in, ':');
       if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
          // change begin();
-         in >> tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), NoSymmetry())];
+         auto& block = tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), NoSymmetry())];
+         block.clear(); // clear了vector，但是容量应该没有变
+         in >> block;
       } else {
          // core是刚刚创建的所以不需要clear blocks
          ignore_until(in, '{');
@@ -475,7 +478,9 @@ namespace TAT {
                std::vector<Symmetry> symmetries;
                in >> symmetries;
                ignore_until(in, ':');
-               in >> tensor.core->blocks[std::move(symmetries)];
+               auto& block = tensor.core->blocks[std::move(symmetries)];
+               block.clear();
+               in >> block;
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
@@ -551,11 +556,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    const Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::data_put(std::ostream& out) const {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         out < core->blocks.begin()->second;
-      } else {
-         out < core->blocks;
-      }
+      out < core->storage;
       return *this;
    }
 
@@ -593,20 +594,16 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::meta_get(std::istream& in) {
       in > names;
       name_to_index = construct_name_to_index<std::map<Name, Rank>>(names);
-      core = std::make_shared<Core<ScalarType, Symmetry>>();
-      in > core->edges;
+      pmr::vector<Edge<Symmetry>> edges;
+      in > edges;
+      core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
       check_valid_name(names, core->edges.size());
       return *this;
    }
 
    template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
    Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::data_get(std::istream& in) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         core->blocks.clear(); // vector的长度不一定相同, 所以还是要clear一下
-         in > core->blocks[std::vector<NoSymmetry>(names.size(), NoSymmetry())];
-      } else {
-         in > core->blocks;
-      }
+      in > core->storage;
       return *this;
    }
 
