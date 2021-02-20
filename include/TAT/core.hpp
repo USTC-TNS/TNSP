@@ -120,6 +120,7 @@ namespace TAT {
    struct Core : core_edges_t<ScalarType, Symmetry, Allocator>, core_blocks_t<ScalarType, Symmetry, Allocator> {
       using core_edges_t<ScalarType, Symmetry, Allocator>::edges;
       using core_blocks_t<ScalarType, Symmetry, Allocator>::blocks;
+      using core_blocks_t<ScalarType, Symmetry, Allocator>::storage;
 
       /**
        * 根据边的形状构造张量, 然后根据对称性条件自动构造张量的分块

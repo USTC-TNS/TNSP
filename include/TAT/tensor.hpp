@@ -210,7 +210,7 @@ namespace TAT {
        * \param number 秩为零的张量拥有的唯一一个元素的值
        */
       explicit Tensor(ScalarType number) : Tensor({}, {}) {
-         core->blocks.begin()->second.front() = number;
+         core->storage.front() = number;
       }
 
       /**
@@ -225,12 +225,12 @@ namespace TAT {
       one(ScalarType number, const VectorName& names_init, const VectorSymmetry& edge_symmetry = {}, const VectorArrow& edge_arrow = {}) {
          auto rank = names_init.size();
          auto result = Tensor(names_init, get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
-         result.core->blocks.begin()->second.front() = number;
+         result.core->storage.front() = number;
          return result;
       }
 
       [[nodiscard]] bool is_scalar() const {
-         return core->blocks.size() == 1 && core->blocks.begin()->second.size() == 1;
+         return core->storage.size() == 1;
       }
 
       /**
@@ -240,7 +240,7 @@ namespace TAT {
          if (!is_scalar()) {
             TAT_error("Try to get the only element of the tensor which contains more than one element");
          }
-         return core->blocks.begin()->second.front();
+         return core->storage.front();
       }
 
       using EdgePoint = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, Size, std::tuple<Symmetry, Size>>;
@@ -279,9 +279,7 @@ namespace TAT {
       template<typename Function>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator> map(Function&& function) const {
          auto result = same_shape();
-         for (auto& [symmetries, block] : core->blocks) {
-            std::transform(block.begin(), block.end(), result.core->blocks.at(symmetries).begin(), function);
-         }
+         std::transform(core->storage.begin(), core.storage.end(), result.core->storage.begin(), function);
          return result;
       }
 
@@ -298,9 +296,7 @@ namespace TAT {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
             TAT_warning_or_error_when_copy_shared("Set tensor shared, copy happened here");
          }
-         for (auto& [_, block] : core->blocks) {
-            std::transform(block.begin(), block.end(), block.begin(), function);
-         }
+         std::transform(core->storage.begin(), core->storage.end(), core->storage.begin(), function);
          return *this;
       }
       template<typename Function>
@@ -402,17 +398,15 @@ namespace TAT {
             auto result = Tensor<OtherScalarType, Symmetry, Name, Allocator>{};
             result.names = names;
             result.name_to_index = name_to_index;
-            result.core = std::make_shared<Core<OtherScalarType, Symmetry>>();
-            result.core->edges = core->edges;
-            for (const auto& [symmetries, block] : core->blocks) {
-               auto [iterator, success] = result.core->blocks.emplace(symmetries, block.size());
-               auto& this_block = iterator->second;
-               for (Size i = 0; i < block.size(); i++) {
-                  if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
-                     this_block[i] = OtherScalarType(block[i].real());
-                  } else {
-                     this_block[i] = OtherScalarType(block[i]);
-                  }
+            result.core = std::make_shared<Core<OtherScalarType, Symmetry>>(core->edges);
+            const ScalarType* __restrict y = core->storage.data();
+            OtherScalarType* __restrict x = result.core->storage.data();
+            const auto size = core->storage.size();
+            for (Size i = 0; i < size; i++) {
+               if constexpr (is_complex_v<ScalarType> && is_real_v<OtherScalarType>) {
+                  x[i] = OtherScalarType(y[i].real());
+               } else {
+                  x[i] = OtherScalarType(y[i]);
                }
             }
             return result;
@@ -428,30 +422,24 @@ namespace TAT {
       [[nodiscard]] real_base_t<ScalarType> norm() const {
          real_base_t<ScalarType> result = 0;
          if constexpr (p == -1) {
-            for (const auto& [_, block] : core->blocks) {
-               for (const auto& number : block) {
-                  if (auto absolute_value = std::abs(number); absolute_value > result) {
-                     result = absolute_value;
-                  }
+            for (const auto& number : core->storage) {
+               if (auto absolute_value = std::abs(number); absolute_value > result) {
+                  result = absolute_value;
                }
             }
          } else if constexpr (p == 0) {
-            for (const auto& [_, block] : core->blocks) {
-               result += real_base_t<ScalarType>(block.size());
-            }
+            result += real_base_t<ScalarType>(core->storage.size());
          } else {
-            for (const auto& [_, block] : core->blocks) {
-               for (const auto& number : block) {
-                  if constexpr (p == 1) {
-                     result += std::abs(number);
-                  } else if constexpr (p == 2) {
-                     result += std::norm(number);
+            for (const auto& number : core->storage) {
+               if constexpr (p == 1) {
+                  result += std::abs(number);
+               } else if constexpr (p == 2) {
+                  result += std::norm(number);
+               } else {
+                  if constexpr (p % 2 == 0 && is_real_v<ScalarType>) {
+                     result += std::pow(number, p);
                   } else {
-                     if constexpr (p % 2 == 0 && is_real_v<ScalarType>) {
-                        result += std::pow(number, p);
-                     } else {
-                        result += std::pow(std::abs(number), p);
-                     }
+                     result += std::pow(std::abs(number), p);
                   }
                }
             }
