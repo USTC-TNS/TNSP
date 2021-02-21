@@ -114,7 +114,7 @@ namespace TAT {
       }
 
    public:
-      self_t operator+(const self_t& other_symmetry) const& {
+      [[nodiscard]] self_t operator+(const self_t& other_symmetry) const& {
          return plus_symmetry(*this, other_symmetry, index_sequence());
       }
 
@@ -133,13 +133,13 @@ namespace TAT {
       }
 
    public:
-      self_t operator-() const& {
+      [[nodiscard]] self_t operator-() const& {
          return minus_symmetry(*this, index_sequence());
       }
 
    public:
       template<std::size_t Index>
-      bool get_item_parity() const {
+      [[nodiscard]] bool get_item_parity() const {
          if constexpr (is_fermi_item[Index]) {
             const auto quantum_number = std::get<Index>(*this);
             if constexpr (std::is_same_v<decltype(quantum_number), bool>) {
@@ -295,6 +295,7 @@ namespace TAT {
       template<std::size_t Head, std::size_t... Tail>
       auto loop_to_get_first_parity_item() const {
          if constexpr (is_fermi_item[Head]) {
+            // 可能需要具体的值，而不是仅仅奇偶
             return std::get<Head>(*this);
          } else {
             return loop_to_get_first_parity_item<Tail...>();
@@ -306,19 +307,19 @@ namespace TAT {
       }
 
    public:
-      auto get_first_parity() const {
+      [[nodiscard]] auto get_first_parity() const {
          return loop_to_get_first_parity(index_sequence());
       }
 
    private:
       template<std::size_t... Is>
-      auto loop_to_get_total_parity(std::index_sequence<Is...>) const {
+      bool loop_to_get_total_parity(std::index_sequence<Is...>) const {
          return (get_item_parity<Is>() ^ ...);
       }
 
    public:
       // TODO: 多个fermion时应该如何做?
-      auto get_total_parity() const {
+      [[nodiscard]] bool get_total_parity() const {
          return loop_to_get_total_parity(index_sequence());
       }
    };
