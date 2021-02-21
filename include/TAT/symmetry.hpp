@@ -55,6 +55,7 @@ namespace TAT {
    template<typename... T>
    struct symmetry_t : std::tuple<fermi_unwrap_t<T>...> {
    private:
+      static_assert((std::is_integral_v<fermi_unwrap_t<T>> && ...));
       using self_t = symmetry_t<T...>;
 
    public:
@@ -67,10 +68,10 @@ namespace TAT {
    private:
       template<typename... Args>
       base_tuple construct_base_tuple(const Args&... args) {
-         if constexpr (sizeof...(Args) == length) {
-            return base_tuple(args...);
-         } else {
+         if constexpr (sizeof...(Args) < length) {
             return construct_base_tuple(args..., 0);
+         } else {
+            return base_tuple(args...);
          }
       }
 

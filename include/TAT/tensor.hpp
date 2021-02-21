@@ -131,9 +131,9 @@ namespace TAT {
          typename Name = DefaultName,
          template<typename> class Allocator = std::allocator>
    struct Tensor {
-      using scalar_valid = std::enable_if_t<is_scalar_v<ScalarType>>;
-      using symmetry_valid = std::enable_if_t<is_symmetry_v<Symmetry>>;
-      using name_valid = std::enable_if_t<is_name_v<Name>>;
+      static_assert(is_scalar_v<ScalarType>);
+      static_assert(is_symmetry_v<Symmetry>);
+      static_assert(is_name_v<Name>);
       // TODO: private访问控制
 
       using scalar_t = ScalarType;
