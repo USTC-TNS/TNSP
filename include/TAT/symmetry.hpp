@@ -319,6 +319,7 @@ namespace TAT {
 
    public:
       // TODO: 多个fermion时应该如何做?
+      // 可能多个fermion时前面获取parity的部分都不对
       [[nodiscard]] bool get_total_parity() const {
          return loop_to_get_total_parity(index_sequence());
       }

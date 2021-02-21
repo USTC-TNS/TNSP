@@ -99,8 +99,8 @@ namespace TAT {
          }
       }
       // storage内容移动, 如果storage的Allocator比较糟糕, 标准库仍然保证storage自己的allocator会被移动到新的core中
-      // pmr resource原本不可以复制构造, TAT中增加了一个移动构造函数
-      core_blocks_t(core_blocks_t&& other) : storage(std::move(other.storage)), resource(std::move(other.resource)) {
+      // 原来的resource会deallocate storage，但是由于是初始buffer，并不会真的delete，所以没问题
+      core_blocks_t(core_blocks_t&& other) : storage(std::move(other.storage)), resource(storage.data(), storage.size() * sizeof(ScalarType)) {
          for (const auto& [symmetries, block] : other.blocks) {
             // storage已经被移动, 只需要按照原来的顺序创建vector, 内容会自动填充
             blocks.emplace(symmetries, content_vector(block.size(), &resource));

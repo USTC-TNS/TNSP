@@ -103,8 +103,7 @@ namespace TAT {
          increase_next_size_to(buffer_size);
       }
       monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
-      // 这个在标准库中不存在, 加上他使这个resource可以移动
-      monotonic_buffer_resource(monotonic_buffer_resource&&) = default;
+      // monotonic_buffer_resource(monotonic_buffer_resource&&) = default;
 
       void increase_next_size() {
          m_next_buffer_size = (std::size_t(-1) / 2 < m_next_buffer_size) ? std::size_t(-1) : m_next_buffer_size * 2;
