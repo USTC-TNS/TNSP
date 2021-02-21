@@ -18,13 +18,9 @@
 #include "PyTAT.hpp"
 
 namespace TAT {
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
-   void dealing_Tensor_##SCALARSHORT##SYM(                   \
-         py::module_& tensor_m,                              \
-         py::module_& block_m,                               \
-         const std::string& scalar_short_name,               \
-         const std::string& scalar_name,                     \
-         const std::string& symmetry_short_name);            \
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM)                                                                                     \
+   void dealing_Tensor_##SCALARSHORT##SYM(                                                                                                       \
+         py::module_& symmetry_m, const std::string& scalar_short_name, const std::string& scalar_name, const std::string& symmetry_short_name); \
    void dealing_MPI_##SCALARSHORT##SYM(py::class_<mpi_t>& py_mpi_t);
    TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
@@ -37,7 +33,6 @@ namespace TAT {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       tat_m.attr("information") = information;
-      auto internal_m = tat_m.def_submodule("_internal", "internal information of TAT");
       // random
       auto random_m = tat_m.def_submodule("random", "random for TAT");
       random_m.def("seed", &set_random_seed, "Set Random Seed");
@@ -66,7 +61,7 @@ namespace TAT {
             py::arg("stddev") = 1,
             "Get random normal real");
       // mpi
-      auto py_mpi_t = py::class_<mpi_t>(internal_m, "mpi_t", "several functions for MPI")
+      auto py_mpi_t = py::class_<mpi_t>(tat_m, "mpi_t", "several functions for MPI")
                             .def_readonly_static("enabled", &mpi_t::enabled)
                             .def_readonly("rank", &mpi_t::rank)
                             .def_readonly("size", &mpi_t::size)
@@ -115,55 +110,54 @@ namespace TAT {
             .def("__repr__", [](const DefaultName& name) { return "Name[" + static_cast<const std::string&>(name) + "]"; })
             .def("__str__", [](const DefaultName& name) { return static_cast<const std::string&>(name); });
 #endif
-      // symmetry
-      auto symmetry_m = internal_m.def_submodule("Symmetry", "All kinds of symmetries for TAT");
-      declare_symmetry<NoSymmetry>(symmetry_m, "No").def(py::init<>());
-      declare_symmetry<Z2Symmetry>(symmetry_m, "Z2")
+      auto No_m = tat_m.def_submodule("No");
+      declare_symmetry<NoSymmetry>(No_m, "No").def(py::init<>());
+      declare_edge<NoSymmetry, void, false>(No_m, "No");
+      declare_edge<NoSymmetry, void, false, edge_map_t>(No_m, "No");
+      auto Z2_m = tat_m.def_submodule("Z2");
+      declare_symmetry<Z2Symmetry>(Z2_m, "Z2")
             .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
             .def_property_readonly("z2", [](const Z2Symmetry& symmetry) { return std::get<0>(symmetry); });
-      declare_symmetry<U1Symmetry>(symmetry_m, "U1")
-            .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
-            .def_property_readonly("u1", [](const U1Symmetry& symmetry) { return std::get<0>(symmetry); });
-      declare_symmetry<FermiSymmetry>(symmetry_m, "Fermi")
+      declare_edge<Z2Symmetry, Z2, false>(Z2_m, "Z2");
+      declare_edge<Z2Symmetry, Z2, false, edge_map_t>(Z2_m, "Z2");
+      auto U1_m = tat_m.def_submodule("U1");
+      declare_symmetry<U1Symmetry>(U1_m, "U1")
+            .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
+            .def_property_readonly("z2", [](const Z2Symmetry& symmetry) { return std::get<0>(symmetry); });
+      declare_edge<U1Symmetry, U1, false>(U1_m, "U1");
+      declare_edge<U1Symmetry, U1, false, edge_map_t>(U1_m, "U1");
+      auto Fermi_m = tat_m.def_submodule("Fermi");
+      declare_symmetry<FermiSymmetry>(Fermi_m, "Fermi")
             .def(implicit_init<FermiSymmetry, U1>(), py::arg("fermi"))
             .def_property_readonly("fermi", [](const FermiSymmetry& symmetry) { return std::get<0>(symmetry); });
-      declare_symmetry<FermiZ2Symmetry>(symmetry_m, "FermiZ2")
+      declare_edge<FermiSymmetry, U1, false>(Fermi_m, "Fermi");
+      declare_edge<FermiSymmetry, U1, false, edge_map_t>(Fermi_m, "Fermi");
+      auto FermiZ2_m = tat_m.def_submodule("FermiZ2");
+      declare_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
             .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
             .def(implicit_init<FermiZ2Symmetry, const std::tuple<U1, Z2>&>(
                        [](const std::tuple<U1, Z2>& p) { return std::make_from_tuple<FermiZ2Symmetry>(p); }),
                  py::arg("tuple_of_fermi_z2"))
             .def_property_readonly("fermi", [](const FermiZ2Symmetry& symmetry) { return std::get<0>(symmetry); })
             .def_property_readonly("z2", [](const FermiZ2Symmetry& symmetry) { return std::get<1>(symmetry); });
-      declare_symmetry<FermiU1Symmetry>(symmetry_m, "FermiU1")
+      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true>(FermiZ2_m, "FermiZ2");
+      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true, edge_map_t>(FermiZ2_m, "FermiZ2");
+      auto FermiU1_m = tat_m.def_submodule("FermiU1");
+      declare_symmetry<FermiU1Symmetry>(FermiU1_m, "FermiU1")
             .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
             .def(implicit_init<FermiU1Symmetry, const std::tuple<U1, U1>&>(
                        [](const std::tuple<U1, U1>& p) { return std::make_from_tuple<FermiU1Symmetry>(p); }),
                  py::arg("tuple_of_fermi_u1"))
             .def_property_readonly("fermi", [](const FermiU1Symmetry& symmetry) { return std::get<0>(symmetry); })
             .def_property_readonly("u1", [](const FermiU1Symmetry& symmetry) { return std::get<1>(symmetry); });
-      // edge
-      auto edge_m = internal_m.def_submodule("Edge", "Edges of all kinds of symmetries for TAT");
-      declare_edge<NoSymmetry, void, false>(edge_m, "No");
-      declare_edge<Z2Symmetry, Z2, false>(edge_m, "Z2");
-      declare_edge<U1Symmetry, U1, false>(edge_m, "U1");
-      declare_edge<FermiSymmetry, U1, false>(edge_m, "Fermi");
-      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true>(edge_m, "FermiZ2");
-      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true>(edge_m, "FermiU1");
-      auto bose_edge_m = edge_m.def_submodule("NoArrow", "Edges without Arrow Even for Fermi Symmetry");
-      declare_edge<NoSymmetry, void, false, edge_map_t>(bose_edge_m, "No");
-      declare_edge<Z2Symmetry, Z2, false, edge_map_t>(bose_edge_m, "Z2");
-      declare_edge<U1Symmetry, U1, false, edge_map_t>(bose_edge_m, "U1");
-      declare_edge<FermiSymmetry, U1, false, edge_map_t>(bose_edge_m, "Fermi");
-      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true, edge_map_t>(bose_edge_m, "FermiZ2");
-      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_map_t>(bose_edge_m, "FermiU1");
+      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true>(FermiU1_m, "FermiU1");
+      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_map_t>(FermiU1_m, "FermiU1");
       // tensor
-      auto tensor_m = tat_m.def_submodule("Tensor", "Tensors for TAT");
-      auto block_m = internal_m.def_submodule("Block", "Block of Tensor for TAT");
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_Tensor_##SCALARSHORT##SYM(tensor_m, block_m, #SCALARSHORT, #SCALAR, #SYM);
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_Tensor_##SCALARSHORT##SYM(SYM##_m, #SCALARSHORT, #SCALAR, #SYM);
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       // get tensor
-      internal_m.def("hub", [tensor_m, tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
+      tat_m.def("navigator", [tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
             tat_m.attr("mpi").attr("print")(information);
             return py::none();
@@ -225,16 +219,14 @@ namespace TAT {
          if (scalar == "") {
             throw std::runtime_error("Scalar Ambiguous");
          }
-         return tensor_m.attr((scalar + fermi + symmetry).c_str());
+         return tat_m.attr((fermi + symmetry).c_str()).attr(scalar.c_str()).attr("Tensor");
       });
-      auto py_module_type = py::type::of(tat_m);
       auto py_type = py::module_::import("builtins").attr("type");
       py::dict callable_type_dict;
-      callable_type_dict["__call__"] = internal_m.attr("hub");
+      callable_type_dict["__call__"] = tat_m.attr("navigator");
       py::list base_types;
-      base_types.append(py_module_type);
-      internal_m.attr("CallableModule") = py_type("CallableModule", py::tuple(base_types), callable_type_dict);
-      tat_m.attr("__class__") = internal_m.attr("CallableModule");
+      base_types.append(py::type::of(tat_m));
+      tat_m.attr("__class__") = py_type("CallableModule", py::tuple(base_types), callable_type_dict);
       at_exit.release();
    }
 } // namespace TAT

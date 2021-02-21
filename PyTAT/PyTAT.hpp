@@ -133,11 +133,12 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry>
    void declare_tensor(
-         py::module_& tensor_m,
-         py::module_& block_m,
+         py::module_& symmetry_m,
          const std::string& scalar_short_name,
          const std::string& scalar_name,
          const std::string& symmetry_short_name) {
+      auto self_m = symmetry_m.def_submodule(scalar_short_name.c_str());
+      auto block_m = self_m.def_submodule("Block");
       using T = Tensor<ScalarType, Symmetry>;
       using S = Singular<ScalarType, Symmetry>;
       using E = Edge<Symmetry>;
@@ -147,7 +148,7 @@ namespace TAT {
       std::string tensor_name = scalar_short_name + symmetry_short_name;
       py::class_<BS>(
             block_m,
-            ("S_" + tensor_name).c_str(),
+            "Blocks",
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def("__getitem__",
                  [](const BS& bs, std::map<DefaultName, Symmetry> position) {
@@ -180,7 +181,7 @@ namespace TAT {
             });
       py::class_<B1>(
             block_m,
-            ("U_" + tensor_name).c_str(),
+            "UnorderedBlock",
             ("Unordered Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
             py::buffer_protocol())
             .def_buffer([](B1& b) {
@@ -206,7 +207,7 @@ namespace TAT {
             });
       py::class_<B2>(
             block_m,
-            ("O_" + tensor_name).c_str(),
+            "OrderedBlock",
             ("Ordered Block of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
             py::buffer_protocol())
             .def_buffer([](B2& b) {
@@ -250,44 +251,43 @@ namespace TAT {
       if constexpr (is_complex_v<ScalarType>) {
          one = ScalarType(1, 1);
       }
-      auto tensor_t = py::class_<T>(
-                            tensor_m,
-                            tensor_name.c_str(),
-                            ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
-                            .def_readonly("name", &T::names, "Names of all edge of the tensor")
-                            .def_property_readonly(
-                                  "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
-                            .def_property_readonly(
-                                  "data", [](T & tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
-                            .def(ScalarType() + py::self)
-                            .def(py::self + ScalarType())
-                            .def(py::self += ScalarType())
-                            .def(ScalarType() - py::self)
-                            .def(py::self - ScalarType())
-                            .def(py::self -= ScalarType())
-                            .def(ScalarType() * py::self)
-                            .def(py::self * ScalarType())
-                            .def(py::self *= ScalarType())
-                            .def(ScalarType() / py::self)
-                            .def(py::self / ScalarType())
-                            .def(py::self /= ScalarType())
+      auto tensor_t =
+            py::class_<T>(
+                  self_m, "Tensor", ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
+                  .def_readonly("name", &T::names, "Names of all edge of the tensor")
+                  .def_property_readonly(
+                        "edge", [](T& tensor) -> std::vector<E>& { return tensor.core->edges; }, "Edges of tensor")
+                  .def_property_readonly(
+                        "data", [](T & tensor) -> auto& { return tensor.core->blocks; }, "All block data of the tensor")
+                  .def(ScalarType() + py::self)
+                  .def(py::self + ScalarType())
+                  .def(py::self += ScalarType())
+                  .def(ScalarType() - py::self)
+                  .def(py::self - ScalarType())
+                  .def(py::self -= ScalarType())
+                  .def(ScalarType() * py::self)
+                  .def(py::self * ScalarType())
+                  .def(py::self *= ScalarType())
+                  .def(ScalarType() / py::self)
+                  .def(py::self / ScalarType())
+                  .def(py::self /= ScalarType())
 #define TAT_LOOP_OPERATOR(ANOTHERSCALAR)                    \
    def(py::self + Tensor<ANOTHERSCALAR, Symmetry>())        \
          .def(py::self - Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self* Tensor<ANOTHERSCALAR, Symmetry>())  \
          .def(py::self / Tensor<ANOTHERSCALAR, Symmetry>())
-                            .TAT_LOOP_OPERATOR(float)
-                            .TAT_LOOP_OPERATOR(double)
-                            .TAT_LOOP_OPERATOR(std::complex<float>)
-                            .TAT_LOOP_OPERATOR(std::complex<double>)
+                  .TAT_LOOP_OPERATOR(float)
+                  .TAT_LOOP_OPERATOR(double)
+                  .TAT_LOOP_OPERATOR(std::complex<float>)
+                  .TAT_LOOP_OPERATOR(std::complex<double>)
 #undef TAT_LOOP_OPERATOR
 #define TAT_LOOP_OPERATOR(ANOTHERSCALAR)                     \
    def(py::self += Tensor<ANOTHERSCALAR, Symmetry>())        \
          .def(py::self -= Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self *= Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self /= Tensor<ANOTHERSCALAR, Symmetry>())
-                            .TAT_LOOP_OPERATOR(float)
-                            .TAT_LOOP_OPERATOR(double);
+                  .TAT_LOOP_OPERATOR(float)
+                  .TAT_LOOP_OPERATOR(double);
       if constexpr (is_complex_v<ScalarType>) {
          tensor_t.TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
          tensor_t.def("__complex__", [](const T& tensor) { return ScalarType(tensor); });
@@ -623,8 +623,11 @@ namespace TAT {
          typename Element,
          bool IsTuple,
          template<typename, template<typename> class = std::allocator, bool = false> class EdgeType = Edge>
-   auto declare_edge(py::module_& edge_m, const char* name) {
-      auto result = py::class_<EdgeType<Symmetry>>(edge_m, name, ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
+   auto declare_edge(py::module_& symmetry_m, const char* name) {
+      auto result = py::class_<EdgeType<Symmetry>>(
+                          symmetry_m,
+                          is_edge_v<EdgeType<Symmetry>> ? "Edge" : "EdgeMap",
+                          ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def_readonly("map", &EdgeType<Symmetry>::map)
                           .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one symmetry")
                           .def(implicit_init<EdgeType<Symmetry>, std::map<Symmetry, Size>>(),
@@ -734,7 +737,7 @@ namespace TAT {
 
    template<typename Symmetry>
    auto declare_symmetry(py::module_& symmetry_m, const char* name) {
-      return py::class_<Symmetry>(symmetry_m, name, (std::string(name) + "Symmetry").c_str())
+      return py::class_<Symmetry>(symmetry_m, "Symmetry", (std::string(name) + "Symmetry").c_str())
             .def(py::self < py::self)
             .def(py::self > py::self)
             .def(py::self <= py::self)
