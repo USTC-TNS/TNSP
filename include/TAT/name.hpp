@@ -23,6 +23,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <string>
 #include <type_traits>
@@ -219,7 +220,7 @@ namespace TAT {
     * \see name_out_operator, name_in_operator
     */
    template<typename Name>
-   struct NameTraits;
+   struct NameTraits {};
 
    /**
     * 判断一个类型是否可以作为Name
@@ -250,9 +251,9 @@ namespace TAT {
          TAT_error("Wrong name list length which no equals to expected length");
          return false;
       }
-      for (Rank i = 0; i < rank; i++) {
-         for (Rank j = i + 1; j < rank; j++) {
-            if (names[i] == names[j]) {
+      for (auto i = names.begin(); i != names.end(); ++i) {
+         for (auto j = std::next(i); j != names.end(); ++j) {
+            if (*i == *j) {
                TAT_error("Duplicated names in name list");
                return false;
             }
