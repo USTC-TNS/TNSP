@@ -11,10 +11,6 @@ so first, let us introduce normal tensor interface of PyTAT.
 No Symmetry Tensor is a tensor without any symmetry,
 which is just a normal tensor, so let us begin from this.
 
-NoTAT is a subset of PyTAT with only normal tensor support,
-which means if you use only no symmetry tensor, you can replace
-`import TAT` to `import NoTAT as TAT` for light weight package
-
 ### Create tensor
 
 Here is a example to create a tensor.
@@ -198,11 +194,11 @@ A = Tensor(["i", "j"], [2, 2]).set(lambda :233)
 
 ```py
 A = Tensor(233)
-# Type of A is <class 'TAT.Tensor.DNo'>
+# Type of A is <class 'TAT.No.D.Tensor'>
 print(type(A))
 # Convert A to an complex tensor
 B = A.to(complex)
-# Type of B is <class 'TAT.Tensor.ZNo'>
+# Type of B is <class 'TAT.No.Z.Tensor'>
 print(type(B))
 ```
 
