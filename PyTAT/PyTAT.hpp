@@ -37,9 +37,6 @@
    TAT_SINGLE_SCALAR_SYMMETRY(C, std::complex<float>, SYM) \
    TAT_SINGLE_SCALAR_SYMMETRY(Z, std::complex<double>, SYM)
 
-#ifdef TAT_NOTAT
-#define TAT_LOOP_ALL_SCALAR_SYMMETRY TAT_SINGLE_SYMMETRY_ALL_SCALAR(No)
-#else
 #define TAT_LOOP_ALL_SCALAR_SYMMETRY       \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(No)      \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(Z2)      \
@@ -47,7 +44,6 @@
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(Fermi)   \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2) \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1)
-#endif
 
 namespace TAT {
    namespace py = pybind11;
