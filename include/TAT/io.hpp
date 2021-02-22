@@ -169,7 +169,7 @@ namespace TAT {
    };
 
    template<typename T>
-   struct is_symmetry_vector : std::bool_constant<false> {};
+   struct is_symmetry_vector : std::false_type {};
    template<typename T>
    struct is_symmetry_vector<std::vector<T>> : is_symmetry<T> {};
    template<typename T>

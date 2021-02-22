@@ -126,33 +126,33 @@ namespace TAT {
    constexpr bool is_real_v = is_real<T>::value;
 
    template<typename Container, typename T>
-   struct is_set_of : std::bool_constant<false> {};
+   struct is_set_of : std::false_type {};
    template<typename T, typename Compare, typename Allocator>
-   struct is_set_of<std::set<T, Compare, Allocator>, T> : std::bool_constant<true> {};
+   struct is_set_of<std::set<T, Compare, Allocator>, T> : std::true_type {};
    template<typename T, typename Compare, typename Allocator>
-   struct is_set_of<std::unordered_set<T, Compare, Allocator>, T> : std::bool_constant<true> {};
+   struct is_set_of<std::unordered_set<T, Compare, Allocator>, T> : std::true_type {};
    template<typename Container, typename T>
    constexpr bool is_set_of_v = is_set_of<Container, T>::value;
 
    template<typename Container, typename T>
-   struct is_list_of : std::bool_constant<false> {};
+   struct is_list_of : std::false_type {};
    template<typename T, typename Allocator>
-   struct is_list_of<std::vector<T, Allocator>, T> : std::bool_constant<true> {};
+   struct is_list_of<std::vector<T, Allocator>, T> : std::true_type {};
    template<typename T, typename Allocator>
-   struct is_list_of<std::list<T, Allocator>, T> : std::bool_constant<true> {};
+   struct is_list_of<std::list<T, Allocator>, T> : std::true_type {};
    template<typename T, typename Allocator>
-   struct is_list_of<std::deque<T, Allocator>, T> : std::bool_constant<true> {};
+   struct is_list_of<std::deque<T, Allocator>, T> : std::true_type {};
    template<typename T, std::size_t size>
-   struct is_list_of<std::array<T, size>, T> : std::bool_constant<true> {};
+   struct is_list_of<std::array<T, size>, T> : std::true_type {};
    template<typename Container, typename T>
    constexpr bool is_list_of_v = is_list_of<Container, T>::value;
 
    template<typename Container, typename Key, typename T>
-   struct is_map_of : std::bool_constant<false> {};
+   struct is_map_of : std::false_type {};
    template<typename Key, typename T, typename Compare, typename Allocator>
-   struct is_map_of<std::map<Key, T, Compare, Allocator>, Key, T> : std::bool_constant<true> {};
+   struct is_map_of<std::map<Key, T, Compare, Allocator>, Key, T> : std::true_type {};
    template<typename Key, typename T, typename Compare, typename Allocator>
-   struct is_map_of<std::unordered_map<Key, T, Compare, Allocator>, Key, T> : std::bool_constant<true> {};
+   struct is_map_of<std::unordered_map<Key, T, Compare, Allocator>, Key, T> : std::true_type {};
    template<typename Container, typename Key, typename T>
    constexpr bool is_map_of_v = is_map_of<Container, Key, T>::value;
 

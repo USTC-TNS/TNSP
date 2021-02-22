@@ -279,10 +279,10 @@ namespace TAT {
     * \see is_edge_v
     */
    template<typename T>
-   struct is_edge : std::bool_constant<false> {};
+   struct is_edge : std::false_type {};
    /// \private
    template<typename T>
-   struct is_edge<Edge<T>> : std::bool_constant<true> {};
+   struct is_edge<Edge<T>> : std::true_type {};
    template<typename T>
    constexpr bool is_edge_v = is_edge<T>::value;
 

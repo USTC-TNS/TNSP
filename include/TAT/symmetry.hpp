@@ -46,9 +46,9 @@ namespace TAT {
    using fermi_unwrap_t = typename fermi_unwrap<T>::type;
 
    template<typename T>
-   struct fermi_wrapped : std::bool_constant<false> {};
+   struct fermi_wrapped : std::false_type {};
    template<typename T>
-   struct fermi_wrapped<fermi_wrap<T>> : std::bool_constant<true> {};
+   struct fermi_wrapped<fermi_wrap<T>> : std::true_type {};
    template<typename T>
    constexpr bool fermi_wrapped_v = fermi_wrapped<T>::value;
 
@@ -339,9 +339,9 @@ namespace TAT {
     * \see is_symmetry_v
     */
    template<typename T>
-   struct is_symmetry : std::bool_constant<false> {};
+   struct is_symmetry : std::false_type {};
    template<typename... T>
-   struct is_symmetry<symmetry_t<T...>> : std::bool_constant<true> {};
+   struct is_symmetry<symmetry_t<T...>> : std::true_type {};
    template<typename T>
    constexpr bool is_symmetry_v = is_symmetry<T>::value;
 
