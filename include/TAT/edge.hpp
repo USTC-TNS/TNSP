@@ -29,92 +29,6 @@
 #include "symmetry.hpp"
 
 namespace TAT {
-   /**
-    * \defgroup Miscellaneous
-    * @{
-    */
-   /**
-    * 只有一个元素的假map
-    *
-    * 无对称性的系统为一个NoSymmetry到Size的map, 显然只有一个元素, 使用一个假map来节省一层指针, 在无对称性的block中也用到了这个类
-    */
-   template<typename Key, typename Value, typename Compare = void, typename Allocator = void>
-   struct fake_map {
-      using iterator = fake_map*;
-      using const_iterator = const fake_map*;
-      using key_type = Key;
-      using mapped_type = Value;
-
-      Key first;
-      Value second;
-
-      fake_map() : first(), second() {}
-      template<typename Iterator>
-      fake_map(Iterator iter) : first(iter->first), second(iter->second) {}
-      template<typename Iterator>
-      fake_map(Iterator iter, Iterator) : fake_map(iter) {}
-
-      fake_map(const std::initializer_list<std::pair<const Key, Value>>& map) : fake_map(map.begin()) {}
-      template<typename Map, typename = std::enable_if_t<is_map_of_v<Map, Key, Size>>>
-      fake_map(const Map& map) : fake_map(map.begin()) {}
-
-      [[nodiscard]] Value& at(const Key&) {
-         return second;
-      }
-      [[nodiscard]] const Value& at(const Key&) const {
-         return second;
-      }
-      Value& operator[](const Key&) {
-         return second;
-      }
-      [[nodiscard]] iterator begin() {
-         return this;
-      }
-      [[nodiscard]] const_iterator begin() const {
-         return this;
-      }
-      [[nodiscard]] iterator end() {
-         return this + 1;
-      }
-      [[nodiscard]] const_iterator end() const {
-         return this + 1;
-      }
-      [[nodiscard]] iterator find(const Key&) {
-         return this;
-      }
-      [[nodiscard]] const_iterator find(const Key&) const {
-         return this;
-      }
-      iterator erase(const Key&) {
-         return this;
-      }
-      std::pair<iterator, bool> insert(const std::tuple<Key, Value>& pair) {
-         second = std::get<1>(pair);
-         return {this, true};
-      }
-      template<typename T>
-      std::pair<iterator, bool> emplace(const Key&, T&& arg) {
-         second.~Value();
-         new (&second) Value(std::forward<T>(arg));
-         return {this, true};
-      }
-      Size size() const {
-         return 1;
-      }
-      void clear() {}
-   };
-   template<typename Key, typename Value>
-   bool operator==(const fake_map<Key, Value>& map_1, const fake_map<Key, Value>& map_2) {
-      return map_1.second == map_2.second;
-   }
-
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY
-   constexpr bool use_simple_nosymmetry = true;
-#else
-   constexpr bool use_simple_nosymmetry = false;
-#endif
-
-   /**@}*/
    /** \defgroup Edge
     * @{
     */
@@ -124,12 +38,7 @@ namespace TAT {
    template<typename Symmetry, template<typename> class Allocator = std::allocator, bool is_pointer = false>
    struct edge_map_t {
       using symmetry_t = Symmetry;
-      using real_map_t = std::map<Symmetry, Size, std::less<Symmetry>, Allocator<std::pair<const Symmetry, Size>>>;
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY
-      using map_t = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_map<Symmetry, Size>, real_map_t>;
-#else
-      using map_t = real_map_t;
-#endif
+      using map_t = std::map<Symmetry, Size, std::less<Symmetry>, Allocator<std::pair<const Symmetry, Size>>>;
       std::conditional_t<is_pointer, const map_t&, map_t> map;
       // TODO bool conjuugated;
 

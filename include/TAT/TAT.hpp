@@ -46,7 +46,6 @@
 // TAT_USE_MKL_GEMM_BATCH 定义以使用mkl的?gemm_batch, cmake可对此进行定义
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
-// TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_TIMER 对常见操作进行计时
 // TAT_ERROR_BITS 将各类警告转换为异常

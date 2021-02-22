@@ -56,13 +56,7 @@ namespace TAT {
       using real_scalar_t = real_base_t<ScalarType>;
       using scalar_vector_t = std::vector<real_scalar_t, Allocator<real_scalar_t>>;
       // TODO: Singular storage
-      using normal_map = std::map<Symmetry, scalar_vector_t, std::less<Symmetry>, Allocator<std::pair<const Symmetry, scalar_vector_t>>>;
-      using fake_singular_map = fake_map<Symmetry, std::vector<real_scalar_t, Allocator<real_scalar_t>>>;
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY
-      using singular_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_singular_map, normal_map>;
-#else
-      using singular_map = normal_map;
-#endif
+      using singular_map = std::map<Symmetry, scalar_vector_t, std::less<Symmetry>, Allocator<std::pair<const Symmetry, scalar_vector_t>>>;
       singular_map value;
 
       template<int p>
@@ -174,6 +168,7 @@ namespace TAT {
             names(names_init.begin(), names_init.end()),
             name_to_index(construct_name_to_index<decltype(name_to_index)>(names)),
             core(std::make_shared<Core<ScalarType, Symmetry>>(edges_init, auto_reverse)) {
+         // TODO: make_shared 替换为allocate_shared，并传入resource
          check_valid_name(names, core->edges.size());
       }
 

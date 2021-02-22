@@ -61,14 +61,8 @@ namespace TAT {
       using symmetry_vector = std::vector<Symmetry, Allocator<Symmetry>>;
       using content_vector = pmr::content_vector<ScalarType>;
 
-      using normal_map =
+      using block_map =
             std::map<symmetry_vector, content_vector, std::less<symmetry_vector>, Allocator<std::pair<const symmetry_vector, content_vector>>>;
-      using fake_block_map = fake_map<symmetry_vector, content_vector>;
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY
-      using block_map = std::conditional_t<std::is_same_v<Symmetry, NoSymmetry>, fake_block_map, normal_map>;
-#else
-      using block_map = normal_map;
-#endif
 
       std::vector<ScalarType, Allocator<ScalarType>> storage;
       monotonic_buffer_resource resource;

@@ -103,7 +103,6 @@ namespace TAT {
          increase_next_size_to(buffer_size);
       }
       monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
-      // monotonic_buffer_resource(monotonic_buffer_resource&&) = default;
 
       void increase_next_size() {
          m_next_buffer_size = (std::size_t(-1) / 2 < m_next_buffer_size) ? std::size_t(-1) : m_next_buffer_size * 2;
@@ -122,8 +121,6 @@ namespace TAT {
          release();
       }
 
-      // 增加了一个移动构造函数，如果被移动, 调用release要求不破坏系统
-      // 移动后m_buffer_list为空, 不会deallocate不应该deallocate的东西
       void release() {
          for (auto [buffer, size] : m_buffer_list) {
             m_upstream->deallocate(buffer, size, alignof(std::max_align_t));
@@ -183,6 +180,8 @@ namespace TAT {
 
    // 和std::pmr::polymorphic_allocator几乎一模一样
    // 和std::pmr::polymorphic_allocator的初始化时的默认resource不同, 使用的是自己的thread unsafe版本
+   // 还有就是加上了一个尝试不初始化的选项
+   // 为了行为和std::pmr尽可能一致, 上层使用的时候尽可能手动指定resource, 而不是通过get_default_resource获取
    template<typename Derived, typename T, bool try_not_initialize>
    struct polymorphic_allocator_base {
       memory_resource* m_resource;

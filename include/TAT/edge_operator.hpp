@@ -505,14 +505,7 @@ namespace TAT {
 
       using VectorSymmetryOfTensor = typename decltype(core->blocks)::key_type;
 
-      using NormalMapFromTransposeToSourceDestination = pmr::map<VectorSymmetryOfTensor, std::tuple<VectorSymmetryOfTensor, pmr::vector<Size>>>;
-      using FakeMapFromTransposeToSourceDestination = fake_map<VectorSymmetryOfTensor, std::tuple<VectorSymmetryOfTensor, pmr::vector<Size>>>;
-#ifdef TAT_USE_SIMPLE_NOSYMMETRY
-      using MapFromTransposeToSourceDestination = std::
-            conditional_t<std::is_same_v<Symmetry, NoSymmetry>, FakeMapFromTransposeToSourceDestination, NormalMapFromTransposeToSourceDestination>;
-#else
-      using MapFromTransposeToSourceDestination = NormalMapFromTransposeToSourceDestination;
-#endif
+      using MapFromTransposeToSourceDestination = pmr::map<VectorSymmetryOfTensor, std::tuple<VectorSymmetryOfTensor, pmr::vector<Size>>>;
       auto data_before_transpose_to_source = MapFromTransposeToSourceDestination();
       if (!split_map.empty() || (is_fermi && !reversed_name.empty())) {
          // 需要使用reversed前的symmetry，所以
