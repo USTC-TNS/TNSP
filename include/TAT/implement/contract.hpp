@@ -458,8 +458,8 @@ namespace TAT {
          for (Rank i = 0; i < common_rank; i++) {
             auto name_1 = common_name_1[i];
             auto name_2 = common_name_2[i];
-            auto edge_1 = tensor_1.core->edges[map_find(tensor_1.name_to_index, name_1)->second];
-            auto edge_2 = tensor_2.core->edges[map_find(tensor_2.name_to_index, name_2)->second];
+            auto edge_1 = tensor_1.core->edges[map_at(tensor_1.name_to_index, name_1)];
+            auto edge_2 = tensor_2.core->edges[map_at(tensor_2.name_to_index, name_2)];
             auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
                if constexpr (is_fermi) {
                   if (edge_this.arrow == edge_other.arrow) [[unlikely]] {
@@ -541,11 +541,11 @@ namespace TAT {
          // m k n
          auto symmetries_1 = put_common_1_right ? symmetries : decltype(symmetries){symmetries[1], symmetries[0]};
          auto symmetries_2 = put_common_2_right ? decltype(symmetries){symmetries[1], symmetries[0]} : symmetries;
-         const auto& data_1 = map_find(tensor_1_merged.core->blocks, symmetries_1)->second;
-         const auto& data_2 = map_find(tensor_2_merged.core->blocks, symmetries_2)->second;
-         const int m = map_find(product_result.core->edges[0].map, symmetries[0])->second;
-         const int n = map_find(product_result.core->edges[1].map, symmetries[1])->second;
-         const int k = map_find(common_edge.map, symmetries[1])->second;
+         const auto& data_1 = map_at(tensor_1_merged.core->blocks, symmetries_1);
+         const auto& data_2 = map_at(tensor_2_merged.core->blocks, symmetries_2);
+         const int m = map_at(product_result.core->edges[0].map, symmetries[0]);
+         const int n = map_at(product_result.core->edges[1].map, symmetries[1]);
+         const int k = map_at(common_edge.map, symmetries[1]);
          ScalarType alpha = 1;
          if constexpr (is_fermi) {
             // 因为并非标准- + - -产生的符号
@@ -661,8 +661,8 @@ namespace TAT {
       for (const auto& name : fuse_names) {
          name_result.push_back(name);
          fuse_names_list.push_back(name);
-         const auto& edge_1 = tensor_1.core->edges[map_find(tensor_1.name_to_index, name)->second];
-         const auto& edge_2 = tensor_2.core->edges[map_find(tensor_2.name_to_index, name)->second];
+         const auto& edge_1 = tensor_1.core->edges[map_at(tensor_1.name_to_index, name)];
+         const auto& edge_2 = tensor_2.core->edges[map_at(tensor_2.name_to_index, name)];
          if (!(edge_1 == edge_2)) [[unlikely]] {
             TAT_error("Cannot fuse two edge with different shape");
          }

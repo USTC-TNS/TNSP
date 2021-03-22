@@ -108,15 +108,15 @@ namespace TAT {
    template<typename T, typename Name, typename Symmetry>
    concept split_configuration = requires(T split_map, Name name) {
       requires std::ranges::range<T>;
-      { map_find(split_map, name)->second }
+      { map_at(split_map, name) }
       ->std::ranges::range;
-      Name(map_find(split_map, name)->second.begin()->first);
-      edge_map_t<Symmetry>(map_find(split_map, name)->second.begin()->second);
+      Name(map_at(split_map, name).front().first);
+      edge_map_t<Symmetry>(map_find(split_map, name).front().second);
    };
 
    template<typename T, typename Name>
    concept merge_configuration = requires(T merge_map, Name name) {
-      { map_find(merge_map, name)->second }
+      { map_at(merge_map, name) }
       ->range_of<Name>;
    };
 

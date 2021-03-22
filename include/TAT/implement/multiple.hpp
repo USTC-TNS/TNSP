@@ -70,7 +70,7 @@ namespace TAT {
       auto result = same_shape();
       auto index = found->second;
       for (const auto& [symmetries, block_source] : core->blocks) {
-         auto& block_destination = map_find(result.core->blocks, symmetries)->second;
+         auto& block_destination = map_at(result.core->blocks, symmetries);
          auto symmetry_of_s = symmetries[index];
          if (different_direction) {
             symmetry_of_s = -symmetry_of_s;
@@ -80,18 +80,18 @@ namespace TAT {
          auto dimension = S.core->edges[1].map.at(symmetry_of_s);
          auto dimension_plus_one = dimension + 1;
 #else
-         const auto& vector_in_S = S.value.at(symmetry_of_s);
+         const auto& vector_in_S = map_at(S.value, symmetry_of_s);
          auto dimension = vector_in_S.size();
 #endif
          Rank i = 0;
          Size m = 1;
          for (; i < index; i++) {
-            m *= map_find(core->edges[i].map, symmetries[i])->second;
+            m *= map_at(core->edges[i].map, symmetries[i]);
          }
-         Size k = map_find(core->edges[i].map, symmetries[i])->second;
+         Size k = map_at(core->edges[i].map, symmetries[i]);
          Size n = 1;
          for (i++; i < names.size(); i++) {
-            n *= map_find(core->edges[i].map, symmetries[i])->second;
+            n *= map_at(core->edges[i].map, symmetries[i]);
          }
          if (dimension != k) [[unlikely]] {
             TAT_error("Vector Size incompatible in Multiple with a tensor");

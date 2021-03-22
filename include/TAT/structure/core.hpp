@@ -70,6 +70,36 @@ namespace TAT {
       }
    }
 
+   template<bool Lexicographic = false, typename Container, typename Key>
+   requires(
+         (!Lexicographic && std::is_same_v<std::remove_cvref_t<typename Container::value_type::first_type>, std::remove_cvref_t<Key>>) ||
+         (Lexicographic && requires(typename Container::value_type::first_type a, Key b) {
+            std::ranges::lexicographical_compare(a, b);
+            std::ranges::equal(a, b);
+         })) auto& map_at(Container& v, const Key& key) {
+      if constexpr (requires(Container c, Key k) { c.find(k); }) {
+         return v.at(key);
+      } else {
+         if constexpr (Lexicographic) {
+            auto result = std::lower_bound(v.begin(), v.end(), key, [](const auto& a, const auto& b) {
+               return std::ranges::lexicographical_compare(get_key<Key>(a), get_key<Key>(b));
+            });
+            if (result == v.end() || !std::ranges::equal(result->first, key)) {
+               throw std::out_of_range("fake map at");
+            } else {
+               return result->second;
+            }
+         } else {
+            auto result = std::lower_bound(v.begin(), v.end(), key, [](const auto& a, const auto& b) { return get_key<Key>(a) < get_key<Key>(b); });
+            if (result == v.end() || result->first != key) {
+               throw std::out_of_range("fake map at");
+            } else {
+               return result->second;
+            }
+         }
+      }
+   }
+
    template<typename Container, typename Key>
    requires std::is_same_v<std::remove_cvref_t<typename Container::value_type>, std::remove_cvref_t<Key>> auto
    set_find(Container& v, const Key& key) {
@@ -238,7 +268,7 @@ namespace TAT {
             }
             for (const auto& [symmetries, _] : blocks) {
                for (Rank i = 0; i < rank; i++) {
-                  map_find(edge_mark[i], symmetries[i])->second = true;
+                  map_at(edge_mark[i], symmetries[i]) = true;
                }
             }
             for (Rank i = 0; i < rank; i++) {

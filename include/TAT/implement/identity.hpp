@@ -59,7 +59,7 @@ namespace TAT {
          }
          // result.core->blocks.at(result_symmetries) <- block
          const Size total_size = block.size();
-         ScalarType* destination = map_find<true>(result.core->blocks, result_symmetries)->second.data();
+         ScalarType* destination = map_at<true>(result.core->blocks, result_symmetries).data();
          const ScalarType* source = block.data();
          bool parity = false;
          if constexpr (Symmetry::is_fermi_symmetry) {

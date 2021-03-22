@@ -488,7 +488,7 @@ namespace TAT {
                std::vector<Symmetry> symmetries;
                in >> symmetries;
                ignore_until(in, ':');
-               auto& block = map_find(tensor.core->blocks, symmetries)->second;
+               auto& block = map_at(tensor.core->blocks, symmetries);
                block.clear();
                in >> block;
             } while (in.get() == ','); // 读了map最后的'}'

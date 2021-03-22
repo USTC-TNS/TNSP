@@ -35,7 +35,7 @@ namespace TAT {
    template<is_scalar ScalarType = double, is_symmetry Symmetry = Symmetry<>, is_name Name = DefaultName>
    struct Singular {
       using scalar_vector_t = std::vector<real_scalar<ScalarType>>;
-      using singular_map = std::map<Symmetry, scalar_vector_t>;
+      using singular_map = std::vector<std::pair<const Symmetry, scalar_vector_t>>;
       singular_map value;
 
       template<int p>

@@ -173,8 +173,8 @@ namespace TAT {
             const auto& name_to_found = names[i];
             for (const auto& [a, b] : pairs) {
                if (a == name_to_found) {
-                  auto ia = map_find(name_to_index, a)->second;
-                  auto ib = map_find(name_to_index, b)->second;
+                  auto ia = map_at(name_to_index, a);
+                  auto ib = map_at(name_to_index, b);
                   valid_index[ib] = false;
                   current_index--;
                   merge_1[current_index] = a;
@@ -184,8 +184,8 @@ namespace TAT {
                   break;
                }
                if (b == name_to_found) {
-                  auto ia = map_find(name_to_index, a)->second;
-                  auto ib = map_find(name_to_index, b)->second;
+                  auto ia = map_at(name_to_index, a);
+                  auto ib = map_at(name_to_index, b);
                   valid_index[ia] = false;
                   current_index--;
                   merge_1[current_index] = a;
@@ -244,8 +244,8 @@ namespace TAT {
             std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
-         auto& data_destination = map_find(result.core->blocks, symmetries)->second;
-         auto n = map_find(tensor_merged.core->edges[0].map, symmetries[0])->second;
+         auto& data_destination = map_at(result.core->blocks, symmetries);
+         auto n = map_at(tensor_merged.core->edges[0].map, symmetries[0]);
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator_implement(

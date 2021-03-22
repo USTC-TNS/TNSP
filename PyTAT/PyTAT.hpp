@@ -235,7 +235,7 @@ namespace TAT {
                auto real_dimensions = std::vector<Size>(rank);
                auto real_leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  auto j = tensor.name_to_index.at(std::get<0>(b.position[i]));
+                  auto j = map_find(tensor.name_to_index, std::get<0>(b.position[i]))->second;
                   real_dimensions[i] = dimensions[j];
                   real_leadings[i] = leadings[j];
                }
@@ -248,7 +248,7 @@ namespace TAT {
                      std::move(real_leadings)};
             });
       ScalarType one = 1;
-      if constexpr (is_complex_v<ScalarType>) {
+      if constexpr (is_complex<ScalarType>) {
          one = ScalarType(1, 1);
       }
       auto tensor_t =
@@ -288,7 +288,7 @@ namespace TAT {
          .def(py::self /= Tensor<ANOTHERSCALAR, Symmetry>())
                   .TAT_LOOP_OPERATOR(float)
                   .TAT_LOOP_OPERATOR(double);
-      if constexpr (is_complex_v<ScalarType>) {
+      if constexpr (is_complex<ScalarType>) {
          tensor_t.TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
          tensor_t.def("__complex__", [](const T& tensor) { return ScalarType(tensor); });
       } else {
@@ -299,7 +299,7 @@ namespace TAT {
 #undef TAT_LOOP_OPERATOR
             .def("__str__",
                  [](const T& tensor) {
-                    if (tensor.is_valid()) {
+                    if (tensor.core) {
                        return tensor.show();
                     } else {
                        return std::string("{}");
@@ -310,7 +310,7 @@ namespace TAT {
                     auto out = std::stringstream();
                     out << tensor_name << "Tensor";
                     out << '{';
-                    if (tensor.is_valid()) {
+                    if (tensor.core) {
                        out << console_green << "names" << console_origin << ':';
                        out << tensor.names << ',';
                        out << console_green << "edges" << console_origin << ':';
@@ -583,14 +583,14 @@ namespace TAT {
             .def(
                   "rand",
                   [](T& tensor, ScalarType min, ScalarType max) -> T& {
-                     if constexpr (is_complex_v<ScalarType>) {
-                        auto distribution_real = std::uniform_real_distribution<real_base_t<ScalarType>>(min.real(), max.real());
-                        auto distribution_imag = std::uniform_real_distribution<real_base_t<ScalarType>>(min.imag(), max.imag());
+                     if constexpr (is_complex<ScalarType>) {
+                        auto distribution_real = std::uniform_real_distribution<real_scalar<ScalarType>>(min.real(), max.real());
+                        auto distribution_imag = std::uniform_real_distribution<real_scalar<ScalarType>>(min.imag(), max.imag());
                         return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
                            return {distribution_real(random_engine), distribution_imag(random_engine)};
                         });
                      } else {
-                        auto distribution = std::uniform_real_distribution<real_base_t<ScalarType>>(min, max);
+                        auto distribution = std::uniform_real_distribution<real_scalar<ScalarType>>(min, max);
                         return tensor.set([&distribution]() { return distribution(random_engine); });
                      }
                   },
@@ -601,14 +601,14 @@ namespace TAT {
             .def(
                   "randn",
                   [](T& tensor, ScalarType mean, ScalarType stddev) -> T& {
-                     if constexpr (is_complex_v<ScalarType>) {
-                        auto distribution_real = std::normal_distribution<real_base_t<ScalarType>>(mean.real(), stddev.real());
-                        auto distribution_imag = std::normal_distribution<real_base_t<ScalarType>>(mean.imag(), stddev.imag());
+                     if constexpr (is_complex<ScalarType>) {
+                        auto distribution_real = std::normal_distribution<real_scalar<ScalarType>>(mean.real(), stddev.real());
+                        auto distribution_imag = std::normal_distribution<real_scalar<ScalarType>>(mean.imag(), stddev.imag());
                         return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
                            return {distribution_real(random_engine), distribution_imag(random_engine)};
                         });
                      } else {
-                        auto distribution = std::normal_distribution<real_base_t<ScalarType>>(mean, stddev);
+                        auto distribution = std::normal_distribution<real_scalar<ScalarType>>(mean, stddev);
                         return tensor.set([&distribution]() { return distribution(random_engine); });
                      }
                   },
@@ -618,15 +618,11 @@ namespace TAT {
                   py::return_value_policy::reference_internal);
    }
 
-   template<
-         typename Symmetry,
-         typename Element,
-         bool IsTuple,
-         template<typename, template<typename> class = std::allocator, bool = false> class EdgeType = Edge>
+   template<typename Symmetry, typename Element, bool IsTuple, template<typename, bool = false> class EdgeType = Edge>
    auto declare_edge(py::module_& symmetry_m, const char* name) {
       auto result = py::class_<EdgeType<Symmetry>>(
                           symmetry_m,
-                          is_edge_v<EdgeType<Symmetry>> ? "Edge" : "EdgeMap",
+                          is_edge<EdgeType<Symmetry>> ? "Edge" : "EdgeMap",
                           ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def_readonly("map", &EdgeType<Symmetry>::map)
                           .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one symmetry")
@@ -638,7 +634,7 @@ namespace TAT {
                                "Edge with several symmetries which dimensions are all one");
       py::implicitly_convertible<py::dict, EdgeType<Symmetry>>();
       py::implicitly_convertible<py::set, EdgeType<Symmetry>>();
-      if constexpr (is_edge_v<EdgeType<Symmetry>>) {
+      if constexpr (is_edge<EdgeType<Symmetry>>) {
          result = result.def("__str__",
                              [](const EdgeType<Symmetry>& edge) {
                                 auto out = std::stringstream();
@@ -648,11 +644,11 @@ namespace TAT {
                         .def("__repr__", [name](const EdgeType<Symmetry>& edge) {
                            auto out = std::stringstream();
                            out << name << "Edge";
-                           if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+                           if constexpr (Symmetry::length == 0) {
                               out << "[";
                            }
                            out << edge;
-                           if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+                           if constexpr (Symmetry::length == 0) {
                               out << "]";
                            }
                            return out.str();
@@ -687,7 +683,7 @@ namespace TAT {
                              py::arg("set_of_symmetry"),
                              "Edge with several symmetries which dimensions are all one");
       }
-      if constexpr (is_fermi_symmetry_v<Symmetry> && is_edge_v<EdgeType<Symmetry>>) {
+      if constexpr (Symmetry::is_fermi_symmetry && is_edge<EdgeType<Symmetry>>) {
          // is fermi symmetry 且没有强制设置为BoseEdge
          result =
                result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge")

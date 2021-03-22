@@ -406,8 +406,8 @@ namespace TAT {
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
       for (const auto& [sym, _] : tensor_merged.core->blocks) {
-         auto m = map_find(tensor_merged.core->edges[0].map, sym[0])->second;
-         auto n = map_find(tensor_merged.core->edges[1].map, sym[1])->second;
+         auto m = map_at(tensor_merged.core->edges[0].map, sym[0]);
+         auto n = map_at(tensor_merged.core->edges[1].map, sym[1]);
          auto k = m > n ? n : m;
          common_edge_1.map.emplace_back(sym[1], k);
          common_edge_2.map.emplace_back(sym[0], k);
@@ -421,11 +421,11 @@ namespace TAT {
             {use_qr_not_lq ? common_name_r : common_name_q, InternalName<Name>::QR_2},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       for (auto& [symmetries, block] : tensor_merged.core->blocks) {
-         auto* data_1 = map_find(tensor_1.core->blocks, symmetries)->second.data();
-         auto* data_2 = map_find(tensor_2.core->blocks, symmetries)->second.data();
+         auto* data_1 = map_at(tensor_1.core->blocks, symmetries).data();
+         auto* data_2 = map_at(tensor_2.core->blocks, symmetries).data();
          auto* data = block.data();
-         const int m = map_find(tensor_1.core->edges[0].map, symmetries[0])->second;
-         const int n = map_find(tensor_2.core->edges[1].map, symmetries[1])->second;
+         const int m = map_at(tensor_1.core->edges[0].map, symmetries[0]);
+         const int n = map_at(tensor_2.core->edges[1].map, symmetries[1]);
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
          if (m * n != 0) {

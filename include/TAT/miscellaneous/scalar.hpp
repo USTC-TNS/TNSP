@@ -88,14 +88,14 @@ namespace TAT {
             auto found_2 = map_find(real_tensor_2.core->blocks, symmetries);                                                         \
             if (found_1 != tensor_1.core->blocks.end()) {                                                                            \
                if (found_2 != real_tensor_2.core->blocks.end()) {                                                                    \
-                  const ScalarType1* __restrict a = map_find(tensor_1.core->blocks, symmetries)->second.data();                      \
-                  const ScalarType2* __restrict b = map_find(real_tensor_2.core->blocks, symmetries)->second.data();                 \
+                  const ScalarType1* __restrict a = map_at(tensor_1.core->blocks, symmetries).data();                                \
+                  const ScalarType2* __restrict b = map_at(real_tensor_2.core->blocks, symmetries).data();                           \
                   ScalarType* __restrict c = block.data();                                                                           \
                   for (Size j = 0; j < block.size(); j++) {                                                                          \
                      EVAL3;                                                                                                          \
                   }                                                                                                                  \
                } else {                                                                                                              \
-                  const ScalarType1* __restrict a = map_find(tensor_1.core->blocks, symmetries)->second.data();                      \
+                  const ScalarType1* __restrict a = map_at(tensor_1.core->blocks, symmetries).data();                                \
                   ScalarType* __restrict c = block.data();                                                                           \
                   for (Size j = 0; j < block.size(); j++) {                                                                          \
                      EVAL2;                                                                                                          \
@@ -103,7 +103,7 @@ namespace TAT {
                }                                                                                                                     \
             } else {                                                                                                                 \
                if (found_2 != real_tensor_2.core->blocks.end()) {                                                                    \
-                  const ScalarType2* __restrict b = map_find(real_tensor_2.core->blocks, symmetries)->second.data();                 \
+                  const ScalarType2* __restrict b = map_at(real_tensor_2.core->blocks, symmetries).data();                           \
                   ScalarType* __restrict c = block.data();                                                                           \
                   for (Size j = 0; j < block.size(); j++) {                                                                          \
                      EVAL1;                                                                                                          \

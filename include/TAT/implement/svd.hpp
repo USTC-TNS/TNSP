@@ -330,8 +330,8 @@ namespace TAT {
       auto common_edge_2 = Edge<Symmetry>();
       // arrow always false
       for (const auto& [sym, _] : tensor_merged.core->blocks) {
-         auto m = map_find(tensor_merged.core->edges[0].map, sym[0])->second;
-         auto n = map_find(tensor_merged.core->edges[1].map, sym[1])->second;
+         auto m = map_at(tensor_merged.core->edges[0].map, sym[0]);
+         auto n = map_at(tensor_merged.core->edges[1].map, sym[1]);
          auto k = m > n ? n : m;
          common_edge_1.map.emplace_back(sym[1], k);
          common_edge_2.map.emplace_back(sym[0], k);
@@ -344,13 +344,13 @@ namespace TAT {
       auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? pmr::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : pmr::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = typename Singular<ScalarType, Symmetry, Name>::singular_map();
+      auto result_s = pmr::map<Symmetry, std::vector<real_scalar<ScalarType>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
-         auto* data_u = map_find(tensor_1.core->blocks, symmetries)->second.data();
-         auto* data_v = map_find(tensor_2.core->blocks, symmetries)->second.data();
+         auto* data_u = map_at(tensor_1.core->blocks, symmetries).data();
+         auto* data_v = map_at(tensor_2.core->blocks, symmetries).data();
          const auto* data = block.data();
-         const int m = map_find(tensor_1.core->edges[0].map, symmetries[0])->second;
-         const int n = map_find(tensor_2.core->edges[1].map, symmetries[1])->second;
+         const int m = map_at(tensor_1.core->edges[0].map, symmetries[0]);
+         const int n = map_at(tensor_2.core->edges[1].map, symmetries[1]);
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
          auto s = std::vector<real_scalar<ScalarType>>(k);
@@ -436,7 +436,7 @@ namespace TAT {
 #ifdef TAT_USE_SINGULAR_MATRIX
             singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v),
 #else
-            {std::move(result_s)},
+            {{std::move_iterator(result_s.begin()), std::move_iterator(result_s.end())}},
 #endif
             std::move(v)};
    }

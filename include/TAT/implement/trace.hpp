@@ -77,7 +77,7 @@ namespace TAT {
                // 统计traced names
                traced_names.insert(name_to_find);
                traced_names.insert(*name_correspond);
-               auto index_correspond = map_find(name_to_index, *name_correspond)->second;
+               auto index_correspond = map_at(name_to_index, *name_correspond);
                valid_index[index_correspond] = false;
             }
          }
@@ -129,7 +129,7 @@ namespace TAT {
                for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
                   // 而source的形状应该是多个分块对角矩阵, 每个元素是一个向量, 我只需要把正对角的向量们求和
                   auto symmetry_2 = -symmetry_1;
-                  auto source_block = map_find<true>(merged_tensor.core->blocks, pmr::vector<Symmetry>{symmetry_1, symmetry_2, Symmetry()})->second;
+                  auto source_block = map_at<true>(merged_tensor.core->blocks, pmr::vector<Symmetry>{symmetry_1, symmetry_2, Symmetry()});
                   auto dimension_plus_one = dimension + 1;
                   for (Size i = 0; i < dimension; i++) {
                      const ScalarType* __restrict source_data = source_block.data() + dimension_plus_one * i * line_size;

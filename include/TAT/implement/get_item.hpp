@@ -64,14 +64,14 @@ namespace TAT {
             const auto& [symmetry, index] = found->second;
             symmetries.push_back(symmetry);
             scalar_position.push_back(index);
-            dimensions.push_back(map_find(core->edges[i].map, symmetry)->second);
+            dimensions.push_back(map_at(core->edges[i].map, symmetry));
          }
          Size offset = 0;
          for (Rank j = 0; j < rank; j++) {
             offset *= dimensions[j];
             offset += scalar_position[j];
          }
-         return map_find(core->blocks, symmetries)->second[offset];
+         return map_at(core->blocks, symmetries)[offset];
       }
    }
 } // namespace TAT

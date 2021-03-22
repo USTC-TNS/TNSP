@@ -661,7 +661,7 @@ namespace TAT {
          auto dimensions_after_transpose = pmr::vector<Size>(rank_at_transpose);
          Size total_size = 1;
          for (auto i = 0; i < rank_at_transpose; i++) {
-            auto dimension = map_find(edge_before_transpose[i].map, symmetries_before_transpose[i])->second;
+            auto dimension = map_at(edge_before_transpose[i].map, symmetries_before_transpose[i]);
             dimensions_before_transpose[i] = dimension;
             dimensions_after_transpose[plan_source_to_destination[i]] = dimension;
             symmetries_after_transpose[plan_source_to_destination[i]] = symmetries_before_transpose[i];
@@ -673,18 +673,18 @@ namespace TAT {
          // 已经获得四个symmetry, 两个offset, 两个dimension
          // 现在获得leadings和开始点
 
-         const auto& source_block = map_find<true>(core->blocks, source_symmetries)->second;
-         auto& destination_block = map_find<true>(result.core->blocks, destination_symmetries)->second;
+         const auto& source_block = map_at<true>(core->blocks, source_symmetries);
+         auto& destination_block = map_at<true>(result.core->blocks, destination_symmetries);
 
          Size total_source_offset = 0;
          for (auto i = 0; i < rank_before_split; i++) {
             // 这里将edge_before_split换为core->edges
-            total_source_offset *= map_find(core->edges[i].map, source_symmetries[i])->second;
+            total_source_offset *= map_at(core->edges[i].map, source_symmetries[i]);
             total_source_offset += source_offsets[i];
          }
          Size total_destination_offset = 0;
          for (auto i = 0; i < rank_after_merge; i++) {
-            total_destination_offset *= map_find(edge_after_merge[i].map, destination_symmetries[i])->second;
+            total_destination_offset *= map_at(edge_after_merge[i].map, destination_symmetries[i]);
             total_destination_offset += destination_offsets[i];
          }
 
@@ -694,7 +694,7 @@ namespace TAT {
                leadings_of_source[i] = 1;
             } else [[likely]] {
                // 这里将edge_before_split换为core->edges
-               leadings_of_source[i] = leadings_of_source[i + 1] * map_find(core->edges[i + 1].map, source_symmetries[i + 1])->second;
+               leadings_of_source[i] = leadings_of_source[i + 1] * map_at(core->edges[i + 1].map, source_symmetries[i + 1]);
             }
          }
          auto leadings_before_transpose = pmr::vector<Size>(rank_at_transpose);
@@ -713,7 +713,7 @@ namespace TAT {
                leadings_of_destination[i] = 1;
             } else [[likely]] {
                leadings_of_destination[i] =
-                     leadings_of_destination[i + 1] * map_find(edge_after_merge[i + 1].map, destination_symmetries[i + 1])->second;
+                     leadings_of_destination[i + 1] * map_at(edge_after_merge[i + 1].map, destination_symmetries[i + 1]);
             }
          }
          auto leadings_after_transpose = pmr::vector<Size>(rank_at_transpose);
