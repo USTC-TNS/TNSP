@@ -22,7 +22,7 @@
 using Tensor = TAT::Tensor<double, TAT::NoSymmetry>;
 
 void run_test() {
-   auto A = Tensor({"i", "j"}, {3, 3}).test();
+   auto A = Tensor({"i", "j"}, {3, 3}).range();
    for (auto step = 1; step < 10; step++) {
       auto B = A.exponential({{"i", "j"}}, step);
       std::cout << B << "\n";

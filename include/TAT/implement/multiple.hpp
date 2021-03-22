@@ -21,9 +21,9 @@
 #ifndef TAT_MULTIPLE_HPP
 #define TAT_MULTIPLE_HPP
 
-#include "const_integral.hpp"
-#include "tensor.hpp"
-#include "timer.hpp"
+#include "../structure/tensor.hpp"
+#include "../utility/const_integral.hpp"
+#include "../utility/timer.hpp"
 
 namespace TAT {
    template<typename ScalarType, typename ScalarTypeS>
@@ -46,11 +46,13 @@ namespace TAT {
             const_n_variant);
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
+   inline timer multiple_guard("multiple");
+
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Tensor<ScalarType, Symmetry, Name>
+   Tensor<ScalarType, Symmetry, Name>::multiple(const SingularType& S, const Name& name, char direction, bool division) const {
       auto timer_guard = multiple_guard();
-      auto pmr_guard = scope_resource<default_buffer_size>();
+      auto pmr_guard = scope_resource<1 << 10>();
       bool different_direction;
       if (direction == 'u' || direction == 'U') {
          different_direction = false;
@@ -60,15 +62,15 @@ namespace TAT {
          TAT_error("Direction invalid in multiple");
          return *this;
       }
-      const auto found = name_to_index.find(name);
-      if (found == name_to_index.end()) {
+      const auto found = map_find(name_to_index, name);
+      if (found == name_to_index.end()) [[unlikely]] {
          TAT_warning_or_error_when_name_missing("Name not found in multiple");
          return *this;
       }
       auto result = same_shape();
       auto index = found->second;
       for (const auto& [symmetries, block_source] : core->blocks) {
-         auto& block_destination = result.core->blocks.at(symmetries);
+         auto& block_destination = map_find(result.core->blocks, symmetries)->second;
          auto symmetry_of_s = symmetries[index];
          if (different_direction) {
             symmetry_of_s = -symmetry_of_s;
@@ -84,14 +86,14 @@ namespace TAT {
          Rank i = 0;
          Size m = 1;
          for (; i < index; i++) {
-            m *= core->edges[i].map.at(symmetries[i]);
+            m *= map_find(core->edges[i].map, symmetries[i])->second;
          }
-         Size k = core->edges[i].map.at(symmetries[i]);
+         Size k = map_find(core->edges[i].map, symmetries[i])->second;
          Size n = 1;
          for (i++; i < names.size(); i++) {
-            n *= core->edges[i].map.at(symmetries[i]);
+            n *= map_find(core->edges[i].map, symmetries[i])->second;
          }
-         if (dimension != k) {
+         if (dimension != k) [[unlikely]] {
             TAT_error("Vector Size incompatible in Multiple with a tensor");
          }
          const auto* data_source = block_source.data();

@@ -19,16 +19,15 @@
 
 #include "run_test.hpp"
 void run_test() {
-   using TAT::operator<<; // print vector need operator in TAT
    std::cout
          << TAT::Tensor<double, TAT::FermiSymmetry>{{"Left", "Right", "Up"}, {{{0, 1}, {1, 2}}, {{-1, 1}, {-2, 3}, {0, 2}}, {{0, 3}, {1, 1}}}, true}
-                  .test(2)
+                  .range(2)
          << "\n";
    std::cout
          << TAT::Tensor<
                   double,
                   TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
-                  .test(2)
+                  .range(2)
          << "\n";
    auto a = TAT::Tensor<double, TAT::FermiU1Symmetry>{
          {"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true};
@@ -36,15 +35,14 @@ void run_test() {
          << TAT::Tensor<
                   double,
                   TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
-                  .test(2)
-                  .block({{"Left", {1, 1}}, {"Up", {1, -1}}, {"Right", {-2, 0}}})
+                  .range(2)
          << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiU1Symmetry>{1234}.at({}) << "\n";
    std::cout
          << TAT::Tensor<
                   double,
                   TAT::FermiU1Symmetry>{{"Left", "Right", "Up"}, {{{{0, 0}, 1}, {{1, 1}, 2}}, {{{-1, -1}, 1}, {{-2, 0}, 3}, {{0, 0}, 2}}, {{{0, 0}, 3}, {{1, -1}, 1}}}, true}
-                  .test(2)
+                  .range(2)
                   .at({{"Left", {{1, 1}, 1}}, {"Up", {{1, -1}, 0}}, {"Right", {{-2, 0}, 0}}})
          << "\n";
 }

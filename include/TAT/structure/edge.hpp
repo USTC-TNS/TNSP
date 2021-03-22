@@ -21,81 +21,72 @@
 #ifndef TAT_EDGE_HPP
 #define TAT_EDGE_HPP
 
+#include <algorithm>
 #include <map>
+#include <ranges>
 #include <set>
 
-#include "basic_type.hpp"
-#include "pmr_resource.hpp"
 #include "symmetry.hpp"
 
 namespace TAT {
    /** \defgroup Edge
     * @{
     */
-
-   TAT_CHECK_MEMBER(map)
-
-   template<typename Symmetry, bool is_pointer = false>
+   template<is_symmetry Symmetry, bool is_pointer = false>
    struct edge_map_t {
+      using pair_initializer_list_t = std::initializer_list<std::pair<Symmetry, Size>>;
+      using symmetry_initializer_list_t = std::initializer_list<Symmetry>;
+
       using symmetry_t = Symmetry;
-      using map_t = pmr::map<Symmetry, Size>;
+      using map_t = std::vector<std::pair<Symmetry, Size>>;
       std::conditional_t<is_pointer, const map_t&, map_t> map;
-      // TODO bool conjugated;
 
       edge_map_t() = default;
-
-      edge_map_t(const edge_map_t&) = default;
-      edge_map_t(const edge_map_t& other, const map_t::allocator_type& alloc) : map(other, alloc) {}
-      edge_map_t(const map_t& map) : map(map) {}
-      edge_map_t(const map_t& map, const map_t::allocator_type& alloc) : map(map, alloc) {}
-
-      edge_map_t(edge_map_t&&) noexcept = default;
-      edge_map_t(edge_map_t&& other, const map_t::allocator_type& alloc) : map(std::move(other), alloc) {}
-      edge_map_t(map_t&& map) : map(std::move(map)) {}
-      edge_map_t(map_t&& map, const map_t allocator_type& alloc) : map(std::move(map), alloc) {}
-
+      edge_map_t(const edge_map_t& edge) = default;
+      edge_map_t(edge_map_t&& edge) = default;
       edge_map_t& operator=(const edge_map_t&) = default;
       edge_map_t& operator=(edge_map_t&&) noexcept = default;
       ~edge_map_t() = default;
 
-      template<typename InputIt>
-      edge_map_t(InputIt first, InputIt last) : map(first, last) {}
-      template<typename InputIt>
-      edge_map_t(InputIt first, InputIt last, const map_t::allocator_type& alloc) : map(first, last, alloc) {}
-
-      template<typename OtherEdge, std::enable_if_t<has_map_v<OtherEdge>, int> = 0>
-      edge_map_t(const OtherEdge& edge) : map(edge.map) {}
-      template<typename OtherEdge, std::enable_if_t<has_map_v<OtherEdge>, int> = 0>
-      edge_map_t(const OtherEdge& edge, const map_t::allocator_type& alloc) : map(edge.map, alloc) {}
-      template<typename MapSymmetrySize, std::enable_if_t<is_map_of_v<MapSymmetrySize, Symmetry, Size>, int> = 0>
-      edge_map_t(const MapSymmetrySize& map) : map(map.begin(), map.end()) {}
-      template<typename MapSymmetrySize, std::enable_if_t<is_map_of_v<MapSymmetrySize, Symmetry, Size>, int> = 0>
-      edge_map_t(const MapSymmetrySize& map, const map_t::allocator_type& alloc) : map(map.begin(), map.end(), alloc) {}
-
-      edge_map_t(const std::initializer_list<std::pair<const Symmetry, Size>>& map) : map(map) {}
-      edge_map_t(const std::initializer_list<std::pair<const Symmetry, Size>>& map, map_t& alloc) : map(map, alloc) {}
+      // map不可以由非const的initializer list创建
+      template<std::ranges::range MapSymmetrySize = pair_initializer_list_t>
+            requires(!is_pointer) && requires(std::ranges::range_value_t<MapSymmetrySize> pair) {
+         pair.first;
+         pair.second;
+      }
+      edge_map_t(MapSymmetrySize&& map_) : map(map_.begin(), map_.end()) {
+         if constexpr (!requires(MapSymmetrySize map, Symmetry s) { map.find(s); }) {
+            std::ranges::sort(map, [](const auto& a, const auto& b) { return a.first < b.first; });
+         }
+      }
 
       /**
        * 由一些对称性的集合构造, 意味着每一个对称性对应的维度都为1
        */
-      template<typename SetSymmetry, std::enable_if_t<is_set_of_v<SetSymmetry, Symmetry>, int> = 0>
-      edge_map_t(const SetSymmetry& symmetries) {
+      template<std::ranges::range SetSymmetry = symmetry_initializer_list_t>
+            requires(!is_pointer) && (!requires(std::ranges::range_value_t<SetSymmetry> pair) {
+               pair.first;
+               pair.second;
+            })edge_map_t(const SetSymmetry& symmetries) {
          for (const auto& symmetry : symmetries) {
-            map[symmetry] = 1;
+            map.emplace_back(symmetry, 1);
          }
-      }
-      edge_map_t(const std::initializer_list<Symmetry>& symmetries) {
-         for (const auto& symmetry : symmetries) {
-            map[symmetry] = 1;
+         if constexpr (!requires(SetSymmetry set, Symmetry s) { set.find(s); }) {
+            std::ranges::sort(map, [](const auto& a, const auto& b) { return a.first < b.first; });
          }
       }
 
       /**
        * 构造一个平凡的边, 仅含一个对称性
        */
-      edge_map_t(const Size dimension) : map({{Symmetry(), dimension}}) {}
+      template<typename = void>
+      requires(!is_pointer) edge_map_t(const Size dimension) : map({{Symmetry(), dimension}}) {}
+
+      template<typename = void>
+      requires is_pointer edge_map_t(const map_t& map_) : map(map_) {}
    };
 
+   // 可能并不需要
    struct edge_nosymmetry_conjugated_t {
       static constexpr bool conjugated = false;
    };
@@ -104,7 +95,6 @@ namespace TAT {
       edge_symmetry_conjugated_t() : conjugated(0) {}
       edge_symmetry_conjugated_t(bool conjugated) : conjugated(conjugated) {}
    };
-
    template<bool is_nosymmetry>
    using edge_conjugated_t = std::conditional_t<is_nosymmetry, edge_nosymmetry_conjugated_t, edge_symmetry_conjugated_t>;
 
@@ -124,7 +114,7 @@ namespace TAT {
     * \tparam Symmetry 张量所拥有的对称性
     * \tparam is_pointer map是否为引用而非真是存储着数据的伪边
     */
-   template<typename Symmetry, bool is_pointer = false>
+   template<is_symmetry Symmetry, bool is_pointer = false>
    struct Edge : edge_map_t<Symmetry, is_pointer>, edge_conjugated_t<Symmetry::length == 0>, edge_arrow_t<Symmetry::is_fermi_symmetry> {
       using base_map_t = edge_map_t<Symmetry, is_pointer>;
       using base_conjugated_t = edge_conjugated_t<Symmetry::length == 0>;
@@ -141,21 +131,17 @@ namespace TAT {
       Edge& operator=(Edge&&) noexcept = default;
       ~Edge() = default;
 
-      template<typename... Args>
-      Edge(Args&&... args) : base_map_t(std::forward<Args>(args)...) {}
-      template<typename... Args>
-      Edge(const std::initializer_list<std::pair<const Symmetry, Size>>& map, Args&&... args) : base_map_t(map, std::forward<Args>(args)...) {}
-      template<typename... Args>
-      Edge(const std::initializer_list<Symmetry>& symmetries, Args&&... args) : base_map_t(symmetries, std::forward<Args>(args)...) {}
+      // 这里不可以用typename ... Args不然会和initialzier list产生歧义
+      // 不知道为啥移动构造会走这一条，所以加个sfinae
+      template<typename Arg>
+      requires(!std::same_as<std::remove_cvref_t<Arg>, Edge<Symmetry, is_pointer>>) Edge(Arg&& arg) : base_map_t(std::forward<Arg>(arg)) {}
+      Edge(const typename base_map_t::pair_initializer_list_t& map_) : base_map_t(map_) {}
+      Edge(const typename base_map_t::symmetry_initializer_list_t& symmetries) : base_map_t(symmetries) {}
 
-      template<typename... Args>
-      Edge(Arrow arrow, Args&&... args) : base_map_t(std::forward<Args>(args)...), base_arrow_t(arrow) {}
-      template<typename... Args>
-      Edge(Arrow arrow, const std::initializer_list<std::pair<const Symmetry, Size>>& map, Args&&... args) :
-            base_map_t(map, std::forward<Args>(args)...), base_arrow_t(arrow) {}
-      template<typename... Args>
-      Edge(Arrow arrow, const std::initializer_list<Symmetry>& symmetries, Args&&... args) :
-            base_map_t(symmetries, std::forward<Args>(args)...), base_arrow(arrow) {}
+      template<typename Arg>
+      Edge(Arrow arrow, Arg&& arg) : base_map_t(std::forward<Arg>(arg)), base_arrow_t(arrow) {}
+      Edge(Arrow arrow, const typename base_map_t::pair_initializer_list_t& map) : base_map_t(map), base_arrow_t(arrow) {}
+      Edge(Arrow arrow, const typename base_map_t::symmetry_initializer_list_t& symmetries) : base_map_t(symmetries), base_arrow_t(arrow) {}
 
       /**
        * 由费米子数自动构造箭头方向, 虽然这个不一定需要一致, 仅仅在只含有一个Fermi对称性时有效
@@ -180,18 +166,35 @@ namespace TAT {
          }
          return false;
       }
+
+      static constexpr bool i_am_an_edge = !is_pointer;
+      static constexpr bool i_am_an_edge_pointer = is_pointer;
    };
-   template<typename Symmetry, bool is_pointer = false>
+   template<is_symmetry Symmetry, bool is_pointer = false>
    bool operator==(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) {
-      return edge_1.arrow == edge_2.arrow && std::equal(edge_1.map.begin(), edge_1.map.end(), edge_2.map.begin(), edge_2.map.end());
+      return edge_1.arrow == edge_2.arrow && edge_1.conjugated == edge_2.conjugated && std::ranges::equal(edge_1.map, edge_2.map);
    }
 
    /**
     * 中间处理中常用到的数据类型, 类似Edge但是其中对称性值到子边长的映射表为指针
     * \see Edge
     */
-   template<typename Symmetry>
+   template<is_symmetry Symmetry>
    using EdgePointer = Edge<Symmetry, true>;
+
+   /**
+    * 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
+    * \tparam T 如果T是Edge类型, 则value为true
+    * \see is_edge_v
+    */
+   template<typename T>
+   concept is_edge = T::i_am_an_edge;
+
+   template<typename T>
+   concept is_edge_pointer = T::i_am_an_edge_pointer;
+
+   template<typename T>
+   concept is_general_edge = is_edge<T> || is_edge_pointer<T>;
 
    /**
     * 对一个边的形状列表进行枚举分块, 并做一些其他操作
@@ -204,36 +207,48 @@ namespace TAT {
     * \note operate输入两个参数, 一个是每个边所在的位置列表, 一个是需要更新信息的位置开头, 并返回操作后需要更新的位置开头
     * \see initialize_block_symmetries_with_check, get_merged_edge
     */
-   template<typename Edge, typename Func1, typename Func2, typename Func3>
-   void loop_edge(const Edge* edges, const Rank rank, Func1&& rank0, Func2&& dims0, Func3&& operate) {
-      if (rank == 0) {
+   template<
+         template<typename> class Allocator = std::allocator,
+         bool check_conjugated = false,
+         is_general_edge Edge,
+         typename Rank0,
+         typename Dims0,
+         typename Operate>
+   requires requires(Rank0&& rank0, Dims0&& dims0, Operate&& operate, std::vector<typename Edge::map_t::const_iterator> list, Rank number) {
+      rank0();
+      dims0();
+      operate(list, number);
+   }
+   void loop_edge(const Edge* edges, const Rank rank, Rank0&& rank0, Dims0&& dims0, Operate&& operate) {
+      if (rank == 0) [[unlikely]] {
          rank0();
          return;
       }
-      using Symmetry = typename Edge::symmetry_t;
-      auto symmetry_iterator_list = pmr::vector<typename Edge::map_t::const_iterator>();
+      using Iterator = typename Edge::map_t::const_iterator;
+      auto symmetry_iterator_list = std::vector<Iterator, Allocator<Iterator>>();
       symmetry_iterator_list.reserve(rank);
       for (auto i = 0; i != rank; ++i) {
          const auto& map = edges[i].map;
-         if (edges[i].map.empty()) {
+         if (edges[i].map.empty()) [[unlikely]] {
             dims0();
             return;
          }
          // 如果没有conjugated，指向当前位置，如果conjugated，指向当前位置的下一个位置
-         symmetry_iterator_list.push_back(edges[i].conjugated ? std::prev(map.end()) : map.begin());
+         symmetry_iterator_list.push_back((check_conjugated && edges[i].conjugated) ? std::prev(map.end()) : map.begin());
       }
       Rank minimum_changed = 0;
       while (true) {
          minimum_changed = operate(symmetry_iterator_list, minimum_changed);
          auto edge_position = rank - 1;
 
-         while (edges[edge_position].conjugated ? symmetry_iterator_list[edge_position]-- == edges[edge_position].map.begin() :
-                                                  ++symmetry_iterator_list[edge_position] == edges[edge_position].map.end()) {
-            if (edge_position == 0) {
+         while ((check_conjugated && edges[edge_position].conjugated) ? symmetry_iterator_list[edge_position]-- == edges[edge_position].map.begin() :
+                                                                        ++symmetry_iterator_list[edge_position] == edges[edge_position].map.end()) {
+            if (edge_position == 0) [[unlikely]] {
                return;
             }
-            symmetry_iterator_list[edge_position] =
-                  edges[edge_position].conjugated ? std::prev(edge[edge_position].map.end()) : edges[edge_position].map.begin();
+            symmetry_iterator_list[edge_position] = (check_conjugated && edges[edge_position].conjugated) ?
+                                                          std::prev(edges[edge_position].map.end()) :
+                                                          edges[edge_position].map.begin();
             --edge_position;
          }
          minimum_changed = minimum_changed < edge_position ? minimum_changed : edge_position;
@@ -241,31 +256,31 @@ namespace TAT {
    }
 
    /// \private
-   template<typename Edges>
-   [[nodiscard]] auto initialize_block_symmetries_with_check(const Edges& edges) {
+   template<template<typename> class Allocator = std::allocator, bool check_conjugated = false, std::ranges::contiguous_range Edges>
+   requires is_general_edge<std::ranges::range_value_t<Edges>> [[nodiscard]] auto initialize_block_symmetries_with_check(const Edges& edges) {
       using Symmetry = typename Edges::value_type::symmetry_t;
       Rank rank = edges.size();
-      auto result = pmr::vector<std::tuple<pmr::vector<Symmetry>, Size>>();
-      auto symmetries = pmr::vector<Symmetry>(rank);
-      auto sizes = pmr::vector<Size>(rank);
-      loop_edge(
+      // 对称性列表和大小
+      using ResultItem = std::pair<std::vector<Symmetry, Allocator<Symmetry>>, Size>;
+      auto result = std::vector<ResultItem, Allocator<ResultItem>>();
+      auto symmetries = std::vector<Symmetry, Allocator<Symmetry>>(rank);
+      auto sizes = std::vector<Size, Allocator<Size>>(rank);
+      loop_edge<Allocator, check_conjugated>(
             edges.data(),
             rank,
-            [&result]() {
-               result.push_back({pmr::vector<Symmetry>{}, 1});
-            },
-            []() {},
+            [&] { result.emplace_back(std::piecewise_construct, std::tuple{}, std::tuple{1}); },
+            [] {},
             [&](const auto& symmetry_iterator_list, Rank minimum_changed) {
                auto symmetry_summary = Symmetry();
                for (const auto& symmetry_iterator : symmetry_iterator_list) {
                   symmetry_summary += symmetry_iterator->first;
                }
-               if (symmetry_summary == Symmetry()) {
+               if (symmetry_summary == Symmetry()) [[unlikely]] {
                   for (auto i = minimum_changed; i < rank; i++) {
                      symmetries[i] = symmetry_iterator_list[i]->first;
                      sizes[i] = symmetry_iterator_list[i]->second * (i ? sizes[i - 1] : 1);
                   }
-                  result.push_back({symmetries, sizes.back()});
+                  result.emplace_back(std::piecewise_construct, std::tuple{symmetries.begin(), symmetries.end()}, std::tuple{sizes.back()});
                   return rank;
                }
                return minimum_changed;
@@ -273,30 +288,17 @@ namespace TAT {
       return result;
    }
 
-   /**
-    * 判断一个类型是否为Edge类型, 这里不认为map为引用的Edge类型为Edge
-    * \tparam T 如果T是Edge类型, 则value为true
-    * \see is_edge_v
-    */
-   template<typename T>
-   struct is_edge : std::false_type {};
    /// \private
-   template<typename T>
-   struct is_edge<Edge<T>> : std::true_type {};
-   template<typename T>
-   constexpr bool is_edge_v = is_edge<T>::value;
-
-   /// \private
-   template<typename VectorSymmetry, typename VectorArrow>
-   [[nodiscard]] auto get_edge_from_edge_symmetry_and_arrow(const VectorSymmetry& edge_symmetry, const VectorArrow& edge_arrow, Rank rank) {
-      using Symmetry = typename VectorSymmetry::value_type;
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         return pmr::vector<Edge<Symmetry>>(rank, {1});
+   template<typename Symmetry>
+   [[nodiscard]] auto get_edge_from_edge_symmetry_and_arrow(const std::span<Symmetry>& edge_symmetry, const std::span<Arrow>& edge_arrow, Rank rank) {
+      // 在one中使用
+      if constexpr (Symmetry::length == 0) {
+         return std::vector<Edge<Symmetry>>(rank, {1});
       } else {
-         auto result = pmr::vector<Edge<Symmetry>>();
+         auto result = std::vector<Edge<Symmetry>>();
          result.reserve(rank);
          for (auto i = 0; i < rank; i++) {
-            if constexpr (is_fermi_symmetry_v<Symmetry>) {
+            if constexpr (Symmetry::is_fermi_symmetry) {
                result.push_back({edge_arrow[i], {{edge_symmetry[i], 1}}});
             } else {
                result.push_back({{{edge_symmetry[i], 1}}});

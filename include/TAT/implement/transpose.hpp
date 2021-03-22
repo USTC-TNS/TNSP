@@ -23,8 +23,7 @@
 
 #include <tuple>
 
-#include "basic_type.hpp"
-#include "const_integral.hpp"
+#include "../utility/const_integral.hpp"
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 #ifdef TAT_USE_MKL_TRANSPOSE
@@ -56,6 +55,30 @@ void mkl_zomatcopy_(
 #endif
 
 namespace TAT {
+   constexpr unsigned long l1_cache =
+#ifdef TAT_L1_CACHE
+         TAT_L1_CACHE
+#else
+         98304
+#endif
+         ;
+
+   constexpr unsigned long l2_cache =
+#ifdef TAT_L1_CACHE
+         TAT_L1_CACHE
+#else
+         786432
+#endif
+         ;
+
+   constexpr unsigned long l3_cache =
+#ifdef TAT_L1_CACHE
+         TAT_L1_CACHE
+#else
+         4718592
+#endif
+         ;
+
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename ScalarType>
    void mkl_transpose(
@@ -113,6 +136,8 @@ namespace TAT {
       mkl_zomatcopy_("R", "T", &dimension_of_M, &dimension_of_N, &alpha, data_source, &leading_source, data_destination, &leading_destination);
    }
 #endif
+
+   inline timer transpose_kernel_core_guard("transpose_kernel_core");
 
    // 这个是最简单的张量转置中实际搬运数据的部分，numpy也是这么写的，区别在于dimension和两个leading的顺序是可以一同交换的
    // numpy保证destination的leading是降序的， simple_transpose就是这么调用tensor_transpose_kernel的
@@ -185,7 +210,7 @@ namespace TAT {
             current_source -= dimension[active_position] * leading_source[active_position];
             current_destination -= dimension[active_position] * leading_destination[active_position];
 
-            if (active_position == 0) {
+            if (active_position == 0) [[unlikely]] {
                return;
             }
             active_position--;
@@ -382,6 +407,8 @@ namespace TAT {
                data_source, data_destination, real_dimensions.data(), real_leadings_source.data(), real_leadings_destination.data(), rank);
       }
    }
+
+   inline timer transpose_kernel_guard("transpose_kernel");
 
    template<typename ScalarType>
    void do_transpose(

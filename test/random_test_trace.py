@@ -35,7 +35,7 @@ for _ in range(1000):
 
     trace_conf = {(f"A.{i}", f"A.{j}") for i, j in pair_leg}
 
-    A = Tensor(name_list, dim_list.tolist()).test()
+    A = Tensor(name_list, dim_list.tolist()).range()
     B = A.trace(trace_conf)
 
     res = A.block[{}]

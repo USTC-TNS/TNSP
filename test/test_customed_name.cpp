@@ -49,7 +49,7 @@ namespace net {
    void f() {
       auto i0 = TAT::InternalName<pss>::SVD_U;
       TAT::NameTraits<pss>::print(std::cout, i0) << "\n";
-      auto a = T({{"A", "1"}}, {5}).test();
+      auto a = T({{"A", "1"}}, {5}).range();
       std::cout << a << "\n";
 
       auto s = a.svd({{"A", "1"}}, {"A", "U"}, {"A", "V"});

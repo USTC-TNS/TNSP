@@ -25,23 +25,23 @@ def run_test(function):
 
 
 def test_create_tensor():
-    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test())
+    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).range())
     print(TAT.Tensor.ZNo(["Left", "Right"], [0, 3]))
     print(TAT.Tensor.DNo([], []).set(lambda: 10))
     print(TAT.Tensor.DNo([], []).set(lambda: 10)[{}])
-    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test()[{"Right": 2, "Left": 1}])
+    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).range()[{"Right": 2, "Left": 1}])
 
 
 def test_create_symmetry_tensor():
     print(TAT.Tensor.DZ2(["Left", "Right", "Up"], [{1: 3, 0: 1}, {1: 1, 0: 2}, {1: 2, 0: 3}]).zero())
-    print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2))
+    print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).range(2))
     print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).zero())
     print(TAT.Tensor.DU1([], []).set(lambda: 123))
 
 
 def test_create_fermi_symmetry_tensor():
-    print(TAT.Tensor.DFermi(["Left", "Right", "Up"], [{0: 1, 1: 2}, {-1: 1, -2: 3, 0: 2}, {0: 3, 1: 1}], True).test(2))
-    print(TAT.Tensor.DFermiU1(["Left", "Right", "Up"], [{(0, 0): 1, (1, 1): 2}, {(-1, -1): 1, (-2, 0): 3, (0, 0): 2}, {(0, 0): 3, (1, -1): 1}], True).test(2))
+    print(TAT.Tensor.DFermi(["Left", "Right", "Up"], [{0: 1, 1: 2}, {-1: 1, -2: 3, 0: 2}, {0: 3, 1: 1}], True).range(2))
+    print(TAT.Tensor.DFermiU1(["Left", "Right", "Up"], [{(0, 0): 1, (1, 1): 2}, {(-1, -1): 1, (-2, 0): 3, (0, 0): 2}, {(0, 0): 3, (1, -1): 1}], True).range(2))
     print(
         TAT.Tensor.DFermiU1(["Left", "Right", "Up"], [{
             (0, 0): 1,
@@ -53,7 +53,7 @@ def test_create_fermi_symmetry_tensor():
         }, {
             (0, 0): 3,
             (1, -1): 1
-        }], True).test(2).block[{
+        }], True).range(2).block[{
             "Left": (1, 1),
             "Up": (1, -1),
             "Right": (-2, 0)
@@ -70,7 +70,7 @@ def test_create_fermi_symmetry_tensor():
         }, {
             (0, 0): 3,
             (1, -1): 1
-        }], True).test(2)[{
+        }], True).range(2)[{
             "Left": ((1, 1), 1),
             "Up": ((1, -1), 0),
             "Right": ((-2, 0), 0)
@@ -80,14 +80,14 @@ def test_create_fermi_symmetry_tensor():
 def test_type_conversion():
     print(TAT.Tensor.DU1(123))
     print(float(TAT.Tensor.DU1(123)))
-    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to(float))
-    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(2).to(complex))
-    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).test(2).to(float))
-    print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to(complex))
+    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).range(2).to(float))
+    print(TAT.Tensor.DNo(["Left", "Right"], [3, 4]).range(2).to(complex))
+    print(TAT.Tensor.ZNo(["Left", "Right"], [3, 4]).range(2).to(float))
+    print(TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).range(2).to(complex))
 
 
 def test_norm():
-    t = TAT.Tensor.DU1("Left Right Up".split(" "), [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2).to(complex)
+    t = TAT.Tensor.DU1("Left Right Up".split(" "), [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).range(2).to(complex)
     print(t.norm_max())
     print(t.norm_num())
     print(t.norm_sum())
@@ -96,12 +96,12 @@ def test_norm():
 
 def test_scalar():
     t = TAT.Tensor.DZ2(["Left", "Right", "Phy"], [{0: 2, 1: 2}, {0: 2, 1: 2}, {0: 2, 1: 2}])
-    t.test()
+    t.range()
     print(t + 1.0)
     print(1.0 / t)
 
-    a = TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test()
-    b = TAT.Tensor.DNo(["Left", "Right"], [3, 4]).test(0, 0.1)
+    a = TAT.Tensor.DNo(["Left", "Right"], [3, 4]).range()
+    b = TAT.Tensor.DNo(["Left", "Right"], [3, 4]).range(0, 0.1)
     print(a + b)
     print(a - b)
     print(a * b)
@@ -110,24 +110,24 @@ def test_scalar():
 
 
 def test_io():
-    a = TAT.Tensor.DNo(["Left", "Right", "Up"], [2, 3, 4]).test()
+    a = TAT.Tensor.DNo(["Left", "Right", "Up"], [2, 3, 4]).range()
     ss = a.dump()
     b = TAT.Tensor.DNo().load(ss)
     print(a)
     print(b)
 
-    c = TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2)
+    c = TAT.Tensor.DU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).range(2)
     ss = c.dump()
     d = TAT.Tensor.DU1().load(ss)
     print(c)
     print(d)
 
-    g = TAT.Tensor.ZU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(2)
+    g = TAT.Tensor.ZU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).range(2)
     h = TAT.Tensor.ZU1().load(g.dump())
     print(g)
     print(h)
 
-    i = TAT.Tensor.ZFermi(["Left", "Right", "Up"], [{-2: 3, 0: 1, -1: 2}, {0: 2, 1: 3}, {0: 3, 1: 1}], True).test(2)
+    i = TAT.Tensor.ZFermi(["Left", "Right", "Up"], [{-2: 3, 0: 1, -1: 2}, {0: 2, 1: 3}, {0: 3, 1: 1}], True).range(2)
     j = TAT.Tensor.ZFermi().load(i.dump())
     print(i)
     print(j)
@@ -136,39 +136,39 @@ def test_io():
 def test_edge_rename():
     t1 = TAT.Tensor.DZ2(["Left", "Right", "Phy"], [{0: 1, 1: 2}, {0: 3, 1: 4}, {0: 5, 1: 6}])
     t2 = t1.edge_rename({"Left": "Up"})
-    t1.test()
+    t1.range()
     print(t1)
 
 
 def test_transpose():
-    a = TAT.Tensor.DNo(["Left", "Right"], [2, 3]).test()
+    a = TAT.Tensor.DNo(["Left", "Right"], [2, 3]).range()
     print(a)
     print(a.transpose(["Right", "Left"]))
 
-    b = TAT.Tensor.DNo(["Left", "Right", "Up"], [2, 3, 4]).test()
+    b = TAT.Tensor.DNo(["Left", "Right", "Up"], [2, 3, 4]).range()
     print(b)
     print(b.transpose(["Right", "Up", "Left"]))
 
-    c = TAT.Tensor.ZU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).test(1)
+    c = TAT.Tensor.ZU1(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}]).range(1)
     print(c)
     ct = c.transpose(["Right", "Up", "Left"])
     print(ct)
     print(c[{"Left": (-1, 0), "Right": (1, 2), "Up": (0, 0)}])
     print(ct[{"Left": (-1, 0), "Right": (1, 2), "Up": (0, 0)}])
 
-    d = TAT.Tensor.DFermi(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}], True).test(1)
+    d = TAT.Tensor.DFermi(["Left", "Right", "Up"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 2, 1: 3}, {-1: 2, 0: 3, 1: 1}], True).range(1)
     print(d)
     dt = d.transpose(["Right", "Up", "Left"])
     print(dt)
 
-    e = TAT.Tensor.DNo(["Down", "Up", "Left", "Right"], [2, 3, 4, 5]).test(1)
+    e = TAT.Tensor.DNo(["Down", "Up", "Left", "Right"], [2, 3, 4, 5]).range(1)
     print(e)
     et = e.transpose(["Left", "Down", "Right", "Up"])
     print(et)
     print(e[{"Down": 1, "Up": 1, "Left": 2, "Right": 2}])
     print(et[{"Down": 1, "Up": 1, "Left": 2, "Right": 2}])
 
-    f = TAT.Tensor.DNo(["l1", "l2", "l3"], [2, 3, 4]).test()
+    f = TAT.Tensor.DNo(["l1", "l2", "l3"], [2, 3, 4]).range()
     print(f)
     print(f.transpose(["l1", "l2", "l3"]))
     print(f.transpose(["l1", "l3", "l2"]))
@@ -209,18 +209,18 @@ def test_split_and_merge():
 
 
 def test_edge_operator():
-    print(TAT.Tensor.DNo(["A", "B"], [8, 8]).test())
-    print(TAT.Tensor.DNo(["A", "B"], [8, 8]).test().edge_operator({"A": "C"}, {"C": [("D", 4), ("E", 2)], "B": [("F", 2), ("G", 4)]}, {"D", "F"}, {"I": ["D", "F"], "J": ["G", "E"]}, ["J", "I"]))
-    print(TAT.Tensor.DNo(["A", "B", "C"], [2, 3, 4]).test().edge_operator({}, {}, set(), {}, ["B", "C", "A"]))
+    print(TAT.Tensor.DNo(["A", "B"], [8, 8]).range())
+    print(TAT.Tensor.DNo(["A", "B"], [8, 8]).range().edge_operator({"A": "C"}, {"C": [("D", 4), ("E", 2)], "B": [("F", 2), ("G", 4)]}, {"D", "F"}, {"I": ["D", "F"], "J": ["G", "E"]}, ["J", "I"]))
+    print(TAT.Tensor.DNo(["A", "B", "C"], [2, 3, 4]).range().edge_operator({}, {}, set(), {}, ["B", "C", "A"]))
 
-    a = TAT.Tensor.DU1(["Left", "Right", "Up", "Down"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 4, 1: 2}, {-1: 2, 0: 3, 1: 1}, {-1: 1, 0: 3, 1: 2}]).test(1)
+    a = TAT.Tensor.DU1(["Left", "Right", "Up", "Down"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 4, 1: 2}, {-1: 2, 0: 3, 1: 1}, {-1: 1, 0: 3, 1: 2}]).range(1)
     b = a.edge_rename({"Right": "Right1"}).split_edge({"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]})
     c = b.transpose(["Down1", "Right1", "Up", "Left", "Down2"])
     d = c.merge_edge({"Left": ["Left", "Down2"]})
     total = a.edge_operator({"Right": "Right1"}, {"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]}, set(), {"Left": ["Left", "Down2"]}, ["Down1", "Right1", "Up", "Left"])
     print((total - d).norm_max())
 
-    a = TAT.Tensor.DFermi(["Left", "Right", "Up", "Down"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 4, 1: 2}, {-1: 2, 0: 3, 1: 1}, {-1: 1, 0: 3, 1: 2}]).test(1)
+    a = TAT.Tensor.DFermi(["Left", "Right", "Up", "Down"], [{-1: 3, 0: 1, 1: 2}, {-1: 1, 0: 4, 1: 2}, {-1: 2, 0: 3, 1: 1}, {-1: 1, 0: 3, 1: 2}]).range(1)
     b = a.edge_rename({"Right": "Right1"}).split_edge({"Down": [("Down1", {0: 1, 1: 2}), ("Down2", {-1: 1, 0: 1})]})
     r = b.reverse_edge({"Left"})
     c = r.transpose(["Down1", "Right1", "Up", "Left", "Down2"])
@@ -231,8 +231,8 @@ def test_edge_operator():
 
 
 def test_contract():
-    a = TAT.Tensor.DNo(["A", "B"], [2, 2]).test()
-    b = TAT.Tensor.DNo(["C", "D"], [2, 2]).test()
+    a = TAT.Tensor.DNo(["A", "B"], [2, 2]).range()
+    b = TAT.Tensor.DNo(["C", "D"], [2, 2]).range()
     print(a)
     print(b)
     print(a.contract(b, {("A", "C")}))
@@ -240,10 +240,10 @@ def test_contract():
     print(a.contract(b, {("B", "C")}))
     print(a.contract(b, {("B", "D")}))
 
-    print(TAT.Tensor.DNo(["A", "B", "C", "D"], [1, 2, 3, 4]).test().contract(TAT.Tensor.DNo(["E", "F", "G", "H"], [3, 1, 2, 4]).test(), {("B", "G"), ("D", "H")}))
+    print(TAT.Tensor.DNo(["A", "B", "C", "D"], [1, 2, 3, 4]).range().contract(TAT.Tensor.DNo(["E", "F", "G", "H"], [3, 1, 2, 4]).range(), {("B", "G"), ("D", "H")}))
 
-    c = TAT.Tensor.DFermi(["A", "B", "C", "D"], [{-1: 1, 0: 1, -2: 1}, {0: 1, 1: 2}, {0: 2, 1: 2}, {-2: 2, -1: 1, 0: 2}], True).test()
-    d = TAT.Tensor.DFermi(["E", "F", "G", "H"], [{0: 2, 1: 1}, {-2: 1, -1: 1, 0: 2}, {0: 1, -1: 2}, {0: 2, 1: 1, 2: 2}], True).test()
+    c = TAT.Tensor.DFermi(["A", "B", "C", "D"], [{-1: 1, 0: 1, -2: 1}, {0: 1, 1: 2}, {0: 2, 1: 2}, {-2: 2, -1: 1, 0: 2}], True).range()
+    d = TAT.Tensor.DFermi(["E", "F", "G", "H"], [{0: 2, 1: 1}, {-2: 1, -1: 1, 0: 2}, {0: 1, -1: 2}, {0: 2, 1: 1, 2: 2}], True).range()
     print(c)
     print(d)
     print(c.contract(d, {("B", "G"), ("D", "H")}))
@@ -251,7 +251,7 @@ def test_contract():
 
 
 def test_svd():
-    a = TAT.Tensor.DNo(["A", "B", "C", "D"], [2, 3, 4, 5]).test()
+    a = TAT.Tensor.DNo(["A", "B", "C", "D"], [2, 3, 4, 5]).range()
     print(a)
     [u, s, v] = a.svd({"C", "A"}, "E", "F")
     print(u)
@@ -259,7 +259,7 @@ def test_svd():
     print(s)
     print(v.multiple(s, "F", 'u').contract(u, {("F", "E")}).transpose(["A", "B", "C", "D"]))
 
-    b = TAT.Tensor.ZNo(["A", "B", "C", "D"], [2, 3, 4, 5]).test()
+    b = TAT.Tensor.ZNo(["A", "B", "C", "D"], [2, 3, 4, 5]).range()
     print(b)
     [u, s, v] = b.svd({"A", "D"}, "E", "F")
     print(u)
@@ -268,7 +268,7 @@ def test_svd():
     print(v.contract(v.edge_rename({"F": "F2"}), {("B", "B"), ("C", "C")}).transform(lambda i: i if abs(i) > 1e-5 else 0))
     print(v.multiple(s, "F", 'v').contract(u, {("F", "E")}).transpose(["A", "B", "C", "D"]))
 
-    c = TAT.Tensor.DU1(["A", "B", "C", "D"], [{-1: 1, 0: 1, -2: 1}, {0: 1, 1: 2}, {0: 2, 1: 2}, {-2: 2, -1: 1, 0: 2}], True).test()
+    c = TAT.Tensor.DU1(["A", "B", "C", "D"], [{-1: 1, 0: 1, -2: 1}, {0: 1, 1: 2}, {0: 2, 1: 2}, {-2: 2, -1: 1, 0: 2}], True).range()
     [u, s, v] = c.svd({"C", "A"}, "E", "F")
     print(u)
     print(s)
@@ -277,7 +277,7 @@ def test_svd():
     print(v.multiple(s, "F", 'v').contract(u, {("F", "E")}).transpose(["A", "B", "C", "D"]).transform(lambda x: 0 if abs(x) < 0.01 else x))
     print(v.contract(u.multiple(s, "E", 'u'), {("F", "E")}).transpose(["A", "B", "C", "D"]).transform(lambda x: 0 if abs(x) < 0.01 else x))
 
-    a = TAT.Tensor.DNo(["A", "B", "C", "D"], [2, 3, 4, 5]).test()
+    a = TAT.Tensor.DNo(["A", "B", "C", "D"], [2, 3, 4, 5]).range()
     print(a)
     [u, s, v] = a.svd({"C", "A"}, "E", "F", 2)
     print(u)
@@ -285,7 +285,7 @@ def test_svd():
     print(s)
     print(v.multiple(s, "F", 'u').contract(u, {("F", "E")}).transpose(["A", "B", "C", "D"]).transform(lambda x: 0 if abs(x) < 0.01 else x))
 
-    c = TAT.Tensor.DU1(["A", "B", "C", "D"], [{-1: 1, 0: 1, -2: 1}, {0: 1, 1: 2}, {0: 2, 1: 2}, {-2: 2, -1: 1, 0: 2}], True).test()
+    c = TAT.Tensor.DU1(["A", "B", "C", "D"], [{-1: 1, 0: 1, -2: 1}, {0: 1, 1: 2}, {0: 2, 1: 2}, {-2: 2, -1: 1, 0: 2}], True).range()
     [u, s, v] = c.svd({"C", "A"}, "E", "F", 7)
     print(u)
     print(s)

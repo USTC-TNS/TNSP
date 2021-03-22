@@ -41,7 +41,7 @@ void run_test() {
    std::cout << e << "\n";
    auto f = e.merge_edge({{"Merged", {"Left", "Up"}}});
    std::cout << f << "\n";
-   auto g = f.split_edge({{"Merged", {{"Left", {{-1, 3}, {0, 1}, {1, 2}}}, {"Up", {{-1, 2}, {0, 3}, {1, 1}}}}}});
+   auto g = f.split_edge({{"Merged", {{"Left", {{{-1, 3}, {0, 1}, {1, 2}}}}, {"Up", {{{-1, 2}, {0, 3}, {1, 1}}}}}}});
    std::cout << g << "\n";
    auto h = g.transpose({"Left", "Right", "Up"});
    std::cout << h << "\n";

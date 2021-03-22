@@ -21,12 +21,13 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
+#include <concepts>
 #include <cstdint>
 #include <iostream>
-#include <iterator>
 #include <map>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace TAT {
@@ -86,37 +87,28 @@ namespace TAT {
        * FastName的标号
        */
       fastname_dataset_t::fast_name_id_t id = 0; // 默认为空串, 行为和std::string一致
+
       FastName() = default;
-      FastName(const fastname_dataset_t::fast_name_id_t id) noexcept : id(id) {}
-      FastName(const char* name) noexcept : FastName(std::string(name)) {}
-      FastName(const std::string& name) noexcept {
-         if (const auto found = fastname_dataset.name_to_id.find(name); found == fastname_dataset.name_to_id.end()) {
+
+      FastName(const fastname_dataset_t::fast_name_id_t id) : id(id) {}
+
+      template<typename String>
+      requires(requires(String&& s) { std::string(std::forward<String>(s)); } && !std::same_as<std::remove_cvref_t<String>, FastName>)
+            FastName(String&& name) {
+         if (const auto found = fastname_dataset.name_to_id.find(name); found == fastname_dataset.name_to_id.end()) [[unlikely]] {
+            fastname_dataset.id_to_name.emplace_back(name);
             id = fastname_dataset.name_to_id[name] = fastname_dataset.fastname_number++;
-            fastname_dataset.id_to_name.push_back(name);
-         } else {
+         } else [[likely]] {
             id = found->second;
          }
       }
+
       operator const std::string&() const {
          return fastname_dataset.id_to_name[id];
       }
-   };
 
-   // 此处将可被c++20的operator<=>替换
-   // 生成Name的比较运算符重载
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-#define TAT_DEFINE_NAME_OPERATOR(OP, EXP)                           \
-   inline bool OP(const FastName& name_1, const FastName& name_2) { \
-      return EXP;                                                   \
-   }
-   TAT_DEFINE_NAME_OPERATOR(operator==, name_1.id == name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator!=, name_1.id != name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator>=, name_1.id >= name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator<=, name_1.id <= name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator>, name_1.id > name_2.id)
-   TAT_DEFINE_NAME_OPERATOR(operator<, name_1.id < name_2.id)
-#undef TAT_DEFINE_NAME_OPERATOR
-#endif
+      auto operator<=>(const FastName&) const = default;
+   };
 
    /**
     * `Tensor`默认使用的`Name`, 如果没有定义宏`TAT_USE_SIMPLE_NAME`则为`FastName`, 否则为`std::string`
@@ -205,11 +197,6 @@ namespace TAT {
    template<typename Name>
    using name_in_operator_t = std::istream& (*)(std::istream&, Name&);
 
-   TAT_CHECK_MEMBER(write)
-   TAT_CHECK_MEMBER(read)
-   TAT_CHECK_MEMBER(print)
-   TAT_CHECK_MEMBER(scan)
-
    /**
     * 对于每个将要被使用做Name的类型, 需要设置其输入输出方式
     *
@@ -229,39 +216,10 @@ namespace TAT {
     * \see is_name_v
     */
    template<typename Name>
-   struct is_name :
-         std::bool_constant<
-               has_write_v<NameTraits<Name>> || has_read_v<NameTraits<Name>> || has_print_v<NameTraits<Name>> || has_scan_v<NameTraits<Name>>> {};
-   template<typename Name>
-   constexpr bool is_name_v = is_name<Name>::value;
-
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename MapNameRank, typename VectorName>
-   MapNameRank construct_name_to_index(const VectorName& names) {
-      MapNameRank result;
-      for (Rank name_index = 0; name_index < names.size(); name_index++) {
-         result[names[name_index]] = name_index;
-      }
-      return result;
-   }
-
-   template<typename VectorName>
-   bool check_valid_name(const VectorName& names, const Rank& rank) {
-      if (names.size() != rank) {
-         TAT_error("Wrong name list length which no equals to expected length");
-         return false;
-      }
-      for (auto i = names.begin(); i != names.end(); ++i) {
-         for (auto j = std::next(i); j != names.end(); ++j) {
-            if (*i == *j) {
-               TAT_error("Duplicated names in name list");
-               return false;
-            }
-         }
-      }
-      return true;
-   }
-#endif
+   concept is_name = (requires(std::ostream & o, const Name& n) { NameTraits<Name>::write(o, n); }) ||
+                     (requires(std::istream & i, Name& n) { &NameTraits<Name>::read(i, n); }) ||
+                     (requires(std::ostream & o, const Name& n) { NameTraits<Name>::print(o, n); }) ||
+                     (requires(std::istream & i, Name& n) { &NameTraits<Name>::scan(i, n); });
    /**@}*/
 } // namespace TAT
 #endif

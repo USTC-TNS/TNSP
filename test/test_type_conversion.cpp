@@ -22,13 +22,13 @@
 void run_test() {
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{123} << "\n";
    std::cout << double(TAT::Tensor<double, TAT::U1Symmetry>{123}) << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(2).to<double>() << "\n";
-   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(2).to<std::complex<double>>() << "\n";
-   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.test(2).to<double>() << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range(2).to<double>() << "\n";
+   std::cout << TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range(2).to<std::complex<double>>() << "\n";
+   std::cout << TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range(2).to<double>() << "\n";
    std::cout << TAT::Tensor<
                       double,
                       TAT::U1Symmetry>{{"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                      .test(2)
+                      .range(2)
                       .to<std::complex<double>>()
              << "\n";
 }

@@ -21,21 +21,22 @@
 #ifndef TAT_SHRINK_AND_EXPAND_HPP
 #define TAT_SHRINK_AND_EXPAND_HPP
 
-#include "tensor.hpp"
+#include "../structure/tensor.hpp"
+#include "../utility/timer.hpp"
+
 namespace TAT {
+   inline timer expand_guard("expand");
+
    // TODO 这些都可以优化，不使用contract
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   template<typename ExpandConfigure>
-   Tensor<ScalarType, Symmetry, Name, Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>::expand(const ExpandConfigure& configure, const Name& old_name) const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::expand_implement(const auto& configure, const Name& old_name) const {
       auto timer_guard = expand_guard();
-      auto pmr_guard = scope_resource<default_buffer_size>();
       // using EdgeInfoWithArrowForExpand = std::conditional_t<
-      //            std::is_same_v<Symmetry, NoSymmetry>,
+      //            Symmetry::length == 0,
       //            std::tuple<Size, Size>,
-      //            std::conditional_t<is_fermi_symmetry_v<Symmetry>, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
-      constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
-      constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
+      //            std::conditional_t<Symmetry::is_fermi_symmetry, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
+      constexpr bool is_no_symmetry = Symmetry::length == 0;
+      constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       auto new_names = pmr::vector<Name>();
       auto new_edges = pmr::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
@@ -62,12 +63,12 @@ namespace TAT {
             new_edges.push_back({{{symmetry, dimension}}});
          }
       }
-      auto contract_names = pmr::set<std::tuple<Name, Name>>();
+      auto contract_names = pmr::set<std::pair<Name, Name>>();
       if (old_name != InternalName<Name>::No_Old_Name) {
          contract_names.insert({old_name, old_name});
          new_names.push_back(old_name);
          // 调整使得可以缩并
-         auto& old_edge = core->edges[name_to_index.at(old_name)];
+         auto& old_edge = core->edges[map_find(name_to_index, old_name)->second];
          if (old_edge.map.size() != 1 || old_edge.map.begin()->second != 1) {
             TAT_error("Cannot Expand a Edge which dimension is not one");
          }
@@ -79,31 +80,31 @@ namespace TAT {
             } else {
                new_edges.push_back({{{-total_symmetry, 1}}});
             }
-            if (old_edge.map.begin()->first != total_symmetry) {
+            if (old_edge.map.begin()->first != total_symmetry) [[unlikely]] {
                TAT_error("Cannot Expand to such Edges whose total Symmetry is not Compatible with origin Edge");
             }
          }
       } else {
          if constexpr (!is_no_symmetry) {
-            if (total_symmetry != Symmetry()) {
+            if (total_symmetry != Symmetry()) [[unlikely]] {
                TAT_error("Cannot Expand to such Edges whose total Symmetry is not zero");
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name, Allocator>(new_names, new_edges);
+      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return contract(helper, std::move(contract_names));
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   template<typename ShrinkConfigure>
-   Tensor<ScalarType, Symmetry, Name, Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>::shrink(const ShrinkConfigure& configure, const Name& new_name, Arrow arrow) const {
+   inline timer shrink_guard("shrink");
+
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Tensor<ScalarType, Symmetry, Name>
+   Tensor<ScalarType, Symmetry, Name>::shrink_implement(const auto& configure, const Name& new_name, Arrow arrow) const {
       auto timer_guard = shrink_guard();
-      auto pmr_guard = scope_resource<default_buffer_size>();
-      constexpr bool is_no_symmetry = std::is_same_v<Symmetry, NoSymmetry>;
-      constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
+      constexpr bool is_no_symmetry = Symmetry::length == 0;
+      constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       auto new_names = pmr::vector<Name>();
       auto new_edges = pmr::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
@@ -111,9 +112,9 @@ namespace TAT {
       new_edges.reserve(reserve_size);
       auto total_symmetry = Symmetry();
       Size total_offset = 0;
-      auto contract_names = pmr::set<std::tuple<Name, Name>>();
+      auto contract_names = pmr::set<std::pair<Name, Name>>();
       for (const auto& name : names) {
-         if (auto found_position = configure.find(name); found_position != configure.end()) {
+         if (auto found_position = map_find(configure, name); found_position != configure.end()) {
             const auto& position = found_position->second;
             Symmetry symmetry;
             Size index;
@@ -124,8 +125,8 @@ namespace TAT {
                index = std::get<1>(position);
                total_symmetry += symmetry;
             }
-            const auto& this_edge = core->edges[name_to_index.at(name)];
-            Size dimension = this_edge.map.at(symmetry);
+            const auto& this_edge = core->edges[map_find(name_to_index, name)->second];
+            Size dimension = map_find(this_edge.map, symmetry)->second;
             total_offset *= dimension;
             total_offset += index;
             new_names.push_back(name);
@@ -146,12 +147,12 @@ namespace TAT {
          }
       } else {
          if constexpr (!is_no_symmetry) {
-            if (total_symmetry != Symmetry()) {
+            if (total_symmetry != Symmetry()) [[unlikely]] {
                TAT_error("Need to Create a New Edge but Name not set in Slice");
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name, Allocator>(new_names, new_edges);
+      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
       helper.zero();
       helper.core->blocks.begin()->second[total_offset] = 1;
       return contract(helper, std::move(contract_names));

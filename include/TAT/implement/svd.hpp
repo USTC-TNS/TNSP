@@ -21,9 +21,9 @@
 #ifndef TAT_SVD_HPP
 #define TAT_SVD_HPP
 
-#include "pmr_resource.hpp"
-#include "tensor.hpp"
-#include "timer.hpp"
+#include "../structure/tensor.hpp"
+#include "../utility/pmr_resource.hpp"
+#include "../utility/timer.hpp"
 #include "transpose.hpp"
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
@@ -95,8 +95,8 @@ void zgesvd_(
 
 namespace TAT {
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator, typename SingularValue>
-   [[nodiscard]] Tensor<ScalarType, Symmetry, Name, Allocator>
+   template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
+   [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
    singular_to_tensor(const SingularValue& singular, const Name& singular_name_u, const Name& singular_name_v) {
       auto symmetries = pmr::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
@@ -104,11 +104,11 @@ namespace TAT {
          symmetries[0].map[-symmetry] = dimension;
          symmetries[1].map[symmetry] = dimension;
       }
-      if constexpr (is_fermi_symmetry_v<Symmetry>) {
+      if constexpr (Symmetry::is_fermi_symmetry) {
          symmetries[0].arrow = false;
          symmetries[1].arrow = true;
       }
-      auto result = Tensor<ScalarType, Symmetry, Name, Allocator>({singular_name_u, singular_name_v}, std::move(symmetries));
+      auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
       for (auto& [symmetries, data_destination] : result.core->blocks) {
          const auto& data_source = singular.at(symmetries[1]);
          auto dimension = data_source.size();
@@ -129,8 +129,10 @@ namespace TAT {
          const int& max,
          const ScalarType* a,
          ScalarType* u,
-         real_base_t<ScalarType>* s,
+         real_scalar<ScalarType>* s,
          ScalarType* vt);
+
+   inline timer svd_kernel_guard("svd_kernel");
 
    template<typename ScalarType>
    void calculate_svd(
@@ -140,7 +142,7 @@ namespace TAT {
          const int& max,
          const ScalarType* a,
          ScalarType* u,
-         real_base_t<ScalarType>* s,
+         real_scalar<ScalarType>* s,
          ScalarType* vt) {
       auto kernel_guard = svd_kernel_guard();
       // 经过初步测试m > n比m < n和false要好, true是显然更糟糕的
@@ -248,19 +250,19 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   template<typename SetName>
-   typename Tensor<ScalarType, Symmetry, Name, Allocator>::svd_result Tensor<ScalarType, Symmetry, Name, Allocator>::svd(
-         const SetName& free_name_set_u,
+   inline timer svd_guard("svd");
+
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd_implement(
+         const auto& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
          Size cut,
          const Name& singular_name_u,
          const Name& singular_name_v) const {
       auto timer_guard = svd_guard();
-      auto pmr_guard = scope_resource<default_buffer_size>();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名
-      constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
+      constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       const auto rank = names.size();
       // merge
       auto free_name_u = pmr::vector<Name>();
@@ -268,10 +270,10 @@ namespace TAT {
       auto reversed_set_u = pmr::set<Name>();
       auto reversed_set_v = pmr::set<Name>();
       auto reversed_set_origin = pmr::set<Name>();
-      auto result_name_u = pmr::vector<Name>();
-      auto result_name_v = pmr::vector<Name>();
-      auto free_names_and_edges_u = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
-      auto free_names_and_edges_v = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
+      auto result_name_u = std::vector<Name>();
+      auto result_name_v = std::vector<Name>();
+      auto free_names_and_edges_u = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>();
+      auto free_names_and_edges_v = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>();
       free_name_u.reserve(rank);
       free_name_v.reserve(rank);
       result_name_u.reserve(rank + 1);
@@ -281,7 +283,7 @@ namespace TAT {
       result_name_v.push_back(common_name_v);
       for (Rank i = 0; i < names.size(); i++) {
          const auto& n = names[i];
-         if (free_name_set_u.find(n) != free_name_set_u.end()) {
+         if (set_find(free_name_set_u, n) != free_name_set_u.end()) {
             free_name_u.push_back(n);
             result_name_u.push_back(n);
             free_names_and_edges_u.push_back({n, {core->edges[i].map}});
@@ -308,43 +310,50 @@ namespace TAT {
       }
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
-      auto tensor_merged = edge_operator<polymorphic_allocator>(
-            {},
-            {},
+      auto tensor_merged = edge_operator_implement(
+            std::initializer_list<std::pair<Name, Name>>(),
+            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reversed_set_origin,
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::SVD_U, std::move(free_name_u)}, {InternalName<Name>::SVD_V, std::move(free_name_v)}},
-            put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
-                          pmr::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U});
+            put_v_right ? std::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
+                          std::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
+            false,
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       // tensor -> SVD_U -O- SVD_V
       // call GESVD
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
       // arrow always false
       for (const auto& [sym, _] : tensor_merged.core->blocks) {
-         auto m = tensor_merged.core->edges[0].map.at(sym[0]);
-         auto n = tensor_merged.core->edges[1].map.at(sym[1]);
+         auto m = map_find(tensor_merged.core->edges[0].map, sym[0])->second;
+         auto n = map_find(tensor_merged.core->edges[1].map, sym[1])->second;
          auto k = m > n ? n : m;
-         common_edge_1.map[sym[1]] = k;
-         common_edge_2.map[sym[0]] = k;
+         common_edge_1.map.emplace_back(sym[1], k);
+         common_edge_2.map.emplace_back(sym[0], k);
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry, Name, Allocator>{
+      do_sort(common_edge_1.map);
+      do_sort(common_edge_2.map);
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? pmr::vector<Name>{InternalName<Name>::SVD_U, common_name_u} : pmr::vector<Name>{InternalName<Name>::SVD_V, common_name_v},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry, Name, Allocator>{
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? pmr::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : pmr::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
-      auto result_s = typename Singular<ScalarType, Symmetry, Name, Allocator>::singular_map();
+      auto result_s = typename Singular<ScalarType, Symmetry, Name>::singular_map();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
-         auto* data_u = tensor_1.core->blocks.at(symmetries).data();
-         auto* data_v = tensor_2.core->blocks.at(symmetries).data();
+         auto* data_u = map_find(tensor_1.core->blocks, symmetries)->second.data();
+         auto* data_v = map_find(tensor_2.core->blocks, symmetries)->second.data();
          const auto* data = block.data();
-         const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
-         const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
+         const int m = map_find(tensor_1.core->edges[0].map, symmetries[0])->second;
+         const int n = map_find(tensor_2.core->edges[1].map, symmetries[1])->second;
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
-         // TODO used in singular
-         auto s = std::vector<real_base_t<ScalarType>, Allocator<real_base_t<ScalarType>>>(k);
+         auto s = std::vector<real_scalar<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
@@ -367,7 +376,7 @@ namespace TAT {
          }
          for (Size i = 0; i < cut; i++) {
             Symmetry maximum_position;
-            real_base_t<ScalarType> maximum_singular = 0;
+            real_scalar<ScalarType> maximum_singular = 0;
             for (const auto& [symmetry, vector_s] : result_s) {
                if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
                   if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
@@ -398,30 +407,34 @@ namespace TAT {
          reversed_set_u.insert(common_name_u);
       }
       // 这里会自动cut
-      auto u = tensor_u.template edge_operator<Allocator>(
-            {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
-                  {InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
+      auto u = tensor_u.edge_operator_implement(
+            std::initializer_list<std::pair<Name, Name>>(),
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>>{{InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
-            {},
-            result_name_u,
+            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            std::move(result_name_u),
             false,
-            std::array<pmr::set<Name>, 4>{{{}, put_v_right ? pmr::set<Name>{} : pmr::set<Name>{common_name_u}, {}, {}}},
+            std::initializer_list<Name>(),
+            put_v_right ? pmr::set<Name>{} : pmr::set<Name>{common_name_u},
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
-      auto v = tensor_v.template edge_operator<Allocator>(
-            {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
-                  {InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
+      auto v = tensor_v.edge_operator_implement(
+            std::initializer_list<std::pair<Name, Name>>(),
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>>{{InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,
-            {},
-            result_name_v,
+            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            std::move(result_name_v),
             false,
-            std::array<pmr::set<Name>, 4>{{{}, {}, {}, {}}},
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
       return {
             std::move(u),
 #ifdef TAT_USE_SINGULAR_MATRIX
-            singular_to_tensor<ScalarType, Symmetry, Name, Allocator>(result_s, singular_name_u, singular_name_v),
+            singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v),
 #else
             {std::move(result_s)},
 #endif

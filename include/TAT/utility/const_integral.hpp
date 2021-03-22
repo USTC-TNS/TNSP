@@ -21,10 +21,12 @@
 #ifndef TAT_CONST_INTEGRAL_HPP
 #define TAT_CONST_INTEGRAL_HPP
 
-#include <limits>
 #include <variant>
 
 namespace TAT {
+   /**
+    * 用于在一些计算中对较小的数做特殊优化的类, 将一个运行期变量变成std::variant<运行期变量, 编译量常量>的类
+    */
    template<auto, typename DynamicType = void>
    struct const_integral_t {
       using value_type = DynamicType;
