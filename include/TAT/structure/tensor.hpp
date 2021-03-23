@@ -92,7 +92,7 @@ namespace TAT {
 
    template<typename Result, typename Container>
    decltype(auto) may_need_sort(Container&& c) {
-      if constexpr (requires(Container m) { &m.find; }) {
+      if constexpr (requires { &std::remove_cvref_t<Container>::find; }) {
          return std::forward<Container>(c);
       } else {
          if constexpr (requires(Container && l) { std::ranges::sort(l); }) {
@@ -106,18 +106,30 @@ namespace TAT {
    }
 
    template<typename T, typename Name, typename Symmetry>
+   concept split_configuration_item = requires(T list, typename std::remove_cvref_t<T>::value_type item) {
+      requires std::ranges::range<T>;
+      Name(std::get<0>(item));
+      edge_map_t<Symmetry>(std::get<1>(item));
+   };
+
+   template<typename T, typename Name, typename Symmetry>
    concept split_configuration = requires(T split_map, Name name) {
       requires std::ranges::range<T>;
       { map_at(split_map, name) }
-      ->std::ranges::range;
-      Name(map_at(split_map, name).front().first);
-      edge_map_t<Symmetry>(map_find(split_map, name).front().second);
+      ->split_configuration_item<Name, Symmetry>;
    };
 
    template<typename T, typename Name>
    concept merge_configuration = requires(T merge_map, Name name) {
       { map_at(merge_map, name) }
       ->range_of<Name>;
+   };
+
+   template<typename T, typename Name>
+   concept pair_range_of = requires(T set, typename std::remove_cvref_t<T>::value_type item) {
+      requires std::ranges::range<T>;
+      Name(std::get<0>(item));
+      Name(std::get<1>(item));
    };
 
    /**
@@ -256,14 +268,14 @@ namespace TAT {
             std::tuple<Size, Size>,
             std::conditional_t<Symmetry::is_fermi_symmetry, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
 
-      template<range_of<std::pair<Name, EdgePointWithArrow>> ExpandConfigure = std::vector<std::pair<Name, EdgePointWithArrow>>>
+      template<map_like_range_of<Name, EdgePointWithArrow> ExpandConfigure = std::vector<std::pair<Name, EdgePointWithArrow>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       expand(ExpandConfigure&& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
          return expand_implement(may_need_sort<pmr::vector<std::pair<Name, EdgePointWithArrow>>>(std::forward<ExpandConfigure>(configure)), old_name);
       }
 
-      template<range_of<std::pair<Name, EdgePoint>> ShrinkConfigure = std::vector<std::pair<Name, EdgePoint>>>
+      template<map_like_range_of<Name, EdgePoint> ShrinkConfigure = std::vector<std::pair<Name, EdgePoint>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(ShrinkConfigure&& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
@@ -496,7 +508,7 @@ namespace TAT {
             ParityExcludeNameMerge&& parity_exclude_name_merge = {}) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
          return edge_operator_implement(
-               may_need_sort<pmr::vector<std::pair<Name, Name>>>(std::forward<RenameMap>(rename_map)),
+               may_need_sort<pmr::vector<std::ranges::range_value_t<RenameMap>>>(std::forward<RenameMap>(rename_map)),
                may_need_sort<pmr::vector<std::pair<Name, typename std::ranges::range_value_t<SplitMap>::second_type>>>(
                      std::forward<SplitMap>(split_map)),
                may_need_sort<pmr::vector<Name>>(std::forward<ReversedName>(reversed_name)),
@@ -647,16 +659,13 @@ namespace TAT {
        * \param contract_names 两个张量将要缩并掉的边的名称
        * \return 缩并后的张量
        */
-      template<range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
+      template<pair_range_of<Name> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
       [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
             SetNameAndName&& contract_names);
 
-      template<
-            is_scalar ScalarType1,
-            is_scalar ScalarType2,
-            range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
+      template<is_scalar ScalarType1, is_scalar ScalarType2, pair_range_of<Name> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
       [[nodiscard]] static auto contract(
             const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
@@ -681,7 +690,7 @@ namespace TAT {
          }
       }
 
-      template<is_scalar OtherScalarType, range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
+      template<is_scalar OtherScalarType, pair_range_of<Name> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
       [[nodiscard]] auto contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, SetNameAndName&& contract_names) const {
          return contract(*this, tensor_2, std::forward<SetNameAndName>(contract_names));
       }
@@ -712,13 +721,13 @@ namespace TAT {
        * 生成相同形状的单位张量
        * \param pairs 看作矩阵时边的配对方案
        */
-      template<range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::tuple<Name, Name>>>
+      template<pair_range_of<Name> SetNameAndName = std::initializer_list<std::tuple<Name, Name>>>
       Tensor<ScalarType, Symmetry, Name>& identity(SetNameAndName&& pairs) & {
          auto pmr_guard = scope_resource<1 << 10>();
-         return identity_implement(may_need_sort<pmr::vector<std::pair<Name, Name>>>(std::forward<SetNameAndName>(pairs)));
+         return identity_implement(may_need_sort<pmr::vector<std::ranges::range_value_t<SetNameAndName>>>(std::forward<SetNameAndName>(pairs)));
       }
 
-      template<range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::tuple<Name, Name>>>
+      template<pair_range_of<Name> SetNameAndName = std::initializer_list<std::tuple<Name, Name>>>
       Tensor<ScalarType, Symmetry, Name>&& identity(SetNameAndName&& pairs) && {
          return std::move(identity(std::forward<SetNameAndName>(pairs)));
       }
@@ -730,10 +739,11 @@ namespace TAT {
        * \param pairs 边的配对方案
        * \param step 迭代步数
        */
-      template<range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
+      template<pair_range_of<Name> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(SetNameAndName&& pairs, int step = 2) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
-         return exponential_implement(may_need_sort<pmr::vector<std::pair<Name, Name>>>(std::forward<SetNameAndName>(pairs)), step);
+         return exponential_implement(
+               may_need_sort<pmr::vector<std::ranges::range_value_t<SetNameAndName>>>(std::forward<SetNameAndName>(pairs)), step);
       }
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential_implement(const auto& pairs, int step) const;
@@ -744,10 +754,10 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
 
-      template<range_of<std::pair<Name, Name>> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
+      template<pair_range_of<Name> SetNameAndName = std::initializer_list<std::pair<Name, Name>>>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(SetNameAndName&& trace_names) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
-         return trace_implement(may_need_sort<pmr::vector<std::pair<Name, Name>>>(std::forward<SetNameAndName>(trace_names)));
+         return trace_implement(may_need_sort<pmr::vector<std::ranges::range_value_t<SetNameAndName>>>(std::forward<SetNameAndName>(trace_names)));
       }
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace_implement(const auto& trace_names) const;

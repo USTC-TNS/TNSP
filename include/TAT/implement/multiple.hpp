@@ -76,8 +76,8 @@ namespace TAT {
             symmetry_of_s = -symmetry_of_s;
          }
 #ifdef TAT_USE_SINGULAR_MATRIX
-         const auto& vector_in_S = S.core->blocks.at({-symmetry_of_s, symmetry_of_s});
-         auto dimension = S.core->edges[1].map.at(symmetry_of_s);
+         const auto& vector_in_S = map_at<true>(S.core->blocks, pmr::vector<Symmetry>{-symmetry_of_s, symmetry_of_s});
+         auto dimension = map_at(S.core->edges[1].map, symmetry_of_s);
          auto dimension_plus_one = dimension + 1;
 #else
          const auto& vector_in_S = map_at(S.value, symmetry_of_s);

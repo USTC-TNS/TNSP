@@ -131,6 +131,16 @@ namespace TAT {
       result.attr("__setitem__")(py::ellipsis(), object);
    }
 
+   template<typename Tensor, typename Symmetry>
+   auto& find_block(Tensor& tensor, const std::map<DefaultName, Symmetry>& map) {
+      std::vector<Symmetry> symmetries;
+      symmetries.reserve(tensor.names.size());
+      for (const auto& i : tensor.names) {
+         symmetries.push_back(map.at(i));
+      }
+      return map_at(tensor.core->blocks, symmetries);
+   }
+
    template<typename ScalarType, typename Symmetry>
    void declare_tensor(
          py::module_& symmetry_m,
@@ -187,12 +197,12 @@ namespace TAT {
             .def_buffer([](B1& b) {
                // 返回的buffer是可变的
                auto& tensor = py::cast<T&>(b.tensor);
-               auto& block = tensor.block(b.position);
+               auto& block = find_block(tensor, b.position);
                const Rank rank = tensor.names.size();
                auto dimensions = std::vector<Size>(rank);
                auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = tensor.core->edges[i].map.at(b.position[tensor.names[i]]);
+                  dimensions[i] = map_at(tensor.core->edges[i].map, b.position[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
                }
                for (auto i = rank; i-- > 0;) {
@@ -217,12 +227,12 @@ namespace TAT {
                for (const auto& [name, symmetry] : b.position) {
                   position_map[name] = symmetry;
                }
-               auto& block = tensor.block(position_map);
+               auto& block = find_block(tensor, position_map);
                const Rank rank = tensor.names.size();
                auto dimensions = std::vector<Size>(rank);
                auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = tensor.core->edges[i].map.at(position_map[tensor.names[i]]);
+                  dimensions[i] = map_at(tensor.core->edges[i].map, position_map[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
                }
                for (auto i = rank; i-- > 0;) {
@@ -335,7 +345,7 @@ namespace TAT {
                  "Read tensor from text string")
             .def_static(
                   "one",
-                  &T::template one<std::vector<DefaultName>, std::vector<Symmetry>>,
+                  &T::one,
                   py::arg("number"),
                   py::arg("names"),
                   py::arg("edge_symmetry") = py::list(),
@@ -365,8 +375,8 @@ namespace TAT {
             .def(
                   "zero", [](T& tensor) -> T& { return tensor.zero(); }, "Set all element zero", py::return_value_policy::reference_internal)
             .def(
-                  "test",
-                  [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.test(first, step); },
+                  "range",
+                  [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.range(first, step); },
                   py::arg("first") = 0,
                   py::arg("step") = 1,
                   "Useful function generate simple data in tensor element for test",
@@ -440,7 +450,7 @@ namespace TAT {
                  py::arg("parity_exclude_name_set") = py::set(),
                  "Reverse fermi arrow of several edge")
             .def("merge_edge",
-                 &T::template merge_edge<std::map<DefaultName, std::vector<DefaultName>>, std::set<DefaultName>>,
+                 &T::template merge_edge<std::map<DefaultName, std::vector<DefaultName>>, std::set<DefaultName>, std::set<DefaultName>>,
                  py::arg("merge_map"),
                  py::arg("apply_parity") = false,
                  py::arg("parity_exclude_name_merge_set") = py::set(),
@@ -464,8 +474,7 @@ namespace TAT {
                      std::set<DefaultName> parity_exclude_name_split_set,
                      std::set<DefaultName> parity_exclude_name_reverse_set,
                      std::set<DefaultName> parity_exclude_name_reverse_before_merge_set,
-                     std::set<DefaultName> parity_exclude_name_merge_set,
-                     const std::map<DefaultName, std::map<Symmetry, Size>>& edge_and_symmetries_to_cut_before_all = {}) {
+                     std::set<DefaultName> parity_exclude_name_merge_set) {
                      return tensor.edge_operator(
                            rename_map,
                            split_map,
@@ -473,12 +482,10 @@ namespace TAT {
                            merge_map,
                            new_names,
                            apply_parity,
-                           std::array<std::set<DefaultName>, 4>{
-                                 std::move(parity_exclude_name_split_set),
-                                 std::move(parity_exclude_name_reverse_set),
-                                 std::move(parity_exclude_name_reverse_before_merge_set),
-                                 std::move(parity_exclude_name_merge_set)},
-                           edge_and_symmetries_to_cut_before_all);
+                           parity_exclude_name_split_set,
+                           parity_exclude_name_reverse_set,
+                           parity_exclude_name_reverse_before_merge_set,
+                           parity_exclude_name_merge_set);
                   },
                   py::arg("rename_map"),
                   py::arg("split_map"),
@@ -490,7 +497,6 @@ namespace TAT {
                   py::arg("parity_exclude_name_reverse_set") = py::set(),
                   py::arg("parity_exclude_name_reverse_before_merge_set") = py::set(),
                   py::arg("parity_exclude_name_merge_set") = py::set(),
-                  py::arg("edge_and_symmetries_to_cut_before_all") = py::dict(),
                   "Tensor Edge Operator")
 #define TAT_LOOP_CONTRACT(ANOTHERSCALAR)                                                                                                         \
    def(                                                                                                                                          \

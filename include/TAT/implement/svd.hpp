@@ -101,9 +101,11 @@ namespace TAT {
       auto symmetries = pmr::vector<Edge<Symmetry>>(2);
       for (const auto& [symmetry, values] : singular) {
          auto dimension = values.size();
-         symmetries[0].map[-symmetry] = dimension;
-         symmetries[1].map[symmetry] = dimension;
+         symmetries[0].map.emplace_back(-symmetry, dimension);
+         symmetries[1].map.emplace_back(symmetry, dimension);
       }
+      do_sort(symmetries[0].map);
+      do_sort(symmetries[1].map);
       if constexpr (Symmetry::is_fermi_symmetry) {
          symmetries[0].arrow = false;
          symmetries[1].arrow = true;

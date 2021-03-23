@@ -139,7 +139,7 @@ namespace TAT {
                }
             }
             ordered_pair.push_back({name_to_find, *name_correspond});
-            auto index_correspond = name_to_index.at(*name_correspond);
+            auto index_correspond = map_at(name_to_index, *name_correspond);
             ordered_pair_index.push_back({i, index_correspond});
             valid_index[index_correspond] = false;
          }
@@ -151,7 +151,7 @@ namespace TAT {
          auto dimension = pmr::vector<Size>(rank);
          auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
-            dimension[i] = core->edges[i].map.at(symmetries[i]);
+            dimension[i] = map_at(core->edges[i].map, symmetries[i]);
             if (i == rank - 1) [[unlikely]] {
                leading[i] = 1;
             } else [[likely]] {

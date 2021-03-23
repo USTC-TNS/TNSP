@@ -267,14 +267,14 @@ namespace TAT {
 #endif
 
    /// \private
-   template<is_scalar ScalarType, is_name Name, range_of<std::pair<Name, Name>> SetNameAndName>
+   template<is_scalar ScalarType, is_name Name, pair_range_of<Name> SetNameAndName>
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_2,
          SetNameAndName contract_names);
 
    /// \private
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name, range_of<std::pair<Name, Name>> SetNameAndName>
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name, pair_range_of<Name> SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
@@ -283,7 +283,7 @@ namespace TAT {
    inline timer contract_guard("contract");
 
    template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
-   template<range_of<std::pair<Name, Name>> SetNameAndName>
+   template<pair_range_of<Name> SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
@@ -299,7 +299,7 @@ namespace TAT {
       }
    }
 
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name, range_of<std::pair<Name, Name>> SetNameAndName>
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name, pair_range_of<Name> SetNameAndName>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
@@ -610,7 +610,7 @@ namespace TAT {
       }
    }
 
-   template<is_scalar ScalarType, is_name Name, range_of<std::pair<Name, Name>> SetNameAndName>
+   template<is_scalar ScalarType, is_name Name, pair_range_of<Name> SetNameAndName>
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_2,
