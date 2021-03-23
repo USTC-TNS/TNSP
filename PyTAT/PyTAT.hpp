@@ -133,12 +133,16 @@ namespace TAT {
 
    template<typename Tensor, typename Symmetry>
    auto& find_block(Tensor& tensor, const std::map<DefaultName, Symmetry>& map) {
-      std::vector<Symmetry> symmetries;
-      symmetries.reserve(tensor.names.size());
-      for (const auto& i : tensor.names) {
-         symmetries.push_back(map.at(i));
+      if constexpr (Symmetry::length == 0) {
+         return tensor.core->blocks.front().second;
+      } else {
+         std::vector<Symmetry> symmetries;
+         symmetries.reserve(tensor.names.size());
+         for (const auto& i : tensor.names) {
+            symmetries.push_back(map.at(i));
+         }
+         return map_at(tensor.core->blocks, symmetries);
       }
-      return map_at(tensor.core->blocks, symmetries);
    }
 
    template<typename ScalarType, typename Symmetry>
