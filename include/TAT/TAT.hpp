@@ -35,20 +35,16 @@
 #endif
 #endif
 
-#ifdef _WIN32
-#define NOMINMAX
-#include <windows.h>
-#endif
-
 // 开关说明
 // TAT_USE_MPI 定义以开启MPI支持, cmake可对此进行定义
 // TAT_USE_MKL_TRANSPOSE 定义以使用mkl加速转置, cmake可对此进行定义 TODO 进一步优化
 // TAT_USE_MKL_GEMM_BATCH 定义以使用mkl的?gemm_batch, cmake可对此进行定义
 // TAT_USE_SINGULAR_MATRIX svd出来的奇异值使用矩阵表示
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
-// TAT_USE_SIMPLE_NOSYMMETRY 定义以使用简单的Size作为无对称性的边
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_TIMER 对常见操作进行计时
+// TAT_USE_RESTRICT_SMALL_ALLOCATOR 使用严格的小分配器
+// TAT_SMALL_ALLOCATOR_SIZE 小分配器的大小
 // TAT_ERROR_BITS 将各类警告转换为异常
 // TAT_NOTHING_BITS 将各类警告转换为静默
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用
@@ -136,13 +132,9 @@ namespace TAT {
     */
    inline void TAT_error(const char* message);
 
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
+   // 下面这一段使用两个BITS来选择一些情况下是否警告，是否静默或者是否直接报错退出
 
-#ifdef TAT_USE_NO_WARNING
-// TODO delete this deprecated macro
-#pragma message("TAT_USE_NO_WARNING is deprecated, define TAT_NOTHING_BITS=7 instead, TAT_USE_NO_WARNING will be removed in v0.2.0")
-#define TAT_NOTHING_BITS 7
-#endif
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 
 #ifndef TAT_ERROR_BITS
 #define TAT_ERROR_BITS 0
@@ -155,48 +147,100 @@ namespace TAT {
    constexpr auto TAT_warning_or_error_when_name_missing = TAT_ERROR_BITS & 2 ? TAT_error : TAT_NOTHING_BITS & 2 ? TAT_nothing : TAT_warning;
    constexpr auto TAT_warning_or_error_when_copy_shared = TAT_ERROR_BITS & 4 ? TAT_error : TAT_NOTHING_BITS & 4 ? TAT_nothing : TAT_warning;
 #endif
-
-   /**
-    * 供转置中使用的l1 cache大小, 可由宏`TAT_L1_CACHE`设置
-    */
-   constexpr unsigned long l1_cache =
-#ifdef TAT_L1_CACHE
-         TAT_L1_CACHE
-#else
-         98304
-#endif
-         ;
-   /**
-    * 供转置中使用的l2 cache大小, 可由宏`TAT_L2_CACHE`设置
-    */
-   constexpr unsigned long l2_cache =
-#ifdef TAT_L2_CACHE
-         TAT_L2_CACHE
-#else
-         786432
-#endif
-         ;
-   /**
-    * 供转置中使用的l3 cache大小, 可由宏`TAT_L3_CACHE`设置
-    */
-   constexpr unsigned long l3_cache =
-#ifdef TAT_L3_CACHE
-         TAT_L3_CACHE
-#else
-         4718592
-#endif
-         ;
-
-   /**
-    * 转置中使用, 一条线长度小于此值时, 才尝试使用向量化的复制
-    */
-   constexpr unsigned long minimum_line_size = 16;
    /**@}*/
 } // namespace TAT
 
-// clang-format off
-#include "tensor.hpp"
-#include "implement.hpp"
-// clang-format on
+#include <cstdint>
+
+namespace TAT {
+   // 下面三个类型原本是short, int, long
+   // 在linux(lp64)下分别是16, 32, 64
+   // 但是windows(llp64)中是16, 32, 32
+   // 在io中会出现windows和linux的输入输出互相不可读的问题
+   // 所以显式写成uintxx_t的格式
+   // TAT中还有一些地方会出现int, 一般为调用blas和lapack的地方
+   // 为32位, 在64位系统中(ilp64)和32位系统中(lp32)分别是64为和16位
+   // 所以底层的blas和lapack库不可以是ilp64或者lp32版本
+   /**
+    * 张量的秩的类型
+    */
+   using Rank = std::uint16_t;
+   /**
+    * 张量分块数目和一个边上对称性数目的类型
+    */
+   using Nums = std::uint32_t;
+   /**
+    * 张量数据维度大小和数据本身大小的类型
+    */
+   using Size = std::uint64_t;
+
+   /**
+    * 费米箭头方向的类型, `false`和`true`分别表示出入
+    */
+   using Arrow = bool;
+} // namespace TAT
+
+#include <complex>
+#include <type_traits>
+
+namespace TAT {
+   template<typename T>
+   concept is_real = std::is_scalar_v<T>;
+
+   template<typename T>
+   concept is_complex = std::is_same_v<T, std::complex<typename T::value_type>>;
+
+   template<typename T>
+   concept is_scalar = is_real<T> || is_complex<T>;
+
+   template<typename T>
+   struct real_scalar_helper : std::conditional<std::is_scalar_v<T>, T, void> {};
+   template<typename T>
+   struct real_scalar_helper<std::complex<T>> : std::conditional<std::is_scalar_v<T>, T, void> {};
+
+   /**
+    * 取对应的实数类型, 在svd, norm等地方会用到
+    * \tparam T 如果`T`是`std::complex<S>`, 则为`S`, 若`T`为其他标量类型, 则为`T`本身, 否则为`void`
+    */
+   template<typename T>
+   using real_scalar = typename real_scalar_helper<T>::type;
+} // namespace TAT
+
+#include "structure/tensor.hpp"
+
+#include "miscellaneous/io.hpp"
+#include "miscellaneous/mpi.hpp"
+#include "miscellaneous/scalar.hpp"
+
+#include "implement/contract.hpp"
+#include "implement/edge_miscellaneous.hpp"
+#include "implement/edge_operator.hpp"
+#include "implement/exponential.hpp"
+#include "implement/get_item.hpp"
+#include "implement/identity.hpp"
+#include "implement/multiple.hpp"
+#include "implement/qr.hpp"
+#include "implement/shrink_and_expand.hpp"
+#include "implement/svd.hpp"
+#include "implement/trace.hpp"
+#include "implement/transpose.hpp"
+
+namespace TAT {
+   /**
+    * Z2对称性的类型
+    */
+   using Z2 = bool;
+   /**
+    * U1对称性的类型
+    */
+   using U1 = std::int32_t;
+
+   using NoSymmetry = Symmetry<>;
+   using Z2Symmetry = Symmetry<Z2>;
+   using U1Symmetry = Symmetry<U1>;
+   using FermiSymmetry = Symmetry<fermi_wrap<U1>>;
+   using FermiZ2Symmetry = Symmetry<fermi_wrap<U1>, Z2>;
+   using FermiU1Symmetry = Symmetry<fermi_wrap<U1>, U1>;
+} // namespace TAT
 
 #endif

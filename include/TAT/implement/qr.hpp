@@ -21,8 +21,8 @@
 #ifndef TAT_QR_HPP
 #define TAT_QR_HPP
 
-#include "tensor.hpp"
-#include "timer.hpp"
+#include "../structure/tensor.hpp"
+#include "../utility/timer.hpp"
 #include "transpose.hpp"
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
@@ -179,7 +179,7 @@ namespace TAT {
 
    template<typename ScalarType>
    int to_int(const ScalarType& value) {
-      if constexpr (is_complex_v<ScalarType>) {
+      if constexpr (is_complex<ScalarType>) {
          return int(value.real());
       } else {
          return int(value);
@@ -283,6 +283,8 @@ namespace TAT {
       }
    }
 
+   inline timer qr_kernel_guard("qr_kernel");
+
    template<typename ScalarType>
    void calculate_qr(
          const int& m,
@@ -310,17 +312,17 @@ namespace TAT {
    }
 #endif
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   template<typename SetName>
-   typename Tensor<ScalarType, Symmetry, Name, Allocator>::qr_result Tensor<ScalarType, Symmetry, Name, Allocator>::qr(
+   inline timer qr_guard("qr");
+
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr_implement(
          char free_name_direction,
-         const SetName& free_name_set,
+         const auto& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
       auto timer_guard = qr_guard();
-      auto pmr_guard = scope_resource<default_buffer_size>();
       // free_name_set不需要做特殊处理即可自动处理不准确的边名
-      constexpr bool is_fermi = is_fermi_symmetry_v<Symmetry>;
+      constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       const auto rank = names.size();
       // 判断使用lq还是qr
       bool use_r_name;
@@ -331,17 +333,17 @@ namespace TAT {
       } else {
          TAT_error("Invalid direction in QR");
       };
-      bool use_qr_not_lq = names.empty() || ((free_name_set.find(names.back()) != free_name_set.end()) == use_r_name);
+      bool use_qr_not_lq = names.empty() || ((set_find(free_name_set, names.back()) != free_name_set.end()) == use_r_name);
       // merge
       auto free_name_1 = pmr::vector<Name>();
       auto free_name_2 = pmr::vector<Name>();
       auto reversed_set_1 = pmr::set<Name>();
       auto reversed_set_2 = pmr::set<Name>();
       auto reversed_set_origin = pmr::set<Name>();
-      auto result_name_1 = pmr::vector<Name>();
-      auto result_name_2 = pmr::vector<Name>();
-      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
-      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>();
+      auto result_name_1 = std::vector<Name>();
+      auto result_name_2 = std::vector<Name>();
+      auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>();
+      auto free_names_and_edges_2 = pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>();
       free_name_1.reserve(rank);
       free_name_2.reserve(rank);
       result_name_1.reserve(rank + 1);
@@ -354,7 +356,7 @@ namespace TAT {
          // set.find() != set.end() => n in the set
          // (!=) == use_r_name => n in the r name
          // (!=) == use_r_name == use_qr_not_lq => in the second name
-         if ((free_name_set.find(n) != free_name_set.end()) == use_r_name == use_qr_not_lq) {
+         if ((set_find(free_name_set, n) != free_name_set.end()) == use_r_name == use_qr_not_lq) {
             free_name_2.push_back(n);
             result_name_2.push_back(n);
             free_names_and_edges_2.push_back({n, {core->edges[i].map}});
@@ -388,34 +390,42 @@ namespace TAT {
          }
       }
       result_name_1.push_back(use_qr_not_lq ? common_name_q : common_name_r);
-      auto tensor_merged = edge_operator<polymorphic_allocator>(
-            {},
-            {},
+      auto tensor_merged = edge_operator_implement(
+            std::initializer_list<std::pair<Name, Name>>(),
+            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reversed_set_origin,
             pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::QR_1, std::move(free_name_1)}, {InternalName<Name>::QR_2, std::move(free_name_2)}},
-            pmr::vector<Name>{InternalName<Name>::QR_1, InternalName<Name>::QR_2});
+            std::vector<Name>{InternalName<Name>::QR_1, InternalName<Name>::QR_2},
+            false,
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       // call lapack
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
       for (const auto& [sym, _] : tensor_merged.core->blocks) {
-         auto m = tensor_merged.core->edges[0].map.at(sym[0]);
-         auto n = tensor_merged.core->edges[1].map.at(sym[1]);
+         auto m = map_at(tensor_merged.core->edges[0].map, sym[0]);
+         auto n = map_at(tensor_merged.core->edges[1].map, sym[1]);
          auto k = m > n ? n : m;
-         common_edge_1.map[sym[1]] = k;
-         common_edge_2.map[sym[0]] = k;
+         common_edge_1.map.emplace_back(sym[1], k);
+         common_edge_2.map.emplace_back(sym[0], k);
       }
-      auto tensor_1 = Tensor<ScalarType, Symmetry, Name, Allocator>{
+      do_sort(common_edge_1.map);
+      do_sort(common_edge_2.map);
+      auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
             {InternalName<Name>::QR_1, use_qr_not_lq ? common_name_q : common_name_r},
             {std::move(tensor_merged.core->edges[0]), std::move(common_edge_1)}};
-      auto tensor_2 = Tensor<ScalarType, Symmetry, Name, Allocator>{
+      auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             {use_qr_not_lq ? common_name_r : common_name_q, InternalName<Name>::QR_2},
             {std::move(common_edge_2), std::move(tensor_merged.core->edges[1])}};
       for (auto& [symmetries, block] : tensor_merged.core->blocks) {
-         auto* data_1 = tensor_1.core->blocks.at(symmetries).data();
-         auto* data_2 = tensor_2.core->blocks.at(symmetries).data();
+         auto* data_1 = map_at(tensor_1.core->blocks, symmetries).data();
+         auto* data_2 = map_at(tensor_2.core->blocks, symmetries).data();
          auto* data = block.data();
-         const int m = tensor_1.core->edges[0].map.at(symmetries[0]);
-         const int n = tensor_2.core->edges[1].map.at(symmetries[1]);
+         const int m = map_at(tensor_1.core->edges[0].map, symmetries[0]);
+         const int n = map_at(tensor_2.core->edges[1].map, symmetries[1]);
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
          if (m * n != 0) {
@@ -429,22 +439,30 @@ namespace TAT {
       if constexpr (is_fermi) {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
-      auto new_tensor_1 = tensor_1.template edge_operator<Allocator>(
-            {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
-                  {InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
+      auto new_tensor_1 = tensor_1.edge_operator_implement(
+            std::initializer_list<std::pair<Name, Name>>(),
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>>{{InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
-            {},
-            result_name_1);
-      auto new_tensor_2 = tensor_2.template edge_operator<Allocator>(
-            {},
-            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, Allocator, true>>>>{
-                  {InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
-            reversed_set_2,
-            {},
-            result_name_2,
+            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            std::move(result_name_1),
             false,
-            std::array<pmr::set<Name>, 4>{{{}, use_qr_not_lq ? pmr::set<Name>{} : pmr::set<Name>{common_name_q}, {}, {}}});
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+      auto new_tensor_2 = tensor_2.edge_operator_implement(
+            std::initializer_list<std::pair<Name, Name>>(),
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>>{{InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
+            reversed_set_2,
+            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            std::move(result_name_2),
+            false,
+            std::initializer_list<Name>(),
+            use_qr_not_lq ? pmr::set<Name>{} : pmr::set<Name>{common_name_q},
+            std::initializer_list<Name>(),
+            std::initializer_list<Name>(),
+            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       return {std::move(use_qr_not_lq ? new_tensor_1 : new_tensor_2), std::move(use_qr_not_lq ? new_tensor_2 : new_tensor_1)};
    }
 } // namespace TAT

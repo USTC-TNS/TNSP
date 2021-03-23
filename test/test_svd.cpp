@@ -21,7 +21,7 @@
 
 void run_test() {
    do {
-      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << a << "\n";
       auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
@@ -30,7 +30,7 @@ void run_test() {
       std::cout << decltype(v)::contract(v.multiple(s, "F", 'u'), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"}) << "\n";
    } while (false);
    do {
-      auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << b << "\n";
       auto [u, s, v] = b.svd({"A", "D"}, "E", "F");
       std::cout << u << "\n";
@@ -45,7 +45,7 @@ void run_test() {
       auto c =
             TAT::Tensor<double, TAT::U1Symmetry>{
                   {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
-                  .test();
+                  .range();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
       std::cout << u << "\n";
       std::cout << s << "\n";
@@ -59,7 +59,7 @@ void run_test() {
       }) << "\n";
    } while (false);
    do {
-      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.test();
+      auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << a << "\n";
       auto [u, s, v] = a.svd({"C", "A"}, "E", "F", 2);
       std::cout << u << "\n";
@@ -73,7 +73,7 @@ void run_test() {
       auto c =
             TAT::Tensor<double, TAT::U1Symmetry>{
                   {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
-                  .test();
+                  .range();
       auto [u, s, v] = c.svd({"C", "A"}, "E", "F", 7);
       std::cout << u << "\n";
       std::cout << s << "\n";

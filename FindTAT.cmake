@@ -17,7 +17,7 @@ message("-- TAT headers found at ${TAT_INCLUDE_PATH}")
 target_include_directories(TAT INTERFACE ${TAT_INCLUDE_PATH})
 
 # 设置为c++17, 大多数超算上目前都有支持c++17的编译器, 故如此, c++20的话部分不支持, 所以本库也不使用
-target_compile_features(TAT INTERFACE cxx_std_17)
+target_compile_features(TAT INTERFACE cxx_std_20)
 
 # 常设置的参数有
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS

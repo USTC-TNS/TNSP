@@ -22,7 +22,7 @@
 void run_test() {
    auto t1 = TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}};
    auto t2 = t1.edge_rename({{"Left", "Up"}});
-   t1.test();
+   t1.range();
    std::cout << t1 << "\n";
    // std::cout << t2 << "\n";
 }

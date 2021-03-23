@@ -24,7 +24,7 @@ void run_test() {
    std::cout << TAT::Tensor<
                       double,
                       TAT::U1Symmetry>{{"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                      .test(2)
+                      .range(2)
              << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{"Left", "Right", "Up"}, {
 #ifdef _MSVC_LANG

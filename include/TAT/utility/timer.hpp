@@ -23,6 +23,8 @@
 
 #include <chrono>
 #include <stack>
+#include <string>
+#include <vector>
 
 namespace TAT {
    /**
@@ -126,32 +128,6 @@ namespace TAT {
       }
       timer(const char*) {}
    };
-#endif
-
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
-#define TAT_DEFINE_TIMER(x) inline timer x##_guard(#x);
-   TAT_DEFINE_TIMER(contract)
-   TAT_DEFINE_TIMER(contract_kernel)
-   TAT_DEFINE_TIMER(svd)
-   TAT_DEFINE_TIMER(svd_kernel)
-   TAT_DEFINE_TIMER(qr)
-   TAT_DEFINE_TIMER(qr_kernel)
-   TAT_DEFINE_TIMER(scalar_outplace)
-   TAT_DEFINE_TIMER(scalar_inplace)
-   TAT_DEFINE_TIMER(transpose)
-   TAT_DEFINE_TIMER(transpose_kernel)
-   TAT_DEFINE_TIMER(transpose_kernel_core)
-   TAT_DEFINE_TIMER(multiple)
-   TAT_DEFINE_TIMER(conjugate)
-   TAT_DEFINE_TIMER(exponential)
-   TAT_DEFINE_TIMER(trace)
-   TAT_DEFINE_TIMER(shrink)
-   TAT_DEFINE_TIMER(expand)
-   TAT_DEFINE_TIMER(mpi_send)
-   TAT_DEFINE_TIMER(mpi_receive)
-   TAT_DEFINE_TIMER(mpi_broadcast)
-   TAT_DEFINE_TIMER(mpi_reduce)
-#undef TAT_DEFINE_TIMER
 #endif
    /**@}*/
 } // namespace TAT

@@ -25,13 +25,17 @@
 #include <sstream>
 #include <stdexcept>
 
+#include "../utility/timer.hpp"
 #include "io.hpp"
-#include "tensor.hpp"
-#include "timer.hpp"
 
 #ifdef TAT_USE_MPI
 // 不可以extern "C"，因为mpi.h发现不可以被暂时屏蔽的宏__cplusplus后申明一些cpp的函数
 #include <mpi.h>
+#endif
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
 #endif
 
 namespace TAT {
@@ -39,6 +43,7 @@ namespace TAT {
     * \defgroup MPI
     * @{
     */
+
    /**
     * 对流进行包装, 包装后流只会根据创建时指定的有效性决定是否输出
     */
@@ -53,7 +58,7 @@ namespace TAT {
 
       template<typename Type>
       mpi_one_output_stream& operator<<(const Type& value) & {
-         if (valid) {
+         if (valid) [[likely]] {
             string << value;
          }
          return *this;
@@ -61,7 +66,7 @@ namespace TAT {
 
       template<typename Type>
       mpi_one_output_stream&& operator<<(const Type& value) && {
-         if (valid) {
+         if (valid) [[likely]] {
             string << value;
          }
          return std::move(*this);
@@ -78,7 +83,7 @@ namespace TAT {
          out << string.str() << std::flush;
       }
       mpi_rank_output_stream(std::ostream& out, int rank) : out(out) {
-         if (rank != -1) {
+         if (rank != -1) [[unlikely]] {
             string << "[rank " << rank << "] ";
          }
       }
@@ -95,6 +100,18 @@ namespace TAT {
          return std::move(*this);
       }
    };
+
+   // TODO: 使用类似std::format一样的公用的序列化方式
+   template<typename T>
+   concept serializable = requires(std::ostream& o, std::istream& i, const T& u, T& v) {
+      o < u;
+      i > v;
+   };
+
+   inline timer mpi_send_guard("mpi_send");
+   inline timer mpi_receive_guard("mpi_receive");
+   inline timer mpi_broadcast_guard("mpi_broadcast");
+   inline timer mpi_reduce_guard("mpi_reduce");
 
    /**
     * 一个mpi handler类型, 会在构造和析构时自动调用MPI_Init和MPI_Finalize, 且会获取Size和Rank信息, 同时提供只在某个rank下有效的输出流
@@ -121,14 +138,14 @@ namespace TAT {
          return result;
       }
       mpi_t() {
-         if (!initialized()) {
+         if (!initialized()) [[unlikely]] {
             MPI_Init(nullptr, nullptr);
          }
          MPI_Comm_size(MPI_COMM_WORLD, &size);
          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       }
       ~mpi_t() {
-         if (!finalized()) {
+         if (!finalized()) [[unlikely]] {
             MPI_Finalize();
          }
       }
@@ -139,7 +156,7 @@ namespace TAT {
 
       static constexpr int mpi_tag = 0;
 
-      template<typename Type>
+      template<serializable Type>
       static void send(const Type& value, const int destination) {
          auto timer_guard = mpi_send_guard();
          std::ostringstream stream;
@@ -150,73 +167,78 @@ namespace TAT {
       }
 
       // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
-      template<typename Type>
+      template<serializable Type>
       static Type receive(const int source) {
          auto timer_guard = mpi_receive_guard();
          auto status = MPI_Status();
          MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
          int length;
          MPI_Get_count(&status, MPI_BYTE, &length);
-         auto data = std::string(length, '\0'); // 这里不需初始化, 但考虑到load和dump本身效率也不高, 无所谓了
+         auto data = std::basic_string<char, std::char_traits<char>, no_initialize_allocator<char>>();
+         data.resize(length);
          MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-         std::istringstream stream(data);
+         std::basic_istringstream<char, std::char_traits<char>, no_initialize_allocator<char>> stream(data);
          auto result = Type();
          stream > result;
          return result;
       }
 
-      template<typename Type>
+      template<serializable Type>
       Type send_receive(const Type& value, const int source, const int destination) const {
-         if (rank == source) {
+         if (rank == source) [[unlikely]] {
             send(value, destination);
          }
-         if (rank == destination) {
+         if (rank == destination) [[unlikely]] {
             return receive<Type>(source);
          }
          return Type();
       }
 
-      template<typename Type>
+      template<serializable Type>
       Type broadcast(const Type& value, const int root) const {
          auto timer_guard = mpi_broadcast_guard();
-         if (size == 1) {
+         if (size == 1) [[unlikely]] {
             return value;
          }
-         if (0 > root || root >= size) {
+         if (0 > root || root >= size) [[unlikely]] {
             TAT_error("Invalid root rank when mpi broadcast");
          }
          const auto this_fake_rank = (size + rank - root) % size;
          Type result;
          // get from father
-         if (this_fake_rank != 0) {
+         if (this_fake_rank != 0) [[likely]] {
             const auto father_fake_rank = (this_fake_rank - 1) / 2;
             const auto father_real_rank = (father_fake_rank + root) % size;
             result = receive<Type>(father_real_rank);
-         } else {
+         } else [[unlikely]] {
             // 自己就是root的话, 会复制一次张量
             result = value;
          }
          // send to son
          const auto left_son_fake_rank = this_fake_rank * 2 + 1;
          const auto right_son_fake_rank = this_fake_rank * 2 + 2;
-         if (left_son_fake_rank < size) {
+         if (left_son_fake_rank < size) [[likely]] {
             const auto left_son_real_rank = (left_son_fake_rank + root) % size;
             send(result, left_son_real_rank);
          }
-         if (right_son_fake_rank < size) {
+         if (right_son_fake_rank < size) [[likely]] {
             const auto right_son_real_rank = (right_son_fake_rank + root) % size;
             send(result, right_son_real_rank);
          }
          return result;
       }
 
-      template<typename Type, typename Func>
+      template<serializable Type, typename Func>
+      requires requires(const Type& a, const Type& b, Func&& f) {
+         { f(a, b) }
+         ->std::same_as<Type>;
+      }
       Type reduce(const Type& value, const int root, Func&& function) const {
          auto timer_guard = mpi_reduce_guard();
-         if (size == 1) {
+         if (size == 1) [[unlikely]] {
             return value;
          }
-         if (0 > root || root >= size) {
+         if (0 > root || root >= size) [[unlikely]] {
             TAT_error("Invalid root rank when mpi reduce");
          }
          const auto this_fake_rank = (size + rank - root) % size;
@@ -224,22 +246,22 @@ namespace TAT {
          // get from son
          const auto left_son_fake_rank = this_fake_rank * 2 + 1;
          const auto right_son_fake_rank = this_fake_rank * 2 + 2;
-         if (left_son_fake_rank < size) {
+         if (left_son_fake_rank < size) [[likely]] {
             const auto left_son_real_rank = (left_son_fake_rank + root) % size;
             result = function(value, receive<Type>(left_son_real_rank));
          }
-         if (right_son_fake_rank < size) {
+         if (right_son_fake_rank < size) [[likely]] {
             const auto right_son_real_rank = (right_son_fake_rank + root) % size;
             // 如果左儿子不存在, 那么右儿子一定不存在, 所以不必判断result是否有效
             result = function(result, receive<Type>(right_son_real_rank));
          }
          // pass to father
-         if (this_fake_rank != 0) {
+         if (this_fake_rank != 0) [[likely]] {
             const auto father_fake_rank = (this_fake_rank - 1) / 2;
             const auto father_real_rank = (father_fake_rank + root) % size;
-            if (left_son_fake_rank < size) {
+            if (left_son_fake_rank < size) [[likely]] {
                send(result, father_real_rank);
-            } else {
+            } else [[unlikely]] {
                send(value, father_real_rank);
             }
          }
@@ -272,40 +294,6 @@ namespace TAT {
     */
    inline mpi_t mpi;
    /**@}*/
-
-#ifdef TAT_USE_MPI
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   void Tensor<ScalarType, Symmetry, Name, Allocator>::send(const int destination) const {
-      mpi.send(*this, destination);
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::receive(const int source) {
-      return mpi.receive<Tensor<ScalarType, Symmetry, Name, Allocator>>(source);
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>::send_receive(const int source, const int destination) const {
-      return mpi.send_receive(*this, source, destination);
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::broadcast(const int root) const {
-      return mpi.broadcast(*this, root);
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   template<typename Func>
-   Tensor<ScalarType, Symmetry, Name, Allocator> Tensor<ScalarType, Symmetry, Name, Allocator>::reduce(const int root, Func&& function) const {
-      return mpi.reduce(*this, root, function);
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   void Tensor<ScalarType, Symmetry, Name, Allocator>::barrier() {
-      mpi.barrier();
-   }
-#endif
 
    inline evil_t::evil_t() noexcept {
 #ifdef _WIN32

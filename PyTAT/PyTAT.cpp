@@ -60,8 +60,8 @@ namespace TAT {
       declare_edge<Z2Symmetry, Z2, false, edge_map_t>(Z2_m, "Z2");
       auto U1_m = tat_m.def_submodule("U1");
       declare_symmetry<U1Symmetry>(U1_m, "U1")
-            .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
-            .def_property_readonly("z2", [](const Z2Symmetry& symmetry) { return std::get<0>(symmetry); });
+            .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
+            .def_property_readonly("u1", [](const U1Symmetry& symmetry) { return std::get<0>(symmetry); });
       declare_edge<U1Symmetry, U1, false>(U1_m, "U1");
       declare_edge<U1Symmetry, U1, false, edge_map_t>(U1_m, "U1");
       auto Fermi_m = tat_m.def_submodule("Fermi");

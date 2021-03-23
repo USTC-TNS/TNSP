@@ -22,7 +22,7 @@
 using Tensor = typename TAT::Tensor<float, TAT::NoSymmetry>;
 
 void run_test() {
-   auto a = Tensor({"A", "B"}, {5, 10}).test();
+   auto a = Tensor({"A", "B"}, {5, 10}).range();
    std::cout << a << '\n';
    {
       auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
@@ -36,7 +36,7 @@ void run_test() {
       std::cout << r << '\n';
       std::cout << (q.contract(r, {{"newQ", "newR"}}) - a).norm<-1>() << '\n';
    }
-   auto b = Tensor({"A", "B"}, {10, 5}).test();
+   auto b = Tensor({"A", "B"}, {10, 5}).range();
    std::cout << b << '\n';
    {
       auto [q, r] = b.qr('r', {"A"}, "newQ", "newR");

@@ -20,8 +20,8 @@
 #include "run_test.hpp"
 
 void run_test() {
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {2, 2}}.test();
-   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"C", "D"}, {2, 2}}.test();
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {2, 2}}.range();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"C", "D"}, {2, 2}}.range();
    std::cout << a << "\n";
    std::cout << b << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"A", "C"}}) << "\n";
@@ -29,18 +29,18 @@ void run_test() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"B", "C"}}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(a, b, {{"B", "D"}}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>::contract(
-                      TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {1, 2, 3, 4}}.test(),
-                      TAT::Tensor<double, TAT::NoSymmetry>{{"E", "F", "G", "H"}, {3, 1, 2, 4}}.test(),
+                      TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {1, 2, 3, 4}}.range(),
+                      TAT::Tensor<double, TAT::NoSymmetry>{{"E", "F", "G", "H"}, {3, 1, 2, 4}}.range(),
                       {{"B", "G"}, {"D", "H"}})
              << "\n";
    auto c =
          TAT::Tensor<double, TAT::FermiSymmetry>{
                {"A", "B", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
-               .test();
+               .range();
    auto d =
          TAT::Tensor<double, TAT::FermiSymmetry>{
                {"E", "F", "G", "H"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}}, true}
-               .test();
+               .range();
    std::cout << c << "\n";
    std::cout << d << "\n";
    std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";

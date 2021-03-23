@@ -21,7 +21,7 @@
 
 void run_test() {
    std::stringstream ss;
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.test();
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.range();
    ss < a;
    auto b = TAT::Tensor<double, TAT::NoSymmetry>();
    ss > b;
@@ -30,7 +30,7 @@ void run_test() {
    auto c =
          TAT::Tensor<double, TAT::U1Symmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .test(2);
+               .range(2);
    ss < c;
    auto d = TAT::Tensor<double, TAT::U1Symmetry>();
    ss > d;
@@ -49,7 +49,7 @@ void run_test() {
    auto g =
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .test(2);
+               .range(2);
    ss < g;
    auto h = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
    ss > h;
@@ -58,7 +58,7 @@ void run_test() {
    auto i =
          TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
                {"Left", "Right", "Up"}, {{{-2, 3}, {0, 1}, {-1, 2}}, {{0, 2}, {1, 3}}, {{0, 3}, {1, 1}}}, true}
-               .test(2);
+               .range(2);
    ss < i;
    auto j = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
    ss > j;

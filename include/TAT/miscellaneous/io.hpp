@@ -24,7 +24,7 @@
 #include <iostream>
 #include <limits>
 
-#include "tensor.hpp"
+#include "../structure/tensor.hpp"
 
 namespace TAT {
    /**
@@ -169,9 +169,9 @@ namespace TAT {
    };
 
    template<typename T>
-   struct is_symmetry_vector : std::bool_constant<false> {};
+   struct is_symmetry_vector : std::false_type {};
    template<typename T>
-   struct is_symmetry_vector<std::vector<T>> : is_symmetry<T> {};
+   struct is_symmetry_vector<std::vector<T>> : std::bool_constant<is_symmetry<T>> {};
    template<typename T>
    constexpr bool is_symmetry_vector_v = is_symmetry_vector<T>::value;
 #endif
@@ -184,7 +184,7 @@ namespace TAT {
          out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
       } else {
          for (const auto& i : list) {
-            if constexpr (is_name_v<T>) {
+            if constexpr (is_name<T>) {
                NameTraits<T>::write(out, i);
             } else {
                out < i;
@@ -204,7 +204,7 @@ namespace TAT {
       } else {
          for (Size i = 0; i < count; i++) {
             auto& item = list.emplace_back();
-            if constexpr (is_name_v<T>) {
+            if constexpr (is_name<T>) {
                NameTraits<T>::read(in, item);
             } else {
                in > item;
@@ -214,7 +214,7 @@ namespace TAT {
       return in;
    }
 
-   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
+   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry<Key> || is_symmetry_vector_v<Key>>>
    std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
       Size size = map.size();
       out < size;
@@ -224,7 +224,7 @@ namespace TAT {
       return out;
    }
 
-   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry_v<Key> || is_symmetry_vector_v<Key>>>
+   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry<Key> || is_symmetry_vector_v<Key>>>
    std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
       map.clear();
       Size size;
@@ -237,7 +237,7 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T> || is_name_v<T>>>
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
    std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       out << '[';
       auto not_first = false;
@@ -246,9 +246,9 @@ namespace TAT {
             out << ',';
          }
          not_first = true;
-         if constexpr (is_name_v<T>) {
+         if constexpr (is_name<T>) {
             NameTraits<T>::print(out, i);
-         } else if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+         } else if constexpr (std::is_same_v<T, std::complex<real_scalar<T>>>) {
             print_complex(out, i);
          } else {
             out << i;
@@ -258,7 +258,7 @@ namespace TAT {
       return out;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar_v<T> || is_edge_v<T> || is_symmetry_v<T> || is_name_v<T>>>
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
    std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       list.clear();
       ignore_until(in, '[');
@@ -270,9 +270,9 @@ namespace TAT {
          while (true) {
             // 此时没有space
             auto& i = list.emplace_back();
-            if constexpr (is_name_v<T>) {
+            if constexpr (is_name<T>) {
                NameTraits<T>::scan(in, i);
-            } else if constexpr (std::is_same_v<T, std::complex<real_base_t<T>>>) {
+            } else if constexpr (std::is_same_v<T, std::complex<real_scalar<T>>>) {
                scan_complex(in, i);
             } else {
                in >> i;
@@ -288,13 +288,19 @@ namespace TAT {
 
    template<typename Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         out << edge.map.at(NoSymmetry());
+      if constexpr (Symmetry::length == 0) {
+         out << edge.map.front().second;
       } else {
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            out << '{' << "arrow" << ':';
-            out << edge.arrow;
-            out << ',' << "map" << ':';
+         if constexpr (Symmetry::length != 0) {
+            out << '{';
+            out << "conjugated" << ':';
+            out << edge.conjugated << ',';
+            if constexpr (Symmetry::is_fermi_symmetry) {
+               out << "arrow" << ':';
+               out << edge.arrow;
+               out << ',';
+            }
+            out << "map" << ':';
          }
          out << '{';
          auto not_first = false;
@@ -306,7 +312,7 @@ namespace TAT {
             out << symmetry << ':' << dimension;
          }
          out << '}';
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if constexpr (Symmetry::is_fermi_symmetry) {
             out << '}';
          }
       }
@@ -314,10 +320,15 @@ namespace TAT {
    }
    template<typename Symmetry>
    std::istream& operator>>(std::istream& in, Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         in >> edge.map[NoSymmetry()];
+      if constexpr (Symmetry::length == 0) {
+         edge.map.clear();
+         in >> edge.map.emplace_back(Symmetry(), 0).second;
       } else {
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if constexpr (Symmetry::length != 0) {
+            ignore_until(in, ':');
+            in >> edge.conjugated;
+         }
+         if constexpr (Symmetry::is_fermi_symmetry) {
             ignore_until(in, ':');
             in >> edge.arrow;
          }
@@ -329,12 +340,14 @@ namespace TAT {
                Symmetry symmetry;
                in >> symmetry;
                ignore_until(in, ':');
-               in >> edge.map[symmetry];
+               Size dimension;
+               in >> dimension;
+               edge.map.emplace_back(symmetry, dimension);
             } while (in.get() == ','); // 读了map最后的'}'
          } else {
             in.get(); // 读了map最后的'}'
          }
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
+         if constexpr (Symmetry::length != 0) {
             ignore_until(in, '}');
          }
       }
@@ -343,27 +356,24 @@ namespace TAT {
 
    template<typename Symmetry>
    std::ostream& operator<(std::ostream& out, const Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         out < edge.map.begin()->second;
-      } else {
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            out < edge.arrow;
-         }
-         out < edge.map;
+      if constexpr (Symmetry::length != 0) {
+         out < edge.conjugated;
       }
+      if constexpr (Symmetry::is_fermi_symmetry) {
+         out < edge.arrow;
+      }
+      out < edge.map;
       return out;
    }
    template<typename Symmetry>
    std::istream& operator>(std::istream& in, Edge<Symmetry>& edge) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         // edge.map.clear(); 不需要
-         in > edge.map[NoSymmetry()];
-      } else {
-         if constexpr (is_fermi_symmetry_v<Symmetry>) {
-            in > edge.arrow;
-         }
-         in > edge.map;
+      if constexpr (Symmetry::length != 0) {
+         in > edge.conjugated;
       }
+      if constexpr (Symmetry::is_fermi_symmetry) {
+         in > edge.arrow;
+      }
+      in > edge.map;
       return in;
    }
 
@@ -372,8 +382,8 @@ namespace TAT {
       (((Is == 0 ? out : out << ',') << std::get<Is>(symmetry)), ...);
    }
    template<typename... T>
-   std::ostream& operator<<(std::ostream& out, const symmetry_t<T...>& symmetry) {
-      using Symmetry = symmetry_t<T...>;
+   std::ostream& operator<<(std::ostream& out, const Symmetry<T...>& symmetry) {
+      using Symmetry = Symmetry<T...>;
       if constexpr (Symmetry::length != 0) {
          if constexpr (Symmetry::length == 1) {
             out << std::get<0>(symmetry);
@@ -390,8 +400,8 @@ namespace TAT {
       (((Is == 0 ? in : (ignore_until(in, ','), in)) >> std::get<Is>(symmetry)), ...);
    }
    template<typename... T>
-   std::istream& operator>>(std::istream& in, symmetry_t<T...>& symmetry) {
-      using Symmetry = symmetry_t<T...>;
+   std::istream& operator>>(std::istream& in, Symmetry<T...>& symmetry) {
+      using Symmetry = Symmetry<T...>;
       if constexpr (Symmetry::length != 0) {
          if constexpr (Symmetry::length == 1) {
             in >> std::get<0>(symmetry);
@@ -421,8 +431,8 @@ namespace TAT {
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::ostream& operator<<(std::ostream& out, const TensorShape<ScalarType, Symmetry, Name, Allocator>& shape) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::ostream& operator<<(std::ostream& out, const TensorShape<ScalarType, Symmetry, Name>& shape) {
       const auto& tensor = *shape.owner;
       out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names << ',';
@@ -430,14 +440,14 @@ namespace TAT {
       out << tensor.core->edges << '}';
       return out;
    }
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
       out << tensor.names << ',';
       out << console_green << "edges" << console_origin << ':';
       out << tensor.core->edges << ',';
       out << console_green << "blocks" << console_origin << ':';
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+      if constexpr (Symmetry::length == 0) {
          out << tensor.core->blocks.begin()->second;
       } else {
          out << '{';
@@ -454,20 +464,20 @@ namespace TAT {
       out << '}';
       return out;
    }
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name, Allocator>& tensor) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       ignore_until(in, ':');
       in >> tensor.names;
-      tensor.name_to_index = construct_name_to_index<std::map<Name, Rank>>(tensor.names);
+      tensor.name_to_index = construct_name_to_index<Name>(tensor.names);
       ignore_until(in, ':');
-      pmr::vector<Edge<Symmetry>> edges;
+      std::vector<Edge<Symmetry>> edges;
       in >> edges;
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
-      check_valid_name(tensor.names, tensor.core->edges.size());
+      check_valid_name<Name>(tensor.names, tensor.core->edges.size());
       ignore_until(in, ':');
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+      if constexpr (Symmetry::length == 0) {
          // change begin();
-         auto& block = tensor.core->blocks[std::vector<Symmetry>(tensor.names.size(), NoSymmetry())];
+         auto& block = tensor.core->blocks.front().second;
          block.clear(); // clear了vector，但是容量应该没有变
          in >> block;
       } else {
@@ -478,7 +488,7 @@ namespace TAT {
                std::vector<Symmetry> symmetries;
                in >> symmetries;
                ignore_until(in, ':');
-               auto& block = tensor.core->blocks[std::move(symmetries)];
+               auto& block = map_at(tensor.core->blocks, symmetries);
                block.clear();
                in >> block;
             } while (in.get() == ','); // 读了map最后的'}'
@@ -490,10 +500,10 @@ namespace TAT {
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::ostream& operator<<(std::ostream& out, const Singular<ScalarType, Symmetry, Name, Allocator>& singular) {
-      const auto& value = singular.value; // std::map<Symmetry, vector<real_base_t<ScalarType>>>
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::ostream& operator<<(std::ostream& out, const Singular<ScalarType, Symmetry, Name>& singular) {
+      const auto& value = singular.value; // std::map<Symmetry, vector<real_scalar<ScalarType>>>
+      if constexpr (Symmetry::length == 0) {
          out << value.begin()->second;
       } else {
          out << '{';
@@ -511,11 +521,11 @@ namespace TAT {
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::istream& operator>>(std::istream& in, Singular<ScalarType, Symmetry, Name, Allocator>& singular) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::istream& operator>>(std::istream& in, Singular<ScalarType, Symmetry, Name>& singular) {
       auto& value = singular.value;
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
-         in >> value[NoSymmetry()];
+      if constexpr (Symmetry::length == 0) {
+         in >> value[{}];
       } else {
          value.clear();
          ignore_until(in, '{');
@@ -533,49 +543,49 @@ namespace TAT {
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::string Tensor<ScalarType, Symmetry, Name, Allocator>::show() const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::string Tensor<ScalarType, Symmetry, Name>::show() const {
       std::ostringstream out;
       out << *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::string Singular<ScalarType, Symmetry, Name, Allocator>::show() const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::string Singular<ScalarType, Symmetry, Name>::show() const {
       std::ostringstream out;
       out << *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   const Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::meta_put(std::ostream& out) const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_put(std::ostream& out) const {
       out < names;
       out < core->edges;
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   const Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::data_put(std::ostream& out) const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_put(std::ostream& out) const {
       out < core->storage;
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name, Allocator>& tensor) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       tensor.meta_put(out).data_put(out);
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::string Tensor<ScalarType, Symmetry, Name, Allocator>::dump() const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::string Tensor<ScalarType, Symmetry, Name>::dump() const {
       std::ostringstream out;
       out < *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry, Name, Allocator>& singular) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::ostream& operator<(std::ostream& out, const Singular<ScalarType, Symmetry, Name>& singular) {
+      if constexpr (Symmetry::length == 0) {
          out < singular.value.begin()->second;
       } else {
          out < singular.value;
@@ -583,56 +593,56 @@ namespace TAT {
       return out;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::string Singular<ScalarType, Symmetry, Name, Allocator>::dump() const {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::string Singular<ScalarType, Symmetry, Name>::dump() const {
       std::ostringstream out;
       out < *this;
       return out.str();
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::meta_get(std::istream& in) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
       in > names;
-      name_to_index = construct_name_to_index<std::map<Name, Rank>>(names);
-      pmr::vector<Edge<Symmetry>> edges;
+      name_to_index = construct_name_to_index<Name>(names);
+      std::vector<Edge<Symmetry>> edges;
       in > edges;
       core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
-      check_valid_name(names, core->edges.size());
+      check_valid_name<Name>(names, core->edges.size());
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::data_get(std::istream& in) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_get(std::istream& in) {
       in > core->storage;
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name, Allocator>& tensor) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       tensor.meta_get(in).data_get(in);
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Tensor<ScalarType, Symmetry, Name, Allocator>& Tensor<ScalarType, Symmetry, Name, Allocator>::load(const std::string& input) & {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::load(const std::string& input) & {
       std::istringstream in(input);
       in > *this;
       return *this;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry, Name, Allocator>& singular) {
-      if constexpr (std::is_same_v<Symmetry, NoSymmetry>) {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   std::istream& operator>(std::istream& in, Singular<ScalarType, Symmetry, Name>& singular) {
+      if constexpr (Symmetry::length == 0) {
          // singular.value.clear(); 不需要
-         in > singular.value[NoSymmetry()];
+         in > singular.value[{}];
       } else {
          in > singular.value;
       }
       return in;
    }
 
-   template<typename ScalarType, typename Symmetry, typename Name, template<typename> class Allocator>
-   Singular<ScalarType, Symmetry, Name, Allocator>& Singular<ScalarType, Symmetry, Name, Allocator>::load(const std::string& input) & {
+   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   Singular<ScalarType, Symmetry, Name>& Singular<ScalarType, Symmetry, Name>::load(const std::string& input) & {
       std::istringstream in(input);
       in > *this;
       return *this;

@@ -38,15 +38,15 @@ namespace square {
    template<typename T>
    using Tensor = TAT::Tensor<T>;
    template<typename T>
-   using real = TAT::real_base_t<T>;
+   using real = TAT::real_scalar<T>;
    template<typename T>
    using complex = std::complex<real<T>>;
    template<typename T>
-   using real_complex = std::conditional_t<TAT::is_complex_v<T>, real<T>, complex<T>>;
+   using real_complex = std::conditional_t<TAT::is_complex<T>, real<T>, complex<T>>;
 
    template<typename O, typename I>
    O scalar_to(I input) {
-      if constexpr (TAT::is_complex_v<I> && TAT::is_real_v<O>) {
+      if constexpr (TAT::is_complex<I> && TAT::is_real_v<O>) {
          return input.real();
       } else {
          return input;
@@ -55,7 +55,7 @@ namespace square {
 
    template<typename T>
    T conj(T input) {
-      if constexpr (TAT::is_complex_v<T>) {
+      if constexpr (TAT::is_complex<T>) {
          return input.conj();
       } else {
          return input;
@@ -184,7 +184,7 @@ namespace square {
 
       template<typename T>
       auto normal(T mean, T stddev) {
-         if constexpr (TAT::is_complex_v<T>) {
+         if constexpr (TAT::is_complex<T>) {
             return [distribution_real = std::normal_distribution<real<T>>(mean.real(), stddev.real()),
                     distribution_imag = std::normal_distribution<real<T>>(mean.imag(), stddev.imag())]() mutable -> T {
                return {distribution_real(engine), distribution_imag(engine)};
@@ -197,7 +197,7 @@ namespace square {
       auto uniform(T min, T max) {
          if constexpr (std::is_integral_v<T>) {
             return [distribution = std::uniform_int_distribution<T>(min, max)]() mutable { return distribution(engine); };
-         } else if constexpr (TAT::is_complex_v<T>) {
+         } else if constexpr (TAT::is_complex<T>) {
             return [distribution_real = std::uniform_real_distribution<real<T>>(min.real(), max.real()),
                     distribution_imag = std::uniform_real_distribution<real<T>>(min.imag(), max.imag())]() mutable -> T {
                return {distribution_real(engine), distribution_imag(engine)};

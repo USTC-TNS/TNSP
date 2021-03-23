@@ -26,11 +26,7 @@
 
 #include <cstddef>
 #include <forward_list>
-#include <list>
-#include <map>
 #include <new>
-#include <set>
-#include <vector>
 
 namespace TAT {
    struct memory_resource {
@@ -103,8 +99,6 @@ namespace TAT {
          increase_next_size_to(buffer_size);
       }
       monotonic_buffer_resource(const monotonic_buffer_resource&) = delete;
-      // 这个在标准库中不存在, 加上他使这个resource可以移动
-      monotonic_buffer_resource(monotonic_buffer_resource&&) = default;
 
       void increase_next_size() {
          m_next_buffer_size = (std::size_t(-1) / 2 < m_next_buffer_size) ? std::size_t(-1) : m_next_buffer_size * 2;
@@ -123,8 +117,6 @@ namespace TAT {
          release();
       }
 
-      // 增加了一个移动构造函数，如果被移动, 调用release要求不破坏系统
-      // 移动后m_buffer_list为空, 不会deallocate不应该deallocate的东西
       void release() {
          for (auto [buffer, size] : m_buffer_list) {
             m_upstream->deallocate(buffer, size, alignof(std::max_align_t));
@@ -184,6 +176,8 @@ namespace TAT {
 
    // 和std::pmr::polymorphic_allocator几乎一模一样
    // 和std::pmr::polymorphic_allocator的初始化时的默认resource不同, 使用的是自己的thread unsafe版本
+   // 还有就是加上了一个尝试不初始化的选项
+   // 为了行为和std::pmr尽可能一致, 上层使用的时候尽可能手动指定resource, 而不是通过get_default_resource获取
    template<typename Derived, typename T, bool try_not_initialize>
    struct polymorphic_allocator_base {
       memory_resource* m_resource;
@@ -207,14 +201,14 @@ namespace TAT {
          resource()->deallocate(p, n * sizeof(T), alignof(T));
       }
 
-      template<class U, class... Args>
+      template<typename U, typename... Args>
       void construct([[maybe_unused]] U* p, Args&&... args) {
          if constexpr (!(try_not_initialize && (sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
             new (p) U(std::forward<Args>(args)...);
          }
       }
 
-      template<class U>
+      template<typename U>
       void destroy(U* p) {
          p->~U();
       }
@@ -237,39 +231,22 @@ namespace TAT {
       using polymorphic_allocator_base<polymorphic_allocator_without_initialize<T>, T, true>::polymorphic_allocator_base;
    };
 
-   template<class T1, class T2>
+   template<typename T1, typename T2>
    bool operator==(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
       return *lhs.resource() == *rhs.resource();
    }
-   template<class T1, class T2>
+   template<typename T1, typename T2>
    bool operator!=(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
       return !(lhs == rhs);
    }
-   template<class T1, class T2>
+   template<typename T1, typename T2>
    bool operator==(const polymorphic_allocator_without_initialize<T1>& lhs, const polymorphic_allocator_without_initialize<T2>& rhs) noexcept {
       return *lhs.resource() == *rhs.resource();
    }
-   template<class T1, class T2>
+   template<typename T1, typename T2>
    bool operator!=(const polymorphic_allocator_without_initialize<T1>& lhs, const polymorphic_allocator_without_initialize<T2>& rhs) noexcept {
       return !(lhs == rhs);
    }
-
-   namespace pmr {
-      template<typename T>
-      using content_vector = std::vector<T, polymorphic_allocator_without_initialize<T>>;
-
-      template<typename T>
-      using vector = std::vector<T, polymorphic_allocator<T>>;
-
-      template<typename T>
-      using list = std::list<T, polymorphic_allocator<T>>;
-
-      template<typename Key, typename T, typename Compare = std::less<Key>>
-      using map = std::map<Key, T, Compare, polymorphic_allocator<std::pair<const Key, T>>>;
-
-      template<class Key, class Compare = std::less<Key>>
-      using set = std::set<Key, Compare, polymorphic_allocator<Key>>;
-   } // namespace pmr
 
    // on windows stack size is 1MB(1<<20), and on linux, stack size is 8M(1<<23)
    // 这个buffer应当仅仅用于零碎的变量
@@ -299,5 +276,31 @@ namespace TAT {
       }
    };
    scope_resource(std::size_t)->scope_resource<0, true>;
+} // namespace TAT
+
+#include <list>
+#include <map>
+#include <set>
+#include <vector>
+
+namespace TAT {
+   namespace pmr {
+      // content_vector仅在张量数据中使用
+      template<typename T>
+      using content_vector = std::vector<T, polymorphic_allocator_without_initialize<T>>;
+
+      // 下面几个容器和std::pmr的唯一区别就是默认的source不同，这里使用的是线程不安全的版本
+      template<typename T>
+      using vector = std::vector<T, polymorphic_allocator<T>>;
+
+      template<typename T>
+      using list = std::list<T, polymorphic_allocator<T>>;
+
+      template<typename Key, typename T, typename Compare = std::less<Key>>
+      using map = std::map<Key, T, Compare, polymorphic_allocator<std::pair<const Key, T>>>;
+
+      template<class Key, class Compare = std::less<Key>>
+      using set = std::set<Key, Compare, polymorphic_allocator<Key>>;
+   } // namespace pmr
 } // namespace TAT
 #endif

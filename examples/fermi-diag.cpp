@@ -21,13 +21,13 @@
 #include <TAT/TAT.hpp>
 
 int main(int argc, char** argv) {
-   auto number = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1}, {1}}, true).test(1, 0) +
-                 TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).test(0, 0);
+   auto number = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1}, {1}}, true).range(1, 0) +
+                 TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).range(0, 0);
 
-   auto less = TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1}, {1}, {0}}, true).test(1, 0);
+   auto less = TAT::Tensor<double, TAT::FermiSymmetry>({"control", "more", "less"}, {{-1}, {1}, {0}}, true).range(1, 0);
    auto more = less.conjugate();
    // TODO bug to fix here
-   auto identity = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).test(1, 0);
+   auto identity = TAT::Tensor<double, TAT::FermiSymmetry>({"in", "out"}, {{-1, 0}, {0, 1}}, true).range(1, 0);
    auto more_1 = identity.edge_rename({{"out", "out2"}, {"in", "in2"}}).contract(more, {}).edge_rename({{"more", "out1"}, {"less", "in1"}});
    auto more_2 = identity.edge_rename({{"out", "out1"}, {"in", "in1"}}).contract(more, {}).edge_rename({{"more", "out2"}, {"less", "in2"}});
    auto less_1 = identity.edge_rename({{"out", "out2"}, {"in", "in2"}}).contract(less, {}).edge_rename({{"more", "in1"}, {"less", "out1"}});

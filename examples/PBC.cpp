@@ -50,7 +50,7 @@ struct PBC {
       auto result = Tensor(1);
       for (int i = 0; i < L; i++) {
          for (int j = 0; j < L; j++) {
-            auto contract_names = std::set<std::tuple<TAT::DefaultName, TAT::DefaultName>>{{right(i), left(i)}, {down(j), up(j)}};
+            auto contract_names = std::set<std::pair<TAT::DefaultName, TAT::DefaultName>>{{right(i), left(i)}, {down(j), up(j)}};
             if (j == L - 1) {
                contract_names.insert({left(i), right(i)});
             }

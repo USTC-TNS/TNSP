@@ -20,16 +20,16 @@
 #include "run_test.hpp"
 
 void run_test() {
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.test();
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.range();
    std::cout << a << "\n";
    std::cout << a.transpose({"Right", "Left"}) << "\n";
-   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.test();
+   auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.range();
    std::cout << b << "\n";
    std::cout << b.transpose({"Right", "Up", "Left"}) << "\n";
    auto c =
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-               .test(1);
+               .range(1);
    std::cout << c << "\n";
    auto ct = c.transpose({"Right", "Up", "Left"});
    std ::cout << ct << "\n";
@@ -38,17 +38,17 @@ void run_test() {
    auto d =
          TAT::Tensor<double, TAT::FermiSymmetry>{
                {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}, true}
-               .test(1);
+               .range(1);
    std::cout << d << "\n";
    auto dt = d.transpose({"Right", "Up", "Left"});
    std::cout << dt << "\n";
-   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{"Down", "Up", "Left", "Right"}, {2, 3, 4, 5}}.test(1);
+   auto e = TAT::Tensor<double, TAT::NoSymmetry>{{"Down", "Up", "Left", "Right"}, {2, 3, 4, 5}}.range(1);
    std::cout << e << "\n";
    auto et = e.transpose({"Left", "Down", "Right", "Up"});
    std::cout << et << "\n";
    std::cout << e.const_at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
    std::cout << et.const_at({{"Down", 1}, {"Up", 1}, {"Left", 2}, {"Right", 2}}) << "\n";
-   auto f = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.test();
+   auto f = TAT::Tensor<double, TAT::NoSymmetry>{{"l1", "l2", "l3"}, {2, 3, 4}}.range();
    std::cout << f << "\n";
    std::cout << f.transpose({"l1", "l2", "l3"}) << "\n";
    std::cout << f.transpose({"l1", "l3", "l2"}) << "\n";
