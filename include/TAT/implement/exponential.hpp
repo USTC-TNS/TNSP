@@ -231,17 +231,17 @@ namespace TAT {
          }
       }
       auto tensor_merged = edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+            empty_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reverse_set,
             merge_map,
             std::move(merged_names),
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = map_at(result.core->blocks, symmetries);
@@ -249,17 +249,17 @@ namespace TAT {
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, Name>>(),
             split_map_result,
             reverse_set,
-            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            empty_list<std::pair<Name, std::initializer_list<Name>>>(),
             std::move(result_names),
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
    }
 } // namespace TAT
 #endif

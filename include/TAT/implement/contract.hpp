@@ -494,32 +494,32 @@ namespace TAT {
       // 仅对第一个张量的公共边的reverse和merge做符号
       auto common_name_1_set = pmr::set<Name>(common_name_1.begin(), common_name_1.end());
       auto tensor_1_merged = tensor_1.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+            empty_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reversed_set_1,
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_1, std::move(free_name_1)}, {InternalName<Name>::Contract_2, std::move(common_name_1)}},
             put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1},
             false,
-            std::initializer_list<Name>(),
+            empty_list<Name>(),
             common_name_1_set,
-            std::initializer_list<Name>(),
+            empty_list<Name>(),
             pmr::vector<Name>{InternalName<Name>::Contract_2},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+            empty_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reversed_set_2,
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_2, std::move(free_name_2)}, {InternalName<Name>::Contract_1, std::move(common_name_2)}},
             put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
                                  std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
             delete_2);
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry, Name>(
@@ -595,17 +595,17 @@ namespace TAT {
          return result;
       } else {
          auto result = product_result.edge_operator_implement(
-               std::initializer_list<std::pair<Name, Name>>(),
+               empty_list<std::pair<Name, Name>>(),
                split_map_result,
                reversed_set_result,
-               std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+               empty_list<std::pair<Name, std::initializer_list<Name>>>(),
                std::move(name_result),
                false,
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
          return result;
       }
    }
@@ -751,9 +751,9 @@ namespace TAT {
       // merge
       // 仅对第一个张量的公共边的reverse和merge做符号
       auto tensor_1_merged = tensor_1.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry<>>>>>>(),
-            std::initializer_list<Name>(),
+            empty_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry<>>>>>>(),
+            empty_list<Name>(),
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_1, std::move(free_name_1)},
                   {InternalName<Name>::Contract_2, std::move(common_name_1)},
@@ -761,15 +761,15 @@ namespace TAT {
             put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
                                  std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1},
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry<>, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry<>, Size>>>>());
       auto tensor_2_merged = tensor_2.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry<>>>>>>(),
-            std::initializer_list<Name>(),
+            empty_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry<>>>>>>(),
+            empty_list<Name>(),
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_2, std::move(free_name_2)},
                   {InternalName<Name>::Contract_1, std::move(common_name_2)},
@@ -777,11 +777,11 @@ namespace TAT {
             put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
                                  std::vector<Name>{InternalName<Name>::Contract_0, InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry<>, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry<>, Size>>>>());
       // calculate_product
       const int l = tensor_1_merged.core->edges[0].map.begin()->second;
       const int m = tensor_1_merged.core->edges[1 + !put_common_1_right].map.begin()->second;

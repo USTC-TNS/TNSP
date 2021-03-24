@@ -313,19 +313,19 @@ namespace TAT {
       result_name_u.push_back(common_name_u);
       const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
       auto tensor_merged = edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+            empty_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reversed_set_origin,
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::SVD_U, std::move(free_name_u)}, {InternalName<Name>::SVD_V, std::move(free_name_v)}},
             put_v_right ? std::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           std::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       // tensor -> SVD_U -O- SVD_V
       // call GESVD
       auto common_edge_1 = Edge<Symmetry>();
@@ -410,28 +410,28 @@ namespace TAT {
       }
       // 这里会自动cut
       auto u = tensor_u.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, Name>>(),
             pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>>{{InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
-            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            empty_list<std::pair<Name, std::initializer_list<Name>>>(),
             std::move(result_name_u),
             false,
-            std::initializer_list<Name>(),
+            empty_list<Name>(),
             put_v_right ? pmr::set<Name>{} : pmr::set<Name>{common_name_u},
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
       auto v = tensor_v.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
+            empty_list<std::pair<Name, Name>>(),
             pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry, true>>>>{{InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,
-            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            empty_list<std::pair<Name, std::initializer_list<Name>>>(),
             std::move(result_name_v),
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
       return {
             std::move(u),

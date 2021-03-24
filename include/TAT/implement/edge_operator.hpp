@@ -712,8 +712,7 @@ namespace TAT {
             if (i == rank_after_merge - 1) [[unlikely]] {
                leadings_of_destination[i] = 1;
             } else [[likely]] {
-               leadings_of_destination[i] =
-                     leadings_of_destination[i + 1] * map_at(edge_after_merge[i + 1].map, destination_symmetries[i + 1]);
+               leadings_of_destination[i] = leadings_of_destination[i + 1] * map_at(edge_after_merge[i + 1].map, destination_symmetries[i + 1]);
             }
          }
          auto leadings_after_transpose = pmr::vector<Size>(rank_at_transpose);

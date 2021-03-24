@@ -46,7 +46,7 @@ namespace TAT {
          (Lexicographic && requires(typename Container::value_type::first_type a, Key b) {
             std::ranges::lexicographical_compare(a, b);
             std::ranges::equal(a, b);
-         })) auto map_find(Container& v, const Key& key) {
+         })) constexpr auto map_find(Container& v, const Key& key) {
       if constexpr (requires(Container c, Key k) { c.find(k); }) {
          return v.find(key);
       } else {

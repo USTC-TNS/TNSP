@@ -38,6 +38,8 @@
 #include "symmetry.hpp"
 
 namespace TAT {
+   template<typename T>
+   using empty_list = std::array<T, 0>;
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
    template<typename Name>
@@ -562,17 +564,17 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(VectorName&& target_names) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
          return edge_operator_implement(
-               std::initializer_list<std::pair<Name, Name>>(),
-               std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+               empty_list<std::pair<Name, Name>>(),
+               empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+               empty_list<Name>(),
+               empty_list<std::pair<Name, std::initializer_list<Name>>>(),
                forward_vector<std::vector<Name>>(std::forward<VectorName>(target_names)),
                false,
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       }
 
       /**
@@ -587,17 +589,17 @@ namespace TAT {
       reverse_edge(ReversedName&& reversed_name, bool apply_parity = false, ExcludeName&& parity_exclude_name = {}) const {
          auto pmr_guard = scope_resource<default_buffer_size>();
          return edge_operator_implement(
-               std::initializer_list<std::pair<Name, Name>>(),
-               std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+               empty_list<std::pair<Name, Name>>(),
+               empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
                may_need_sort<pmr::vector<Name>>(std::forward<ReversedName>(reversed_name)),
-               std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+               empty_list<std::pair<Name, std::initializer_list<Name>>>(),
                names,
                apply_parity,
-               std::initializer_list<Name>(),
+               empty_list<Name>(),
                may_need_sort<pmr::vector<Name>>(std::forward<ExcludeName>(parity_exclude_name)),
-               std::initializer_list<Name>(),
-               std::initializer_list<Name>(),
-               std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+               empty_list<Name>(),
+               empty_list<Name>(),
+               empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
       }
 
       /**
