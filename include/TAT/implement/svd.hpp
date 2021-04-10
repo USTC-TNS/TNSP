@@ -28,68 +28,68 @@
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
-void sgesvd_(
-      const char* job_u,
-      const char* job_vt,
-      const int* m,
-      const int* n,
-      const float* a,
-      const int* ld_a,
-      float* s,
-      float* u,
-      const int* ld_u,
-      float* vt,
-      const int* ld_vt,
-      float* work,
-      const int* lwork,
-      int* info);
-void dgesvd_(
-      const char* job_u,
-      const char* job_vt,
-      const int* m,
-      const int* n,
-      const double* a,
-      const int* ld_a,
-      double* s,
-      double* u,
-      const int* ld_u,
-      double* vt,
-      const int* ld_vt,
-      double* work,
-      const int* lwork,
-      int* info);
-void cgesvd_(
-      const char* job_u,
-      const char* job_vt,
-      const int* m,
-      const int* n,
-      const std::complex<float>* a,
-      const int* ld_a,
-      float* s,
-      std::complex<float>* u,
-      const int* ld_u,
-      std::complex<float>* vt,
-      const int* ld_vt,
-      std::complex<float>* work,
-      const int* lwork,
-      float* rwork,
-      int* info);
-void zgesvd_(
-      const char* job_u,
-      const char* job_vt,
-      const int* m,
-      const int* n,
-      const std::complex<double>* a,
-      const int* ld_a,
-      double* s,
-      std::complex<double>* u,
-      const int* ld_u,
-      std::complex<double>* vt,
-      const int* ld_vt,
-      std::complex<double>* work,
-      const int* lwork,
-      double* rwork,
-      int* info);
+   void sgesvd_(
+         const char* job_u,
+         const char* job_vt,
+         const int* m,
+         const int* n,
+         const float* a,
+         const int* ld_a,
+         float* s,
+         float* u,
+         const int* ld_u,
+         float* vt,
+         const int* ld_vt,
+         float* work,
+         const int* lwork,
+         int* info);
+   void dgesvd_(
+         const char* job_u,
+         const char* job_vt,
+         const int* m,
+         const int* n,
+         const double* a,
+         const int* ld_a,
+         double* s,
+         double* u,
+         const int* ld_u,
+         double* vt,
+         const int* ld_vt,
+         double* work,
+         const int* lwork,
+         int* info);
+   void cgesvd_(
+         const char* job_u,
+         const char* job_vt,
+         const int* m,
+         const int* n,
+         const std::complex<float>* a,
+         const int* ld_a,
+         float* s,
+         std::complex<float>* u,
+         const int* ld_u,
+         std::complex<float>* vt,
+         const int* ld_vt,
+         std::complex<float>* work,
+         const int* lwork,
+         float* rwork,
+         int* info);
+   void zgesvd_(
+         const char* job_u,
+         const char* job_vt,
+         const int* m,
+         const int* n,
+         const std::complex<double>* a,
+         const int* ld_a,
+         double* s,
+         std::complex<double>* u,
+         const int* ld_u,
+         std::complex<double>* vt,
+         const int* ld_vt,
+         std::complex<double>* work,
+         const int* lwork,
+         double* rwork,
+         int* info);
 }
 #endif
 
@@ -317,7 +317,8 @@ namespace TAT {
             empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
             reversed_set_origin,
             pmr::map<Name, pmr::vector<Name>>{
-                  {InternalName<Name>::SVD_U, std::move(free_name_u)}, {InternalName<Name>::SVD_V, std::move(free_name_v)}},
+                  {InternalName<Name>::SVD_U, std::move(free_name_u)},
+                  {InternalName<Name>::SVD_V, std::move(free_name_v)}},
             put_v_right ? std::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           std::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
             false,
@@ -433,14 +434,7 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
-      return {
-            std::move(u),
-#ifdef TAT_USE_SINGULAR_MATRIX
-            singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v),
-#else
-            {{std::move_iterator(result_s.begin()), std::move_iterator(result_s.end())}},
-#endif
-            std::move(v)};
+      return {std::move(u), singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v), std::move(v)};
    }
 } // namespace TAT
 #endif

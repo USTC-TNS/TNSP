@@ -141,7 +141,9 @@ namespace TAT {
                      this_edge.map.emplace_back(symmetry, dimension);
                   }
                }
-               std::ranges::sort(this_edge.map, [](const auto& a, const auto& b) { return a.first < b.first; });
+               std::ranges::sort(this_edge.map, [](const auto& a, const auto& b) {
+                  return a.first < b.first;
+               });
             } else {
                real_edge_before_split.push_back(core->edges[i]);
             }
@@ -535,7 +537,8 @@ namespace TAT {
       } else {
          for (const auto& [symmetries, block] : core->blocks) {
             data_before_transpose_to_source[pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()}] = {
-                  pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()}, pmr::vector<Size>(rank_before_split, 0)};
+                  pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
+                  pmr::vector<Size>(rank_before_split, 0)};
          }
       }
       auto data_after_transpose_to_destination = MapFromTransposeToSourceDestination();
@@ -577,7 +580,8 @@ namespace TAT {
       } else {
          for (const auto& [symmetries, block] : result.core->blocks) {
             data_after_transpose_to_destination[pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()}] = {
-                  pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()}, pmr::vector<Size>(rank_after_merge, 0)};
+                  pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
+                  pmr::vector<Size>(rank_after_merge, 0)};
          }
       }
 
@@ -690,9 +694,9 @@ namespace TAT {
 
          auto leadings_of_source = pmr::vector<Size>(rank_before_split);
          for (auto i = rank_before_split; i-- > 0;) {
-            if (i == rank_before_split - 1) [[unlikely]] {
+            if (i == rank_before_split - 1) {
                leadings_of_source[i] = 1;
-            } else [[likely]] {
+            } else {
                // 这里将edge_before_split换为core->edges
                leadings_of_source[i] = leadings_of_source[i + 1] * map_at(core->edges[i + 1].map, source_symmetries[i + 1]);
             }
@@ -709,9 +713,9 @@ namespace TAT {
 
          auto leadings_of_destination = pmr::vector<Size>(rank_after_merge);
          for (auto i = rank_after_merge; i-- > 0;) {
-            if (i == rank_after_merge - 1) [[unlikely]] {
+            if (i == rank_after_merge - 1) {
                leadings_of_destination[i] = 1;
-            } else [[likely]] {
+            } else {
                leadings_of_destination[i] = leadings_of_destination[i + 1] * map_at(edge_after_merge[i + 1].map, destination_symmetries[i + 1]);
             }
          }

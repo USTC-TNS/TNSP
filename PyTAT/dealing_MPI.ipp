@@ -16,7 +16,9 @@ namespace TAT {
                     return self.reduce(value, root, func);
                  })
             .def("summary", [](const mpi_t& self, const Tensor<Scalar, Symmetry>& value, const int root) {
-               return self.reduce(value, root, [](const Tensor<Scalar, Symmetry>& a, const Tensor<Scalar, Symmetry>& b) { return a + b; });
+               return self.reduce(value, root, [](const Tensor<Scalar, Symmetry>& a, const Tensor<Scalar, Symmetry>& b) {
+                  return a + b;
+               });
             });
 #endif
    }
