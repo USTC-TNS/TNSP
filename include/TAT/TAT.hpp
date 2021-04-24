@@ -42,8 +42,6 @@
 // TAT_USE_SIMPLE_NAME 定义以使用原始字符串作为name
 // TAT_USE_VALID_DEFAULT_TENSOR 默认tensor初始化会产生一个合法的tensor, 默认不合法
 // TAT_USE_TIMER 对常见操作进行计时
-// TAT_USE_RESTRICT_SMALL_ALLOCATOR 使用严格的小分配器
-// TAT_SMALL_ALLOCATOR_SIZE 小分配器的大小
 // TAT_ERROR_BITS 将各类警告转换为异常
 // TAT_NOTHING_BITS 将各类警告转换为静默
 // TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE 在转置中会使用

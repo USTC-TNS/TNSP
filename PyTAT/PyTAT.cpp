@@ -42,12 +42,6 @@ namespace TAT {
       tat_m.attr("information") = information;
       // random
       set_random(tat_m);
-      // mpi
-      auto py_mpi_t = set_mpi(tat_m);
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_MPI_##SCALARSHORT##SYM(py_mpi_t);
-      TAT_LOOP_ALL_SCALAR_SYMMETRY
-#undef TAT_SINGLE_SCALAR_SYMMETRY
-      tat_m.attr("mpi") = mpi;
       // name
       set_name(tat_m);
       // symmetry and edge
