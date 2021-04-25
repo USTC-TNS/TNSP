@@ -27,90 +27,90 @@
 
 #ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 extern "C" {
-void sgeqrf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
-void dgeqrf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
-void cgeqrf_(
-      const int* m,
-      const int* n,
-      std::complex<float>* A,
-      const int* lda,
-      std::complex<float>* tau,
-      std::complex<float>* work,
-      const int* lwork,
-      int* info);
-void zgeqrf_(
-      const int* m,
-      const int* n,
-      std::complex<double>* A,
-      const int* lda,
-      std::complex<double>* tau,
-      std::complex<double>* work,
-      const int* lwork,
-      int* info);
-void sgelqf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
-void dgelqf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
-void cgelqf_(
-      const int* m,
-      const int* n,
-      std::complex<float>* A,
-      const int* lda,
-      std::complex<float>* tau,
-      std::complex<float>* work,
-      const int* lwork,
-      int* info);
-void zgelqf_(
-      const int* m,
-      const int* n,
-      std::complex<double>* A,
-      const int* lda,
-      std::complex<double>* tau,
-      std::complex<double>* work,
-      const int* lwork,
-      int* info);
-void sorgqr_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
-void dorgqr_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
-void cungqr_(
-      const int* m,
-      const int* n,
-      const int* k,
-      std::complex<float>* A,
-      const int* lda,
-      std::complex<float> const* tau,
-      std::complex<float>* work,
-      const int* lwork,
-      int* info);
-void zungqr_(
-      const int* m,
-      const int* n,
-      const int* k,
-      std::complex<double>* A,
-      const int* lda,
-      std::complex<double> const* tau,
-      std::complex<double>* work,
-      const int* lwork,
-      int* info);
-void sorglq_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
-void dorglq_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
-void cunglq_(
-      const int* m,
-      const int* n,
-      const int* k,
-      std::complex<float>* A,
-      const int* lda,
-      std::complex<float> const* tau,
-      std::complex<float>* work,
-      const int* lwork,
-      int* info);
-void zunglq_(
-      const int* m,
-      const int* n,
-      const int* k,
-      std::complex<double>* A,
-      const int* lda,
-      std::complex<double> const* tau,
-      std::complex<double>* work,
-      const int* lwork,
-      int* info);
+   void sgeqrf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
+   void dgeqrf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
+   void cgeqrf_(
+         const int* m,
+         const int* n,
+         std::complex<float>* A,
+         const int* lda,
+         std::complex<float>* tau,
+         std::complex<float>* work,
+         const int* lwork,
+         int* info);
+   void zgeqrf_(
+         const int* m,
+         const int* n,
+         std::complex<double>* A,
+         const int* lda,
+         std::complex<double>* tau,
+         std::complex<double>* work,
+         const int* lwork,
+         int* info);
+   void sgelqf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
+   void dgelqf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
+   void cgelqf_(
+         const int* m,
+         const int* n,
+         std::complex<float>* A,
+         const int* lda,
+         std::complex<float>* tau,
+         std::complex<float>* work,
+         const int* lwork,
+         int* info);
+   void zgelqf_(
+         const int* m,
+         const int* n,
+         std::complex<double>* A,
+         const int* lda,
+         std::complex<double>* tau,
+         std::complex<double>* work,
+         const int* lwork,
+         int* info);
+   void sorgqr_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
+   void dorgqr_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
+   void cungqr_(
+         const int* m,
+         const int* n,
+         const int* k,
+         std::complex<float>* A,
+         const int* lda,
+         std::complex<float> const* tau,
+         std::complex<float>* work,
+         const int* lwork,
+         int* info);
+   void zungqr_(
+         const int* m,
+         const int* n,
+         const int* k,
+         std::complex<double>* A,
+         const int* lda,
+         std::complex<double> const* tau,
+         std::complex<double>* work,
+         const int* lwork,
+         int* info);
+   void sorglq_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
+   void dorglq_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
+   void cunglq_(
+         const int* m,
+         const int* n,
+         const int* k,
+         std::complex<float>* A,
+         const int* lda,
+         std::complex<float> const* tau,
+         std::complex<float>* work,
+         const int* lwork,
+         int* info);
+   void zunglq_(
+         const int* m,
+         const int* n,
+         const int* k,
+         std::complex<double>* A,
+         const int* lda,
+         std::complex<double> const* tau,
+         std::complex<double>* work,
+         const int* lwork,
+         int* info);
 }
 #endif
 
