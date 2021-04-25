@@ -95,6 +95,8 @@ namespace TAT {
    // map is always increasing, this variable only works when looping edge
    struct edge_nosymmetry_conjugated_t {
       static constexpr bool conjugated = false;
+      edge_nosymmetry_conjugated_t() {}
+      edge_nosymmetry_conjugated_t(bool) {}
    };
    struct edge_symmetry_conjugated_t {
       bool conjugated;
@@ -106,6 +108,8 @@ namespace TAT {
 
    struct edge_bose_arrow_t {
       static constexpr Arrow arrow = 0;
+      edge_bose_arrow_t() {}
+      edge_bose_arrow_t(Arrow) {}
    };
    struct edge_fermi_arrow_t {
       Arrow arrow;
@@ -139,16 +143,28 @@ namespace TAT {
 
       // 这里不可以用typename ... Args不然会和initialzier list产生歧义
       // 不知道为啥移动构造会走这一条，所以加个sfinae
+      // TODO move arrow to the last argument
       template<typename Arg>
          requires(!std::is_same_v<std::remove_cvref_t<Arg>, Edge<Symmetry, is_pointer>>)
-      Edge(Arg&& arg) : base_map_t(std::forward<Arg>(arg)) {}
-      Edge(const typename base_map_t::pair_initializer_list_t& map_) : base_map_t(map_) {}
-      Edge(const typename base_map_t::symmetry_initializer_list_t& symmetries) : base_map_t(symmetries) {}
+      Edge(Arg&& arg, bool conjugated = false) : base_map_t(std::forward<Arg>(arg)), base_conjugated_t(conjugated) {}
+      Edge(const typename base_map_t::pair_initializer_list_t& map_, bool conjugated = false) : base_map_t(map_), base_conjugated_t(conjugated) {}
+      Edge(const typename base_map_t::symmetry_initializer_list_t& symmetries, bool conjugated = false) :
+            base_map_t(symmetries),
+            base_conjugated_t(conjugated) {}
 
       template<typename Arg>
-      Edge(Arrow arrow, Arg&& arg) : base_map_t(std::forward<Arg>(arg)), base_arrow_t(arrow) {}
-      Edge(Arrow arrow, const typename base_map_t::pair_initializer_list_t& map) : base_map_t(map), base_arrow_t(arrow) {}
-      Edge(Arrow arrow, const typename base_map_t::symmetry_initializer_list_t& symmetries) : base_map_t(symmetries), base_arrow_t(arrow) {}
+      Edge(Arrow arrow, Arg&& arg, bool conjugated = false) :
+            base_map_t(std::forward<Arg>(arg)),
+            base_conjugated_t(conjugated),
+            base_arrow_t(arrow) {}
+      Edge(Arrow arrow, const typename base_map_t::pair_initializer_list_t& map, bool conjugated = false) :
+            base_map_t(map),
+            base_conjugated_t(conjugated),
+            base_arrow_t(arrow) {}
+      Edge(Arrow arrow, const typename base_map_t::symmetry_initializer_list_t& symmetries, bool conjugated = false) :
+            base_map_t(symmetries),
+            base_conjugated_t(conjugated),
+            base_arrow_t(arrow) {}
 
       /**
        * 由费米子数自动构造箭头方向, 虽然这个不一定需要一致, 仅仅在只含有一个Fermi对称性时有效

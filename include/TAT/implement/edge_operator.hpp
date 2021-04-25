@@ -57,6 +57,7 @@ namespace TAT {
 
       // is_fermi
       constexpr auto is_fermi = Symmetry::is_fermi_symmetry;
+      constexpr auto is_no_symmetry = Symmetry::length == 0;
 
       // 前一半分析edge变化的变量表
       //
@@ -129,6 +130,9 @@ namespace TAT {
                if constexpr (is_fermi) {
                   this_edge.arrow = core->edges[i].arrow;
                }
+               if constexpr (!is_no_symmetry) {
+                  this_edge.conjugated = core->edges[i].conjugated;
+               }
                for (const auto& [symmetry, dimension] : core->edges[i].map) {
                   if (auto cut_iterator = map_find(symmetry_to_cut_dimension, symmetry); cut_iterator != symmetry_to_cut_dimension.end()) {
                      if (auto new_dimension = cut_iterator->second; new_dimension != 0) {
@@ -166,12 +170,15 @@ namespace TAT {
          edge_after_split.reserve(rank_before_split);      // rank_at_transpose
          for (Rank position_before_split = 0, total_split_index = 0; position_before_split < rank_before_split; position_before_split++) {
             if (auto position = map_find(split_map, name_before_split[position_before_split]); position != split_map.end()) {
+               bool conjugated = edge_before_split[position_before_split].conjugated;
                const auto& this_split_begin_position_in_edge_after_split = edge_after_split.size();
                // split后的edge合法性并不能保证, 需要调用者保证
                for (const auto& [split_name, split_edge] : position->second) {
                   real_name_after_split.push_back(split_name);
                   if constexpr (is_fermi) {
-                     edge_after_split.push_back({edge_before_split[position_before_split].arrow, split_edge.map});
+                     edge_after_split.push_back({edge_before_split[position_before_split].arrow, split_edge.map, conjugated});
+                  } else if constexpr (!is_no_symmetry) {
+                     edge_after_split.push_back({split_edge.map, conjugated});
                   } else {
                      edge_after_split.push_back({split_edge.map});
                   }
@@ -219,7 +226,12 @@ namespace TAT {
             } else {
                real_name_after_split.push_back(name_before_split[position_before_split]);
                if constexpr (is_fermi) {
-                  edge_after_split.push_back({edge_before_split[position_before_split].arrow, edge_before_split[position_before_split].map});
+                  edge_after_split.push_back(
+                        {edge_before_split[position_before_split].arrow,
+                         edge_before_split[position_before_split].map,
+                         edge_before_split[position_before_split].conjugated});
+               } else if constexpr (!is_no_symmetry) {
+                  edge_after_split.push_back({edge_before_split[position_before_split].map, edge_before_split[position_before_split].conjugated});
                } else {
                   edge_after_split.push_back({edge_before_split[position_before_split].map});
                }
@@ -239,7 +251,9 @@ namespace TAT {
          for (auto i = 0; i < rank_before_split; i++) {
             const auto& edge = edge_before_split[i];
             if constexpr (is_fermi) {
-               edge_after_split.push_back({edge.arrow, edge.map});
+               edge_after_split.push_back({edge.arrow, edge.map, edge.conjugated});
+            } else if constexpr (!is_no_symmetry) {
+               edge_after_split.push_back({edge.map, edge.conjugated});
             } else {
                edge_after_split.push_back({edge.map});
             }
@@ -496,7 +510,7 @@ namespace TAT {
 
       using MapFromTransposeToSourceDestination = pmr::map<pmr::vector<Symmetry>, std::tuple<pmr::vector<Symmetry>, pmr::vector<Size>>>;
       auto data_before_transpose_to_source = MapFromTransposeToSourceDestination();
-      if (split_map.size() != 0 || (is_fermi && reversed_name.size() != 0)) {
+      if (edge_and_symmetries_to_cut_before_all.size() != 0 || split_map.size() != 0 || (is_fermi && reversed_name.size() != 0)) {
          // 需要使用reversed前的symmetry，所以
          // 1. 上面判断了是否reversed为空，不然else中的edge不正确 2.下面使用edge_after_split而不是edge_before_transpose
          for (auto& [symmetries_before_transpose, size] : initialize_block_symmetries_with_check<polymorphic_allocator>(edge_after_split)) {

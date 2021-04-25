@@ -14,6 +14,7 @@
 /.mypy_cache
 /.cache
 __pycache__
+ltximg
 .ipynb_checkpoints
 data.*
 *.dll

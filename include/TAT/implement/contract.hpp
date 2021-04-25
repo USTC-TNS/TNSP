@@ -539,6 +539,7 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             delete_2);
+
       // calculate_product
       auto product_result = Tensor<ScalarType, Symmetry, Name>(
             {InternalName<Name>::Contract_1, InternalName<Name>::Contract_2},
