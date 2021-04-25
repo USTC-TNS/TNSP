@@ -32,7 +32,7 @@ namespace TAT {
    concept range_of = std::ranges::range<Range> &&(std::is_same_v<Value, void> || std::same_as<Value, std::ranges::range_value_t<Range>>);
 
    template<typename T, typename Target = void>
-   concept exist = std::is_same_v<Target, void> || std::is_same_v<Target, T>;
+   concept exist = std::is_same_v<T, T> &&(std::is_same_v<Target, void> || std::is_same_v<Target, T>);
 
    template<typename Range, typename Key = void, typename Value = void>
    concept map_like_range_of = std::ranges::range<Range> && exist<std::remove_cvref_t<typename std::ranges::range_value_t<Range>::first_type>, Key> &&
@@ -50,7 +50,7 @@ namespace TAT {
       if constexpr (std::is_same_v<std::remove_cvref_t<Key>, std::remove_cvref_t<A>>) {
          return a;
       } else {
-         return a.first;
+         return std::get<0>(a);
       }
    }
 
@@ -144,7 +144,7 @@ namespace TAT {
       if constexpr (map_like_range_of<Container>) {
          // map like
          std::ranges::sort(c, [](const auto& a, const auto& b) {
-            return a.first < b.first;
+            return std::get<0>(a) < std::get<0>(b);
          });
       } else {
          // set like
