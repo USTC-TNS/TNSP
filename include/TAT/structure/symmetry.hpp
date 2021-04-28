@@ -23,44 +23,49 @@
 
 #include <tuple>
 
-#include "../TAT.hpp"
-#include "../utility/concepts_and_fake_map_set.hpp"
+#include "../utility/concepts.hpp"
 
 namespace TAT {
-   /**
-    * \defgroup Symmetry
-    * 对称性模块
-    * @{
-    */
-
+   // A symmetry is a tuple of several int or bool, which may be fermi or bose
+   // fermi_wrap is used to select fermi, otherwise bose by default.
    template<typename T>
    struct fermi_wrap {};
 
-   template<typename T>
-   struct fermi_unwrap_helper : std::type_identity<T> {};
-   template<typename T>
-   struct fermi_unwrap_helper<fermi_wrap<T>> : std::type_identity<T> {};
-   template<typename T>
-   using fermi_unwrap = typename fermi_unwrap_helper<T>::type;
+   namespace detail {
+      template<typename T>
+      struct fermi_unwrap_helper : std::type_identity<T> {};
+      template<typename T>
+      struct fermi_unwrap_helper<fermi_wrap<T>> : std::type_identity<T> {};
+      template<typename T>
+      using fermi_unwrap = typename fermi_unwrap_helper<T>::type;
 
-   template<typename T>
-   struct fermi_wrapped_helper : std::false_type {};
-   template<typename T>
-   struct fermi_wrapped_helper<fermi_wrap<T>> : std::true_type {};
-   template<typename T>
-   constexpr bool fermi_wrapped = fermi_wrapped_helper<T>::value;
+      template<typename T>
+      struct fermi_wrapped_helper : std::false_type {};
+      template<typename T>
+      struct fermi_wrapped_helper<fermi_wrap<T>> : std::true_type {};
+      template<typename T>
+      constexpr bool fermi_wrapped = fermi_wrapped_helper<T>::value;
+   } // namespace detail
 
+   /**
+    * General symmetry type, used to mark edge index the different transform rule when some symmetric operation is applied.
+    *
+    * For example, Symmetry<int> is U1 symmetry and Symmetry<bool> is Z2 symmetry.
+    * While Symmetry<int, femri_wrap<int>> represent the conservation of particle number of two particle, one is boson and the other is fermion.
+    *
+    * \param T integral type, such as bool or int, or use fermi_wrap<...> to mark the fermi symmetry
+    */
    template<typename... T>
-      requires(std::is_integral_v<fermi_unwrap<T>>&&...)
-   struct Symmetry : std::tuple<fermi_unwrap<T>...> {
+      requires(std::is_integral_v<detail::fermi_unwrap<T>>&&...)
+   struct Symmetry : std::tuple<detail::fermi_unwrap<T>...> {
     private:
       using self_t = Symmetry<T...>; // used freq too high so alias it
 
     public:
-      using base_tuple = std::tuple<fermi_unwrap<T>...>;
+      using base_tuple = std::tuple<detail::fermi_unwrap<T>...>;
       static constexpr int length = sizeof...(T);
-      static constexpr std::array<bool, length> is_fermi_item = {fermi_wrapped<T>...};
-      static constexpr bool is_fermi_symmetry = (fermi_wrapped<T> || ...);
+      static constexpr std::array<bool, length> is_fermi_item = {detail::fermi_wrapped<T>...};
+      static constexpr bool is_fermi_symmetry = (detail::fermi_wrapped<T> || ...);
       using index_sequence = std::index_sequence_for<T...>;
 
     private:
@@ -119,7 +124,7 @@ namespace TAT {
 
     private:
       template<typename Item>
-      static Item minus_item(const Item& a) {
+      static Item negative_item(const Item& a) {
          if constexpr (std::is_same_v<Item, bool>) {
             return a;
          } else {
@@ -127,13 +132,13 @@ namespace TAT {
          }
       }
       template<size_t... Is>
-      static self_t minus_symmetry(const self_t& symmetry, std::index_sequence<Is...>) {
-         return self_t(minus_item(std::get<Is>(symmetry))...);
+      static self_t negative_symmetry(const self_t& symmetry, std::index_sequence<Is...>) {
+         return self_t(negative_item(std::get<Is>(symmetry))...);
       }
 
     public:
       [[nodiscard]] self_t operator-() const& {
-         return minus_symmetry(*this, index_sequence());
+         return negative_symmetry(*this, index_sequence());
       }
 
     public:
@@ -168,19 +173,18 @@ namespace TAT {
 
     public:
       /**
-       * 给出翻转各边时产生的parity
+       * Give the parity when reverse some edge
        *
-       * \param symmetries 某分块在各个边的对称性情况
-       * \param reverse_flag 各个边是否需要翻转的列表
-       * \param valid_mark 各个边翻转的有效性
+       * \param symmetries symmetry list for each rank of some block
+       * \param reverse_flag flags marking whether to reverse for each rank
+       * \param valid_mark flags marking the validity for each rank
        *
-       * 在edge_operator中, 反转边的时候, 所有奇性边会产生一个符号, 本函数求得总的符号,
-       * 即统计symmetries中为奇, reverse_flag中为true, valid_mark中为true的数目的奇偶性
+       * when reversing edge in edge_operator, all reversed edge when parity is odd,
+       * and this function will give the total parity summation of all the edge.
        * \see Tensor::edge_operator
        */
       [[nodiscard]] static bool
       get_reverse_parity(const range_of<self_t> auto& symmetries, const range_of<bool> auto& reverse_flag, const range_of<bool> auto& valid_mark) {
-         // std::span cannot accept std::vector<bool>, to be pretty, so use range_of concept
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
@@ -205,12 +209,13 @@ namespace TAT {
 
     public:
       /**
-       * 给出转置时产生的parity
+       * Give the parity of transposation
        *
-       * \param symmetries 某分块在各个边的对称性情况
-       * \param transpose_plan 转置方案
+       * \param symmetries symmetry list for each rank of some block
+       * \param transpose_plan plan of transposition
        *
-       * 转置的parity总是有效的, 而翻转和split, merge涉及的两个张量只会有一侧有效, 毕竟这是单个张量的操作
+       * There is no valid mark like reversing edge, since the parity of transposition is always valid, because
+       * transposition is the operation of a single tensor.
        * \see Tensor::edge_operator
        */
       [[nodiscard]] static bool get_transpose_parity(const range_of<self_t> auto& symmetries, const range_of<Rank> auto& transpose_plan) {
@@ -253,14 +258,14 @@ namespace TAT {
 
     public:
       /**
-       * 给出merge或split时产生的parity
+       * Give the parity when merging or spliting edges.
        *
-       * \param symmetries 某分块在各个边的对称性情况
-       * \param split_merge_flag merge或split的方案
-       * \param valid_mark 各个merge或split的有效性
+       * \param symmetries symmetry list for each rank of some block
+       * \param split_merge_flag The plan of merging or splitting
+       * \param valid_mark validity of each merging or splitting operation.
        *
-       * \note 实际上每一个merge或split操作都是一个全翻转,
-       * 而\f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, 所以可以更简单的实现
+       * \note This is equivalant to total transposition over the merging list or splitting list,
+       * while \f$\sum_{i\neq j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, so it can be simplified.
        */
       [[nodiscard]] static bool get_split_merge_parity(
             const range_of<self_t> auto& symmetries,     // before merge length
@@ -292,7 +297,6 @@ namespace TAT {
       template<std::size_t Head, std::size_t... Tail>
       auto loop_to_get_first_parity_item() const {
          if constexpr (is_fermi_item[Head]) {
-            // 可能需要具体的值，而不是仅仅奇偶
             return std::get<Head>(*this);
          } else {
             return loop_to_get_first_parity_item<Tail...>();
@@ -304,7 +308,11 @@ namespace TAT {
       }
 
     public:
-      // 用于auto reverse
+      /**
+       * Get the first fermi parity value.
+       *
+       * Used for auto reversing
+       */
       [[nodiscard]] auto get_first_parity() const {
          return loop_to_get_first_parity(index_sequence());
       }
@@ -316,33 +324,43 @@ namespace TAT {
       }
 
     public:
-      // TODO: 多个fermion时应该如何做?
-      // 可能多个fermion时前面获取parity的部分都不对
-      // contract中用到
+      /**
+       * Get the total parity(may not be fermi symmetry)
+       *
+       * Used in contraction
+       *
+       * TODO: whether is correct when there are many fermions?
+       */
       [[nodiscard]] bool get_total_parity() const {
          return loop_to_get_total_parity(index_sequence());
       }
-
-    public:
-      static constexpr bool i_am_a_symmetry = true;
    };
 
+   namespace detail {
+      template<typename T>
+      struct is_symmetry_helper : std::bool_constant<false> {};
+
+      template<typename... T>
+      struct is_symmetry_helper<Symmetry<T...>> : std::bool_constant<true> {};
+   } // namespace detail
+
    /**
-    * 判断一个类型是否是对称性类型
+    * Check whether a type is a symmetry type
     *
-    * \tparam T 如果`T`是对称性类型, 则`value`为`true`
-    * \see is_symmetry_v
+    * Only type specialized by Symmetry is symmetry type
+    *
+    * \see Symmetry
     */
    template<typename T>
-   concept is_symmetry = T::i_am_a_symmetry;
+   concept is_symmetry = detail::is_symmetry_helper<T>::value;
 
    // common used symmetries alias
    /**
-    * Z2对称性的类型
+    * Z2 Symmetry
     */
    using Z2 = bool;
    /**
-    * U1对称性的类型
+    * U1 symmetry
     */
    using U1 = std::int32_t;
 
@@ -352,6 +370,5 @@ namespace TAT {
    using FermiSymmetry = Symmetry<fermi_wrap<U1>>;
    using FermiZ2Symmetry = Symmetry<fermi_wrap<U1>, Z2>;
    using FermiU1Symmetry = Symmetry<fermi_wrap<U1>, U1>;
-   /**@}*/
 } // namespace TAT
 #endif
