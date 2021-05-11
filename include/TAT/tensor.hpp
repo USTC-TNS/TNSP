@@ -27,6 +27,7 @@
 #include <memory>
 #include <set>
 #include <tuple>
+#include <variant>
 
 #include "basic_type.hpp"
 #include "core.hpp"
@@ -37,6 +38,18 @@
 #include "symmetry.hpp"
 
 namespace TAT {
+   struct RemainCut {
+      Size value;
+      // implicit to be compatible with former interface
+      RemainCut(Size v) : value(v) {}
+   };
+   struct RelativeCut {
+      double value;
+      explicit RelativeCut(double v) : value(v) {}
+   };
+   struct NoCut {};
+   using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
+
    /**
     * \defgroup Singular
     * @{
@@ -665,8 +678,6 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> multiple(const SingularType& S, const Name& name, char direction, bool division = false) const;
 
-      constexpr static float float_minus_one = -1;
-
       /**
        * 对张量进行svd分解
        * \param free_name_set_u svd分解中u的边的名称集合
@@ -682,7 +693,7 @@ namespace TAT {
       svd(const SetName& free_name_set_u,
           const Name& common_name_u,
           const Name& common_name_v,
-          float cut = float_minus_one,
+          Cut cut = NoCut(),
           const Name& singular_name_u = InternalName<Name>::SVD_U,
           const Name& singular_name_v = InternalName<Name>::SVD_V) const;
 
