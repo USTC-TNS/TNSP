@@ -254,7 +254,7 @@ namespace TAT {
          const SetName& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
-         Size cut,
+         float cut,
          const Name& singular_name_u,
          const Name& singular_name_v) const {
       auto timer_guard = svd_guard();
@@ -358,32 +358,69 @@ namespace TAT {
       }
       auto remain_dimension_u = pmr::map<Symmetry, Size>();
       auto remain_dimension_v = pmr::map<Symmetry, Size>();
-      if (cut != Size(-1) && cut < total_dimension) {
-         // auto remain_dimension = pmr::map<Symmetry, Size>();
-         for (const auto& [symmetry, vector_s] : result_s) {
-            remain_dimension_u[symmetry] = 0;
-            remain_dimension_v[-symmetry] = 0;
-         }
-         for (Size i = 0; i < cut; i++) {
-            Symmetry maximum_position;
+      if (cut != float_minus_one) {
+         if (cut > 0) {
+            Size cut_i = cut;
+            if (cut_i < total_dimension) {
+               // auto remain_dimension = pmr::map<Symmetry, Size>();
+               for (const auto& [symmetry, vector_s] : result_s) {
+                  remain_dimension_u[symmetry] = 0;
+                  remain_dimension_v[-symmetry] = 0;
+               }
+               for (Size i = 0; i < cut_i; i++) {
+                  Symmetry maximum_position;
+                  real_base_t<ScalarType> maximum_singular = 0;
+                  for (const auto& [symmetry, vector_s] : result_s) {
+                     if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
+                        if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
+                           maximum_singular = this_singular;
+                           maximum_position = symmetry;
+                        }
+                     }
+                  }
+                  remain_dimension_u.at(maximum_position) += 1;
+                  remain_dimension_v.at(-maximum_position) += 1;
+               }
+
+               for (const auto& [symmetry, this_remain] : remain_dimension_u) {
+                  if (this_remain == 0) {
+                     result_s.erase(symmetry);
+                  } else {
+                     result_s.at(symmetry).resize(this_remain);
+                  }
+               }
+            }
+         } else {
+            for (const auto& [symmetry, vector_s] : result_s) {
+               remain_dimension_u[symmetry] = 0;
+               remain_dimension_v[-symmetry] = 0;
+            }
             real_base_t<ScalarType> maximum_singular = 0;
             for (const auto& [symmetry, vector_s] : result_s) {
                if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
                   if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
                      maximum_singular = this_singular;
-                     maximum_position = symmetry;
                   }
                }
             }
-            remain_dimension_u.at(maximum_position) += 1;
-            remain_dimension_v.at(-maximum_position) += 1;
-         }
+            real_base_t<ScalarType> threshold = -cut * maximum_singular;
+            for (const auto& [symmetry, vector_s] : result_s) {
+               auto current_size = vector_s.size();
+               for (auto i = 0; i < current_size; i++) {
+                  if (vector_s[i] < threshold) {
+                     remain_dimension_u.at(symmetry) = i;
+                     remain_dimension_v.at(-symmetry) = i;
+                     break;
+                  }
+               }
+            }
 
-         for (const auto& [symmetry, this_remain] : remain_dimension_u) {
-            if (this_remain == 0) {
-               result_s.erase(symmetry);
-            } else {
-               result_s.at(symmetry).resize(this_remain);
+            for (const auto& [symmetry, this_remain] : remain_dimension_u) {
+               if (this_remain == 0) {
+                  result_s.erase(symmetry);
+               } else {
+                  result_s.at(symmetry).resize(this_remain);
+               }
             }
          }
       }
