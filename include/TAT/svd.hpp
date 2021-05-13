@@ -392,14 +392,10 @@ namespace TAT {
             }
          }
       } else if (auto cut_value = std::get_if<RelativeCut>(&cut)) {
-         for (const auto& [symmetry, vector_s] : result_s) {
-            remain_dimension_u[symmetry] = 0;
-            remain_dimension_v[-symmetry] = 0;
-         }
          real_base_t<ScalarType> maximum_singular = 0;
          for (const auto& [symmetry, vector_s] : result_s) {
-            if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
-               if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
+            for (const auto& this_singular : vector_s) {
+               if (this_singular > maximum_singular) {
                   maximum_singular = this_singular;
                }
             }
@@ -409,8 +405,8 @@ namespace TAT {
             auto current_size = vector_s.size();
             for (auto i = 0; i < current_size; i++) {
                if (vector_s[i] < threshold) {
-                  remain_dimension_u.at(symmetry) = i;
-                  remain_dimension_v.at(-symmetry) = i;
+                  remain_dimension_u[symmetry] = i;
+                  remain_dimension_v[-symmetry] = i;
                   break;
                }
             }
