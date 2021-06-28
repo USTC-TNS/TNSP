@@ -20,23 +20,24 @@
 #include "run_test.hpp"
 
 void run_test() {
-   std::cout << TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Up"}, {{{1, 3}, {0, 1}}, {{1, 1}, {0, 2}}, {{1, 2}, {0, 3}}}}.zero() << "\n";
+#define edge_seg(...) {__VA_ARGS__}
    std::cout << TAT::Tensor<
                       double,
-                      TAT::U1Symmetry>{{"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+                      TAT::Z2Symmetry>{{"Left", "Right", "Up"}, {edge_seg({1, 3}, {0, 1}), edge_seg({1, 1}, {0, 2}), edge_seg({1, 2}, {0, 3})}}
+                      .zero()
+             << "\n";
+   std::cout << TAT::Tensor<double, TAT::U1Symmetry>(
+                      {"Left", "Right", "Up"},
+                      {edge_seg({-1, 3}, {0, 1}, {1, 2}), edge_seg({-1, 1}, {0, 2}, {1, 3}), edge_seg({-1, 2}, {0, 3}, {1, 1})})
                       .range(2)
              << "\n";
-   std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{"Left", "Right", "Up"}, {
-#ifdef _MSVC_LANG
-                     // 这似乎是MSVC的一个bug, 如果用下面的写法, Edge的析构函数将会被调用两次
-                     std::map<TAT::U1Symmetry, TAT::Size>{},
-#else
-                     {},
-#endif
-                     {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+   std::cout << TAT::Tensor<double, TAT::U1Symmetry>(
+                      {"Left", "Right", "Up"},
+                      {std::vector<TAT::U1Symmetry>(), edge_seg({-1, 1}, {0, 2}, {1, 3}), edge_seg({-1, 2}, {0, 3}, {1, 1})})
                       .zero()
              << "\n";
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.set([]() {
       return 123;
    }) << "\n";
+   std::cout << TAT::Tensor<double, TAT::U1Symmetry>::one(2333, {"i", "j"}, {-2, +2}) << "\n";
 }

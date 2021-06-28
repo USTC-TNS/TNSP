@@ -149,18 +149,19 @@ namespace TAT {
 
    inline timer exponential_guard("exponential");
 
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential_implement(const auto& pairs, int step) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::pair<Name, Name>>& pairs, int step) const {
+      auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = exponential_guard();
 
-      Rank rank = names.size();
+      Rank rank = get_rank();
       Rank half_rank = rank / 2;
       auto merge_map = pmr::map<Name, pmr::vector<Name>>();
       auto& merge_1 = merge_map[InternalName<Name>::Exp_1];
       merge_1.resize(half_rank);
       auto& merge_2 = merge_map[InternalName<Name>::Exp_2];
       merge_2.resize(half_rank);
-      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>>();
+      auto split_map_result = pmr::map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>>();
       auto& split_1 = split_map_result[InternalName<Name>::Exp_1];
       split_1.resize(half_rank);
       auto& split_2 = split_map_result[InternalName<Name>::Exp_2];
@@ -173,25 +174,25 @@ namespace TAT {
             const auto& name_to_found = names[i];
             for (const auto& [a, b] : pairs) {
                if (a == name_to_found) {
-                  auto ia = map_at(name_to_index, a);
-                  auto ib = map_at(name_to_index, b);
+                  auto ia = get_rank_from_name(a);
+                  auto ib = get_rank_from_name(b);
                   valid_index[ib] = false;
                   current_index--;
                   merge_1[current_index] = a;
                   merge_2[current_index] = b;
-                  split_1[current_index] = {a, core->edges[ia].map};
-                  split_2[current_index] = {b, core->edges[ib].map};
+                  split_1[current_index] = {a, edges(ia).segment};
+                  split_2[current_index] = {b, edges(ib).segment};
                   break;
                }
                if (b == name_to_found) {
-                  auto ia = map_at(name_to_index, a);
-                  auto ib = map_at(name_to_index, b);
+                  auto ia = get_rank_from_name(a);
+                  auto ib = get_rank_from_name(b);
                   valid_index[ia] = false;
                   current_index--;
                   merge_1[current_index] = a;
                   merge_2[current_index] = b;
-                  split_1[current_index] = {a, core->edges[ia].map};
-                  split_2[current_index] = {b, core->edges[ib].map};
+                  split_1[current_index] = {a, edges(ia).segment};
+                  split_2[current_index] = {b, edges(ib).segment};
                   break;
                }
             }
@@ -200,7 +201,7 @@ namespace TAT {
       auto reverse_set = pmr::set<Name>();
       if constexpr (Symmetry::is_fermi_symmetry) {
          for (Rank i = 0; i < rank; i++) {
-            if (core->edges[i].arrow) {
+            if (edges(i).arrow) {
                reverse_set.insert(names[i]);
             }
          }
@@ -231,8 +232,7 @@ namespace TAT {
          }
       }
       auto tensor_merged = edge_operator_implement(
-            empty_list<std::pair<Name, Name>>(),
-            empty_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+            empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reverse_set,
             merge_map,
             std::move(merged_names),
@@ -241,25 +241,24 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
-            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
       auto result = tensor_merged.same_shape();
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
-         auto& data_destination = map_at(result.core->blocks, symmetries);
-         auto n = map_at(tensor_merged.core->edges[0].map, symmetries[0]);
+         auto& data_destination = result.blocks(symmetries);
+         auto n = tensor_merged.edges(0).get_dimension_from_symmetry(symmetries[0]);
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator_implement(
-            empty_list<std::pair<Name, Name>>(),
             split_map_result,
             reverse_set,
-            empty_list<std::pair<Name, std::initializer_list<Name>>>(),
+            empty_list<std::pair<Name, empty_list<Name>>>(),
             std::move(result_names),
             false,
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
-            empty_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
    }
 } // namespace TAT
 #endif

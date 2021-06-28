@@ -25,16 +25,16 @@
 #error only work for c++
 #endif
 
-#if __cplusplus < 202002L
-#error require c++20 or later
+#if __cplusplus < 201703L
+#error require c++17 or later
 #endif
 
 // Macros options
 // - TAT_USE_MPI: define to enable mpi support, cmake can configure it
 // - TAT_USE_MKL_TRANSPOSE: define to use mkl for matrix transpose, cmake can configure it, TODO optimize
 // - TAT_USE_MKL_GEMM_BATCH: define to use mkl ?gemm_batch, cmake can configure it
+
 // - TAT_USE_SIMPLE_NAME: define to use raw std::string as default name
-// - TAT_USE_VALID_DEFAULT_TENSOR: define to construct valid tensor when no argument given, default behavior constructs an invalid tensor
 // - TAT_USE_TIMER: define to add timers for some common operator
 // - TAT_ERROR_BITS: throw exception for different situations, rather than print warning
 // - TAT_NOTHING_BITS: keep silent for different situations, rather than print warning
@@ -53,6 +53,9 @@ namespace TAT {
     */
    inline const char* version = TAT_VERSION;
 
+   /**
+    * Debug flag
+    */
    inline constexpr bool debug_mode =
 #ifdef NDEBUG
          false
@@ -83,10 +86,10 @@ namespace TAT {
        * Singleton, print a tips when program exits in debug mode, and control color ansi in windows
        */
       struct evil_t {
-         evil_t() noexcept;
+         evil_t();
          ~evil_t();
       };
-      inline const detail::evil_t evil;
+      inline const evil_t evil;
    } // namespace detail
 
    // log and warning
@@ -122,7 +125,7 @@ namespace TAT {
        *
        * \see warning, nothing
        */
-      inline void error(const char* message);
+      [[noreturn]] inline void error(const char* message);
 
 #ifndef TAT_ERROR_BITS
 #define TAT_ERROR_BITS 0
@@ -175,18 +178,23 @@ namespace TAT {
 namespace TAT {
    // traits about scalar
    template<typename T>
-   concept is_real = std::is_scalar_v<T>;
+   constexpr bool is_real = std::is_scalar_v<T>;
+
+   namespace detail {
+      template<typename T>
+      struct is_complex_helper : std::bool_constant<false> {};
+      template<typename T>
+      struct is_complex_helper<std::complex<T>> : std::bool_constant<true> {};
+   } // namespace detail
+   template<typename T>
+   constexpr bool is_complex = detail::is_complex_helper<T>::value;
 
    template<typename T>
-   concept is_complex = is_real<typename T::value_type> && std::is_same_v<T, std::complex<typename T::value_type>>;
-
-   template<typename T>
-   concept is_scalar = is_real<T> || is_complex<T>;
+   constexpr bool is_scalar = is_real<T> || is_complex<T>;
 
    namespace detail {
       template<typename T>
       struct real_scalar_helper : std::conditional<is_real<T>, T, void> {};
-
       template<typename T>
       struct real_scalar_helper<std::complex<T>> : std::conditional<is_real<T>, T, void> {};
    } // namespace detail
@@ -197,6 +205,46 @@ namespace TAT {
     */
    template<typename T>
    using real_scalar = typename detail::real_scalar_helper<T>::type;
+
+   // type traits from c++latest
+   namespace detail {
+      template<typename AlwaysVoid, template<typename...> class Op, typename... Args>
+      struct detector : std::false_type {};
+
+      template<template<typename...> class Op, typename... Args>
+      struct detector<std::void_t<Op<Args...>>, Op, Args...> : std::true_type {};
+
+   } // namespace detail
+   template<template<typename...> class Op, typename... Args>
+   using is_detected = typename detail::detector<void, Op, Args...>;
+   template<template<typename...> class Op, typename... Args>
+   constexpr bool is_detected_v = is_detected<Op, Args...>::value;
+
+   template<typename T>
+   struct remove_cvref {
+      using type = std::remove_cv_t<std::remove_reference_t<T>>;
+   };
+   template<typename T>
+   using remove_cvref_t = typename remove_cvref<T>::type;
+
+   template<typename T>
+   struct type_identity {
+      using type = T;
+   };
+   template<typename T>
+   using type_identity_t = typename type_identity<T>::type;
+} // namespace TAT
+
+#include <array>
+
+namespace TAT {
+   template<typename T>
+   struct empty_list : std::array<T, 0> {
+      template<typename U>
+      auto find(const U&) const {
+         return this->end();
+      }
+   };
 } // namespace TAT
 
 #include "structure/tensor.hpp"
@@ -209,9 +257,8 @@ namespace TAT {
 #include "implement/edge_miscellaneous.hpp"
 #include "implement/edge_operator.hpp"
 #include "implement/exponential.hpp"
-#include "implement/get_item.hpp"
+#include "implement/get_item_and_clear_symmetry.hpp"
 #include "implement/identity_and_conjugate.hpp"
-#include "implement/multiple.hpp"
 #include "implement/qr.hpp"
 #include "implement/shrink_and_expand.hpp"
 #include "implement/svd.hpp"

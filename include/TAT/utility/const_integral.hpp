@@ -78,7 +78,7 @@ namespace TAT {
     *
     * Use std::visit([](const auto& variable) { xxx; variable.value(); xxx}, v) to dispatch compile time variable and run time variable
     */
-   template<std::integral T, T... possible_value>
+   template<typename T, T... possible_value>
    auto to_const_integral(T value) {
       using result_type = std::variant<detail::const_integral_t<0, T>, detail::const_integral_t<possible_value>...>;
       return detail::to_const_integral_helper<result_type, T, possible_value...>(value);

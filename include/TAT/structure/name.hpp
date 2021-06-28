@@ -21,7 +21,6 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
-#include <concepts>
 #include <cstdint>
 #include <iostream>
 #include <map>
@@ -56,16 +55,17 @@ namespace TAT {
       FastName() = default;
 
       // Specify name by its id directly
-      FastName(const id_t id) : id(id) {}
+      explicit FastName(const id_t id) : id(id) {}
 
-      template<typename String>
-         requires(std::is_convertible_v<String, std::string> && !std::is_same_v<std::remove_cvref_t<String>, FastName>)
+      template<
+            typename String,
+            typename = std::enable_if_t<std::is_convertible_v<String, std::string> && !std::is_same_v<remove_cvref_t<String>, FastName>>>
       FastName(String&& name) {
          // use template to avoid type convension here, most case std::string constructor is not needed
-         if (const auto found = dataset.name_to_id.find(name); found == dataset.name_to_id.end()) [[unlikely]] {
+         if (const auto found = dataset.name_to_id.find(name); found == dataset.name_to_id.end()) {
             dataset.id_to_name.emplace_back(name);
             id = dataset.name_to_id[name] = dataset.fastname_number++;
-         } else [[likely]] {
+         } else {
             id = found->second;
          }
       }
@@ -74,7 +74,18 @@ namespace TAT {
          return dataset.id_to_name[id];
       }
 
-      auto operator<=>(const FastName&) const = default;
+#define TAT_DEFINE_FASTNAME_COMPARE(OP, EVAL) \
+   inline auto OP(const FastName& other) const { \
+      const auto& a = id; \
+      const auto& b = other.id; \
+      return EVAL; \
+   }
+      TAT_DEFINE_FASTNAME_COMPARE(operator==, a == b)
+      TAT_DEFINE_FASTNAME_COMPARE(operator!=, a != b)
+      TAT_DEFINE_FASTNAME_COMPARE(operator<, a < b)
+      TAT_DEFINE_FASTNAME_COMPARE(operator>, a > b)
+      TAT_DEFINE_FASTNAME_COMPARE(operator<=, a <= b)
+      TAT_DEFINE_FASTNAME_COMPARE(operator>=, a >= b)
    };
 
    using DefaultName =
@@ -166,6 +177,18 @@ namespace TAT {
    template<typename Name>
    struct NameTraits {};
 
+   namespace detail {
+      // It is hard implement in c++17
+      template<typename T>
+      using name_trait_write_checker = decltype(&NameTraits<T>::write);
+      template<typename T>
+      using name_trait_read_checker = decltype(&NameTraits<T>::read);
+      template<typename T>
+      using name_trait_print_checker = decltype(&NameTraits<T>::print);
+      template<typename T>
+      using name_trait_scan_checker = decltype(&NameTraits<T>::scan);
+   } // namespace detail
+
    /**
     * Check whether a type is a Name type
     *
@@ -173,9 +196,7 @@ namespace TAT {
     * Because it is considered that user want to use it as Name for some operator
     */
    template<typename Name>
-   concept is_name = (requires(std::ostream & o, const Name& n) { NameTraits<Name>::write(o, n); }) ||
-                     (requires(std::istream & i, Name& n) { &NameTraits<Name>::read(i, n); }) ||
-                     (requires(std::ostream & o, const Name& n) { NameTraits<Name>::print(o, n); }) ||
-                     (requires(std::istream & i, Name& n) { &NameTraits<Name>::scan(i, n); });
+   constexpr bool is_name = is_detected_v<detail::name_trait_write_checker, Name> || is_detected_v<detail::name_trait_read_checker, Name> ||
+                            is_detected_v<detail::name_trait_print_checker, Name> || is_detected_v<detail::name_trait_scan_checker, Name>;
 } // namespace TAT
 #endif

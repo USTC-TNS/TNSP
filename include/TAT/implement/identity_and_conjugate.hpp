@@ -28,31 +28,22 @@
 namespace TAT {
    inline timer conjugate_guard("conjugate");
 
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
+   template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
       auto timer_guard = conjugate_guard();
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::length == 0 && is_real<ScalarType>) {
          return *this;
       }
-      auto result_edges = pmr::vector<Edge<Symmetry>>();
-      result_edges.reserve(names.size());
+      auto result_edges = std::vector<Edge<Symmetry>>();
+      result_edges.reserve(get_rank());
       for (const auto& edge : core->edges) {
-         auto& result_edge = result_edges.emplace_back();
-         if constexpr (Symmetry::is_fermi_symmetry) {
-            result_edge.arrow = !edge.arrow;
-         }
-         if constexpr (Symmetry::length != 0) {
-            result_edge.conjugated = !edge.arrow;
-         }
-         for (const auto& [symmetry, dimension] : edge.map) {
-            result_edge.map.emplace_back(-symmetry, dimension);
-         }
-         do_sort(result_edge.map);
+         auto& result_edge = result_edges.emplace_back(edge);
+         result_edge.conjugate_edge();
       }
-      auto transpose_flag = pmr::vector<Rank>(names.size(), 0);
+      auto transpose_flag = pmr::vector<Rank>(get_rank(), 0);
       auto valid_flag = pmr::vector<bool>(1, true);
-      auto result = Tensor<ScalarType, Symmetry, Name>(names, result_edges);
+      auto result = Tensor<ScalarType, Symmetry, Name>(names, std::move(result_edges));
       for (const auto& [symmetries, block] : core->blocks) {
          auto result_symmetries = pmr::vector<Symmetry>();
          for (const auto& symmetry : symmetries) {
@@ -60,8 +51,8 @@ namespace TAT {
          }
          // result.core->blocks.at(result_symmetries) <- block
          const Size total_size = block.size();
-         ScalarType* destination = map_at<true>(result.core->blocks, result_symmetries).data();
-         const ScalarType* source = block.data();
+         ScalarType* __restrict destination = result.blocks(result_symmetries).data();
+         const ScalarType* __restrict source = block.data();
          bool parity = false;
          if constexpr (Symmetry::is_fermi_symmetry) {
             parity = Symmetry::get_split_merge_parity(symmetries, transpose_flag, valid_flag);
@@ -91,8 +82,8 @@ namespace TAT {
       return result;
    }
 
-   /// \private
-   void set_to_identity(auto* pointer, const std::span<const Size>& dimension, const std::span<const Size>& leading, Rank rank) {
+   template<typename ScalarType, typename = std::enable_if_t<is_scalar<ScalarType>>>
+   void set_to_identity(ScalarType* pointer, const pmr::vector<Size>& dimension, const pmr::vector<Size>& leading, Rank rank) {
       auto current_index = pmr::vector<Size>(rank, 0);
       while (true) {
          *pointer = 1;
@@ -105,7 +96,7 @@ namespace TAT {
             current_index[active_position] = 0;
             pointer -= dimension[active_position] * leading[active_position];
 
-            if (active_position == 0) [[unlikely]] {
+            if (active_position == 0) {
                return;
             }
             active_position--;
@@ -116,9 +107,10 @@ namespace TAT {
       }
    }
 
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity_implement(const auto& pairs) & {
-      auto rank = names.size();
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::pair<Name, Name>>& pairs) & {
+      auto pmr_guard = scope_resource(default_buffer_size);
+      auto rank = get_rank();
       auto half_rank = rank / 2;
       auto ordered_pair = pmr::vector<std::tuple<Name, Name>>();
       auto ordered_pair_index = pmr::vector<std::tuple<Rank, Rank>>();
@@ -140,7 +132,7 @@ namespace TAT {
                }
             }
             ordered_pair.push_back({name_to_find, *name_correspond});
-            auto index_correspond = map_at(name_to_index, *name_correspond);
+            auto index_correspond = get_rank_from_name(*name_correspond);
             ordered_pair_index.push_back({i, index_correspond});
             valid_index[index_correspond] = false;
          }
@@ -152,7 +144,7 @@ namespace TAT {
          auto dimension = pmr::vector<Size>(rank);
          auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {
-            dimension[i] = map_at(core->edges[i].map, symmetries[i]);
+            dimension[i] = edges(i).get_dimension_from_symmetry(symmetries[i]);
             if (i == rank - 1) {
                leading[i] = 1;
             } else {

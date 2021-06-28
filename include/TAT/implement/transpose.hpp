@@ -157,13 +157,13 @@ namespace TAT {
       // 经过测试使用mkl的transpose有时会变慢
 #if 0
 #ifdef TAT_USE_MKL_TRANSPOSE
-      if (rank == 2) [[unlikely]] {
-         if (leading_source[1] == 1 && leading_destination[0] == 1) [[unlikely]] {
+      if (rank == 2) {
+         if (leading_source[1] == 1 && leading_destination[0] == 1) {
             mkl_transpose<ScalarType>(
                   dimension[0], dimension[1], data_source, data_destination, leading_source[0], leading_destination[1], parity ? -1 : 1);
             return;
          }
-         if (leading_source[0] == 1 && leading_destination[1] == 1) [[unlikely]] {
+         if (leading_source[0] == 1 && leading_destination[1] == 1) {
             mkl_transpose<ScalarType>(
                   dimension[1], dimension[0], data_source, data_destination, leading_source[1], leading_destination[0], parity ? -1 : 1);
             return;
@@ -211,7 +211,7 @@ namespace TAT {
             current_source -= dimension[active_position] * leading_source[active_position];
             current_destination -= dimension[active_position] * leading_destination[active_position];
 
-            if (active_position == 0) [[unlikely]] {
+            if (active_position == 0) {
                return;
             }
             active_position--;
@@ -262,7 +262,7 @@ namespace TAT {
          Size expect_leading = 1;
          while (expect_leading *= dimensions_destination[line_rank],
                 leadings_source_by_destination[line_rank - 1] == expect_leading && leadings_destination[line_rank - 1] == expect_leading) {
-            if (line_rank == 0) [[unlikely]] {
+            if (line_rank == 0) {
                // 完全线性copy
                break;
             }
@@ -383,7 +383,7 @@ namespace TAT {
          Size expect_leading = 1;
          while (expect_leading *= real_dimensions[line_rank],
                 real_leadings_source[line_rank - 1] == expect_leading && real_leadings_destination[line_rank - 1] == expect_leading) {
-            if (line_rank == 0) [[unlikely]] {
+            if (line_rank == 0) {
                // 完全线性copy
                break;
             }
