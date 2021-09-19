@@ -93,7 +93,7 @@ namespace TAT {
          if (auto found = traced_names.find(name); found == traced_names.end()) {
             const auto& this_edge = edges(i);
             result_names.push_back(name);
-            split_plan.push_back({name, {this_edge.map}});
+            split_plan.push_back({name, {this_edge.segment}});
             if constexpr (is_fermi) {
                if (this_edge.arrow) {
                   reverse_names.insert(name);
@@ -101,6 +101,7 @@ namespace TAT {
             }
          }
       }
+      // TODO need to reorder symmetry first
       auto merged_tensor = edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reverse_names,
@@ -125,7 +126,7 @@ namespace TAT {
       std::visit(
             [&](const auto& const_line_size) {
                const auto line_size = const_line_size.value();
-               for (const auto& [symmetry_1, dimension] : merged_tensor.edges(0).map) {
+               for (const auto& [symmetry_1, dimension] : merged_tensor.edges(0).segment) {
                   // 而source的形状应该是多个分块对角矩阵, 每个元素是一个向量, 我只需要把正对角的向量们求和
                   auto symmetry_2 = -symmetry_1;
                   auto source_block = merged_tensor.blocks(pmr::vector<Symmetry>{symmetry_1, symmetry_2, Symmetry()});

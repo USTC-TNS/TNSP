@@ -19,18 +19,30 @@
 
 #include "run_test.hpp"
 
+#define t_edge(...) \
+   { {__VA_ARGS__}, true }
+#define f_edge(...) \
+   { {__VA_ARGS__}, false }
+
 void run_test() {
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C", "D", "E"}, {2, 3, 2, 3, 4}).range().trace({{"A", "C"}, {"B", "D"}}) << "\n";
    std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {2, 2, 3}).range().trace({{"A", "B"}}) << "\n";
    auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {4, 3, 5}).range();
    auto b = TAT::Tensor<double, TAT::NoSymmetry>({"D", "E", "F"}, {5, 4, 6}).range();
-   std::cout << a.contract(b, {{"A", "E"}, {"C", "D"}}) - a.contract(b, {}).trace({{"A", "E"}, {"C", "D"}});
+   std::cout << a.contract(b, {{"A", "E"}, {"C", "D"}}) - a.contract(b, {}).trace({{"A", "E"}, {"C", "D"}}) << "\n";
 
    do {
+      std::cout << "\n\n#\n";
       auto c =
-            TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "B", "C"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}}, true}.range();
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"A", "B", "C"},
+                  {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2})}}
+                  .range();
       auto d =
-            TAT::Tensor<double, TAT::FermiSymmetry>{{"E", "F", "G"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}}, true}.range();
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"E", "F", "G"},
+                  {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2})}}
+                  .range();
       std::cout << c << "\n";
       std::cout << d << "\n";
       std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}}) << "\n";
@@ -42,11 +54,16 @@ void run_test() {
             << "\n";
    } while (false);
    do {
+      std::cout << "\n\n#\n";
       auto c =
-            TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "C", "D"}, {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}}, true}
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"A", "C", "D"},
+                  {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range();
       auto d =
-            TAT::Tensor<double, TAT::FermiSymmetry>{{"E", "F", "H"}, {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 2}, {1, 1}, {2, 2}}}, true}
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"E", "F", "H"},
+                  {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), f_edge({0, 2}, {1, 1}, {2, 2})}}
                   .range();
       std::cout << c << "\n";
       std::cout << d << "\n";
@@ -59,17 +76,16 @@ void run_test() {
             << "\n";
    } while (false);
    do {
+      std::cout << "\n\n#\n";
       auto c =
             TAT::Tensor<double, TAT::U1Symmetry>{
                   {"A", "B", "C", "D"},
-                  {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
-                  true}
+                  {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range();
       auto d =
             TAT::Tensor<double, TAT::U1Symmetry>{
                   {"E", "F", "G", "H"},
-                  {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}},
-                  true}
+                  {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2}), f_edge({0, 2}, {1, 1}, {2, 2})}}
                   .range();
       std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";
       std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(
@@ -78,24 +94,22 @@ void run_test() {
                          {{"B", "G"}, {"D", "H"}})
                 << "\n";
       std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c, d, {}).trace({{"B", "G"}}).trace({{"D", "H"}}) << "\n";
-      // TODO U1这里也有问题
       std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c, d, {}).trace({{"B", "G"}, {"D", "H"}}) << "\n";
       std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {})
                          .trace({{"B", "G"}, {"D", "H"}})
                 << "\n";
    } while (false);
    do {
+      std::cout << "\n\n#\n";
       auto c =
             TAT::Tensor<double, TAT::FermiSymmetry>{
                   {"A", "B", "C", "D"},
-                  {{{-1, 1}, {0, 1}, {-2, 1}}, {{0, 1}, {1, 2}}, {{0, 2}, {1, 2}}, {{-2, 2}, {-1, 1}, {0, 2}}},
-                  true}
+                  {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range();
       auto d =
             TAT::Tensor<double, TAT::FermiSymmetry>{
                   {"E", "F", "G", "H"},
-                  {{{0, 2}, {1, 1}}, {{-2, 1}, {-1, 1}, {0, 2}}, {{0, 1}, {-1, 2}}, {{0, 2}, {1, 1}, {2, 2}}},
-                  true}
+                  {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2}), f_edge({2, 2}, {1, 1}, {0, 2})}}
                   .range();
       std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c, d, {{"B", "G"}, {"D", "H"}}) << "\n";
       std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(
@@ -108,6 +122,5 @@ void run_test() {
       std::cout << TAT::Tensor<double, TAT::FermiSymmetry>::contract(c.transpose({"A", "C", "B", "D"}), d.transpose({"G", "H", "E", "F"}), {})
                          .trace({{"B", "G"}, {"D", "H"}})
                 << "\n";
-      // TODO 这里问题有点大
    } while (false);
 }

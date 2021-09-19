@@ -64,6 +64,19 @@ namespace TAT {
       return blocks(symmetries)[offset];
    }
 
+   auto get_leading(const pmr::vector<Size>& dim) {
+      Rank rank = dim.size();
+      pmr::vector<Size> res(rank, 0);
+      for (auto i = rank; i-- > 0;) {
+         if (i == rank - 1) {
+            res[i] = 1;
+         } else {
+            res[i] = res[i + 1] * dim[i + 1];
+         }
+      }
+      return res;
+   }
+
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_symmetry() const {
       auto pmr_guard = scope_resource(default_buffer_size);
@@ -96,7 +109,7 @@ namespace TAT {
          }
          // source dimension is block dimension
          // source leading is block dimension
-         const ScalarType* data_source = block.begin();
+         const ScalarType* data_source = block.data();
          // destination dimension is block dimension
          // destination leading is result edge
          ScalarType* data_destination = &result.at(block_index);
@@ -107,8 +120,8 @@ namespace TAT {
                plan,
                block_dimension,
                block_dimension,
-               block_dimension,
-               result_dim,
+               get_leading(block_dimension),
+               get_leading(result_dim),
                rank);
       }
       return result;
