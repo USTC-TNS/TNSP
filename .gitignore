@@ -13,6 +13,7 @@
 /init.C
 /.mypy_cache
 /.cache
+/git-worktree
 __pycache__
 ltximg
 .ipynb_checkpoints

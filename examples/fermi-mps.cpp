@@ -34,17 +34,20 @@ struct MPS {
    MPS(int n, int d, G&& g) : dimension(d) {
       for (int i = 0; i < n; i++) {
          if (i == 0) {
-            chain.push_back(Tensor({"Total", "Phy", "Right"}, {{-1}, {0, 1}, {1, 0}}, true).set(g));
+            chain.push_back(Tensor({"Total", "Phy", "Right"}, {{{-1}, true}, {{0, 1}, false}, {{1, 0}, false}}).set(g));
             //}
             // if (i == 1) {
             //   chain.push_back(Tensor({"Left", "Phy", "Right"}, {{{-2, 1}, {-1, 1}}, {{0, 1}, {1, 1}}, {{2, 1}, {1, 2}, {0, 1}}}, true).set(g));
             //} else if (i == 2) {
             //   chain.push_back(Tensor({"Left", "Phy", "Right"}, {{{-2, 1}, {-1, 2}, {0, 1}}, {{0, 1}, {1, 1}}, {{1, 1}, {0, 1}}}, true).set(g));
          } else {
-            chain.push_back(Tensor({"Left", "Phy"}, {{-1, 0}, {0, 1}}, true).set(g));
+            chain.push_back(Tensor({"Left", "Phy"}, {{{-1, 0}, true}, {{0, 1}, false}}).set(g));
          }
       }
-      hamiltonian = Tensor({"I0", "I1", "O0", "O1"}, {{{0, 1}, {-1, 1}}, {{0, 1}, {-1, 1}}, {{0, 1}, {1, 1}}, {{0, 1}, {1, 1}}}, true).zero();
+      hamiltonian = Tensor(
+                          {"I0", "I1", "O0", "O1"},
+                          {{{{0, 1}, {-1, 1}}, true}, {{{0, 1}, {-1, 1}}, true}, {{{0, 1}, {1, 1}}, false}, {{{0, 1}, {1, 1}}, false}})
+                          .zero();
       hamiltonian.block({{"I0", 0}, {"O0", 1}, {"I1", -1}, {"O1", 0}})[0] = 1;
       hamiltonian.block({{"I1", 0}, {"O1", 1}, {"I0", -1}, {"O0", 0}})[0] = 1;
    }
@@ -180,7 +183,9 @@ struct MPS {
 int main(int argc, char** argv) {
    std::mt19937 engine(0);
    std::uniform_real_distribution<double> dis(-1, 1);
-   auto gen = [&]() { return dis(engine); };
+   auto gen = [&]() {
+      return dis(engine);
+   };
    auto mps = MPS(2, 2, gen);
    // mps.update(std::atoi(argv[3]), std::atof(argv[4]), std::atoi(argv[5]));
    mps.update(10, 0.1, 1);

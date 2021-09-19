@@ -28,16 +28,22 @@ void run_test() {
    std::cout << b.transpose({"Right", "Up", "Left"}) << "\n";
    auto c =
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
-               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               {"Left", "Right", "Up"},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                .range(1);
    std::cout << c << "\n";
    auto ct = c.transpose({"Right", "Up", "Left"});
    std ::cout << ct << "\n";
    std::cout << c.const_at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
    std::cout << ct.const_at({{"Left", {-1, 0}}, {"Right", {1, 2}}, {"Up", {0, 0}}}) << "\n";
+#define t_edge(...) \
+   { {__VA_ARGS__}, true }
+#define f_edge(...) \
+   { {__VA_ARGS__}, false }
    auto d =
          TAT::Tensor<double, TAT::FermiSymmetry>{
-               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}, true}
+               {"Left", "Right", "Up"},
+               {t_edge({-1, 3}, {0, 1}, {1, 2}), t_edge({-1, 1}, {0, 2}, {1, 3}), t_edge({-1, 2}, {0, 3}, {1, 1})}}
                .range(1);
    std::cout << d << "\n";
    auto dt = d.transpose({"Right", "Up", "Left"});

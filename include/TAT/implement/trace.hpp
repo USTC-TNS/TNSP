@@ -27,13 +27,13 @@
 namespace TAT {
    inline timer trace_guard("trace");
 
-   // TODO 可以不转置直接trace掉, 但是写起来比较麻烦
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace_implement(const auto& trace_names) const {
+   template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::set<std::pair<Name, Name>>& trace_names) const {
+      auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = trace_guard();
 
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
-      auto rank = names.size();
+      auto rank = get_rank();
       auto trace_rank = trace_names.size();
       auto free_rank = rank - 2 * trace_rank;
       // 应该转置为a_i = sum_j b_{jji}的形式, 这样局域性最好
@@ -62,7 +62,7 @@ namespace TAT {
                // found in trace_names
                // 对于费米子考虑方向, 应是一进一出才合法
                if constexpr (is_fermi) {
-                  if (core->edges[i].arrow) {
+                  if (edges(i).arrow) {
                      trace_1_names.push_back(name_to_find);
                      trace_2_names.push_back(*name_correspond);
                   } else {
@@ -77,7 +77,7 @@ namespace TAT {
                // 统计traced names
                traced_names.insert(name_to_find);
                traced_names.insert(*name_correspond);
-               auto index_correspond = map_at(name_to_index, *name_correspond);
+               auto index_correspond = get_rank_from_name(*name_correspond);
                valid_index[index_correspond] = false;
             }
          }
@@ -85,13 +85,13 @@ namespace TAT {
       // 寻找自由脚
       auto result_names = std::vector<Name>();
       auto reverse_names = pmr::set<Name>();
-      auto split_plan = pmr::vector<std::tuple<Name, edge_map_t<Symmetry>>>();
+      auto split_plan = pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>();
       result_names.reserve(free_rank);
       split_plan.reserve(free_rank);
       for (Rank i = 0; i < rank; i++) {
          const auto& name = names[i];
          if (auto found = traced_names.find(name); found == traced_names.end()) {
-            const auto& this_edge = core->edges[i];
+            const auto& this_edge = edges(i);
             result_names.push_back(name);
             split_plan.push_back({name, {this_edge.map}});
             if constexpr (is_fermi) {
@@ -102,8 +102,7 @@ namespace TAT {
          }
       }
       auto merged_tensor = edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Name, edge_map_t<Symmetry>>>>>(),
+            empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reverse_names,
             pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Trace_1, std::move(trace_1_names)},
@@ -111,13 +110,13 @@ namespace TAT {
                   {InternalName<Name>::Trace_3, {result_names.begin(), result_names.end()}}},
             std::vector<Name>{InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
       // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
-      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.core->edges[2]}).zero();
+      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.edges(2)}).zero();
       auto& destination_block = traced_tensor.core->blocks.begin()->second;
       // 应该只有一个边, 所以也只有一个block
       const Size line_size = destination_block.size();
@@ -126,10 +125,10 @@ namespace TAT {
       std::visit(
             [&](const auto& const_line_size) {
                const auto line_size = const_line_size.value();
-               for (const auto& [symmetry_1, dimension] : merged_tensor.core->edges[0].map) {
+               for (const auto& [symmetry_1, dimension] : merged_tensor.edges(0).map) {
                   // 而source的形状应该是多个分块对角矩阵, 每个元素是一个向量, 我只需要把正对角的向量们求和
                   auto symmetry_2 = -symmetry_1;
-                  auto source_block = map_at<true>(merged_tensor.core->blocks, pmr::vector<Symmetry>{symmetry_1, symmetry_2, Symmetry()});
+                  auto source_block = merged_tensor.blocks(pmr::vector<Symmetry>{symmetry_1, symmetry_2, Symmetry()});
                   auto dimension_plus_one = dimension + 1;
                   for (Size i = 0; i < dimension; i++) {
                      const ScalarType* __restrict source_data = source_block.data() + dimension_plus_one * i * line_size;
@@ -143,17 +142,16 @@ namespace TAT {
             const_line_size_variant);
 
       auto result = traced_tensor.edge_operator_implement(
-            std::initializer_list<std::pair<Name, Name>>(),
             pmr::map<Name, decltype(split_plan)>{{InternalName<Name>::Trace_3, std::move(split_plan)}},
             reverse_names,
-            std::initializer_list<std::pair<Name, std::initializer_list<Name>>>(),
+            empty_list<std::pair<Name, empty_list<Name>>>(),
             std::move(result_names),
             false,
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<Name>(),
-            std::initializer_list<std::pair<Name, std::initializer_list<std::pair<Symmetry, Size>>>>());
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<Name>(),
+            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
       return result;
    }
 } // namespace TAT

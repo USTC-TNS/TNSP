@@ -29,7 +29,8 @@ void run_test() {
    std::cout << b << "\n";
    auto c =
          TAT::Tensor<double, TAT::U1Symmetry>{
-               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               {"Left", "Right", "Up"},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                .range(2);
    ss < c;
    auto d = TAT::Tensor<double, TAT::U1Symmetry>();
@@ -48,16 +49,22 @@ void run_test() {
    std::cout << f << "\n";
    auto g =
          TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
-               {"Left", "Right", "Up"}, {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
+               {"Left", "Right", "Up"},
+               {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                .range(2);
    ss < g;
    auto h = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
    ss > h;
    std::cout << g << "\n";
    std::cout << h << "\n";
+#define f_edge(...) \
+   { {__VA_ARGS__}, false }
+#define t_edge(...) \
+   { {__VA_ARGS__}, true }
    auto i =
          TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
-               {"Left", "Right", "Up"}, {{{-2, 3}, {0, 1}, {-1, 2}}, {{0, 2}, {1, 3}}, {{0, 3}, {1, 1}}}, true}
+               {"Left", "Right", "Up"},
+               {t_edge({-2, 3}, {0, 1}, {-1, 2}), f_edge({0, 2}, {1, 3}), f_edge({0, 3}, {1, 1})}}
                .range(2);
    ss < i;
    auto j = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
