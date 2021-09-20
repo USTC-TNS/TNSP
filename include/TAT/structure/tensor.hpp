@@ -28,6 +28,7 @@
 #include <set>
 #include <span>
 #include <tuple>
+#include <variant>
 
 #include "../utility/allocator.hpp"
 #include "../utility/propagate_const.hpp"
@@ -37,6 +38,18 @@
 #include "symmetry.hpp"
 
 namespace TAT {
+   struct RemainCut {
+      Size value;
+      // implicit to be compatible with former interface
+      RemainCut(Size v) : value(v) {}
+   };
+   struct RelativeCut {
+      double value;
+      explicit RelativeCut(double v) : value(v) {}
+   };
+   struct NoCut {};
+   using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
+
    /**
     * Check list of names is a valid and the rank is correct
     *
@@ -758,7 +771,7 @@ namespace TAT {
       svd(const std::set<Name>& free_name_set_u,
           const Name& common_name_u,
           const Name& common_name_v,
-          Size cut = std::numeric_limits<Size>::max(),
+          Cut cut = NoCut(),
           const Name& singular_name_u = InternalName<Name>::SVD_U,
           const Name& singular_name_v = InternalName<Name>::SVD_V) const;
 

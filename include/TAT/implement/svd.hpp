@@ -21,6 +21,8 @@
 #ifndef TAT_SVD_HPP
 #define TAT_SVD_HPP
 
+#include <variant>
+
 #include "../structure/tensor.hpp"
 #include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
@@ -257,7 +259,7 @@ namespace TAT {
          const std::set<Name>& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
-         Size cut,
+         Cut cut,
          const Name& singular_name_u,
          const Name& singular_name_v) const {
       auto pmr_guard = scope_resource(default_buffer_size);
@@ -343,7 +345,7 @@ namespace TAT {
       auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : std::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.edges(1))}};
-      auto result_s = pmr::map<Symmetry, std::vector<real_scalar<ScalarType>>>();
+      auto result_s = pmr::map<Symmetry, pmr::vector<real_scalar<ScalarType>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.blocks(symmetries).data();
          auto* data_v = tensor_2.blocks(symmetries).data();
@@ -352,7 +354,7 @@ namespace TAT {
          const int n = tensor_2.edges(1).get_dimension_from_symmetry(symmetries[1]);
          const int k = m > n ? n : m;
          const int max = m > n ? m : n;
-         auto s = std::vector<real_scalar<ScalarType>>(k);
+         auto s = pmr::vector<real_scalar<ScalarType>>(k);
          auto* s_data = s.data();
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
@@ -367,25 +369,55 @@ namespace TAT {
       }
       auto remain_dimension_u = pmr::map<Symmetry, Size>();
       auto remain_dimension_v = pmr::map<Symmetry, Size>();
-      if (cut != Size(-1) && cut < total_dimension) {
-         // auto remain_dimension = pmr::map<Symmetry, Size>();
-         for (const auto& [symmetry, vector_s] : result_s) {
-            remain_dimension_u[symmetry] = 0;
-            remain_dimension_v[-symmetry] = 0;
-         }
-         for (Size i = 0; i < cut; i++) {
-            Symmetry maximum_position;
-            real_scalar<ScalarType> maximum_singular = 0;
+      if (auto cut_value = std::get_if<RemainCut>(&cut)) {
+         Size cut_i = cut_value->value;
+         if (cut_i < total_dimension) {
             for (const auto& [symmetry, vector_s] : result_s) {
-               if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
-                  if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
-                     maximum_singular = this_singular;
-                     maximum_position = symmetry;
+               remain_dimension_u[symmetry] = 0;
+               remain_dimension_v[-symmetry] = 0;
+            }
+            for (Size i = 0; i < cut_i; i++) {
+               Symmetry maximum_position;
+               real_scalar<ScalarType> maximum_singular = 0;
+               for (const auto& [symmetry, vector_s] : result_s) {
+                  if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
+                     if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
+                        maximum_singular = this_singular;
+                        maximum_position = symmetry;
+                     }
                   }
                }
+               remain_dimension_u.at(maximum_position) += 1;
+               remain_dimension_v.at(-maximum_position) += 1;
             }
-            remain_dimension_u.at(maximum_position) += 1;
-            remain_dimension_v.at(-maximum_position) += 1;
+
+            for (const auto& [symmetry, this_remain] : remain_dimension_u) {
+               if (this_remain == 0) {
+                  result_s.erase(symmetry);
+               } else {
+                  result_s.at(symmetry).resize(this_remain);
+               }
+            }
+         }
+      } else if (auto cut_value = std::get_if<RelativeCut>(&cut)) {
+         real_scalar<ScalarType> maximum_singular = 0;
+         for (const auto& [symmetry, vector_s] : result_s) {
+            for (const auto& this_singular : vector_s) {
+               if (this_singular > maximum_singular) {
+                  maximum_singular = this_singular;
+               }
+            }
+         }
+         real_scalar<ScalarType> threshold = cut_value->value * maximum_singular;
+         for (const auto& [symmetry, vector_s] : result_s) {
+            auto current_size = vector_s.size();
+            for (auto i = 0; i < current_size; i++) {
+               if (vector_s[i] < threshold) {
+                  remain_dimension_u[symmetry] = i;
+                  remain_dimension_v[-symmetry] = i;
+                  break;
+               }
+            }
          }
 
          for (const auto& [symmetry, this_remain] : remain_dimension_u) {
