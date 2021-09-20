@@ -61,6 +61,7 @@ namespace TAT {
             if (name_correspond) {
                // found in trace_names
                // 对于费米子考虑方向, 应是一进一出才合法
+               // trace_1 arrow true, trace_2 arrow false
                if constexpr (is_fermi) {
                   if (edges(i).arrow) {
                      trace_1_names.push_back(name_to_find);
@@ -101,7 +102,7 @@ namespace TAT {
             }
          }
       }
-      // TODO need to reorder symmetry first
+      // TODO maybe need to reorder symmetry segment first
       auto merged_tensor = edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reverse_names,
@@ -111,10 +112,10 @@ namespace TAT {
                   {InternalName<Name>::Trace_3, {result_names.begin(), result_names.end()}}},
             std::vector<Name>{InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
             false,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
+            empty_list<Name>(),                          // split
+            empty_list<Name>(),                          // reverse
+            empty_list<Name>(),                          // reverse
+            pmr::set<Name>{InternalName<Name>::Trace_1}, // merge
             empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
       // Trace_1和Trace_2一起merge, 而他们相连, 所以要有一个有效, Trace_3等一会会翻转回来, 所以没事
       auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.edges(2)}).zero();

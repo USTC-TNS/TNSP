@@ -64,7 +64,7 @@ namespace TAT {
       return blocks(symmetries)[offset];
    }
 
-   auto get_leading(const pmr::vector<Size>& dim) {
+   inline auto get_leading(const pmr::vector<Size>& dim) {
       Rank rank = dim.size();
       pmr::vector<Size> res(rank, 0);
       for (auto i = rank; i-- > 0;) {

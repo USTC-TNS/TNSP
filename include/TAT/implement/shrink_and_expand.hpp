@@ -57,7 +57,7 @@ namespace TAT {
             const auto& [arrow, symmetry, index, dimension] = information;
             total_offset *= dimension;
             total_offset += index;
-            new_edges.push_back({arrow, {{symmetry, dimension}}});
+            new_edges.push_back({{{symmetry, dimension}}, arrow});
          } else {
             const auto& [symmetry, index, dimension] = information;
             total_offset *= dimension;
@@ -71,18 +71,18 @@ namespace TAT {
          new_names.push_back(old_name);
          // 调整使得可以缩并
          auto& old_edge = edges(old_name);
-         if (old_edge.map.size() != 1 || old_edge.map.begin()->second != 1) {
+         if (old_edge.segment.size() != 1 || old_edge.segment.front().second != 1) {
             detail::error("Cannot Expand a Edge which dimension is not one");
          }
          if constexpr (is_no_symmetry) {
             new_edges.push_back({{{Symmetry(), 1}}});
          } else {
             if constexpr (is_fermi) {
-               new_edges.push_back({!old_edge.arrow, {{-total_symmetry, 1}}});
+               new_edges.push_back({{{-total_symmetry, 1}}, !old_edge.arrow});
             } else {
                new_edges.push_back({{{-total_symmetry, 1}}});
             }
-            if (old_edge.map.front().first != total_symmetry) {
+            if (old_edge.segment.front().first != total_symmetry) {
                detail::error("Cannot Expand to such Edges whose total Symmetry is not Compatible with origin Edge");
             }
          }
@@ -135,7 +135,7 @@ namespace TAT {
             new_names.push_back(name);
             contract_names.insert({name, name});
             if constexpr (is_fermi) {
-               new_edges.push_back({!this_edge.arrow, {{-symmetry, dimension}}});
+               new_edges.push_back({{{-symmetry, dimension}}, !this_edge.arrow});
             } else {
                new_edges.push_back({{{-symmetry, dimension}}});
             }
@@ -144,7 +144,7 @@ namespace TAT {
       if (new_name != InternalName<Name>::No_New_Name) {
          new_names.push_back(new_name);
          if constexpr (is_fermi) {
-            new_edges.push_back({arrow, {{total_symmetry, 1}}});
+            new_edges.push_back({{{total_symmetry, 1}}, arrow});
          } else {
             new_edges.push_back({{{total_symmetry, 1}}});
          }

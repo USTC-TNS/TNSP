@@ -26,7 +26,6 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <span>
 #include <tuple>
 #include <variant>
 
@@ -48,6 +47,11 @@ namespace TAT {
       explicit RelativeCut(double v) : value(v) {}
    };
    struct NoCut {};
+   /**
+    * Used to describle how to cut when doing svd to a tensor
+    *
+    * Is one of RemainCut, RelativeCut and NoCut
+    */
    using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
 
    /**
@@ -94,9 +98,7 @@ namespace TAT {
    struct Tensor {
       static_assert(is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>);
 
-    private:
       using self_t = Tensor<ScalarType, Symmetry, Name>;
-    public:
       // common used type alias
       using scalar_t = ScalarType;
       using symmetry_t = Symmetry;
@@ -187,7 +189,7 @@ namespace TAT {
          return const_at();
       }
 
-    private:
+      /// \private
       [[nodiscard]] static auto
       get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
          // used in one
@@ -207,7 +209,6 @@ namespace TAT {
             return result;
          }
       }
-    public:
       /**
        * Create a high rank tensor but which only contains one element
        *
@@ -430,10 +431,10 @@ namespace TAT {
          return storage().front();
       }
 
-    private:
+      /// \private
       template<typename IndexOrPoint>
       [[nodiscard]] const ScalarType& get_item(const std::map<Name, IndexOrPoint>& position) const&;
-    public:
+
       Tensor<ScalarType, NoSymmetry, Name> clear_symmetry() const;
 
       const auto& storage() const& {
@@ -456,7 +457,7 @@ namespace TAT {
          return const_cast<Edge<Symmetry>&>(const_cast<const self_t*>(this)->edges(name));
       }
 
-    private:
+      /// \private
       /**
        * If given a Key, return itself, else return a.first;
        */
@@ -468,7 +469,7 @@ namespace TAT {
             return std::get<0>(a);
          }
       }
-    public:
+
       template<typename SymmetryList = std::vector<Symmetry>>
       auto find_block(const SymmetryList& symmetry_list) const {
          using Key = SymmetryList;
@@ -552,6 +553,7 @@ namespace TAT {
          // last argument only used in svd, Name -> Symmetry -> Size
       }
 
+      /// \private
       template<typename A, typename B, typename C, typename D, typename E, typename F, typename G, typename H>
       [[nodiscard]] auto edge_operator_implement(
             const A& split_map,
@@ -564,7 +566,6 @@ namespace TAT {
             const F& parity_exclude_name_reversed_after_transpose,
             const G& parity_exclude_name_merge,
             const H& edge_and_symmetries_to_cut_before_all = {}) const;
-
       /**
        * 对张量边的名称进行重命名
        * \param dictionary 重命名方案的映射表
@@ -645,6 +646,12 @@ namespace TAT {
 
       // Contract
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
+      /// \private
+      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
+            const Tensor<ScalarType, Symmetry, Name>& tensor_1,
+            const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+            std::set<std::pair<Name, Name>> contract_names);
+
       /**
        * 两个张量的缩并运算
        * \param tensor_1 参与缩并的第一个张量
@@ -652,11 +659,6 @@ namespace TAT {
        * \param contract_names 两个张量将要缩并掉的边的名称
        * \return 缩并后的张量
        */
-      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
-            const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-            const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-            std::set<std::pair<Name, Name>> contract_names);
-
       template<typename ScalarType1, typename ScalarType2, typename = std::enable_if_t<is_scalar<ScalarType1> && is_scalar<ScalarType2>>>
       [[nodiscard]] static auto contract(
             const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
@@ -689,28 +691,6 @@ namespace TAT {
       }
 
       /**
-       * 将一个张量与另一个张量的所有相同名称的边进行缩并
-       * \param other 另一个张量
-       * \return 缩并后的结果
-       */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge(const Tensor<ScalarType, Symmetry, Name>& other) const {
-         // other不含有的边会在contract中自动删除
-         auto contract_names = std::vector<std::pair<Name, Name>>();
-         for (const auto& i : names) {
-            contract_names.push_back({i, i});
-         }
-         return contract(other, std::move(contract_names));
-      }
-
-      /**
-       * 张量与自己的共轭进行尽可能的缩并
-       * \return 缩并后的结果
-       */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> contract_all_edge() const {
-         return contract_all_edge(conjugate());
-      }
-
-      /**
        * 生成相同形状的单位张量
        * \param pairs 看作矩阵时边的配对方案
        */
@@ -720,7 +700,6 @@ namespace TAT {
          return std::move(identity(pairs));
       }
 
-    public:
       /**
        * 看作矩阵后求出矩阵指数
        * \param pairs 边的配对方案
@@ -728,7 +707,6 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::set<std::pair<Name, Name>>& pairs, int step = 2) const;
 
-    public:
       /**
        * 生成张量的共轭张量
        * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
@@ -737,15 +715,13 @@ namespace TAT {
 
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::set<std::pair<Name, Name>>& trace_names) const;
 
-    public:
-      using SingularType = Tensor<ScalarType, Symmetry, Name>;
       /**
        * 张量svd的结果类型
        * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
        */
       struct svd_result {
          Tensor<ScalarType, Symmetry, Name> U;
-         SingularType S;
+         Tensor<ScalarType, Symmetry, Name> S;
          Tensor<ScalarType, Symmetry, Name> V;
       };
 
@@ -775,7 +751,6 @@ namespace TAT {
           const Name& singular_name_u = InternalName<Name>::SVD_U,
           const Name& singular_name_v = InternalName<Name>::SVD_V) const;
 
-    public:
       /**
        * 对张量进行qr分解
        * \param free_name_direction free_name_set取的方向, 为'Q'或'R'
@@ -788,7 +763,6 @@ namespace TAT {
       [[nodiscard]] qr_result
       qr(char free_name_direction, const std::set<Name>& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
 
-    public:
       using EdgePointShrink = std::conditional_t<Symmetry::length == 0, Size, std::tuple<Symmetry, Size>>;
       using EdgePointExpand = std::conditional_t<
             Symmetry::length == 0,
@@ -801,10 +775,13 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(const std::map<Name, EdgePointShrink>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
-    public:
+      /// \private
       const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;
+      /// \private
       const Tensor<ScalarType, Symmetry, Name>& data_put(std::ostream&) const;
+      /// \private
       Tensor<ScalarType, Symmetry, Name>& meta_get(std::istream&);
+      /// \private
       Tensor<ScalarType, Symmetry, Name>& data_get(std::istream&);
 
       [[nodiscard]] std::string show() const;

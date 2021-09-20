@@ -141,6 +141,16 @@ namespace TAT {
       zero();
 
       for (auto& [symmetries, block] : core->blocks) {
+         bool not_diagonal = false;
+         for (const auto& [i0, i1] : ordered_pair_index) {
+            not_diagonal = symmetries[i0] + symmetries[i1] != Symmetry();
+            if (not_diagonal) {
+               break;
+            }
+         }
+         if (not_diagonal) {
+            continue;
+         }
          auto dimension = pmr::vector<Size>(rank);
          auto leading = pmr::vector<Size>(rank);
          for (Rank i = rank; i-- > 0;) {

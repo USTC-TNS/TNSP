@@ -145,7 +145,7 @@ namespace TAT {
          for (const auto& i : tensor.names) {
             symmetries.push_back(map.at(i));
          }
-         return map_at(tensor.core->blocks, symmetries);
+         return tensor.blocks(symmetries);
       }
    }
 
@@ -209,7 +209,7 @@ namespace TAT {
                auto dimensions = std::vector<Size>(rank);
                auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = map_at(tensor.core->edges[i].map, b.position[tensor.names[i]]);
+                  dimensions[i] = tensor.edges(i).get_dimension_from_symmetry(b.position[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
                }
                for (auto i = rank; i-- > 0;) {
@@ -244,7 +244,7 @@ namespace TAT {
                auto dimensions = std::vector<Size>(rank);
                auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = map_at(tensor.core->edges[i].map, position_map[tensor.names[i]]);
+                  dimensions[i] = tensor.edges(i).get_dimension_from_symmetry(position_map[tensor.names[i]]);
                   // 使用operator[]在NoSymmetry时获得默认对称性, 从而得到仅有的维度
                }
                for (auto i = rank; i-- > 0;) {
@@ -257,7 +257,7 @@ namespace TAT {
                auto real_dimensions = std::vector<Size>(rank);
                auto real_leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  auto j = map_find(tensor.name_to_index, std::get<0>(b.position[i]))->second;
+                  auto j = tensor.get_rank_from_name(std::get<0>(b.position[i]));
                   real_dimensions[i] = dimensions[j];
                   real_leadings[i] = leadings[j];
                }
@@ -355,10 +355,9 @@ namespace TAT {
                     return out.str();
                  })
             .def(py::init<>(), "Default Constructor")
-            .def(py::init<std::vector<DefaultName>, std::vector<E>, bool>(),
+            .def(py::init<std::vector<DefaultName>, std::vector<E>>(),
                  py::arg("names"),
                  py::arg("edges"),
-                 py::arg("auto_reverse") = false,
                  "Construct tensor with edge names and edge shapes")
             .def(py::init<ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
             .def(py::init<>([](const std::string& string) {
@@ -379,8 +378,11 @@ namespace TAT {
             .def("copy", &T::copy, "Deep copy a tensor")
             .def("__copy__", &T::copy)
             .def("__deepcopy__", &T::copy)
-            .def("same_shape", &T::same_shape, "Create a tensor with same shape")
-            .def("map", &T::template map<std::function<ScalarType(ScalarType)>>, py::arg("function"), "Out-place map every element of a tensor")
+            .def("same_shape", &T::template same_shape<ScalarType>, "Create a tensor with same shape") // TODO other scalartype
+            .def("map",
+                 &T::template map<ScalarType, std::function<ScalarType(ScalarType)>>,
+                 py::arg("function"),
+                 "Out-place map every element of a tensor")
             .def(
                   "transform",
                   [](T& tensor, std::function<ScalarType(ScalarType)>& function) -> T& {
@@ -428,28 +430,32 @@ namespace TAT {
                   })
             .def(
                   "__getitem__",
-                  [](const T& tensor, const std::map<DefaultName, typename T::EdgePoint>& position) {
+                  [](const T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position) {
                      return tensor.at(position);
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"))
             .def(
+                  "__getitem__",
+                  [](const T& tensor, const std::map<DefaultName, Size>& position) {
+                     return tensor.at(position);
+                  },
+                  py::arg("dictionary_from_name_to_total_index"))
+            .def(
                   "__setitem__",
-                  [](T& tensor, const std::map<DefaultName, typename T::EdgePoint>& position, const ScalarType& value) {
+                  [](T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position, const ScalarType& value) {
                      tensor.at(position) = value;
                   },
                   py::arg("dictionary_from_name_to_symmetry_and_dimension"),
                   py::arg("value"))
-            .def("shrink",
-                 &T::template shrink<std::map<DefaultName, typename T::EdgePoint>>,
-                 "Shrink Edge of tensor",
-                 py::arg("configure"),
-                 py::arg("new_name") = ",No_New_Name",
-                 py::arg("arrow") = false)
-            .def("expand",
-                 &T::template expand<std::map<DefaultName, typename T::EdgePointWithArrow>>,
-                 "Expand Edge of tensor",
-                 py::arg("configure"),
-                 py::arg("old_name") = ",No_Old_Name")
+            .def(
+                  "__setitem__",
+                  [](T& tensor, const std::map<DefaultName, Size>& position, const ScalarType& value) {
+                     tensor.at(position) = value;
+                  },
+                  py::arg("dictionary_from_name_to_total_index"),
+                  py::arg("value"))
+            .def("shrink", &T::shrink, "Shrink Edge of tensor", py::arg("configure"), py::arg("new_name") = ",No_New_Name", py::arg("arrow") = false)
+            .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = ",No_Old_Name")
             .def(
                   "to",
                   [](const T& tensor, const py::object& object) -> py::object {
@@ -489,25 +495,22 @@ namespace TAT {
                   },
                   py::arg("name_dictionary"),
                   "Rename names of edges, which will not copy data")
-            .def("transpose",
-                 &T::template transpose<std::vector<DefaultName>>,
-                 py::arg("new_names"),
-                 "Transpose the tensor to the order of new names")
+            .def("transpose", &T::transpose, py::arg("new_names"), "Transpose the tensor to the order of new names")
             .def("reverse_edge",
-                 &T::template reverse_edge<std::set<DefaultName>, std::set<DefaultName>>,
+                 &T::reverse_edge,
                  py::arg("reversed_name_set"),
                  py::arg("apply_parity") = false,
                  py::arg("parity_exclude_name_set") = py::set(),
                  "Reverse fermi arrow of several edge")
             .def("merge_edge",
-                 &T::template merge_edge<std::map<DefaultName, std::vector<DefaultName>>, std::set<DefaultName>, std::set<DefaultName>>,
+                 &T::merge_edge,
                  py::arg("merge_map"),
                  py::arg("apply_parity") = false,
                  py::arg("parity_exclude_name_merge_set") = py::set(),
                  py::arg("parity_exclude_name_reverse_set") = py::set(),
                  "Merge several edges of the tensor into ones")
             .def("split_edge",
-                 &T::template split_edge<std::map<DefaultName, std::vector<std::tuple<DefaultName, edge_map_t<Symmetry>>>>, std::set<DefaultName>>,
+                 &T::split_edge,
                  py::arg("split_map"),
                  py::arg("apply_parity") = false,
                  py::arg("parity_exclude_name_split_set") = py::set(),
@@ -515,8 +518,7 @@ namespace TAT {
             .def(
                   "edge_operator",
                   [](const T& tensor,
-                     const std::map<DefaultName, DefaultName>& rename_map,
-                     const std::map<DefaultName, std::vector<std::tuple<DefaultName, edge_map_t<Symmetry>>>>& split_map,
+                     const std::map<DefaultName, std::vector<std::pair<DefaultName, edge_segment_t<Symmetry>>>>& split_map,
                      const std::set<DefaultName>& reversed_name,
                      const std::map<DefaultName, std::vector<DefaultName>>& merge_map,
                      const std::vector<DefaultName>& new_names,
@@ -526,7 +528,6 @@ namespace TAT {
                      std::set<DefaultName> parity_exclude_name_reverse_before_merge_set,
                      std::set<DefaultName> parity_exclude_name_merge_set) {
                      return tensor.edge_operator(
-                           rename_map,
                            split_map,
                            reversed_name,
                            merge_map,
@@ -537,7 +538,6 @@ namespace TAT {
                            parity_exclude_name_reverse_before_merge_set,
                            parity_exclude_name_merge_set);
                   },
-                  py::arg("rename_map"),
                   py::arg("split_map"),
                   py::arg("reversed_name"),
                   py::arg("merge_map"),
@@ -551,7 +551,7 @@ namespace TAT {
 #define TAT_LOOP_CONTRACT(ANOTHERSCALAR) \
    def( \
          "contract", \
-         [](const T& tensor_1, const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, std::set<std::tuple<DefaultName, DefaultName>> contract_names) { \
+         [](const T& tensor_1, const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, std::set<std::pair<DefaultName, DefaultName>> contract_names) { \
             return tensor_1.contract(tensor_2, std::move(contract_names)); \
          }, \
          py::arg("another_tensor"), \
@@ -563,32 +563,15 @@ namespace TAT {
             .TAT_LOOP_CONTRACT(std::complex<double>)
 #undef TAT_LOOP_CONTRACT
             .def(
-                  "contract_all_edge",
-                  [](const T& tensor) {
-                     return tensor.contract_all_edge();
-                  },
-                  "Contract all edge with conjugate tensor")
-            .def(
-                  "contract_all_edge",
-                  [](const T& tensor, const T& other) {
-                     return tensor.contract_all_edge(other);
-                  },
-                  py::arg("another_tensor"),
-                  "Contract as much as possible with another tensor on same name edges")
-            .def(
                   "identity",
-                  [](T& tensor, std::set<std::tuple<DefaultName, DefaultName>>& pairs) -> T& {
+                  [](T& tensor, std::set<std::pair<DefaultName, DefaultName>>& pairs) -> T& {
                      return tensor.identity(pairs);
                   },
                   py::arg("pairs"),
                   "Get a identity tensor with same shape")
-            .def("exponential",
-                 &T::template exponential<std::set<std::tuple<DefaultName, DefaultName>>>,
-                 py::arg("pairs"),
-                 py::arg("step") = 2,
-                 "Calculate exponential like matrix")
+            .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
             .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
-            .def("trace", &T::template trace<std::set<std::tuple<DefaultName, DefaultName>>>)
+            .def("trace", &T::trace)
             .def(
                   "svd",
                   [](const T& tensor,
@@ -623,16 +606,6 @@ namespace TAT {
                   py::arg("common_name_q"),
                   py::arg("common_name_r"),
                   "QR decomposition")
-            .def(
-                  "multiple",
-                  [](T& tensor, const typename T::SingularType& s, const DefaultName& name, char direction, bool division) {
-                     return tensor.multiple(s, name, direction, division);
-                  },
-                  py::arg("singular"),
-                  py::arg("name"),
-                  py::arg("direction"),
-                  py::arg("division") = false,
-                  "Multiple with singular generated by svd")
             .def(
                   "dump",
                   [](T& tensor) {
@@ -702,12 +675,12 @@ namespace TAT {
                           symmetry_m,
                           is_edge<EdgeType<Symmetry>> ? "Edge" : "EdgeMap",
                           ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
-                          .def_readonly("map", &EdgeType<Symmetry>::map)
+                          .def_readonly("segment", &EdgeType<Symmetry>::segment)
                           .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one symmetry")
-                          .def(implicit_init<EdgeType<Symmetry>, std::map<Symmetry, Size>>(),
+                          .def(implicit_init<EdgeType<Symmetry>, std::vector<std::pair<Symmetry, Size>>>(),
                                py::arg("dictionary_from_symmetry_to_dimension"),
                                "Create Edge with dictionary from symmetry to dimension")
-                          .def(implicit_init<EdgeType<Symmetry>, const std::set<Symmetry>&>(),
+                          .def(implicit_init<EdgeType<Symmetry>, const std::vector<Symmetry>&>(),
                                py::arg("set_of_symmetry"),
                                "Edge with several symmetries which dimensions are all one");
       py::implicitly_convertible<py::dict, EdgeType<Symmetry>>();
@@ -734,26 +707,27 @@ namespace TAT {
       }
       if constexpr (!std::is_same_v<Element, void>) {
          // is not no symmetry
-         result = result.def(implicit_init<EdgeType<Symmetry>, std::map<Element, Size>>([](const std::map<Element, Size>& element_map) {
-                                auto symmetry_map = std::map<Symmetry, Size>();
-                                for (const auto& [key, value] : element_map) {
-                                   if constexpr (IsTuple) {
-                                      symmetry_map[std::make_from_tuple<Symmetry>(key)] = value;
-                                   } else {
-                                      symmetry_map[Symmetry(key)] = value;
-                                   }
-                                }
-                                return EdgeType<Symmetry>(std::move(symmetry_map));
-                             }),
+         result = result.def(implicit_init<EdgeType<Symmetry>, std::vector<std::pair<Element, Size>>>(
+                                   [](const std::vector<std::pair<Element, Size>>& element_map) {
+                                      auto symmetry_map = std::vector<std::pair<Symmetry, Size>>();
+                                      for (const auto& [key, value] : element_map) {
+                                         if constexpr (IsTuple) {
+                                            symmetry_map.push_back({std::make_from_tuple<Symmetry>(key), value});
+                                         } else {
+                                            symmetry_map.push_back({Symmetry(key), value});
+                                         }
+                                      }
+                                      return EdgeType<Symmetry>(std::move(symmetry_map));
+                                   }),
                              py::arg("dictionary_from_symmetry_to_dimension"),
                              "Create Edge with dictionary from symmetry to dimension")
-                        .def(implicit_init<EdgeType<Symmetry>, const std::set<Element>&>([](const std::set<Element>& element_set) {
-                                auto symmetry_set = std::set<Symmetry>();
+                        .def(implicit_init<EdgeType<Symmetry>, const std::vector<Element>&>([](const std::vector<Element>& element_set) {
+                                auto symmetry_set = std::vector<Symmetry>();
                                 for (const auto& element : element_set) {
                                    if constexpr (IsTuple) {
-                                      symmetry_set.insert(std::make_from_tuple<Symmetry>(element));
+                                      symmetry_set.push_back(std::make_from_tuple<Symmetry>(element));
                                    } else {
-                                      symmetry_set.insert(Symmetry(element));
+                                      symmetry_set.push_back(Symmetry(element));
                                    }
                                 }
                                 return EdgeType<Symmetry>(std::move(symmetry_set));
@@ -764,44 +738,44 @@ namespace TAT {
       if constexpr (Symmetry::is_fermi_symmetry && is_edge<EdgeType<Symmetry>>) {
          // is fermi symmetry 且没有强制设置为BoseEdge
          result = result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge")
-                        .def(py::init<Arrow, std::map<Symmetry, Size>>(),
+                        .def(py::init<std::vector<std::pair<Symmetry, Size>>, Arrow>(),
                              py::arg("arrow"),
                              py::arg("dictionary_from_symmetry_to_dimension"),
                              "Fermi Edge created from arrow and dictionary")
-                        .def(implicit_init<EdgeType<Symmetry>, std::tuple<Arrow, std::map<Symmetry, Size>>>(
-                                   [](std::tuple<Arrow, std::map<Symmetry, Size>> p) {
+                        .def(implicit_init<EdgeType<Symmetry>, std::tuple<std::vector<std::pair<Symmetry, Size>>, Arrow>>(
+                                   [](std::tuple<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
                                       return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
                                    }),
                              py::arg("tuple_of_arrow_and_dictionary"),
                              "Fermi Edge created from arrow and dictionary");
          if constexpr (!std::is_same_v<Element, void>) {
             // true if not FermiSymmetry
-            result = result.def(py::init([](Arrow arrow, const std::map<Element, Size>& element_map) {
-                                   auto symmetry_map = std::map<Symmetry, Size>();
+            result = result.def(py::init([](const std::vector<std::pair<Element, Size>>& element_map, Arrow arrow) {
+                                   auto symmetry_map = std::vector<std::pair<Symmetry, Size>>();
                                    for (const auto& [key, value] : element_map) {
                                       if constexpr (IsTuple) {
-                                         symmetry_map[std::make_from_tuple<Symmetry>(key)] = value;
+                                         symmetry_map.push_back({std::make_from_tuple<Symmetry>(key), value});
                                       } else {
-                                         symmetry_map[Symmetry(key)] = value;
+                                         symmetry_map.push_back({Symmetry(key), value});
                                       }
                                    }
-                                   return EdgeType<Symmetry>(arrow, std::move(symmetry_map));
+                                   return EdgeType<Symmetry>(std::move(symmetry_map), arrow);
                                 }),
                                 py::arg("arrow"),
                                 py::arg("dictionary_from_symmetry_to_dimension"),
                                 "Fermi Edge created from arrow and dictionary")
-                           .def(implicit_init<EdgeType<Symmetry>, std::tuple<Arrow, std::map<Element, Size>>>(
-                                      [](const std::tuple<Arrow, std::map<Element, Size>>& p) {
-                                         const auto& [arrow, element_map] = p;
-                                         auto symmetry_map = std::map<Symmetry, Size>();
+                           .def(implicit_init<EdgeType<Symmetry>, std::tuple<std::vector<std::pair<Element, Size>>, Arrow>>(
+                                      [](const std::tuple<std::vector<std::pair<Element, Size>>, Arrow>& p) {
+                                         const auto& [element_map, arrow] = p;
+                                         auto symmetry_map = std::vector<std::pair<Symmetry, Size>>();
                                          for (const auto& [key, value] : element_map) {
                                             if constexpr (IsTuple) {
-                                               symmetry_map[std::make_from_tuple<Symmetry>(key)] = value;
+                                               symmetry_map.push_back({std::make_from_tuple<Symmetry>(key), value});
                                             } else {
-                                               symmetry_map[Symmetry(key)] = value;
+                                               symmetry_map.push_back({Symmetry(key), value});
                                             }
                                          }
-                                         return EdgeType<Symmetry>(arrow, std::move(symmetry_map));
+                                         return EdgeType<Symmetry>(std::move(symmetry_map), arrow);
                                       }),
                                 py::arg("tuple_of_arrow_and_dictionary"),
                                 "Fermi Edge created from arrow and dictionary");

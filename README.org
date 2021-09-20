@@ -74,8 +74,7 @@
     To create a no symmetry tensor, pass names and dimension for each dimension of the tensor
 
     #+begin_src C++ :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-      auto A = TAT::Tensor<double, TAT::NoSymmetry>({"i", "j"}, {3, 4}).zero();
-      std::cout << A << "\n";
+      std::cout << TAT::Tensor<double, TAT::NoSymmetry>({"i", "j"}, {3, 4}).zero() << "\n";
     #+end_src
 
     #+RESULTS:
@@ -476,12 +475,13 @@
 **** QR decomposition
 
      #+begin_src C++ :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-       #define edge(...) {__VA_ARGS__}
-       using Tensor = TAT::Tensor<double, TAT::U1Symmetry>;
+       #define f_edge(...) {{__VA_ARGS__}, false}
+       #define t_edge(...) {{__VA_ARGS__}, true}
+       using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
        auto A =
          Tensor{
          {"i", "j", "k"},
-         {edge({-1, 2}, {0, 2}, {-2, 2}), edge({0, 2}, {1, 2}), edge({0, 2}, {1, 2})}}
+         {t_edge({-1, 2}, {0, 2}, {-2, 2}), f_edge({0, 2}, {1, 2}), f_edge({0, 2}, {1, 2})}}
          .range();
        // Do QR decomposition, specify Q matrix edge is edge k
        // You can also write is as `Q, R = A.qr('r', {"i", "j"}, "Q", "R")`
@@ -489,26 +489,27 @@
        // by QR decomposition
        auto [Q, R] = A.qr('q', {"k"}, "Q", "R");
        // Q is an unitary matrix, which edge name is Q and k
-       std::cout << Q.edge_rename({{"Q", "Q1"}}).contract(Q.conjugate().edge_rename({{"Q", "Q2"}}), {{"k", "k"}}) << "\n";
+       std::cout << Q.conjugate().edge_rename({{"Q", "Q1"}}).contract(Q.edge_rename({{"Q", "Q2"}}), {{"k", "k"}}) << "\n";
        // Q R - A is 0
        std::cout << (Q.contract(R, {{"Q", "R"}}) - A).norm<-1>() << "\n";
      #+end_src
 
      #+RESULTS:
      #+begin_example
-     {names:[Q1,Q2],edges:[{-1:2,0:2},{1:2,0:2}],blocks:{[-1,1]:[1,6.34378e-17,6.34378e-17,1],[0,0]:[1,1.70156e-16,1.70156e-16,1]}}
+     {names:[Q1,Q2],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[0,0]:[1,1.70156e-16,1.70156e-16,1],[1,-1]:[1,6.34378e-17,6.34378e-17,1]}}
      2.13163e-14
      #+end_example
 
 **** SVD decomposition
 
      #+begin_src C++ :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-       #define edge(...) {__VA_ARGS__}
-       using Tensor = TAT::Tensor<double, TAT::U1Symmetry>;
+       #define f_edge(...) {{__VA_ARGS__}, false}
+       #define t_edge(...) {{__VA_ARGS__}, true}
+       using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
        auto A =
          Tensor{
          {"i", "j", "k"},
-         {edge({-1, 2}, {0, 2}, {-2, 2}), edge({0, 2}, {1, 2}), edge({0, 2}, {1, 2})}}
+         {t_edge({-1, 2}, {0, 2}, {-2, 2}), f_edge({0, 2}, {1, 2}), f_edge({0, 2}, {1, 2})}}
          .range();
        // Do SVD decomposition with cut=3, if cut not specified,
        // svd will not cut the edge.
@@ -516,9 +517,9 @@
        // supply function to specify edge set of matrix V like what
        // is done in QR since SVD is symmetric between U and V.
        // The later two argument is new edges generated
-       auto [U, S, V] = A.svd({"k"}, "U", "V", 3, "SU", "SV");
+       auto [U, S, V] = A.svd({"k"}, "U", "V", TAT::NoCut(), "SU", "SV");
        // U is an rank-3 unitary matrix
-       std::cout << U.edge_rename({{"U", "U1"}}).contract(U.conjugate().edge_rename({{"U", "U2"}}), {{"k", "k"}}) << "\n";
+       std::cout << U.conjugate().edge_rename({{"U", "U1"}}).contract(U.edge_rename({{"U", "U2"}}), {{"k", "k"}}) << "\n";
        // U S V - A is a small value
        // please notice that S is an diagnalized matrix so contract is
        // not support, use multiple which is designed for this
@@ -535,8 +536,8 @@
 
      #+RESULTS:
      #+begin_example
-     {names:[U1,U2],edges:[{-1:2,0:1},{1:2,0:1}],blocks:{[-1,1]:[1,-2.44838e-18,-2.44838e-18,1],[0,0]:[1]}}
-     0.165038
+     {names:[U1,U2],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[0,0]:[1,5.02471e-18,5.02471e-18,1],[1,-1]:[1,-2.44838e-18,-2.44838e-18,1]}}
+     1.06581e-14
      #+end_example
 
 *** Identity, exponential and trace

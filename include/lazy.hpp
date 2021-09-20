@@ -48,13 +48,13 @@ namespace lazy {
     * @{
     */
    struct lazy_base : std::enable_shared_from_this<lazy_base> {
-   private:
+    private:
       /**
        * 重置当前节点
        */
       virtual void release() = 0;
 
-   protected:
+    protected:
       /**
        * 重置当前节点和下游
        */
@@ -70,7 +70,7 @@ namespace lazy {
          }
       }
 
-   public:
+    public:
       /**
        * 下游节点的列表
        */
@@ -80,7 +80,7 @@ namespace lazy {
    };
 
    struct data_lazy_base : lazy_base {
-   public:
+    public:
       /**
        * 从一个any中load出数据
        */
@@ -94,12 +94,12 @@ namespace lazy {
    // path的type可以有cv ref
    template<typename Type>
    struct path : lazy_base {
-   private:
+    private:
       std::function<Type()> function;
 
       void release() override {}
 
-   public:
+    public:
       decltype(auto) get() {
          return function();
       }
@@ -114,14 +114,14 @@ namespace lazy {
 
    template<typename Type>
    struct root : data_lazy_base {
-   private:
+    private:
       std::shared_ptr<const Type> value;
 
       void release() override {
          value.reset();
       }
 
-   public:
+    public:
       const Type& get() {
          return *value;
       }
@@ -154,7 +154,7 @@ namespace lazy {
 
    template<typename Type>
    struct node : data_lazy_base {
-   private:
+    private:
       std::function<Type()> function;
       using RealType = std::remove_cv_t<std::remove_reference_t<Type>>;
       std::shared_ptr<const RealType> value;
@@ -172,7 +172,7 @@ namespace lazy {
          value.reset(new RealType(v));
       }
 
-   public:
+    public:
       const auto& get() {
          if (!bool(value)) {
             set(function());
@@ -248,7 +248,9 @@ namespace lazy {
 
    template<typename Function, typename... Args>
    auto function_wrapper(Function&& function, Args&... args) {
-      return std::function([=] { return function(args->get()...); });
+      return std::function([=] {
+         return function(args->get()...);
+      });
    }
 
    template<typename Type>

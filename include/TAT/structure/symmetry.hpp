@@ -237,8 +237,9 @@ namespace TAT {
        * \note This is equivalant to total transposition over the merging list or splitting list,
        * while \f$\sum_{i\le j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, so it can be simplified.
        */
+      template<typename SymmetryList>
       [[nodiscard]] static bool get_split_merge_parity(
-            const pmr::vector<self_t>& symmetries,     // before merge length
+            const SymmetryList& symmetries,            // before merge length
             const pmr::vector<Rank>& split_merge_flag, // before merge length
             const pmr::vector<bool>& valid_mark) {     // after merge length
          auto result = false;

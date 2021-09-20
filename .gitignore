@@ -14,11 +14,15 @@
 /.mypy_cache
 /.cache
 /git-worktree
+/*.html
 __pycache__
 ltximg
+auto
 .ipynb_checkpoints
 data.*
 *.dll
 *.lib
 *.so
 *.a
+*.tex
+*.pdf

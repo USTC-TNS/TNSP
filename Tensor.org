@@ -2,24 +2,167 @@
 #+author: Hao Zhang
 #+email: zh970205@mail.ustc.edu.cn
 
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-format-latex-options (plist-put org-format-latex-options :scale 2.0))
+#+end_src
+
 * Tensor Network
 
-** Spin Tensor Network
+** Normal Tensor Network
 
-*** Raw Tensor
+*** Normal Tensor
 
-*** Tensor Notation
+    A raw tensor $T$ is just a multi-rank array, like $T_{i_{T,0},i_{T,1},\cdots,i_{T,R_T}}$,
 
-*** PEPS Network
+    where $R_T$ is the rank of $T$, and $i_{T,r}$ is the index of $r$ -th rank,
+
+    it takes value between $0$ to $I_{T,r}-1$,
+
+    and $I_{T,r}$ is the dimension of $r$ -th rank of tensor $T$.
+
+*** Tensor Network
+
+    A state $P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}}$ can be describle as a tensor network
+
+    $P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}} = \prod T \prod I \prod O$
+
+    $\prod T = \prod_{n=0}^{N-1} T^n_{i_{T^n,0},i_{T^n,1},\cdots,i_{T^n,R_{T^n}}}$
+
+    $\prod I = \prod_{b=0}^{B-1} \delta^{i_{T^{A_b^1}, {E_b^1}}}_{i_{T^{A_b^2}, {E_b^2}}}$
+
+    $\prod O = \prod_{r=0}^{R_P-1} \delta^{i_{P,r}}_{i_{T^{A'_r},E'_r}}$
+
+    where $N$ is the tensor number of this network, and $B$ is the internal bond number;
+
+    Tensor $A_b^1$ and $A_b^2$ is link by bound $b$, linked edge is $E_b^1$ and $E_b^2$;
+
+    Edge $E'_r$ of tensor $A'_r$ is present as $r$ -th index of original state $P$.
 
 *** EPR Pair Interpretation
 
+**** Internal bond
+
+    $b$ -th term of $\prod I$ is $\delta^{i_{T^{A_b^1}, {E_b^1}}}_{i_{T^{A_b^2}, {E_b^2}}}$, It can be rewritten as
+
+    $c_{b,1,i_{T^{A_b^1}, {E_b^1}}} c_{b,2,i_{T^{A_b^2}, {E_b^2}}} \prod_{d} c^\dagger_{b,1,d} c^\dagger_{b,2,d}$
+
+    So now we interpret the bond of tensor network as boson EPR pair.
+
+**** External bond
+
+     The original state $P$ can rewritten as
+
+     $P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}} \prod_{r=0}^{R_P-1} f_r^{\dagger i_{P,r}} |\Omega\rangle$
+
+     So now
+
+     $\prod O = \prod_{r=0}^{R_P-1} \delta^{i_{P,r}}_{i_{T^{A'_r},E'_r}} f_r^{\dagger i_{P,r}} = \prod_{r=0}^{R_P-1}  f_r^{\dagger i_{T^{A'_r},E'_r}}$
+
+     To be the same with EPR pair language
+
+     $\prod O = \prod_{r=0}^{R_P-1} \prod_{d} c_{r,1,i_{T^{A'_r}, E'_r}} c_{r,1,d}^\dagger f_r^{\dagger d}$
+
+
 *** Hamiltonian on Tensor Network State
 
-** Symmetry Tensor
+    Hamiltonian is represented as
 
-** Fermi Tensor
+    $H = \prod_{r=0}^{R_H-1} f_r^{\dagger i_{H,1,r}} |\Omega\rangle H_{i_{H,1,0}, i_{H,1,1}, \cdots i_{H,1,R_H}, i_{H,2,0}, i_{H,2,1}, \cdots i_{H,2,R_H}} \langle\Omega| \prod_{r=0}^{R_H-1} f_r^{i_{H,2,r}}$
+
+    conbine with $\prod O$, it is easily to rewrite $\langle \Omega | f_r^{i_{H,2,r}} f_r^{\dagger i_{T^{A'_r},E'_r}} | \Omega \rangle$ to a new EPR pair.
+
+** Symmetry Tensor and Symmetry Tensor Network
+
+   TODO
+
+** Fermi Tensor and Fermi Tensor Network
+
+*** Fermi Tensor
+
+   Change all EPR pair operator above to fermi particle
+
+   $P = P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}} \prod_{r=0}^{R_P-1} f_r^{\dagger i_{P,r}} |\Omega\rangle = \prod T \prod I \prod O |\Omega\rangle$
+
+   $\prod T = \prod_{n=0}^{N-1} T^n_{i_{T^n,0},i_{T^n,1},\cdots,i_{T^n,R_{T^n}}} \prod_{r=0}^{R_N-1} c_{B_{n,r},A_{n,r}, i_{T^n,r}}$
+
+   $\prod I = \prod_{b=0}^{B-1} \prod_{d} c^\dagger_{b,1,d} c^\dagger_{b,2,d}$
+
+   where the $A_{n,r}$ -th particle in EPR pair $B_{n,r}$ connect to edge $r$ of tensor $n$.
+
+   $\prod O = \prod_{r=0}^{R_P-1} \prod_{d} c_{r,1,d}^\dagger f_r^{\dagger d}$
+
+   It is free to set parity of particle $c$ in both  $\prod O$ and $\prod T$;
+
+   Now set parity of $c$ in $\prod O$ the same to $f_r^{\dagger d}$, so each term of $\prod O$ is boson totally.
+
+   And restrict the ansatz that, each term of $\prod T$ is boson totally, which will lead the tensor becoming blocked tensor.
+
+   At last, it is obviously that every term of $\prod I$ is boson totally.
+
+   So every term of the tensor network is boson.
+
+*** Operations
+
+    + Transpose
+
+      Exchange $c$ in the single term of $\prod T$ produce a sign, depending on the detail of transpose plan.
+
+      It should be noticed that each block of the same tensor is applied to different sign.
+
+    + Merge and Split
+
+      It means we need to merge or split EPR pairs.
+
+      $(c_1 c_2) (c_3 c_4) (c_1^\dagger c_3^\dagger) (c_2^\dagger c_4^\dagger) = Parity (c_1 c_2) (c_3 c_4) ((c_1c_2)^\dagger (c_3c_4)^\dagger)$
+
+      where $Parity=+1$ is any of two EPR pair is boson, and $Parity=-1$ if both of two EPR pair is fermion.
+
+      Before merge or split, $c_{1,a} c_{1,b}^\dagger |\Omega\rangle = \delta_{a,b} |\Omega\rangle$
+
+      And now, we also have $c_{1,a}c_{2,b}c_{2,d}^\dagger c_{1,d}^\dagger|\Omega\rangle = \delta_{ab,cd} |\Omega\rangle$, so that is OK.
+
+      It should be noticed that only one sign is produced when merging or splitting the edge of two contracting tensor.
+
+    + Reverse
+
+      Exchange the order in EPR pair produce a sign, trivially
+
+    + Contract
+
+      $(c_1c_2)(c_3c_4)(c_3^\dagger c_2^\dagger) = c_1c_4$, Just merge, transpose, reverse the edge before contract and than recovery everything.
+
+    + Conjugate
+
+      Conjugate is used when computing $\langle \Psi | H | \Psi \rangle$.
+
+      Suppose two tensor is connected and they are something like $(ABC)(DEF)(B^\dagger E^\dagger)$, where $B$ and $E$ is the EPR pairs, and $ACDF$ is other operators.
+
+      Conjugate result is $(EB)(C^\dagger B^\dagger A^\dagger) (F^\dagger E^\dagger D^\dagger)$, after considering a full transpose, it is $(E B) (A B^\dagger C) (D E^\dagger F)$, here the dagger of other operators is omit.
+
+      And then, equals to $(ABC)(DEF)(E^\dagger B^\dagger)$, since the both side of these operators is vacuum, so $B_i B_j^\dagger = B_j B_i^\dagger$.
+
+      In short, doing conjugate will reverse the EPR pair order and product a full transpose sign.
+
+    + Reciprocal
+
+      $T^{-1}=\frac{T^\dagger}{TT^\dagger}$
+
+    + Trace
+
+      $(\cdots AB)(B^\dagger A^\dagger) = (\cdots)$, just need to merge and transpose before tracing.
+
+      This is equals to
+
+      $(\cdots AB)(CD)_{id}(B^\dagger D^\dagger)(C^\dagger A^\dagger)$
+
+      It should be noticed that it equals to the original tensor contracted with identity $(AB)$, not $(BA)$,
+
+      The order should be the same to the conjugate of the EPR pairs.
+
+** Fermi Tensor Network
+
+   TODO
 
 * Algorithm on Tensor Network
 
-  ...
+  TODO

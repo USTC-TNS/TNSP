@@ -27,7 +27,7 @@ namespace TAT {
             .def(py::self >= py::self)
             .def(py::self == py::self)
             .def(py::self != py::self)
-            .def(py::init<fastname_dataset_t::fast_name_id_t>(), py::arg("id"), "Name with specified id directly")
+            .def(py::init<DefaultName::id_t>(), py::arg("id"), "Name with specified id directly")
             .def_readonly("id", &DefaultName::id)
             .def("__hash__",
                  [](const DefaultName& name) {
