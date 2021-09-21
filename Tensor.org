@@ -69,7 +69,7 @@
 
     $H = \prod_{r=0}^{R_H-1} f_r^{\dagger i_{H,1,r}} |\Omega\rangle H_{i_{H,1,0}, i_{H,1,1}, \cdots i_{H,1,R_H}, i_{H,2,0}, i_{H,2,1}, \cdots i_{H,2,R_H}} \langle\Omega| \prod_{r=0}^{R_H-1} f_r^{i_{H,2,r}}$
 
-    conbine with $\prod O$, it is easily to rewrite $\langle \Omega | f_r^{i_{H,2,r}} f_r^{\dagger i_{T^{A'_r},E'_r}} | \Omega \rangle$ to a new EPR pair.
+    conbine with $\prod O$, it is easily to rewrite $\langle \Omega | f_r^{i_{H,2,r}} f_r^{\dagger i_{T^{A'_r},E'_r}} | \Omega \rangle$ to single particle operators to construct a real EPR pair.
 
 ** Symmetry Tensor and Symmetry Tensor Network
 
@@ -90,6 +90,8 @@
    where the $A_{n,r}$ -th particle in EPR pair $B_{n,r}$ connect to edge $r$ of tensor $n$.
 
    $\prod O = \prod_{r=0}^{R_P-1} \prod_{d} c_{r,1,d}^\dagger f_r^{\dagger d}$
+
+   It should be noticed that the order of terms in $\prod O$ is $cf$ since $A f^\dagger B=Ac c^\dagger f^\dagger B = (AcB)(c^\dagger f^\dagger)$
 
    It is free to set parity of particle $c$ in both  $\prod O$ and $\prod T$;
 
@@ -161,7 +163,17 @@
 
 ** Fermi Tensor Network
 
-   TODO
+   As above, hamiltonian is represented as
+
+   $H = \prod_{r=0}^{R_H-1} f_r^{\dagger i_{H,1,r}} |\Omega\rangle H_{i_{H,1,0}, i_{H,1,1}, \cdots i_{H,1,R_H}, i_{H,2,0}, i_{H,2,1}, \cdots i_{H,2,R_H}} \langle\Omega| \prod_{r=0}^{R_H-1} f_r^{i_{H,2,r}}$
+
+   And now $f$ is fermion operator. We still rewrite $f^i$ to single particle operators, like
+
+   $f^i c_d^\dagger f^\dagger^d = c_{f,i} c_d^\dagger c_{f,d}^\dagger$
+
+   So for hamitiltonian, it is just needed to pay attension to its EPR pair order.
+
+   Then we can construct tensor network like normal tensor.
 
 * Algorithm on Tensor Network
 
