@@ -1,4 +1,5 @@
 #include <TAT/TAT.hpp>
+#include <iterator>
 #include <memory>
 #include <random>
 
@@ -21,18 +22,28 @@ auto Sy = ZTensor({"I", "O"}, {2, 2}).set([]() {
    return data[i++] / 2.;
 });
 auto SzSz = Sz.edge_rename({{"I", "I1"}, {"O", "O1"}})
-                  .contract_all_edge(Sz.edge_rename({{"I", "I2"}, {"O", "O2"}}))
+                  .contract(Sz.edge_rename({{"I", "I2"}, {"O", "O2"}}), {})
                   .transpose({"I1", "I2", "O1", "O2"})
                   .to<double>();
 auto SxSx = Sx.edge_rename({{"I", "I1"}, {"O", "O1"}})
-                  .contract_all_edge(Sx.edge_rename({{"I", "I2"}, {"O", "O2"}}))
+                  .contract(Sx.edge_rename({{"I", "I2"}, {"O", "O2"}}), {})
                   .transpose({"I1", "I2", "O1", "O2"})
                   .to<double>();
 auto SySy = Sy.edge_rename({{"I", "I1"}, {"O", "O1"}})
-                  .contract_all_edge(Sy.edge_rename({{"I", "I2"}, {"O", "O2"}}))
+                  .contract(Sy.edge_rename({{"I", "I2"}, {"O", "O2"}}), {})
                   .transpose({"I1", "I2", "O1", "O2"})
                   .to<double>();
 auto SS = SxSx + SySy + SzSz;
+
+template<typename Scalar>
+auto contract_all_edge(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b) {
+   using Name = TAT::DefaultName;
+   auto contract_names = std::set<std::pair<Name, Name>>();
+   for (const auto& i : a.names) {
+      contract_names.insert({i, i});
+   }
+   return a.contract(b, std::move(contract_names));
+}
 
 auto random_engine = std::default_random_engine(std::random_device()());
 
@@ -45,7 +56,12 @@ struct SpinLattice {
    SpinLattice(const std::vector<std::string>& node_names, double approximate_energy = 0) : approximate_energy(std::abs(approximate_energy)) {
       auto edge_to_initial = std::vector<int>(node_names.size(), 2);
       auto dist = std::normal_distribution<double>(0, 1);
-      state_vector = DTensor({node_names.begin(), node_names.end()}, {edge_to_initial.begin(), edge_to_initial.end()}).set([&]() {
+      auto edge = std::vector<TAT::Edge<TAT::NoSymmetry>>();
+      std::transform(edge_to_initial.begin(), edge_to_initial.end(), std::back_inserter(edge), [](auto a) {
+         return a;
+      });
+
+      state_vector = DTensor({node_names.begin(), node_names.end()}, std::move(edge)).set([&]() {
          return dist(random_engine);
       });
    }
@@ -61,7 +77,7 @@ struct SpinLattice {
       auto state_vector_temporary = state_vector.same_shape().zero();
       for (const auto& bond : bonds) {
          const auto& name = bond.names;
-         auto this_term = state_vector.contract_all_edge(bond).edge_rename({{name[2], name[0]}, {name[3], name[1]}});
+         auto this_term = contract_all_edge(state_vector, bond).edge_rename({{name[2], name[0]}, {name[3], name[1]}});
          state_vector_temporary += this_term;
       }
       state_vector *= approximate_energy;
@@ -75,13 +91,13 @@ struct SpinLattice {
          auto str = std::string(n);
          map["_" + str] = str;
       }
-      if constexpr (TAT::is_complex_v<Scalar>) {
+      if constexpr (TAT::is_complex<Scalar>) {
          auto v = state_vector.to<Scalar>();
-         Scalar value = v.contract_all_edge(op).edge_rename(map).contract_all_edge(v);
+         Scalar value = Scalar(contract_all_edge(contract_all_edge(v, op).edge_rename(map), v));
          return value.real();
       } else {
          const auto& v = state_vector;
-         Scalar value = v.contract_all_edge(op).edge_rename(map).contract_all_edge(v);
+         Scalar value = Scalar(contract_all_edge(contract_all_edge(v, op).edge_rename(map), v));
          return value;
       }
    }
@@ -93,7 +109,7 @@ struct SpinLattice {
    }
 
    double get_observe_denominator() const {
-      return state_vector.contract_all_edge(state_vector);
+      return double(contract_all_edge(state_vector, state_vector));
    }
 };
 
