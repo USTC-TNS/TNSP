@@ -246,6 +246,7 @@ namespace TAT {
       for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
          auto& data_destination = result.blocks(symmetries);
          auto n = tensor_merged.edges(0).get_dimension_from_symmetry(symmetries[0]);
+         // TODO 应有一个符号
          matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator_implement(

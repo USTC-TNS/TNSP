@@ -84,7 +84,8 @@ def main(N, T, S, P, D):
     iden = hamiltonian.same_shape().identity({("I0", "O0"), ("I1", "O1")})
     print("id  ", iden)
     print("1-tH", iden - hamiltonian * S)
-    print("op  ", op)
+    print("op  ", op.transpose(hamiltonian.name))
+    op = iden - hamiltonian * S # TODO exp bug
 
     for t in range(T):
         t_norm = 1

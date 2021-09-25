@@ -74,6 +74,7 @@ namespace TAT {
                   trace_1_names.push_back(*name_correspond);
                   trace_2_names.push_back(name_to_find);
                   // trace_1是放在前面的, 而name_correspond也确实在name_to_find前面
+                  // TODO 这个好像可以设定reverse apply parity来去掉
                }
                // 统计traced names
                traced_names.insert(name_to_find);

@@ -48,58 +48,89 @@ namespace TAT {
       edge_segment_t& operator=(edge_segment_t&&) noexcept = default;
       ~edge_segment_t() = default;
 
+      void check_valid_symmetry() const {
+         Nums seg_num = segment.size();
+         for (auto i = 0; i < seg_num; i++) {
+            for (auto j = i + 1; j < seg_num; j++) {
+               if (segment[i].first == segment[j].first) {
+                  detail::error("Duplicated Symmetry in Edge Segment");
+               }
+            }
+         }
+      }
+
       // only valid if is_not_pointer
-      edge_segment_t(segment_t&& s) : segment(std::move(s)) {}
+      edge_segment_t(segment_t&& s) : segment(std::move(s)) {
+         static_assert(is_not_pointer);
+         if constexpr (debug_mode) {
+            check_valid_symmetry();
+         }
+      }
       // valid for both
-      edge_segment_t(const segment_t& s) : segment(s) {}
+      edge_segment_t(const segment_t& s) : segment(s) {
+         static_assert(true);
+         if constexpr (debug_mode) {
+            check_valid_symmetry();
+         }
+      }
 
       /**
        * construct the edge with list of symmetry, each size of them are 1
        */
       edge_segment_t(const symlist_t& symmetries) {
+         static_assert(is_not_pointer);
          segment.reserve(symmetries.size());
          for (const auto& symmetry : symmetries) {
             segment.push_back({symmetry, 1});
+         }
+         if constexpr (debug_mode) {
+            check_valid_symmetry();
          }
       }
 
       /**
        * construct a trivial edge, only contain a single symmetry
        */
-      // only valid if is_not_pointer
-      edge_segment_t(const Size dimension, const Symmetry symmetry = Symmetry()) : segment({{symmetry, dimension}}) {}
+      edge_segment_t(const Size dimension, const Symmetry symmetry = Symmetry()) : segment({{symmetry, dimension}}) {
+         static_assert(is_not_pointer);
+         if constexpr (debug_mode) {
+            check_valid_symmetry();
+         }
+      }
 
-      using point = std::tuple<Symmetry, Size>;
+      using point_t = std::tuple<symmetry_t, Size>;
+      using index_t = Size;
+      using position_t = Nums;
 
-      point get_point_from_index(Size index) const {
-         for (const auto& [symmetry, size] : segment) {
-            if (index < size) {
-               return {symmetry, index};
+      point_t get_point_from_index(index_t index) const {
+         for (const auto& [sym, dim] : segment) {
+            if (index < dim) {
+               return {sym, index};
             } else {
-               index -= size;
+               index -= dim;
             }
          }
          detail::error("Index is more than edge total dimension");
       }
 
-      Size get_index_from_point(const point& pair) const {
+      Size get_index_from_point(const point_t& pair) const {
          Size result = std::get<1>(pair);
-         for (const auto& [symmetry, size] : segment) {
-            if (symmetry == std::get<0>(pair)) {
+         for (const auto& [sym, dim] : segment) {
+            if (sym == std::get<0>(pair)) {
                return result;
             }
-            result += size;
+            result += dim;
          }
          detail::error("The symmetry not found in this edge");
       }
 
-      auto find_by_symmetry(const Symmetry& symmetry) const {
+      auto find_by_symmetry(const symmetry_t& symmetry) const {
          return std::find_if(segment.begin(), segment.end(), [symmetry](const auto& x) {
             return symmetry == std::get<0>(x);
          });
       }
 
-      Size get_dimension_from_symmetry(const Symmetry& symmetry) const {
+      Size get_dimension_from_symmetry(const symmetry_t& symmetry) const {
          auto where = find_by_symmetry(symmetry);
          if constexpr (debug_mode) {
             if (where == segment.end()) {
@@ -109,7 +140,7 @@ namespace TAT {
          return where->second;
       }
 
-      Size get_dimension_from_position(const Nums& position) const {
+      Size get_dimension_from_position(const position_t& position) const {
          if constexpr (debug_mode) {
             if (position >= segment.size()) {
                detail::error("Position is large than segment number");
@@ -118,7 +149,7 @@ namespace TAT {
          return std::get<1>(segment[position]);
       }
 
-      Symmetry get_symmetry_from_position(const Nums& position) const {
+      symmetry_t get_symmetry_from_position(const position_t& position) const {
          if constexpr (debug_mode) {
             if (position >= segment.size()) {
                detail::error("Position is large than segment number");
@@ -127,7 +158,7 @@ namespace TAT {
          return std::get<0>(segment[position]);
       }
 
-      Nums get_position_from_symmetry(const Symmetry& symmetry) const {
+      position_t get_position_from_symmetry(const symmetry_t& symmetry) const {
          auto where = find_by_symmetry(symmetry);
          if constexpr (debug_mode) {
             if (where == segment.end()) {
@@ -143,19 +174,23 @@ namespace TAT {
       // point     : (sym, xxx)
       // index     : xxx
 
-      // only valid is_not_pointer
-      void reorder_symmetry(const std::vector<Symmetry>& symmetry_order) {
-         if constexpr (debug_mode) {
-            if (symmetry_order.size() != segment.size()) {
-               detail::error("Invalid new order when reorder symmetry of edge segment");
-            }
-            for (auto i = symmetry_order.begin(); i != symmetry_order.end(); ++i) {
-               for (auto j = std::next(i); j != symmetry_order.end(); ++j) {
-                  if (*i == *j) {
-                     detail::error("Duplicated symmetry in new symmetry list");
-                  }
+      void check_valid_reorder_symmetry(const std::vector<Symmetry>& symmetry_order) {
+         if (symmetry_order.size() != segment.size()) {
+            detail::error("Invalid new order when reorder symmetry of edge segment");
+         }
+         for (auto i = symmetry_order.begin(); i != symmetry_order.end(); ++i) {
+            for (auto j = std::next(i); j != symmetry_order.end(); ++j) {
+               if (*i == *j) {
+                  detail::error("Duplicated symmetry in new symmetry list");
                }
             }
+         }
+      }
+
+      void reorder_symmetry(const std::vector<Symmetry>& symmetry_order) {
+         static_assert(is_not_pointer);
+         if constexpr (debug_mode) {
+            check_valid_reorder_symmetry(symmetry_order);
          }
          auto new_segment = segment_t();
          new_segment.reserve(segment.size());
@@ -163,6 +198,18 @@ namespace TAT {
             new_segment.emplace_back(symmetry, get_dimension_from_symmetry(symmetry));
          }
          segment = std::move(new_segment);
+      }
+
+      edge_segment_t<symmetry_t> reordered_symmetry(const std::vector<Symmetry>& symmetry_order) const {
+         if constexpr (debug_mode) {
+            check_valid_reorder_symmetry(symmetry_order);
+         }
+         auto new_segment = segment_t();
+         new_segment.reserve(segment.size());
+         for (const auto& symmetry : symmetry_order) {
+            new_segment.emplace_back(symmetry, get_dimension_from_symmetry(symmetry));
+         }
+         return edge_segment_t<symmetry_t>(std::move(new_segment));
       }
 
       std::vector<Symmetry> get_symmetry_order() const {
@@ -174,12 +221,20 @@ namespace TAT {
          return result;
       }
 
-      // only valid is_not_pointer
       void conjugate_edge() {
-         for (auto& pair : segment) {
-            auto& sym = std::get<0>(pair);
+         static_assert(is_not_pointer);
+         for (auto& [sym, dim] : segment) {
             sym = -sym;
          }
+      }
+
+      edge_segment_t<symmetry_t> conjugated_edge() const {
+         segment_t result;
+         result.reserve(segment.size());
+         for (const auto& [sym, dim] : segment) {
+            result.emplace_back(-sym, dim);
+         }
+         return edge_segment_t<symmetry_t>(std::move(result));
       }
 
       Size total_dimension() const {
@@ -245,6 +300,12 @@ namespace TAT {
          }
          base_segment_t::conjugate_edge();
       }
+      Edge<Symmetry> conjugated_edge() const {
+         return Edge<Symmetry>(std::move(base_segment_t::conjugated_edge()), !arrow);
+      }
+      Edge<Symmetry> reordered_symmetry() const {
+         return Edge<Symmetry>(std::move(base_segment_t::reordered_symmetry()), arrow);
+      }
    };
 
    template<typename Symmetry, bool is_pointer>
@@ -263,8 +324,8 @@ namespace TAT {
       template<typename T>
       struct is_edge_helper : std::false_type {};
 
-      template<typename Symmetry>
-      struct is_edge_helper<Edge<Symmetry, false>> : std::true_type {};
+      template<typename T>
+      struct is_edge_helper<Edge<T, false>> : std::true_type {};
 
       template<typename T>
       struct is_edge_pointer_helper : std::false_type {};
@@ -282,6 +343,12 @@ namespace TAT {
    template<typename T>
    constexpr bool is_general_edge = is_edge<T> || is_edge_pointer<T>;
 
+   namespace detail {
+      template<typename Edge>
+      using LoopEdgeIter = typename Edge::segment_t::const_iterator;
+      template<template<typename> class Allocator, typename Edge>
+      using LoopEdgeIterList = std::vector<LoopEdgeIter<Edge>, Allocator<LoopEdgeIter<Edge>>>;
+   } // namespace detail
    /**
     * Loop over each block generated by list of edge
     *
@@ -299,15 +366,16 @@ namespace TAT {
          typename Edge,
          typename Rank0,
          typename Dims0,
-         typename Op, // I did not write sfinae for Op since it is complex
-         typename = std::enable_if_t<is_general_edge<Edge> && std::is_invocable_v<Rank0> && std::is_invocable_v<Dims0>>>
+         typename Op,
+         typename = std::enable_if_t<
+               is_general_edge<Edge> && std::is_invocable_v<Rank0> && std::is_invocable_v<Dims0> &&
+               std::is_invocable_r_v<Rank, Op, detail::LoopEdgeIterList<Allocator, Edge>, Rank>>>
    void loop_edge(const Edge* edges, const Rank rank, Rank0&& rank0, Dims0&& dims0, Op&& operate) {
       if (rank == 0) {
          rank0();
          return;
       }
-      using Iterator = typename Edge::segment_t::const_iterator;
-      auto symmetry_iterator_list = std::vector<Iterator, Allocator<Iterator>>();
+      auto symmetry_iterator_list = detail::LoopEdgeIterList<Allocator, Edge>();
       symmetry_iterator_list.reserve(rank);
       for (auto i = 0; i != rank; ++i) {
          const auto& segment = edges[i].segment;

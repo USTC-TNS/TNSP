@@ -75,7 +75,7 @@ namespace TAT {
       }
 
 #define TAT_DEFINE_FASTNAME_COMPARE(OP, EVAL) \
-   inline auto OP(const FastName& other) const { \
+   inline bool OP(const FastName& other) const { \
       const auto& a = id; \
       const auto& b = other.id; \
       return EVAL; \
@@ -87,12 +87,13 @@ namespace TAT {
       TAT_DEFINE_FASTNAME_COMPARE(operator<=, a <= b)
       TAT_DEFINE_FASTNAME_COMPARE(operator>=, a >= b)
    };
+#undef TAT_DEFINE_FASTNAME_COMPARE
 
    using DefaultName =
-#ifdef TAT_USE_SIMPLE_NAME
-         std::string
-#else
+#ifdef TAT_USE_FAST_NAME
          FastName
+#else
+         std::string
 #endif
          ;
 
@@ -108,20 +109,20 @@ namespace TAT {
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_0)
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_1)
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_2)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_0)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_1)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_2)
-      TAT_DEFINE_ALL_INTERNAL_NAME(SVD_U)
-      TAT_DEFINE_ALL_INTERNAL_NAME(SVD_V)
-      TAT_DEFINE_ALL_INTERNAL_NAME(QR_1)
-      TAT_DEFINE_ALL_INTERNAL_NAME(QR_2)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_1)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_2)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_3)
-      TAT_DEFINE_ALL_INTERNAL_NAME(No_Old_Name)
-      TAT_DEFINE_ALL_INTERNAL_NAME(No_New_Name)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Exp_1)
-      TAT_DEFINE_ALL_INTERNAL_NAME(Exp_2)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_0)  // Used in contract temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_1)  // Used in contract temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Contract_2)  // used in contract temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(SVD_U)       // used in svd temporary tensor and singular matrix tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(SVD_V)       // used in svd temporary tensor and singular matrix tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(QR_1)        // used in qr temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(QR_2)        // used in qr temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_1)     // used in trace temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_2)     // used in trace temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_3)     // used in trace temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(No_Old_Name) // used in expand configuration
+      TAT_DEFINE_ALL_INTERNAL_NAME(No_New_Name) // used in shrink configuration
+      TAT_DEFINE_ALL_INTERNAL_NAME(Exp_1)       // used in exponential temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Exp_2)       // used in exponential temporary tensor
 #undef TAT_DEFINE_ALL_INTERNAL_NAME
    };
 #define TAT_DEFINE_DEFAULT_INTERNAL_NAME(x, n) \
