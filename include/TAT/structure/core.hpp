@@ -129,32 +129,32 @@ namespace TAT {
       // this is the only constructor, from constructor of tensor
       Core(std::vector<Edge<Symmetry>> initial_edge) :
             base_edges(std::move(initial_edge)),
-            base_blocks(initialize_block_symmetries_with_check(edges.data(), edges.size())) {
+            base_blocks(initialize_block_symmetries_with_check(edges.data(), edges.size())) {}
+
+      void clear_unused_symmetry() {
          // delete symmetry not used in block from edge data
-         if constexpr (Symmetry::length != 0) {
-            const Rank rank = edges.size();
-            auto edge_mark = std::vector<std::vector<bool>>(rank);
+         const Rank rank = edges.size();
+         auto edge_mark = std::vector<std::vector<bool>>(rank);
+         for (Rank i = 0; i < rank; i++) {
+            edge_mark[i] = std::vector<bool>(edges[i].segment.size(), false);
+         }
+         for (const auto& [symmetries, _] : blocks) {
             for (Rank i = 0; i < rank; i++) {
-               edge_mark[i] = std::vector<bool>(edges[i].segment.size(), false);
+               auto symmetry_position = edges[i].get_position_from_symmetry(symmetries[i]);
+               edge_mark[i][symmetry_position] = true;
             }
-            for (const auto& [symmetries, _] : blocks) {
-               for (Rank i = 0; i < rank; i++) {
-                  auto symmetry_position = edges[i].get_position_from_symmetry(symmetries[i]);
-                  edge_mark[i][symmetry_position] = true;
+         }
+         for (Rank i = 0; i < rank; i++) {
+            auto& edge = edges[i];
+            const auto& this_mark = edge_mark[i];
+            const Nums number = edge.segment.size();
+            Nums k = 0;
+            for (Nums j = 0; j < number; j++) {
+               if (this_mark[j]) {
+                  edge.segment[k++] = std::move(edge.segment[j]);
                }
             }
-            for (Rank i = 0; i < rank; i++) {
-               auto& edge = edges[i];
-               const auto& this_mark = edge_mark[i];
-               const Nums number = edge.segment.size();
-               Nums k = 0;
-               for (Nums j = 0; j < number; j++) {
-                  if (this_mark[j]) {
-                     edge.segment[k++] = std::move(edge.segment[j]);
-                  }
-               }
-               edge.segment.resize(k);
-            }
+            edge.segment.resize(k);
          }
       }
 
