@@ -798,7 +798,7 @@ namespace TAT {
             .def(-py::self)
             .def("__hash__",
                  [](const Symmetry& symmetry) {
-                    return py::hash(py::cast(static_cast<const typename Symmetry::base_tuple&>(symmetry)));
+                    return py::hash(py::cast(static_cast<const typename Symmetry::base_tuple_t&>(symmetry)));
                  })
             .def("__repr__",
                  [=](const Symmetry& symmetry) {

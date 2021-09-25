@@ -63,25 +63,25 @@ namespace TAT {
 
       using self_t = Symmetry<T...>; // used freq too high so alias it
 
-      using base_tuple = std::tuple<detail::fermi_unwrap<T>...>;
+      using base_tuple_t = std::tuple<detail::fermi_unwrap<T>...>;
       static constexpr int length = sizeof...(T);
       static constexpr std::array<bool, length> is_fermi_item = {detail::fermi_wrapped<T>...};
       static constexpr bool is_fermi_symmetry = (detail::fermi_wrapped<T> || ...);
-      using index_sequence = std::index_sequence_for<T...>;
+      using index_sequence_t = std::index_sequence_for<T...>;
 
     private:
       template<typename... Args>
-      base_tuple construct_base_tuple(const Args&... args) {
+      base_tuple_t construct_base_tuple(const Args&... args) {
          if constexpr (sizeof...(Args) < length) {
             return construct_base_tuple(args..., 0);
          } else {
-            return base_tuple(args...);
+            return base_tuple_t(args...);
          }
       }
 
     public:
       template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) <= length) && (std::is_integral_v<Args> && ...)>>
-      Symmetry(const Args&... args) : base_tuple(construct_base_tuple(args...)) {}
+      Symmetry(const Args&... args) : base_tuple_t(construct_base_tuple(args...)) {}
 
       // operators
       // a += b
@@ -106,7 +106,7 @@ namespace TAT {
 
     public:
       self_t& operator+=(const self_t& other_symmetry) & {
-         return inplace_plus_symmetry(*this, other_symmetry, index_sequence());
+         return inplace_plus_symmetry(*this, other_symmetry, index_sequence_t());
       }
 
     private:
@@ -125,7 +125,7 @@ namespace TAT {
 
     public:
       [[nodiscard]] self_t operator+(const self_t& other_symmetry) const& {
-         return plus_symmetry(*this, other_symmetry, index_sequence());
+         return plus_symmetry(*this, other_symmetry, index_sequence_t());
       }
 
     private:
@@ -145,7 +145,7 @@ namespace TAT {
 
     public:
       self_t& operator-=(const self_t& other_symmetry) & {
-         return inplace_minus_symmetry(*this, other_symmetry, index_sequence());
+         return inplace_minus_symmetry(*this, other_symmetry, index_sequence_t());
       }
 
     private:
@@ -164,7 +164,7 @@ namespace TAT {
 
     public:
       [[nodiscard]] self_t operator-(const self_t& other_symmetry) const& {
-         return minus_symmetry(*this, other_symmetry, index_sequence());
+         return minus_symmetry(*this, other_symmetry, index_sequence_t());
       }
 
     private:
@@ -183,7 +183,7 @@ namespace TAT {
 
     public:
       [[nodiscard]] self_t operator-() const& {
-         return negative_symmetry(*this, index_sequence());
+         return negative_symmetry(*this, index_sequence_t());
       }
 
       // parity
@@ -216,7 +216,7 @@ namespace TAT {
        */
       [[nodiscard]] bool get_parity() const {
          if constexpr (is_fermi_symmetry) {
-            return get_parity_helper(index_sequence());
+            return get_parity_helper(index_sequence_t());
          } else {
             return false;
          }
