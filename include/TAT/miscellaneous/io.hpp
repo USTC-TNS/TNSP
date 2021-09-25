@@ -501,7 +501,9 @@ namespace TAT {
       std::vector<Edge<Symmetry>> edges;
       in >> edges;
       tensor.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
-      check_valid_name(tensor.names, tensor.core->edges.size());
+      if constexpr (debug_mode) {
+         tensor.check_valid_name();
+      }
       detail::ignore_until(in, ':');
       if constexpr (Symmetry::length == 0) {
          // change begin();
@@ -574,7 +576,6 @@ namespace TAT {
       std::vector<Edge<Symmetry>> edges;
       in > edges;
       core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
-      check_valid_name(names, core->edges.size());
       return *this;
    }
 
@@ -591,6 +592,9 @@ namespace TAT {
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       tensor.meta_get(in).data_get(in);
+      if constexpr (debug_mode) {
+         tensor.check_valid_name();
+      }
       return in;
    }
 

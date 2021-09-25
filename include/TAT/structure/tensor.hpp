@@ -54,28 +54,6 @@ namespace TAT {
     */
    using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
 
-   /**
-    * Check list of names is a valid and the rank is correct
-    *
-    * Only used in tensor construction
-    */
-   template<typename Name, typename = std::enable_if_t<is_name<Name>>>
-   bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      if (names.size() != rank) {
-         detail::error("Wrong name list length which no equals to expected length");
-         return false;
-      }
-      for (auto i = names.begin(); i != names.end(); ++i) {
-         for (auto j = std::next(i); j != names.end(); ++j) {
-            if (*i == *j) {
-               detail::error("Duplicated names in name list");
-               return false;
-            }
-         }
-      }
-      return true;
-   }
-
    template<typename ScalarType = double, typename Symmetry = Symmetry<>, typename Name = DefaultName>
    struct TensorShape;
 
@@ -130,6 +108,26 @@ namespace TAT {
          return std::distance(names.begin(), where);
       }
 
+      /**
+       * Check list of names is a valid and the rank is correct
+       */
+      bool check_valid_name() {
+         auto rank = core->edges.size();
+         if (names.size() != rank) {
+            detail::error("Wrong name list length which no equals to expected length");
+            return false;
+         }
+         for (auto i = names.begin(); i != names.end(); ++i) {
+            for (auto j = std::next(i); j != names.end(); ++j) {
+               if (*i == *j) {
+                  detail::error("Duplicated names in name list");
+                  return false;
+               }
+            }
+         }
+         return true;
+      }
+
       // core
       /**
        * tensor data except name, including edge and block
@@ -159,7 +157,7 @@ namespace TAT {
             names(std::move(names_init)),
             core(std::make_shared<core_t>(std::move(edges_init))) {
          if constexpr (debug_mode) {
-            check_valid_name(names, core->edges.size());
+            check_valid_name();
          }
       }
 

@@ -459,7 +459,9 @@ namespace TAT {
 
       // put res_edge into res
       result.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(result_edge));
-      check_valid_name(result.names, result.core->edges.size());
+      if constexpr (debug_mode) {
+         result.check_valid_name();
+      }
       // edge_6
       const auto& edge_after_merge = result.core->edges;
       // 2. 开始分析data如何移动
