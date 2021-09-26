@@ -384,42 +384,31 @@ namespace TAT {
          return result;
       }
 
-      // get element or other things
-      [[nodiscard]] const ScalarType& at(const std::map<Name, std::pair<Symmetry, Size>>& position) const& {
-         return const_at(position);
-      }
-
-      [[nodiscard]] const ScalarType& at(const std::map<Name, Size>& position) const& {
-         return const_at(position);
-      }
-
+      // get element
+      // name/int -> (point/index) const&/&
+#define TAT_DEFINE_TENSOR_AT(...) \
+   [[nodiscard]] const ScalarType& at(const __VA_ARGS__& position) const& { \
+      return const_at(position); \
+   } \
+   [[nodiscard]] ScalarType& at(const __VA_ARGS__& position)& { \
+      acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference"); \
+      return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at(position)); \
+   } \
+   [[nodiscard]] const ScalarType& const_at(const __VA_ARGS__& position) const& { \
+      return get_item(position); \
+   }
+      TAT_DEFINE_TENSOR_AT(std::map<Name, std::pair<Symmetry, Size>>)
+      TAT_DEFINE_TENSOR_AT(std::map<Name, Size>)
+      TAT_DEFINE_TENSOR_AT(std::vector<std::pair<Symmetry, Size>>)
+      TAT_DEFINE_TENSOR_AT(std::vector<Size>)
+#undef TAT_DEFINE_TENSOR_AT
       [[nodiscard]] const ScalarType& at() const& {
          return const_at();
       }
-
-      [[nodiscard]] ScalarType& at(const std::map<Name, std::pair<Symmetry, Size>>& position) & {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
-         return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at(position));
-      }
-
-      [[nodiscard]] ScalarType& at(const std::map<Name, Size>& position) & {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
-         return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at(position));
-      }
-
       [[nodiscard]] ScalarType& at() & {
          acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
          return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at());
       }
-
-      [[nodiscard]] const ScalarType& const_at(const std::map<Name, std::pair<Symmetry, Size>>& position) const& {
-         return get_item(position);
-      }
-
-      [[nodiscard]] const ScalarType& const_at(const std::map<Name, Size>& position) const& {
-         return get_item(position);
-      }
-
       [[nodiscard]] const ScalarType& const_at() const& {
          if (!scalar_like()) {
             detail::error("Try to get the only element of t he tensor which contains more than one element");
@@ -428,9 +417,16 @@ namespace TAT {
       }
 
       /// \private
-      template<typename IndexOrPoint>
-      [[nodiscard]] const ScalarType& get_item(const std::map<Name, IndexOrPoint>& position) const&;
+      template<typename PositionType>
+      [[nodiscard]] const ScalarType& get_item(const PositionType& position) const&;
 
+      // TODO MARK
+
+      /**
+       * Convert symmetry tensor to non-symmetry tensor
+       *
+       * \note it is dangerous for fermi tensor
+       */
       Tensor<ScalarType, NoSymmetry, Name> clear_symmetry() const;
 
       const auto& storage() const& {

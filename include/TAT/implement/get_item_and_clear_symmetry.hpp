@@ -27,8 +27,11 @@
 
 namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
-   template<typename IndexOrPoint>
-   const ScalarType& Tensor<ScalarType, Symmetry, Name>::get_item(const std::map<Name, IndexOrPoint>& position) const& {
+   template<typename PositionType>
+   const ScalarType& Tensor<ScalarType, Symmetry, Name>::get_item(const PositionType& position) const& {
+      constexpr bool is_vector_not_map =
+            std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::vector<std::pair<Symmetry, Size>>>;
+      constexpr bool is_index_not_point = std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::map<Name, Size>>;
       auto pmr_guard = scope_resource(default_buffer_size);
       auto rank = get_rank();
       auto symmetries = pmr::vector<Symmetry>();
@@ -38,16 +41,22 @@ namespace TAT {
       scalar_position.reserve(rank);
       dimensions.reserve(rank);
       for (auto i = 0; i < rank; i++) {
-         const auto& name = names[i];
-         auto found = position.find(name);
-         if constexpr (debug_mode) {
-            if (found == position.end()) {
-               detail::error("Name not found in position map when finding block and offset");
+         const auto& point_or_index = [&]() {
+            if constexpr (is_vector_not_map) {
+               return position[i];
+            } else {
+               auto found = position.find(names[i]);
+               if constexpr (debug_mode) {
+                  if (found == position.end()) {
+                     detail::error("Name not found in position map when finding block and offset");
+                  }
+               }
+               return found->second;
             }
-         }
-         const auto& [symmetry, index] = [&edge = edges(i), &point_or_index = found->second]() {
-            if constexpr (std::is_integral_v<remove_cvref_t<IndexOrPoint>>) {
-               return edge.get_point_from_index(point_or_index);
+         }();
+         const auto& [symmetry, index] = [&]() {
+            if constexpr (is_index_not_point) {
+               return edges(i).get_point_from_index(point_or_index);
             } else {
                return point_or_index;
             }
