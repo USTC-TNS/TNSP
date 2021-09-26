@@ -54,28 +54,6 @@ namespace TAT {
     */
    using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
 
-   /**
-    * Check list of names is a valid and the rank is correct
-    *
-    * Only used in tensor construction
-    */
-   template<typename Name, typename = std::enable_if_t<is_name<Name>>>
-   bool check_valid_name(const std::vector<Name>& names, const Rank& rank) {
-      if (names.size() != rank) {
-         detail::error("Wrong name list length which no equals to expected length");
-         return false;
-      }
-      for (auto i = names.begin(); i != names.end(); ++i) {
-         for (auto j = std::next(i); j != names.end(); ++j) {
-            if (*i == *j) {
-               detail::error("Duplicated names in name list");
-               return false;
-            }
-         }
-      }
-      return true;
-   }
-
    template<typename ScalarType = double, typename Symmetry = Symmetry<>, typename Name = DefaultName>
    struct TensorShape;
 
@@ -130,6 +108,26 @@ namespace TAT {
          return std::distance(names.begin(), where);
       }
 
+      /**
+       * Check list of names is a valid and the rank is correct
+       */
+      bool check_valid_name() {
+         auto rank = core->edges.size();
+         if (names.size() != rank) {
+            detail::error("Wrong name list length which no equals to expected length");
+            return false;
+         }
+         for (auto i = names.begin(); i != names.end(); ++i) {
+            for (auto j = std::next(i); j != names.end(); ++j) {
+               if (*i == *j) {
+                  detail::error("Duplicated names in name list");
+                  return false;
+               }
+            }
+         }
+         return true;
+      }
+
       // core
       /**
        * tensor data except name, including edge and block
@@ -137,6 +135,8 @@ namespace TAT {
        * \note bacause edge rename is very common operation, to avoid copy data, put the remaining data into shared pointer
        */
       detail::propagate_const_shared_ptr<core_t> core;
+
+      // TODO put clear unused symmetry here
 
       // shape
       /**
@@ -159,7 +159,7 @@ namespace TAT {
             names(std::move(names_init)),
             core(std::make_shared<core_t>(std::move(edges_init))) {
          if constexpr (debug_mode) {
-            check_valid_name(names, core->edges.size());
+            check_valid_name();
          }
       }
 
@@ -171,11 +171,24 @@ namespace TAT {
       ~Tensor() = default;
 
       /**
-       * create a rank-0 tensor
-       * \param number the only element of this tensor
+       * Create a high rank tensor but which only contains one element
+       *
+       * \param number the only element
+       * \param names_init edge name
+       * \param edge_symmetry the symmetry for every edge, if valid
+       * \param edge_arrow the fermi arrow for every edge, if valid
        */
-      explicit Tensor(ScalarType number) : Tensor({}, {}) {
-         storage().front() = number;
+      explicit Tensor(
+            ScalarType number,
+            std::vector<Name> names_init = {},
+            const std::vector<Symmetry>& edge_symmetry = {},
+            const std::vector<Arrow>& edge_arrow = {}) :
+            names(std::move(names_init)),
+            core(std::make_shared<core_t>(get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, names.size()))) {
+         if constexpr (debug_mode) {
+            check_valid_name();
+         }
+         at() = number;
       }
 
       [[nodiscard]] bool scalar_like() const {
@@ -192,41 +205,24 @@ namespace TAT {
       /// \private
       [[nodiscard]] static auto
       get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
-         // used in one
+         // used in Tensor(ScalarType, ...)
          if constexpr (Symmetry::length == 0) {
             return std::vector<Edge<Symmetry>>(rank, {1});
          } else {
             auto result = std::vector<Edge<Symmetry>>();
             result.reserve(rank);
-            for (auto [symmetry, arrow] = std::tuple{edge_symmetry.begin(), edge_arrow.begin()}; symmetry < edge_symmetry.end();
-                 ++symmetry, ++arrow) {
-               if constexpr (Symmetry::is_fermi_symmetry) {
+            if constexpr (Symmetry::is_fermi_symmetry) {
+               for (auto [symmetry, arrow] = std::tuple{edge_symmetry.begin(), edge_arrow.begin()}; symmetry < edge_symmetry.end();
+                    ++symmetry, ++arrow) {
                   result.push_back({{{*symmetry, 1}}, *arrow});
-               } else {
+               }
+            } else {
+               for (auto symmetry = edge_symmetry.begin(); symmetry < edge_symmetry.end(); ++symmetry) {
                   result.push_back({{{*symmetry, 1}}});
                }
             }
             return result;
          }
-      }
-      /**
-       * Create a high rank tensor but which only contains one element
-       *
-       * \note Tensor::one(a, {}, {}, {}) is equivilent to Tensor(a)
-       * \param number the only element
-       * \param names_init edge name
-       * \param edge_symmetry the symmetry for every edge, if valid
-       * \param edge_arrow the fermi arrow for every edge, if valid
-       */
-      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name>
-      one(ScalarType number,
-          std::vector<Name> names_init,
-          const std::vector<Symmetry>& edge_symmetry = {},
-          const std::vector<Arrow>& edge_arrow = {}) {
-         const auto rank = names_init.size();
-         auto result = Tensor(std::move(names_init), get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
-         result.storage().front() = number;
-         return result;
       }
 
       // elementwise operators
@@ -388,42 +384,31 @@ namespace TAT {
          return result;
       }
 
-      // get element or other things
-      [[nodiscard]] const ScalarType& at(const std::map<Name, std::pair<Symmetry, Size>>& position) const& {
-         return const_at(position);
-      }
-
-      [[nodiscard]] const ScalarType& at(const std::map<Name, Size>& position) const& {
-         return const_at(position);
-      }
-
+      // get element
+      // name/int -> (point/index) const&/&
+#define TAT_DEFINE_TENSOR_AT(...) \
+   [[nodiscard]] const ScalarType& at(const __VA_ARGS__& position) const& { \
+      return const_at(position); \
+   } \
+   [[nodiscard]] ScalarType& at(const __VA_ARGS__& position)& { \
+      acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference"); \
+      return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at(position)); \
+   } \
+   [[nodiscard]] const ScalarType& const_at(const __VA_ARGS__& position) const& { \
+      return get_item(position); \
+   }
+      TAT_DEFINE_TENSOR_AT(std::map<Name, std::pair<Symmetry, Size>>)
+      TAT_DEFINE_TENSOR_AT(std::map<Name, Size>)
+      TAT_DEFINE_TENSOR_AT(std::vector<std::pair<Symmetry, Size>>)
+      TAT_DEFINE_TENSOR_AT(std::vector<Size>)
+#undef TAT_DEFINE_TENSOR_AT
       [[nodiscard]] const ScalarType& at() const& {
          return const_at();
       }
-
-      [[nodiscard]] ScalarType& at(const std::map<Name, std::pair<Symmetry, Size>>& position) & {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
-         return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at(position));
-      }
-
-      [[nodiscard]] ScalarType& at(const std::map<Name, Size>& position) & {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
-         return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at(position));
-      }
-
       [[nodiscard]] ScalarType& at() & {
          acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
          return const_cast<ScalarType&>(const_cast<const self_t*>(this)->const_at());
       }
-
-      [[nodiscard]] const ScalarType& const_at(const std::map<Name, std::pair<Symmetry, Size>>& position) const& {
-         return get_item(position);
-      }
-
-      [[nodiscard]] const ScalarType& const_at(const std::map<Name, Size>& position) const& {
-         return get_item(position);
-      }
-
       [[nodiscard]] const ScalarType& const_at() const& {
          if (!scalar_like()) {
             detail::error("Try to get the only element of t he tensor which contains more than one element");
@@ -432,9 +417,14 @@ namespace TAT {
       }
 
       /// \private
-      template<typename IndexOrPoint>
-      [[nodiscard]] const ScalarType& get_item(const std::map<Name, IndexOrPoint>& position) const&;
+      template<typename PositionType>
+      [[nodiscard]] const ScalarType& get_item(const PositionType& position) const&;
 
+      /**
+       * Convert symmetry tensor to non-symmetry tensor
+       *
+       * \note it is dangerous for fermi tensor
+       */
       Tensor<ScalarType, NoSymmetry, Name> clear_symmetry() const;
 
       const auto& storage() const& {
@@ -488,8 +478,10 @@ namespace TAT {
          }
       }
 
+      // int/name -> symmetry
       template<typename SymmetryList = std::vector<Symmetry>>
       const typename core_t::content_vector_t& blocks(const SymmetryList& symmetry_list) const& {
+         // it maybe used from other tensor function
          auto found = find_block(symmetry_list);
          if (found == core->blocks.end()) {
             detail::error("No such symmetry block in the tensor");
@@ -514,25 +506,25 @@ namespace TAT {
 
       // Operators
       /**
-       * 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
-       * \param rename_map 重命名边的名称的映射表
-       * \param split_map 分裂一些边的数据, 需要包含分裂后边的形状, 不然分裂不唯一
-       * \param reversed_name 将要取反费米箭头的边的名称列表
-       * \param merge_map 合并一些边的名称列表
-       * \param new_names 最后进行的转置操作后的边的名称顺序列表
-       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上的默认行为
-       * \param parity_exclude_name 是否产生符号这个问题上行为与默认行为相反的操作的边的名称, 四部分分别是split, reverse, reverse_before_merge, merge
-       * \return 进行了一系列操作后的结果张量
-       * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
-       * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
-       * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
-       * \note 本函数对转置外不标准的腿的输入是脆弱的
+       * The core method for various edge operations, include split, reverse, merge and transpose
+       * \param split_map map describing how to split
+       * \param reversed_name set describing how to reverse, only for fermi tensor
+       * \param merge_map map describing how to merge
+       * \param new_names the result tensor edge order
+       * \param apply_parity some operations generate half sign, it controls default behavior whether to apply the sign to this tensor
+       * \return the result of all the operations
+       *
+       * If some few edge is not share the same behavior to default sign apply property, please use the last four argument
+       *
+       * \note If reversed name not satisfy the merge condition, it will reverse automatically
+       * \note For fermi tensor, reverse/split/merge will generate half sign, you need to apply the sign to one of the two tensor
+       * \note Since transpose generate a full sign, it will not be controled by apply_parity, it is always valid
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
-            const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split_map,
+            const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split_map, // order of edge symmetry is specify here
             const std::set<Name>& reversed_name,
-            const std::map<Name, std::vector<Name>>& merge_map, // 这个可以merge后再对edge进行reorder
-            std::vector<Name> new_names,
+            const std::map<Name, std::vector<Name>>& merge_map, // if you want, you can reorder the edge symemtry easily after edge operator
+            std::vector<Name> new_names,                        // move into result tensor
             const bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {},
             const std::set<Name>& parity_exclude_name_reversed_before_transpose = {},
@@ -551,6 +543,7 @@ namespace TAT {
                parity_exclude_name_merge,
                empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
          // last argument only used in svd, Name -> Symmetry -> Size
+         // it is not proper to expose to users
       }
 
       /// \private
@@ -565,7 +558,10 @@ namespace TAT {
             const E& parity_exclude_name_reversed_before_transpose,
             const F& parity_exclude_name_reversed_after_transpose,
             const G& parity_exclude_name_merge,
-            const H& edge_and_symmetries_to_cut_before_all = {}) const;
+            const H& edge_and_symmetries_to_cut_before_all) const;
+
+      // TODO MARK
+
       /**
        * 对张量边的名称进行重命名
        * \param dictionary 重命名方案的映射表
@@ -733,6 +729,24 @@ namespace TAT {
          Tensor<ScalarType, Symmetry, Name> R;
       };
 
+      [[nodiscard, deprecated("Explicit singular tensor edge name required in future")]] svd_result
+      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v) const {
+         return svd(free_name_set_u, common_name_u, common_name_v, InternalName<Name>::SVD_U, InternalName<Name>::SVD_V, NoCut());
+      }
+      [[nodiscard, deprecated("Explicit singular tensor edge name required in future")]] svd_result
+      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Cut cut) const {
+         return svd(free_name_set_u, common_name_u, common_name_v, InternalName<Name>::SVD_U, InternalName<Name>::SVD_V, cut);
+      }
+      [[nodiscard, deprecated("Put cut to the last argument")]] svd_result
+      svd(const std::set<Name>& free_name_set_u,
+          const Name& common_name_u,
+          const Name& common_name_v,
+          Cut cut,
+          const Name& singular_name_u,
+          const Name& singular_name_v) const {
+         return svd(free_name_set_u, common_name_u, common_name_v, singular_name_u, singular_name_v, cut);
+      }
+
       /**
        * 对张量进行svd分解
        * \param free_name_set_u svd分解中u的边的名称集合
@@ -747,9 +761,9 @@ namespace TAT {
       svd(const std::set<Name>& free_name_set_u,
           const Name& common_name_u,
           const Name& common_name_v,
-          Cut cut = NoCut(),
-          const Name& singular_name_u = InternalName<Name>::SVD_U,
-          const Name& singular_name_v = InternalName<Name>::SVD_V) const;
+          const Name& singular_name_u,
+          const Name& singular_name_v,
+          Cut cut = NoCut()) const;
 
       /**
        * 对张量进行qr分解

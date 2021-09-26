@@ -61,31 +61,34 @@ namespace TAT {
    struct Symmetry : std::tuple<detail::fermi_unwrap<T>...> {
       static_assert((std::is_integral_v<detail::fermi_unwrap<T>> && ...));
 
-    private:
       using self_t = Symmetry<T...>; // used freq too high so alias it
 
-    public:
-      using base_tuple = std::tuple<detail::fermi_unwrap<T>...>;
+      using base_tuple_t = std::tuple<detail::fermi_unwrap<T>...>;
       static constexpr int length = sizeof...(T);
       static constexpr std::array<bool, length> is_fermi_item = {detail::fermi_wrapped<T>...};
       static constexpr bool is_fermi_symmetry = (detail::fermi_wrapped<T> || ...);
-      using index_sequence = std::index_sequence_for<T...>;
+      using index_sequence_t = std::index_sequence_for<T...>;
 
     private:
       template<typename... Args>
-      base_tuple construct_base_tuple(const Args&... args) {
+      base_tuple_t construct_base_tuple(const Args&... args) {
          if constexpr (sizeof...(Args) < length) {
             return construct_base_tuple(args..., 0);
          } else {
-            return base_tuple(args...);
+            return base_tuple_t(args...);
          }
       }
 
     public:
       template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) <= length) && (std::is_integral_v<Args> && ...)>>
-      Symmetry(const Args&... args) : base_tuple(construct_base_tuple(args...)) {}
+      Symmetry(const Args&... args) : base_tuple_t(construct_base_tuple(args...)) {}
 
       // operators
+      // a += b
+      // a + b
+      // a -= b
+      // a - b
+      // - a
     private:
       template<typename Item>
       static Item& inplace_plus_item(Item& a, const Item& b) {
@@ -103,7 +106,7 @@ namespace TAT {
 
     public:
       self_t& operator+=(const self_t& other_symmetry) & {
-         return inplace_plus_symmetry(*this, other_symmetry, index_sequence());
+         return inplace_plus_symmetry(*this, other_symmetry, index_sequence_t());
       }
 
     private:
@@ -122,7 +125,46 @@ namespace TAT {
 
     public:
       [[nodiscard]] self_t operator+(const self_t& other_symmetry) const& {
-         return plus_symmetry(*this, other_symmetry, index_sequence());
+         return plus_symmetry(*this, other_symmetry, index_sequence_t());
+      }
+
+    private:
+      template<typename Item>
+      static Item& inplace_minus_item(Item& a, const Item& b) {
+         if constexpr (std::is_same_v<Item, bool>) {
+            return a ^= b;
+         } else {
+            return a -= b;
+         }
+      }
+      template<std::size_t... Is>
+      static self_t& inplace_minus_symmetry(self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
+         (inplace_minus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2)), ...);
+         return symmetry_1;
+      }
+
+    public:
+      self_t& operator-=(const self_t& other_symmetry) & {
+         return inplace_minus_symmetry(*this, other_symmetry, index_sequence_t());
+      }
+
+    private:
+      template<typename Item>
+      static Item minus_item(const Item& a, const Item& b) {
+         if constexpr (std::is_same_v<Item, bool>) {
+            return a ^ b;
+         } else {
+            return a - b;
+         }
+      }
+      template<size_t... Is>
+      static self_t minus_symmetry(const self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
+         return self_t(minus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2))...);
+      }
+
+    public:
+      [[nodiscard]] self_t operator-(const self_t& other_symmetry) const& {
+         return minus_symmetry(*this, other_symmetry, index_sequence_t());
       }
 
     private:
@@ -141,7 +183,7 @@ namespace TAT {
 
     public:
       [[nodiscard]] self_t operator-() const& {
-         return negative_symmetry(*this, index_sequence());
+         return negative_symmetry(*this, index_sequence_t());
       }
 
       // parity
@@ -174,7 +216,7 @@ namespace TAT {
        */
       [[nodiscard]] bool get_parity() const {
          if constexpr (is_fermi_symmetry) {
-            return get_parity_helper(index_sequence());
+            return get_parity_helper(index_sequence_t());
          } else {
             return false;
          }
@@ -192,8 +234,8 @@ namespace TAT {
        * and this function will give the total parity summation of all the edge.
        * \see Tensor::edge_operator
        */
-      [[nodiscard]] static bool
-      get_reverse_parity(const pmr::vector<self_t>& symmetries, const pmr::vector<bool>& reverse_flag, const pmr::vector<bool>& valid_mark) {
+      template<typename SymList, typename BoolList1, typename BoolList2>
+      [[nodiscard]] static bool get_reverse_parity(const SymList& symmetries, const BoolList1& reverse_flag, const BoolList2& valid_mark) {
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             if (reverse_flag[i] && valid_mark[i]) {
@@ -214,7 +256,8 @@ namespace TAT {
        * transposition is the operation of a single tensor.
        * \see Tensor::edge_operator
        */
-      [[nodiscard]] static bool get_transpose_parity(const pmr::vector<self_t>& symmetries, const pmr::vector<Rank>& transpose_plan) {
+      template<typename SymList, typename RankList>
+      [[nodiscard]] static bool get_transpose_parity(const SymList& symmetries, const RankList& transpose_plan) {
          auto result = false;
          for (Rank i = 0; i < symmetries.size(); i++) {
             for (Rank j = i + 1; j < symmetries.size(); j++) {
@@ -237,11 +280,11 @@ namespace TAT {
        * \note This is equivalant to total transposition over the merging list or splitting list,
        * while \f$\sum_{i\le j} s_i s_j = \frac{(\sum s_i)^2 - \sum s_i^2}{2}\f$, so it can be simplified.
        */
-      template<typename SymmetryList>
+      template<typename SymList, typename RankList, typename BoolList>
       [[nodiscard]] static bool get_split_merge_parity(
-            const SymmetryList& symmetries,            // before merge length
-            const pmr::vector<Rank>& split_merge_flag, // before merge length
-            const pmr::vector<bool>& valid_mark) {     // after merge length
+            const SymList& symmetries,        // before merge length
+            const RankList& split_merge_flag, // before merge length
+            const BoolList& valid_mark) {     // after merge length
          auto result = false;
          for (Rank split_merge_group_position = 0, split_merge_begin_position = 0, split_merge_end_position = 0;
               split_merge_group_position < valid_mark.size();

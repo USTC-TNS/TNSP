@@ -170,6 +170,7 @@ namespace TAT {
             pair_leading.push_back(leading[std::get<0>(ordered_pair_index[i])] + leading[std::get<1>(ordered_pair_index[i])]);
             // ordered_pair_index使用较大的leading进行从大到小排序，所以pair_leading一定降序
          }
+         // TODO 应有一个符号
          set_to_identity(block.data(), pair_dimension, pair_leading, half_rank);
       }
 

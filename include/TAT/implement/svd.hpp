@@ -259,9 +259,9 @@ namespace TAT {
          const std::set<Name>& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
-         Cut cut,
          const Name& singular_name_u,
-         const Name& singular_name_v) const {
+         const Name& singular_name_v,
+         Cut cut) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = svd_guard();
       // free_name_set_u不需要做特殊处理即可自动处理不准确的边名

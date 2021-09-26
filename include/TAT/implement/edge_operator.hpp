@@ -168,7 +168,7 @@ namespace TAT {
                auto accumulated_dimensions = pmr::vector<Size>(split_rank);
                auto current_symmetries = pmr::vector<Symmetry>(split_rank);
 
-               loop_edge<detail::polymorphic_allocator>(
+               loop_edge<detail::pmr::polymorphic_allocator>(
                      edge_after_split.data() + this_split_begin_position_in_edge_after_split,
                      split_rank,
                      [&this_offset]() {
@@ -391,7 +391,7 @@ namespace TAT {
             auto current_symmetries = pmr::vector<Symmetry>(merge_rank);
 
             if (merge_rank != 1) {
-               loop_edge<detail::polymorphic_allocator>(
+               loop_edge<detail::pmr::polymorphic_allocator>(
                      edge_before_merge.data() + start_of_merge,
                      merge_rank,
                      [&merged_edge, &this_offset]() {
@@ -459,7 +459,9 @@ namespace TAT {
 
       // put res_edge into res
       result.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(result_edge));
-      check_valid_name(result.names, result.core->edges.size());
+      if constexpr (debug_mode) {
+         result.check_valid_name();
+      }
       // edge_6
       const auto& edge_after_merge = result.core->edges;
       // 2. 开始分析data如何移动
@@ -481,7 +483,7 @@ namespace TAT {
          // 需要使用reversed前的symmetry，所以
          // 1. 上面判断了是否reversed为空，不然else中的edge不正确 2.下面使用edge_after_split而不是edge_before_transpose
          for (auto& [symmetries_before_transpose, size] :
-              initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_after_split.data(), edge_after_split.size())) {
+              initialize_block_symmetries_with_check<detail::pmr::polymorphic_allocator>(edge_after_split.data(), edge_after_split.size())) {
             // convert sym -> target_sym and offsets
             // and add to map
             auto symmetries = pmr::vector<Symmetry>();
@@ -526,7 +528,7 @@ namespace TAT {
       auto data_after_transpose_to_destination = MapFromTransposeToSourceDestination();
       if (merge_map.size() != 0) {
          for (auto& [symmetries_after_transpose, size] :
-              initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_before_merge.data(), edge_before_merge.size())) {
+              initialize_block_symmetries_with_check<detail::pmr::polymorphic_allocator>(edge_before_merge.data(), edge_before_merge.size())) {
             // convert sym -> target_sym and offsets
             // and add to map
             auto symmetries = pmr::vector<Symmetry>();

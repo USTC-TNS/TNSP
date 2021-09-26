@@ -1,2 +1,4 @@
 /kernel.js
 /kernel.wasm
+/kernel.wasm.map
+/include

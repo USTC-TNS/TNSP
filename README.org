@@ -28,7 +28,7 @@
 
    For mpi support, you need to define macro =TAT_USE_MPI= and use mpi compiler such as =mpic++= (recommend) or pass correct flag to normal compiler(for expert)
 
-   Please check comment in file [[/include/TAT/TAT.hpp#L38][ =TAT.hpp= ]] for some other macro options
+   Please check comment in file [[/include/TAT/TAT.hpp#L32][ =TAT.hpp= ]] for some other macro options
 
    Please notice that this library need proper compiler optimization option(=-O2=, =-O3=, =-Ofast=) for good performace
 

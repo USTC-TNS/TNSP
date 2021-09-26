@@ -454,8 +454,13 @@ namespace TAT {
                   },
                   py::arg("dictionary_from_name_to_total_index"),
                   py::arg("value"))
-            .def("shrink", &T::shrink, "Shrink Edge of tensor", py::arg("configure"), py::arg("new_name") = ",No_New_Name", py::arg("arrow") = false)
-            .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = ",No_Old_Name")
+            .def("shrink",
+                 &T::shrink,
+                 "Shrink Edge of tensor",
+                 py::arg("configure"),
+                 py::arg("new_name") = InternalName<DefaultName>::No_New_Name,
+                 py::arg("arrow") = false)
+            .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = InternalName<DefaultName>::No_Old_Name)
             .def(
                   "to",
                   [](const T& tensor, const py::object& object) -> py::object {
@@ -798,7 +803,7 @@ namespace TAT {
             .def(-py::self)
             .def("__hash__",
                  [](const Symmetry& symmetry) {
-                    return py::hash(py::cast(static_cast<const typename Symmetry::base_tuple&>(symmetry)));
+                    return py::hash(py::cast(static_cast<const typename Symmetry::base_tuple_t&>(symmetry)));
                  })
             .def("__repr__",
                  [=](const Symmetry& symmetry) {

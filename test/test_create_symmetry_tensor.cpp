@@ -39,5 +39,5 @@ void run_test() {
    std::cout << TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.set([]() {
       return 123;
    }) << "\n";
-   std::cout << TAT::Tensor<double, TAT::U1Symmetry>::one(2333, {"i", "j"}, {-2, +2}) << "\n";
+   std::cout << TAT::Tensor<double, TAT::U1Symmetry>(2333, {"i", "j"}, {-2, +2}) << "\n";
 }

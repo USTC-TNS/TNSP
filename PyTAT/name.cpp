@@ -19,7 +19,7 @@
 
 namespace TAT {
    void set_name(py::module_& tat_m) {
-#ifndef TAT_USE_SIMPLE_NAME
+#ifdef TAT_USE_FAST_NAME
       py::class_<DefaultName>(tat_m, "Name", "Name used in edge of tensor, which is just a string but stored by identical integer")
             .def(py::self < py::self)
             .def(py::self > py::self)
