@@ -136,6 +136,8 @@ namespace TAT {
        */
       detail::propagate_const_shared_ptr<core_t> core;
 
+      // TODO put clear unused symmetry here
+
       // shape
       /**
        * Get tensor shape to print, used when you don't want to know value of the tensor
@@ -169,11 +171,24 @@ namespace TAT {
       ~Tensor() = default;
 
       /**
-       * create a rank-0 tensor
-       * \param number the only element of this tensor
+       * Create a high rank tensor but which only contains one element
+       *
+       * \param number the only element
+       * \param names_init edge name
+       * \param edge_symmetry the symmetry for every edge, if valid
+       * \param edge_arrow the fermi arrow for every edge, if valid
        */
-      explicit Tensor(ScalarType number) : Tensor({}, {}) {
-         storage().front() = number;
+      explicit Tensor(
+            ScalarType number,
+            std::vector<Name> names_init = {},
+            const std::vector<Symmetry>& edge_symmetry = {},
+            const std::vector<Arrow>& edge_arrow = {}) :
+            names(std::move(names_init)),
+            core(std::make_shared<core_t>(get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, names.size()))) {
+         if constexpr (debug_mode) {
+            check_valid_name();
+         }
+         at() = number;
       }
 
       [[nodiscard]] bool scalar_like() const {
@@ -190,41 +205,24 @@ namespace TAT {
       /// \private
       [[nodiscard]] static auto
       get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
-         // used in one
+         // used in Tensor(ScalarType, ...)
          if constexpr (Symmetry::length == 0) {
             return std::vector<Edge<Symmetry>>(rank, {1});
          } else {
             auto result = std::vector<Edge<Symmetry>>();
             result.reserve(rank);
-            for (auto [symmetry, arrow] = std::tuple{edge_symmetry.begin(), edge_arrow.begin()}; symmetry < edge_symmetry.end();
-                 ++symmetry, ++arrow) {
-               if constexpr (Symmetry::is_fermi_symmetry) {
+            if constexpr (Symmetry::is_fermi_symmetry) {
+               for (auto [symmetry, arrow] = std::tuple{edge_symmetry.begin(), edge_arrow.begin()}; symmetry < edge_symmetry.end();
+                    ++symmetry, ++arrow) {
                   result.push_back({{{*symmetry, 1}}, *arrow});
-               } else {
+               }
+            } else {
+               for (auto symmetry = edge_symmetry.begin(); symmetry < edge_symmetry.end(); ++symmetry) {
                   result.push_back({{{*symmetry, 1}}});
                }
             }
             return result;
          }
-      }
-      /**
-       * Create a high rank tensor but which only contains one element
-       *
-       * \note Tensor::one(a, {}, {}, {}) is equivilent to Tensor(a)
-       * \param number the only element
-       * \param names_init edge name
-       * \param edge_symmetry the symmetry for every edge, if valid
-       * \param edge_arrow the fermi arrow for every edge, if valid
-       */
-      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name>
-      one(ScalarType number,
-          std::vector<Name> names_init,
-          const std::vector<Symmetry>& edge_symmetry = {},
-          const std::vector<Arrow>& edge_arrow = {}) {
-         const auto rank = names_init.size();
-         auto result = Tensor(std::move(names_init), get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, rank));
-         result.storage().front() = number;
-         return result;
       }
 
       // elementwise operators

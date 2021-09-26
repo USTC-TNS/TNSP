@@ -18,12 +18,12 @@
  */
 
 #pragma once
-#include <type_traits>
 #ifndef TAT_IO_HPP
 #define TAT_IO_HPP
 
 #include <iostream>
 #include <limits>
+#include <type_traits>
 
 #include "../structure/tensor.hpp"
 
