@@ -73,6 +73,7 @@ namespace TAT {
       return blocks(symmetries)[offset];
    }
 
+   /// \private
    inline auto get_leading(const pmr::vector<Size>& dim) {
       Rank rank = dim.size();
       pmr::vector<Size> res(rank, 0);
@@ -90,7 +91,7 @@ namespace TAT {
    Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_symmetry() const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::is_fermi_symmetry) {
-         detail::warning("Clearing a fermi tensor's symmetry");
+         detail::warning("Clearing a fermi tensor's symmetry, it is dangerous if you do not take care of edge order");
       }
       Rank rank = get_rank();
       std::vector<Edge<NoSymmetry>> result_edge;
@@ -105,16 +106,20 @@ namespace TAT {
          result_dim.push_back(dim);
          plan.push_back(i);
       }
+      // Generate no symmetry tensor edge total dimension and create it first
       auto result = Tensor<ScalarType, NoSymmetry, Name>(names, std::move(result_edge)).zero();
+      // copy every block into no symmetry tensor
+      // find the dimension of the block, the result leading is same to total dimension
+      // and find the offset of destination
+      // it is easy to get the offset of source then call transpose
       for (const auto& [symmetry_list, block] : core->blocks) {
          pmr::vector<Size> block_dimension;
-         std::map<Name, Size> block_index;
+         pmr::vector<Size> block_index;
          block_dimension.reserve(rank);
+         block_index.reserve(rank);
          for (auto i = 0; i < rank; i++) {
-            // TODO opt it, 但是由于这个函数一般只用于测试正确性，所以优先级不高
-            // 两个可以一起做，而且下面的block index的使用方式不需要Name
             block_dimension.push_back(edges(i).get_dimension_from_symmetry(symmetry_list[i]));
-            block_index[names[i]] = edges(i).get_index_from_point({symmetry_list[i], 0});
+            block_index.push_back(edges(i).get_index_from_point({symmetry_list[i], 0}));
          }
          // source dimension is block dimension
          // source leading is block dimension

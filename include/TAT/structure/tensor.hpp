@@ -420,8 +420,6 @@ namespace TAT {
       template<typename PositionType>
       [[nodiscard]] const ScalarType& get_item(const PositionType& position) const&;
 
-      // TODO MARK
-
       /**
        * Convert symmetry tensor to non-symmetry tensor
        *
@@ -480,8 +478,10 @@ namespace TAT {
          }
       }
 
+      // int/name -> symmetry
       template<typename SymmetryList = std::vector<Symmetry>>
       const typename core_t::content_vector_t& blocks(const SymmetryList& symmetry_list) const& {
+         // it maybe used from other tensor function
          auto found = find_block(symmetry_list);
          if (found == core->blocks.end()) {
             detail::error("No such symmetry block in the tensor");
@@ -506,25 +506,25 @@ namespace TAT {
 
       // Operators
       /**
-       * 对张量的边进行操作的中枢函数, 对边依次做重命名, 分裂, 费米箭头取反, 合并, 转置的操作,
-       * \param rename_map 重命名边的名称的映射表
-       * \param split_map 分裂一些边的数据, 需要包含分裂后边的形状, 不然分裂不唯一
-       * \param reversed_name 将要取反费米箭头的边的名称列表
-       * \param merge_map 合并一些边的名称列表
-       * \param new_names 最后进行的转置操作后的边的名称顺序列表
-       * \param apply_parity 控制费米对称性中费米性质产生的符号是否应用在结果张量上的默认行为
-       * \param parity_exclude_name 是否产生符号这个问题上行为与默认行为相反的操作的边的名称, 四部分分别是split, reverse, reverse_before_merge, merge
-       * \return 进行了一系列操作后的结果张量
-       * \note 反转不满足和合并操作的条件时, 将在合并前再次反转需要反转的边, 方向对齐第一个有方向的边
-       * \note 因为费米箭头在反转和合并分裂时会产生半个符号, 所以需要扔给一方张量, 另一方张量不变号
-       * \note 但是转置部分时产生一个符号的, 所以这一部分无视apply_parity
-       * \note 本函数对转置外不标准的腿的输入是脆弱的
+       * The core method for various edge operations, include split, reverse, merge and transpose
+       * \param split_map map describing how to split
+       * \param reversed_name set describing how to reverse, only for fermi tensor
+       * \param merge_map map describing how to merge
+       * \param new_names the result tensor edge order
+       * \param apply_parity some operations generate half sign, it controls default behavior whether to apply the sign to this tensor
+       * \return the result of all the operations
+       *
+       * If some few edge is not share the same behavior to default sign apply property, please use the last four argument
+       *
+       * \note If reversed name not satisfy the merge condition, it will reverse automatically
+       * \note For fermi tensor, reverse/split/merge will generate half sign, you need to apply the sign to one of the two tensor
+       * \note Since transpose generate a full sign, it will not be controled by apply_parity, it is always valid
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
-            const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split_map,
+            const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split_map, // order of edge symmetry is specify here
             const std::set<Name>& reversed_name,
-            const std::map<Name, std::vector<Name>>& merge_map, // 这个可以merge后再对edge进行reorder
-            std::vector<Name> new_names,
+            const std::map<Name, std::vector<Name>>& merge_map, // if you want, you can reorder the edge symemtry easily after edge operator
+            std::vector<Name> new_names,                        // move into result tensor
             const bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {},
             const std::set<Name>& parity_exclude_name_reversed_before_transpose = {},
@@ -543,6 +543,7 @@ namespace TAT {
                parity_exclude_name_merge,
                empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
          // last argument only used in svd, Name -> Symmetry -> Size
+         // it is not proper to expose to users
       }
 
       /// \private
@@ -557,7 +558,10 @@ namespace TAT {
             const E& parity_exclude_name_reversed_before_transpose,
             const F& parity_exclude_name_reversed_after_transpose,
             const G& parity_exclude_name_merge,
-            const H& edge_and_symmetries_to_cut_before_all = {}) const;
+            const H& edge_and_symmetries_to_cut_before_all) const;
+
+      // TODO MARK
+
       /**
        * 对张量边的名称进行重命名
        * \param dictionary 重命名方案的映射表
