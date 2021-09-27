@@ -620,6 +620,9 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(std::vector<Name> target_names) const {
          auto pmr_guard = scope_resource(default_buffer_size);
+         if (names == target_names) {
+            return *this;
+         }
          return edge_operator_implement(
                empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
                empty_list<Name>(),
@@ -676,53 +679,59 @@ namespace TAT {
             bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {}) const;
 
-      // TODO MARK
-
       // Contract
-      // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
+      // maybe calculate tensor product directly without transpose, but it is very hard
       /// \private
-      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract(
+      [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract_implement(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-            std::set<std::pair<Name, Name>> contract_names);
+            const std::set<std::pair<Name, Name>>& contract_names,
+            const std::set<Name>& fuse_names);
 
       /**
-       * 两个张量的缩并运算
-       * \param tensor_1 参与缩并的第一个张量
-       * \param tensor_2 参与缩并的第二个张量
-       * \param contract_names 两个张量将要缩并掉的边的名称
-       * \return 缩并后的张量
+       * Calculate product of two tensor
+       * \param tensor_1 tensor 1
+       * \param tensor_2 tensor 2
+       * \param contract_names set of edge name pair to contract
+       * \param fuse_names set of edge name to fuse
+       * \return the result tensor
        */
       template<typename ScalarType1, typename ScalarType2, typename = std::enable_if_t<is_scalar<ScalarType1> && is_scalar<ScalarType2>>>
       [[nodiscard]] static auto contract(
             const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
-            std::set<std::pair<Name, Name>> contract_names) {
+            const std::set<std::pair<Name, Name>>& contract_names,
+            const std::set<Name>& fuse_names = {}) {
          using ResultScalarType = std::common_type_t<ScalarType1, ScalarType2>;
          using ResultTensor = Tensor<ResultScalarType, Symmetry, Name>;
          if constexpr (std::is_same_v<ResultScalarType, ScalarType1>) {
             if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
-               return ResultTensor::contract(tensor_1, tensor_2, std::move(contract_names));
+               return ResultTensor::contract_implement(tensor_1, tensor_2, contract_names, fuse_names);
             } else {
-               return ResultTensor::contract(tensor_1, tensor_2.template to<ResultScalarType>(), std::move(contract_names));
+               return ResultTensor::contract_implement(tensor_1, tensor_2.template to<ResultScalarType>(), contract_names, fuse_names);
             }
          } else {
             if constexpr (std::is_same_v<ResultScalarType, ScalarType2>) {
-               return ResultTensor::contract(tensor_1.template to<ResultScalarType>(), tensor_2, std::move(contract_names));
+               return ResultTensor::contract_implement(tensor_1.template to<ResultScalarType>(), tensor_2, contract_names, fuse_names);
             } else {
-               return ResultTensor::contract(
+               return ResultTensor::contract_implement(
                      tensor_1.template to<ResultScalarType>(),
                      tensor_2.template to<ResultScalarType>(),
-                     std::move(contract_names));
+                     contract_names,
+                     fuse_names);
             }
          }
       }
 
       template<typename OtherScalarType, typename = std::enable_if_t<is_scalar<OtherScalarType>>>
-      [[nodiscard]] auto
-      contract(const Tensor<OtherScalarType, Symmetry, Name>& tensor_2, const std::set<std::pair<Name, Name>>& contract_names) const {
-         return contract(*this, tensor_2, std::move(contract_names));
+      [[nodiscard]] auto contract(
+            const Tensor<OtherScalarType, Symmetry, Name>& tensor_2,
+            const std::set<std::pair<Name, Name>>& contract_names,
+            const std::set<Name>& fuse_names = {}) const {
+         return contract(*this, tensor_2, contract_names, fuse_names);
       }
+
+      // TODO MARK
 
       /**
        * 生成相同形状的单位张量

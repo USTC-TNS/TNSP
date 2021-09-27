@@ -112,7 +112,9 @@ namespace TAT {
       }
       auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
       for (auto& [symmetries, data_destination] : result.core->blocks) {
-         const auto& data_source = singular.at(symmetries[1]);
+         const auto& data_source = std::find_if(singular.begin(), singular.end(), [&symmetry = symmetries[1]](const auto& pair) {
+                                      return pair.first == symmetry;
+                                   })->second;
          auto dimension = data_source.size();
          auto dimension_plus_one = dimension + 1;
          std::fill(data_destination.begin(), data_destination.end(), 0);
@@ -345,7 +347,7 @@ namespace TAT {
       auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : std::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.edges(1))}};
-      auto result_s = pmr::map<Symmetry, pmr::vector<real_scalar<ScalarType>>>();
+      auto result_s = pmr::list<std::pair<Symmetry, pmr::vector<real_scalar<ScalarType>>>>();
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.blocks(symmetries).data();
          auto* data_v = tensor_2.blocks(symmetries).data();
@@ -359,7 +361,7 @@ namespace TAT {
          if (m * n != 0) {
             calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
          }
-         result_s[symmetries[put_v_right]] = std::move(s);
+         result_s.emplace_back(symmetries[put_v_right], std::move(s));
       }
 
       // 分析cut方案
@@ -392,10 +394,13 @@ namespace TAT {
             }
 
             for (const auto& [symmetry, this_remain] : remain_dimension_u) {
+               auto found = std::find_if(result_s.begin(), result_s.end(), [&symmetry](const auto& pair) {
+                  return pair.first == symmetry;
+               });
                if (this_remain == 0) {
-                  result_s.erase(symmetry);
+                  result_s.erase(found);
                } else {
-                  result_s.at(symmetry).resize(this_remain);
+                  found->second.resize(this_remain);
                }
             }
          }
@@ -421,10 +426,13 @@ namespace TAT {
          }
 
          for (const auto& [symmetry, this_remain] : remain_dimension_u) {
+            auto found = std::find_if(result_s.begin(), result_s.end(), [&symmetry](const auto& pair) {
+               return pair.first == symmetry;
+            });
             if (this_remain == 0) {
-               result_s.erase(symmetry);
+               result_s.erase(found);
             } else {
-               result_s.at(symmetry).resize(this_remain);
+               found->second.resize(this_remain);
             }
          }
       }

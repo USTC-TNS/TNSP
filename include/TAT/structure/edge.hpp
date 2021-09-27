@@ -312,6 +312,10 @@ namespace TAT {
    bool operator==(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) {
       return edge_1.arrow == edge_2.arrow && std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
    }
+   template<typename Symmetry, bool is_pointer>
+   bool operator!=(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) {
+      return edge_1.arrow != edge_2.arrow || !std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
+   }
 
    /**
     * An edge but only containing a pointer to other edge's segment data

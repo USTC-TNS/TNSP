@@ -24,7 +24,7 @@ using namespace TAT;
 void run_test() {
    auto a = Tensor<>({"A", "B", "C"}, {2, 3, 5}).range();
    auto b = Tensor<>({"A", "B", "D"}, {2, 3, 7}).range();
-   auto c = Tensor<>::contract(a, b, {{"B", "B"}});
+   auto c = Tensor<>::contract(a, b, {{"B", "B"}}, {"A"});
    auto a0 = a.shrink({{"A", 0}});
    auto a1 = a.shrink({{"A", 1}});
    auto b0 = b.shrink({{"A", 0}});

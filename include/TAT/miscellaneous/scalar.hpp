@@ -24,6 +24,7 @@
 #include "../structure/tensor.hpp"
 #include "../utility/timer.hpp"
 
+#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 namespace TAT {
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL) \
    template< \
@@ -127,4 +128,5 @@ namespace TAT {
    TAT_DEFINE_SCALAR_OPERATOR(operator/=, x / y)
 #undef TAT_DEFINE_SCALAR_OPERATOR
 } // namespace TAT
+#endif
 #endif

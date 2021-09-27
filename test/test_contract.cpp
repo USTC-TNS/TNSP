@@ -40,7 +40,7 @@ void run_test() {
    auto c =
          TAT::Tensor<double, TAT::FermiSymmetry>{
                {"A", "B", "C", "D"},
-               {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
+               {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({0, 2}, {-1, 1}, {-2, 2})}}
                .range();
    auto d =
          TAT::Tensor<double, TAT::FermiSymmetry>{

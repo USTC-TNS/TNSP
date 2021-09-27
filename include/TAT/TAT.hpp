@@ -167,7 +167,11 @@ namespace TAT {
    using Size = std::uint64_t;
 
    /**
-    * Fermi arrow type, `false` and `true` for out and in
+    * Fermi arrow type
+    *
+    * \note For connected two edge, EPR pair is \f$a^\dagger b^\dagger\f$
+    * then, tensor owning edge a have arrow=false, and tensor owning edge b has arrow=true.
+    * namely, the EPR pair arrow order is (false true)
     */
    using Arrow = bool;
 } // namespace TAT
