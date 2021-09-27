@@ -30,18 +30,20 @@
 #include "io.hpp"
 
 #ifdef TAT_USE_MPI
-// 不可以extern "C"，因为mpi.h发现不可以被暂时屏蔽的宏__cplusplus后申明一些cpp的函数
+// Can not use extern "C" here, since some version of mpi will detect macro __cplusplus
+// and then it will declare some c++ function, and this macro cannot be mask
 #include <mpi.h>
 #endif
 
 #ifdef _WIN32
+// windows.h will define macro min and max by default which is annoying
 #define NOMINMAX
 #include <windows.h>
 #endif
 
 namespace TAT {
    /**
-    * 对流进行包装, 包装后流只会根据创建时指定的有效性决定是否输出
+    * Wrapper for ostream, the stream will only output in the rank which is specified when creating
     */
    struct mpi_one_output_stream {
       std::ostream& out;
@@ -70,7 +72,7 @@ namespace TAT {
    };
 
    /**
-    * 对流进行包装, 每次输出之前打印当前rank
+    * Wrapper for ostream, the stream will output the rank which is psecified when creating
     */
    struct mpi_rank_output_stream {
       std::ostream& out;
@@ -97,7 +99,6 @@ namespace TAT {
       }
    };
 
-   // TODO: 使用类似std::format一样的公用的序列化方式
    namespace detail {
       template<typename T>
       using serializable_helper = std::
@@ -111,10 +112,15 @@ namespace TAT {
    inline timer mpi_broadcast_guard("mpi_broadcast");
    inline timer mpi_reduce_guard("mpi_reduce");
 
+   // TODO MARK
+
    /**
-    * 一个mpi handler类型, 会在构造和析构时自动调用MPI_Init和MPI_Finalize, 且会获取Size和Rank信息, 同时提供只在某个rank下有效的输出流
+    * MPI handler type
     *
-    * 创建多个mpi_t不会产生冲突
+    * It will call MPI_Init and MPI_Finalize automatically, and get size and rank information.
+    * It also supply ostream related to mpi rank
+    *
+    * \note creating multiple MPI handler will not crash the program
     */
    struct mpi_t {
       int size = 1;
@@ -159,12 +165,10 @@ namespace TAT {
          auto timer_guard = mpi_send_guard();
          std::ostringstream stream;
          stream < value;
-         auto data = stream.str(); // TODO: 也许可以不需复制, 但这个在mpi框架内可能不是很方便
-         // TODO 是不是可以立即返回?
+         auto data = stream.str(); // maybe it does not need copy, but it is hard to implement in the mpi framework
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
       }
 
-      // TODO: 异步的处理, 这个优先级很低, 也许以后将和gpu中做svd, gemm一起做成异步
       template<typename Type, typename = std::enable_if_t<serializable<Type>>>
       static Type receive(const int source) {
          auto timer_guard = mpi_receive_guard();
@@ -198,6 +202,7 @@ namespace TAT {
          if (size == 1) {
             return value;
          }
+         // there is many time wasted in mpi communication so there is no constexpr if here again
          if (0 > root || root >= size) {
             detail::error("Invalid root rank when mpi broadcast");
          }
@@ -209,7 +214,7 @@ namespace TAT {
             const auto father_real_rank = (father_fake_rank + root) % size;
             result = receive<Type>(father_real_rank);
          } else {
-            // 自己就是root的话, 会复制一次张量
+            // if itself is root, copy the value
             result = value;
          }
          // send to son
@@ -246,7 +251,8 @@ namespace TAT {
          }
          if (right_son_fake_rank < size) {
             const auto right_son_real_rank = (right_son_fake_rank + root) % size;
-            // 如果左儿子不存在, 那么右儿子一定不存在, 所以不必判断result是否有效
+            // if left son does not exist, then right son does not exist definitely
+            // so it does not need to check validity of result
             result = function(result, receive<Type>(right_son_real_rank));
          }
          // pass to father
@@ -260,7 +266,6 @@ namespace TAT {
             }
          }
          return result;
-         // 子叶为空tensor, 每个非子叶节点为reduce了所有的后代的结果
       }
 #endif
       auto out_one(int rank_specified = 0) {
