@@ -25,11 +25,6 @@
 #include "../utility/timer.hpp"
 
 namespace TAT {
-   /**
-    * \defgroup Scalar
-    * @{
-    */
-
 #define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL) \
    template< \
          typename ScalarType1, \
@@ -180,6 +175,5 @@ namespace TAT {
    TAT_DEFINE_SCALAR_OPERATOR(operator*=, a[j] *= y, a[j] *= b[j])
    TAT_DEFINE_SCALAR_OPERATOR(operator/=, a[j] /= y, a[j] /= b[j])
 #undef TAT_DEFINE_SCALAR_OPERATOR
-   /**@}*/
 } // namespace TAT
 #endif
