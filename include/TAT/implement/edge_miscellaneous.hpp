@@ -73,9 +73,9 @@ namespace TAT {
       std::vector<Name> target_name;
       target_name.reserve(get_rank());
       for (auto iterator = names.rbegin(); iterator != names.rend(); ++iterator) {
-         // 找到且最后 -> 添加新的
-         // 找到不最后 -> 不做事
-         // 没找到 -> 添加
+         // find and it is last -> add new merge list
+         // find but not last -> do nothing
+         // not found -> add this single edge
          auto found_in_merge = false;
          for (const auto& [name_after_merge, names_before_merge] : merge) {
             if (auto position_in_group = std::find(names_before_merge.begin(), names_before_merge.end(), *iterator);
@@ -91,13 +91,13 @@ namespace TAT {
             target_name.push_back(*iterator);
          }
       }
-      // 插入空merge的edge
+      // and empty merge edge
       for (const auto& [name_after_merge, names_before_merge] : merge) {
          if (names_before_merge.empty()) {
             target_name.push_back(name_after_merge);
          }
       }
-      // 翻转target_name
+      // reverse target name
       std::reverse(target_name.begin(), target_name.end());
       return edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
@@ -107,8 +107,8 @@ namespace TAT {
             apply_parity,
             empty_list<Name>(),
             empty_list<Name>(),
-            std::forward<decltype(parity_exclude_name_reverse)>(parity_exclude_name_reverse),
-            std::forward<decltype(parity_exclude_name_merge)>(parity_exclude_name_merge),
+            parity_exclude_name_reverse,
+            parity_exclude_name_merge,
             empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
    }
 
@@ -126,13 +126,13 @@ namespace TAT {
             }
          }
       }
-      // 生成target_name
+      // generate target_name
       std::vector<Name> target_name;
-      target_name.reserve(get_rank()); // 不够, 但是可以减少new的次数
+      target_name.reserve(get_rank()); // not enough but it is ok to reduce realloc time
       for (const auto& n : names) {
          if (auto found = split.find(n); found != split.end()) {
             for (const auto& edge_after_split : found->second) {
-               target_name.push_back(std::get<0>(edge_after_split));
+               target_name.push_back(edge_after_split.first);
             }
          } else {
             target_name.push_back(n);
@@ -144,7 +144,7 @@ namespace TAT {
             empty_list<std::pair<Name, empty_list<Name>>>(),
             std::move(target_name),
             apply_parity,
-            std::forward<decltype(parity_exclude_name_split)>(parity_exclude_name_split),
+            parity_exclude_name_split,
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),

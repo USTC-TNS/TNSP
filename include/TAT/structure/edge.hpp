@@ -114,9 +114,9 @@ namespace TAT {
       }
 
       Size get_index_from_point(const point_t& pair) const {
-         Size result = std::get<1>(pair);
+         Size result = pair.second;
          for (const auto& [sym, dim] : segment) {
-            if (sym == std::get<0>(pair)) {
+            if (sym == pair.first) {
                return result;
             }
             result += dim;
@@ -126,7 +126,7 @@ namespace TAT {
 
       auto find_by_symmetry(const symmetry_t& symmetry) const {
          return std::find_if(segment.begin(), segment.end(), [symmetry](const auto& x) {
-            return symmetry == std::get<0>(x);
+            return symmetry == x.first;
          });
       }
 
@@ -146,7 +146,7 @@ namespace TAT {
                detail::error("Position is large than segment number");
             }
          }
-         return std::get<1>(segment[position]);
+         return segment[position].second;
       }
 
       symmetry_t get_symmetry_from_position(const position_t& position) const {
@@ -155,7 +155,7 @@ namespace TAT {
                detail::error("Position is large than segment number");
             }
          }
-         return std::get<0>(segment[position]);
+         return segment[position].first;
       }
 
       position_t get_position_from_symmetry(const symmetry_t& symmetry) const {

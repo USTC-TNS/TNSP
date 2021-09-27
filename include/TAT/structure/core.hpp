@@ -80,7 +80,7 @@ namespace TAT {
             resource(storage.data(), storage.size() * sizeof(ScalarType)),
             blocks() {
          std::sort(symmetries_list.begin(), symmetries_list.end(), [&](const auto& a, const auto& b) {
-            return std::get<0>(a) < std::get<0>(b);
+            return a.first < b.first;
          });
          // symmetries_list : vector<Symmetry> -> Size
          for (auto&& [symmetries, size] : symmetries_list) {

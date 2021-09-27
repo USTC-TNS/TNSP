@@ -456,7 +456,7 @@ namespace TAT {
          if constexpr (std::is_same_v<remove_cvref_t<Key>, remove_cvref_t<A>>) {
             return a;
          } else {
-            return std::get<0>(a);
+            return a.first;
          }
       }
 
@@ -560,21 +560,18 @@ namespace TAT {
             const G& parity_exclude_name_merge,
             const H& edge_and_symmetries_to_cut_before_all) const;
 
-      // TODO MARK
-
       /**
-       * 对张量边的名称进行重命名
-       * \param dictionary 重命名方案的映射表
-       * \return 仅仅改变了边的名称的张量, 与原张量共享Core
-       * \note 虽然功能蕴含于edge_operator中, 但是edge_rename操作很常用, 所以并没有调用会稍微慢的edge_operator, 而是实现一个小功能的edge_rename
+       * Rename the edge name of tensor
+       * \param dictionary the map of the plan for renaming edge name
+       * \return A tensor after renaming, share the core with the original tensor
        */
       template<typename ResultName = Name, typename = std::enable_if_t<is_name<ResultName>>>
       [[nodiscard]] auto edge_rename(const std::map<Name, ResultName>& dictionary) const;
 
       /**
-       * 对张量进行转置
-       * \param target_names 转置后的目标边的名称顺序
-       * \return 转置后的结果张量
+       * Transpose the tensor
+       * \param target_names edge name order after transpose
+       * \return tensor transposed
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> transpose(std::vector<Name> target_names) const {
          auto pmr_guard = scope_resource(default_buffer_size);
@@ -592,11 +589,11 @@ namespace TAT {
       }
 
       /**
-       * 将费米张量的一些边进行反转
-       * \param reversed_name 反转的边的集合
-       * \param apply_parity 是否应用反转产生的符号
-       * \param parity_exclude_name 与apply_parity行为相反的边名集合
-       * \return 反转后的结果张量
+       * Reverse fermi arrow of some edge for fermi tensor
+       * \param reversed_name reversed name set
+       * \param apply_parity whether to apply sign by default
+       * \param parity_exclude_name set of edge which apply sign differently with default behavior
+       * \return tensor with edge reversed
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       reverse_edge(const std::set<Name>& reversed_name, bool apply_parity = false, const std::set<Name>& parity_exclude_name = {}) const {
@@ -615,30 +612,26 @@ namespace TAT {
       }
 
       /**
-       * 合并张量的一些边
-       * \param merge 合并的边的名称的映射表
-       * \param apply_parity 是否应用合并边产生的符号
-       * \param parity_exclude_name_merge merge过程中与apply_parity不符的例外
-       * \param parity_exclude_name_reverse merge前不得不做的reverse过程中与apply_parity不符的例外
-       * \return 合并边后的结果张量
-       * \note 合并前转置的策略是将一组合并的边按照合并时的顺序移动到这组合并边中最后的一个边前, 其他边位置不变
+       * Merge some edge of a tensor
+       * \param merge a map describing how to merge
+       * \note the strategy to determine the result edge is to move each group of merged edge to the last edge of this merge group
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
             const std::map<Name, std::vector<Name>>& merge,
             bool apply_parity = false,
             const std::set<Name>&& parity_exclude_name_merge = {},
             const std::set<Name>& parity_exclude_name_reverse = {}) const;
+
       /**
-       * 分裂张量的一些边
-       * \param split 分裂的边的名称的映射表
-       * \param apply_parity 是否应用分裂边产生的符号
-       * \param parity_exclude_name_split split过程中与apply_parity不符的例外
-       * \return 分裂边后的结果张量
+       * Split some edge of a tensor
+       * \param split a map describing how to split
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> split_edge(
             const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
             bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {}) const;
+
+      // TODO MARK
 
       // Contract
       // 可以考虑不转置成矩阵直接乘积的可能, 但这个最多优化N^2的常数次, 只需要转置不调用多次就不会产生太大的问题
