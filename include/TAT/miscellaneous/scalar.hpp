@@ -43,7 +43,7 @@ namespace TAT {
 
    inline timer scalar_outplace_guard("scalar_outplace");
 
-#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2, EVAL3) \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL) \
    template< \
          typename ScalarType1, \
          typename ScalarType2, \
@@ -53,28 +53,9 @@ namespace TAT {
    [[nodiscard]] auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
       auto timer_guard = scalar_outplace_guard(); \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>; \
-      if (tensor_1.get_rank() != tensor_2.get_rank()) { \
-         detail::error("Try to do scalar operator on two different rank tensor"); \
-      } \
-      auto real_tensor_2_pointer = &tensor_2; \
-      auto new_tensor_2 = Tensor<ScalarType2, Symmetry, Name>(); \
-      if (tensor_1.names != tensor_2.names) { \
-         new_tensor_2 = tensor_2.transpose(tensor_1.names); \
-         real_tensor_2_pointer = &new_tensor_2; \
-      } \
-      const auto& real_tensor_2 = *real_tensor_2_pointer; \
-      if (tensor_1.core->edges != real_tensor_2.core->edges) { \
-         detail::error("Try to do scalar operator on two tensors which edges not compatible"); \
-      } \
-      auto result = Tensor<ScalarType, Symmetry, Name>{tensor_1.names, tensor_1.core->edges}; \
-      const ScalarType1* __restrict a = tensor_1.storage().data(); \
-      const ScalarType2* __restrict b = real_tensor_2.storage().data(); \
-      ScalarType* __restrict c = result.storage().data(); \
-      const auto size = result.storage().size(); \
-      for (Size j = 0; j < size; j++) { \
-         EVAL3; \
-      } \
-      return result; \
+      return tensor_1.template zip_map<ScalarType>(tensor_2, [](const auto& x, const auto& y) { \
+         return EVAL; \
+      }); \
    } \
    template< \
          typename ScalarType1, \
@@ -85,15 +66,9 @@ namespace TAT {
    [[nodiscard]] auto OP(const Tensor<ScalarType1, Symmetry, Name>& tensor_1, const ScalarType2& number_2) { \
       auto timer_guard = scalar_outplace_guard(); \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>; \
-      const ScalarType1* __restrict a = tensor_1.storage().data(); \
-      const auto& y = number_2; \
-      auto result = Tensor<ScalarType, Symmetry, Name>{tensor_1.names, tensor_1.core->edges}; \
-      ScalarType* __restrict c = result.storage().data(); \
-      const auto size = result.storage().size(); \
-      for (Size j = 0; j < size; j++) { \
-         EVAL2; \
-      } \
-      return result; \
+      return tensor_1.template map<ScalarType>([&y = number_2](const auto& x) { \
+         return EVAL; \
+      }); \
    } \
    template< \
          typename ScalarType1, \
@@ -104,26 +79,20 @@ namespace TAT {
    [[nodiscard]] auto OP(const ScalarType1& number_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
       auto timer_guard = scalar_outplace_guard(); \
       using ScalarType = std::common_type_t<ScalarType1, ScalarType2>; \
-      const auto& x = number_1; \
-      const ScalarType2* __restrict b = tensor_2.storage().data(); \
-      auto result = Tensor<ScalarType, Symmetry, Name>{tensor_2.names, tensor_2.core->edges}; \
-      ScalarType* __restrict c = result.storage().data(); \
-      const auto size = result.storage().size(); \
-      for (Size j = 0; j < size; j++) { \
-         EVAL1; \
-      } \
-      return result; \
+      return tensor_2.template map<ScalarType>([&x = number_1](const auto& y) { \
+         return EVAL; \
+      }); \
    }
 
-   TAT_DEFINE_SCALAR_OPERATOR(operator+, c[j] = x + b[j], c[j] = a[j] + y, c[j] = a[j] + b[j])
-   TAT_DEFINE_SCALAR_OPERATOR(operator-, c[j] = x - b[j], c[j] = a[j] - y, c[j] = a[j] - b[j])
-   TAT_DEFINE_SCALAR_OPERATOR(operator*, c[j] = x * b[j], c[j] = a[j] * y, c[j] = a[j] * b[j])
-   TAT_DEFINE_SCALAR_OPERATOR(operator/, c[j] = x / b[j], c[j] = a[j] / y, c[j] = a[j] / b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator+, x + y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator-, x - y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator*, x* y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator/, x / y)
 #undef TAT_DEFINE_SCALAR_OPERATOR
 
    inline timer scalar_inplace_guard("scalar_inplace");
 
-#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL1, EVAL2) \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL) \
    template< \
          typename ScalarType1, \
          typename ScalarType2, \
@@ -134,23 +103,9 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
       auto timer_guard = scalar_inplace_guard(); \
       tensor_1.acquare_data_ownership("Inplace operator on tensor shared, copy happened here"); \
-      auto real_tensor_2_pointer = &tensor_2; \
-      auto new_tensor_2 = Tensor<ScalarType2, Symmetry, Name>(); \
-      if (tensor_1.names != tensor_2.names) { \
-         new_tensor_2 = tensor_2.transpose(tensor_1.names); \
-         real_tensor_2_pointer = &new_tensor_2; \
-      } \
-      const auto& real_tensor_2 = *real_tensor_2_pointer; \
-      if (tensor_1.core->edges != real_tensor_2.core->edges) { \
-         detail::error("Try to do scalar operator on two tensors which edges not compatible"); \
-      } \
-      ScalarType1* __restrict a = tensor_1.storage().data(); \
-      const ScalarType2* __restrict b = real_tensor_2.storage().data(); \
-      const auto size = tensor_1.storage().size(); \
-      for (Size j = 0; j < size; j++) { \
-         EVAL2; \
-      } \
-      return tensor_1; \
+      return tensor_1.zip_transform(tensor_2, [](const auto& x, const auto& y) { \
+         return EVAL; \
+      }); \
    } \
    template< \
          typename ScalarType1, \
@@ -162,18 +117,14 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const ScalarType2& number_2) { \
       auto timer_guard = scalar_inplace_guard(); \
       tensor_1.acquare_data_ownership("Inplace operator on tensor shared, copy happened here"); \
-      ScalarType1* __restrict a = tensor_1.storage().data(); \
-      const auto& y = number_2; \
-      const auto size = tensor_1.storage().size(); \
-      for (Size j = 0; j < size; j++) { \
-         EVAL1; \
-      } \
-      return tensor_1; \
+      return tensor_1.transform([&y = number_2](const auto& x) { \
+         return EVAL; \
+      }); \
    }
-   TAT_DEFINE_SCALAR_OPERATOR(operator+=, a[j] += y, a[j] += b[j])
-   TAT_DEFINE_SCALAR_OPERATOR(operator-=, a[j] -= y, a[j] -= b[j])
-   TAT_DEFINE_SCALAR_OPERATOR(operator*=, a[j] *= y, a[j] *= b[j])
-   TAT_DEFINE_SCALAR_OPERATOR(operator/=, a[j] /= y, a[j] /= b[j])
+   TAT_DEFINE_SCALAR_OPERATOR(operator+=, x + y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator-=, x - y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator*=, x* y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator/=, x / y)
 #undef TAT_DEFINE_SCALAR_OPERATOR
 } // namespace TAT
 #endif

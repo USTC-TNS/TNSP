@@ -240,6 +240,29 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>&& transform(Function&& function) && {
          return std::move(transform(function));
       }
+      template<typename OtherScalarType, typename Function>
+      Tensor<ScalarType, Symmetry, Name>& zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) & {
+         acquare_data_ownership("Set tensor shared in zip_transform, copy happened here");
+         if (get_rank() != other.get_rank()) {
+            detail::error("Try to do zip_transform on two different rank tensor");
+         }
+         auto real_other_pointer = &other;
+         auto new_other = Tensor<OtherScalarType, Symmetry, Name>();
+         if (names != other.names) {
+            new_other = other.transpose(names);
+            real_other_pointer = &new_other;
+         }
+         const auto& real_other = *real_other_pointer;
+         if (core->edges != real_other.core->edges) {
+            detail::error("Try to do zip_transform on two tensors which edges not compatible");
+         }
+         std::transform(storage().begin(), storage().end(), real_other.storage().begin(), storage().begin(), function);
+         return *this;
+      }
+      template<typename OtherScalarType, typename Function>
+      Tensor<ScalarType, Symmetry, Name>&& zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) && {
+         return std::move(zip_transform(other, function));
+      }
 
       /**
        * Generate a tensor with the same shape
@@ -263,6 +286,28 @@ namespace TAT {
          using NewScalarType = std::conditional_t<std::is_same_v<void, ForceScalarType>, DefaultNewScalarType, ForceScalarType>;
          auto result = same_shape<NewScalarType>();
          std::transform(storage().begin(), storage().end(), result.storage().begin(), function);
+         return result;
+      }
+
+      template<typename ForceScalarType = void, typename OtherScalarType, typename Function>
+      [[nodiscard]] auto zip_map(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) const {
+         using DefaultNewScalarType = std::result_of_t<Function(ScalarType, OtherScalarType)>;
+         using NewScalarType = std::conditional_t<std::is_same_v<void, ForceScalarType>, DefaultNewScalarType, ForceScalarType>;
+         if (get_rank() != other.get_rank()) {
+            detail::error("Try to do zip_map on two different rank tensor");
+         }
+         auto real_other_pointer = &other;
+         auto new_other = Tensor<OtherScalarType, Symmetry, Name>();
+         if (names != other.names) {
+            new_other = other.transpose(names);
+            real_other_pointer = &new_other;
+         }
+         const auto& real_other = *real_other_pointer;
+         if (core->edges != real_other.core->edges) {
+            detail::error("Try to do zip_map on two tensors which edges not compatible");
+         }
+         auto result = same_shape<NewScalarType>();
+         std::transform(storage().begin(), storage().end(), real_other.storage().begin(), result.storage().begin(), function);
          return result;
       }
 
