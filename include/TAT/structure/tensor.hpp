@@ -368,10 +368,12 @@ namespace TAT {
        * Acquare tensor data's ownership, it will copy the core if the core is shared
        * \param message warning message if core is copied
        */
-      void acquare_data_ownership(const char* message) {
+      void acquare_data_ownership(const char* message = "") {
          if (core.use_count() != 1) {
             core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
-            detail::what_if_copy_shared(message);
+            if (*message != 0) {
+               detail::what_if_copy_shared(message);
+            }
          }
       }
 
@@ -731,11 +733,16 @@ namespace TAT {
          return contract(*this, tensor_2, contract_names, fuse_names);
       }
 
-      // TODO MARK
+      /**
+       * Get the conjugated tensor
+       * \note for symmetry tensor, every symmetry is transformed to -symmetry,
+       * for fermion tensor, arrow is reversed, for complex tensor value got conjugated
+       */
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
 
       /**
-       * 生成相同形状的单位张量
-       * \param pairs 看作矩阵时边的配对方案
+       * Set the tensor as identity inplacely
+       * \param pairs pair set describing how to treat the tensor as matrix
        */
       Tensor<ScalarType, Symmetry, Name>& identity(const std::set<std::pair<Name, Name>>& pairs) &;
 
@@ -744,19 +751,19 @@ namespace TAT {
       }
 
       /**
-       * 看作矩阵后求出矩阵指数
-       * \param pairs 边的配对方案
-       * \param step 迭代步数
+       * Get the tensor exponential
+       * \param pairs pair set describing how to treat the tensor as matrix
+       * \param step iteration step
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::set<std::pair<Name, Name>>& pairs, int step = 2) const;
 
       /**
-       * 生成张量的共轭张量
-       * \note 如果为对称性张量, 量子数取反, 如果为费米张量, 箭头取反, 如果为复张量, 元素取共轭
+       * Get trace of tensor
+       * \param pairs pair set describing how to trace the tensor
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
-
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::set<std::pair<Name, Name>>& trace_names) const;
+
+      // TODO MARK
 
       /**
        * 张量svd的结果类型

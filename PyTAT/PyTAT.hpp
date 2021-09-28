@@ -359,7 +359,12 @@ namespace TAT {
                  py::arg("names"),
                  py::arg("edges"),
                  "Construct tensor with edge names and edge shapes")
-            .def(py::init<ScalarType>(), py::arg("number"), "Create rank 0 tensor with only one element")
+            .def(py::init<ScalarType, std::vector<DefaultName>, std::vector<Symmetry>, std::vector<Arrow>>(),
+                 py::arg("number"),
+                 py::arg("names") = py::list(),
+                 py::arg("edge_symmetry") = py::list(),
+                 py::arg("edge_arrow") = py::list(),
+                 "Create high rank tensor with only one element")
             .def(py::init<>([](const std::string& string) {
                     auto ss = std::stringstream(string);
                     auto result = T();
@@ -367,14 +372,6 @@ namespace TAT {
                     return result;
                  }),
                  "Read tensor from text string")
-            .def_static(
-                  "one",
-                  &T::one,
-                  py::arg("number"),
-                  py::arg("names"),
-                  py::arg("edge_symmetry") = py::list(),
-                  py::arg("edge_arrow") = py::list(),
-                  "Create tensor with high rank but containing only one element")
             .def("copy", &T::copy, "Deep copy a tensor")
             .def("__copy__", &T::copy)
             .def("__deepcopy__", &T::copy)
@@ -583,18 +580,18 @@ namespace TAT {
                      const std::set<DefaultName>& free_name_set_u,
                      const DefaultName& common_name_u,
                      const DefaultName& common_name_v,
-                     Size cut,
                      const DefaultName& singular_name_u,
-                     const DefaultName& singular_name_v) {
-                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, cut, singular_name_u, singular_name_v);
+                     const DefaultName& singular_name_v,
+                     Size cut) {
+                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, singular_name_u, singular_name_v, cut);
                      return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
                   },
                   py::arg("free_name_set_u"),
                   py::arg("common_name_u"),
                   py::arg("common_name_v"),
-                  py::arg("cut") = Size(-1),
                   py::arg("singular_name_u") = DefaultName("DefaultSingularNameU"),
                   py::arg("singular_name_v") = DefaultName("DefaultSingularNameV"),
+                  py::arg("cut") = Size(-1),
                   "Singular value decomposition")
             .def(
                   "qr",
@@ -744,14 +741,14 @@ namespace TAT {
          // is fermi symmetry 且没有强制设置为BoseEdge
          result = result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge")
                         .def(py::init<std::vector<std::pair<Symmetry, Size>>, Arrow>(),
-                             py::arg("arrow"),
                              py::arg("dictionary_from_symmetry_to_dimension"),
+                             py::arg("arrow"),
                              "Fermi Edge created from arrow and dictionary")
                         .def(implicit_init<EdgeType<Symmetry>, std::tuple<std::vector<std::pair<Symmetry, Size>>, Arrow>>(
                                    [](std::tuple<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
                                       return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
                                    }),
-                             py::arg("tuple_of_arrow_and_dictionary"),
+                             py::arg("tuple_of_dictionary_and_arrow"),
                              "Fermi Edge created from arrow and dictionary");
          if constexpr (!std::is_same_v<Element, void>) {
             // true if not FermiSymmetry
@@ -766,8 +763,8 @@ namespace TAT {
                                    }
                                    return EdgeType<Symmetry>(std::move(symmetry_map), arrow);
                                 }),
-                                py::arg("arrow"),
                                 py::arg("dictionary_from_symmetry_to_dimension"),
+                                py::arg("arrow"),
                                 "Fermi Edge created from arrow and dictionary")
                            .def(implicit_init<EdgeType<Symmetry>, std::tuple<std::vector<std::pair<Element, Size>>, Arrow>>(
                                       [](const std::tuple<std::vector<std::pair<Element, Size>>, Arrow>& p) {
@@ -782,7 +779,7 @@ namespace TAT {
                                          }
                                          return EdgeType<Symmetry>(std::move(symmetry_map), arrow);
                                       }),
-                                py::arg("tuple_of_arrow_and_dictionary"),
+                                py::arg("tuple_of_dictionary_and_arrow"),
                                 "Fermi Edge created from arrow and dictionary");
          }
       }
