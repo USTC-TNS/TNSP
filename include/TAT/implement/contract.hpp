@@ -152,135 +152,165 @@ extern "C" {
 }
 
 namespace TAT {
-   /// \private
-   template<typename ScalarType>
-   constexpr void (*gemm)(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const ScalarType* alpha,
-         const ScalarType* a,
-         const int* lda,
-         const ScalarType* b,
-         const int* ldb,
-         const ScalarType* beta,
-         ScalarType* c,
-         const int* ldc) = nullptr;
+   namespace detail {
+      template<typename ScalarType>
+      constexpr void (*gemm)(
+            const char* transpose_a,
+            const char* transpose_b,
+            const int* m,
+            const int* n,
+            const int* k,
+            const ScalarType* alpha,
+            const ScalarType* a,
+            const int* lda,
+            const ScalarType* b,
+            const int* ldb,
+            const ScalarType* beta,
+            ScalarType* c,
+            const int* ldc) = nullptr;
 
-   /// \private
-   template<>
-   inline auto gemm<float> = sgemm_;
-   /// \private
-   template<>
-   inline auto gemm<double> = dgemm_;
-   /// \private
-   template<>
-   inline auto gemm<std::complex<float>> = cgemm_;
-   /// \private
-   template<>
-   inline auto gemm<std::complex<double>> = zgemm_;
+      template<>
+      inline auto gemm<float> = sgemm_;
+      template<>
+      inline auto gemm<double> = dgemm_;
+      template<>
+      inline auto gemm<std::complex<float>> = cgemm_;
+      template<>
+      inline auto gemm<std::complex<double>> = zgemm_;
 
-   /// \private
-   template<typename ScalarType>
-   constexpr void (*mkl_gemm_batch)(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const ScalarType* alpha,
-         const ScalarType** a,
-         const int* lda,
-         const ScalarType** b,
-         const int* ldb,
-         const ScalarType* beta,
-         ScalarType** c,
-         const int* ldc,
-         const int* group_count,
-         const int* group_size) = nullptr;
+      template<typename ScalarType>
+      constexpr void (*mkl_gemm_batch)(
+            const char* transpose_a,
+            const char* transpose_b,
+            const int* m,
+            const int* n,
+            const int* k,
+            const ScalarType* alpha,
+            const ScalarType** a,
+            const int* lda,
+            const ScalarType** b,
+            const int* ldb,
+            const ScalarType* beta,
+            ScalarType** c,
+            const int* ldc,
+            const int* group_count,
+            const int* group_size) = nullptr;
 
 #ifdef TAT_USE_MKL_GEMM_BATCH
-   /// \private
-   template<>
-   inline auto mkl_gemm_batch<float> = sgemm_batch_;
-   /// \private
-   template<>
-   inline auto mkl_gemm_batch<double> = dgemm_batch_;
-   /// \private
-   template<>
-   inline auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
-   /// \private
-   template<>
-   inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
+      template<>
+      inline auto mkl_gemm_batch<float> = sgemm_batch_;
+      template<>
+      inline auto mkl_gemm_batch<double> = dgemm_batch_;
+      template<>
+      inline auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
+      template<>
+      inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
 #endif
+   } // namespace detail
 
    inline timer contract_kernel_guard("contract_kernel");
 
-   /// \private
-   template<typename ScalarType, bool same_shape>
-   void gemm_batch(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const ScalarType* alpha,
-         const ScalarType** a,
-         const int* lda,
-         const ScalarType** b,
-         const int* ldb,
-         const ScalarType* beta,
-         ScalarType** c,
-         const int* ldc,
-         const int& batch_size) {
-      auto kernel_guard = contract_kernel_guard();
-      if (batch_size == 1) {
-         gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
-      } else {
+   namespace detail {
+      template<typename ScalarType, bool same_shape>
+      void gemm_batch(
+            const char* transpose_a,
+            const char* transpose_b,
+            const int* m,
+            const int* n,
+            const int* k,
+            const ScalarType* alpha,
+            const ScalarType** a,
+            const int* lda,
+            const ScalarType** b,
+            const int* ldb,
+            const ScalarType* beta,
+            ScalarType** c,
+            const int* ldc,
+            const int& batch_size) {
+         auto kernel_guard = contract_kernel_guard();
+         if (batch_size == 1) {
+            gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
+         } else {
 #ifdef TAT_USE_MKL_GEMM_BATCH
-         if constexpr (same_shape) {
-            int group_count = 1;
-            mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
-         } else {
-            pmr::vector<int> group_size(batch_size, 1);
-            mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
-         }
+            if constexpr (same_shape) {
+               int group_count = 1;
+               mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
+            } else {
+               pmr::vector<int> group_size(batch_size, 1);
+               mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
+            }
 #else
-         if constexpr (same_shape) {
-            for (auto i = 0; i < batch_size; i++) {
-               gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
+            if constexpr (same_shape) {
+               for (auto i = 0; i < batch_size; i++) {
+                  gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
+               }
+            } else {
+               for (auto i = 0; i < batch_size; i++) {
+                  gemm<ScalarType>(
+                        &transpose_a[i],
+                        &transpose_b[i],
+                        &m[i],
+                        &n[i],
+                        &k[i],
+                        &alpha[i],
+                        a[i],
+                        &lda[i],
+                        b[i],
+                        &ldb[i],
+                        &beta[i],
+                        c[i],
+                        &ldc[i]);
+               }
             }
-         } else {
-            for (auto i = 0; i < batch_size; i++) {
-               gemm<ScalarType>(
-                     &transpose_a[i],
-                     &transpose_b[i],
-                     &m[i],
-                     &n[i],
-                     &k[i],
-                     &alpha[i],
-                     a[i],
-                     &lda[i],
-                     b[i],
-                     &ldb[i],
-                     &beta[i],
-                     c[i],
-                     &ldc[i]);
+#endif
+         }
+      }
+
+      template<int i, typename Name, typename SetNameAndName>
+      auto find_in_contract_names(const SetNameAndName& contract_names, const Name& name) {
+         return std::find_if(contract_names.begin(), contract_names.end(), [&name](const auto& pair) {
+            return name == std::get<i>(pair);
+         });
+      }
+
+      template<typename ScalarType, typename Symmetry, typename Name>
+      void check_valid_contract_plan(
+            const Tensor<ScalarType, Symmetry, Name>& tensor_1,
+            const Tensor<ScalarType, Symmetry, Name>& tensor_2,
+            const std::set<std::pair<Name, Name>>& contract_names,
+            const std::set<Name>& fuse_names = {}) {
+         // check if some missing name in contract
+         for (const auto& [name_1, name_2] : contract_names) {
+            if (auto found = tensor_1.find_rank_from_name(name_1) == tensor_1.names.end()) {
+               detail::error("Name missing in contract");
+            }
+            if (auto found = tensor_2.find_rank_from_name(name_2) == tensor_2.names.end()) {
+               detail::error("Name missing in contract");
             }
          }
-#endif
+         // check if some duplicated name in pairs
+         for (auto i = contract_names.begin(); i != contract_names.end(); ++i) {
+            for (auto j = std::next(i); j != contract_names.end(); ++j) {
+               if (i->first == j->first) {
+                  detail::error("Duplicated name in contract_names");
+               }
+               if (i->second == j->second) {
+                  detail::error("Duplicated name in contract_names");
+               }
+            }
+         }
+         // check if some duplicated name in two tensor except fuse_names
+         for (const auto& name_1 : tensor_1.names) {
+            for (const auto& name_2 : tensor_2.names) {
+               if ((name_1 == name_2) && (fuse_names.find(name_1) == fuse_names.end()) &&
+                   (find_in_contract_names<0>(contract_names, name_1) == contract_names.end() ||
+                    find_in_contract_names<1>(contract_names, name_2) == contract_names.end())) {
+                  detail::error("Duplicated name in two contracting tensor but not fusing");
+               }
+            }
+         }
       }
-   }
-
-   /// \private
-   template<int i, typename Name, typename SetNameAndName>
-   auto find_in_contract_names(const SetNameAndName& contract_names, const Name& name) {
-      return std::find_if(contract_names.begin(), contract_names.end(), [&name](const auto& pair) {
-         return name == std::get<i>(pair);
-      });
-   }
+   } // namespace detail
 
    /// \private
    template<typename ScalarType, typename Name, typename = std::enable_if_t<is_scalar<ScalarType> && is_name<Name>>>
@@ -323,45 +353,6 @@ namespace TAT {
       }
    }
 
-   /// \private
-   template<typename ScalarType, typename Symmetry, typename Name>
-   void check_valid_contract_plan(
-         const Tensor<ScalarType, Symmetry, Name>& tensor_1,
-         const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::set<std::pair<Name, Name>>& contract_names,
-         const std::set<Name>& fuse_names = {}) {
-      // check if some missing name in contract
-      for (const auto& [name_1, name_2] : contract_names) {
-         if (auto found = tensor_1.find_rank_from_name(name_1) == tensor_1.names.end()) {
-            detail::error("Name missing in contract");
-         }
-         if (auto found = tensor_2.find_rank_from_name(name_2) == tensor_2.names.end()) {
-            detail::error("Name missing in contract");
-         }
-      }
-      // check if some duplicated name in pairs
-      for (auto i = contract_names.begin(); i != contract_names.end(); ++i) {
-         for (auto j = std::next(i); j != contract_names.end(); ++j) {
-            if (i->first == j->first) {
-               detail::error("Duplicated name in contract_names");
-            }
-            if (i->second == j->second) {
-               detail::error("Duplicated name in contract_names");
-            }
-         }
-      }
-      // check if some duplicated name in two tensor except fuse_names
-      for (const auto& name_1 : tensor_1.names) {
-         for (const auto& name_2 : tensor_2.names) {
-            if ((name_1 == name_2) && (fuse_names.find(name_1) == fuse_names.end()) &&
-                (find_in_contract_names<0>(contract_names, name_1) == contract_names.end() ||
-                 find_in_contract_names<1>(contract_names, name_2) == contract_names.end())) {
-               detail::error("Duplicated name in two contracting tensor but not fusing");
-            }
-         }
-      }
-   }
-
    template<typename ScalarType, typename Symmetry, typename Name, typename>
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
@@ -374,7 +365,7 @@ namespace TAT {
       const Rank free_rank_1 = rank_1 - common_rank;
       const Rank free_rank_2 = rank_2 - common_rank;
       if constexpr (debug_mode) {
-         check_valid_contract_plan(tensor_1, tensor_2, contract_names);
+         detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names);
       }
       // reverse -> merge -> product -> split -> reverse
       // reverse free name all two false and recovery them at last, both not apply sign
@@ -417,7 +408,7 @@ namespace TAT {
 
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
-         if (find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
+         if (detail::find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
             // it is free name
             free_name_1.push_back(n);
             split_map_result_part_1.push_back({n, {tensor_1.edges(i).segment}});
@@ -442,7 +433,7 @@ namespace TAT {
       }
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
-         if (find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
+         if (detail::find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
             // it is free name
             free_name_2.push_back(n);
             split_map_result_part_2.push_back({n, {tensor_2.edges(i).segment}});
@@ -469,7 +460,7 @@ namespace TAT {
       bool put_common_2_right;
       auto fit_tensor_1_common_edge = [&]() {
          for (const auto& n : tensor_1.names) {
-            if (auto position = find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
+            if (auto position = detail::find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
             }
@@ -477,7 +468,7 @@ namespace TAT {
       };
       auto fit_tensor_2_common_edge = [&]() {
          for (const auto& n : tensor_2.names) {
-            if (auto position = find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
+            if (auto position = detail::find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
             }
@@ -675,7 +666,7 @@ namespace TAT {
             std::fill(data.begin(), data.end(), 0);
          }
       }
-      gemm_batch<ScalarType, false>(
+      detail::gemm_batch<ScalarType, false>(
             transpose_a_list.data(),
             transpose_b_list.data(),
             m_list.data(),
@@ -717,7 +708,7 @@ namespace TAT {
       const Rank free_rank_1 = rank_1 - common_rank - fuse_rank;
       const Rank free_rank_2 = rank_2 - common_rank - fuse_rank;
       if constexpr (debug_mode) {
-         check_valid_contract_plan(tensor_1, tensor_2, contract_names, fuse_names);
+         detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names, fuse_names);
       }
       // merge -> product -> split
       // merge to two rank 3 tensor
@@ -763,7 +754,7 @@ namespace TAT {
 
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
-         if (find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
+         if (detail::find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
             // it is free or fuse
             if (fuse_names.find(n) == fuse_names.end()) {
                // it is free
@@ -775,7 +766,7 @@ namespace TAT {
       }
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
-         if (find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
+         if (detail::find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
             // it is free or fuse
             if (fuse_names.find(n) == fuse_names.end()) {
                // it is free
@@ -791,7 +782,7 @@ namespace TAT {
       bool put_common_2_right;
       auto fit_tensor_1_common_edge = [&]() {
          for (const auto& n : tensor_1.names) {
-            if (auto position = find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
+            if (auto position = detail::find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
             }
@@ -799,7 +790,7 @@ namespace TAT {
       };
       auto fit_tensor_2_common_edge = [&]() {
          for (const auto& n : tensor_2.names) {
-            if (auto position = find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
+            if (auto position = detail::find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
             }
@@ -895,7 +886,7 @@ namespace TAT {
             b_list[i] = data_1 + m * k * i;
             c_list[i] = data + m * n * i;
          }
-         gemm_batch<ScalarType, true>(
+         detail::gemm_batch<ScalarType, true>(
                put_common_2_right ? "T" : "N",
                put_common_1_right ? "N" : "T",
                &n,

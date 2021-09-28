@@ -62,7 +62,7 @@ namespace TAT {
       using block_map_t = std::vector<std::pair<symmetry_vector_t, content_vector_t>>;
 
       no_initialize::vector<ScalarType> storage;
-      detail::pmr::monotonic_buffer_resource resource;
+      detail::monotonic_buffer_resource resource;
 
       /**
        * tensor data itself, is a map from symmetries list to data, every term is a block of tensor

@@ -160,7 +160,7 @@ namespace TAT {
                auto accumulated_symmetries = pmr::vector<Symmetry>(split_rank);
                auto accumulated_dimensions = pmr::vector<Size>(split_rank);
                auto current_symmetries = pmr::vector<Symmetry>(split_rank);
-               loop_edge<detail::pmr::polymorphic_allocator>(
+               loop_edge<detail::polymorphic_allocator>(
                      edge_after_split.data() + this_split_begin_position_in_edge_after_split,
                      split_rank,
                      [&this_offset]() {
@@ -369,7 +369,7 @@ namespace TAT {
             auto current_symmetries = pmr::vector<Symmetry>(merge_rank);
 
             if (merge_rank != 1) {
-               loop_edge<detail::pmr::polymorphic_allocator>(
+               loop_edge<detail::polymorphic_allocator>(
                      edge_before_merge.data() + start_of_merge,
                      merge_rank,
                      [&merged_edge, &this_offset]() {
@@ -461,7 +461,7 @@ namespace TAT {
          // if some edge is cut, some symmetries list should not appear in the data_before_transpose_to_source
          // so main copy loop should be loop by data_after_transpose_to_destination
          for (auto& [symmetries_before_transpose, size] :
-              initialize_block_symmetries_with_check<detail::pmr::polymorphic_allocator>(edge_after_split.data(), edge_after_split.size())) {
+              initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_after_split.data(), edge_after_split.size())) {
             // convert sym -> target_sym and offsets
             // and add to map
             auto symmetries = pmr::vector<Symmetry>();
@@ -509,7 +509,7 @@ namespace TAT {
       auto data_after_transpose_to_destination = MapFromTransposeToSourceDestination();
       if (merge_map.size() != 0) {
          for (auto& [symmetries_after_transpose, size] :
-              initialize_block_symmetries_with_check<detail::pmr::polymorphic_allocator>(edge_before_merge.data(), edge_before_merge.size())) {
+              initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_before_merge.data(), edge_before_merge.size())) {
             // convert sym -> target_sym and offsets
             // and add to map
             auto symmetries = pmr::vector<Symmetry>();

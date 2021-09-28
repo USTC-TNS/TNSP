@@ -121,7 +121,7 @@ namespace TAT {
          auto& X_new = k % 2 == 0 ? X1 : X2;
          // new = A @ old
          // new.T = old.T @ A.T
-         gemm<ScalarType>("N", "N", &int_n, &int_n, &int_n, &alpha, X_old.data(), &int_n, A, &int_n, &beta, X_new.data(), &int_n);
+         detail::gemm<ScalarType>("N", "N", &int_n, &int_n, &int_n, &alpha, X_old.data(), &int_n, A, &int_n, &beta, X_new.data(), &int_n);
          ScalarType d = k % 2 == 0 ? c : -c;
          for (Size i = 0; i < n * n; i++) {
             auto x = X_new[i];
@@ -142,7 +142,8 @@ namespace TAT {
          auto* F_new = k == j ? F : k % 2 == 0 ? F1.data() : F2.data();
          // new = old * old
          // new.T = old.T * old.T
-         gemm<ScalarType>("N", "N", &int_n, &int_n, &int_n, &alpha, F_old, &int_n, F_old, &int_n, &beta, F_new, &int_n);
+         // TODO batch
+         detail::gemm<ScalarType>("N", "N", &int_n, &int_n, &int_n, &alpha, F_old, &int_n, F_old, &int_n, &beta, F_new, &int_n);
       }
    }
 #endif

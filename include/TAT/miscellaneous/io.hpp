@@ -473,7 +473,7 @@ namespace TAT {
       out << tensor.core->edges << ',';
       out << console_green << "blocks" << console_origin << ':';
       if constexpr (Symmetry::length == 0) {
-         out << tensor.core->blocks.begin()->second;
+         out << tensor.storage();
       } else {
          out << '{';
          auto not_first = false;
@@ -507,9 +507,8 @@ namespace TAT {
       }
       detail::ignore_until(in, ':');
       if constexpr (Symmetry::length == 0) {
-         // change begin();
-         auto& block = tensor.core->blocks.front().second;
-         block.clear(); // clear vector，storage not change
+         auto& block = tensor.storage();
+         block.clear(); // resize block, but memory not released
          in >> block;
       } else {
          detail::ignore_until(in, '{');

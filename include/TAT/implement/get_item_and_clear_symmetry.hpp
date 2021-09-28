@@ -73,19 +73,20 @@ namespace TAT {
       return blocks(symmetries)[offset];
    }
 
-   /// \private
-   inline auto get_leading(const pmr::vector<Size>& dim) {
-      Rank rank = dim.size();
-      pmr::vector<Size> res(rank, 0);
-      for (auto i = rank; i-- > 0;) {
-         if (i == rank - 1) {
-            res[i] = 1;
-         } else {
-            res[i] = res[i + 1] * dim[i + 1];
+   namespace detail {
+      inline auto get_leading(const pmr::vector<Size>& dim) {
+         Rank rank = dim.size();
+         pmr::vector<Size> res(rank, 0);
+         for (auto i = rank; i-- > 0;) {
+            if (i == rank - 1) {
+               res[i] = 1;
+            } else {
+               res[i] = res[i + 1] * dim[i + 1];
+            }
          }
+         return res;
       }
-      return res;
-   }
+   } // namespace detail
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_symmetry() const {
@@ -134,8 +135,8 @@ namespace TAT {
                plan,
                block_dimension,
                block_dimension,
-               get_leading(block_dimension),
-               get_leading(result_dim),
+               detail::get_leading(block_dimension),
+               detail::get_leading(result_dim),
                rank);
       }
       return result;
