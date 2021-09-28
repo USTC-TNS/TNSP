@@ -163,6 +163,12 @@
 
       $(\cdots DA)(\mathrm{id}CB)(A^\dagger B^\dagger)(C^\dagger D^\dagger)$
 
+    + Exponential
+
+      To calculate exponential, reverse and merge the tensor to a matrix, let the edge be like $(AB)(\cdots B^\dagger)(A^\dagger \cdots)$, apply sign to only one side.
+
+      Then calculate the matrix exponential, and recovery edge, so now shoud only apply sign to the side as step above.
+
 *** Some Note
 
 **** EPR pair arrow in TAT

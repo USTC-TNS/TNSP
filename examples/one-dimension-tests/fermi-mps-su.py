@@ -85,7 +85,6 @@ def main(N, T, S, P, D):
     print("id  ", iden)
     print("1-tH", iden - hamiltonian * S)
     print("op  ", op.transpose(hamiltonian.name))
-    op = iden - hamiltonian * S  # TODO exp bug
 
     for t in range(T):
         t_norm = 1

@@ -44,7 +44,7 @@ namespace TAT {
       auto result_edges = std::vector<Edge<Symmetry>>();
       result_edges.reserve(get_rank());
       for (const auto& edge : core->edges) {
-         auto& result_edge = result_edges.emplace_back(edge.conjugated_edge());
+         result_edges.push_back(edge.conjugated_edge());
       }
       auto transpose_flag = pmr::vector<Rank>(get_rank(), 0);
       auto valid_flag = pmr::vector<bool>(1, true);
