@@ -112,8 +112,6 @@ namespace TAT {
    inline timer mpi_broadcast_guard("mpi_broadcast");
    inline timer mpi_reduce_guard("mpi_reduce");
 
-   // TODO MARK
-
    /**
     * MPI handler type
     *

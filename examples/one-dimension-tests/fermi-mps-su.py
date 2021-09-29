@@ -85,14 +85,13 @@ def main(N, T, S, P, D):
     print("id  ", iden)
     print("1-tH", iden - hamiltonian * S)
     print("op  ", op.transpose(hamiltonian.name))
-    op = iden - hamiltonian * S # TODO exp bug
 
     for t in range(T):
         t_norm = 1
         for n in range(N - 1):
             # n and n+1
             BIG = chain[n].contract(chain[n + 1], {("R", "L")}).contract(op, {(f"P{n}", "I0"), (f"P{n+1}", "I1")}).edge_rename({"O0": f"P{n}", "O1": f"P{n+1}"})
-            U, s, V = BIG.svd({"L", f"P{n}"}, "R", "L", D, "L", "R")
+            U, s, V = BIG.svd({"L", f"P{n}"}, "R", "L", "L", "R", D)
             chain[n] = U
             chain[n + 1] = V
             norm = s.norm_2()
@@ -102,7 +101,7 @@ def main(N, T, S, P, D):
         for n in reversed(range(N - 1)):
             # n and n+1
             BIG = chain[n].contract(chain[n + 1], {("R", "L")}).contract(op, {(f"P{n}", "I0"), (f"P{n+1}", "I1")}).edge_rename({"O0": f"P{n}", "O1": f"P{n+1}"})
-            U, s, V = BIG.svd({"L", f"P{n}"}, "R", "L", D, "L", "R")
+            U, s, V = BIG.svd({"L", f"P{n}"}, "R", "L", "L", "R", D)
             chain[n] = U
             chain[n + 1] = V
             norm = s.norm_2()
