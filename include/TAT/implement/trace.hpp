@@ -49,6 +49,9 @@ namespace TAT {
       auto reverse_names = pmr::set<Name>();
       auto traced_reverse_flag = pmr::set<Name>();
 
+      // delete empty corresponding segment of traced edge
+      auto delete_map = pmr::map<Name, pmr::map<Symmetry, Size>>();
+
       // traced edge
       auto valid_index = pmr::vector<bool>(rank, true);
       for (auto i = rank; i-- > 0;) {
@@ -88,8 +91,80 @@ namespace TAT {
                auto index_correspond = get_rank_from_name(*name_correspond);
                valid_index[index_correspond] = false;
 
-               if constexpr (debug_mode) {
-                  // order of segment?
+               if constexpr (Symmetry::length != 0) {
+                  // order of edge symmetry segment
+                  const auto& name_1 = *name_correspond;
+                  const auto& name_2 = name_to_find;
+                  const auto& edge_1 = edges(index_correspond);
+                  const auto& edge_2 = edges(i);
+                  // same to contract delete dimension
+                  auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
+                     if constexpr (debug_mode) {
+                        if constexpr (is_fermi) {
+                           if (edge_this.arrow == edge_other.arrow) {
+                              detail::error("Different Fermi Arrow to Trace");
+                           }
+                        }
+                     }
+                     auto delete_map = pmr::map<Symmetry, Size>();
+                     for (const auto& [symmetry, dimension] : edge_this.segment) {
+                        auto found = edge_other.find_by_symmetry(-symmetry);
+                        if (found != edge_other.segment.end()) {
+                           // found
+                           if constexpr (debug_mode) {
+                              if (const auto dimension_other = found->second; dimension_other != dimension) {
+                                 detail::error("Different Dimension to Trace");
+                              }
+                           }
+                        } else {
+                           // not found
+                           delete_map[symmetry] = 0;
+                           // pass delete map when merging, edge operator will delete the entire segment if it is zero
+                        }
+                     }
+                     if (!delete_map.empty()) {
+                        return delete_this.emplace(name_this, std::move(delete_map)).first;
+                     } else {
+                        return delete_this.end();
+                     }
+                  };
+                  auto delete_map_edge_1_iterator = delete_unused_dimension(edge_1, edge_2, name_1, delete_map);
+                  auto delete_map_edge_2_iterator = delete_unused_dimension(edge_2, edge_1, name_2, delete_map);
+                  if constexpr (debug_mode) {
+                     // check different order
+                     auto empty_delete_map = pmr::map<Symmetry, Size>();
+                     const auto& delete_map_edge_1 = [&]() -> const auto& {
+                        if (delete_map_edge_1_iterator == delete_map.end()) {
+                           return empty_delete_map;
+                        } else {
+                           return delete_map_edge_1_iterator->second;
+                        }
+                     }
+                     ();
+                     const auto& delete_map_edge_2 = [&]() -> const auto& {
+                        if (delete_map_edge_2_iterator == delete_map.end()) {
+                           return empty_delete_map;
+                        } else {
+                           return delete_map_edge_2_iterator->second;
+                        }
+                     }
+                     ();
+                     // it is impossible that one of i, j reach end and another not
+                     for (auto [i, j] = std::tuple{edge_1.segment.begin(), edge_2.segment.begin()};
+                          i != edge_1.segment.end() && j != edge_2.segment.end();
+                          ++i, ++j) {
+                        // i/j -> first :: Symmetry
+                        while (delete_map_edge_1.find(i->first) != delete_map_edge_1.end()) {
+                           ++i;
+                        }
+                        while (delete_map_edge_2.find(j->first) != delete_map_edge_2.end()) {
+                           ++j;
+                        }
+                        if ((i->first + j->first) != Symmetry()) {
+                           detail::error("Different symmetry segment order in trace");
+                        }
+                     }
+                  }
                }
             }
          }
@@ -129,7 +204,7 @@ namespace TAT {
             traced_reverse_flag,                         // reverse
             empty_list<Name>(),                          // reverse
             pmr::set<Name>{InternalName<Name>::Trace_1}, // merge
-            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
+            delete_map);
       // trace 1 is connected to trace_2, so one of then is applied sign, another is not
       // trace 3 will be reversed/splitted later, nothing changed
       auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.edges(2)}).zero();
