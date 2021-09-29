@@ -763,11 +763,8 @@ namespace TAT {
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::set<std::pair<Name, Name>>& trace_names) const;
 
-      // TODO MARK
-
       /**
-       * 张量svd的结果类型
-       * \note S的的对称性是有方向的, 用来标注如何对齐, 向U对齐
+       * SVD result type
        */
       struct svd_result {
          Tensor<ScalarType, Symmetry, Name> U;
@@ -776,7 +773,7 @@ namespace TAT {
       };
 
       /**
-       * 张量qr的结果类型
+       * QR result type
        */
       struct qr_result {
          Tensor<ScalarType, Symmetry, Name> Q;
@@ -802,14 +799,15 @@ namespace TAT {
       }
 
       /**
-       * 对张量进行svd分解
-       * \param free_name_set_u svd分解中u的边的名称集合
-       * \param common_name_u 分解后u新产生的边的名称
-       * \param common_name_v 分解后v新产生的边的名称
-       * \param cut 需要截断的维度数目
-       * \return svd的结果
+       * Calculate SVD of the tensor
+       * \param free_name_set_u U tensor free name after SVD
+       * \param common_name_u U tensor new name after SVD
+       * \param common_name_v V tensor new name after SVD
+       * \param singular_name_u S tensor edge name connected to tensor U
+       * \param singular_name_v S tensor edge name connected to tensor V
+       * \param cut How to cut bond dimension during SVD
+       * \return SVD result
        * \see svd_result
-       * \note 对于对称性张量, S需要有对称性, S对称性与V的公共边配对, 与U的公共边相同
        */
       [[nodiscard]] svd_result
       svd(const std::set<Name>& free_name_set_u,
@@ -820,12 +818,12 @@ namespace TAT {
           Cut cut = NoCut()) const;
 
       /**
-       * 对张量进行qr分解
-       * \param free_name_direction free_name_set取的方向, 为'Q'或'R'
-       * \param free_name_set qr分解中某一侧的边的名称集合
-       * \param common_name_q 分解后q新产生的边的名称
-       * \param common_name_r 分解后r新产生的边的名称
-       * \return qr的结果
+       * Calculate QR of the tensor
+       * \param free_name_direction specify what tensor the free_name_set means, it can be 'Q' or 'R'
+       * \param free_name_set one of tensor Q or tensor R free name after QR
+       * \param common_name_q Q tensor new name after QR
+       * \param common_name_r R tensor new name after QR
+       * \return QR result
        * \see qr_result
        */
       [[nodiscard]] qr_result
@@ -838,8 +836,14 @@ namespace TAT {
             std::conditional_t<Symmetry::is_fermi_symmetry, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
       // index, dim
 
+      /**
+       * expand a dimension-1 edge of a tensor to several wider edge
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       expand(const std::map<Name, EdgePointExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
+      /**
+       * shrink several edge of a tensor to a dimension-1 edge
+       */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(const std::map<Name, EdgePointShrink>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
@@ -884,52 +888,6 @@ namespace TAT {
       Tensor<ScalarType, Symmetry, Name>* owner;
    };
 
-   // TODO: middle 用edge operator表示一个待计算的张量, 在contract中用到
-   // 因为contract的操作是这样的
-   // merge gemm split
-   // 上一次split可以和下一次的merge合并
-   // 比较重要， 可以大幅减少对称性张量的分块
-   /*
-   template<is_scalar ScalarType, is_symmetry Symmetry, is_name Name>
-   struct QuasiTensor {
-      Tensor<ScalarType, Symmetry, Name> tensor;
-      std::map<Name, std::vector<std::tuple<Name, edge_segment_t<Symmetry>>>> split_map;
-      std::set<Name> reversed_set;
-      std::vector<Name> res_name;
-
-      QuasiTensor
-
-      operator Tensor<ScalarType, Symmetry, Name>() && {
-         return tensor.edge_operator({}, split_map, reversed_set, {}, std::move(res_name));
-      }
-      operator Tensor<ScalarType, Symmetry, Name>() const& {
-         return tensor.edge_operator({}, split_map, reversed_set, {}, res_name);
-      }
-
-      Tensor<ScalarType, Symmetry, Name> merge_again(
-            const std::set<Name>& merge_reversed_set,
-            const std::map<Name, std::vector<Name>>& merge_map,
-            std::vector<Name>&& merge_res_name,
-            std::set<Name>& split_parity_mark,
-            std::set<Name>& merge_parity_mark) {
-         auto total_reversed_set = reversed_set; // merge_reversed_set
-         return tensor.edge_operator(
-               {},
-               split_map,
-               total_reversed_set,
-               merge_map,
-               merge_res_name,
-               false,
-               {{{}, split_parity_mark, {}, merge_parity_mark}});
-      }
-      QuasiTensor<ScalarType, Symmetry, Name>
-   };
-   */
-
-   // TODO: lazy framework
-   // 看一下idris是如何做的
-   // 需要考虑深搜不可行的问题
-   // 支持inplace操作
-
+   // TODO quasi tensor (middle value between edge_operator)
 } // namespace TAT
 #endif

@@ -27,18 +27,24 @@
 namespace TAT {
    inline timer expand_guard("expand");
 
-   // TODO 这些都可以优化，不使用contract
+   // TODO these can be optimize, avoid to use contract
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
    Tensor<ScalarType, Symmetry, Name>::expand(const std::map<Name, EdgePointExpand>& configure, const Name& old_name) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = expand_guard();
-      // using EdgeInfoWithArrowForExpand = std::conditional_t<
-      //            Symmetry::length == 0,
-      //            std::tuple<Size, Size>,
-      //            std::conditional_t<Symmetry::is_fermi_symmetry, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
+      // using EdgePointExpand = std::conditional_t<
+      //       Symmetry::length == 0,
+      //       std::tuple<Size, Size>,
+      //       std::conditional_t<Symmetry::is_fermi_symmetry, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
       constexpr bool is_no_symmetry = Symmetry::length == 0;
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
+      if constexpr (is_fermi) {
+         detail::warning("expand edge of fermi tensor is dangerous, please contract helper tensor manually");
+      }
+
+      // generator helper tensor names and edges
+      // and an offset, the helper tensor have only one block
       auto new_names = std::vector<Name>();
       auto new_edges = std::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
@@ -67,12 +73,15 @@ namespace TAT {
       }
       auto contract_names = std::set<std::pair<Name, Name>>();
       if (old_name != InternalName<Name>::No_Old_Name) {
-         contract_names.insert({old_name, old_name});
-         new_names.push_back(old_name);
-         // 调整使得可以缩并
-         auto& old_edge = edges(old_name);
-         if (old_edge.segment.size() != 1 || old_edge.segment.front().second != 1) {
-            detail::error("Cannot Expand a Edge which dimension is not one");
+         contract_names.insert({old_name, InternalName<Name>::No_Old_Name});
+         new_names.push_back(InternalName<Name>::No_Old_Name);
+
+         // add the last edge
+         const auto& old_edge = edges(old_name);
+         if constexpr (debug_mode) {
+            if (old_edge.segment.size() != 1 || old_edge.segment.front().second != 1) {
+               detail::error("Cannot Expand a Edge which dimension is not one");
+            }
          }
          if constexpr (is_no_symmetry) {
             new_edges.push_back({{{Symmetry(), 1}}});
@@ -82,21 +91,25 @@ namespace TAT {
             } else {
                new_edges.push_back({{{-total_symmetry, 1}}});
             }
-            if (old_edge.segment.front().first != total_symmetry) {
-               detail::error("Cannot Expand to such Edges whose total Symmetry is not Compatible with origin Edge");
+            if constexpr (debug_mode) {
+               if (old_edge.segment.front().first != total_symmetry) {
+                  detail::error("Cannot Expand to such Edges whose total Symmetry is not Compatible with origin Edge");
+               }
             }
          }
       } else {
-         if constexpr (!is_no_symmetry) {
-            if (total_symmetry != Symmetry()) {
-               detail::error("Cannot Expand to such Edges whose total Symmetry is not zero");
+         if constexpr (debug_mode) {
+            if constexpr (!is_no_symmetry) {
+               if (total_symmetry != Symmetry()) {
+                  detail::error("Cannot Expand to such Edges whose total Symmetry is not zero");
+               }
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
+      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
       helper.zero();
-      helper.core->blocks.begin()->second[total_offset] = 1;
-      return contract(helper, std::move(contract_names));
+      helper.storage()[total_offset] = 1;
+      return contract(helper, contract_names);
    }
 
    inline timer shrink_guard("shrink");
@@ -108,6 +121,10 @@ namespace TAT {
       auto timer_guard = shrink_guard();
       constexpr bool is_no_symmetry = Symmetry::length == 0;
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
+      if constexpr (is_fermi) {
+         detail::warning("shrink edge of fermi tensor is dangerous, please contract helper tensor manually");
+      }
+
       auto new_names = std::vector<Name>();
       auto new_edges = std::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
@@ -118,6 +135,7 @@ namespace TAT {
       auto contract_names = std::set<std::pair<Name, Name>>();
       for (const auto& name : names) {
          if (auto found_position = configure.find(name); found_position != configure.end()) {
+            // shrinking
             const auto& position = found_position->second;
             Symmetry symmetry;
             Size index;
@@ -149,16 +167,18 @@ namespace TAT {
             new_edges.push_back({{{total_symmetry, 1}}});
          }
       } else {
-         if constexpr (!is_no_symmetry) {
-            if (total_symmetry != Symmetry()) {
-               detail::error("Need to Create a New Edge but Name not set in Slice");
+         if constexpr (debug_mode) {
+            if constexpr (!is_no_symmetry) {
+               if (total_symmetry != Symmetry()) {
+                  detail::error("Need to Create a New Edge but Name not set in Slice");
+               }
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(new_names, new_edges);
+      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
       helper.zero();
-      helper.core->blocks.begin()->second[total_offset] = 1;
-      return contract(helper, std::move(contract_names));
+      helper.storage()[total_offset] = 1;
+      return contract(helper, contract_names);
    }
 } // namespace TAT
 #endif

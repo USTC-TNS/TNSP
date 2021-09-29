@@ -31,7 +31,7 @@ namespace TAT {
          for (const auto& [name, new_name] : dictionary) {
             auto found = std::find(names.begin(), names.end(), name);
             if (found == names.end()) {
-               detail::warning("Name missing in edge_rename");
+               detail::error("Name missing in edge_rename");
             }
          }
       }
