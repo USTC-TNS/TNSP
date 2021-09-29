@@ -507,10 +507,11 @@ namespace TAT {
       auto delete_1 = pmr::map<Name, pmr::map<Symmetry, Size>>();
       auto delete_2 = pmr::map<Name, pmr::map<Symmetry, Size>>();
       for (Rank i = 0; i < common_rank; i++) {
-         auto name_1 = common_name_1[i];
-         auto name_2 = common_name_2[i];
-         auto edge_1 = tensor_1.edges(name_1);
-         auto edge_2 = tensor_2.edges(name_2);
+         const auto& name_1 = common_name_1[i];
+         const auto& name_2 = common_name_2[i];
+         const auto& edge_1 = tensor_1.edges(name_1);
+         const auto& edge_2 = tensor_2.edges(name_2);
+         // same to trace delete dimension
          auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
             if constexpr (debug_mode) {
                if constexpr (is_fermi) {

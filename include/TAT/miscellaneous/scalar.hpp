@@ -33,7 +33,7 @@ namespace TAT {
          typename = std::enable_if_t<(is_complex<ScalarType1> || is_complex<ScalarType2>)&&( \
                !std::is_same_v<real_scalar<ScalarType1>, real_scalar<ScalarType2>>)>> \
    inline auto OP(const ScalarType1& a, const ScalarType2& b) { \
-      using t = std::common_type_t<decltype(a), decltype(b)>; \
+      using t = std::common_type_t<ScalarType1, ScalarType2>; \
       return EVAL; \
    }
    TAT_DEFINE_SCALAR_OPERATOR(operator+, t(a) + t(b))

@@ -195,7 +195,7 @@ namespace TAT {
       [[nodiscard]] bool single_term_get_parity_helper() const {
          if constexpr (is_fermi_item[Index]) {
             const auto quantum_number = std::get<Index>(*this);
-            if constexpr (std::is_same_v<decltype(quantum_number), bool>) {
+            if constexpr (std::is_same_v<remove_cvref_t<decltype(quantum_number)>, bool>) {
                return quantum_number;
             } else {
                return bool(quantum_number % 2);
