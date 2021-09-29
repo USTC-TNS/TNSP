@@ -112,4 +112,29 @@ void run_test() {
                          })
                 << "\n";
    } while (false);
+   do {
+      auto c =
+            TAT::Tensor<double, TAT::FermiSymmetry>{
+                  {"A", "B", "C", "D"},
+                  {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
+                  .range()
+                  .transpose({"D", "C", "B", "A"});
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
+      std::cout << u << "\n";
+      std::cout << s << "\n";
+      std::cout << v << "\n";
+      std::cout << c << "\n";
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_v}}).edge_rename({{name_u, "F"}}), u, {{"F", "E"}})
+                         .transpose({"D", "C", "B", "A"})
+                         .transform([](auto i) {
+                            return std::abs(i) < 0.01 ? 0 : i;
+                         })
+                << "\n";
+      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", name_u}}).edge_rename({{name_v, "E"}}), {{"F", "E"}})
+                         .transpose({"D", "C", "B", "A"})
+                         .transform([](auto i) {
+                            return std::abs(i) < 0.01 ? 0 : i;
+                         })
+                << "\n";
+   } while (false);
 }
