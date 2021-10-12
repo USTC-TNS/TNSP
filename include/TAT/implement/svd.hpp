@@ -94,6 +94,9 @@ extern "C" {
 }
 
 namespace TAT {
+
+   inline timer svd_kernel_guard("svd_kernel");
+
    namespace detail {
       template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
@@ -147,8 +150,6 @@ namespace TAT {
             ScalarType* u,
             real_scalar<ScalarType>* s,
             ScalarType* vt);
-
-      inline timer svd_kernel_guard("svd_kernel");
 
       template<typename ScalarType>
       void calculate_svd(
@@ -370,9 +371,8 @@ namespace TAT {
             empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
 
       // tensor -> SVD_U -O- SVD_V
-      // call lapack GESVD to calculate svd
 
-      // first create result tensor
+      // prepare result tensor
       auto common_edge_1 = Edge<Symmetry>();
       auto common_edge_2 = Edge<Symmetry>();
       // arrow all false currently, arrow check is processed at the last
@@ -390,6 +390,8 @@ namespace TAT {
             put_v_right ? std::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : std::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_2), std::move(tensor_merged.edges(1))}};
       auto result_s = pmr::list<std::pair<Symmetry, pmr::vector<real_scalar<ScalarType>>>>();
+
+      // call lapack
       for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
          auto* data_u = tensor_1.blocks(symmetries).data();
          auto* data_v = tensor_2.blocks(symmetries).data();
@@ -435,15 +437,13 @@ namespace TAT {
                remain_dimension_v.at(-maximum_position) += 1;
             }
 
-            // delete empty segment
+            // delete element of tensor S
             for (const auto& [symmetry, this_remain] : remain_dimension_u) {
                auto found = std::find_if(result_s.begin(), result_s.end(), [&symmetry](const auto& pair) {
                   return pair.first == symmetry;
                });
                if (this_remain == 0) {
                   result_s.erase(found);
-                  // remain_dimension_v not erase, it is erase when generate Core
-                  // this maybe changed in future. TODO default-not-clear-unused-symmetry
                } else {
                   found->second.resize(this_remain);
                }
@@ -470,7 +470,7 @@ namespace TAT {
             }
          }
 
-         // delete empty segment
+         // delete element of tensor S
          for (const auto& [symmetry, this_remain] : remain_dimension_u) {
             auto found = std::find_if(result_s.begin(), result_s.end(), [&symmetry](const auto& pair) {
                return pair.first == symmetry;
@@ -538,6 +538,8 @@ namespace TAT {
       // (... U sym true) (-sym false S sym true) (-sym false V ...)
       return {
             std::move(u),
+            // it should be noticed that, singular value content of fermi tensor is not always positive,
+            // since it is not even valid to talk about sign of tensor content for fermi tensor
             detail::singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v, put_v_right == false),
             std::move(v)};
    }
