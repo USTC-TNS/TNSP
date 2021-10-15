@@ -11,22 +11,22 @@ jobs:
     steps:
     - name: checkout
       uses: actions/checkout@v2
-    - name: mpi and mkl
+    - name: generate PyTAT code
+      working-directory: ${{github.workspace}}/PyTAT
+      run: bash ./generator.sh
+    - name: install mpi and mkl
       run: sudo apt-get install -y mpi-default-dev intel-mkl
-    - name: pybind11
+    - name: git clone pybind11
       working-directory: ${{github.workspace}}
       run: git clone https://github.com/pybind/pybind11.git
-    - name: fire
-      working-directory: ${{github.workspace}}/include
-      run: wget https://raw.githubusercontent.com/kongaskristjan/fire-hpp/master/include/fire-hpp/fire.hpp
-    - name: build directory
-      run: cmake -E make_directory ${{runner.workspace}}/build
+    - name: make build directory
+      run: mkdir ${{runner.workspace}}/build
     - name: configure
       working-directory: ${{runner.workspace}}/build
       run: cmake ${{github.workspace}}
     - name: make
       working-directory: ${{runner.workspace}}/build
-      run: cmake --build . --parallel 4
-    - name: test python
+      run: make PyTAT -j
+    - name: run python
       working-directory: ${{runner.workspace}}/build
-      run: python ${{github.workspace}}/test/simple_test.py
+      run: python -c "import TAT; print(TAT())"
