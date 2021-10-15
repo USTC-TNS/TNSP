@@ -98,7 +98,7 @@ namespace TAT {
          }
       }
 
-      using point_t = std::tuple<symmetry_t, Size>;
+      using point_t = std::pair<symmetry_t, Size>;
       using index_t = Size;
       using position_t = Nums;
 

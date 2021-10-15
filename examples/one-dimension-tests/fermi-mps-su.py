@@ -22,12 +22,10 @@ import fire
 from math import log
 
 Tensor = TAT.Fermi.D.Tensor
-Edge = TAT.Fermi.Edge
-Sym = TAT.Fermi.Symmetry
 
-hamiltonian = Tensor(["O1", "O0", "I0", "I1"], [Edge([(0, 1), (1, 1)], False), Edge([(0, 1), (1, 1)], False), Edge([(0, 1), (-1, 1)], True), Edge([(0, 1), (-1, 1)], True)]).zero()
-hamiltonian[{"O0": (Sym(1), 0), "O1": (Sym(0), 0), "I0": (Sym(0), 0), "I1": (Sym(-1), 0)}] = 1
-hamiltonian[{"O0": (Sym(0), 0), "O1": (Sym(1), 0), "I0": (Sym(-1), 0), "I1": (Sym(0), 0)}] = 1
+hamiltonian = Tensor(["O1", "O0", "I0", "I1"], [([(0, 1), (1, 1)], False), ([(0, 1), (1, 1)], False), ([(0, 1), (-1, 1)], True), ([(0, 1), (-1, 1)], True)]).zero()
+hamiltonian[{"O0": (1, 0), "O1": (0, 0), "I0": (0, 0), "I1": (-1, 0)}] = 1
+hamiltonian[{"O0": (0, 0), "O1": (1, 0), "I0": (-1, 0), "I1": (0, 0)}] = 1
 print(hamiltonian)
 
 
@@ -63,17 +61,17 @@ def main(N, T, S, P, D):
         edges = []
         if n == 0:
             names.append("L")
-            edges.append(Edge([(-P, 1)], True))
+            edges.append(([(-P, 1)], True))
         else:
             Q = int(P * (N - n) / N)
             names.append("L")
-            edges.append(Edge([(-Q + 1, D), (-Q, D), (-Q - 1, D)], True))
+            edges.append(([(-Q + 1, D), (-Q, D), (-Q - 1, D)], True))
         names.append(f"P{n}")
-        edges.append(Edge([0, 1]))
+        edges.append([0, 1])
         if n != N - 1:
             Q = int(P * (N - 1 - n) / N)
             names.append("R")
-            edges.append(Edge([(Q - 1, D), (Q, D), (Q + 1, D)]))
+            edges.append([(Q - 1, D), (Q, D), (Q + 1, D)])
         site = Tensor(names, edges).randn()
         site /= site.norm_2()
         chain.append(site)
@@ -84,7 +82,7 @@ def main(N, T, S, P, D):
     iden = hamiltonian.same_shape().identity({("I0", "O0"), ("I1", "O1")})
     print("id  ", iden)
     print("1-tH", iden - hamiltonian * S)
-    print("op  ", op.transpose(hamiltonian.name))
+    print("op  ", op.transpose(hamiltonian.names))
 
     for t in range(T):
         t_norm = 1

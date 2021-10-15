@@ -39,6 +39,7 @@
 namespace TAT {
    struct RemainCut {
       Size value;
+      // TODO RemainCut from Size should be explicit
       // implicit to be compatible with former interface
       RemainCut(Size v) : value(v) {}
    };
@@ -142,7 +143,7 @@ namespace TAT {
       /**
        * Get tensor shape to print, used when you don't want to know value of the tensor
        */
-      TensorShape<ScalarType, Symmetry, Name> shape() {
+      TensorShape<ScalarType, Symmetry, Name> shape() const {
          return {this};
       }
 
@@ -885,7 +886,7 @@ namespace TAT {
    struct TensorShape {
       static_assert(is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>);
 
-      Tensor<ScalarType, Symmetry, Name>* owner;
+      const Tensor<ScalarType, Symmetry, Name>* owner;
    };
 
    // TODO quasi tensor (middle value between edge_operator)

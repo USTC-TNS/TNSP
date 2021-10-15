@@ -115,7 +115,7 @@ namespace TAT {
       // it is easy to get the offset of source then call transpose
       for (const auto& [symmetry_list, block] : core->blocks) {
          pmr::vector<Size> block_dimension;
-         pmr::vector<Size> block_index;
+         std::vector<Size> block_index; // Tensor::at does not accept pmr::vector<Size>
          block_dimension.reserve(rank);
          block_index.reserve(rank);
          for (auto i = 0; i < rank; i++) {

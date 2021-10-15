@@ -21,16 +21,12 @@ namespace TAT {
    void set_navigator(py::module_& tat_m) {
       tat_m.def("navigator", [tat_m](const py::args& args, const py::kwargs& kwargs) -> py::object {
          if (py::len(args) == 0 && py::len(kwargs) == 0) {
-            tat_m.attr("mpi").attr("print")(tat_m.attr("information"));
-            return py::none();
+            return tat_m.attr("information");
          }
          auto text = py::str(py::make_tuple(args, kwargs));
          auto contain = [&text](const char* string) {
             return py::cast<bool>(text.attr("__contains__")(string));
          };
-         if (contain("mpi") || contain("MPI")) {
-            return tat_m.attr("mpi");
-         }
          std::string scalar = "";
          std::string fermi = "";
          std::string symmetry = "";
@@ -90,6 +86,6 @@ namespace TAT {
       callable_type_dict["__call__"] = tat_m.attr("navigator");
       py::list base_types;
       base_types.append(py::type::of(tat_m));
-      tat_m.attr("__class__") = py_type("CallableModule", py::tuple(base_types), callable_type_dict);
+      tat_m.attr("__class__") = py_type("CallableModuleForTAT", py::tuple(base_types), callable_type_dict);
    }
 } // namespace TAT
