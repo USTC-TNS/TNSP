@@ -591,6 +591,7 @@ namespace TAT {
                   py::arg("stddev") = one,
                   "Set Normal Distribution Random Number into Tensor",
                   py::return_value_policy::reference_internal);
+      tensor_t.attr("model") = symmetry_m;
    }
 
    template<typename Symmetry, bool IsSegmentNotSymmetries, typename Element, bool IsTuple, typename Input>
