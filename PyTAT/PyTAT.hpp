@@ -634,8 +634,13 @@ namespace TAT {
                           symmetry_m,
                           is_edge<EdgeType<Symmetry>> ? "Edge" : "EdgeSegment",
                           ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
+                          .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one trivial segment")
                           .def_readonly("segment", &EdgeType<Symmetry>::segment)
-                          .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one trivial segment");
+                          .def_property_readonly("dimension", &EdgeType<Symmetry>::total_dimension)
+                          .def("conjugated", &EdgeType<Symmetry>::conjugated_edge, "Get conjugated edge of this edge")
+                          .def(py::self == py::self)
+                          .def(py::self != py::self);
+
       if constexpr (need_arrow) {
          result = result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
       }
@@ -757,8 +762,6 @@ namespace TAT {
                   "Fermi Edge created from symmetries and arrow");
          }
       }
-
-      result = result.def_property_readonly("dimension", &EdgeType<Symmetry>::total_dimension);
 
       return result;
    }

@@ -309,6 +309,15 @@ namespace TAT {
    };
 
    template<typename Symmetry, bool is_pointer>
+   bool operator==(const edge_segment_t<Symmetry, is_pointer>& edge_1, const edge_segment_t<Symmetry, is_pointer>& edge_2) {
+      return std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
+   }
+   template<typename Symmetry, bool is_pointer>
+   bool operator!=(const edge_segment_t<Symmetry, is_pointer>& edge_1, const edge_segment_t<Symmetry, is_pointer>& edge_2) {
+      return !std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
+   }
+
+   template<typename Symmetry, bool is_pointer>
    bool operator==(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) {
       return edge_1.arrow == edge_2.arrow && std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
    }
