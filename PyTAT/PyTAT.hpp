@@ -642,6 +642,21 @@ namespace TAT {
                           .def(py::self == py::self)
                           .def(py::self != py::self);
 
+      if constexpr (is_edge<EdgeType<Symmetry>>) {
+         result = result.def(py::pickle(
+               [](const EdgeType<Symmetry>& edge) {
+                  auto out = std::stringstream();
+                  out < edge;
+                  return py::bytes(out.str());
+               },
+               [](const py::bytes& bytes) {
+                  EdgeType<Symmetry> edge;
+                  auto in = std::stringstream(std::string(bytes));
+                  in > edge;
+                  return edge;
+               }));
+      }
+
       if constexpr (need_arrow) {
          result = result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
       }
@@ -796,11 +811,24 @@ namespace TAT {
                     out << "]";
                     return out.str();
                  })
-            .def("__str__", [=](const Symmetry& symmetry) {
-               auto out = std::stringstream();
-               out << symmetry;
-               return out.str();
-            });
+            .def("__str__",
+                 [=](const Symmetry& symmetry) {
+                    auto out = std::stringstream();
+                    out << symmetry;
+                    return out.str();
+                 })
+            .def(py::pickle(
+                  [](const Symmetry& symmetry) {
+                     auto out = std::stringstream();
+                     out < symmetry;
+                     return py::bytes(out.str());
+                  },
+                  [](const py::bytes& bytes) {
+                     Symmetry symmetry;
+                     auto in = std::stringstream(std::string(bytes));
+                     in > symmetry;
+                     return symmetry;
+                  }));
    }
 } // namespace TAT
 
