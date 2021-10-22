@@ -126,7 +126,7 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry>
-   void declare_tensor(
+   auto declare_tensor(
          py::module_& symmetry_m,
          const std::string& scalar_short_name,
          const std::string& scalar_name,
@@ -211,252 +211,251 @@ namespace TAT {
          one = ScalarType(1, 1);
       }
       auto tensor_t = py::class_<T>(
-                            self_m,
-                            "Tensor",
-                            ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
-                            .def_readonly("names", &T::names, "Names of all edge of the tensor")
-                            .def_property_readonly("rank", &T::get_rank)
-                            .def(
-                                  "edges",
-                                  [](T& tensor, Rank r) -> E& {
-                                     return tensor.edges(r);
-                                  },
-                                  py::return_value_policy::reference_internal)
-                            .def(
-                                  "edges",
-                                  [](T& tensor, DefaultName r) -> E& {
-                                     return tensor.edges(r);
-                                  },
-                                  py::return_value_policy::reference_internal)
-                            .def_property_readonly(
-                                  "blocks",
-                                  [](const py::object& tensor) {
-                                     return blocks_of_tensor<ScalarType, Symmetry>{tensor};
-                                  })
-                            .def(ScalarType() + py::self)
-                            .def(py::self + ScalarType())
-                            .def(py::self += ScalarType())
-                            .def(ScalarType() - py::self)
-                            .def(py::self - ScalarType())
-                            .def(py::self -= ScalarType())
-                            .def(ScalarType() * py::self)
-                            .def(py::self * ScalarType())
-                            .def(py::self *= ScalarType())
-                            .def(ScalarType() / py::self)
-                            .def(py::self / ScalarType())
-                            .def(py::self /= ScalarType())
+            self_m,
+            "Tensor",
+            ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str());
+      tensor_t.attr("model") = symmetry_m;
+
+      return [=]() mutable {
+         tensor_t.def_readonly("names", &T::names, "Names of all edge of the tensor")
+               .def_property_readonly("rank", &T::get_rank)
+               .def(
+                     "edges",
+                     [](T& tensor, Rank r) -> E& {
+                        return tensor.edges(r);
+                     },
+                     py::return_value_policy::reference_internal)
+               .def(
+                     "edges",
+                     [](T& tensor, DefaultName r) -> E& {
+                        return tensor.edges(r);
+                     },
+                     py::return_value_policy::reference_internal)
+               .def_property_readonly(
+                     "blocks",
+                     [](const py::object& tensor) {
+                        return blocks_of_tensor<ScalarType, Symmetry>{tensor};
+                     })
+               .def(ScalarType() + py::self)
+               .def(py::self + ScalarType())
+               .def(py::self += ScalarType())
+               .def(ScalarType() - py::self)
+               .def(py::self - ScalarType())
+               .def(py::self -= ScalarType())
+               .def(ScalarType() * py::self)
+               .def(py::self * ScalarType())
+               .def(py::self *= ScalarType())
+               .def(ScalarType() / py::self)
+               .def(py::self / ScalarType())
+               .def(py::self /= ScalarType());
 #define TAT_LOOP_OPERATOR(ANOTHERSCALAR) \
    def(py::self + Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self - Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self* Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self / Tensor<ANOTHERSCALAR, Symmetry>())
-                            .TAT_LOOP_OPERATOR(float)
-                            .TAT_LOOP_OPERATOR(double)
-                            .TAT_LOOP_OPERATOR(std::complex<float>)
-                            .TAT_LOOP_OPERATOR(std::complex<double>)
+         tensor_t.TAT_LOOP_OPERATOR(float).TAT_LOOP_OPERATOR(double).TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
 #undef TAT_LOOP_OPERATOR
 #define TAT_LOOP_OPERATOR(ANOTHERSCALAR) \
    def(py::self += Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self -= Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self *= Tensor<ANOTHERSCALAR, Symmetry>()) \
          .def(py::self /= Tensor<ANOTHERSCALAR, Symmetry>())
-                            .TAT_LOOP_OPERATOR(float)
-                            .TAT_LOOP_OPERATOR(double);
-      if constexpr (is_complex<ScalarType>) {
-         tensor_t.TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
-         tensor_t.def("__complex__", [](const T& tensor) {
-            return ScalarType(tensor);
-         });
-      } else {
-         tensor_t.def("__float__", [](const T& tensor) {
-            return ScalarType(tensor);
-         });
-         tensor_t.def("__complex__", [](const T& tensor) {
-            return std::complex<ScalarType>(ScalarType(tensor));
-         });
-      }
-      tensor_t
+         tensor_t.TAT_LOOP_OPERATOR(float).TAT_LOOP_OPERATOR(double);
+         if constexpr (is_complex<ScalarType>) {
+            tensor_t.TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
+            tensor_t.def("__complex__", [](const T& tensor) {
+               return ScalarType(tensor);
+            });
+         } else {
+            tensor_t.def("__float__", [](const T& tensor) {
+               return ScalarType(tensor);
+            });
+            tensor_t.def("__complex__", [](const T& tensor) {
+               return std::complex<ScalarType>(ScalarType(tensor));
+            });
+         }
 #undef TAT_LOOP_OPERATOR
-            .def("__str__",
-                 [](const T& tensor) {
-                    return tensor.show();
-                 })
-            .def("__repr__",
-                 [tensor_name](const T& tensor) {
-                    auto out = std::stringstream();
-                    out << tensor_name << "Tensor";
-                    out << tensor.shape();
-                    return out.str();
-                 })
-            .def(py::init<>(), "Default Constructor")
-            .def(py::init<std::vector<DefaultName>, std::vector<E>>(),
-                 py::arg("names"),
-                 py::arg("edges"),
-                 "Construct tensor with edge names and edge shapes")
-            .def(py::init<ScalarType, std::vector<DefaultName>, std::vector<Symmetry>, std::vector<Arrow>>(),
-                 py::arg("number"),
-                 py::arg("names") = py::list(),
-                 py::arg("edge_symmetry") = py::list(),
-                 py::arg("edge_arrow") = py::list(),
-                 "Create high rank tensor with only one element")
-            .def(py::init<>([](const std::string& string) {
-                    auto ss = std::stringstream(string);
-                    auto result = T();
-                    ss >> result;
-                    return result;
-                 }),
-                 "Read tensor from text string")
-            .def("copy", &T::copy, "Deep copy a tensor")
-            .def("__copy__", &T::copy)
-            .def("__deepcopy__", &T::copy)
-            .def("same_shape", &T::template same_shape<ScalarType>, "Create a tensor with same shape")
-            .def(
-                  "map",
-                  [](const T& tensor, std::function<ScalarType(ScalarType)>& function) {
-                     return tensor.map(function);
-                  },
-                  py::arg("function"),
-                  "Out-place map every element of a tensor")
-            .def(
-                  "transform",
-                  [](T& tensor, std::function<ScalarType(ScalarType)>& function) -> T& {
-                     return tensor.transform(function);
-                  },
-                  // write function explicitly to avoid const T&/T& ambigiuous
-                  // if use py::overload_cast, I need to write argument type twice
-                  py::arg("function"),
-                  "In-place map every element of a tensor",
-                  py::return_value_policy::reference_internal)
-            .def(
-                  "sqrt",
-                  [](const T& tensor) {
-                     return tensor.map([](ScalarType value) {
-                        return std::sqrt(value);
-                     });
-                  },
-                  "Get elementwise square root") // it is faster to implement in python, since it is common used
-            .def(
-                  "set",
-                  [](T& tensor, std::function<ScalarType()>& function) -> T& {
-                     return tensor.set(function);
-                  },
-                  py::arg("function"),
-                  "Set every element of a tensor by a function",
-                  py::return_value_policy::reference_internal)
-            .def(
-                  "zero",
-                  [](T& tensor) -> T& {
-                     return tensor.zero();
-                  },
-                  "Set all element zero",
-                  py::return_value_policy::reference_internal)
-            .def(
-                  "range",
-                  [](T& tensor, ScalarType first, ScalarType step) -> T& {
-                     return tensor.range(first, step);
-                  },
-                  py::arg("first") = 0,
-                  py::arg("step") = 1,
-                  "Useful function generate simple data in tensor element for test",
-                  py::return_value_policy::reference_internal)
-            .def(
-                  "__getitem__",
-                  [](const T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position) {
-                     return tensor.at(position);
-                  },
-                  py::arg("dictionary_from_name_to_symmetry_and_dimension"))
-            .def(
-                  "__getitem__",
-                  [](const T& tensor, const std::map<DefaultName, Size>& position) {
-                     return tensor.at(position);
-                  },
-                  py::arg("dictionary_from_name_to_total_index"))
-            .def(
-                  "__setitem__",
-                  [](T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position, const ScalarType& value) {
-                     tensor.at(position) = value;
-                  },
-                  py::arg("dictionary_from_name_to_symmetry_and_dimension"),
-                  py::arg("value"))
-            .def(
-                  "__setitem__",
-                  [](T& tensor, const std::map<DefaultName, Size>& position, const ScalarType& value) {
-                     tensor.at(position) = value;
-                  },
-                  py::arg("dictionary_from_name_to_total_index"),
-                  py::arg("value"))
-            .def(
-                  "to",
-                  [](const T& tensor, const py::object& object) -> py::object {
-                     auto string = py::str(object);
-                     auto contain = [&string](const char* other) {
-                        return py::cast<bool>(string.attr("__contains__")(other));
-                     };
-                     if (contain("float32")) {
-                        return py::cast(tensor.template to<float>(), py::return_value_policy::move);
-                     } else if (contain("complex32")) {
-                        return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
-                     } else if (contain("float")) {
-                        return py::cast(tensor.template to<double>(), py::return_value_policy::move);
-                     } else if (contain("complex")) {
-                        return py::cast(tensor.template to<std::complex<double>>(), py::return_value_policy::move);
-                     } else if (contain("S")) {
-                        return py::cast(tensor.template to<float>(), py::return_value_policy::move);
-                     } else if (contain("D")) {
-                        return py::cast(tensor.template to<double>(), py::return_value_policy::move);
-                     } else if (contain("C")) {
-                        return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
-                     } else if (contain("Z")) {
-                        return py::cast(tensor.template to<std::complex<double>>(), py::return_value_policy::move);
-                     } else {
-                        throw std::runtime_error("Invalid scalar type in type conversion");
-                     }
-                  },
-                  "Convert to other scalar type tensor")
-            .def("norm_max", &T::template norm<-1>, "Get -1 norm, namely max absolute value")
-            .def("norm_num", &T::template norm<0>, "Get 0 norm, namely number of element, note: not check whether equal to 0")
-            .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
-            .def("norm_2", &T::template norm<2>, "Get 2 norm")
-            .def("clear_symmetry", &T::clear_symmetry, "Convert symmetry tensor to non-symmetry tensor")
-            .def(
-                  "edge_rename",
-                  [](const T& tensor, const std::map<DefaultName, DefaultName>& dictionary) {
-                     return tensor.edge_rename(dictionary);
-                  },
-                  py::arg("name_dictionary"),
-                  "Rename names of edges, which will not copy data")
-            .def("transpose", &T::transpose, py::arg("new_names"), "Transpose the tensor to the order of new names")
-            .def("reverse_edge",
-                 &T::reverse_edge,
-                 py::arg("reversed_name_set"),
-                 py::arg("apply_parity") = false,
-                 py::arg("parity_exclude_name_set") = py::set(),
-                 "Reverse fermi arrow of several edge")
-            .def("merge_edge",
-                 &T::merge_edge,
-                 py::arg("merge_map"),
-                 py::arg("apply_parity") = false,
-                 py::arg("parity_exclude_name_merge_set") = py::set(),
-                 py::arg("parity_exclude_name_reverse_set") = py::set(),
-                 "Merge several edges of the tensor into ones")
-            .def("split_edge",
-                 &T::split_edge,
-                 py::arg("split_map"),
-                 py::arg("apply_parity") = false,
-                 py::arg("parity_exclude_name_split_set") = py::set(),
-                 "Split edges of a tensor to many edges")
-            .def("edge_operator",
-                 &T::edge_operator,
-                 py::arg("split_map"),
-                 py::arg("reversed_name"),
-                 py::arg("merge_map"),
-                 py::arg("new_names"),
-                 py::arg("apply_parity") = false,
-                 py::arg("parity_exclude_name_split_set") = py::set(),
-                 py::arg("parity_exclude_name_reverse_before_transpose_set") = py::set(),
-                 py::arg("parity_exclude_name_reverse_after_transpose_set") = py::set(),
-                 py::arg("parity_exclude_name_merge_set") = py::set(),
-                 "Tensor Edge Operator")
+         tensor_t
+               .def("__str__",
+                    [](const T& tensor) {
+                       return tensor.show();
+                    })
+               .def("__repr__",
+                    [tensor_name](const T& tensor) {
+                       auto out = std::stringstream();
+                       out << tensor_name << "Tensor";
+                       out << tensor.shape();
+                       return out.str();
+                    })
+               .def(py::init<>(), "Default Constructor")
+               .def(py::init<std::vector<DefaultName>, std::vector<E>>(),
+                    py::arg("names"),
+                    py::arg("edges"),
+                    "Construct tensor with edge names and edge shapes")
+               .def(py::init<ScalarType, std::vector<DefaultName>, std::vector<Symmetry>, std::vector<Arrow>>(),
+                    py::arg("number"),
+                    py::arg("names") = py::list(),
+                    py::arg("edge_symmetry") = py::list(),
+                    py::arg("edge_arrow") = py::list(),
+                    "Create high rank tensor with only one element")
+               .def(py::init<>([](const std::string& string) {
+                       auto ss = std::stringstream(string);
+                       auto result = T();
+                       ss >> result;
+                       return result;
+                    }),
+                    "Read tensor from text string")
+               .def("copy", &T::copy, "Deep copy a tensor")
+               .def("__copy__", &T::copy)
+               .def("__deepcopy__", &T::copy)
+               .def("same_shape", &T::template same_shape<ScalarType>, "Create a tensor with same shape")
+               .def(
+                     "map",
+                     [](const T& tensor, std::function<ScalarType(ScalarType)>& function) {
+                        return tensor.map(function);
+                     },
+                     py::arg("function"),
+                     "Out-place map every element of a tensor")
+               .def(
+                     "transform",
+                     [](T& tensor, std::function<ScalarType(ScalarType)>& function) -> T& {
+                        return tensor.transform(function);
+                     },
+                     // write function explicitly to avoid const T&/T& ambigiuous
+                     // if use py::overload_cast, I need to write argument type twice
+                     py::arg("function"),
+                     "In-place map every element of a tensor",
+                     py::return_value_policy::reference_internal)
+               .def(
+                     "sqrt",
+                     [](const T& tensor) {
+                        return tensor.map([](ScalarType value) {
+                           return std::sqrt(value);
+                        });
+                     },
+                     "Get elementwise square root") // it is faster to implement in python, since it is common used
+               .def(
+                     "set",
+                     [](T& tensor, std::function<ScalarType()>& function) -> T& {
+                        return tensor.set(function);
+                     },
+                     py::arg("function"),
+                     "Set every element of a tensor by a function",
+                     py::return_value_policy::reference_internal)
+               .def(
+                     "zero",
+                     [](T& tensor) -> T& {
+                        return tensor.zero();
+                     },
+                     "Set all element zero",
+                     py::return_value_policy::reference_internal)
+               .def(
+                     "range",
+                     [](T& tensor, ScalarType first, ScalarType step) -> T& {
+                        return tensor.range(first, step);
+                     },
+                     py::arg("first") = 0,
+                     py::arg("step") = 1,
+                     "Useful function generate simple data in tensor element for test",
+                     py::return_value_policy::reference_internal)
+               .def(
+                     "__getitem__",
+                     [](const T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position) {
+                        return tensor.at(position);
+                     },
+                     py::arg("dictionary_from_name_to_symmetry_and_dimension"))
+               .def(
+                     "__getitem__",
+                     [](const T& tensor, const std::map<DefaultName, Size>& position) {
+                        return tensor.at(position);
+                     },
+                     py::arg("dictionary_from_name_to_total_index"))
+               .def(
+                     "__setitem__",
+                     [](T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position, const ScalarType& value) {
+                        tensor.at(position) = value;
+                     },
+                     py::arg("dictionary_from_name_to_symmetry_and_dimension"),
+                     py::arg("value"))
+               .def(
+                     "__setitem__",
+                     [](T& tensor, const std::map<DefaultName, Size>& position, const ScalarType& value) {
+                        tensor.at(position) = value;
+                     },
+                     py::arg("dictionary_from_name_to_total_index"),
+                     py::arg("value"))
+               .def(
+                     "to",
+                     [](const T& tensor, const py::object& object) -> py::object {
+                        auto string = py::str(object);
+                        auto contain = [&string](const char* other) {
+                           return py::cast<bool>(string.attr("__contains__")(other));
+                        };
+                        if (contain("float32")) {
+                           return py::cast(tensor.template to<float>(), py::return_value_policy::move);
+                        } else if (contain("complex32")) {
+                           return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
+                        } else if (contain("float")) {
+                           return py::cast(tensor.template to<double>(), py::return_value_policy::move);
+                        } else if (contain("complex")) {
+                           return py::cast(tensor.template to<std::complex<double>>(), py::return_value_policy::move);
+                        } else if (contain("S")) {
+                           return py::cast(tensor.template to<float>(), py::return_value_policy::move);
+                        } else if (contain("D")) {
+                           return py::cast(tensor.template to<double>(), py::return_value_policy::move);
+                        } else if (contain("C")) {
+                           return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
+                        } else if (contain("Z")) {
+                           return py::cast(tensor.template to<std::complex<double>>(), py::return_value_policy::move);
+                        } else {
+                           throw std::runtime_error("Invalid scalar type in type conversion");
+                        }
+                     },
+                     "Convert to other scalar type tensor")
+               .def("norm_max", &T::template norm<-1>, "Get -1 norm, namely max absolute value")
+               .def("norm_num", &T::template norm<0>, "Get 0 norm, namely number of element, note: not check whether equal to 0")
+               .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
+               .def("norm_2", &T::template norm<2>, "Get 2 norm")
+               .def("clear_symmetry", &T::clear_symmetry, "Convert symmetry tensor to non-symmetry tensor")
+               .def(
+                     "edge_rename",
+                     [](const T& tensor, const std::map<DefaultName, DefaultName>& dictionary) {
+                        return tensor.edge_rename(dictionary);
+                     },
+                     py::arg("name_dictionary"),
+                     "Rename names of edges, which will not copy data")
+               .def("transpose", &T::transpose, py::arg("new_names"), "Transpose the tensor to the order of new names")
+               .def("reverse_edge",
+                    &T::reverse_edge,
+                    py::arg("reversed_name_set"),
+                    py::arg("apply_parity") = false,
+                    py::arg("parity_exclude_name_set") = py::set(),
+                    "Reverse fermi arrow of several edge")
+               .def("merge_edge",
+                    &T::merge_edge,
+                    py::arg("merge_map"),
+                    py::arg("apply_parity") = false,
+                    py::arg("parity_exclude_name_merge_set") = py::set(),
+                    py::arg("parity_exclude_name_reverse_set") = py::set(),
+                    "Merge several edges of the tensor into ones")
+               .def("split_edge",
+                    &T::split_edge,
+                    py::arg("split_map"),
+                    py::arg("apply_parity") = false,
+                    py::arg("parity_exclude_name_split_set") = py::set(),
+                    "Split edges of a tensor to many edges")
+               .def("edge_operator",
+                    &T::edge_operator,
+                    py::arg("split_map"),
+                    py::arg("reversed_name"),
+                    py::arg("merge_map"),
+                    py::arg("new_names"),
+                    py::arg("apply_parity") = false,
+                    py::arg("parity_exclude_name_split_set") = py::set(),
+                    py::arg("parity_exclude_name_reverse_before_transpose_set") = py::set(),
+                    py::arg("parity_exclude_name_reverse_after_transpose_set") = py::set(),
+                    py::arg("parity_exclude_name_merge_set") = py::set(),
+                    "Tensor Edge Operator");
 #define TAT_LOOP_CONTRACT(ANOTHERSCALAR) \
    def( \
          "contract", \
@@ -466,132 +465,130 @@ namespace TAT {
          py::arg("another_tensor"), \
          py::arg("contract_names"), \
          "Contract two tensors")
-            .TAT_LOOP_CONTRACT(float)
-            .TAT_LOOP_CONTRACT(double)
-            .TAT_LOOP_CONTRACT(std::complex<float>)
-            .TAT_LOOP_CONTRACT(std::complex<double>)
+         tensor_t.TAT_LOOP_CONTRACT(float).TAT_LOOP_CONTRACT(double).TAT_LOOP_CONTRACT(std::complex<float>).TAT_LOOP_CONTRACT(std::complex<double>);
 #undef TAT_LOOP_CONTRACT
-            .def(
-                  "identity",
-                  [](T& tensor, std::set<std::pair<DefaultName, DefaultName>>& pairs) -> T& {
-                     return tensor.identity(pairs);
-                  },
-                  py::arg("pairs"),
-                  "Get a identity tensor with same shape",
-                  py::return_value_policy::reference_internal)
-            .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
-            .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
-            .def("trace", &T::trace)
-            .def(
-                  "svd",
-                  [](const T& tensor,
-                     const std::set<DefaultName>& free_name_set_u,
-                     const DefaultName& common_name_u,
-                     const DefaultName& common_name_v,
-                     const DefaultName& singular_name_u,
-                     const DefaultName& singular_name_v,
-                     double cut) {
-                     Cut real_cut = NoCut();
-                     if (cut > 0) {
-                        if (cut >= 1) {
-                           real_cut = RemainCut(Size(cut));
-                        } else {
-                           real_cut = RelativeCut(cut);
+         tensor_t
+               .def(
+                     "identity",
+                     [](T& tensor, std::set<std::pair<DefaultName, DefaultName>>& pairs) -> T& {
+                        return tensor.identity(pairs);
+                     },
+                     py::arg("pairs"),
+                     "Get a identity tensor with same shape",
+                     py::return_value_policy::reference_internal)
+               .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
+               .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
+               .def("trace", &T::trace)
+               .def(
+                     "svd",
+                     [](const T& tensor,
+                        const std::set<DefaultName>& free_name_set_u,
+                        const DefaultName& common_name_u,
+                        const DefaultName& common_name_v,
+                        const DefaultName& singular_name_u,
+                        const DefaultName& singular_name_v,
+                        double cut) {
+                        Cut real_cut = NoCut();
+                        if (cut > 0) {
+                           if (cut >= 1) {
+                              real_cut = RemainCut(Size(cut));
+                           } else {
+                              real_cut = RelativeCut(cut);
+                           }
                         }
-                     }
-                     auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, singular_name_u, singular_name_v, real_cut);
-                     return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
-                  },
-                  py::arg("free_name_set_u"),
-                  py::arg("common_name_u"),
-                  py::arg("common_name_v"),
-                  py::arg("singular_name_u"),
-                  py::arg("singular_name_v"),
-                  py::arg("cut") = -1,
-                  "Singular value decomposition")
-            .def(
-                  "qr",
-                  [](const T& tensor,
-                     char free_name_direction,
-                     const std::set<DefaultName>& free_name_set,
-                     const DefaultName& common_name_q,
-                     const DefaultName& common_name_r) {
-                     auto result = tensor.qr(free_name_direction, free_name_set, common_name_q, common_name_r);
-                     return py::make_tuple(std::move(result.Q), std::move(result.R));
-                  },
-                  py::arg("free_name_direction"),
-                  py::arg("free_name_set"),
-                  py::arg("common_name_q"),
-                  py::arg("common_name_r"),
-                  "QR decomposition")
-            .def("shrink",
-                 &T::shrink,
-                 "Shrink Edge of tensor",
-                 py::arg("configure"),
-                 py::arg("new_name") = InternalName<DefaultName>::No_New_Name,
-                 py::arg("arrow") = false)
-            .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = InternalName<DefaultName>::No_Old_Name)
-            .def(
-                  "dump",
-                  [](const T& tensor) {
-                     return py::bytes(tensor.dump());
-                  },
-                  "dump Tensor to bytes")
-            .def(
-                  "load",
-                  [](T& tensor, const py::bytes& bytes) -> T& {
-                     return tensor.load(std::string(bytes));
-                  },
-                  "Load Tensor from bytes",
-                  py::return_value_policy::reference_internal)
-            .def(py::pickle(
-                  [](const T& tensor) {
-                     return py::bytes(tensor.dump());
-                  },
-                  [](const py::bytes& bytes) {
-                     return T().load(std::string(bytes));
-                  }))
-            .def(
-                  "rand",
-                  [](T& tensor, ScalarType min, ScalarType max) -> T& {
-                     if constexpr (is_complex<ScalarType>) {
-                        auto distribution_real = std::uniform_real_distribution<real_scalar<ScalarType>>(min.real(), max.real());
-                        auto distribution_imag = std::uniform_real_distribution<real_scalar<ScalarType>>(min.imag(), max.imag());
-                        return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
-                           return {distribution_real(random_engine), distribution_imag(random_engine)};
-                        });
-                     } else {
-                        auto distribution = std::uniform_real_distribution<real_scalar<ScalarType>>(min, max);
-                        return tensor.set([&distribution]() {
-                           return distribution(random_engine);
-                        });
-                     }
-                  },
-                  py::arg("min") = 0,
-                  py::arg("max") = one,
-                  "Set Uniform Random Number into Tensor",
-                  py::return_value_policy::reference_internal)
-            .def(
-                  "randn",
-                  [](T& tensor, ScalarType mean, ScalarType stddev) -> T& {
-                     if constexpr (is_complex<ScalarType>) {
-                        auto distribution_real = std::normal_distribution<real_scalar<ScalarType>>(mean.real(), stddev.real());
-                        auto distribution_imag = std::normal_distribution<real_scalar<ScalarType>>(mean.imag(), stddev.imag());
-                        return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
-                           return {distribution_real(random_engine), distribution_imag(random_engine)};
-                        });
-                     } else {
-                        auto distribution = std::normal_distribution<real_scalar<ScalarType>>(mean, stddev);
-                        return tensor.set([&distribution]() {
-                           return distribution(random_engine);
-                        });
-                     }
-                  },
-                  py::arg("mean") = 0,
-                  py::arg("stddev") = one,
-                  "Set Normal Distribution Random Number into Tensor",
-                  py::return_value_policy::reference_internal);
-      tensor_t.attr("model") = symmetry_m;
+                        auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, singular_name_u, singular_name_v, real_cut);
+                        return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
+                     },
+                     py::arg("free_name_set_u"),
+                     py::arg("common_name_u"),
+                     py::arg("common_name_v"),
+                     py::arg("singular_name_u"),
+                     py::arg("singular_name_v"),
+                     py::arg("cut") = -1,
+                     "Singular value decomposition")
+               .def(
+                     "qr",
+                     [](const T& tensor,
+                        char free_name_direction,
+                        const std::set<DefaultName>& free_name_set,
+                        const DefaultName& common_name_q,
+                        const DefaultName& common_name_r) {
+                        auto result = tensor.qr(free_name_direction, free_name_set, common_name_q, common_name_r);
+                        return py::make_tuple(std::move(result.Q), std::move(result.R));
+                     },
+                     py::arg("free_name_direction"),
+                     py::arg("free_name_set"),
+                     py::arg("common_name_q"),
+                     py::arg("common_name_r"),
+                     "QR decomposition")
+               .def("shrink",
+                    &T::shrink,
+                    "Shrink Edge of tensor",
+                    py::arg("configure"),
+                    py::arg("new_name") = InternalName<DefaultName>::No_New_Name,
+                    py::arg("arrow") = false)
+               .def("expand", &T::expand, "Expand Edge of tensor", py::arg("configure"), py::arg("old_name") = InternalName<DefaultName>::No_Old_Name)
+               .def(
+                     "dump",
+                     [](const T& tensor) {
+                        return py::bytes(tensor.dump());
+                     },
+                     "dump Tensor to bytes")
+               .def(
+                     "load",
+                     [](T& tensor, const py::bytes& bytes) -> T& {
+                        return tensor.load(std::string(bytes));
+                     },
+                     "Load Tensor from bytes",
+                     py::return_value_policy::reference_internal)
+               .def(py::pickle(
+                     [](const T& tensor) {
+                        return py::bytes(tensor.dump());
+                     },
+                     [](const py::bytes& bytes) {
+                        return T().load(std::string(bytes));
+                     }))
+               .def(
+                     "rand",
+                     [](T& tensor, ScalarType min, ScalarType max) -> T& {
+                        if constexpr (is_complex<ScalarType>) {
+                           auto distribution_real = std::uniform_real_distribution<real_scalar<ScalarType>>(min.real(), max.real());
+                           auto distribution_imag = std::uniform_real_distribution<real_scalar<ScalarType>>(min.imag(), max.imag());
+                           return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
+                              return {distribution_real(random_engine), distribution_imag(random_engine)};
+                           });
+                        } else {
+                           auto distribution = std::uniform_real_distribution<real_scalar<ScalarType>>(min, max);
+                           return tensor.set([&distribution]() {
+                              return distribution(random_engine);
+                           });
+                        }
+                     },
+                     py::arg("min") = 0,
+                     py::arg("max") = one,
+                     "Set Uniform Random Number into Tensor",
+                     py::return_value_policy::reference_internal)
+               .def(
+                     "randn",
+                     [](T& tensor, ScalarType mean, ScalarType stddev) -> T& {
+                        if constexpr (is_complex<ScalarType>) {
+                           auto distribution_real = std::normal_distribution<real_scalar<ScalarType>>(mean.real(), stddev.real());
+                           auto distribution_imag = std::normal_distribution<real_scalar<ScalarType>>(mean.imag(), stddev.imag());
+                           return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
+                              return {distribution_real(random_engine), distribution_imag(random_engine)};
+                           });
+                        } else {
+                           auto distribution = std::normal_distribution<real_scalar<ScalarType>>(mean, stddev);
+                           return tensor.set([&distribution]() {
+                              return distribution(random_engine);
+                           });
+                        }
+                     },
+                     py::arg("mean") = 0,
+                     py::arg("stddev") = one,
+                     "Set Normal Distribution Random Number into Tensor",
+                     py::return_value_policy::reference_internal);
+      };
    }
 
    template<typename Symmetry, bool IsSegmentNotSymmetries, typename Element, bool IsTuple, typename Input>
@@ -643,7 +640,7 @@ namespace TAT {
                           .def(py::self != py::self);
 
       if constexpr (is_edge<EdgeType<Symmetry>>) {
-         result = result.def(py::pickle(
+         result.def(py::pickle(
                [](const EdgeType<Symmetry>& edge) {
                   auto out = std::stringstream();
                   out < edge;
@@ -658,28 +655,28 @@ namespace TAT {
       }
 
       if constexpr (need_arrow) {
-         result = result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
+         result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
       }
       if constexpr (is_edge<EdgeType<Symmetry>>) {
          // __str__ and __repr__
-         result = result.def("__str__",
-                             [](const EdgeType<Symmetry>& edge) {
-                                auto out = std::stringstream();
-                                out << edge;
-                                return out.str();
-                             })
-                        .def("__repr__", [name](const EdgeType<Symmetry>& edge) {
-                           auto out = std::stringstream();
-                           out << name << "Edge";
-                           if constexpr (Symmetry::length == 0) {
-                              out << "[";
-                           }
-                           out << edge;
-                           if constexpr (Symmetry::length == 0) {
-                              out << "]";
-                           }
-                           return out.str();
-                        });
+         result.def("__str__",
+                    [](const EdgeType<Symmetry>& edge) {
+                       auto out = std::stringstream();
+                       out << edge;
+                       return out.str();
+                    })
+               .def("__repr__", [name](const EdgeType<Symmetry>& edge) {
+                  auto out = std::stringstream();
+                  out << name << "Edge";
+                  if constexpr (Symmetry::length == 0) {
+                     out << "[";
+                  }
+                  out << edge;
+                  if constexpr (Symmetry::length == 0) {
+                     out << "]";
+                  }
+                  return out.str();
+               });
       }
 
       // non trivial constructor
@@ -688,12 +685,12 @@ namespace TAT {
       // pair of symmetry arrow
       // element arrow
       // pair of element arrow
-      result = result.def(
+      result.def(
             implicit_init<EdgeType<Symmetry>, std::vector<std::pair<Symmetry, Size>>>(),
             py::arg("segments"),
             "Create Edge with list of pair of symmetry and dimension");
       if constexpr (need_element) {
-         result = result.def(
+         result.def(
                implicit_init<EdgeType<Symmetry>, std::vector<std::pair<Element, Size>>>(
                      [](const std::vector<std::pair<Element, Size>>& element_segment) {
                         return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, true, Element, IsTuple>(element_segment));
@@ -703,12 +700,12 @@ namespace TAT {
          if constexpr (need_arrow) {
             // former two constructor(symmetry/element) * two argument/tuple -> 4 ctor
             // symmetry
-            result = result.def(
+            result.def(
                   py::init<std::vector<std::pair<Symmetry, Size>>, Arrow>(),
                   py::arg("segments"),
                   py::arg("arrow"),
                   "Fermi Edge created from segments and arrow");
-            result = result.def(
+            result.def(
                   implicit_init<EdgeType<Symmetry>, std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow>>(
                         [](std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
                            return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
@@ -717,14 +714,14 @@ namespace TAT {
                   "Fermi Edge created from segments and arrow");
 
             // element
-            result = result.def(
+            result.def(
                   py::init([](const std::vector<std::pair<Element, Size>>& element_segment, Arrow arrow) {
                      return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, true, Element, IsTuple>(element_segment), arrow);
                   }),
                   py::arg("segments"),
                   py::arg("arrow"),
                   "Fermi Edge created from segments and arrow");
-            result = result.def(
+            result.def(
                   implicit_init<EdgeType<Symmetry>, std::pair<std::vector<std::pair<Element, Size>>, Arrow>>(
                         [](const std::pair<std::vector<std::pair<Element, Size>>, Arrow>& p) {
                            const auto& [element_segment, arrow] = p;
@@ -734,12 +731,12 @@ namespace TAT {
                   "Fermi Edge created from segments and arrow");
          }
       }
-      result = result.def(
+      result.def(
             implicit_init<EdgeType<Symmetry>, const std::vector<Symmetry>&>(),
             py::arg("symmetries"),
             "Create Edge with list of symmetries which construct several one dimension segments");
       if constexpr (need_element) {
-         result = result.def(
+         result.def(
                implicit_init<EdgeType<Symmetry>, const std::vector<Element>&>([](const std::vector<Element>& element_symmetries) {
                   return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, false, Element, IsTuple>(element_symmetries));
                }),
@@ -748,12 +745,12 @@ namespace TAT {
          if constexpr (need_arrow) {
             // former two constructor(symmetry/element) * two argument/tuple -> 4 ctor
             // symmetry
-            result = result.def(
+            result.def(
                   py::init<std::vector<Symmetry>, Arrow>(),
                   py::arg("symmetries"),
                   py::arg("arrow"),
                   "Fermi Edge created from symmetries and arrow");
-            result = result.def(
+            result.def(
                   implicit_init<EdgeType<Symmetry>, std::pair<std::vector<Symmetry>, Arrow>>(
                         [](std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
                            return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
@@ -762,14 +759,14 @@ namespace TAT {
                   "Fermi Edge created from symmetries and arrow");
 
             // element
-            result = result.def(
+            result.def(
                   py::init([](const std::vector<Element>& element_symmetries, Arrow arrow) {
                      return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, false, Element, IsTuple>(element_symmetries), arrow);
                   }),
                   py::arg("symmetries"),
                   py::arg("arrow"),
                   "Fermi Edge created from symmetries and arrow");
-            result = result.def(
+            result.def(
                   implicit_init<EdgeType<Symmetry>, std::pair<std::vector<Element>, Arrow>>([](const std::pair<std::vector<Element>, Arrow>& p) {
                      const auto& [element_symmetries, arrow] = p;
                      return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, false, Element, IsTuple>(element_symmetries), arrow);

@@ -22,7 +22,7 @@ namespace TAT {
    void set_navigator(py::module_&);
    void set_random(py::module_&);
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
-   void dealing_Tensor_##SCALARSHORT##SYM( \
+   std::function<void()> dealing_Tensor_##SCALARSHORT##SYM( \
          py::module_& symmetry_m, \
          const std::string& scalar_short_name, \
          const std::string& scalar_name, \
@@ -110,9 +110,15 @@ namespace TAT {
       declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_segment_t>(FermiU1_m, "FermiU1");
 
       // tensor
-#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) dealing_Tensor_##SCALARSHORT##SYM(SYM##_m, #SCALARSHORT, #SCALAR, #SYM);
+      std::vector<std::function<void()>> define_tensor;
+#define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
+   define_tensor.push_back(dealing_Tensor_##SCALARSHORT##SYM(SYM##_m, #SCALARSHORT, #SCALAR, #SYM));
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
+      for (const auto& f : define_tensor) {
+         f();
+      }
+
       // get tensor
       set_navigator(tat_m);
       // normal = no
