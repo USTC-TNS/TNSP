@@ -23,6 +23,7 @@ Tensor = TAT.Fermi.D.Tensor
 
 
 class FakeEdge:
+    __slots__ = ["direction"]
 
     def __init__(self, direction):
         self.direction = direction

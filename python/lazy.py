@@ -17,21 +17,70 @@
 #
 
 from __future__ import annotations
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Callable
 import weakref
-from multimethod import multimethod
 
-__all__ = ["Copier", "Node", "Root"]
+__all__ = ["Copier", "Merger", "Node", "Root"]
 
 
 class Copier:
+    __slots__ = ["_map"]
 
-    def __init__(self):
-        self._map = {}
+    def __init__(self) -> None:
+        self._map: dict[Node, Node] = {}
 
-    def __call__(self, node):
-        result = Node(node, self)
+    def __call__(self, node: Node) -> Node:
+        result: Node = Node._copy(node, self)
+        result._value = node._value
         self._map[node] = result
+        return result
+
+    def _map_node(self, node):
+        if isinstance(node, Node):
+            return self._map[node]
+        else:
+            return node
+
+
+class Merger:
+    __slots__ = ["_map", "_select_1", "_select_2"]
+
+    def __init__(self) -> None:
+        self._map: dict[Node, Node] = {}
+        self._select_1: dict[Node] = set()  # nodes using value from channel 1
+        self._select_2: dict[Node] = set()  # nodes using value from channel 2
+
+    def __call__(self, node_1: Node, node_2: Node, select: int) -> Node:
+        if select == 1:
+            result: Node = Node._copy(node_1, self)
+            result._value = node_1._value
+            self._select_1(result)
+        elif select == 2:
+            result: Node = Node._copy(node_2, self)
+            result._value = node_2._value
+            self._select_2(result)
+        elif select == 0:
+            result: Node = Node._copy(node_1, self)
+            select_1: bool = True
+            select_2: bool = True
+            upstreams: set[Node] = {i for i in result._args if isinstance(i, Node)} | {j for i, j in result._kwargs.items() if isinstance(j, Node)}
+            for i in upstreams:
+                if i not in self._select_1:
+                    select_1 = False  # upstream not using channel 1 so result cannot use it
+                if i not in self._select_2:
+                    select_2 = False  # upstream not using channel 2 so result cannot use it
+            if select_1:
+                result._value = node_1._value
+                self._select_1.add(result)
+            elif select_2:
+                result._value = node_2._value
+                self._select_2.add(result)
+            else:
+                result._value = None
+        else:
+            raise ValueError("Invalid select index")
+        self._map[node_1] = result
+        self._map[node_2] = result
         return result
 
     def _map_node(self, node):
@@ -45,24 +94,18 @@ T = TypeVar('T')
 
 
 class Node(Generic[T]):
+    __slots__ = ["_value", "_downstream", "_func", "_args", "_kwargs", "__weakref__"]
 
-    @multimethod
-    def __init__(self, other: Node[T], copier: Copier):
-        self._value: T | None = other._value
-        self._downstream: set[Node] = set()
-        self._func = other._func
-        self._args = [copier._map_node(i) for i in other._args]
-        self._kwargs = {i: copier._map_node(j) for i, j in other._kwargs.items()}
+    @staticmethod
+    def _copy(other: Node[T], copier: Copier | Merger) -> Node[T]:
+        args = [copier._map_node(i) for i in other._args]
+        kwargs = {i: copier._map_node(j) for i, j in other._kwargs.items()}
+        return Node(other._func, *args, **kwargs)
 
-        for i in self._args:
-            if isinstance(i, Node):
-                i._downstream.add(weakref.ref(self))
-
-    @multimethod
-    def __init__(self, func, *args, **kwargs):
+    def __init__(self, func: Callable[..., T], *args, **kwargs):
         self._value: T | None = None
-        self._downstream: set[Node] = set()
-        self._func = func
+        self._downstream: set[weakref.ref[Node]] = set()
+        self._func: [..., T] = func
         self._args = args
         self._kwargs = kwargs
 
@@ -73,7 +116,7 @@ class Node(Generic[T]):
     def reset(self, value: T | None = None):
         if self._value != value:
             self._value = value
-            new_downstream: set[Node] = set()
+            new_downstream: set[weakref.ref[Node]] = set()
             for i in self._downstream:
                 if i():
                     i().reset()

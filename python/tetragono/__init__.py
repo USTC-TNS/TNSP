@@ -17,6 +17,7 @@
 #
 
 from .auxiliaries import Auxiliaries
+from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_state import AbstractState
 from .exact_state import ExactState
 from .abstract_lattice import AbstractLattice

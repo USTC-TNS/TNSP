@@ -17,8 +17,6 @@
 #
 
 from __future__ import annotations
-from multimethod import multimethod
-
 from .abstract_state import AbstractState
 
 __all__ = ["AbstractLattice"]
@@ -47,15 +45,13 @@ class AbstractLatticeVirtualBond:
 class AbstractLattice(AbstractState):
     __slots__ = ["_virtual_bond"]
 
-    @multimethod
     def __init__(self, abstract: AbstractState) -> None:
-        super().__init__(abstract)
+        super()._init_by_copy(abstract)
 
         self._virtual_bond: dict[tuple[int, int], dict[str, self.Edge]] = {(l1, l2): self._default_bonds(l1, l2) for l1 in range(self.L1) for l2 in range(self.L2)}
 
-    @multimethod
-    def __init__(self, other: AbstractLattice) -> None:
-        super().__init__(other)
+    def _init_by_copy(self, other: AbstractLattice) -> None:
+        super()._init_by_copy(other)
 
         self._virtual_bond: dict[tuple[int, int], dict[str, self.Edge]] = {i: {k: l for k, l in j.items()} for i, j in other._virtual_bond.items()}
 

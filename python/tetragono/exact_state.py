@@ -17,7 +17,6 @@
 #
 
 from __future__ import annotations
-
 from .common_variable import clear_line
 from .abstract_state import AbstractState
 
@@ -28,7 +27,7 @@ class ExactState(AbstractState):
     __slots__ = ["vector"]
 
     def __init__(self, abstract: AbstractState) -> None:
-        super().__init__(abstract)
+        super()._init_by_copy(abstract)
         self.vector: self.Tensor = self._construct_vector()
 
     def _construct_vector(self) -> self.Tensor:

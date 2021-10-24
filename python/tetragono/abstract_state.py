@@ -17,7 +17,6 @@
 #
 
 from __future__ import annotations
-from multimethod import multimethod
 
 __all__ = ["AbstractState"]
 
@@ -73,7 +72,6 @@ class AbstractStateHamiltonian:
 class AbstractState:
     __slots__ = ["Tensor", "Edge", "Symmetry", "L1", "L2", "_physics_edges", "_hamiltonians", "_total_symmetry"]
 
-    @multimethod
     def __init__(self, Tensor: type, L1: int, L2: int) -> None:
         self.Tensor: type = Tensor
         self.Edge: type = Tensor.model.Edge
@@ -85,8 +83,7 @@ class AbstractState:
         self._hamiltonians: dict[tuple[tuple[int, int], ...], self.Tensor] = {}  # ((int, int), ...) -> Tensor
         self._total_symmetry: self.Symmetry | None = None
 
-    @multimethod
-    def __init__(self, other: AbstractState) -> None:
+    def _init_by_copy(self, other: AbstractState) -> None:
         self.Tensor: type = other.Tensor
         self.Edge: type = other.Edge
         self.Symmetry: type = other.Symmetry

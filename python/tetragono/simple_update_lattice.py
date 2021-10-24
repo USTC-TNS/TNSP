@@ -17,8 +17,8 @@
 #
 
 from __future__ import annotations
-
 from .auxiliaries import Auxiliaries
+from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .exact_state import ExactState
 from .abstract_state import AbstractState
 from .abstract_lattice import AbstractLattice
@@ -26,6 +26,7 @@ from .common_variable import clear_line
 
 
 class SimpleUpdateLatticeEnvironment:
+    __slots__ = ["owner"]
 
     def __init__(self, owner: SimpleUpdateLattice) -> None:
         self.owner = owner
@@ -80,12 +81,12 @@ class SimpleUpdateLattice(AbstractLattice):
     __slots__ = ["_lattice", "_environment_v", "_environment_h", "_auxiliaries"]
 
     def __init__(self, abstract: AbstractLattice) -> None:
-        super().__init__(abstract)
+        super()._init_by_copy(abstract)
 
         self._lattice: list[list[self.Tensor]] = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
         self._environment_h: list[list[self.Tensor | None]] = [[None for l2 in range(self.L2 - 1)] for l1 in range(self.L1)]
         self._environment_v: list[list[self.Tensor | None]] = [[None for l2 in range(self.L2)] for l1 in range(self.L1 - 1)]
-        self._auxiliaries: Auxiliaries | None = None
+        self._auxiliaries: DoubleLayerAuxiliaries | None = None
 
     def __getitem__(self, l1l2: tuple[int, int]) -> self.Tensor:
         l1, l2 = l1l2
@@ -159,7 +160,7 @@ class SimpleUpdateLattice(AbstractLattice):
             .contract(right_r.edge_rename({"P": "P1"}), {("R", "L")}) \
             .contract(updater, {("P0", "I0"), ("P1", "I1")}) \
             .svd({"L", "O0"}, "R", "L", "L", "R", new_dimension)
-        s /= s.norm_sum()
+        s /= s.norm_2()
         self.environment[(i, j), "R"] = s
         left_q = self._try_multiple(left_q, i, j, "L", True)
         left_q = self._try_multiple(left_q, i, j, "U", True)
@@ -189,7 +190,7 @@ class SimpleUpdateLattice(AbstractLattice):
             .contract(down_r.edge_rename({"P": "P1"}), {("D", "U")}) \
             .contract(updater, {("P0", "I0"), ("P1", "I1")}) \
             .svd({"U", "O0"}, "D", "U","U","D", new_dimension)
-        s /= s.norm_sum()
+        s /= s.norm_2()
         self.environment[(i, j), "D"] = s
         up_q = self._try_multiple(up_q, i, j, "L", True)
         up_q = self._try_multiple(up_q, i, j, "U", True)
@@ -239,123 +240,33 @@ class SimpleUpdateLattice(AbstractLattice):
                     result.vector = result.vector.contract(this, contract_pair)
         return result
 
+    def clear_auxiliaries(self) -> None:
+        self._auxiliaries = None
+
     def initialize_auxiliaries(self, Dc: int) -> None:
-        self._auxiliaries = Auxiliaries(self.L1, self.L2, Dc, self.Tensor)
+        self._auxiliaries = DoubleLayerAuxiliaries(self.L1, self.L2, Dc, True, self.Tensor)
         for l1 in range(self.L1):
             for l2 in range(self.L2):
                 this_site: self.Tensor = self[l1, l2]
                 this_site = self._try_multiple(this_site, l1, l2, "L")
                 this_site = self._try_multiple(this_site, l1, l2, "U")
-                contract_pairs: set[tuple[str, str]]
-                if l1 == l2 == 0:
-                    contract_pairs = {("P", "P"), ("T", "T")}
-                else:
-                    contract_pairs = {("P", "P")}
-                double_site = this_site.edge_rename({
-                    "L": "L1",
-                    "R": "R1",
-                    "U": "U1",
-                    "D": "D1"
-                }).contract(this_site.conjugate().edge_rename({
-                    "L": "L2",
-                    "R": "R2",
-                    "U": "U2",
-                    "D": "D2"
-                }), contract_pairs)
-                merge_map: dict[str, list[str]] = {}
-                if l1 != 0:
-                    merge_map["U"] = ["U1", "U2"]
-                if l2 != 0:
-                    merge_map["L"] = ["L1", "L2"]
-                if l1 != self.L1 - 1:
-                    merge_map["D"] = ["D1", "D2"]
-                if l2 != self.L2 - 1:
-                    merge_map["R"] = ["R1", "R2"]
-                self._auxiliaries[l1, l2] = double_site.merge_edge(merge_map, parity_exclude_name_merge_set={"R", "D"}, parity_exclude_name_reverse_set={"R1", "R2", "D1", "D2"})
-        # protocol:
-        # The double layer merging order is [normal tensor, conjugated tensor].
-        # In auxiliaries, every site contain the environment in the left and up direction, if it exists.
-        # When reversing and merging edge, edge left and up DO NOT apply sign,
-        # and edge down and right DO apply sign.
+                self._auxiliaries[l1, l2, "N"] = this_site
+                self._auxiliaries[l1, l2, "C"] = this_site.conjugate()
 
-    def observe(self, positions: tuple[tuple[int, int], ...], observer: self.Tensor | None) -> float:
+    def observe(self, positions: tuple[tuple[int, int], ...], observer: self.Tensor) -> float:
         if self._auxiliaries is None:
             raise RuntimeError("Need to initialize auxiliary before call observe")
-        # print("observing", positions)
-
         body: int = len(positions)
         if body == 0:
-            return float(self._auxiliaries())
-        # TODO detailed positions specific algorithm can be optimized
-
-        outer: self.Tensor = self._auxiliaries(positions)
-        outer = outer.edge_rename({f"D{i}": f"U{i}" for i in range(body)} | {f"U{i}": f"D{i}" for i in range(body)} | {f"L{i}": f"R{i}" for i in range(body)} | {f"R{i}": f"L{i}" for i in range(body)})
-
-        inner_single: self.Tensor = self.Tensor(1)
-        remained_names: set[str] = set()
-        for index, position in enumerate(positions):
-            l1, l2 = position
-            this_site: self.Tensor = self[l1, l2]
-            this_site = self._try_multiple(this_site, l1, l2, "L")
-            this_site = self._try_multiple(this_site, l1, l2, "U")
-            this_site = this_site.edge_rename({name: f"{name}{index}" for name in this_site.names if name != "T"})
-            contract_set: set[tuple[str, str]] = set()
-            if l1 != 0:
-                remained_names.add(f"U{index}")
-            if l2 != 0:
-                remained_names.add(f"L{index}")
-            if l1 != self.L1 - 1:
-                remained_names.add(f"D{index}")
-            if l2 != self.L2 - 1:
-                remained_names.add(f"R{index}")
-
-            for other_index in range(index):
-                other_position: tuple[int, int] = positions[other_index]
-                m1, m2 = other_position
-                if m1 == l1 and m2 + 1 == l2:
-                    # former - this
-                    contract_set.add((f"R{other_index}", f"L{index}"))
-                    remained_names.remove(f"L{index}")
-                    remained_names.remove(f"R{other_index}")
-                elif m1 == l1 and m2 - 1 == l2:
-                    # this - former
-                    contract_set.add((f"L{other_index}", f"R{index}"))
-                    remained_names.remove(f"R{index}")
-                    remained_names.remove(f"L{other_index}")
-                elif m1 + 1 == l1 and m2 == l2:
-                    # former
-                    #   |
-                    # this
-                    contract_set.add((f"D{other_index}", f"U{index}"))
-                    remained_names.remove(f"U{index}")
-                    remained_names.remove(f"D{other_index}")
-                elif m1 - 1 == l1 and m2 == l2:
-                    # this
-                    #   |
-                    # former
-                    contract_set.add((f"U{other_index}", f"D{index}"))
-                    remained_names.remove(f"D{index}")
-                    remained_names.remove(f"U{other_index}")
-            inner_single = inner_single.contract(this_site, contract_set)
-        inner_1: self.Tensor = inner_single.edge_rename({name: f"{name}.1" for name in remained_names})
-        inner_2: self.Tensor = inner_single.edge_rename({name: f"{name}.2" for name in remained_names}).conjugate()
-        if "T" in inner_single.names:
-            with_T: set[tuple[str, str]] = {("T", "T")}
-        else:
-            with_T: set[tuple[str, str]] = set()
-        big: self.Tensor = inner_1.contract(observer, {(f"P{i}", f"I{i}") for i in range(body)}).contract(inner_2, {(f"O{i}", f"P{i}") for i in range(body)} | with_T)
-        merge_parity_set = {name for name in remained_names if name[0] == "R" or name[0] == "D"}
-        reverse_parity_set = {f"{name}.1" for name in merge_parity_set} | {f"{name}.2" for name in merge_parity_set}
-        inner: self.Tensor = big.merge_edge({name: [f"{name}.1", f"{name}.2"] for name in remained_names},
-                                            parity_exclude_name_merge_set=merge_parity_set,
-                                            parity_exclude_name_reverse_set=reverse_parity_set)
-        return float(inner.contract(outer, {(name, name) for name in inner.names}))
+            return float(1)
+        rho: self.Tensor = self._auxiliaries(positions)
+        psipsi: self.Tensor = rho.trace({(f"O{i}", f"I{i}") for i in range(body)})
+        psiHpsi: self.Tensor = rho.contract(observer, {*((f"O{i}", f"I{i}") for i in range(body)), *((f"I{i}", f"O{i}") for i in range(body))})
+        return float(psiHpsi) / float(psipsi)
 
     def observe_energy(self) -> float:
         energy: float = 0
         for positions, observer in self._hamiltonians.items():
             # print("observing", positions)
             energy += self.observe(positions, observer)
-        return energy / self.observe(tuple(), None) / (self.L1 * self.L2)
-
-    # TODO full update
+        return energy / (self.L1 * self.L2)
