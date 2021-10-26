@@ -114,17 +114,15 @@ namespace TAT {
             symmetries[1].arrow = true;
          }
          auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
-         for (auto& [symmetries, data_destination] : result.core->blocks) {
-            const auto& data_source = std::find_if(singular.begin(), singular.end(), [&symmetry = symmetries[1]](const auto& pair) {
-                                         return pair.first == symmetry;
-                                      })->second;
+         for (const auto& [symmetry, data_source] : singular) {
+            auto& data_destination = result.blocks(std::array<Symmetry, 2>{-symmetry, symmetry});
             auto dimension = data_source.size();
             auto dimension_plus_one = dimension + 1;
             std::fill(data_destination.begin(), data_destination.end(), 0);
             bool parity = false;
             if constexpr (Symmetry::is_fermi_symmetry) {
                if (need_transpose) {
-                  parity = symmetries[0].get_parity();
+                  parity = symmetry.get_parity();
                }
             }
             if (parity) {

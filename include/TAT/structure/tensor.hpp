@@ -30,13 +30,53 @@
 #include <variant>
 
 #include "../utility/allocator.hpp"
-#include "../utility/propagate_const.hpp"
+#include "../utility/shared_ptr.hpp"
 #include "core.hpp"
 #include "edge.hpp"
 #include "name.hpp"
 #include "symmetry.hpp"
 
 namespace TAT {
+   namespace detail {
+      /**
+       * If given a Key, return itself, else return a.first;
+       */
+      template<typename Key, typename A>
+      const auto& get_key(const A& a) {
+         if constexpr (std::is_same_v<remove_cvref_t<Key>, remove_cvref_t<A>>) {
+            return a;
+         } else {
+            return std::get<0>(a);
+         }
+      }
+
+      template<bool is_range = true, typename Map, typename Key>
+      auto fake_map_find(Map& v, const Key& key) {
+         auto result = std::lower_bound(v.begin(), v.end(), key, [](const auto& a, const auto& b) {
+            if constexpr (is_range) {
+               return std::lexicographical_compare(get_key<Key>(a).begin(), get_key<Key>(a).end(), get_key<Key>(b).begin(), get_key<Key>(b).end());
+            } else {
+               return get_key<Key>(a) < get_key<Key>(b);
+            }
+         });
+         if (result == v.end()) {
+            // result may be un dereferencable
+            return v.end();
+         } else {
+            if constexpr (is_range) {
+               if (std::equal(std::get<0>(*result).begin(), std::get<0>(*result).end(), key.begin(), key.end())) {
+                  return result;
+               }
+            } else {
+               if (std::get<0>(*result) == key) {
+                  return result;
+               }
+            }
+            return v.end();
+         }
+      }
+   } // namespace detail
+
    struct RemainCut {
       Size value;
       // TODO RemainCut from Size should be explicit
@@ -135,7 +175,7 @@ namespace TAT {
        * \see Core
        * \note bacause edge rename is very common operation, to avoid copy data, put the remaining data into shared pointer
        */
-      detail::propagate_const_shared_ptr<core_t> core;
+      detail::shared_ptr<core_t> core;
 
       // TODO put clear unused symmetry here
 
@@ -158,7 +198,7 @@ namespace TAT {
        */
       Tensor(std::vector<Name> names_init, std::vector<Edge<Symmetry>> edges_init) :
             names(std::move(names_init)),
-            core(std::make_shared<core_t>(std::move(edges_init))) {
+            core(detail::shared_ptr<core_t>::make(std::move(edges_init))) {
          if constexpr (debug_mode) {
             check_valid_name();
          }
@@ -185,7 +225,7 @@ namespace TAT {
             const std::vector<Symmetry>& edge_symmetry = {},
             const std::vector<Arrow>& edge_arrow = {}) :
             names(std::move(names_init)),
-            core(std::make_shared<core_t>(get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, names.size()))) {
+            core(detail::shared_ptr<core_t>::make(get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, names.size()))) {
          if constexpr (debug_mode) {
             check_valid_name();
          }
@@ -317,7 +357,7 @@ namespace TAT {
        * \see map
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> copy() const {
-         return map([](auto x) {
+         return map([](const ScalarType& x) -> ScalarType {
             return x;
          });
       }
@@ -342,7 +382,7 @@ namespace TAT {
        * \see set
        */
       Tensor<ScalarType, Symmetry, Name>& zero() & {
-         return set([]() {
+         return set([]() -> ScalarType {
             return 0;
          });
       }
@@ -355,7 +395,7 @@ namespace TAT {
        * \see set
        */
       Tensor<ScalarType, Symmetry, Name>& range(ScalarType first = 0, ScalarType step = 1) & {
-         return set([&first, step]() {
+         return set([&first, step]() -> ScalarType {
             auto result = first;
             first += step;
             return result;
@@ -371,7 +411,7 @@ namespace TAT {
        */
       void acquare_data_ownership(const char* message = "") {
          if (core.use_count() != 1) {
-            core = std::make_shared<Core<ScalarType, Symmetry>>(*core);
+            core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(*core);
             if (*message != 0) {
                detail::what_if_copy_shared(message);
             }
@@ -495,42 +535,11 @@ namespace TAT {
          return const_cast<Edge<Symmetry>&>(const_cast<const self_t*>(this)->edges(name));
       }
 
-      /// \private
-      /**
-       * If given a Key, return itself, else return a.first;
-       */
-      template<typename Key, typename A>
-      static const auto& get_key(const A& a) {
-         if constexpr (std::is_same_v<remove_cvref_t<Key>, remove_cvref_t<A>>) {
-            return a;
-         } else {
-            return a.first;
-         }
-      }
-
-      template<typename SymmetryList = std::vector<Symmetry>>
-      auto find_block(const SymmetryList& symmetry_list) const {
-         using Key = SymmetryList;
-         const auto& v = core->blocks;
-         const auto& key = symmetry_list;
-         auto result = std::lower_bound(v.begin(), v.end(), key, [](const auto& a, const auto& b) {
-            return std::lexicographical_compare(get_key<Key>(a).begin(), get_key<Key>(a).end(), get_key<Key>(b).begin(), get_key<Key>(b).end());
-         });
-         if (result == v.end()) {
-            // result may be un dereferencable
-            return v.end();
-         } else if (std::equal(result->first.begin(), result->first.end(), key.begin(), key.end())) {
-            return result;
-         } else {
-            return v.end();
-         }
-      }
-
       // int/name -> symmetry
       template<typename SymmetryList = std::vector<Symmetry>>
       const typename core_t::content_vector_t& blocks(const SymmetryList& symmetry_list) const& {
          // it maybe used from other tensor function
-         auto found = find_block(symmetry_list);
+         auto found = detail::fake_map_find(core->blocks, symmetry_list);
          if (found == core->blocks.end()) {
             detail::error("No such symmetry block in the tensor");
          }
