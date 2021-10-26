@@ -433,8 +433,12 @@ namespace TAT {
                      }
                   }
                }
-               remain_dimension_u.at(maximum_position) += 1;
-               remain_dimension_v.at(-maximum_position) += 1;
+               if (maximum_singular != 0) {
+                  // sometimes non zero singular number is less than cut_i
+                  // this if check the validity of maximum_position
+                  remain_dimension_u.at(maximum_position) += 1;
+                  remain_dimension_v.at(-maximum_position) += 1;
+               }
             }
 
             // delete element of tensor S
