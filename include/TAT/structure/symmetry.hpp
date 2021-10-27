@@ -342,5 +342,6 @@ namespace TAT {
    using FermiSymmetry = Symmetry<fermi_wrap<U1>>;
    using FermiZ2Symmetry = Symmetry<fermi_wrap<U1>, Z2>;
    using FermiU1Symmetry = Symmetry<fermi_wrap<U1>, U1>;
+   using ParitySymmetry = Symmetry<fermi_wrap<Z2>>;
 } // namespace TAT
 #endif

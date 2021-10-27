@@ -109,6 +109,15 @@ namespace TAT {
       declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true>(FermiU1_m, "FermiU1");
       declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_segment_t>(FermiU1_m, "FermiU1");
 
+      auto Parity_m = tat_m.def_submodule("Parity");
+      declare_symmetry<ParitySymmetry>(Parity_m, "Pariry")
+            .def(implicit_init<ParitySymmetry, Z2>(), py::arg("parity"))
+            .def_property_readonly("parity", [](const ParitySymmetry& symmetry) {
+               return std::get<0>(symmetry);
+            });
+      declare_edge<ParitySymmetry, Z2, false>(Parity_m, "Parity");
+      declare_edge<ParitySymmetry, Z2, false, edge_segment_t>(Parity_m, "Parity");
+
       // tensor
       std::vector<std::function<void()>> define_tensor;
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
