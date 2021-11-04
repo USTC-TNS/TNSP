@@ -66,8 +66,7 @@ class AbstractLattice(AbstractState):
     def _default_bonds(self, l1: int, l2: int) -> dict[str, self.Edge]:
         result: dict[str, self.Edge] = {}
         if l1 == l2 == 0:
-            if self.total_symmetry:
-                result["T"] = self.get_total_symmetry_edge()
+            result["T"] = self.get_total_symmetry_edge()
         if l1 != 0:
             result["U"] = None
         if l1 != self.L1 - 1:

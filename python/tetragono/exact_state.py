@@ -33,9 +33,8 @@ class ExactState(AbstractState):
     def _construct_vector(self) -> self.Tensor:
         names: list[str] = [f"P_{i}_{j}" for i in range(self.L1) for j in range(self.L2)]
         edges: list[self.Edge] = [self.physics_edges[i, j] for i in range(self.L1) for j in range(self.L2)]
-        if self._total_symmetry:
-            names.append("T")
-            edges.append(self.get_total_symmetry_edge())
+        names.append("T")
+        edges.append(self.get_total_symmetry_edge())
         vector: self.Tensor = self.Tensor(names, edges).randn()
         vector /= vector.norm_2()
         return vector
@@ -64,9 +63,7 @@ class ExactState(AbstractState):
         else:
             result: self.Tensor = self.vector.contract(observer.edge_rename({f"O{t}": f"P_{i}_{j}" for t, [i, j] in enumerate(positions)}),
                                                        {(f"P_{i}_{j}", f"I{t}") for t, [i, j] in enumerate(positions)})
-        TT_pair: set[tuple[str, str]] = set()
-        if self.total_symmetry is not None:
-            TT_pair = {("T", "T")}
+        TT_pair: set[tuple[str, str]] = {("T", "T")}
         result = result.contract(self.vector.conjugate(), {(f"P_{i}_{j}", f"P_{i}_{j}") for i in range(self.L1) for j in range(self.L2)} | TT_pair)
         return float(result)
 

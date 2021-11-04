@@ -141,6 +141,10 @@ class Auxiliaries:
         l1, l2 = l1l2
         self._lattice[l1][l2].reset(tensor)
 
+    def __getitem__(self, l1l2: tuple[int, int]) -> self.Tensor:
+        l1, l2 = l1l2
+        return self._lattice[l1][l2]()
+
     def _construct_inline_left_to_right(self, l1: int, l2: int) -> lazy.Node[self.Tensor]:
         if l2 == -1:
             return self._one
@@ -304,14 +308,104 @@ class Auxiliaries:
 
         return double_line
 
-    def __call__(self, position: tuple[tuple[int, int], ...], *, hint=None) -> self.Tensor:
+    def replace(self, replacement: dict[tuple[int, int], self.Tensor], *, hint=None) -> self.Tensor:
+        if len(replacement) == 0:
+            if hint is None:
+                hint = ("H", 0)
+            direction, line = hint
+            if direction == "H":
+                return self._inline_right_to_left[line, 0]()
+            elif direction == "V":
+                return self._inline_down_to_up[0, line]()
+            else:
+                raise ValueError("Unrecognized hint")
+        elif len(replacement) == 1:
+            [l1, l2], new_tensor = list(replacement.items())[0]
+            if hint is None:
+                hint = "H"
+            if hint == "H":
+                left: self.Tensor = self._inline_left_to_right_tailed[l1, l2 - 1]()
+                right: self.Tensor = self._inline_right_to_left_tailed[l1, l2 + 1]()
+                result: self.Tensor
+                result = safe_contract(left, new_tensor, {("R2", "L"), ("D", "U")})
+                result = safe_contract(result, right, {("R1", "L1"), ("R", "L2"), ("D", "U"), ("R3", "L3")})
+                return result
+            elif hint == "V":
+                up: self.Tensor = self._inline_up_to_down_tailed[l1 - 1, l2]()
+                down: self.Tensor = self._inline_down_to_up_tailed[l1 + 1, l2]()
+                result: self.Tensor
+                result = safe_contract(up, new_tensor, {("D2", "U"), ("R", "L")})
+                result = safe_contract(result, down, {("D1", "U1"), ("D", "U2"), ("R", "L"), ("D3", "U3 ")})
+                return result
+            else:
+                raise ValueError("Unrecognized hint")
+        elif len(replacement) == 2:
+            items = list(replacement.items())
+            p0, t0 = items[0]
+            p1, t1 = items[1]
+            if hint is not None:
+                raise ValueError("Unrecognized hint")
+            if p0[0] == p1[0]:
+                if p0[1] + 1 == p1[1]:
+                    left_part: self.Tensor = self._inline_left_to_right_tailed[p0[0], p0[1] - 1]()
+                    left_dot: self.Tensor = self._down_to_up_site[p0[0] + 1, p0[1]]()
+                    right_part: self.Tensor = self._inline_right_to_left_tailed[p1[0], p1[1] + 1]()
+                    right_dot: self.Tensor = self._up_to_down_site[p1[0] - 1, p1[1]]()
+                    result: self.Tensor
+                    result = safe_contract(left_part, t0.edge_rename({"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, left_dot.edge_rename({"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, right_dot.edge_rename({"R": "R1"}), {("R1", "L")})
+                    result = safe_contract(result, t1.edge_rename({"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("D", "U"), ("R3", "L3")})
+                    return result
+                if p0[1] == p1[1] + 1:
+                    left_part: self.Tensor = self._inline_left_to_right_tailed[p1[0], p1[1] - 1]()
+                    left_dot: self.Tensor = self._down_to_up_site[p1[0] + 1, p1[1]]()
+                    right_part: self.Tensor = self._inline_right_to_left_tailed[p0[0], p0[1] + 1]()
+                    right_dot: self.Tensor = self._up_to_down_site[p0[0] - 1, p0[1]]()
+                    result: self.Tensor
+                    result = safe_contract(left_part, t1.edge_rename({"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, left_dot.edge_rename({"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, right_dot.edge_rename({"R": "R1"}), {("R1", "L")})
+                    result = safe_contract(result, t0.edge_rename({"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("D", "U"), ("R3", "L3")})
+                    return result
+            if p0[1] == p1[1]:
+                if p0[0] + 1 == p1[0]:
+                    up_part: self.Tensor = self._inline_up_to_down_tailed[p0[0] - 1, p0[1]]()
+                    up_dot: self.Tensor = self._right_to_left_site[p0[0], p0[1] + 1]()
+                    down_part: self.Tensor = self._inline_down_to_up_tailed[p1[0] + 1, p1[1]]()
+                    down_dot: self.Tensor = self._left_to_right_site[p1[0], p1[1] - 1]()
+                    result: self.Tensor
+                    result = safe_contract(up_part, t0.edge_rename({"D": "D2"}), {("R", "L"), ("D2", "U")})
+                    result = safe_contract(result, up_dot.edge_rename({"D": "D3"}), {("R", "L"), ("D3", "U")})
+                    result = safe_contract(result, down_dot.edge_rename({"D": "D1"}), {("D1", "U")})
+                    result = safe_contract(result, t1.edge_rename({"D": "D2"}), {("R", "L"), ("D2", "U")})
+                    result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
+                    return result
+                if p0[0] == p1[0] + 1:
+                    up_part: self.Tensor = self._inline_up_to_down_tailed[p1[0] - 1, p1[1]]()
+                    up_dot: self.Tensor = self._right_to_left_site[p1[0], p1[1] + 1]()
+                    down_part: self.Tensor = self._inline_down_to_up_tailed[p0[0] + 1, p0[1]]()
+                    down_dot: self.Tensor = self._left_to_right_site[p0[0], p0[1] - 1]()
+                    result: self.Tensor
+                    result = safe_contract(up_part, t1.edge_rename({"D": "D2"}), {("R", "L"), ("D2", "U")})
+                    result = safe_contract(result, up_dot.edge_rename({"D": "D3"}), {("R", "L"), ("D3", "U")})
+                    result = safe_contract(result, down_dot.edge_rename({"D": "D1"}), {("D1", "U")})
+                    result = safe_contract(result, t0.edge_rename({"D": "D2"}), {("R", "L"), ("D2", "U")})
+                    result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
+                    return result
+
+        raise NotImplementedError("Unsupported auxilary replace style")
+
+    def hole(self, position: tuple[tuple[int, int], ...], *, hint=None) -> self.Tensor:
         if len(position) == 0:
             if hint is None:
                 hint = ("H", 0)
             direction, line = hint
             if direction == "H":
                 return self._inline_right_to_left[line, 0]()
-            elif directionn == "V":
+            elif direction == "V":
                 return self._inline_down_to_up[0, line]()
             else:
                 raise ValueError("Unrecognized hint")
@@ -341,7 +435,8 @@ class Auxiliaries:
                     left_dot: self.Tensor = self._down_to_up_site[p0[0] + 1, p0[1]]()
                     right_part: self.Tensor = self._inline_right_to_left_tailed[p1[0], p1[1] + 1]()
                     right_dot: self.Tensor = self._up_to_down_site[p1[0] - 1, p1[1]]()
-                    result: self.Tensor = safe_contract(left_part, left_dot.edge_rename({"R": "R3"}), {("R3", "L")}).edge_rename({"D": "D0", "U": "U0"})
+                    result: self.Tensor
+                    result = safe_contract(left_part, left_dot.edge_rename({"R": "R3"}), {("R3", "L")}).edge_rename({"D": "D0", "U": "U0"})
                     result = safe_contract(result, right_dot.edge_rename({"R": "R1"}), {("R1", "L")}).edge_rename({"D": "D1"})
                     result = safe_contract(result, right_part, {("R1", "L1"), ("R3", "L3")}).edge_rename({"U": "U1", "R2": "R0", "L2": "L1"})
                     return result
@@ -350,7 +445,8 @@ class Auxiliaries:
                     left_dot: self.Tensor = self._down_to_up_site[p1[0] + 1, p1[1]]()
                     right_part: self.Tensor = self._inline_right_to_left_tailed[p0[0], p0[1] + 1]()
                     right_dot: self.Tensor = self._up_to_down_site[p0[0] - 1, p0[1]]()
-                    result: self.Tensor = safe_contract(left_part, left_dot.edge_rename({"R": "R3"}), {("R3", "L")}).edge_rename({"D": "D1", "U": "U1"})
+                    result: self.Tensor
+                    result = safe_contract(left_part, left_dot.edge_rename({"R": "R3"}), {("R3", "L")}).edge_rename({"D": "D1", "U": "U1"})
                     result = safe_contract(result, right_dot.edge_rename({"R": "R1"}), {("R1", "L")}).edge_rename({"D": "D0"})
                     result = safe_contract(result, right_part, {("R1", "L1"), ("R3", "L3")}).edge_rename({"U": "U0", "R2": "R1", "L2": "L0"})
                     return result
@@ -360,7 +456,8 @@ class Auxiliaries:
                     up_dot: self.Tensor = self._right_to_left_site[p0[0], p0[1] + 1]()
                     down_part: self.Tensor = self._inline_down_to_up_tailed[p1[0] + 1, p1[1]]()
                     down_dot: self.Tensor = self._left_to_right_site[p1[0], p1[1] - 1]()
-                    result: self.Tensor = safe_contract(up_part, up_dot.edge_rename({"D": "D3"}), {("D3", "U")}).edge_rename({"R": "R0", "L": "L0"})
+                    result: self.Tensor
+                    result = safe_contract(up_part, up_dot.edge_rename({"D": "D3"}), {("D3", "U")}).edge_rename({"R": "R0", "L": "L0"})
                     result = safe_contract(result, down_dot.edge_rename({"D": "D1"}), {("D1", "U")}).edge_rename({"R": "R1"})
                     result = safe_contract(result, down_part, {("D1", "U1"), ("D3", "U3")}).edge_rename({"L": "L1", "D2": "D0", "U2": "U1"})
                     return result
@@ -369,14 +466,10 @@ class Auxiliaries:
                     up_dot: self.Tensor = self._right_to_left_site[p1[0], p1[1] + 1]()
                     down_part: self.Tensor = self._inline_down_to_up_tailed[p0[0] + 1, p0[1]]()
                     down_dot: self.Tensor = self._left_to_right_site[p0[0], p0[1] - 1]()
-                    result: self.Tensor = safe_contract(up_part, up_dot.edge_rename({"D": "D3"}), {("D3", "U")}).edge_rename({"R": "R1", "L": "L1"})
+                    result: self.Tensor
+                    result = safe_contract(up_part, up_dot.edge_rename({"D": "D3"}), {("D3", "U")}).edge_rename({"R": "R1", "L": "L1"})
                     result = safe_contract(result, down_dot.edge_rename({"D": "D1"}), {("D1", "U")}).edge_rename({"R": "R0"})
                     result = safe_contract(result, down_part, {("D1", "U1"), ("D3", "U3")}).edge_rename({"L": "L0", "D2": "D1", "U2": "U0"})
                     return result
 
         raise NotImplementedError("Unsupported auxilary hole style")
-
-    # TODO
-    # contract with other tensor style aux -> sampling lattice
-    # aux copy and merge
-    # opt edge operator

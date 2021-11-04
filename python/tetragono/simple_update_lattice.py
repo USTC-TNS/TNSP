@@ -256,10 +256,10 @@ class SimpleUpdateLattice(AbstractLattice):
     def observe(self, positions: tuple[tuple[int, int], ...], observer: self.Tensor) -> float:
         if self._auxiliaries is None:
             raise RuntimeError("Need to initialize auxiliary before call observe")
-        body: int = len(positions)
+        body: int = observer.rank // 2
         if body == 0:
             return float(1)
-        rho: self.Tensor = self._auxiliaries(positions)
+        rho: self.Tensor = self._auxiliaries.hole(positions)
         psipsi: self.Tensor = rho.trace({(f"O{i}", f"I{i}") for i in range(body)})
         psiHpsi: self.Tensor = rho.contract(observer, {*((f"O{i}", f"I{i}") for i in range(body)), *((f"I{i}", f"O{i}") for i in range(body))})
         return float(psiHpsi) / float(psipsi)

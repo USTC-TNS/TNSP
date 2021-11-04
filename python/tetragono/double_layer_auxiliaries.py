@@ -136,12 +136,21 @@ class DoubleLayerAuxiliaries:
                 self._inline_down_to_up[l1, l2] = self._construct_inline_down_to_up(l1, l2)
                 self._inline_down_to_up_tailed[l1, l2] = self._construct_inline_down_to_up_tailed(l1, l2)
 
-    def __setitem__(self, l1l2: tuple[int, int, str], tensor: self.Tensor) -> None:
-        l1, l2, nc = l1l2
+    def __setitem__(self, l1l2nc: tuple[int, int, str], tensor: self.Tensor) -> None:
+        l1, l2, nc = l1l2nc
         if nc == "N" or nc == "n":
             self._lattice_n[l1][l2].reset(tensor)
         elif nc == "C" or nc == "c":
             self._lattice_c[l1][l2].reset(tensor)
+        else:
+            raise ValueError("Invalid layer when setting lattice")
+
+    def __getitem__(self, l1l2nc: tuple[int, int, str]) -> self.Tensor:
+        l1, l2, nc = l1l2nc
+        if nc == "N" or nc == "n":
+            return self._lattice_n[l1][l2]()
+        elif nc == "C" or nc == "c":
+            return self._lattice_c[l1][l2]()
         else:
             raise ValueError("Invalid layer when setting lattice")
 
@@ -335,7 +344,7 @@ class DoubleLayerAuxiliaries:
 
         return double_line
 
-    def __call__(self, position: tuple[tuple[int, int], ...], *, hint=None) -> self.Tensor:
+    def hole(self, position: tuple[tuple[int, int], ...], *, hint=None) -> self.Tensor:
         if len(position) == 0:
             if hint is None:
                 hint = ("H", 0)

@@ -81,7 +81,7 @@ class AbstractState:
         self.L2: int = L2
         self._physics_edges: list[list[self.Edge]] = [[None for l2 in range(self.L2)] for l1 in range(self.L1)]
         self._hamiltonians: dict[tuple[tuple[int, int], ...], self.Tensor] = {}  # ((int, int), ...) -> Tensor
-        self._total_symmetry: self.Symmetry | None = None
+        self._total_symmetry: self.Symmetry = self.Symmetry()
 
     def _init_by_copy(self, other: AbstractState) -> None:
         self.Tensor: type = other.Tensor
@@ -91,7 +91,7 @@ class AbstractState:
         self.L2: int = other.L2
         self._physics_edges: list[list[self.Edge]] = [[other._physics_edges[i][j] for j in range(self.L2)] for i in range(self.L1)]
         self._hamiltonians: dict[tuple[tuple[int, int], ...], self.Tensor] = other._hamiltonians.copy()
-        self._total_symmetry: self.Symmetry | None = other.total_symmetry
+        self._total_symmetry: self.Symmetry = other.total_symmetry
 
     @property
     def total_symmetry(self) -> self.Symmetry:
@@ -104,23 +104,16 @@ class AbstractState:
         else:
             self._total_symmetry = self.Symmetry(value)
 
-    def is_fermi(self) -> bool:
-        return hasattr(self.Edge, "arrow")
-
     def get_total_symmetry_edge(self) -> self.Edge:
-        if self.is_fermi():
-            return self.Edge([(-self._total_symmetry, 1)], True)
-        else:
-            return self.Edge([(-self._total_symmetry, 1)])
+        return self.Edge([(-self._total_symmetry, 1)], True)
 
     def _construct_physics_edge(self, edge) -> self.Edge:
         if isinstance(edge, self.Edge):
             result = edge
         else:
             result = self.Edge(edge)
-        if self.is_fermi():
-            if result.arrow != False:
-                raise ValueError("Edge arrow of physics bond should be False")
+        if result.arrow != False:
+            raise ValueError("Edge arrow of physics bond should be False")
         return result
 
     @property
