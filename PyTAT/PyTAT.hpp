@@ -394,7 +394,7 @@ namespace TAT {
                         };
                         if (contain("float32")) {
                            return py::cast(tensor.template to<float>(), py::return_value_policy::move);
-                        } else if (contain("complex32")) {
+                        } else if (contain("complex64")) {
                            return py::cast(tensor.template to<std::complex<float>>(), py::return_value_policy::move);
                         } else if (contain("float")) {
                            return py::cast(tensor.template to<double>(), py::return_value_policy::move);

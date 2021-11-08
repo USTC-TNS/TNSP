@@ -59,7 +59,7 @@ namespace TAT {
          if (contain("complex")) {
             scalar = "Z";
          }
-         if (contain("complex32")) {
+         if (contain("complex64")) {
             scalar = "C";
          }
          if (contain("float")) {

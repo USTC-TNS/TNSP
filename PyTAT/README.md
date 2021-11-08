@@ -21,7 +21,7 @@ import TAT
 
 # TAT does not support mixing different basic scalar type tensor
 # So you need to get type of some specific type tensor first
-# Supported type are "float", "float32", "complex", "complex32"
+# Supported type are "float", "float32", "complex", "complex64"
 Tensor = TAT(float)
 
 # Create a rank-2 tensor with edge names as "i" and "j", and its
