@@ -200,7 +200,12 @@ namespace TAT {
        * Get the only element from a tensor which contains only one element
        */
       explicit operator ScalarType() const {
-         return const_at();
+         if (storage().size() == 0) {
+            // sometimes it is useful
+            return 0;
+         } else {
+            return const_at();
+         }
       }
 
       /// \private
