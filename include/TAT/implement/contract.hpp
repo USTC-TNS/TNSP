@@ -303,7 +303,7 @@ namespace TAT {
          for (const auto& name_1 : tensor_1.names) {
             for (const auto& name_2 : tensor_2.names) {
                if ((name_1 == name_2) && (fuse_names.find(name_1) == fuse_names.end()) &&
-                   (find_in_contract_names<0>(contract_names, name_1) == contract_names.end() ||
+                   (find_in_contract_names<0>(contract_names, name_1) == contract_names.end() &&
                     find_in_contract_names<1>(contract_names, name_2) == contract_names.end())) {
                   detail::error("Duplicated name in two contracting tensor but not fusing");
                }
