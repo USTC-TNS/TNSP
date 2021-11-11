@@ -31,11 +31,11 @@ namespace TAT {
    using net::pss;
 
    template<>
-   [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_0 = {"Internal", "0"};
+   const pss InternalName<pss>::Default_0 = {"Internal", "0"};
    template<>
-   [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_1 = {"Internal", "1"};
+   const pss InternalName<pss>::Default_1 = {"Internal", "1"};
    template<>
-   [[gnu::init_priority(101)]] const pss InternalName<pss>::Default_2 = {"Internal", "2"};
+   const pss InternalName<pss>::Default_2 = {"Internal", "2"};
 
    template<>
    struct NameTraits<pss> {

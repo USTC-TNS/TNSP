@@ -109,6 +109,8 @@ namespace TAT {
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_0)
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_1)
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_2)
+#undef TAT_DEFINE_ALL_INTERNAL_NAME
+#define TAT_DEFINE_ALL_INTERNAL_NAME(x) static const Name& x;
       TAT_DEFINE_ALL_INTERNAL_NAME(Contract_0)  // Used in contract temporary tensor
       TAT_DEFINE_ALL_INTERNAL_NAME(Contract_1)  // Used in contract temporary tensor
       TAT_DEFINE_ALL_INTERNAL_NAME(Contract_2)  // used in contract temporary tensor
@@ -127,7 +129,7 @@ namespace TAT {
    };
 #define TAT_DEFINE_DEFAULT_INTERNAL_NAME(x, n) \
    template<typename Name> \
-   const Name InternalName<Name>::x = InternalName<Name>::Default_##n;
+   const Name& InternalName<Name>::x = InternalName<Name>::Default_##n;
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_0, 0)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_1, 1)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Contract_2, 2)
@@ -145,9 +147,9 @@ namespace TAT {
 #undef TAT_DEFINE_DEFAULT_INTERNAL_NAME
 #define TAT_DEFINE_INTERNAL_NAME(x) \
    template<> \
-   inline const FastName InternalName<FastName>::x = "__" #x; \
+   inline const FastName& InternalName<FastName>::x = "__" #x; \
    template<> \
-   inline const std::string InternalName<std::string>::x = "__" #x;
+   inline const std::string& InternalName<std::string>::x = "__" #x;
    TAT_DEFINE_INTERNAL_NAME(Contract_0)
    TAT_DEFINE_INTERNAL_NAME(Contract_1)
    TAT_DEFINE_INTERNAL_NAME(Contract_2)
