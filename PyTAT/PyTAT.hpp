@@ -610,7 +610,12 @@ namespace TAT {
             if constexpr (IsTuple) {
                symmetries.push_back(std::make_from_tuple<Symmetry>(element));
             } else {
-               symmetries.push_back(Symmetry(element));
+               // element maybe bit reference from vector bool
+               if constexpr (std::is_base_of_v<std::tuple<bool>, Symmetry>) {
+                  symmetries.push_back(Symmetry(bool(element)));
+               } else {
+                  symmetries.push_back(Symmetry(element));
+               }
             }
          }
          return symmetries;
