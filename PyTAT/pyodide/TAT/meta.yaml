@@ -1,0 +1,20 @@
+package:
+  name: TAT
+  version: 0.1.4
+
+source:
+  url: https://github.com/hzhangxyz/TAT/archive/refs/heads/feature/pyodide.zip
+  extras:
+    - [setup.py, setup.py]
+
+
+build:
+  script: |
+     git clone https://github.com/pybind/pybind11.git
+     cd PyTAT
+     bash ./generator.sh
+     cd ..
+
+requirements:
+  run:
+    - CLAPACK
