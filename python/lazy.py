@@ -126,17 +126,25 @@ class Node(Generic[T]):
 
     def __call__(self) -> T:
         if self._value is None:
-            args = [self._unwrap_node(i) for i in self._args]
-            kwargs = {i: self._unwrap_node(j) for i, j in self._kwargs.items()}
+            # need to reduce stack depth
+            # or call sys.setrecursionlimit(more_stack_depth)
+
+            # args = [self._unwrap_node(i) for i in self._args]
+            args = []
+            for i in self._args:
+                if isinstance(i, Node):
+                    i = i()
+                args.append(i)
+
+            # kwargs = {i: self._unwrap_node(j) for i, j in self._kwargs.items()}
+            kwargs = {}
+            for i, j in self._kwargs.items():
+                if isinstance(j, Node):
+                    j = j()
+                kwargs[i] = j
+
             self._value = self._func(*args, **kwargs)
         return self._value
-
-    @staticmethod
-    def _unwrap_node(node):
-        if isinstance(node, Node):
-            return node()
-        else:
-            return node
 
 
 def Root(value: T | None = None) -> Node[T]:
