@@ -1,5 +1,5 @@
 package:
-  name: TAT
+  name: tetragono
   version: 0.1.4
 
 source:
@@ -7,14 +7,9 @@ source:
   extras:
     - [setup.py, setup.py]
 
-build:
-  script: |
-     git clone https://github.com/pybind/pybind11.git
-     cd PyTAT
-     bash ./generator.sh
-     cd ..
-
 requirements:
   run:
+    - lazy
+    - TAT
     - numpy
     - CLAPACK
