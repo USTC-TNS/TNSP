@@ -25,272 +25,282 @@
 #error only work for c++
 #endif
 
-#ifdef _MSVC_LANG
-#if _MSVC_LANG < 201703L
-#error require c++17 or later
-#endif
-#else
 #if __cplusplus < 201703L
 #error require c++17 or later
 #endif
-#endif
 
-#include <any>
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
+#include <stdexcept>
 #include <tuple>
 #include <type_traits>
+#include <unordered_map>
+#include <variant>
 
 namespace lazy {
-   /**
-    * \defgroup Lazy
-    * @{
-    */
-   struct lazy_base : std::enable_shared_from_this<lazy_base> {
-    private:
-      /**
-       * 重置当前节点
-       */
-      virtual void release() = 0;
+   namespace detail {
+      template<class>
+      constexpr bool is_reference_wrapper_v = false;
+      template<class U>
+      constexpr bool is_reference_wrapper_v<std::reference_wrapper<U>> = true;
 
-    protected:
-      /**
-       * 重置当前节点和下游
-       */
-      void unset() {
-         release();
-         for (auto iter = downstream.begin(); iter != downstream.end();) {
-            if (auto ptr = iter->lock(); ptr) {
-               ptr->unset();
-               ++iter;
+      template<typename T>
+      struct node;
+
+      template<class>
+      constexpr bool is_node_v = false;
+      template<class U>
+      constexpr bool is_node_v<node<U>> = true;
+
+      template<typename Arg>
+      const auto& unwrap_arg(const Arg& arg) {
+         // arg maybe const X&, std::reference_wrapper or node
+         if constexpr (is_node_v<Arg>) {
+            return arg();
+         } else if constexpr (is_reference_wrapper_v<Arg>) {
+            return arg.get();
+         } else {
+            return arg;
+         }
+      }
+
+      template<typename Func, typename Args, std::size_t... Is>
+      auto unwrap_apply(const Func& func, const Args& args, std::index_sequence<Is...>) {
+         return func(unwrap_arg(std::get<Is>(args))...);
+      }
+
+      struct general_base : std::enable_shared_from_this<general_base> {
+         mutable std::list<std::weak_ptr<general_base>> downstream;
+         bool reset() const {
+            if (unset()) {
+               for (auto i = downstream.begin(); i != downstream.end();) {
+                  if (auto ptr = i->lock(); ptr) {
+                     ptr->reset();
+                     ++i;
+                  } else {
+                     i = downstream.erase(i);
+                  }
+               }
+               return true;
             } else {
-               iter = downstream.erase(iter);
+               return false;
             }
          }
-      }
 
-    public:
-      /**
-       * 下游节点的列表
-       */
-      std::list<std::weak_ptr<lazy_base>> downstream;
+         virtual bool unset() const = 0; // true if value changed, false if value not changed
+      };
 
-      virtual ~lazy_base() {}
-   };
+      using map_t = std::unordered_map<std::shared_ptr<general_base>, std::shared_ptr<general_base>>;
 
-   struct data_lazy_base : lazy_base {
-    public:
-      /**
-       * 从一个any中load出数据
-       */
-      virtual void load(std::any) = 0;
-      /**
-       * dump出一个any数据
-       */
-      virtual std::any dump() = 0;
-   };
+      template<typename T>
+      struct specific_type : general_base {
+         virtual bool reset(const T&) const = 0;
+         virtual bool reset(T&&) const = 0;
+         virtual bool reset(std::reference_wrapper<const T> u) const = 0;
+         virtual const T& get() const = 0;
+         virtual node<T> copy(const map_t& map) const = 0;
+      };
 
-   // path的type可以有cv ref
-   template<typename Type>
-   struct path : lazy_base {
-    private:
-      std::function<Type()> function;
-
-      void release() override {}
-
-    public:
-      decltype(auto) get() {
-         return function();
-      }
-
-      path(std::function<Type()>&& f) : function(std::move(f)) {}
-      path() = delete;
-      path(const path&) = delete;
-      path(path&&) = delete;
-      path& operator=(const path<Type>&) = delete;
-      path& operator=(path<Type>&&) = delete;
-   };
-
-   template<typename Type>
-   struct root : data_lazy_base {
-    private:
-      std::shared_ptr<const Type> value;
-
-      void release() override {
-         value.reset();
-      }
-
-    public:
-      const Type& get() {
-         return *value;
-      }
-
-      void load(std::any v) override {
-         value = std::any_cast<std::shared_ptr<const Type>>(v);
-      }
-
-      std::any dump() override {
-         return std::any(value);
-      }
-
-      using lazy_base::unset;
-
-      void set(Type&& v) {
-         unset();
-         value.reset(new Type(std::move(v)));
-      }
-      void set(const Type& v) {
-         unset();
-         value.reset(new Type(v));
-      }
-
-      root() = default;
-      root(const root&) = delete;
-      root(root&&) = delete;
-      root& operator=(const root<Type>&) = delete;
-      root& operator=(root<Type>&&) = delete;
-   };
-
-   template<typename Type>
-   struct node : data_lazy_base {
-    private:
-      std::function<Type()> function;
-      using RealType = std::remove_cv_t<std::remove_reference_t<Type>>;
-      std::shared_ptr<const RealType> value;
-
-      void release() override {
-         value.reset();
-      }
-
-      void set(RealType&& v) {
-         unset();
-         value.reset(new RealType(std::move(v)));
-      }
-      void set(const RealType& v) {
-         unset();
-         value.reset(new RealType(v));
-      }
-
-    public:
-      const auto& get() {
-         if (!bool(value)) {
-            set(function());
-         }
-         return *value;
-      }
-
-      node(std::function<Type()>&& f) : function(std::move(f)) {}
-      node() = delete;
-      node(const node&) = delete;
-      node(node&&) = delete;
-      node& operator=(const node<Type>&) = delete;
-      node& operator=(node<Type>&&) = delete;
-
-      void load(std::any v) override {
-         value = std::any_cast<std::shared_ptr<const RealType>>(v);
-      }
-
-      std::any dump() override {
-         return std::any(value);
-      }
-   };
-   // graph
-
-   using Snapshot = std::list<std::tuple<std::weak_ptr<data_lazy_base>, std::any>>;
-   /**
-    * Graph用于restore各个node中的数据
-    */
-   struct Graph {
-      // std::any will store std::shared_ptr<T> for any T
-      std::list<std::weak_ptr<data_lazy_base>> nodes;
-
-      Snapshot dump() {
-         auto result = Snapshot();
-         for (auto iter = nodes.begin(); iter != nodes.end();) {
-            if (auto ptr = iter->lock(); ptr) {
-               result.emplace_back(*iter, ptr->dump());
-               ++iter;
+      template<typename T>
+      struct given_value final : specific_type<T> {
+         mutable std::variant<std::monostate, T, std::reference_wrapper<const T>> value;
+         bool unset() const override {
+            if (std::holds_alternative<std::monostate>(value)) {
+               return false;
             } else {
-               iter = nodes.erase(iter);
+               value = std::monostate();
+               return true;
             }
          }
-         return result;
-      }
-      void load(Snapshot& snapshot) {
-         for (auto iter = snapshot.begin(); iter != snapshot.end();) {
-            auto& [weak, value] = *iter;
-            if (auto ptr = weak.lock(); ptr) {
-               ptr->load(value);
-               ++iter;
+         bool reset(const T& u) const override {
+            bool result = general_base::reset();
+            value = u;
+            return result;
+         }
+         bool reset(T&& u) const override {
+            bool result = general_base::reset();
+            value = std::move(u);
+            return result;
+         }
+         bool reset(std::reference_wrapper<const T> u) const override {
+            bool result = general_base::reset();
+            value = u;
+            return result;
+         }
+         const T& get() const override {
+            // if it is given_value, it will always have value
+            if (auto v = std::get_if<T>(&value)) {
+               return *v;
+            } else if (auto v = std::get_if<std::reference_wrapper<const T>>(&value)) {
+               return v->get();
+            }
+            throw std::runtime_error("try to get value from empty Root");
+         }
+         node<T> copy(const map_t& map) const override;
+      };
+
+      template<typename T>
+      struct specific_function_base : specific_type<T> {
+         mutable std::optional<T> value;
+         bool unset() const override {
+            if (value.has_value()) {
+               value.reset();
+               return true;
             } else {
-               iter = snapshot.erase(iter);
+               return false;
             }
          }
+         bool reset(const T& u) const override {
+            throw std::runtime_error("try to set value of functional node");
+         }
+         bool reset(T&& u) const override {
+            throw std::runtime_error("try to set value of functional node");
+         }
+         bool reset(std::reference_wrapper<const T> u) const override {
+            throw std::runtime_error("try to set value of functional node");
+         }
+      };
+
+      template<typename T, typename Func, typename... Args>
+      struct specific_function final : specific_function_base<T> {
+         using specific_function_base<T>::value;
+         Func func;                // it can be called directly if Func is std::reference_wrapper
+         std::tuple<Args...> args; // if it needs reference, use std::cref
+         template<typename Func0, typename... Args0>
+         specific_function(Func0&& func0, Args0&&... args0) : func(std::forward<Func0>(func0)), args(std::forward<Args0>(args0)...) {}
+         const T& get() const override {
+            // if it is given_value, it will always have value
+            if (!value.has_value()) {
+               value = unwrap_apply(func, args, std::index_sequence_for<Args...>());
+            }
+            return value.value();
+         }
+         node<T> copy(const map_t& map) const override;
+      };
+
+      template<typename T>
+      struct node {
+         using pointer_t = std::shared_ptr<specific_type<T>>;
+         pointer_t pointer;
+         node(pointer_t&& p) : pointer(std::move(p)) {}
+         bool reset() const {
+            return pointer->reset();
+         };
+         bool reset(const T& u) const {
+            return pointer->reset(u);
+         };
+         bool reset(T&& u) const {
+            return pointer->reset(std::move(u));
+         };
+         bool reset(std::reference_wrapper<const T> u) const {
+            return pointer->reset(u);
+         };
+         const T& operator()() const {
+            return pointer->get();
+         }
+      };
+
+      template<typename Down, typename Up>
+      bool try_add_downstream(const Down& down, const Up& up) {
+         // down is shared_ptr of specific_function
+         // up is node or normal object
+         if constexpr (is_node_v<Up>) {
+            up.pointer->downstream.push_back(down);
+            return true;
+         } else {
+            return false;
+         }
+      }
+
+      template<typename T, std::size_t... Is>
+      void add_as_downstream(const T& t, std::index_sequence<Is...>) {
+         // T is a shared_ptr of specific_function
+         (try_add_downstream(t, std::get<Is>(t->args)), ...);
+      }
+
+      template<typename Func, typename... Args>
+      auto Node(Func&& func, Args&&... args) {
+         using T = std::invoke_result_t<Func, decltype(unwrap_arg(std::declval<Args>()))...>;
+         auto result = std::make_shared<specific_function<T, std::remove_reference_t<Func>, std::remove_reference_t<Args>...>>(
+               std::forward<Func>(func),
+               std::forward<Args>(args)...);
+         add_as_downstream(result, std::index_sequence_for<Args...>());
+         return node<T>(std::move(result));
+      }
+      template<typename T>
+      auto Root() {
+         auto result = std::make_shared<given_value<T>>();
+         return node<T>(std::move(result));
+      }
+      template<typename T>
+      auto Root(const T& arg) {
+         auto result = std::make_shared<given_value<T>>();
+         result->reset(arg);
+         return node<T>(std::move(result));
+      }
+      template<typename T>
+      auto Root(T&& arg) {
+         auto result = std::make_shared<given_value<T>>();
+         result->reset(std::move(arg));
+         return node<T>(std::move(result));
+      }
+      template<typename T>
+      auto Root(std::reference_wrapper<const T> arg) {
+         auto result = std::make_shared<given_value<T>>();
+         result->reset(arg);
+         return node<T>(std::move(result));
+      }
+
+      struct Copy {
+         map_t map;
+         template<typename T>
+         node<T> operator()(const node<T>& n0) {
+            node<T> result = n0.pointer->copy(map);
+            map[n0.pointer] = result.pointer;
+            return result;
+         }
+      };
+
+      template<typename T>
+      node<T> given_value<T>::copy(const map_t& map) const {
+         auto result = std::make_shared<given_value<T>>();
+         if (auto v = std::get_if<T>(&value)) {
+            result->reset(*v); // copy value
+         } else if (auto v = std::get_if<std::reference_wrapper<const T>>(&value)) {
+            result->reset(*v); // copy reference_wrapper
+         }
+         return node<T>(std::move(result));
       }
 
       template<typename T>
-      void add(T value) {
-         nodes.push_back(std::dynamic_pointer_cast<data_lazy_base>(value));
+      decltype(auto) try_map(const map_t& map, const T& arg) {
+         if constexpr (is_node_v<T>) {
+            // T is node<U>
+            return T(std::dynamic_pointer_cast<typename T::pointer_t::element_type>(map.at(arg.pointer))); // value
+         } else {
+            return (arg); // reference
+         }
       }
-   };
 
-   inline Graph default_graph;
-   inline Graph* active_graph = &default_graph;
-   inline Graph& current_graph() {
-      return *active_graph;
-   }
-   inline void use_graph(Graph& graph = default_graph) {
-      active_graph = &graph;
-   }
+      template<typename T, typename Func, typename Args, std::size_t... Is>
+      auto copy_specific_function_impl(const Func& func, const Args& args, const map_t& map, std::index_sequence<Is...>) {
+         return std::make_shared<T>(func, try_map(map, std::get<Is>(args))...);
+      }
 
-   // helper function
+      template<typename T, typename Func, typename... Args>
+      node<T> specific_function<T, Func, Args...>::copy(const map_t& map) const {
+         auto result = copy_specific_function_impl<specific_function<T, Func, Args...>>(func, args, map, std::index_sequence_for<Args...>());
+         add_as_downstream(result, std::index_sequence_for<Args...>());
+         result->value = value;
+         return node<T>(std::move(result));
+      }
+   } // namespace detail
 
-   template<typename Function, typename... Args>
-   auto function_wrapper(Function&& function, Args&... args) {
-      return std::function([=] {
-         return function(args->get()...);
-      });
-   }
-
-   template<typename Type>
-   auto Root() {
-      using RealType = std::remove_cv_t<std::remove_reference_t<Type>>;
-      auto result = std::make_shared<root<RealType>>();
-      current_graph().add(result);
-      return result;
-   }
-
-   template<typename Type>
-   auto Root(Type&& v) {
-      using RealType = std::remove_cv_t<std::remove_reference_t<Type>>;
-      auto result = std::make_shared<root<RealType>>();
-      result->set(std::forward<Type>(v));
-      current_graph().add(result);
-      return result;
-   }
-
-   template<typename Function, typename... Args>
-   auto Node(Function&& function, Args&... args) {
-      // 应该返回一个值而非引用, 否则无法放入shared_ptr中
-      auto f = function_wrapper(function, args...);
-      using Type = typename decltype(f)::result_type;
-      auto result = std::make_shared<node<Type>>(std::move(f));
-      (args->downstream.push_back(result->shared_from_this()), ...);
-      current_graph().add(result);
-      return result;
-   }
-
-   template<typename Function, typename... Args>
-   auto Path(Function&& function, Args&... args) {
-      // 返回啥都行
-      auto f = function_wrapper(function, args...);
-      using Type = typename decltype(f)::result_type;
-      auto result = std::make_shared<path<Type>>(std::move(f));
-      (args->downstream.push_back(result->shared_from_this()), ...);
-      return result;
-   }
-   /**@}*/
+   using detail::Copy;
+   using detail::Node;
+   using detail::Root;
 } // namespace lazy
 
 #endif

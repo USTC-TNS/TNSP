@@ -21,28 +21,48 @@
 #include "run_test.hpp"
 
 void run_test() {
-   auto a = lazy::Root(1);
-   auto b = lazy::Root(2);
-   std::cout << a->get() << "\n";
-   std::cout << b->get() << "\n";
-   auto c = lazy::Path(
-         [](int a, int b) {
-            return a + b;
-         },
-         a,
-         b);
-   auto d = lazy::Node(
-         [](int c, int a) {
-            return c * a;
-         },
-         c,
-         a);
-   std::cout << d->get() << "\n";
-   a->set(233);
-   std::cout << d->get() << "\n";
-   auto snap = lazy::default_graph.dump();
-   b->set(666);
-   std::cout << d->get() << "\n";
-   lazy::default_graph.load(snap);
-   std::cout << d->get() << "\n";
+   {
+      auto v = 1;
+      auto a = lazy::Root(std::cref(v));
+      auto b = lazy::Root(2);
+      std::cout << a() << "\n";
+      std::cout << b() << "\n";
+      auto c = lazy::Node(
+            [](int a, int b) {
+               return a + b;
+            },
+            a,
+            b);
+      auto d = lazy::Node(
+            [](int c, int a) {
+               return c * a;
+            },
+            c,
+            a);
+      std::cout << d() << "\n";
+      a.reset(233);
+      std::cout << d() << "\n";
+      b.reset(666);
+      std::cout << d() << "\n";
+   }
+   {
+      auto a = lazy::Root(1);
+      auto b = lazy::Root(10);
+      auto c = lazy::Node(
+            [](auto i, auto j) {
+               return i + j;
+            },
+            a,
+            b);
+      std::cout << c() << "\n";
+      b.reset(100);
+      std::cout << c() << "\n";
+      auto copy = lazy::Copy();
+      auto aa = copy(a);
+      auto bb = copy(b);
+      auto cc = copy(c);
+      aa.reset(1000);
+      std::cout << cc() << "\n";
+      std::cout << c() << "\n";
+   }
 }
