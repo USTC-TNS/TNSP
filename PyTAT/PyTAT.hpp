@@ -628,24 +628,35 @@ namespace TAT {
       // Element is implicitly convertible to Symmetry
       // IsTuple describe wether Element is a tuple
 
-      constexpr bool need_arrow = Symmetry::is_fermi_symmetry && is_edge<EdgeType<Symmetry>>;
+      constexpr bool need_arrow = Symmetry::is_fermi_symmetry;
       constexpr bool need_element = !std::is_same_v<Element, void>;
+      constexpr bool real_edge = is_edge<EdgeType<Symmetry>>;
       // need_arrow no, need element no
       // need_arrow no, need_element yes
       // need_arrow yes, need element yes
 
       auto result = py::class_<EdgeType<Symmetry>>(
                           symmetry_m,
-                          is_edge<EdgeType<Symmetry>> ? "Edge" : "EdgeSegment",
+                          real_edge ? "Edge" : "EdgeSegment",
                           ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one trivial segment")
                           .def_readonly("segment", &EdgeType<Symmetry>::segment)
                           .def_property_readonly("dimension", &EdgeType<Symmetry>::total_dimension)
                           .def("conjugated", &EdgeType<Symmetry>::conjugated_edge, "Get conjugated edge of this edge")
+                          .def("get_point_from_index", &EdgeType<Symmetry>::get_point_from_index, "Get edge point from index")
+                          .def("get_index_from_point", &EdgeType<Symmetry>::get_index_from_point, "Get index from edge point")
                           .def(py::self == py::self)
                           .def(py::self != py::self);
 
-      if constexpr (is_edge<EdgeType<Symmetry>>) {
+      if constexpr (real_edge) {
+         if constexpr (need_arrow) {
+            result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
+         } else {
+            result.def_readonly_static("arrow", &EdgeType<Symmetry>::arrow, "Boson Arrow of the edge, always False");
+         }
+      }
+
+      if constexpr (real_edge) {
          result.def(py::pickle(
                [](const EdgeType<Symmetry>& edge) {
                   auto out = std::stringstream();
@@ -660,10 +671,7 @@ namespace TAT {
                }));
       }
 
-      if constexpr (need_arrow) {
-         result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
-      }
-      if constexpr (is_edge<EdgeType<Symmetry>>) {
+      if constexpr (real_edge) {
          // __str__ and __repr__
          result.def("__str__",
                     [](const EdgeType<Symmetry>& edge) {
@@ -686,11 +694,19 @@ namespace TAT {
       }
 
       // non trivial constructor
+      // trivial single segment has already defined, it is ususally used in NoSymmetry
 
-      // symmetry arrow
-      // pair of symmetry arrow
-      // element arrow
-      // pair of element arrow
+      // [(Sym, Size)]
+      // [Sym]
+
+      // []
+      // [], Arrow
+      // ([], Arrow)
+
+      // Sym
+      // Ele
+
+      // [(Sym, Size)] * []
       result.def(
             implicit_init<EdgeType<Symmetry>, std::vector<std::pair<Symmetry, Size>>>(),
             py::arg("segments"),
@@ -703,30 +719,32 @@ namespace TAT {
                      }),
                py::arg("segments"),
                "Create Edge with list of pair of symmetry and dimension");
-         if constexpr (need_arrow) {
-            // former two constructor(symmetry/element) * two argument/tuple -> 4 ctor
-            // symmetry
-            result.def(
-                  py::init<std::vector<std::pair<Symmetry, Size>>, Arrow>(),
-                  py::arg("segments"),
-                  py::arg("arrow"),
-                  "Fermi Edge created from segments and arrow");
-            result.def(
-                  implicit_init<EdgeType<Symmetry>, std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow>>(
-                        [](std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
-                           return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
-                        }),
-                  py::arg("pair_of_segments_and_arrow"),
-                  "Fermi Edge created from segments and arrow");
-
-            // element
+      }
+      if constexpr (real_edge) {
+         // [(Sym, Size)] * [], Arrow
+         result.def(
+               py::init<std::vector<std::pair<Symmetry, Size>>, Arrow>(),
+               py::arg("segments"),
+               py::arg("arrow"),
+               "Edge created from segments and arrow, for boson edge, arrow will not be used");
+         if constexpr (need_element) {
             result.def(
                   py::init([](const std::vector<std::pair<Element, Size>>& element_segment, Arrow arrow) {
                      return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, true, Element, IsTuple>(element_segment), arrow);
                   }),
                   py::arg("segments"),
                   py::arg("arrow"),
-                  "Fermi Edge created from segments and arrow");
+                  "Edge created from segments and arrow, for boson edge, arrow will not be used");
+         }
+         // [(Sym, Size)] * ([], Arrow)
+         result.def(
+               implicit_init<EdgeType<Symmetry>, std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow>>(
+                     [](std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
+                        return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
+                     }),
+               py::arg("pair_of_segments_and_arrow"),
+               "Edge created from segments and arrow, for boson edge, arrow will not be used");
+         if constexpr (need_element) {
             result.def(
                   implicit_init<EdgeType<Symmetry>, std::pair<std::vector<std::pair<Element, Size>>, Arrow>>(
                         [](const std::pair<std::vector<std::pair<Element, Size>>, Arrow>& p) {
@@ -734,9 +752,10 @@ namespace TAT {
                            return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, true, Element, IsTuple>(element_segment), arrow);
                         }),
                   py::arg("pair_of_segments_and_arrow"),
-                  "Fermi Edge created from segments and arrow");
+                  "Edge created from segments and arrow, for boson edge, arrow will not be used");
          }
       }
+      // [Sym] * []
       result.def(
             implicit_init<EdgeType<Symmetry>, const std::vector<Symmetry>&>(),
             py::arg("symmetries"),
@@ -748,37 +767,39 @@ namespace TAT {
                }),
                py::arg("symmetries"),
                "Create Edge with list of symmetries which construct several one dimension segments");
-         if constexpr (need_arrow) {
-            // former two constructor(symmetry/element) * two argument/tuple -> 4 ctor
-            // symmetry
-            result.def(
-                  py::init<std::vector<Symmetry>, Arrow>(),
-                  py::arg("symmetries"),
-                  py::arg("arrow"),
-                  "Fermi Edge created from symmetries and arrow");
-            result.def(
-                  implicit_init<EdgeType<Symmetry>, std::pair<std::vector<Symmetry>, Arrow>>(
-                        [](std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
-                           return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
-                        }),
-                  py::arg("pair_of_symmetries_and_arrow"),
-                  "Fermi Edge created from symmetries and arrow");
-
-            // element
+      }
+      if constexpr (real_edge) {
+         // [Sym] * [], Arrow
+         result.def(
+               py::init<std::vector<Symmetry>, Arrow>(),
+               py::arg("symmetries"),
+               py::arg("arrow"),
+               "Edge created from segments and arrow, for boson edge, arrow will not be used");
+         if constexpr (need_element) {
             result.def(
                   py::init([](const std::vector<Element>& element_symmetries, Arrow arrow) {
                      return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, false, Element, IsTuple>(element_symmetries), arrow);
                   }),
                   py::arg("symmetries"),
                   py::arg("arrow"),
-                  "Fermi Edge created from symmetries and arrow");
+                  "Edge created from segments and arrow, for boson edge, arrow will not be used");
+         }
+         // [Sym] * ([], Arrow)
+         result.def(
+               implicit_init<EdgeType<Symmetry>, std::pair<std::vector<Symmetry>, Arrow>>(
+                     [](std::pair<std::vector<std::pair<Symmetry, Size>>, Arrow> p) {
+                        return std::make_from_tuple<EdgeType<Symmetry>>(std::move(p));
+                     }),
+               py::arg("pair_of_symmetries_and_arrow"),
+               "Edge created from segments and arrow, for boson edge, arrow will not be used");
+         if constexpr (need_element) {
             result.def(
                   implicit_init<EdgeType<Symmetry>, std::pair<std::vector<Element>, Arrow>>([](const std::pair<std::vector<Element>, Arrow>& p) {
                      const auto& [element_symmetries, arrow] = p;
                      return EdgeType<Symmetry>(convert_element_to_symmetry<Symmetry, false, Element, IsTuple>(element_symmetries), arrow);
                   }),
                   py::arg("pair_of_symmetries_and_arrow"),
-                  "Fermi Edge created from symmetries and arrow");
+                  "Edge created from segments and arrow, for boson edge, arrow will not be used");
          }
       }
 

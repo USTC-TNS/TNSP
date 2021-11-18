@@ -48,6 +48,7 @@ namespace TAT {
 
       auto Z2_m = tat_m.def_submodule("Z2");
       declare_symmetry<Z2Symmetry>(Z2_m, "Z2")
+            .def(py::init<>())
             .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
             .def_property_readonly("z2", [](const Z2Symmetry& symmetry) {
                return std::get<0>(symmetry);
@@ -57,6 +58,7 @@ namespace TAT {
 
       auto U1_m = tat_m.def_submodule("U1");
       declare_symmetry<U1Symmetry>(U1_m, "U1")
+            .def(py::init<>())
             .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
             .def_property_readonly("u1", [](const U1Symmetry& symmetry) {
                return std::get<0>(symmetry);
@@ -66,6 +68,7 @@ namespace TAT {
 
       auto Fermi_m = tat_m.def_submodule("Fermi");
       declare_symmetry<FermiSymmetry>(Fermi_m, "Fermi")
+            .def(py::init<>())
             .def(implicit_init<FermiSymmetry, U1>(), py::arg("fermi"))
             .def_property_readonly("fermi", [](const FermiSymmetry& symmetry) {
                return std::get<0>(symmetry);
@@ -75,6 +78,7 @@ namespace TAT {
 
       auto FermiZ2_m = tat_m.def_submodule("FermiZ2");
       declare_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
+            .def(py::init<>())
             .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
             .def(implicit_init<FermiZ2Symmetry, const std::tuple<U1, Z2>&>([](const std::tuple<U1, Z2>& p) {
                     return std::make_from_tuple<FermiZ2Symmetry>(p);
@@ -93,6 +97,7 @@ namespace TAT {
 
       auto FermiU1_m = tat_m.def_submodule("FermiU1");
       declare_symmetry<FermiU1Symmetry>(FermiU1_m, "FermiU1")
+            .def(py::init<>())
             .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
             .def(implicit_init<FermiU1Symmetry, const std::tuple<U1, U1>&>([](const std::tuple<U1, U1>& p) {
                     return std::make_from_tuple<FermiU1Symmetry>(p);
@@ -111,6 +116,7 @@ namespace TAT {
 
       auto Parity_m = tat_m.def_submodule("Parity");
       declare_symmetry<ParitySymmetry>(Parity_m, "Pariry")
+            .def(py::init<>())
             .def(implicit_init<ParitySymmetry, Z2>(), py::arg("parity"))
             .def_property_readonly("parity", [](const ParitySymmetry& symmetry) {
                return std::get<0>(symmetry);
