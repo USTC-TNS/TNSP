@@ -32,4 +32,10 @@ void run_test() {
    std::cout << a * b << "\n";
    std::cout << a / b << "\n";
    std::cout << a + b.transpose({"Right", "Left"}) << "\n";
+
+   auto c = TAT::Tensor<double, TAT::U1Symmetry>{{"L", "R"}, {{-1, 0, 1}, {-1, 0, 1}}}.range(10);
+   auto d = TAT::Tensor<double, TAT::U1Symmetry>{{"L", "R"}, {{0, 1}, {-1, 0}}}.range(100);
+   std::cout << c << "\n";
+   std::cout << d << "\n";
+   std::cout << (c += d) << "\n";
 }

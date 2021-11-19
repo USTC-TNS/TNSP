@@ -93,7 +93,7 @@ namespace TAT {
 
    inline timer scalar_inplace_guard("scalar_inplace");
 
-#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL) \
+#define TAT_DEFINE_SCALAR_OPERATOR(OP, EVAL, MISSING) \
    template< \
          typename ScalarType1, \
          typename ScalarType2, \
@@ -104,9 +104,14 @@ namespace TAT {
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
       auto timer_guard = scalar_inplace_guard(); \
       tensor_1.acquare_data_ownership("Inplace operator on tensor shared, copy happened here"); \
-      return tensor_1.zip_transform(tensor_2, [](const auto& x, const auto& y) { \
-         return EVAL; \
-      }); \
+      return tensor_1.zip_transform( \
+            tensor_2, \
+            [](const auto& x, const auto& y) { \
+               return EVAL; \
+            }, \
+            [](const auto& x) { \
+               return MISSING; \
+            }); \
    } \
    template< \
          typename ScalarType1, \
@@ -122,10 +127,10 @@ namespace TAT {
          return EVAL; \
       }); \
    }
-   TAT_DEFINE_SCALAR_OPERATOR(operator+=, x + y)
-   TAT_DEFINE_SCALAR_OPERATOR(operator-=, x - y)
-   TAT_DEFINE_SCALAR_OPERATOR(operator*=, x* y)
-   TAT_DEFINE_SCALAR_OPERATOR(operator/=, x / y)
+   TAT_DEFINE_SCALAR_OPERATOR(operator+=, x + y, x)
+   TAT_DEFINE_SCALAR_OPERATOR(operator-=, x - y, x)
+   TAT_DEFINE_SCALAR_OPERATOR(operator*=, x* y, 0)
+   TAT_DEFINE_SCALAR_OPERATOR(operator/=, x / y, 0)
 #undef TAT_DEFINE_SCALAR_OPERATOR
 } // namespace TAT
 #endif

@@ -244,10 +244,11 @@ namespace TAT {
       }
       template<typename Function>
       Tensor<ScalarType, Symmetry, Name>&& transform(Function&& function) && {
-         return std::move(transform(function));
+         return std::move(transform(std::forward<Function>(function)));
       }
-      template<typename OtherScalarType, typename Function>
-      Tensor<ScalarType, Symmetry, Name>& zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) & {
+      template<typename OtherScalarType, typename Function, typename Missing>
+      Tensor<ScalarType, Symmetry, Name>&
+      zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function, Missing&& missing) & {
          acquare_data_ownership("Set tensor shared in zip_transform, copy happened here");
          if (get_rank() != other.get_rank()) {
             detail::error("Try to do zip_transform on two different rank tensor");
@@ -260,14 +261,32 @@ namespace TAT {
          }
          const auto& real_other = *real_other_pointer;
          if (core->edges != real_other.core->edges) {
-            detail::error("Try to do zip_transform on two tensors which edges not compatible");
+            for (auto& [symmetries, block] : core->blocks) {
+               if (const auto found = real_other.find_block(symmetries); found != real_other.core->blocks.end()) {
+                  // check shape
+                  if constexpr (debug_mode) {
+                     for (auto i = 0; i < get_rank(); i++) {
+                        if (edges(i).get_dimension_from_symmetry(symmetries[i]) != real_other.edges(i).get_dimension_from_symmetry(symmetries[i])) {
+                           detail::error("Try to do zip_transform on two tensors which edges not compatible");
+                        }
+                     }
+                  }
+                  // call function
+                  std::transform(block.begin(), block.end(), found->second.begin(), block.begin(), function);
+               } else {
+                  // call missing
+                  std::transform(block.begin(), block.end(), block.begin(), missing);
+               }
+            }
+         } else {
+            std::transform(storage().begin(), storage().end(), real_other.storage().begin(), storage().begin(), function);
          }
-         std::transform(storage().begin(), storage().end(), real_other.storage().begin(), storage().begin(), function);
          return *this;
       }
-      template<typename OtherScalarType, typename Function>
-      Tensor<ScalarType, Symmetry, Name>&& zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) && {
-         return std::move(zip_transform(other, function));
+      template<typename OtherScalarType, typename Function, typename Missing>
+      Tensor<ScalarType, Symmetry, Name>&&
+      zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function, Missing&& missing) && {
+         return std::move(zip_transform(other, std::forward<Function>(function), std::forward<Missing>(missing)));
       }
 
       /**
@@ -288,7 +307,7 @@ namespace TAT {
        */
       template<typename ForceScalarType = void, typename Function>
       [[nodiscard]] auto map(Function&& function) const {
-         using DefaultNewScalarType = std::result_of_t<Function(ScalarType)>;
+         using DefaultNewScalarType = std::invoke_result_t<Function, ScalarType>;
          using NewScalarType = std::conditional_t<std::is_same_v<void, ForceScalarType>, DefaultNewScalarType, ForceScalarType>;
          auto result = same_shape<NewScalarType>();
          std::transform(storage().begin(), storage().end(), result.storage().begin(), function);
@@ -297,7 +316,7 @@ namespace TAT {
 
       template<typename ForceScalarType = void, typename OtherScalarType, typename Function>
       [[nodiscard]] auto zip_map(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) const {
-         using DefaultNewScalarType = std::result_of_t<Function(ScalarType, OtherScalarType)>;
+         using DefaultNewScalarType = std::invoke_result_t<Function, ScalarType, OtherScalarType>;
          using NewScalarType = std::conditional_t<std::is_same_v<void, ForceScalarType>, DefaultNewScalarType, ForceScalarType>;
          if (get_rank() != other.get_rank()) {
             detail::error("Try to do zip_map on two different rank tensor");
@@ -339,7 +358,7 @@ namespace TAT {
       }
       template<typename Generator>
       Tensor<ScalarType, Symmetry, Name>&& set(Generator&& generator) && {
-         return std::move(set(generator));
+         return std::move(set(std::forward<Generator>(generator)));
       }
 
       /**
