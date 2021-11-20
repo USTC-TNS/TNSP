@@ -21,7 +21,6 @@ import lazy
 import TAT
 from .auxiliaries import Auxiliaries
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
-from .exact_state import ExactState
 from .abstract_state import AbstractState
 from .abstract_lattice import AbstractLattice
 from .common_variable import clear_line
@@ -122,26 +121,6 @@ class SamplingLattice(AbstractLattice):
     def __setitem__(self, l1l2: tuple[int, int], value: self.Tensor) -> None:
         l1, l2 = l1l2
         self._lattice[l1][l2] = value
-
-    def exact_state(self) -> ExactState:
-        result: ExactState = ExactState(self)
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                rename_map: dict[str, str] = {}
-                rename_map["P"] = f"P_{l1}_{l2}"
-                if l1 != self.L1 - 1:
-                    rename_map["D"] = f"D_{l2}"
-                this: self.Tensor = self[l1, l2].edge_rename(rename_map)
-                if l1 == l2 == 0:
-                    result.vector = this
-                else:
-                    contract_pair: set[tuple[int, int]] = set()
-                    if l2 != 0:
-                        contract_pair.add(("R", "L"))
-                    if l1 != 0:
-                        contract_pair.add((f"D_{l2}", "U"))
-                    result.vector = result.vector.contract(this, contract_pair)
-        return result
 
 
 class Observer():

@@ -19,7 +19,6 @@
 from __future__ import annotations
 from .auxiliaries import Auxiliaries
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
-from .exact_state import ExactState
 from .abstract_state import AbstractState
 from .abstract_lattice import AbstractLattice
 from .common_variable import clear_line
@@ -217,28 +216,6 @@ class SimpleUpdateLattice(AbstractLattice):
             if direction == "D":
                 tensor = tensor.contract(environment_tensor, {("D", "U")})
         return tensor
-
-    def exact_state(self) -> ExactState:
-        result: ExactState = ExactState(self)
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                rename_map: dict[str, str] = {}
-                rename_map["P"] = f"P_{l1}_{l2}"
-                if l1 != self.L1 - 1:
-                    rename_map["D"] = f"D_{l2}"
-                this: self.Tensor = self[l1, l2].edge_rename(rename_map)
-                this = self._try_multiple(this, l1, l2, "L")
-                this = self._try_multiple(this, l1, l2, "U")
-                if l1 == l2 == 0:
-                    result.vector = this
-                else:
-                    contract_pair: set[tuple[int, int]] = set()
-                    if l2 != 0:
-                        contract_pair.add(("R", "L"))
-                    if l1 != 0:
-                        contract_pair.add((f"D_{l2}", "U"))
-                    result.vector = result.vector.contract(this, contract_pair)
-        return result
 
     def clear_auxiliaries(self) -> None:
         self._auxiliaries = None

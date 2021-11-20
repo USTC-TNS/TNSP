@@ -24,3 +24,4 @@ from .abstract_lattice import AbstractLattice
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from . import common_variable
+from . import conversion
