@@ -16,15 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import fire
-import pickle
 import TAT
 import tetragono as tet
 
-state = None
 
-
-def create(file_name, L1, L2, D, T):
+def new(self, L1, L2, D, T):
     state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
     state.physics_edges = [0, 1]
     state.hamiltonians.vertical_bond = tet.common_variable.Fermi.CC
@@ -45,20 +41,8 @@ def create(file_name, L1, L2, D, T):
             state.virtual_bond[(l1, l2), "R"] = [(Q - 1, D), (Q, D), (Q + 1, D)]
 
     state = tet.SimpleUpdateLattice(state)
-    with open(file_name, "wb") as file:
-        pickle.dump(state, file)
 
-
-def update(file_name, T, S, D, Dc):
-    with open(file_name, "rb") as file:
-        state = pickle.load(file)
-    state.update(T, S, D)
-    with open(file_name, "wb") as file:
-        pickle.dump(state, file)
-    state.initialize_auxiliaries(Dc)
-    print(state.observe_energy())
-
-
-if __name__ == "__main__":
-    fire.core.Display = lambda lines, out: out.write("\n".join(lines) + "\n")
-    fire.Fire()
+    self._state = state
+    self.save()
+    self._retype("SimpleUpdateLattice")
+    return self

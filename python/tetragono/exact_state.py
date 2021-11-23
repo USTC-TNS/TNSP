@@ -39,8 +39,8 @@ class ExactState(AbstractState):
         vector /= vector.norm_2()
         return vector
 
-    def update(self, total_step: int = 1, approximnate_energy: float = -0.5) -> float:
-        total_approximate_energy: float = abs(approximnate_energy) * self.L1 * self.L2
+    def update(self, total_step: int = 1, approximate_energy: float = -0.5) -> float:
+        total_approximate_energy: float = abs(approximate_energy) * self.L1 * self.L2
         energy: float = 0
         for step in range(total_step):
             temporary_vector: self.Tensor = self.vector.same_shape().zero()

@@ -16,72 +16,25 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import fire
-import pickle
 import TAT
 import tetragono as tet
 
-state = None
 
-
-def calc_exact(file_name):
-    with open(file_name, "rb") as file:
-        state = pickle.load(file)
-    state = tet.ExactState(state)
-    state.update(2000, 0.5)
-
-
-def create(file_name, L1, L2, D):
+def create(L1, L2, D):
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     state.physics_edges = 2
     state.hamiltonians.vertical_bond = tet.common_variable.No.SS
     state.hamiltonians.horizontal_bond = tet.common_variable.No.SS
-
     state = tet.AbstractLattice(state)
     state.virtual_bond[..., "R"] = D
     state.virtual_bond[..., "D"] = D
-
     state = tet.SimpleUpdateLattice(state)
-    with open(file_name, "wb") as file:
-        pickle.dump(state, file)
+    return state
 
 
-def update(file_name, T, S, D, Dc):
-    with open(file_name, "rb") as file:
-        state = pickle.load(file)
-    state.update(T, S, D)
-    with open(file_name, "wb") as file:
-        pickle.dump(state, file)
-    state.initialize_auxiliaries(Dc)
-    print(state.observe_energy())
-    print(state.exact_state().observe_energy())
-
-
-def sampling(file_name):
-    with open(file_name, "rb") as file:
-        state = pickle.load(file)
-    TAT.random.seed(1)
-    state = tet.SamplingLattice(state, -1)
-    for i in range(state.L1):
-        for j in range(state.L2):
-            state.configuration[i, j] = (i + j + 1) % 2
-
-    sampling = tet.SweepSampling(state)
-    observer = tet.Observer(state)
-    observer.enable_gradient()
-    for _ in range(100):
-        observer.flush()
-        for _ in range(100):
-            observer(sampling())
-            print(tet.common_variable.clear_line, "sampling result energy", observer.energy / (state.L1 * state.L2), end="\r")
-        print()
-        grad = observer.gradient
+def configuration(state):
+    if not state.configuration.valid():
+        print(" Setting configuration")
         for i in range(state.L1):
             for j in range(state.L2):
-                state[i, j] -= 0.02 * grad[i][j]
-        state.configuration.refresh_all()
-
-
-if __name__ == "__main__":
-    fire.core.Display = lambda lines, out: out.write("\n".join(lines) + "\n")
-    fire.Fire()
+                state.configuration[i, j] = (i + j + 1) % 2

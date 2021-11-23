@@ -16,12 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import fire
-import pickle
 import TAT
 import tetragono as tet
-
-state = None
 
 
 class FakeEdge:
@@ -66,7 +62,7 @@ H = (-t) * CC + J * SS
 # print(H.transpose(["O0", "O1", "I1", "I0"]).clear_symmetry().blocks[["O0", "O1", "I0", "I1"]].reshape([9, 9]))
 
 
-def create(file_name, L1, L2, D, T):
+def create(L1, L2, D, T):
     state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
     state.physics_edges = [(0, 0), (+1, -1), (+1, +1)]  # empty, down, up
     state.hamiltonians.vertical_bond = H
@@ -90,24 +86,10 @@ def create(file_name, L1, L2, D, T):
                                                  ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
 
     state = tet.SimpleUpdateLattice(state)
-    with open(file_name, "wb") as file:
-        pickle.dump(state, file)
+    return state
 
 
-def update(file_name, T, S, D, Dc):
-    with open(file_name, "rb") as file:
-        state = pickle.load(file)
-    print(state.L1, state.L2, state.total_symmetry)
-    state.update(T, S, D)
-    with open(file_name, "wb") as file:
-        pickle.dump(state, file)
-    if Dc != 0:
-        state.initialize_auxiliaries(Dc)
-        # print(state.observe(((3, 3), (3, 4)), H))
-        print(state.observe_energy())
-
-
-def _generate_random_configuration(state: tet.SamplingLattice):
+def configuration(state):
     L1 = state.L1
     L2 = state.L2
     UpD = state.total_symmetry.fermi
@@ -134,34 +116,4 @@ def _generate_random_configuration(state: tet.SamplingLattice):
             state.configuration[l1, l2] = ((1, -1), 0)
             d += 1
     if len(state.configuration.hole(()).edges("T").segment) == 0:
-        _generate_random_configuration(state)
-
-
-def sampling(file_name):
-    with open(file_name, "rb") as file:
-        state = pickle.load(file)
-    TAT.random.seed(1)
-    state = tet.SamplingLattice(state, cut_dimension=100)
-    _generate_random_configuration(state)
-    sampling = tet.SweepSampling(state)
-    observer = tet.Observer(state)
-    observer.add_energy()
-    observer.enable_gradient()
-    for _ in range(10):
-        for i in state.configuration._configuration:
-            for j in i:
-                if j[0].u1 == +1:
-                    print("+", end="")
-                elif j[0].u1 == -1:
-                    print("-", end="")
-                else:
-                    print("O", end="")
-            print()
-        sampling()
-        observer()
-        print(sum(observer.result["energy"].values()) / (state.L1 * state.L2))
-
-
-if __name__ == "__main__":
-    fire.core.Display = lambda lines, out: out.write("\n".join(lines) + "\n")
-    fire.Fire()
+        return configuration(state)

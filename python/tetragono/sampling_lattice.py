@@ -17,6 +17,7 @@
 #
 
 from __future__ import annotations
+import copyreg
 import lazy
 import TAT
 from .auxiliaries import Auxiliaries
@@ -28,34 +29,36 @@ from .tensor_element import tensor_element
 
 
 class Configuration(Auxiliaries):
-    __slots__ = ["owner", "EdgePoint", "_configuration"]
+    __slots__ = ["owner"]
 
-    def __init__(self, owner: SamplingLattice, cut_dimension: int) -> None:
-        super().__init__(owner.L1, owner.L2, cut_dimension, False, owner.Tensor)
+    def __init__(self, owner: SamplingLattice) -> None:
+        super().__init__(owner.L1, owner.L2, owner.cut_dimension, False, owner.Tensor)
         self.owner: SamplingLattice = owner
-        self.EdgePoint = tuple[self.owner.Symmetry, int]
-        self._configuration: list[list[None | self.EdgePoint]] = [[None for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
+        # update exist configuration
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                self[l1, l2] = self[l1, l2]
 
     def valid(self) -> bool:
         for l1 in range(self.owner.L1):
             for l2 in range(self.owner.L2):
-                if self._configuration[l1][l2] is None:
+                if self.owner._configuration[l1][l2] is None:
                     return False
         return True
 
-    def __getitem__(self, l1l2: tuple[int, int]) -> None | self.EdgePoint:
+    def __getitem__(self, l1l2: tuple[int, int]) -> None | self.owner.EdgePoint:
         l1, l2 = l1l2
-        return self._configuration[l1][l2]
+        return self.owner._configuration[l1][l2]
 
     def __setitem__(self, l1l2: tuple[int, int], value: "EdgePoint") -> None:
         l1, l2 = l1l2
         if value is None:
-            self._configuration[l1][l2] = None
+            self.owner._configuration[l1][l2] = None
             super().__setitem__(l1l2, None)
             return
-        this_configuration: self.EdgePoint = self._get_edge_point(value)
-        if this_configuration != self._configuration[l1][l2]:
-            self._configuration[l1][l2] = this_configuration
+        this_configuration: self.owner.EdgePoint = self._get_edge_point(value)
+        if this_configuration != self.owner._configuration[l1][l2] or self._lattice[l1][l2]() is None:
+            self.owner._configuration[l1][l2] = this_configuration
             super().__setitem__(l1l2, self._shrink_configuration(l1l2, this_configuration))
 
     def __delitem__(self, l1l2: tuple[int, int]) -> None:
@@ -68,7 +71,7 @@ class Configuration(Auxiliaries):
             base_replacement[k] = t
         return super().replace(base_replacement, hint=hint)
 
-    def _get_edge_point(self, value: "EdgePoint") -> self.EdgePoint:
+    def _get_edge_point(self, value: "EdgePoint") -> self.owner.EdgePoint:
         if not isinstance(value, tuple):
             symmetry = self.owner.Symmetry()  # work for NoSymmetry
             index = value
@@ -78,7 +81,7 @@ class Configuration(Auxiliaries):
             symmetry = self.owner.Symmetry(symmetry)
         return (symmetry, index)
 
-    def _get_shrinker(self, l1l2: tuple[int, int], configuration: self.EdgePoint) -> self.Tensor:
+    def _get_shrinker(self, l1l2: tuple[int, int], configuration: self.owner.EdgePoint) -> self.Tensor:
         l1, l2 = l1l2
         tensor: self.Tensor = self.owner[l1l2]
         symmetry, index = configuration
@@ -88,7 +91,7 @@ class Configuration(Auxiliaries):
         shrinker[{"Q": (-symmetry, index), "P": (symmetry, 0)}] = 1
         return shrinker
 
-    def _shrink_configuration(self, l1l2: tuple[int, int], configuration: self.EdgePoint) -> self.Tensor:
+    def _shrink_configuration(self, l1l2: tuple[int, int], configuration: self.owner.EdgePoint) -> self.Tensor:
         l1, l2 = l1l2
         tensor: self.Tensor = self.owner[l1l2]
         shrinker: self.Tensor = self._get_shrinker(l1l2, configuration).edge_rename({"P": f"P_{l1}_{l2}"})
@@ -106,13 +109,39 @@ class Configuration(Auxiliaries):
 
 
 class SamplingLattice(AbstractLattice):
-    __slots__ = ["_lattice", "configuration", "_element_pool"]
+    __slots__ = ["_lattice", "EdgePoint", "_configuration", "_cut_dimension", "configuration"]
+
+    def __setstate__(self, state):
+        for i, j in state.items():
+            setattr(self, i, j)
+        self._create_auxiliaries()
+
+    def __getstate__(self):
+        state = {n: getattr(self, n) for n in copyreg._slotnames(self.__class__) if n != "configuration"}
+        return state
 
     def __init__(self, abstract: AbstractLattice, cut_dimension: int) -> None:
         super()._init_by_copy(abstract)
 
         self._lattice: list[list[self.Tensor]] = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
-        self.configuration: Configuration = Configuration(self, cut_dimension)
+        self.EdgePoint = tuple[self.Symmetry, int]
+        self._configuration: list[list[None | self.EdgePoint]] = [[None for l2 in range(self.L2)] for l1 in range(self.L1)]
+        self._cut_dimension: int = cut_dimension
+        self.configuration: Configuration
+        self._create_auxiliaries()
+
+    @property
+    def cut_dimension(self) -> int:
+        return self._cut_dimension
+
+    @cut_dimension.setter
+    def cut_dimension(self, cut_dimension: int) -> None:
+        if self._cut_dimension != cut_dimension:
+            self._cut_dimension = cut_dimension
+            self._create_auxiliaries()
+
+    def _create_auxiliaries(self) -> None:
+        self.configuration = Configuration(self)
 
     def __getitem__(self, l1l2: tuple[int, int]) -> self.Tensor:
         l1, l2 = l1l2
@@ -172,7 +201,7 @@ class Observer():
         self._start = True
         self._count += 1
         self._total_weight += reweight
-        configuration_t = tuple[self.state.configuration.EdgePoint, ...]
+        configuration_t = tuple[self.state.EdgePoint, ...]
         ws: self.state.Tensor = self.state.configuration.hole(())
         inv_ws_conj: self.state.Tensor = ws / (ws.norm_2()**2)
         inv_ws: self.state.Tensor = inv_ws_conj.conjugate()
@@ -225,7 +254,7 @@ class Observer():
 
     @property
     def energy(self) -> float:
-        return sum(self.result["energy"].values())
+        return sum(self.result["energy"].values()) / (self.state.L1 * self.state.L2)
 
     @property
     def gradient(self) -> list[list[self.state.Tensor]]:
@@ -259,7 +288,7 @@ class SweepSampling(Sampling):
 
     def _single_term(self, positions: tuple[tuple[int, int], ...], hamiltonian: self.state.Tensor, ws: float) -> float:
         body: int = hamiltonian.rank // 2
-        configuration_t = tuple[self.state.configuration.EdgePoint, ...]
+        configuration_t = tuple[self.state.EdgePoint, ...]
         current_configuration: configuration_t = tuple(self.state.configuration[l1l2] for l1l2 in positions)
         element_pool = tensor_element(hamiltonian)
         if current_configuration not in element_pool:
