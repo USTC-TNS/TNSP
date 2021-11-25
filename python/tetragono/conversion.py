@@ -22,36 +22,58 @@ from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
 
 
-def simple_update_lattice_to_sampling_lattice(state: SimpleUpdateLattice, cut_dimension: int) -> SamplingState:
+def simple_update_lattice_to_sampling_lattice(state, cut_dimension):
+    """
+    Convert SimpleUpdateLattice to ExactState
+
+    Parameters
+    ----------
+    state : SimpleUpdateLattice
+    cut_dimension : int
+
+    Returns
+    -------
+    ExactState
+    """
     if type(state) != SimpleUpdateLattice:
         raise ValueError("Conversion input type mismatch")
-    result: SamplingLattice = SamplingLattice(state, cut_dimension)
+    result = SamplingLattice(state, cut_dimension)
     for l1 in range(state.L1):
         for l2 in range(state.L2):
-            this: state.Tensor = state[l1, l2]
+            this = state[l1, l2]
             this = state._try_multiple(this, l1, l2, "L")
             this = state._try_multiple(this, l1, l2, "U")
             result[l1, l2] = this
     return result
 
 
-def simple_update_lattice_to_exact_state(state: SimpleUpdateLattice) -> ExactState:
+def simple_update_lattice_to_exact_state(state):
+    """
+    Convert SimpleUpdateLattice to ExactState
+
+    Parameters
+    ----------
+    state : SimpleUpdateLattice
+
+    Returns
+    -------
+    ExactState
+    """
     if type(state) != SimpleUpdateLattice:
         raise ValueError("Conversion input type mismatch")
-    result: ExactState = ExactState(state)
+    result = ExactState(state)
     for l1 in range(state.L1):
         for l2 in range(state.L2):
-            rename_map: dict[str, str] = {}
-            rename_map["P"] = f"P_{l1}_{l2}"
+            rename_map = {f"P{orbit}": f"P_{l1}_{l2}_{orbit}" for orbit, edge in state.physics_edges[l1, l2].items()}
             if l1 != state.L1 - 1:
                 rename_map["D"] = f"D_{l2}"
-            this: state.Tensor = state[l1, l2].edge_rename(rename_map)
+            this = state[l1, l2].edge_rename(rename_map)
             this = state._try_multiple(this, l1, l2, "L")
             this = state._try_multiple(this, l1, l2, "U")
             if l1 == l2 == 0:
                 result.vector = this
             else:
-                contract_pair: set[tuple[int, int]] = set()
+                contract_pair = set()
                 if l2 != 0:
                     contract_pair.add(("R", "L"))
                 if l1 != 0:
@@ -60,21 +82,31 @@ def simple_update_lattice_to_exact_state(state: SimpleUpdateLattice) -> ExactSta
     return result
 
 
-def sampling_lattice_to_exact_state(state: SamplingLattice) -> ExactState:
+def sampling_lattice_to_exact_state(state):
+    """
+    Convert SamplingLattice to ExactState
+
+    Parameters
+    ----------
+    state : SamplingLattice
+
+    Returns
+    -------
+    ExactState
+    """
     if type(state) != SamplingLattice:
         raise ValueError("Conversion input type mismatch")
-    result: ExactState = ExactState(state)
+    result = ExactState(state)
     for l1 in range(state.L1):
         for l2 in range(state.L2):
-            rename_map: dict[str, str] = {}
-            rename_map["P"] = f"P_{l1}_{l2}"
+            rename_map = {f"P{orbit}": f"P_{l1}_{l2}_{orbit}" for orbit, edge in state.physics_edges[l1, l2].items()}
             if l1 != state.L1 - 1:
                 rename_map["D"] = f"D_{l2}"
-            this: state.Tensor = state[l1, l2].edge_rename(rename_map)
+            this = state[l1, l2].edge_rename(rename_map)
             if l1 == l2 == 0:
                 result.vector = this
             else:
-                contract_pair: set[tuple[int, int]] = set()
+                contract_pair = set()
                 if l2 != 0:
                     contract_pair.add(("R", "L"))
                 if l1 != 0:

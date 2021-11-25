@@ -124,6 +124,14 @@ class SimpleUpdateLatticeApp(App):
         self._retype("SamplingLattice")
         return self
 
+    def energy(self, cut_dimension):
+        """
+        Observe energy of simple update lattice
+        """
+        self._state.initialize_auxiliaries(cut_dimension)
+        print(" Simple update lattice energy is", self._state.observe_energy())
+        return self
+
 
 class SamplingLatticeApp(App):
     __slots__ = []
@@ -155,9 +163,14 @@ class SamplingLatticeApp(App):
             observer.flush()
             for step in range(total_step):
                 observer(sampling())
-                print(tet.common_variable.clear_line, f"sampling, {total_step=}, energy={observer.energy}, {step=}", end="\r")
+                print(tet.common_variable.clear_line,
+                      f"sampling, {total_step=}, energy={observer.energy}, {step=}",
+                      end="\r")
             if grad_step_size != 0:
-                print(tet.common_variable.clear_line, f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}")
+                print(
+                    tet.common_variable.clear_line,
+                    f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
+                )
                 grad = observer.gradient
                 for i in range(state.L1):
                     for j in range(state.L2):

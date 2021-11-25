@@ -18,135 +18,403 @@
 
 from __future__ import annotations
 
-__all__ = ["AbstractState"]
-
 
 class AbstractStatePhysicsEdge:
-    __slots__ = ["owner"]
+    """
+    Physics edge handler for abstract state.
+    """
 
-    def __init__(self, owner: AbstractState) -> None:
-        self.owner: AbstractState = owner
+    __slots__ = ["_owner"]
 
-    def __getitem__(self, l1l2: tuple[int, int]) -> self.owner.Edge:
-        l1, l2 = l1l2
-        return self.owner._physics_edges[l1][l2]
+    def __init__(self, owner):
+        """
+        Create a physics edge handler.
 
-    def __setitem__(self, l1l2: tuple[int, int], edge: self.owner.Edge) -> None:
-        l1, l2 = l1l2
-        self.owner._physics_edges[l1][l2] = self.owner._construct_physics_edge(edge)
+        Parameters
+        ----------
+        owner : AbstractState
+            The owner of this handler.
+        """
+        self._owner = owner
+
+    def __getitem__(self, l1l2o):
+        """
+        Get the physics edge from abstract state.
+
+        Parameters
+        ----------
+        l1l2o : tuple[int, int, int] | tuple[int, int]
+            The position of physics edge, if it is tuple[int, int], it is coordinate of the site, if the third int is
+            given, the third int is the orbit index.
+
+        Returns
+        -------
+        Edge | dict[int, Edge]
+            If the orbit index is given, return the Edge of this orbit, if orbit is not specified, return a dict mapping
+            orbit index to Edge.
+        """
+        if len(l1l2o) == 3:
+            l1, l2, orbit = l1l2o
+            return self._owner._physics_edges[l1][l2][orbit]
+        elif len(l1l2o) == 2:
+            l1, l2 = l1l2o
+            return self._owner._physics_edges[l1][l2]
+        else:
+            raise ValueError("Invalid getitem argument for physics edge handler")
+
+    def __setitem__(self, l1l2o, edge):
+        """
+        Set the physics edge for abstract state
+
+        Parameters
+        ----------
+        l1l2o : tuple[int, int, int] | type(...)
+            The coordinate and orbit index of the physics edge to be set, if l1l2o is `...`, set single orbit for all
+            site and set edges of all sites to the same edge.
+        edge : ?Edge
+            An edge or something that can be used to construct an edge.
+        """
+        self._owner._site_number = None
+        if l1l2o == ...:
+            edge = self._owner._construct_physics_edge(edge)
+            self._owner._physics_edges = [[{0: edge} for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+        else:
+            l1, l2, orbit = l1l2o
+            self._owner._physics_edges[l1][l2][orbit] = self._owner._construct_physics_edge(edge)
 
 
 class AbstractStateHamiltonian:
-    __slots__ = ["owner"]
+    """
+    Hamiltonian handler for abstract state.
+    """
 
-    def __init__(self, owner: AbstractState) -> None:
-        self.owner: AbstractState = owner
+    __slots__ = ["_owner"]
 
-    def __getitem__(self, points: tuple[tuple[int, int], ...]) -> self.owner.Tensor:
-        return self.owner._hamiltonians[points]
+    def __init__(self, owner):
+        """
+        Create a hamiltonian handler.
 
-    def __setitem__(self, points: tuple[tuple[int, int], ...], tensor: self.owner.Tensor):
-        self.owner._set_hamiltonian(points, tensor)
+        Parameters
+        ----------
+        owner : AbstractState
+            The owner of this handler.
+        """
+        self._owner = owner
 
-    @property
-    def vertical_bond(self) -> None:
-        raise RuntimeError("Getting hamiltonians is not allowed")
+    def __getitem__(self, points):
+        """
+        Get a hamitlonian for several points
 
-    @vertical_bond.setter
-    def vertical_bond(self, tensor: self.owner.Tensor) -> None:
-        for i in range(self.owner.L1 - 1):
-            for j in range(self.owner.L2):
-                self.owner._set_hamiltonian(((i, j), (i + 1, j)), tensor)
+        Parameters
+        ----------
+        points : tuple[tuple[int, int, int], ...]
+            List of points which the hamiltonian applies on, every point is a tuple[int, int, int], the first two int
+            is coordinate and the third is orbit index.
 
-    @property
-    def horizontal_bond(self) -> None:
-        raise RuntimeError("Getting hamiltonians is not allowed")
+        Returns
+        -------
+        Tensor
+            The hamiltonian tensor
+        """
+        return self._owner._hamiltonians[points]
 
-    @horizontal_bond.setter
-    def horizontal_bond(self, tensor: self.owner.Tensor) -> None:
-        for i in range(self.owner.L1):
-            for j in range(self.owner.L2 - 1):
-                self.owner._set_hamiltonian(((i, j), (i, j + 1)), tensor)
+    def __setitem__(self, arg, tensor):
+        """
+        Set a hamiltonian for several points
+
+        Parameters
+        ----------
+        arg : tuple[tuple[int, int, int], ...] | str
+            If arg is tuple, it is list of points which the hamiltonian applies on, every point is a
+            tuple[int, int, int], the first two int is coordinate and the third is orbit index. If arg is str, it is
+            used to set some common used kinds of hamiltonian.
+        tensor : Tensor
+             The hamiltonian tensor.
+        """
+        if isinstance(arg, str):
+            if arg == "single_site":
+                # Set hamiltonian to all first orbit of every site
+                for i in range(self._owner.L1):
+                    for j in range(self._owner.L2):
+                        self._owner._set_hamiltonian(((i, j, 0),), tensor)
+            elif arg == "vertical_bond":
+                # Set hamiltonian to all vertical bond connecting first orbits
+                for i in range(self._owner.L1 - 1):
+                    for j in range(self._owner.L2):
+                        self._owner._set_hamiltonian(((i, j, 0), (i + 1, j, 0)), tensor)
+            elif arg == "horizontal_bond":
+                # Set hamiltonian to all horinzontal bond connecting first orbits
+                for i in range(self._owner.L1):
+                    for j in range(self._owner.L2 - 1):
+                        self._owner._set_hamiltonian(((i, j, 0), (i, j + 1, 0)), tensor)
+            else:
+                raise ValueError("Unknown kind of hamiltonian")
+        else:
+            self._owner._set_hamiltonian(arg, tensor)
 
 
 class AbstractState:
-    __slots__ = ["Tensor", "Edge", "Symmetry", "L1", "L2", "_physics_edges", "_hamiltonians", "_total_symmetry"]
+    """
+    Abstract state, which is used to construct other type of state.
+    """
 
-    def __init__(self, Tensor: type, L1: int, L2: int) -> None:
-        self.Tensor: type = Tensor
-        self.Edge: type = Tensor.model.Edge
-        self.Symmetry: type = Tensor.model.Symmetry
-
-        self.L1: int = L1
-        self.L2: int = L2
-        self._physics_edges: list[list[self.Edge]] = [[None for l2 in range(self.L2)] for l1 in range(self.L1)]
-        self._hamiltonians: dict[tuple[tuple[int, int], ...], self.Tensor] = {}  # ((int, int), ...) -> Tensor
-        self._total_symmetry: self.Symmetry = self.Symmetry()
-
-    def _init_by_copy(self, other: AbstractState) -> None:
-        self.Tensor: type = other.Tensor
-        self.Edge: type = other.Edge
-        self.Symmetry: type = other.Symmetry
-        self.L1: int = other.L1
-        self.L2: int = other.L2
-        self._physics_edges: list[list[self.Edge]] = [[other._physics_edges[i][j] for j in range(self.L2)] for i in range(self.L1)]
-        self._hamiltonians: dict[tuple[tuple[int, int], ...], self.Tensor] = other._hamiltonians.copy()
-        self._total_symmetry: self.Symmetry = other.total_symmetry
+    __slots__ = ["_Tensor", "_L1", "_L2", "_physics_edges", "_hamiltonians", "_total_symmetry", "_site_number"]
 
     @property
-    def total_symmetry(self) -> self.Symmetry:
+    def Tensor(self):
+        """
+        Get the tensor type of this abstract state.
+
+        Returns
+        -------
+        type
+            The tensor type of this abstract state.
+        """
+        return self._Tensor
+
+    @property
+    def Edge(self):
+        """
+        Get the edge type of this abstract state.
+
+        Returns
+        -------
+        type
+            The edge type of this abstract state.
+        """
+        return self.Tensor.model.Edge
+
+    @property
+    def Symmetry(self):
+        """
+        Get the symmetry type of this abstract state.
+
+        Returns
+        -------
+        type
+            The symmetry type of this abstract state.
+        """
+        return self.Tensor.model.Symmetry
+
+    @property
+    def L1(self):
+        """
+        Get the system size.
+
+        Returns
+        -------
+        int
+            The height of the square system.
+        """
+        return self._L1
+
+    @property
+    def L2(self):
+        """
+        Get the system size.
+
+        Returns
+        -------
+        int
+            The width of the square system.
+        """
+        return self._L2
+
+    def __init__(self, Tensor, L1, L2):
+        """
+        Create an abstract state.
+
+        Parameters
+        ----------
+        Tensor : type
+            The tensor type of this abstract state.
+        L1 : int
+            The square system size of this abstract state.
+        L2 : int
+            The square system size of this abstract state.
+        """
+        self._Tensor = Tensor
+        self._L1 = L1
+        self._L2 = L2
+        self._physics_edges = [[{} for l2 in range(self.L2)] for l1 in range(self.L1)]
+        self._hamiltonians = {}
+        self._total_symmetry = self.Symmetry()
+        self._site_number = None
+
+    def _init_by_copy(self, other):
+        """
+        Copy constructor of abstract state.
+
+        Parameters
+        ----------
+        other : AbstractState
+            Another abstract state.
+        """
+        self._Tensor = other._Tensor
+        self._L1 = other._L1
+        self._L2 = other._L2
+        self._physics_edges = [[other._physics_edges[i][j].copy() for j in range(self.L2)] for i in range(self.L1)]
+        self._hamiltonians = other._hamiltonians.copy()
+        self._total_symmetry = other._total_symmetry
+        self._site_number = other._site_number
+
+    def _construct_symmetry(self, value):
+        """
+        Construct symmetry from something that can be used to construct an symmetry.
+
+        Parameters
+        ----------
+        value : ?Symmetry
+            Symmetry or something that can be used to construct a symmetry.
+
+        Returns
+        -------
+        Symmetry
+            The result symmetry object.
+        """
+        if isinstance(value, self.Symmetry):
+            return value
+        else:
+            return self.Symmetry(value)
+
+    @property
+    def total_symmetry(self):
+        """
+        Get the total symmetry of this abstract state
+
+        Returns
+        -------
+        Symmetry
+            The total symmetry of this abstract state
+        """
         return self._total_symmetry
 
     @total_symmetry.setter
-    def total_symmetry(self, value) -> None:
-        if isinstance(value, self.Symmetry):
-            self._total_symmetry = value
-        else:
-            self._total_symmetry = self.Symmetry(value)
+    def total_symmetry(self, value):
+        """
+        Set the total symmetry of this abstract state
 
-    def get_total_symmetry_edge(self) -> self.Edge:
+        Parameters
+        ----------
+        value : ?Symmetry
+            The total symmetry of this abstract state
+        """
+        self._total_symmetry = self._construct_symmetry(value)
+
+    @property
+    def _total_symmetry_edge(self):
+        """
+        Get the virtual edge for containing total symmetry.
+
+        Returns
+        -------
+        Edge
+            The result virtual edge.
+        """
         return self.Edge([(-self._total_symmetry, 1)], True)
 
-    def _construct_physics_edge(self, edge) -> self.Edge:
-        if isinstance(edge, self.Edge):
-            result = edge
+    def _construct_edge(self, value):
+        """
+        Construct edge from something that can be used to construct an edge.
+
+        Parameters
+        ----------
+        value : ?Edge
+            Edge or something that can be used to construct an edge.
+
+        Returns
+        -------
+        Edge
+            The result edge object.
+        """
+        if isinstance(value, self.Edge):
+            return value
         else:
-            result = self.Edge(edge)
+            return self.Edge(value)
+
+    def _construct_physics_edge(self, edge):
+        """
+        Construct physics edge from something that can be used to construct an edge.
+
+        Parameters
+        ----------
+        value : ?Edge
+            Edge or something that can be used to construct an edge.
+
+        Returns
+        -------
+        Edge
+            The result edge object used for physics edge.
+        """
+        result = self._construct_edge(edge)
         if result.arrow != False:
             raise ValueError("Edge arrow of physics bond should be False")
         return result
 
     @property
-    def physics_edges(self) -> AbstractStatePhysicsEdge:
+    def physics_edges(self):
+        """
+        Get the physics edge handler for this abstract state
+
+        Returns
+        -------
+        AbstractStatePhysicsEdge
+            The physics edge handler
+        """
         return AbstractStatePhysicsEdge(self)
 
-    @physics_edges.setter
-    def physics_edges(self, edge) -> None:
-        edge = self._construct_physics_edge(edge)
-        self._physics_edges = [[edge for l2 in range(self.L2)] for l1 in range(self.L1)]
+    @property
+    def hamiltonians(self):
+        """
+        Get the hamiltonian handler for this abstract state
 
-    def _set_hamiltonian(self, points: tuple[tuple[int, int], ...], tensor: self.Tensor) -> None:
-        body: int = len(points)
+        Returns
+        -------
+        AbstractStateHamiltonian
+            The hamiltonian handler
+        """
+        return AbstractStateHamiltonian(self)
+
+    def _set_hamiltonian(self, points, tensor):
+        """
+        Set a hamiltonian for several points
+
+        Parameters
+        ----------
+        points : tuple[tuple[int, int, int], ...]
+            List of points which the hamiltonian applies on, every point is a tuple[int, int, int], the first two int is
+            coordinate and the third is orbit index
+        tensor : Tensor
+             The hamiltonian tensor.
+        """
+        body = len(points)
         if {f"{i}" for i in tensor.names} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
             raise ValueError("Wrong hamiltonian name")
         for i in range(body):
-            edge_out: self.Edge = tensor.edges(f"O{i}")
-            if edge_out != self._physics_edges[points[i][0]][points[i][1]]:
-                print(edge_out, self._physics_edges[points[i][0]][points[i][1]])
-                print(edge_out == self._physics_edges[points[i][0]][points[i][1]])
+            edge_out = tensor.edges(f"O{i}")
+            edge_in = tensor.edges(f"I{i}")
+            if edge_out != self.physics_edges[points[i]]:
                 raise ValueError("Wrong hamiltonian edge")
-            edge_in: self.Edge = tensor.edges(f"I{i}")
             if edge_out.conjugated() != edge_in:
                 raise ValueError("Wrong hamiltonian edge")
 
+        if points in self._hamiltonians:
+            raise RuntimeError("This hamiltonian term is already set")
         self._hamiltonians[points] = tensor
 
     @property
-    def hamiltonians(self) -> AbstractStateHamiltonian:
-        return AbstractStateHamiltonian(self)
+    def site_number(self):
+        """
+        Get the total site number of this abstract state
 
-    @hamiltonians.setter
-    def hamiltonians(self, tensor: self.Tensor) -> None:
-        for i in range(self.L1):
-            for j in range(self.L2):
-                self._set_hamiltonian(((i, j),), tensor)
+        Returns
+        -------
+        int
+            The total site number
+        """
+        if self._site_number is None:
+            self._site_number = 0
+            for l1 in range(self.L1):
+                for l2 in range(self.L2):
+                    self._site_number += len(self.physics_edges[l1, l2])
+        return self._site_number

@@ -22,9 +22,20 @@ import tetragono as tet
 
 def create(L1, L2, D):
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
-    state.physics_edges[...] = 2
-    state.hamiltonians["vertical_bond"] = tet.common_variable.No.SS
-    state.hamiltonians["horizontal_bond"] = tet.common_variable.No.SS
+    for l1 in range(L1):
+        for l2 in range(L2):
+            if not (l1, l2) == (0, 0):
+                state.physics_edges[l1, l2, 0] = 2
+            if not (l1, l2) == (L1 - 1, L2 - 1):
+                state.physics_edges[l1, l2, 1] = 2
+    for l1 in range(L1):
+        for l2 in range(L2):
+            if not ((l1, l2) == (0, 0) or (l1, l2) == (L1 - 1, L2 - 1)):
+                state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = tet.common_variable.No.SzSz
+            if l1 != 0:
+                state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = tet.common_variable.No.SxSx
+            if l2 != 0:
+                state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = tet.common_variable.No.SySy
     state = tet.AbstractLattice(state)
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
@@ -37,4 +48,7 @@ def configuration(state):
         print(" Setting configuration")
         for i in range(state.L1):
             for j in range(state.L2):
-                state.configuration[i, j, 0] = (i + j + 1) % 2
+                for o in range(2):
+                    if i == 0 and j == 0 and o == 0 or i == state.L1 - 1 and j == state.L2 - 1 and o == 1:
+                        continue
+                    state.configuration[i, j, o] = o

@@ -18,7 +18,6 @@
 
    * [[https://github.com/kongaskristjan/fire-hpp][fire-hpp]]
    * [[https://github.com/google/python-fire][fire]]
-   * [[https://github.com/coady/multimethod][multimethpd]]
 
 ** Usage
 

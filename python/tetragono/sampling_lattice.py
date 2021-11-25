@@ -17,257 +17,574 @@
 #
 
 from __future__ import annotations
-import copyreg
+from copyreg import _slotnames
 import lazy
 import TAT
 from .auxiliaries import Auxiliaries
-from .double_layer_auxiliaries import DoubleLayerAuxiliaries
-from .abstract_state import AbstractState
 from .abstract_lattice import AbstractLattice
 from .common_variable import clear_line
 from .tensor_element import tensor_element
 
 
 class Configuration(Auxiliaries):
-    __slots__ = ["owner"]
+    """
+    Configuration system for square sampling lattice.
+    """
 
-    def __init__(self, owner: SamplingLattice) -> None:
+    __slots__ = ["_owner"]
+
+    def __init__(self, owner):
+        """
+        Create configuration system for the given sampling lattice.
+
+        The configuration data is stored in sampling lattice, this system is only used for maintaining auxiliaries.
+
+        Parameters
+        ----------
+        owner : SamplingLattice
+            The sampling lattice owning this configuration system.
+        """
         super().__init__(owner.L1, owner.L2, owner.cut_dimension, False, owner.Tensor)
-        self.owner: SamplingLattice = owner
+        self._owner = owner
         # update exist configuration
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
-                self[l1, l2] = self[l1, l2]
+                for orbit, edge in self._owner.physics_edges[l1, l2].items():
+                    self[l1, l2, orbit] = self[l1, l2, orbit]
 
-    def valid(self) -> bool:
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                if self.owner._configuration[l1][l2] is None:
+    def site_valid(self, l1, l2):
+        """
+        Check if specific site have valid configuration
+
+        Parameters
+        ----------
+        l1, l2 : int
+            The coordinate of the specific site.
+
+        Returns
+        -------
+            The validity of this single site configuration.
+        """
+        for orbit, edge in self._owner.physics_edges[l1, l2].items():
+            if self._owner._configuration[l1][l2][orbit] is None:
+                return False
+        return True
+
+    def valid(self):
+        """
+        Check if all site have valid configuration.
+
+        Returns
+        -------
+        bool
+            The validity of this configuration system.
+        """
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                if not self.site_valid(l1, l2):
                     return False
         return True
 
-    def __getitem__(self, l1l2: tuple[int, int]) -> None | self.owner.EdgePoint:
-        l1, l2 = l1l2
-        return self.owner._configuration[l1][l2]
+    def __getitem__(self, l1l2o):
+        """
+        Get the configuration of the specific site.
 
-    def __setitem__(self, l1l2: tuple[int, int], value: "EdgePoint") -> None:
-        l1, l2 = l1l2
+        Parameters
+        ----------
+        l1l2o : tuple[int, int, int]
+            The coordinate and orbit index of the site.
+
+        Returns
+        -------
+        EdgePoint | None
+            The configuration of the specific site.
+        """
+        l1, l2, orbit = l1l2o
+        return self._owner._configuration[l1][l2][orbit]
+
+    def __setitem__(self, l1l2o, value):
+        """
+        Set the configuration of the specific site.
+
+        Parameters
+        ----------
+        l1l2o : tuple[int, int, int]
+            The coordinate and orbit index of the site.
+        value : ?EdgePoint
+            The configuration of this site.
+        """
+        l1, l2, orbit = l1l2o
         if value is None:
-            self.owner._configuration[l1][l2] = None
-            super().__setitem__(l1l2, None)
+            self._owner._configuration[l1][l2][orbit] = None
+            super().__setitem__((l1, l2), None)
             return
-        this_configuration: self.owner.EdgePoint = self._get_edge_point(value)
-        if this_configuration != self.owner._configuration[l1][l2] or self._lattice[l1][l2]() is None:
-            self.owner._configuration[l1][l2] = this_configuration
-            super().__setitem__(l1l2, self._shrink_configuration(l1l2, this_configuration))
+        this_configuration = self._construct_edge_point(value)
+        if this_configuration == self._owner._configuration[l1][l2][orbit]:
+            changed = False
+        else:
+            self._owner._configuration[l1][l2][orbit] = this_configuration
+            changed = True
+        if self._lattice[l1][l2]() is None or changed:
+            if self.site_valid(l1, l2):
+                shrinked_site = self._shrink_configuration((l1, l2), self._owner._configuration[l1][l2])
+                super().__setitem__((l1, l2), shrinked_site)
 
-    def __delitem__(self, l1l2: tuple[int, int]) -> None:
-        self.__setitem__(l1l2, None)
+    def __delitem__(self, l1l2o):
+        """
+        Clear the configuration of the specific site.
 
-    def replace(self, replacement: dict[tuple[int, int], "EdgePoint"], *, hint=None) -> self.Tensor:
-        base_replacement: dict[tuple[int, int], self.Tensor] = {}
-        for k, v in replacement.items():
-            t = self._shrink_configuration(k, self._get_edge_point(v))
-            base_replacement[k] = t
+        Parameters
+        ----------
+        l1l2o : tuple[int, int, int]
+            The coordinate and orbit index of the site.
+        """
+        self.__setitem__(l1l2o, None)
+
+    def replace(self, replacement, *, hint=None):
+        """
+        Calculate $\langle s\psi\rangle$ with several $s$ replaced.
+
+        Parameters
+        ----------
+        replacement : dict[tuple[int, int, int], ?EdgePoint]
+            Replacement plan to modify $s$.
+        hint : Any, default=None
+            Hint passed to base class replace
+
+        Returns
+        -------
+        Tensor
+            $\langle s\psi\rangle$ with several $s$ replaced.
+        """
+        grouped_replacement = {}  # dict[tuple[int, int], dict[int, EdgePoint]]
+        for [l1, l2, orbit], edge_point in replacement.items():
+            l1l2 = l1, l2
+            if l1l2 not in grouped_replacement:
+                grouped_replacement[l1l2] = {}
+            grouped_replacement[l1l2][orbit] = edge_point
+
+        base_replacement = {}  # dict[tuple[int, int], Tensor]
+        for l1l2, site_replacement in grouped_replacement.items():
+            l1, l2 = l1l2
+            tensor = self._owner[l1l2]
+            changed = False
+            for orbit, configuration in self._owner._configuration[l1][l2].items():
+                if orbit not in site_replacement:
+                    site_replacement[orbit] = configuration
+                else:
+                    if site_replacement[orbit] != configuration:
+                        changed = True
+            if changed:
+                base_replacement[l1l2] = self._shrink_configuration(l1l2, site_replacement)
         return super().replace(base_replacement, hint=hint)
 
-    def _get_edge_point(self, value: "EdgePoint") -> self.owner.EdgePoint:
+    def _construct_edge_point(self, value):
+        """
+        Construct edge point from something that can be used to construct an edge point.
+
+        Parameters
+        ----------
+        value : ?EdgePoint
+            Edge point or something that can be used to construct a edge point.
+
+        Returns
+        -------
+        EdgePoint
+            The result edge point object.
+        """
         if not isinstance(value, tuple):
-            symmetry = self.owner.Symmetry()  # work for NoSymmetry
+            symmetry = self._owner.Symmetry()  # work for NoSymmetry
             index = value
         else:
             symmetry, index = value
-        if not isinstance(symmetry, self.owner.Symmetry):
-            symmetry = self.owner.Symmetry(symmetry)
+        symmetry = self._owner._construct_symmetry(symmetry)
         return (symmetry, index)
 
-    def _get_shrinker(self, l1l2: tuple[int, int], configuration: self.owner.EdgePoint) -> self.Tensor:
+    def _get_shrinker(self, l1l2, configuration):
+        """
+        Get shrinker tensor for the given coordinate site, using the given configuration map.
+
+        Parameters
+        ----------
+        l1l2 : tuple[int, int]
+            The coordinate of the site.
+        configuration : dict[int, EdgePoint]
+            The given configuration for this site, mapping orbit to edge point.
+
+        Yields
+        ------
+        tuple[int, Tensor]
+            The orbit index and shrinker tensor, shrinker tensor name is "P" and "Q", where edge "P" is wider one.
+        """
         l1, l2 = l1l2
-        tensor: self.Tensor = self.owner[l1l2]
-        symmetry, index = configuration
-        # P side is dimension - 1 edge
-        # Q side is connected to lattice
-        shrinker: self.Tensor = self.Tensor(["P", "Q"], [[(symmetry, 1)], tensor.edges("P").conjugated()]).zero()
-        shrinker[{"Q": (-symmetry, index), "P": (symmetry, 0)}] = 1
-        return shrinker
+        for orbit, edge in self._owner.physics_edges[l1, l2].items():
+            symmetry, index = configuration[orbit]
+            # P side is dimension - 1 edge
+            # Q side is connected to lattice
+            shrinker = self.Tensor(["P", "Q"], [[(symmetry, 1)], edge.conjugated()]).zero()
+            shrinker[{"Q": (-symmetry, index), "P": (symmetry, 0)}] = 1
+            yield orbit, shrinker
 
-    def _shrink_configuration(self, l1l2: tuple[int, int], configuration: self.owner.EdgePoint) -> self.Tensor:
+    def _shrink_configuration(self, l1l2, configuration):
+        """
+        Shrink all configuration of given coordinate point.
+
+        Parameters
+        ----------
+        l1l2 : tuple[int, int]
+            The coordinate of the site.
+        configuration : dict[int, EdgePoint]
+            The given configuration for this site, mapping orbit to edge point.
+
+        Returns
+        -------
+        Tensor
+            The shrinked result tensor
+        """
         l1, l2 = l1l2
-        tensor: self.Tensor = self.owner[l1l2]
-        shrinker: self.Tensor = self._get_shrinker(l1l2, configuration).edge_rename({"P": f"P_{l1}_{l2}"})
-        return tensor.contract(shrinker, {("P", "Q")})
+        tensor = self._owner[l1l2]
+        for orbit, shrinker in self._get_shrinker(l1l2, configuration):
+            tensor = tensor.contract(shrinker.edge_rename({"P": f"P_{l1}_{l2}_{orbit}"}), {(f"P{orbit}", "Q")})
+        return tensor
 
-    def refresh_site(self, l1l2: tuple[int, int]) -> None:
-        conf = self[l1l2]
-        del self[l1l2]
-        self[l1l2] = conf
+    def refresh_site(self, l1l2o):
+        """
+        Refresh the single site configuration, need to be called after lattice tensor changed.
 
-    def refresh_all(self) -> None:
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                self.refresh_site((l1, l2))
+        Parameters
+        ----------
+        l1l2o : tuple[int, int, int]
+            The coordinate and orbit index of the site.
+        """
+        configuration = self[l1l2o]
+        del self[l1l2o]
+        self[l1l2o] = configuration
+
+    def refresh_all(self):
+        """
+        Refresh the configuration of all sites, need to be called after lattice tensor changed.
+        """
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit, edge in self._owner.physics_edges[l1, l2].items():
+                    self.refresh_site((l1, l2, orbit))
 
 
 class SamplingLattice(AbstractLattice):
-    __slots__ = ["_lattice", "EdgePoint", "_configuration", "_cut_dimension", "configuration"]
+    """
+    Square lattice used for sampling.
+    """
+
+    __slots__ = ["_lattice", "_configuration", "_cut_dimension", "configuration"]
 
     def __setstate__(self, state):
-        for i, j in state.items():
-            setattr(self, i, j)
+        for key, value in state.items():
+            setattr(self, key, value)
         self._create_auxiliaries()
 
     def __getstate__(self):
-        state = {n: getattr(self, n) for n in copyreg._slotnames(self.__class__) if n != "configuration"}
+        state = {key: getattr(self, key) for key in _slotnames(self.__class__) if key != "configuration"}
         return state
 
-    def __init__(self, abstract: AbstractLattice, cut_dimension: int) -> None:
+    def __init__(self, abstract, cut_dimension):
+        """
+        Create a simple update lattice from abstract lattice.
+
+        Parameters
+        ----------
+        abstract : AbstractLattice
+            The abstract lattice used to create simple update lattice.
+        cut_dimension : int
+            The cut dimension when calculating auxiliary tensors.
+        """
         super()._init_by_copy(abstract)
 
-        self._lattice: list[list[self.Tensor]] = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
-        self.EdgePoint = tuple[self.Symmetry, int]
-        self._configuration: list[list[None | self.EdgePoint]] = [[None for l2 in range(self.L2)] for l1 in range(self.L1)]
-        self._cut_dimension: int = cut_dimension
-        self.configuration: Configuration
+        self._lattice = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
+        # EdgePoint = tuple[self.Symmetry, int]
+        self._configuration = [[{orbit: None
+                                 for orbit, edge in self.physics_edges[l1, l2].items()}
+                                for l2 in range(self.L2)]
+                               for l1 in range(self.L1)]
+        self._cut_dimension = cut_dimension
         self._create_auxiliaries()
 
     @property
-    def cut_dimension(self) -> int:
+    def cut_dimension(self):
+        """
+        Get the cut dimension when calculating auxiliary tensor.
+
+        Returns
+        -------
+        int
+            The cut dimension when calculating auxiliary tensor.
+        """
         return self._cut_dimension
 
     @cut_dimension.setter
-    def cut_dimension(self, cut_dimension: int) -> None:
+    def cut_dimension(self, cut_dimension):
+        """
+        Get the cut dimension when calculating auxiliary tensor.
+
+        Parameters
+        ----------
+        cut_dimension : int
+            The cut dimension when calculating auxiliary tensor.
+        """
         if self._cut_dimension != cut_dimension:
             self._cut_dimension = cut_dimension
             self._create_auxiliaries()
 
-    def _create_auxiliaries(self) -> None:
+    def _create_auxiliaries(self):
+        """
+        Create new auxiliary system for the current given cut dimension.
+        """
         self.configuration = Configuration(self)
 
-    def __getitem__(self, l1l2: tuple[int, int]) -> self.Tensor:
+    def __getitem__(self, l1l2):
+        """
+        Get the tensor at the given coordinate.
+
+        Parameters
+        ----------
+        l1l2 : tuple[int, int]
+            The coordinate.
+
+        Returns
+        -------
+        Tensor
+            The tensor at the given coordinate.
+        """
         l1, l2 = l1l2
         return self._lattice[l1][l2]
 
-    def __setitem__(self, l1l2: tuple[int, int], value: self.Tensor) -> None:
+    def __setitem__(self, l1l2, value):
+        """
+        Set the tensor at the given coordinate.
+
+        Parameters
+        ----------
+        l1l2 : tuple[int, int]
+            The coordinate.
+        value : Tensor
+            The tensor used to set.
+        """
         l1, l2 = l1l2
         self._lattice[l1][l2] = value
 
 
 class Observer():
-    __slots__ = ["state", "_enable_hole", "_start", "_observer", "_result", "_count", "_total_weight", "_Delta", "_EDelta"]
+    """
+    Helper type for Observing the sampling lattice.
+    """
 
-    def __init__(self, state: SamplingLattice) -> None:
-        self.state: SamplingLattice = state
-        self._enable_hole: bool = False
-        self._start: bool = False
-        self._observer: dict[str, dict[tuple[tuple[int, int], ...], self.state.Tensor]] = {}
-        self._result: dict[str, dict[tuple[tuple[int, int], ...], float]] | None = None
-        self._count: int | None = None
-        self._total_weight: float | None = None
-        self._Delta: list[list[self.state.Tensor]] | None = None
-        self._EDelta: list[list[self.state.Tensor]] | None = None
+    __slots__ = [
+        "_owner", "_enable_hole", "_start", "_observer", "_result", "_count", "_total_weight", "_Delta", "_EDelta"
+    ]
 
-    def flush(self) -> None:
-        self._result = {name: {positions: 0 for positions, observer in observers.items()} for name, observers in self._observer.items()}
+    def __init__(self, owner):
+        """
+        Create observer object for the given sampling lattice.
+
+        Parameters
+        ----------
+        owner : SamplingLattice
+            The owner of this obsever object.
+        """
+        self._owner = owner
+        self._enable_hole = False
+        self._start = False
+        self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
+
+        self._result = None  # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
+        self._count = None  # int
+        self._total_weight = None  # float
+        self._Delta = None  # list[list[Tensor]]
+        self._EDelta = None  # list[list[Tensor]]
+
+    def flush(self):
+        """
+        Flush all cached data in the observer object, need to be called every time a sampling sequence start.
+        """
+        self._result = {
+            name: {positions: 0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
         self._count = 0
-        self._total_weight = 0
+        self._total_weight = 0.0
         if self._enable_hole:
-            self._Delta = [[self.state[l1, l2].same_shape().zero() for l2 in range(self.state.L2)] for l1 in range(self.state.L1)]
-            self._EDelta = [[self.state[l1, l2].same_shape().zero() for l2 in range(self.state.L2)] for l1 in range(self.state.L1)]
+            self._Delta = [[self._owner[l1, l2].same_shape().zero()
+                            for l2 in range(self._owner.L2)]
+                           for l1 in range(self._owner.L1)]
+            self._EDelta = [[self._owner[l1, l2].same_shape().zero()
+                             for l2 in range(self._owner.L2)]
+                            for l1 in range(self._owner.L1)]
 
-    def add_observer(self, name: str, observers: dict[tuple[tuple[int, int], ...], self.state.Tensor]) -> None:
+    def add_observer(self, name, observers):
+        """
+        Add an observer set into this observer object, cannot add observer once observer started.
+
+        Parameters
+        ----------
+        name : str
+            This observer set name.
+        observers : dict[tuple[tuple[int, int, int], ...], Tensor]
+            The observer map.
+        """
         if self._start:
             raise RuntimeError("Cannot enable hole after sampling start")
         self._observer[name] = observers
 
-    def add_energy(self) -> None:
-        self.add_observer("energy", self.state._hamiltonians)
+    def add_energy(self):
+        """
+        Add energy as an observer.
+        """
+        self.add_observer("energy", self._owner._hamiltonians)
 
-    def enable_gradient(self) -> None:
+    def enable_gradient(self):
+        """
+        Enable observing gradient.
+        """
         if self._start:
             raise RuntimeError("Cannot enable gradient after sampling start")
         if "energy" not in self._observer:
             self.add_energy()
         self._enable_hole = True
 
-    def __call__(self, reweight: float) -> None:
+    def __call__(self, reweight):
         """
-        Collect observer value from current configuration
+        Collect observer value from current configuration, the sampling should have distribution based on
+        $|\langle\psi s\rangle|^2$, If it is not, a reweight argument should be passed with a non-one float number.
 
         Parameters
         ----------
         reweight
-            the weight for reweight in importance sampling
+            the weight for reweight in importance sampling.
         """
         self._start = True
         self._count += 1
         self._total_weight += reweight
-        configuration_t = tuple[self.state.EdgePoint, ...]
-        ws: self.state.Tensor = self.state.configuration.hole(())
-        inv_ws_conj: self.state.Tensor = ws / (ws.norm_2()**2)
-        inv_ws: self.state.Tensor = inv_ws_conj.conjugate()
-        all_name: set[tuple[str, str]] = {("T", "T")} | {(f"P_{l1}_{l2}", f"P_{l1}_{l2}") for l1 in range(self.state.L1) for l2 in range(self.state.L2)}
+        ws = self._owner.configuration.hole(())  # ws is a tensor
+        inv_ws_conj = ws / (ws.norm_2()**2)
+        inv_ws = inv_ws_conj.conjugate()
+        all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
+                                   for l2 in range(self._owner.L2)
+                                   for orbit, edge in self._owner.physics_edges[l1, l2].items()}
         for name, observers in self._observer.items():
-            calculate_gradient: bool
             if name == "energy" and self._enable_hole:
                 calculating_gradient = True
-                Es: float = 0
+                Es = 0
             else:
                 calculating_gradient = False
             for positions, observer in observers.items():
-                body: int = observer.rank // 2
-                current_configuration: configuration_t = tuple(self.state.configuration[positions[i]] for i in range(body))
+                body = observer.rank // 2
+                current_configuration = tuple(self._owner.configuration[positions[i]] for i in range(body))
                 element_pool = tensor_element(observer)
                 if current_configuration not in element_pool:
                     continue
-                total_value: float = 0
-                physics_names: list[str] = [f"P_{positions[i][0]}_{positions[i][1]}" for i in range(body)]
+                total_value = 0
+                physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    wss: self.state.Tensor = self.state.configuration.replace({positions[i]: other_configuration[i] for i in range(body)}).conjugate()
+                    wss = self._owner.configuration.replace({positions[i]: other_configuration[i] for i in range(body)
+                                                            }).conjugate()
                     if wss.norm_num() == 0:
                         continue
-                    value: self.state.Tensor = inv_ws_conj.contract(observer_shrinked, {(physics_names[i], f"I{i}") for i in range(body)}).edge_rename({f"O{i}": physics_names[i] for i in range(body)
-                                                                                                                                                       }).contract(wss, all_name)
+                    value = inv_ws_conj.contract(observer_shrinked,
+                                                 {(physics_names[i], f"I{i}") for i in range(body)}).edge_rename({
+                                                     f"O{i}": physics_names[i] for i in range(body)
+                                                 }).contract(wss, all_name)
                     total_value += float(value)
                 self._result[name][positions] += total_value * reweight
                 if calculating_gradient:
-                    Es += total_value
+                    Es += total_value  # reweight will be multipled later
             if calculating_gradient:
-                for l1 in range(self.state.L1):
-                    for l2 in range(self.state.L2):
-                        contract_name: set[tuple[str, str]] = all_name.copy()
-                        contract_name.remove((f"P_{l1}_{l2}", f"P_{l1}_{l2}"))
+                for l1 in range(self._owner.L1):
+                    for l2 in range(self._owner.L2):
+                        contract_name = all_name.copy()
+                        for orbit, edge in self._owner.physics_edges[l1, l2].items():
+                            contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
                         if l1 == l2 == 0:
                             contract_name.remove(("T", "T"))
-                        hole: self.state.Tensor = self.state.configuration.hole(((l1, l2),)).contract(inv_ws, contract_name)
-                        hole = hole.edge_rename({"L0": "R", "R0": "L", "U0": "D", "D0": "U", f"P_{l1}_{l2}": "P"})
+                        hole = self._owner.configuration.hole(((l1, l2),)).contract(inv_ws, contract_name)
+                        hole = hole.edge_rename({
+                            "L0": "R",
+                            "R0": "L",
+                            "U0": "D",
+                            "D0": "U"
+                        } | {
+                            f"P_{l1}_{l2}_{orbit}": f"P{orbit}"
+                            for orbit, edge in self._owner.physics_edges[l1, l2].items()
+                        })
 
-                        shrinker: self.state.Tensor = self.state.configuration._get_shrinker((l1, l2), self.state.configuration[l1, l2])
-                        grad: self.state.Tensor = hole.contract(shrinker, {("P", "P")}).edge_rename({"Q": "P"})
+                        for orbit, shrinker in self._owner.configuration._get_shrinker(
+                            (l1, l2), self._owner._configuration[l1][l2]):
+                            hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
 
-                        grad *= reweight
-                        self._Delta[l1][l2] += grad
-                        self._EDelta[l1][l2] += Es * grad
+                        hole *= reweight
+                        self._Delta[l1][l2] += hole
+                        self._EDelta[l1][l2] += Es * hole
 
     @property
-    def result(self) -> dict[str, dict[tuple[tuple[int, int], ...], float]]:
-        return {name: {positions: value / self._total_weight for positions, value in data.items()} for name, data in self._result.items()}
+    def result(self):
+        """
+        Get the observer result.
+
+        Returns
+        -------
+        dict[str, dict[tuple[tuple[int, int, int], ...], float]]
+            The observer result of each observer set name and each site positions list.
+        """
+        return {
+            name: {positions: value / self._total_weight for positions, value in data.items()
+                  } for name, data in self._result.items()
+        }
 
     @property
-    def energy(self) -> float:
-        return sum(self.result["energy"].values()) / (self.state.L1 * self.state.L2)
+    def energy(self):
+        """
+        Get the observed energy per site.
+
+        Returns
+        -------
+        float
+            The energy per site.
+        """
+        return sum(self.result["energy"].values()) / self._owner.site_number
 
     @property
-    def gradient(self) -> list[list[self.state.Tensor]]:
-        return [[(self._EDelta[l1][l2] / self._total_weight) - (self._Delta[l1][l2] / self._total_weight) * self.energy for l2 in range(self.state.L2)] for l1 in range(self.state.L1)]
+    def gradient(self):
+        """
+        Get the energy gradient for every tensor.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The gradient for every tensor.
+        """
+        return [[(self._EDelta[l1][l2] / self._total_weight) * 2 -
+                 (self._Delta[l1][l2] / self._total_weight) * sum(self.result["energy"].values()) * 2
+                 for l2 in range(self._owner.L2)]
+                for l1 in range(self._owner.L1)]
 
 
 class Sampling:
-    __slots__ = ["state"]
+    """
+    Helper type for run sampling for sampling lattice.
+    """
 
-    def __init__(self, state: SamplingLattice) -> None:
-        self.state: SamplingLattice = state
+    __slots__ = ["_owner"]
 
-    def __call__(self) -> float:
+    def __init__(self, owner):
+        """
+        Create sampling object for the given sampling lattice.
+
+        Parameters
+        ----------
+        owner : SamplingLattice
+            The owner of this sampling object.
+        """
+        self._owner = owner
+
+    def __call__(self):
         """
         Get the next sampling configuration
 
@@ -280,101 +597,121 @@ class Sampling:
 
 
 class SweepSampling(Sampling):
-    __slots__ = ["sweep_order"]
+    """
+    Sweep sampling.
+    """
 
-    def __init__(self, state: SamplingLattice) -> None:
-        super().__init__(state)
-        self.sweep_order: list[tuple[tuple[int, int], ...]] | None = None
+    __slots__ = ["_sweep_order"]
 
-    def _single_term(self, positions: tuple[tuple[int, int], ...], hamiltonian: self.state.Tensor, ws: float) -> float:
-        body: int = hamiltonian.rank // 2
-        configuration_t = tuple[self.state.EdgePoint, ...]
-        current_configuration: configuration_t = tuple(self.state.configuration[l1l2] for l1l2 in positions)
+    def __init__(self, owner):
+        super().__init__(owner)
+        self._sweep_order = None  # list[tuple[tuple[int, int, int], ...]]
+
+    def _single_term(self, positions, hamiltonian, ws):
+        body = hamiltonian.rank // 2
+        current_configuration = tuple(self._owner.configuration[l1l2o] for l1l2o in positions)  # tuple[EdgePoint, ...]
         element_pool = tensor_element(hamiltonian)
         if current_configuration not in element_pool:
             return ws
-        possible_hopping: dict[configuration_t, self.state.Tensor] = element_pool[current_configuration]
+        possible_hopping = element_pool[current_configuration]
         if possible_hopping:
-            hopping_number: int = len(possible_hopping)
+            hopping_number = len(possible_hopping)
             configuration_new, element = list(possible_hopping.items())[TAT.random.uniform_int(0, hopping_number - 1)()]
-            hopping_number_s: int = len(element_pool[configuration_new])
+            hopping_number_s = len(element_pool[configuration_new])
             replacement = {positions[i]: configuration_new[i] for i in range(body)}
-            wss: float = float(self.state.configuration.replace(replacement))  # which return a tensor, we only need its norm
-            p: float = (wss**2) / (ws**2) * hopping_number / hopping_number_s
+            wss = float(self._owner.configuration.replace(replacement))  # which return a tensor, we only need its norm
+            p = (wss**2) / (ws**2) * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 ws = wss
                 for i in range(body):
-                    self.state.configuration[positions[i]] = configuration_new[i]
+                    self._owner.configuration[positions[i]] = configuration_new[i]
         return ws
 
-    def __call__(self) -> float:
-        state: SamplingLattice = self.state
-        if not state.configuration.valid():
+    def __call__(self):
+        owner = self._owner
+        if not owner.configuration.valid():
             raise RuntimeError("Configuration not initialized")
-        ws: float = float(state.configuration.hole(()))
-        if self.sweep_order is None:
-            self.sweep_order: list[tuple[tuple[int, int], ...]] = self._get_proper_position_order()
-        for positions in self.sweep_order:
-            hamiltonian: state.Tensor = state._hamiltonians[positions]
+        ws = float(owner.configuration.hole(()))
+        if self._sweep_order is None:
+            self._sweep_order = self._get_proper_position_order()
+        for positions in self._sweep_order:
+            hamiltonian = owner._hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
-        self.sweep_order.reverse()
-        for positions in self.sweep_order:
-            hamiltonian: state.Tensor = state._hamiltonians[positions]
+        self._sweep_order.reverse()
+        for positions in self._sweep_order:
+            hamiltonian = owner._hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
         return 1.
 
-    def _get_proper_position_order(self) -> list[tuple[tuple[int, int], ...]]:
-        L1: int = self.state.L1
-        L2: int = self.state.L2
-        positions: set[tuple[tuple[int, int], ...]] = set(self.state._hamiltonians.keys())
+    def _get_proper_position_order(self):
+        L1 = self._owner.L1
+        L2 = self._owner.L2
+        positions = set(self._owner._hamiltonians.keys())
         result = []
+        # Single site auxiliary use horizontal style contract by default
         for l1 in range(L1):
             for l2 in range(L2):
-                p = ((l1, l2),)
-                if p in positions:
-                    positions.remove(p)
-                    result.append(p)
-                p = ((l1, l2), (l1, l2 + 1))
-                if p in positions:
-                    positions.remove(p)
-                    result.append(p)
+                new_positions = set()
+                for ps in positions:
+                    if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2), (l1, l2 + 1))]) == 0:
+                        result.append(ps)
+                    else:
+                        new_positions.add(ps)
+                positions = new_positions
         for l2 in range(L2):
             for l1 in range(L1):
-                p = ((l1, l2), (l1 + 1, l2))
-                if p in positions:
-                    positions.remove(p)
-                    result.append(p)
+                new_positions = set()
+                for ps in positions:
+                    if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2), (l1 + 1, l2))]) == 0:
+                        result.append(ps)
+                    else:
+                        new_positions.add(ps)
+                positions = new_positions
         if len(positions) != 0:
             raise NotImplementedError("Not implemented hamiltonian")
         return result
 
 
 class ErgodicSampling(Sampling):
-    __slots__ = ["total_step", "edges"]
+    """
+    Ergodic sampling.
+    """
 
-    def __init__(self, state: SamplingLattice) -> None:
-        super().__init__(state)
-        self.edges: list[list[self.state.Edge]] = [[self.state[l1, l2].edges("P") for l2 in range(self.state.L2)] for l1 in range(self.state.L1)]
-        self.total_step: int = 1
-        for l1 in range(self.state.L1):
-            for l2 in range(self.state.L2):
-                self.total_step *= self.edges[l1][l2].dimension
+    __slots__ = ["total_step", "_edges"]
 
-    def __call__(self) -> float:
-        state: SamplingLattice = self.state
-        if not state.configuration.valid():
+    def __init__(self, owner):
+        super().__init__(owner)
+
+        self._edges = [[{
+            orbit: self._owner[l1, l2].edges(f"P{orbit}") for orbit, edge in self._owner.physics_edges[l1, l2].items()
+        } for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+
+        self.total_step = 1
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit, edge in self._edges[l1][l2].items():
+                    self.total_step *= edge.dimension
+
+    def __call__(self):
+        owner = self._owner
+        if not owner.configuration.valid():
             raise RuntimeError("Configuration not initialized")
-        for l1 in range(state.L1):
-            for l2 in range(state.L2):
-                index: int = self.edges[l1][l2].get_index_from_point(self.state.configuration[l1, l2])
-                index += 1
-                if index == self.edges[l1][l2].dimension:
-                    self.state.configuration[l1, l2] = self.edges[l1][l2].get_point_from_index(0)
-                else:
-                    self.state.configuration[l1, l2] = self.edges[l1][l2].get_point_from_index(index)
-                    return self.state.configuration.hole(()).norm_2()**2
-        return self.state.configuration.hole(()).norm_2()**2
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit, edge in self._edges[l1][l2].items():
+                    index = edge.get_index_from_point(owner.configuration[l1, l2, orbit])
+                    index += 1
+                    if index == edge.dimension:
+                        owner.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
+                    else:
+                        owner.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
+                        return owner.configuration.hole(()).norm_2()**2
+        return owner.configuration.hole(()).norm_2()**2
 
 
 class DirectSampling(Sampling):
+    """
+    Direct sampling.
+    """
+
     __slots__ = []

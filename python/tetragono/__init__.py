@@ -16,12 +16,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .auxiliaries import Auxiliaries
-from .double_layer_auxiliaries import DoubleLayerAuxiliaries
+# States
 from .abstract_state import AbstractState
 from .exact_state import ExactState
 from .abstract_lattice import AbstractLattice
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
+
+# Tools
+from .auxiliaries import Auxiliaries
+from .double_layer_auxiliaries import DoubleLayerAuxiliaries
+from .tensor_element import tensor_element
+
+# Miscellaneous
 from . import common_variable
 from . import conversion

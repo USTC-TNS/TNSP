@@ -39,7 +39,11 @@ TE = ((0, 0), 0)
 TD = ((-1, +1), 0)
 TU = ((-1, -1), 0)
 
-CC = TAT.FermiU1.D.Tensor(["O0", "O1", "I0", "I1"], [Fedge[(0, 0), (+1, -1), (+1, +1)], Fedge[(0, 0), (+1, -1), (+1, +1)], Tedge[(0, 0), (-1, +1), (-1, -1)], Tedge[(0, 0), (-1, +1), (-1, -1)]]).zero()
+CC = TAT.FermiU1.D.Tensor(["O0", "O1", "I0", "I1"], [
+    Fedge[(0, 0), (+1, -1), (+1, +1)], Fedge[(0, 0), (+1, -1), (+1, +1)], Tedge[(0, 0), (-1, +1),
+                                                                                (-1, -1)], Tedge[(0, 0), (-1, +1),
+                                                                                                 (-1, -1)]
+]).zero()
 CC[{"O0": FD, "O1": FE, "I0": TE, "I1": TD}] = 1
 CC[{"O0": FU, "O1": FE, "I0": TE, "I1": TU}] = 1
 CC[{"O0": FE, "O1": FD, "I0": TD, "I1": TE}] = 1
@@ -74,7 +78,8 @@ def create(L1, L2, D, T):
     state = tet.AbstractLattice(state)
     for l1 in range(state.L1 - 1):
         Q = int(T * (state.L1 - l1 - 1) / state.L1)
-        state.virtual_bond[(l1, 0), "D"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D), ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D), ((2 * Q + 1, -1), D),
+        state.virtual_bond[(l1, 0), "D"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D),
+                                            ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D), ((2 * Q + 1, -1), D),
                                             ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
     for l1 in range(state.L1 - 1):
         for l2 in range(1, state.L2):
@@ -82,8 +87,9 @@ def create(L1, L2, D, T):
     for l1 in range(state.L1):
         for l2 in range(state.L2 - 1):
             Q = int(t * (state.L2 - l2 - 1) / state.L2)
-            state.virtual_bond[(l1, l2), "R"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D), ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D), ((2 * Q + 1, -1), D),
-                                                 ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
+            state.virtual_bond[(l1, l2), "R"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D),
+                                                 ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D),
+                                                 ((2 * Q + 1, -1), D), ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
 
     state = tet.SimpleUpdateLattice(state)
     return state
