@@ -17,95 +17,87 @@
 #
 
 from __future__ import annotations
-from typing import TypeVar, Generic, Callable
 import weakref
 
-__all__ = ["Copier", "Merger", "Node", "Root"]
 
+class Copy:
+    """
+    A helper class used to copy entire lazy node graph.
+    """
 
-class Copier:
     __slots__ = ["_map"]
 
-    def __init__(self) -> None:
-        self._map: dict[Node, Node] = {}
+    def __init__(self):
+        """
+        Create a new Copy class used to copy entire lazy node graph.
+        """
+        self._map = {}  # A map from old lazy node to new lazy node
 
-    def __call__(self, node: Node) -> Node:
-        result: Node = Node._copy(node, self)
-        result._value = node._value
-        self._map[node] = result
+    def __call__(self, node):
+        """
+        Copy a lazy node into newly created graph and get result node.
+
+        Parameters
+        ----------
+        node : Node[T]
+            The old lazy node from the old graph.
+
+        Returns
+        -------
+        Node[T]
+            The newly created lazy node in the new graph.
+        """
+        args = tuple(self._map_node(i) for i in node._args)  # map all args of node
+        kwargs = {i: self._map_node(j) for i, j in node._kwargs.items()}  # Map all kwargs of node
+        result = Node(node._func, *args, **kwargs)
+        result._value = node._value  # Set value
+        self._map[node] = result  # Record relation in map
         return result
 
     def _map_node(self, node):
+        """
+        Get new created lazy node from old lazy node.
+
+        Parameters
+        ----------
+        node : Node[T] | Any
+            The old lazy node from the old graph, or any other things.
+
+        Returns
+        -------
+        Node[T] | Any
+            If the parameter `node` is really a lazy node, it will return newly created mapped by the input node.
+            Otherwise it will return the input object directly without any change.
+        """
         if isinstance(node, Node):
             return self._map[node]
         else:
             return node
 
 
-class Merger:
-    __slots__ = ["_map", "_select_1", "_select_2"]
+class Node:
+    """
+    Lazy node type, used to build a lazy evaluation graph, the value of it may be reset and when trying to get value of
+    it, the needed node will be calculated automatically.
+    """
 
-    def __init__(self) -> None:
-        self._map: dict[Node, Node] = {}
-        self._select_1: dict[Node] = set()  # nodes using value from channel 1
-        self._select_2: dict[Node] = set()  # nodes using value from channel 2
-
-    def __call__(self, node_1: Node, node_2: Node, select: int) -> Node:
-        if select == 1:
-            result: Node = Node._copy(node_1, self)
-            result._value = node_1._value
-            self._select_1(result)
-        elif select == 2:
-            result: Node = Node._copy(node_2, self)
-            result._value = node_2._value
-            self._select_2(result)
-        elif select == 0:
-            result: Node = Node._copy(node_1, self)
-            select_1: bool = True
-            select_2: bool = True
-            upstreams: set[Node] = {i for i in result._args if isinstance(i, Node)} | {j for i, j in result._kwargs.items() if isinstance(j, Node)}
-            for i in upstreams:
-                if i not in self._select_1:
-                    select_1 = False  # upstream not using channel 1 so result cannot use it
-                if i not in self._select_2:
-                    select_2 = False  # upstream not using channel 2 so result cannot use it
-            if select_1:
-                result._value = node_1._value
-                self._select_1.add(result)
-            elif select_2:
-                result._value = node_2._value
-                self._select_2.add(result)
-            else:
-                result._value = None
-        else:
-            raise ValueError("Invalid select index")
-        self._map[node_1] = result
-        self._map[node_2] = result
-        return result
-
-    def _map_node(self, node):
-        if isinstance(node, Node):
-            return self._map[node]
-        else:
-            return node
-
-
-T = TypeVar('T')
-
-
-class Node(Generic[T]):
     __slots__ = ["_value", "_downstream", "_func", "_args", "_kwargs", "__weakref__"]
 
-    @staticmethod
-    def _copy(other: Node[T], copier: Copier | Merger) -> Node[T]:
-        args = [copier._map_node(i) for i in other._args]
-        kwargs = {i: copier._map_node(j) for i, j in other._kwargs.items()}
-        return Node(other._func, *args, **kwargs)
+    def __init__(self, func, *args, **kwargs):
+        """
+        Create a lazy node with given function and arguments.
 
-    def __init__(self, func: Callable[..., T], *args, **kwargs):
-        self._value: T | None = None
-        self._downstream: set[weakref.ref[Node]] = set()
-        self._func: [..., T] = func
+        Parameters
+        ----------
+        func : Callable[..., T]
+            The function used to calculate the value of this node.
+        *args, **kwargs
+            Arguments used by the function, if there is lazy node inside args, it will be calculated first when try to
+            calculate this lazy node.
+        """
+        self._value = None  # The cache of the value of this lazy node
+        self._downstream = set()  # The set of weak reference of all downstream node
+        self._func = func
         self._args = args
         self._kwargs = kwargs
 
@@ -113,10 +105,18 @@ class Node(Generic[T]):
             if isinstance(i, Node):
                 i._downstream.add(weakref.ref(self))
 
-    def reset(self, value: T | None = None):
+    def reset(self, value=None):
+        """
+        Reset value of this node, it will refresh all its downstream.
+
+        Parameters
+        ----------
+        value : T | None, default=None
+            Reset the cache of this node by the given value.
+        """
         if self._value != value:
             self._value = value
-            new_downstream: set[weakref.ref[Node]] = set()
+            new_downstream = set()
             for i in self._downstream:
                 if i():
                     i().reset()
@@ -124,10 +124,17 @@ class Node(Generic[T]):
 
             self._downstream = new_downstream
 
-    def __call__(self) -> T:
+    def __call__(self):
+        """
+        Obtain the value of this node, it will calculate the value by self._func and cache it
+
+        Returns
+        -------
+        T
+            The calculated value of this node.
+        """
         if self._value is None:
-            # need to reduce stack depth
-            # or call sys.setrecursionlimit(more_stack_depth)
+            # Do NOT use generator here for less stack depth
 
             # args = [self._unwrap_node(i) for i in self._args]
             args = []
@@ -147,7 +154,20 @@ class Node(Generic[T]):
         return self._value
 
 
-def Root(value: T | None = None) -> Node[T]:
+def Root(value=None):
+    """
+    Create a lazy node with given value.
+
+    Parameters
+    ----------
+    value : T | None, default=None
+        The given value of this lazy node.
+
+    Returns
+    -------
+    Node[T]
+        The result lazy node.
+    """
     result = Node(lambda: None)
     result.reset(value)
     return result
