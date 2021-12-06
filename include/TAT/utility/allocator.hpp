@@ -299,6 +299,8 @@ namespace TAT {
 #include <list>
 #include <map>
 #include <set>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace TAT {
