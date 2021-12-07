@@ -20,29 +20,25 @@ import TAT
 import tetragono as tet
 
 
-def new(self, L1, L2, D, T):
+def create(L1, L2, D, T):
     state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
-    state.physics_edges = [0, 1]
-    state.hamiltonians.vertical_bond = tet.common_variable.Fermi.CC
-    state.hamiltonians.horizontal_bond = tet.common_variable.Fermi.CC
+    state.physics_edges[...] = [0, 1]
+    state.hamiltonians["vertical_bond"] = tet.common_variable.Fermi.CC
+    state.hamiltonians["horizontal_bond"] = tet.common_variable.Fermi.CC
     state.total_symmetry = T
     t = T / state.L1
 
     state = tet.AbstractLattice(state)
     for l1 in range(state.L1 - 1):
         Q = int(T * (state.L1 - l1 - 1) / state.L1)
-        state.virtual_bond[(l1, 0), "D"] = [(Q - 1, D), (Q, D), (Q + 1, D)]
+        state.virtual_bond[l1, 0, "D"] = [(Q - 1, D), (Q, D), (Q + 1, D)]
     for l1 in range(state.L1 - 1):
         for l2 in range(1, state.L2):
-            state.virtual_bond[(l1, l2), "D"] = [(0, D)]
+            state.virtual_bond[l1, l2, "D"] = [(0, D)]
     for l1 in range(state.L1):
         for l2 in range(state.L2 - 1):
             Q = int(t * (state.L2 - l2 - 1) / state.L2)
-            state.virtual_bond[(l1, l2), "R"] = [(Q - 1, D), (Q, D), (Q + 1, D)]
+            state.virtual_bond[l1, l2, "R"] = [(Q - 1, D), (Q, D), (Q + 1, D)]
 
     state = tet.SimpleUpdateLattice(state)
-
-    self._state = state
-    self.save()
-    self._retype("SimpleUpdateLattice")
-    return self
+    return state

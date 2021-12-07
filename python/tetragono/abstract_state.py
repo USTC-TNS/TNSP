@@ -311,7 +311,7 @@ class AbstractState:
         Edge
             The result virtual edge.
         """
-        return self.Edge([(-self._total_symmetry, 1)], True)
+        return self.Edge([(-self._total_symmetry, 1)], False)
 
     def _construct_edge(self, value):
         """
