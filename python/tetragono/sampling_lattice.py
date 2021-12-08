@@ -651,6 +651,14 @@ class SweepSampling(Sampling):
         # Single site auxiliary use horizontal style contract by default
         for l1 in range(L1):
             for l2 in range(L2):
+                # Single site first, if not one useless right auxiliary tensor will be calculated.
+                new_positions = set()
+                for ps in positions:
+                    if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2))]) == 0:
+                        result.append(ps)
+                    else:
+                        new_positions.add(ps)
+                positions = new_positions
                 new_positions = set()
                 for ps in positions:
                     if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2), (l1, l2 + 1))]) == 0:
