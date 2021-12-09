@@ -201,7 +201,34 @@ class SimpleUpdateLattice(AbstractLattice):
             The dimension cut used in svd of simple update.
         """
         updaters = []
-        for positions, hamiltonian_term in self._hamiltonians.items():
+        # TODO TMP
+        keys = []
+        for l1 in range(self.L1):
+            for l2 in range(0, self.L2 - 1, 2):
+                keys.append(((l1, l2, 1), (l1, l2 + 1, 0)))
+        for l1 in range(self.L1):
+            for l2 in range(1, self.L2 - 1, 2):
+                keys.append(((l1, l2, 1), (l1, l2 + 1, 0)))
+        for l1 in range(0, self.L1 - 1, 2):
+            for l2 in range(self.L2):
+                keys.append(((l1, l2, 1), (l1 + 1, l2, 0)))
+        for l1 in range(1, self.L1 - 1, 2):
+            for l2 in range(self.L2):
+                keys.append(((l1, l2, 1), (l1 + 1, l2, 0)))
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if (l1, l2) != (0, 0) and (l1, l2) != (self.L1 - 1, self.L2 - 1):
+                    keys.append(((l1, l2, 0), (l1, l2, 1)))
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if (l1, l2) != (0, 0):
+                    keys.append(((l1, l2, 0),))
+                if (l1, l2) != (self.L1 - 1, self.L2 - 1):
+                    keys.append(((l1, l2, 1),))
+        # print(keys)
+        iterl = [(k, self._hamiltonians[k]) for k in keys]
+        # TODO TMP
+        for positions, hamiltonian_term in iterl:
             coordinates = []
             index_and_orbit = []
             for l1, l2, orbit in positions:
@@ -215,12 +242,13 @@ class SimpleUpdateLattice(AbstractLattice):
                 {(f"I{i}", f"O{i}") for i in range(site_number)}, step=8)
 
             updaters.append((coordinates, index_and_orbit, evolution_operator))
+        # TODO combine coordinates TODO reorder it
         for step in range(total_step):
             print(clear_line, f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}", end="\r")
             for coordinates, index_and_orbit, evolution_operator in updaters:
                 self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
-            for coordinates, index_and_orbit, evolution_operator in reversed(updaters):
-                self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+            #for coordinates, index_and_orbit, evolution_operator in reversed(updaters):
+            #    self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
         print(clear_line, f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
         self._update_virtual_bond()
 
