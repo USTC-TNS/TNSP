@@ -20,7 +20,7 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D):
+def create(L1, L2, D, Jx, Jy, Jz):
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     for l1 in range(L1):
         for l2 in range(L2):
@@ -31,11 +31,11 @@ def create(L1, L2, D):
     for l1 in range(L1):
         for l2 in range(L2):
             if not ((l1, l2) == (0, 0) or (l1, l2) == (L1 - 1, L2 - 1)):
-                state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = tet.common_variable.No.SzSz
+                state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = tet.common_variable.No.SxSx * Jx
             if l1 != 0:
-                state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = tet.common_variable.No.SxSx
+                state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = tet.common_variable.No.SySy * Jy
             if l2 != 0:
-                state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = tet.common_variable.No.SySy
+                state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = tet.common_variable.No.SzSz * Jz
     state = tet.AbstractLattice(state)
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
