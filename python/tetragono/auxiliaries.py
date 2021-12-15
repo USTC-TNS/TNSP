@@ -50,6 +50,64 @@ class Auxiliaries:
         "_inline_up_to_down_tailed", "_inline_down_to_up", "_inline_down_to_up_tailed"
     ]
 
+    def copy(self):
+        result = Auxiliaries.__new__(Auxiliaries)
+        cp = lazy.Copy()
+
+        result.L1 = self.L1
+        result.L2 = self.L2
+        result.cut_dimension = self.cut_dimension
+        result.normalize = self.normalize
+        result.Tensor = self.Tensor
+
+        result._one = cp(self._one)
+        result._one_l1 = cp(self._one_l1)
+        result._one_l2 = cp(self._one_l2)
+
+        result._lattice = [[cp(root) for root in row] for row in self._lattice]
+
+        result._zip_row = [cp(row) for row in self._zip_row]
+        result._up_to_down = {k: cp(v) for k, v in self._up_to_down.items()}
+        result._up_to_down_site = {k: cp(v) for k, v in self._up_to_down_site.items()}
+        result._down_to_up = {k: cp(v) for k, v in self._down_to_up.items()}
+        result._down_to_up_site = {k: cp(v) for k, v in self._down_to_up_site.items()}
+
+        result._zip_column = [cp(column) for column in self._zip_column]
+        result._left_to_right = {k: cp(v) for k, v in self._left_to_right.items()}
+        result._left_to_right_site = {k: cp(v) for k, v in self._left_to_right_site.items()}
+        result._right_to_left = {k: cp(v) for k, v in self._right_to_left.items()}
+        result._right_to_left_site = {k: cp(v) for k, v in self._right_to_left_site.items()}
+
+        result._inline_left_to_right = {}
+        result._inline_left_to_right_tailed = {}
+        for l1 in range(self.L1):
+            for l2 in range(-1, self.L2):
+                result._inline_left_to_right[l1, l2] = cp(self._inline_left_to_right[l1, l2])
+                result._inline_left_to_right_tailed[l1, l2] = cp(self._inline_left_to_right_tailed[l1, l2])
+
+        result._inline_right_to_left = {}
+        result._inline_right_to_left_tailed = {}
+        for l1 in range(self.L1):
+            for l2 in reversed(range(self.L2 + 1)):
+                result._inline_right_to_left[l1, l2] = cp(self._inline_right_to_left[l1, l2])
+                result._inline_right_to_left_tailed[l1, l2] = cp(self._inline_right_to_left_tailed[l1, l2])
+
+        result._inline_up_to_down = {}
+        result._inline_up_to_down_tailed = {}
+        for l2 in range(self.L2):
+            for l1 in range(-1, self.L1):
+                result._inline_up_to_down[l1, l2] = cp(self._inline_up_to_down[l1, l2])
+                result._inline_up_to_down_tailed[l1, l2] = cp(self._inline_up_to_down_tailed[l1, l2])
+
+        result._inline_down_to_up = {}
+        result._inline_down_to_up_tailed = {}
+        for l2 in range(self.L2):
+            for l1 in reversed(range(self.L1 + 1)):
+                result._inline_down_to_up[l1, l2] = cp(self._inline_down_to_up[l1, l2])
+                result._inline_down_to_up_tailed[l1, l2] = cp(self._inline_down_to_up_tailed[l1, l2])
+
+        return result
+
     def __init__(self, L1, L2, cut_dimension, normalize, Tensor):
         self.L1 = L1
         self.L2 = L2
