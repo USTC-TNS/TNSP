@@ -17,7 +17,7 @@
 #
 
 from __future__ import annotations
-import weakref
+from weakref import ref
 
 
 class Copy:
@@ -66,10 +66,12 @@ class Copy:
         Returns
         -------
         Node[T] | Any
-            If the parameter `node` is really a lazy node, it will return newly created mapped by the input node.
-            Otherwise it will return the input object directly without any change.
+            If the parameter `node` is really a lazy node and it is recorded in `self._map`, it will return newly
+            created mapped by the input node. Otherwise it will return the input object directly without any change.
         """
-        if isinstance(node, Node):
+        if node in self._map:
+            # node is definitly a lazy node. but if it is a lazy node, it may be not in self._map, it happens if only
+            # part of graph is copyied.
             return self._map[node]
         else:
             return node
@@ -82,6 +84,45 @@ class Node:
     """
 
     __slots__ = ["_value", "_downstream", "_func", "_args", "_kwargs", "__weakref__"]
+
+    def _clear_downstream_of_upstream(self):
+        for i in self._args:
+            if isinstance(i, Node):
+                i._downstream.remove(ref(self))
+        for _, i in self._kwargs.items():
+            if isinstance(i, Node):
+                i._downstream.remove(ref(self))
+
+    def _add_downstream_of_upstream(self):
+        for i in self._args:
+            if isinstance(i, Node):
+                i._downstream.add(ref(self))
+        for _, i in self._kwargs.items():
+            if isinstance(i, Node):
+                i._downstream.add(ref(self))
+
+    def replace(self, node):
+        """
+        Replace the current node with another node.
+
+        Parameters
+        ----------
+        node : Node[T]
+            The new node used to replace.
+        """
+
+        self._clear_downstream_of_upstream()
+
+        self._value = node._value
+        # _downstream is not changed
+        self._func = node._func
+        self._args = node._args
+        self._kwargs = node._kwargs
+
+        self._add_downstream_of_upstream()
+
+    # def __del__(self):
+    #     self._clear_downstream_of_upstream()
 
     def __init__(self, func, *args, **kwargs):
         """
@@ -101,9 +142,7 @@ class Node:
         self._args = args
         self._kwargs = kwargs
 
-        for i in self._args:
-            if isinstance(i, Node):
-                i._downstream.add(weakref.ref(self))
+        self._add_downstream_of_upstream()
 
     def reset(self, value=None):
         """
