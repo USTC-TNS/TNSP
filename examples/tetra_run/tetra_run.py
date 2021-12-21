@@ -127,10 +127,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             self.model.configuration(self.gm)
 
     def do_gm_run(self, line):
-        total_step, grad_total_step, grad_step_size = self._parse(line)
+        total_step, grad_total_step, grad_step_size, log_file = self._parse(line)
         state = self.gm
 
-        sampling = tet.SweepSampling(state)
+        sampling = tet.DirectSampling(state, 2)
         observer = tet.Observer(state)
         observer.add_energy()
         if grad_step_size != 0:
@@ -143,6 +143,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                       f"sampling, {total_step=}, energy={observer.energy}, {step=}",
                       end="\r")
             if grad_step_size != 0:
+                with open(log_file, "a") as file:
+                    print(observer.energy, file=file)
                 print(
                     tet.common_variable.clear_line,
                     f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
@@ -152,9 +154,19 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                     for j in range(state.L2):
                         state[i, j] -= grad_step_size * grad[i][j]
                 state.configuration.refresh_all()
-                # self.save()
+                sampling.refresh_all()
             else:
                 print(tet.common_variable.clear_line, f"sampling done, {total_step=}, energy={observer.energy}")
+
+    def do_gm_dump(self, line):
+        name, = self._parse(line)
+        with open(name, "wb") as file:
+            pickle.dump(self.gm, file)
+
+    def do_gm_load(self, line):
+        name, = self._parse(line)
+        with open(name, "rb") as file:
+            self.gm = pickle.load(file)
 
 
 class TetragonoScriptApp(TetragonoCommandApp):

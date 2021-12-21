@@ -68,9 +68,9 @@ H = (-t) * CC + J * SS
 
 def create(L1, L2, D, T):
     state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
-    state.physics_edges = [(0, 0), (+1, -1), (+1, +1)]  # empty, down, up
-    state.hamiltonians.vertical_bond = H
-    state.hamiltonians.horizontal_bond = H
+    state.physics_edges[...] = [(0, 0), (+1, -1), (+1, +1)]  # empty, down, up
+    state.hamiltonians["vertical_bond"] = H
+    state.hamiltonians["horizontal_bond"] = H
     state.total_symmetry = (T * 2, 0)  # T up and T down
     print("total symmetry", state.total_symmetry)
     t = T / state.L1
@@ -78,18 +78,18 @@ def create(L1, L2, D, T):
     state = tet.AbstractLattice(state)
     for l1 in range(state.L1 - 1):
         Q = int(T * (state.L1 - l1 - 1) / state.L1)
-        state.virtual_bond[(l1, 0), "D"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D),
-                                            ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D), ((2 * Q + 1, -1), D),
-                                            ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
+        state.virtual_bond[l1, 0, "D"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D),
+                                          ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D), ((2 * Q + 1, -1), D),
+                                          ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
     for l1 in range(state.L1 - 1):
         for l2 in range(1, state.L2):
-            state.virtual_bond[(l1, l2), "D"] = [((0, 0), D)]
+            state.virtual_bond[l1, l2, "D"] = [((0, 0), D)]
     for l1 in range(state.L1):
         for l2 in range(state.L2 - 1):
             Q = int(t * (state.L2 - l2 - 1) / state.L2)
-            state.virtual_bond[(l1, l2), "R"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D),
-                                                 ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D),
-                                                 ((2 * Q + 1, -1), D), ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
+            state.virtual_bond[l1, l2, "R"] = [((2 * Q - 2, 0), D), ((2 * Q - 1, -1), D), ((2 * Q - 1, +1), D),
+                                               ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D),
+                                               ((2 * Q + 1, -1), D), ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
 
     state = tet.SimpleUpdateLattice(state)
     return state
@@ -104,22 +104,22 @@ def configuration(state):
     D = (UpD - UmD) // 2
     for l1 in range(L1):
         for l2 in range(L2):
-            state.configuration[l1, l2] = ((0, 0), 0)
+            state.configuration[l1, l2, 0] = ((0, 0), 0)
     randL1 = TAT.random.uniform_int(0, L1 - 1)
     randL2 = TAT.random.uniform_int(0, L2 - 1)
     u = 0
     while u < U:
         l1 = randL1()
         l2 = randL2()
-        if state.configuration[l1, l2][0] == state.Symmetry(0, 0):
-            state.configuration[l1, l2] = ((1, +1), 0)
+        if state.configuration[l1, l2, 0][0] == state.Symmetry(0, 0):
+            state.configuration[l1, l2, 0] = ((1, +1), 0)
             u += 1
     d = 0
     while d < D:
         l1 = randL1()
         l2 = randL2()
-        if state.configuration[l1, l2][0] == state.Symmetry(0, 0):
-            state.configuration[l1, l2] = ((1, -1), 0)
+        if state.configuration[l1, l2, 0][0] == state.Symmetry(0, 0):
+            state.configuration[l1, l2, 0] = ((1, -1), 0)
             d += 1
     if len(state.configuration.hole(()).edges("T").segment) == 0:
         return configuration(state)

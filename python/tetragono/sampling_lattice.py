@@ -18,9 +18,11 @@
 
 from __future__ import annotations
 from copyreg import _slotnames
+import numpy as np
 import lazy
 import TAT
 from .auxiliaries import Auxiliaries
+from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
 from .common_variable import clear_line
 from .tensor_element import tensor_element
@@ -722,4 +724,72 @@ class DirectSampling(Sampling):
     Direct sampling.
     """
 
-    __slots__ = []
+    __slots__ = ["_cut_dimension", "_double_layer_auxiliaries"]
+
+    def __init__(self, owner, cut_dimension):
+        super().__init__(owner)
+        self._cut_dimension = cut_dimension
+        self.refresh_all()
+
+    def refresh_all(self):
+        owner = self._owner
+        self._double_layer_auxiliaries = DoubleLayerAuxiliaries(owner.L1, owner.L2, self._cut_dimension, False,
+                                                                owner.Tensor)
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                this = owner[l1, l2].copy()
+                self._double_layer_auxiliaries[l1, l2, "n"] = this
+                self._double_layer_auxiliaries[l1, l2, "c"] = this.conjugate()
+
+    def __call__(self):
+        owner = self._owner
+        random = TAT.random.uniform_real(0, 1)
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit, edge in owner.physics_edges[l1, l2].items():
+                    owner.configuration[l1, l2, orbit] = None
+        possibility = 1.
+        for l1 in range(owner.L1):
+
+            three_line_auxiliaries = DoubleLayerAuxiliaries(3, owner.L2, -1, False, owner.Tensor)
+            line_3 = []
+            for l2 in range(owner.L2):
+                tensor_1 = owner.configuration._up_to_down_site[l1 - 1, l2]()
+                three_line_auxiliaries[0, l2, "n"] = tensor_1
+                three_line_auxiliaries[0, l2, "c"] = tensor_1.conjugate()
+                tensor_2 = owner[l1, l2]
+                three_line_auxiliaries[1, l2, "n"] = tensor_2
+                three_line_auxiliaries[1, l2, "c"] = tensor_2.conjugate()
+                line_3.append(self._double_layer_auxiliaries._down_to_up_site[l1 + 1, l2]())
+            three_line_auxiliaries._down_to_up[2].reset(line_3)
+
+            for l2 in range(owner.L2):
+                shrinked_site_tensor = owner[l1, l2]
+                configuration = {}
+                shrinkers = owner.configuration._get_shrinker((l1, l2), configuration)
+                for orbit, edge in owner.physics_edges[l1, l2].items():
+                    hole = three_line_auxiliaries.hole([(1, l2, orbit)]).transpose(["I0", "O0"])
+                    rho = np.array([])
+                    for seg in edge.segment:
+                        if seg in hole.edges("O0").segment:
+                            symmetry, _ = seg
+                            block_rho = hole.blocks[[("I0", -symmetry), ("O0", symmetry)]]
+                            diag_rho = np.diagonal(block_rho)
+                            rho = np.array([*rho, *diag_rho])
+                    rho = rho / np.sum(rho)
+                    choice = self._choice(random(), rho)
+                    possibility *= rho[choice]
+                    configuration[orbit] = owner.configuration[l1, l2, orbit] = edge.get_point_from_index(choice)
+                    _, shrinker = next(shrinkers)
+                    shrinked_site_tensor = shrinked_site_tensor.contract(shrinker.edge_rename({"P": f"P{orbit}"}),
+                                                                         {(f"P{orbit}", "Q")})
+                    three_line_auxiliaries[1, l2, "n"] = shrinked_site_tensor
+                    three_line_auxiliaries[1, l2, "c"] = shrinked_site_tensor.conjugate()
+        return owner.configuration.hole(()).norm_2()**2 / possibility
+
+    def _choice(self, p, rho):
+        for i, r in enumerate(rho):
+            p -= r
+            if p < 0:
+                return i
+        return i
