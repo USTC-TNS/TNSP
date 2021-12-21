@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 from weakref import ref
+from itertools import chain
 
 
 class Copy:
@@ -47,10 +48,22 @@ class Copy:
         Node[T]
             The newly created lazy node in the new graph.
         """
+        if node in self._map:
+            return self._map[node]
+
         args = tuple(self._map_node(i) for i in node._args)  # map all args of node
         kwargs = {i: self._map_node(j) for i, j in node._kwargs.items()}  # Map all kwargs of node
         result = Node(node._func, *args, **kwargs)
-        result._value = node._value  # Set value
+
+        cache_valid = True
+        for new, old in chain(zip(result._args, node._args), zip(result._kwargs.values(), node._kwargs.values())):
+            if isinstance(old, Node):
+                if old._value != new._value:
+                    cache_valid = False
+                    break
+        if cache_valid:
+            result._value = node._value  # Set value
+
         self._map[node] = result  # Record relation in map
         return result
 
