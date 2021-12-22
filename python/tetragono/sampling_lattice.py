@@ -380,7 +380,8 @@ class Observer():
     """
 
     __slots__ = [
-        "_owner", "_enable_hole", "_start", "_observer", "_result", "_count", "_total_weight", "_Delta", "_EDelta"
+        "_owner", "_enable_hole", "_start", "_observer", "_result", "_result_square", "_count", "_total_weight",
+        "_total_weight_square", "_Delta", "_EDelta"
     ]
 
     def __init__(self, owner):
@@ -398,8 +399,10 @@ class Observer():
         self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
 
         self._result = None  # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
+        self._result_square = None
         self._count = None  # int
         self._total_weight = None  # float
+        self._total_weight_square = None
         self._Delta = None  # list[list[Tensor]]
         self._EDelta = None  # list[list[Tensor]]
 
@@ -408,11 +411,16 @@ class Observer():
         Flush all cached data in the observer object, need to be called every time a sampling sequence start.
         """
         self._result = {
-            name: {positions: 0 for positions, observer in observers.items()
+            name: {positions: 0.0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
+        self._result_square = {
+            name: {positions: 0.0 for positions, observer in observers.items()
                   } for name, observers in self._observer.items()
         }
         self._count = 0
         self._total_weight = 0.0
+        self._total_weight_square = 0.0
         if self._enable_hole:
             self._Delta = [[self._owner[l1, l2].same_shape().zero()
                             for l2 in range(self._owner.L2)]
@@ -465,6 +473,7 @@ class Observer():
         self._start = True
         self._count += 1
         self._total_weight += reweight
+        self._total_weight_square += reweight * reweight
         ws = self._owner.configuration.hole(())  # ws is a tensor
         inv_ws_conj = ws / (ws.norm_2()**2)
         inv_ws = inv_ws_conj.conjugate()
@@ -495,7 +504,9 @@ class Observer():
                                                      f"O{i}": physics_names[i] for i in range(body)
                                                  }).contract(wss, all_name)
                     total_value += float(value)
-                self._result[name][positions] += total_value * reweight
+                to_save = total_value * reweight
+                self._result[name][positions] += to_save
+                self._result_square[name][positions] += to_save * to_save
                 if calculating_gradient:
                     Es += total_value  # reweight will be multipled later
             if calculating_gradient:
@@ -525,6 +536,23 @@ class Observer():
                         self._Delta[l1][l2] += hole
                         self._EDelta[l1][l2] += Es * hole
 
+    def _expect_and_deviation_before_reweight(self, total, total_square):
+        expect_of_square = total_square / self._count
+        expect = total / self._count
+        square_of_expect = expect * expect
+        variance = expect_of_square - square_of_expect
+        variance /= self._count
+        deviation = np.sqrt(variance)
+        return expect, deviation
+
+    def _expect_and_deviation(self, total, total_square):
+        expect_num, deviation_num = self._expect_and_deviation_before_reweight(total, total_square)
+        expect_den, deviation_den = self._expect_and_deviation_before_reweight(self._total_weight,
+                                                                               self._total_weight_square)
+        expect = expect_num / expect_den
+        deviation = abs(expect) * np.sqrt((deviation_num / expect_num)**2 + (deviation_den / expect_den)**2)
+        return expect, deviation
+
     @property
     def result(self):
         """
@@ -532,12 +560,15 @@ class Observer():
 
         Returns
         -------
-        dict[str, dict[tuple[tuple[int, int, int], ...], float]]
+        dict[str, dict[tuple[tuple[int, int, int], ...], tuple[float, float]]]
             The observer result of each observer set name and each site positions list.
         """
         return {
-            name: {positions: value / self._total_weight for positions, value in data.items()
-                  } for name, data in self._result.items()
+            name: {
+                positions: self._expect_and_deviation(self._result[name][positions],
+                                                      self._result_square[name][positions])
+                for positions, _ in data.items()
+            } for name, data in self._observer.items()
         }
 
     @property
@@ -547,10 +578,17 @@ class Observer():
 
         Returns
         -------
-        float
+        tuple[float, float]
             The energy per site.
         """
-        return sum(self.result["energy"].values()) / self._owner.site_number
+        name = "energy"
+        result = [
+            self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions])
+            for positions, _ in self._observer[name].items()
+        ]
+        expect = sum(e for e, d in result) / self._owner.site_number
+        deviation = np.sqrt(sum(d * d for e, d in result)) / self._owner.site_number
+        return expect, deviation
 
     @property
     def gradient(self):
@@ -562,9 +600,12 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        return [[(self._EDelta[l1][l2] / self._total_weight) * 2 -
-                 (self._Delta[l1][l2] / self._total_weight) * sum(self.result["energy"].values()) * 2
-                 for l2 in range(self._owner.L2)]
+        # TODO deviation of grad
+        energy = self.energy[0] * self._owner.site_number
+        return [[
+            (self._EDelta[l1][l2] / self._total_weight) * 2 - (self._Delta[l1][l2] / self._total_weight) * energy * 2
+            for l2 in range(self._owner.L2)
+        ]
                 for l1 in range(self._owner.L1)]
 
 

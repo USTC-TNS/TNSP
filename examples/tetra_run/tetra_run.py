@@ -144,7 +144,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                       end="\r")
             if grad_step_size != 0:
                 with open(log_file, "a") as file:
-                    print(observer.energy, file=file)
+                    print(*observer.energy, file=file)
                 print(
                     tet.common_variable.clear_line,
                     f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
