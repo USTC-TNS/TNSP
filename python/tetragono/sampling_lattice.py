@@ -384,6 +384,29 @@ class Observer():
         "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_DeltaDelta"
     ]
 
+    def reduce_observers(self, func):
+        """
+        Reduce all observed value by a function, used when running with multiple processes.
+        """
+        for name, observers in self._observer.items():
+            for positions in observers:
+                self._result[name][positions] = func(self._result[name][positions])
+                self._result_square[name][positions] = func(self._result_square[name][positions])
+        self._count = func(self._count)
+        self._total_weight = func(self._total_weight)
+        self._total_weight_square = func(self._total_weight_square)
+        if self._enable_gradient:
+            for l1 in range(self._owner.L1):
+                for l2 in range(self._owner.L2):
+                    self._Delta[l1][l2] = func(self._Delta[l1][l2])
+                    self._EDelta[l1][l2] = func(self._EDelta[l1][l2])
+        if self._enable_natural:
+            for al1 in range(self._owner.L1):
+                for al2 in range(self._owner.L2):
+                    for bl1 in range(self._owner.L1):
+                        for bl2 in range(self._owner.L2):
+                            self._DeltaDelta[al1][al2][bl1][bl2] = func(self._DeltaDelta[al1][al2][bl1][bl2])
+
     def __init__(self, owner):
         """
         Create observer object for the given sampling lattice.

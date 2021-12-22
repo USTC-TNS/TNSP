@@ -21,6 +21,22 @@ import pickle
 import TAT
 import tetragono as tet
 
+USE_MPI = True
+
+if USE_MPI:
+    from mpi4py import MPI
+
+    mpi_comm = MPI.COMM_WORLD
+    mpi_rank = mpi_comm.Get_rank()
+    mpi_size = mpi_comm.Get_size()
+else:
+    mpi_rank = 0
+    mpi_size = 1
+
+
+def _reduce_mpi(value):
+    return mpi_comm.allreduce(value)
+
 
 class TetragonoCommandApp(cmd.Cmd):
     license = """
@@ -141,18 +157,25 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             observer.enable_natural_gradient()
         for grad_step in range(grad_total_step):
             observer.flush()
+            TAT.random.seed(TAT.random.uniform_int(0, 2**31 - 1)() + mpi_rank)
             for step in range(total_step):
                 observer(sampling())
-                print(tet.common_variable.clear_line,
-                      f"sampling, {total_step=}, energy={observer.energy}, {step=}",
-                      end="\r")
+                if mpi_rank == 0:
+                    print(tet.common_variable.clear_line,
+                          f"sampling, {total_step=}, energy={observer.energy}, {step=}",
+                          end="\r")
+            if USE_MPI:
+                observer.reduce_observers(_reduce_mpi)
+                TAT.random.seed(_reduce_mpi(TAT.random.uniform_int(0, 2**31 - 1)()) // mpi_size)
+                total_step *= mpi_size
             if grad_step_size != 0:
-                with open(log_file, "a") as file:
-                    print(*observer.energy, file=file)
-                print(
-                    tet.common_variable.clear_line,
-                    f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
-                )
+                if mpi_rank == 0:
+                    with open(log_file, "a") as file:
+                        print(*observer.energy, file=file)
+                    print(
+                        tet.common_variable.clear_line,
+                        f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
+                    )
                 grad = observer.natural_gradient(conjugate_gradient_method_step)
                 for i in range(state.L1):
                     for j in range(state.L2):
@@ -160,7 +183,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                 state.configuration.refresh_all()
                 sampling.refresh_all()
             else:
-                print(tet.common_variable.clear_line, f"sampling done, {total_step=}, energy={observer.energy}")
+                if mpi_rank == 0:
+                    print(tet.common_variable.clear_line, f"sampling done, {total_step=}, energy={observer.energy}")
+            if USE_MPI:
+                total_step //= mpi_size
 
     def do_gm_dump(self, line):
         name, = self._parse(line)
@@ -181,27 +207,32 @@ class TetragonoScriptApp(TetragonoCommandApp):
     def precmd(self, line):
         line = super().precmd(line)
         if line != "":
-            print(super().prompt, line, sep="")
+            if mpi_rank == 0:
+                print(super().prompt, line, sep="")
         return line
 
+
+override_intro = None
+if USE_MPI and mpi_rank != 0:
+    override_intro = ""
 
 if __name__ == "__main__":
     import sys
     help_message = "Usage: tetra_run.py [script_file]"
     if len(sys.argv) == 1:
-        TetragonoCommandApp().cmdloop()
+        TetragonoCommandApp().cmdloop(intro=override_intro)
     elif len(sys.argv) == 2:
         script_file = sys.argv[1]
         if script_file in ["-h", "--help", "-help"]:
             print(help_message)
         else:
             with open(sys.argv[1], 'rt') as file:
-                TetragonoScriptApp(stdin=file).cmdloop()
+                TetragonoScriptApp(stdin=file).cmdloop(intro=override_intro)
     elif sys.argv[1] == "--":
         commands = " ".join(sys.argv[2:]).replace("-", "\n")
         from io import StringIO
         file = StringIO(commands)
-        TetragonoScriptApp(stdin=file).cmdloop()
+        TetragonoScriptApp(stdin=file).cmdloop(intro=override_intro)
     else:
         print("tetra_run: Error: unrecognized command-line option")
         print(help_message)
