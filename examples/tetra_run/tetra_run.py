@@ -130,11 +130,15 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         total_step, grad_total_step, grad_step_size, log_file = self._parse(line)
         state = self.gm
 
-        sampling = tet.DirectSampling(state, 2)
+        direct_sampling_cut_dimension = 4
+        conjugate_gradient_method_step = 20
+
+        sampling = tet.DirectSampling(state, direct_sampling_cut_dimension)
         observer = tet.Observer(state)
         observer.add_energy()
         if grad_step_size != 0:
             observer.enable_gradient()
+            observer.enable_natural_gradient()
         for grad_step in range(grad_total_step):
             observer.flush()
             for step in range(total_step):
@@ -149,7 +153,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                     tet.common_variable.clear_line,
                     f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
                 )
-                grad = observer.gradient
+                grad = observer.natural_gradient(conjugate_gradient_method_step)
                 for i in range(state.L1):
                     for j in range(state.L2):
                         state[i, j] -= grad_step_size * grad[i][j]

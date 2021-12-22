@@ -380,8 +380,8 @@ class Observer():
     """
 
     __slots__ = [
-        "_owner", "_enable_hole", "_start", "_observer", "_result", "_result_square", "_count", "_total_weight",
-        "_total_weight_square", "_Delta", "_EDelta"
+        "_owner", "_enable_gradient", "_enable_natural", "_start", "_observer", "_result", "_result_square", "_count",
+        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_DeltaDelta"
     ]
 
     def __init__(self, owner):
@@ -394,7 +394,8 @@ class Observer():
             The owner of this obsever object.
         """
         self._owner = owner
-        self._enable_hole = False
+        self._enable_gradient = False
+        self._enable_natural = False
         self._start = False
         self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
 
@@ -405,6 +406,7 @@ class Observer():
         self._total_weight_square = None
         self._Delta = None  # list[list[Tensor]]
         self._EDelta = None  # list[list[Tensor]]
+        self._DeltaDelta = None
 
     def flush(self):
         """
@@ -421,13 +423,41 @@ class Observer():
         self._count = 0
         self._total_weight = 0.0
         self._total_weight_square = 0.0
-        if self._enable_hole:
+        if self._enable_gradient:
             self._Delta = [[self._owner[l1, l2].same_shape().zero()
                             for l2 in range(self._owner.L2)]
                            for l1 in range(self._owner.L1)]
             self._EDelta = [[self._owner[l1, l2].same_shape().zero()
                              for l2 in range(self._owner.L2)]
                             for l1 in range(self._owner.L1)]
+            if self._enable_natural:
+                self._DeltaDelta = [[[[
+                    self._construct_delta_delta(self._owner[al1, al2], self._owner[bl1, bl2]).zero()
+                    for bl2 in range(self._owner.L2)
+                ]
+                                      for bl1 in range(self._owner.L1)]
+                                     for al2 in range(self._owner.L2)]
+                                    for al1 in range(self._owner.L1)]
+
+    def _construct_delta_delta(self, tensor_a, tensor_b):
+        """
+        Construct delta delta, used in metric tensor.
+
+        Parameters
+        ----------
+        tensor_a, tensor_b : Tensor
+            Two hole tensors
+
+        Returns
+        -------
+        Tensor
+            The product of two hole tensors, it is a term of metric tensor
+        """
+        name_a = tensor_a.names
+        name_b = tensor_b.names
+        tensor_a = tensor_a.edge_rename({name: f"A_{name}" for name in name_a})
+        tensor_b = tensor_b.edge_rename({name: f"B_{name}" for name in name_b})
+        return tensor_a.conjugate().contract(tensor_b, set())
 
     def add_observer(self, name, observers):
         """
@@ -458,7 +488,17 @@ class Observer():
             raise RuntimeError("Cannot enable gradient after sampling start")
         if "energy" not in self._observer:
             self.add_energy()
-        self._enable_hole = True
+        self._enable_gradient = True
+
+    def enable_natural_gradient(self):
+        """
+        Enable observing natural gradient.
+        """
+        if self._start:
+            raise RuntimeError("Cannot enable natural gradient after sampling start")
+        if not self._enable_gradient:
+            self.enable_gradient()
+        self._enable_natural = True
 
     def __call__(self, reweight):
         """
@@ -481,7 +521,7 @@ class Observer():
                                    for l2 in range(self._owner.L2)
                                    for orbit, edge in self._owner.physics_edges[l1, l2].items()}
         for name, observers in self._observer.items():
-            if name == "energy" and self._enable_hole:
+            if name == "energy" and self._enable_gradient:
                 calculating_gradient = True
                 Es = 0
             else:
@@ -510,6 +550,8 @@ class Observer():
                 if calculating_gradient:
                     Es += total_value  # reweight will be multipled later
             if calculating_gradient:
+                holes = [[None for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+                # \frac{\partial\langle s|\psi\rangle}{\partial x_i} / \langle s|\psi\rangle
                 for l1 in range(self._owner.L1):
                     for l2 in range(self._owner.L2):
                         contract_name = all_name.copy()
@@ -532,11 +574,39 @@ class Observer():
                             (l1, l2), self._owner._configuration[l1][l2]):
                             hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
 
-                        hole *= reweight
+                        holes[l1][l2] = hole
+                for l1 in range(self._owner.L1):
+                    for l2 in range(self._owner.L2):
+                        hole = holes[l1][l2] * reweight
                         self._Delta[l1][l2] += hole
                         self._EDelta[l1][l2] += Es * hole
+                if self._enable_natural:
+                    for al1 in range(self._owner.L1):
+                        for al2 in range(self._owner.L2):
+                            for bl1 in range(self._owner.L1):
+                                for bl2 in range(self._owner.L2):
+                                    ahole = holes[al1][al2]
+                                    bhole = holes[bl1][bl2]
+                                    hole = self._construct_delta_delta(ahole, bhole) * reweight
+                                    self._DeltaDelta[al1][al2][bl1][bl2] += hole
 
     def _expect_and_deviation_before_reweight(self, total, total_square):
+        """
+        Get the expect value and deviation from summation of observed value and the summation of its square, without
+        reweight.
+
+        Parameters
+        ----------
+        total : float
+            The summation of observed value.
+        total_square : float
+            The summation of observed value square.
+
+        Returns
+        -------
+        tuple[float, float]
+            The expect value and deviation.
+        """
         expect_of_square = total_square / self._count
         expect = total / self._count
         square_of_expect = expect * expect
@@ -546,6 +616,22 @@ class Observer():
         return expect, deviation
 
     def _expect_and_deviation(self, total, total_square):
+        """
+        Get the expect value and deviation from summation of observed value and the summation of its square, with
+        reweight.
+
+        Parameters
+        ----------
+        total : float
+            The summation of observed value.
+        total_square : float
+            The summation of observed value square.
+
+        Returns
+        -------
+        tuple[float, float]
+            The expect value and deviation.
+        """
         expect_num, deviation_num = self._expect_and_deviation_before_reweight(total, total_square)
         expect_den, deviation_den = self._expect_and_deviation_before_reweight(self._total_weight,
                                                                                self._total_weight_square)
@@ -572,9 +658,9 @@ class Observer():
         }
 
     @property
-    def energy(self):
+    def _total_energy(self):
         """
-        Get the observed energy per site.
+        Get the observed energy.
 
         Returns
         -------
@@ -586,9 +672,23 @@ class Observer():
             self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions])
             for positions, _ in self._observer[name].items()
         ]
-        expect = sum(e for e, d in result) / self._owner.site_number
-        deviation = np.sqrt(sum(d * d for e, d in result)) / self._owner.site_number
+        expect = sum(e for e, d in result)
+        deviation = np.sqrt(sum(d * d for e, d in result))
         return expect, deviation
+
+    @property
+    def energy(self):
+        """
+        Get the observed energy per site.
+
+        Returns
+        -------
+        tuple[float, float]
+            The energy per site.
+        """
+        expect, deviation = self._total_energy
+        site_number = self._owner.site_number
+        return expect / site_number, deviation / site_number
 
     @property
     def gradient(self):
@@ -600,13 +700,119 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        # TODO deviation of grad
-        energy = self.energy[0] * self._owner.site_number
-        return [[
-            (self._EDelta[l1][l2] / self._total_weight) * 2 - (self._Delta[l1][l2] / self._total_weight) * energy * 2
-            for l2 in range(self._owner.L2)
-        ]
-                for l1 in range(self._owner.L1)]
+        energy, _ = self._total_energy
+        return self._lattice_map(lambda x1, x2: 2 * (x1 / self._total_weight) - 2 * energy * (x2 / self._total_weight),
+                                 self._EDelta, self._Delta)
+
+    @property
+    def _metric(self):
+        """
+        Get the metric tensors.
+
+        Returns
+        -------
+        list[list[list[list[Tensor]]]]
+            The metric tensors between every two site.
+        """
+        return [[[[(self._DeltaDelta[al1][al2][bl1][bl2] / self._total_weight) - self._construct_delta_delta(
+            self._Delta[al1][al2] / self._total_weight, self._Delta[bl1][bl2] / self._total_weight)
+                   for bl2 in range(self._owner.L2)]
+                  for bl1 in range(self._owner.L1)]
+                 for al2 in range(self._owner.L2)]
+                for al1 in range(self._owner.L1)]
+
+    def _lattice_mv(self, metric, gradient):
+        """
+        Product metric tensors and hole tensors, like matrix multiply vector.
+
+        Parameters
+        ----------
+        metric : list[list[list[list[Tensor]]]]
+            The metric tensors.
+        gradient : list[list[Tensor]]
+            The hole tensors.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The product result.
+        """
+        xs = [[x.same_shape().zero() for x in row] for row in gradient]
+        for al1 in range(self._owner.L1):
+            for al2 in range(self._owner.L2):
+                for bl1 in range(self._owner.L1):
+                    for bl2 in range(self._owner.L2):
+                        m = metric[al1][al2][bl1][bl2]
+                        g = gradient[al1][al2]
+                        product = m.contract(g, {(f"A_{name}", name) for name in gradient[al1][al2].names})
+                        xs[bl1][bl2] += product.edge_rename({f"B_{name}": name for name in gradient[bl1][bl2].names})
+        return xs
+
+    def _lattice_dot(self, a, b):
+        """
+        Dot of two hole tensors, like vector dot product.
+
+        Parameters
+        ----------
+        a, b : list[list[Tensor]]
+            The hole tensors.
+
+        Returns
+        -------
+        float
+            The dot result.
+        """
+        result = 0.
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                ta = a[l1][l2]
+                tb = b[l1][l2]
+                result += ta.contract(tb, {(name, name) for name in ta.names})
+        return float(result)
+
+    def _lattice_map(self, func, *args):
+        """
+        Map function to several hole tensors.
+        """
+        return [[func(*(t[l1][l2] for t in args)) for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+
+    def natural_gradient(self, step):
+        """
+        Get the energy natural gradient for every tensor.
+
+        Parameters
+        ----------
+        step : int
+            conjugate gradient method step count.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The gradient for every tensor.
+        """
+        b = self.gradient
+        A = self._metric
+        # A x = b
+
+        x = [[t.same_shape().zero() for t in row] for row in b]
+        # r = b - A@x
+        r = self._lattice_map(lambda x1, x2: x1 - x2, b, self._lattice_mv(A, x))
+        # p = r
+        p = r
+        for t in range(step):
+            # alpha = (r @ r) / (p @ A @ p)
+            alpha = self._lattice_dot(r, r) / self._lattice_dot(p, self._lattice_mv(A, p))
+            # x = x + alpha * p
+            x = self._lattice_map(lambda x1, x2: x1 + alpha * x2, x, p)
+            # new_r = r - alpha * A @ p
+            new_r = self._lattice_map(lambda x1, x2: x1 - alpha * x2, r, self._lattice_mv(A, p))
+            # beta = (new_r @ new_r) / (r @ r)
+            beta = self._lattice_dot(new_r, new_r) / self._lattice_dot(r, r)
+            # r = new_r
+            r = new_r
+            # p = r + beta * p
+            p = self._lattice_map(lambda x1, x2: x1 + beta * x2, r, p)
+        return x
 
 
 class Sampling:
