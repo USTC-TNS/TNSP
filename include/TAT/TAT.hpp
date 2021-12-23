@@ -38,7 +38,6 @@
 // - TAT_USE_TIMER: define to add timers for some common operator
 // - TAT_ERROR_BITS: throw exception for different situations, rather than print warning
 // - TAT_NOTHING_BITS: keep silent for different situations, rather than print warning
-// - TAT_L3_CACHE, TAT_L2_CACHE, TAT_L1_CACHE: cache size, used in transpose
 
 /**
  * TAT is A Tensor library

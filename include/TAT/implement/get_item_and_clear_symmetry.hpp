@@ -128,7 +128,7 @@ namespace TAT {
          // destination dimension is block dimension
          // destination leading is result edge
          ScalarType* data_destination = &result.at(block_index);
-         simple_transpose<ScalarType, false>(
+         do_transpose<ScalarType>(
                data_source,
                data_destination,
                plan,
@@ -137,7 +137,9 @@ namespace TAT {
                block_dimension,
                detail::get_leading(block_dimension),
                detail::get_leading(result_dim),
-               rank);
+               rank,
+               block.size(),
+               false);
       }
       return result;
    }
