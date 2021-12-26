@@ -437,7 +437,7 @@ namespace TAT {
       }
 
       // put res_edge into res
-      result.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(result_edge));
+      result.core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(result_edge));
       result.core->clear_unused_symmetry();
       if constexpr (debug_mode) {
          result.check_valid_name();

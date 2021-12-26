@@ -501,7 +501,7 @@ namespace TAT {
       detail::ignore_until(in, ':');
       std::vector<Edge<Symmetry>> edges;
       in >> edges;
-      tensor.core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
+      tensor.core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(edges));
       if constexpr (debug_mode) {
          tensor.check_valid_name();
       }
@@ -575,7 +575,7 @@ namespace TAT {
       in > names;
       std::vector<Edge<Symmetry>> edges;
       in > edges;
-      core = std::make_shared<Core<ScalarType, Symmetry>>(std::move(edges));
+      core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(edges));
       return *this;
    }
 
