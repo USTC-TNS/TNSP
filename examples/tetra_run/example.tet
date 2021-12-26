@@ -25,4 +25,4 @@ ex_energy
 
 su_to_gm             10
 gm_cfg_create
-gm_run               1000 1 0
+gm_run               1000 1 0 /dev/null

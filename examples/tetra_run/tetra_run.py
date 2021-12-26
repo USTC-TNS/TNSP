@@ -148,6 +148,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
         direct_sampling_cut_dimension = 4
         conjugate_gradient_method_step = 20
+        metric_inverse_epsilon = 0.01
 
         sampling = tet.DirectSampling(state, direct_sampling_cut_dimension)
         observer = tet.Observer(state)
@@ -176,7 +177,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                         tet.common_variable.clear_line,
                         f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
                     )
-                grad = observer.natural_gradient(conjugate_gradient_method_step)
+                if USE_MPI:
+                    reduce = _reduce_mpi
+                else:
+                    reduce = lambda x1: x1
+                grad = observer.natural_gradient(conjugate_gradient_method_step, metric_inverse_epsilon, reduce)
                 for i in range(state.L1):
                     for j in range(state.L2):
                         state[i, j] -= grad_step_size * grad[i][j]
