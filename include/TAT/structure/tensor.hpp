@@ -137,8 +137,6 @@ namespace TAT {
        */
       detail::propagate_const_shared_ptr<core_t> core;
 
-      // TODO put clear unused symmetry here
-
       // shape
       /**
        * Get tensor shape to print, used when you don't want to know value of the tensor

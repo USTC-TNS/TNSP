@@ -134,9 +134,7 @@ namespace TAT {
 #endif
 
       constexpr auto what_if_lapack_error = TAT_ERROR_BITS & 1 ? error : TAT_NOTHING_BITS & 1 ? nothing : warning;
-      constexpr auto what_if_name_missing = TAT_ERROR_BITS & 2 ? error : TAT_NOTHING_BITS & 2 ? nothing : warning;
-      // TODO what if name missing is deprecated, name missing always throw error
-      constexpr auto what_if_copy_shared = TAT_ERROR_BITS & 4 ? error : TAT_NOTHING_BITS & 4 ? nothing : warning;
+      constexpr auto what_if_copy_shared = TAT_ERROR_BITS & 2 ? error : TAT_NOTHING_BITS & 2 ? nothing : warning;
    } // namespace detail
 } // namespace TAT
 
