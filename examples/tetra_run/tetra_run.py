@@ -160,7 +160,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             observer.flush()
             TAT.random.seed(TAT.random.uniform_int(0, 2**31 - 1)() + mpi_rank)
             for step in range(total_step):
-                observer(sampling())
+                observer(*sampling())
                 if mpi_rank == 0:
                     print(tet.common_variable.clear_line,
                           f"sampling, {total_step=}, energy={observer.energy}, {step=}",
@@ -185,7 +185,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                 for i in range(state.L1):
                     for j in range(state.L2):
                         state[i, j] -= grad_step_size * grad[i][j]
-                state.configuration.refresh_all()
                 sampling.refresh_all()
             else:
                 if mpi_rank == 0:

@@ -50,8 +50,9 @@ class Auxiliaries:
         "_inline_up_to_down_tailed", "_inline_down_to_up", "_inline_down_to_up_tailed"
     ]
 
-    def copy(self, cp=None):
-        result = Auxiliaries.__new__(Auxiliaries)
+    def copy(self, cp=None, result=None):
+        if result is None:
+            result = Auxiliaries.__new__(Auxiliaries)
         if cp is None:
             cp = lazy.Copy()
 
