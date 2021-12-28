@@ -983,17 +983,17 @@ class DirectSampling(Sampling):
                 shrinkers = self.configuration._get_shrinker((l1, l2), configuration)
                 for orbit, edge in owner.physics_edges[l1, l2].items():
                     hole = three_line_auxiliaries.hole([(1, l2, orbit)]).transpose(["I0", "O0"])
+                    hole_edge = hole.edges("O0")
                     rho = np.array([])
-                    for seg in edge.segment:
-                        if seg in hole.edges("O0").segment:
-                            symmetry, _ = seg
-                            block_rho = hole.blocks[[("I0", -symmetry), ("O0", symmetry)]]
-                            diag_rho = np.diagonal(block_rho)
-                            rho = np.array([*rho, *diag_rho])
+                    for seg in hole_edge.segment:
+                        symmetry, _ = seg
+                        block_rho = hole.blocks[[("I0", -symmetry), ("O0", symmetry)]]
+                        diag_rho = np.diagonal(block_rho)
+                        rho = np.array([*rho, *diag_rho])
                     rho = rho / np.sum(rho)
                     choice = self._choice(random(), rho)
                     possibility *= rho[choice]
-                    configuration[orbit] = self.configuration[l1, l2, orbit] = edge.get_point_from_index(choice)
+                    configuration[orbit] = self.configuration[l1, l2, orbit] = hole_edge.get_point_from_index(choice)
                     _, shrinker = next(shrinkers)
                     shrinked_site_tensor = shrinked_site_tensor.contract(shrinker.edge_rename({"P": f"P{orbit}"}),
                                                                          {(f"P{orbit}", "Q")})
