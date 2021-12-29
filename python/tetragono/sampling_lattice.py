@@ -579,6 +579,9 @@ class Observer():
         square_of_expect = expect * expect
         variance = expect_of_square - square_of_expect
         variance /= self._count
+        if variance < 0.0:
+            # When total summate several same values, numeric error will lead variance < 0
+            variance = 0.0
         deviation = np.sqrt(variance)
         return expect, deviation
 
@@ -599,6 +602,8 @@ class Observer():
         tuple[float, float]
             The expect value and deviation.
         """
+        if total == total_square == 0.0:
+            return 0.0, 0.0
         expect_num, deviation_num = self._expect_and_deviation_before_reweight(total, total_square)
         expect_den, deviation_den = self._expect_and_deviation_before_reweight(self._total_weight,
                                                                                self._total_weight_square)
