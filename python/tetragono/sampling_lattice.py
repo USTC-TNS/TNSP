@@ -695,13 +695,22 @@ class Observer():
         ]
         for reweight, deltas in self._Deltas:
             param = self._lattice_dot(deltas, gradient) * reweight / self._total_weight
-            result_1 = self._lattice_map(lambda x1, x2: x1 + param * x2, result_1, deltas)
+            to_sum = self._lattice_map(lambda x1: param * x1, deltas)
+            self._lattice_sum(result_1, to_sum)
         result_1 = self._lattice_map(lambda x1: func(x1), result_1)
 
         delta = self._lattice_map(lambda x1: x1 / self._total_weight, self._Delta)
         param = self._lattice_dot(delta, gradient)
         result_2 = self._lattice_map(lambda x1: x1 * param, delta)
         return self._lattice_map(lambda x1, x2, x3: x1 - x2 + epsilon * x3, result_1, result_2, gradient)
+
+    def _lattice_sum(self, result, to_sum):
+        """
+        Summation lattice tensor like object into result.
+        """
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                result[l1][l2] += to_sum[l1][l2]
 
     def _lattice_dot(self, a, b):
         """
