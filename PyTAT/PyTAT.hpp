@@ -506,7 +506,7 @@ namespace TAT {
                      "Get a identity tensor with same shape",
                      py::return_value_policy::reference_internal)
                .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
-               .def("conjugate", &T::conjugate, "Get the conjugate Tensor")
+               .def("conjugate", &T::conjugate, py::arg("positive_contract") = false, "Get the conjugate Tensor")
                .def("trace", &T::trace)
                .def(
                      "svd",

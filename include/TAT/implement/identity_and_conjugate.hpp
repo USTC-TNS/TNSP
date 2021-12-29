@@ -29,7 +29,7 @@ namespace TAT {
    inline timer conjugate_guard("conjugate");
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate() const {
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::conjugate(bool positive_contract) const {
       auto timer_guard = conjugate_guard();
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::length == 0) {
@@ -41,13 +41,17 @@ namespace TAT {
             });
          }
       }
+
+      Rank rank = get_rank();
+
+      auto transpose_flag = pmr::vector<Rank>(rank, 0);
+      auto valid_flag = pmr::vector<bool>(1, true);
+
       auto result_edges = std::vector<Edge<Symmetry>>();
-      result_edges.reserve(get_rank());
+      result_edges.reserve(rank);
       for (const auto& edge : core->edges) {
          result_edges.push_back(edge.conjugated_edge());
       }
-      auto transpose_flag = pmr::vector<Rank>(get_rank(), 0);
-      auto valid_flag = pmr::vector<bool>(1, true);
       auto result = Tensor<ScalarType, Symmetry, Name>(names, std::move(result_edges));
       for (const auto& [symmetries, block] : core->blocks) {
          auto result_symmetries = pmr::vector<Symmetry>();
@@ -61,6 +65,14 @@ namespace TAT {
          if constexpr (Symmetry::is_fermi_symmetry) {
             parity = Symmetry::get_split_merge_parity(symmetries, transpose_flag, valid_flag);
             // get full transpose sign
+            if (positive_contract) {
+               // true/false edge total parity
+               for (Rank i = 0; i < rank; i++) {
+                  if (edges(i).arrow) {
+                     parity ^= symmetries[i].get_parity();
+                  }
+               }
+            }
          }
          if constexpr (is_complex<ScalarType>) {
             if (parity) {

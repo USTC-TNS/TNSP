@@ -774,8 +774,9 @@ namespace TAT {
        * Get the conjugated tensor
        * \note for symmetry tensor, every symmetry is transformed to -symmetry,
        * for fermion tensor, arrow is reversed, for complex tensor value got conjugated
+       * \param positive_contract ensure the contract of result and self is positive.
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate() const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate(bool positive_contract = false) const;
 
       /**
        * Set the tensor as identity inplacely
