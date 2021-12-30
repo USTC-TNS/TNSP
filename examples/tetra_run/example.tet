@@ -3,13 +3,9 @@
 # set random seed
 seed                 2333
 
-# set model
-model_set            kitaev
-
 # what you can create is lattice for simple update only
 # different model have different parameter for create
-# for kitaev, they are L1, L2, D, Jx, Jy, Jz
-su_create            2 2 6 1 1 1
+su_create            kitaev L1=2 L2=2 D=6 Jx=1 Jy=1 Jz=1
 
 # save or open file
 su_dump              /dev/null
@@ -24,5 +20,4 @@ ex_update            1000 4
 ex_energy
 
 su_to_gm             10
-gm_cfg_create
-gm_run               1000 1 0 /dev/null
+gm_run               1000 1 0 log_file=data.log

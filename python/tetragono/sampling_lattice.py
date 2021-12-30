@@ -24,7 +24,7 @@ import TAT
 from .auxiliaries import Auxiliaries
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_variable import clear_line
+from .common_variable import mpi_comm, mpi_rank, mpi_size
 from .tensor_element import tensor_element
 
 
@@ -362,6 +362,15 @@ class Observer():
         "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas"
     ]
 
+    # statuc: created, flushed, collecting, collected
+    def __enter__(self):
+        self._flush()
+        self._start = True
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # TODO faster storage reduce
+        self.reduce_observers(mpi_comm.allreduce)
+
     def reduce_observers(self, func):
         """
         Reduce all observed value by a function, used when running with multiple processes.
@@ -406,7 +415,7 @@ class Observer():
         self._EDelta = None  # list[list[Tensor]]
         self._Deltas = None
 
-    def flush(self):
+    def _flush(self):
         """
         Flush all cached data in the observer object, need to be called every time a sampling sequence start.
         """
@@ -485,7 +494,6 @@ class Observer():
             The configuration system of the lattice.
         """
         reweight = configuration.hole(()).norm_2()**2 / possibility
-        self._start = True
         self._count += 1
         self._total_weight += reweight
         self._total_weight_square += reweight * reweight

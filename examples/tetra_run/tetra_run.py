@@ -21,22 +21,6 @@ import pickle
 import TAT
 import tetragono as tet
 
-USE_MPI = True
-
-if USE_MPI:
-    from mpi4py import MPI
-
-    mpi_comm = MPI.COMM_WORLD
-    mpi_rank = mpi_comm.Get_rank()
-    mpi_size = mpi_comm.Get_size()
-else:
-    mpi_rank = 0
-    mpi_size = 1
-
-
-def _reduce_mpi(value):
-    return mpi_comm.allreduce(value)
-
 
 class TetragonoCommandApp(cmd.Cmd):
     license = """
@@ -44,9 +28,12 @@ Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     """
+
     intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + license
 
     prompt = "TET> "
+
+    stored_line = ""
 
     def _int_float_str(self, i):
         try:
@@ -59,11 +46,29 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             pass
         return i
 
-    def _parse(self, line):
-        return tuple(self._int_float_str(i) for i in line.split())
+    def _parse(self, line, kw=False):
+        split = line.split()
+        args = [i for i in split if "=" not in i]
+        kwargs = [i.split("=") for i in split if "=" in i]
+        result = [self._int_float_str(i) for i in args]
+        if kw:
+            kv = {k: self._int_float_str(v) for k, v in kwargs}
+            result.append(kv)
+        else:
+            if kwargs:
+                raise ValueError
+        return tuple(result)
 
     def precmd(self, line):
-        return line.split("#")[0]
+        if len(line) == 0:
+            return line
+        if line[-1] == "\\":
+            self.stored_line = self.stored_line + " " + line[:-1]
+            return ""
+        line = self.stored_line + " " + line
+        self.stored_line = ""
+        line = line.split("#")[0]
+        return line
 
     def emptyline(self):
         pass
@@ -76,18 +81,18 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         seed, = self._parse(line)
         TAT.random.seed(seed)
 
-    def do_model_set(self, line):
-        name, = self._parse(line)
-        self.model = __import__(name)
-
     def do_su_create(self, line):
-        args = self._parse(line)
-        self.su = self.model.create(*args)
+        args = self._parse(line, True)
+        model = __import__(args[0])
+        kwargs = args[-1]
+        args = args[1:-1]
+        self.su = model.create(*args, **kwargs)
 
     def do_su_dump(self, line):
         name, = self._parse(line)
-        with open(name, "wb") as file:
-            pickle.dump(self.su, file)
+        if tet.common_variable.mpi_rank == 0:
+            with open(name, "wb") as file:
+                pickle.dump(self.su, file)
 
     def do_su_load(self, line):
         name, = self._parse(line)
@@ -101,7 +106,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def do_su_energy(self, line):
         cut_dimension, = self._parse(line)
         self.su.initialize_auxiliaries(cut_dimension)
-        print(" Simple update lattice energy is", self.su.observe_energy())
+        tet.common_variable.showln("Simple update lattice energy is", self.su.observe_energy())
 
     def do_su_to_ex(self, line):
         () = self._parse(line)
@@ -117,12 +122,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def do_ex_energy(self, line):
         () = self._parse(line)
-        print(" Exact state energy is", self.ex.observe_energy())
+        tet.common_variable.showln("Exact state energy is", self.ex.observe_energy())
 
     def do_ex_dump(self, line):
         name, = self._parse(line)
-        with open(name, "wb") as file:
-            pickle.dump(self.ex, file)
+        if tet.common_variable.mpi_rank == 0:
+            with open(name, "wb") as file:
+                pickle.dump(self.ex, file)
 
     def do_ex_load(self, line):
         name, = self._parse(line)
@@ -133,69 +139,30 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         cut, = self._parse(line)
         self.gm.cut_dimension = cut
 
-    def do_gm_cfg_create(self, line):
-        () = self._parse(line)
-        self.model.configuration(self.gm)
-
-    def do_gm_cfg_ensure(self, line):
-        () = self._parse(line)
-        if not self.gm.configuration.valid():
-            self.model.configuration(self.gm)
-
     def do_gm_run(self, line):
-        total_step, grad_total_step, grad_step_size, log_file = self._parse(line)
-        state = self.gm
+        sampling_total_step, grad_total_step, grad_step_size, kv = self._parse(line, kw=True)
 
-        direct_sampling_cut_dimension = 4
-        conjugate_gradient_method_step = 20
-        metric_inverse_epsilon = 0.01
+        config = type("Config", (object,), {})()
 
-        sampling = tet.DirectSampling(state, direct_sampling_cut_dimension)
-        observer = tet.Observer(state)
-        observer.add_energy()
-        if grad_step_size != 0:
-            observer.enable_gradient()
-            observer.enable_natural_gradient()
-        for grad_step in range(grad_total_step):
-            observer.flush()
-            TAT.random.seed(TAT.random.uniform_int(0, 2**31 - 1)() + mpi_rank)
-            for step in range(total_step):
-                observer(*sampling())
-                if mpi_rank == 0:
-                    print(tet.common_variable.clear_line,
-                          f"sampling, {total_step=}, energy={observer.energy}, {step=}",
-                          end="\r")
-            if USE_MPI:
-                observer.reduce_observers(_reduce_mpi)
-                TAT.random.seed(_reduce_mpi(TAT.random.uniform_int(0, 2**31 - 1)()) // mpi_size)
-                total_step *= mpi_size
-            if grad_step_size != 0:
-                if mpi_rank == 0:
-                    with open(log_file, "a") as file:
-                        print(*observer.energy, file=file)
-                    print(
-                        tet.common_variable.clear_line,
-                        f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}, sampling={total_step}, energy={observer.energy}"
-                    )
-                if USE_MPI:
-                    reduce = _reduce_mpi
-                else:
-                    reduce = lambda x1: x1
-                grad = observer.natural_gradient(conjugate_gradient_method_step, metric_inverse_epsilon, reduce)
-                for i in range(state.L1):
-                    for j in range(state.L2):
-                        state[i, j] -= grad_step_size * grad[i][j]
-                sampling.refresh_all()
-            else:
-                if mpi_rank == 0:
-                    print(tet.common_variable.clear_line, f"sampling done, {total_step=}, energy={observer.energy}")
-            if USE_MPI:
-                total_step //= mpi_size
+        config.sampling_total_step = sampling_total_step
+        config.grad_total_step = grad_total_step
+        config.grad_step_size = grad_step_size
+        config.sampling_method = kv.get("sampling_method", "direct")
+        config.log_file = kv.get("log_file", None)
+        config.direct_sampling_cut_dimension = 4
+        config.conjugate_gradient_method_step = 20
+        config.metric_inverse_epsilon = 0.01
+        config.use_gradient = grad_total_step != 0
+        config.use_natural_gradient = kv.get("use_natural_gradient", 0) == 1
+        config.use_line_search = kv.get("use_line_search", 0) == 1
+        config.save_state_file = lambda x: None
+        tet.gradient_descent(self.gm, config)
 
     def do_gm_dump(self, line):
         name, = self._parse(line)
-        with open(name, "wb") as file:
-            pickle.dump(self.gm, file)
+        if tet.common_variable.mpi_rank == 0:
+            with open(name, "wb") as file:
+                pickle.dump(self.gm, file)
 
     def do_gm_load(self, line):
         name, = self._parse(line)
@@ -210,14 +177,13 @@ class TetragonoScriptApp(TetragonoCommandApp):
 
     def precmd(self, line):
         line = super().precmd(line)
-        if line != "":
-            if mpi_rank == 0:
-                print(super().prompt, line, sep="")
+        if line.replace(" ", "") != "":
+            tet.common_variable.showln(super().prompt, line.strip(), sep="")
         return line
 
 
 override_intro = None
-if USE_MPI and mpi_rank != 0:
+if tet.common_variable.mpi_rank != 0:
     override_intro = ""
 
 if __name__ == "__main__":
@@ -228,7 +194,7 @@ if __name__ == "__main__":
     elif len(sys.argv) == 2:
         script_file = sys.argv[1]
         if script_file in ["-h", "--help", "-help"]:
-            print(help_message)
+            tet.common_variable.showln(help_message)
         else:
             with open(sys.argv[1], 'rt') as file:
                 TetragonoScriptApp(stdin=file).cmdloop(intro=override_intro)
@@ -238,6 +204,6 @@ if __name__ == "__main__":
         file = StringIO(commands)
         TetragonoScriptApp(stdin=file).cmdloop(intro=override_intro)
     else:
-        print("tetra_run: Error: unrecognized command-line option")
-        print(help_message)
+        tet.common_variable.showln("tetra_run: Error: unrecognized command-line option")
+        tet.common_variable.showln(help_message)
         exit(1)

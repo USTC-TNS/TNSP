@@ -17,7 +17,7 @@
 #
 
 from __future__ import annotations
-from .common_variable import clear_line
+from .common_variable import show, showln
 from .abstract_state import AbstractState
 
 
@@ -96,8 +96,8 @@ class ExactState(AbstractState):
             norm = float(self.vector.norm_2())
             energy = total_approximate_energy - norm
             self.vector /= norm
-            print(clear_line, f"Exact update, {total_step=}, {step=}, energy={energy / self.site_number}", end="\r")
-        print(clear_line, f"Exact update done, {total_step=}, energy={energy / self.site_number}")
+            show(f"Exact update, {total_step=}, {step=}, energy={energy / self.site_number}")
+        showln(f"Exact update done, {total_step=}, energy={energy / self.site_number}")
         return energy / self.site_number
 
     def observe(self, positions, observer):

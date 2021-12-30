@@ -20,3 +20,19 @@ from . import No
 from . import Fermi
 
 clear_line = "\u001b[2K"
+
+from mpi4py import MPI
+
+mpi_comm = MPI.COMM_WORLD
+mpi_rank = mpi_comm.Get_rank()
+mpi_size = mpi_comm.Get_size()
+
+
+def show(*args, **kwargs):
+    if mpi_rank == 0:
+        print(clear_line, *args, **kwargs, end="\r")
+
+
+def showln(*args, **kwargs):
+    if mpi_rank == 0:
+        print(clear_line, *args, **kwargs)

@@ -30,11 +30,3 @@ def create(L1, L2, D):
     state.virtual_bond["D"] = D
     state = tet.SimpleUpdateLattice(state)
     return state
-
-
-def configuration(state):
-    if not state.configuration.valid():
-        print(" Setting configuration")
-        for i in range(state.L1):
-            for j in range(state.L2):
-                state.configuration[i, j, 0] = (i + j + 1) % 2

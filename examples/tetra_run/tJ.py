@@ -93,33 +93,3 @@ def create(L1, L2, D, T):
 
     state = tet.SimpleUpdateLattice(state)
     return state
-
-
-def configuration(state):
-    L1 = state.L1
-    L2 = state.L2
-    UpD = state.total_symmetry.fermi
-    UmD = state.total_symmetry.u1
-    U = (UpD + UmD) // 2
-    D = (UpD - UmD) // 2
-    for l1 in range(L1):
-        for l2 in range(L2):
-            state.configuration[l1, l2, 0] = ((0, 0), 0)
-    randL1 = TAT.random.uniform_int(0, L1 - 1)
-    randL2 = TAT.random.uniform_int(0, L2 - 1)
-    u = 0
-    while u < U:
-        l1 = randL1()
-        l2 = randL2()
-        if state.configuration[l1, l2, 0][0] == state.Symmetry(0, 0):
-            state.configuration[l1, l2, 0] = ((1, +1), 0)
-            u += 1
-    d = 0
-    while d < D:
-        l1 = randL1()
-        l2 = randL2()
-        if state.configuration[l1, l2, 0][0] == state.Symmetry(0, 0):
-            state.configuration[l1, l2, 0] = ((1, -1), 0)
-            d += 1
-    if len(state.configuration.hole(()).edges("T").segment) == 0:
-        return configuration(state)

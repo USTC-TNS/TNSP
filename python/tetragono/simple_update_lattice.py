@@ -20,7 +20,7 @@ from __future__ import annotations
 from copyreg import _slotnames
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_variable import clear_line
+from .common_variable import show, showln
 
 
 class SimpleUpdateLatticeEnvironment:
@@ -216,12 +216,12 @@ class SimpleUpdateLattice(AbstractLattice):
 
             updaters.append((coordinates, index_and_orbit, evolution_operator))
         for step in range(total_step):
-            print(clear_line, f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}", end="\r")
+            show(f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}")
             for coordinates, index_and_orbit, evolution_operator in updaters:
                 self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
             for coordinates, index_and_orbit, evolution_operator in reversed(updaters):
                 self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
-        print(clear_line, f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
+        showln(f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
         self._update_virtual_bond()
 
     def _update_virtual_bond(self):
