@@ -35,6 +35,7 @@ class FakeEdge:
 Fedge = FakeEdge(False)
 Tedge = FakeEdge(True)
 
-CC = Tensor(["O0", "O1", "I0", "I1"], [Fedge[(0, 1), (1, 1)], Fedge[(0, 1), (1, 1)], Tedge[(0, 1), (-1, 1)], Tedge[(0, 1), (-1, 1)]]).zero()
+CC = Tensor(["O0", "O1", "I0", "I1"],
+            [Fedge[(0, 1), (1, 1)], Fedge[(0, 1), (1, 1)], Tedge[(0, 1), (-1, 1)], Tedge[(0, 1), (-1, 1)]]).zero()
 CC[{"O0": (1, 0), "O1": (0, 0), "I0": (0, 0), "I1": (-1, 0)}] = 1
 CC[{"O0": (0, 0), "O1": (1, 0), "I0": (-1, 0), "I1": (0, 0)}] = 1

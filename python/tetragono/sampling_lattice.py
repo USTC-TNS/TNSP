@@ -24,7 +24,7 @@ import TAT
 from .auxiliaries import Auxiliaries
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_variable import mpi_comm, mpi_rank, mpi_size
+from .common_variable import mpi_comm, mpi_rank, mpi_size, allreduce_lattice_buffer, allreduce_buffer
 from .tensor_element import tensor_element
 
 
@@ -362,34 +362,61 @@ class Observer():
         "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas"
     ]
 
-    # statuc: created, flushed, collecting, collected
     def __enter__(self):
-        self._flush()
+        """
+        Enter sampling loop, flush all cached data in the observer object.
+        """
+        self._result = {
+            name: {positions: 0.0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
+        self._result_square = {
+            name: {positions: 0.0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
+        self._count = 0
+        self._total_weight = 0.0
+        self._total_weight_square = 0.0
+        if self._enable_gradient:
+            self._Delta = [[self._owner[l1, l2].same_shape().zero()
+                            for l2 in range(self._owner.L2)]
+                           for l1 in range(self._owner.L1)]
+            self._EDelta = [[self._owner[l1, l2].same_shape().zero()
+                             for l2 in range(self._owner.L2)]
+                            for l1 in range(self._owner.L1)]
+            if self._enable_natural:
+                self._Deltas = []
         self._start = True
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # TODO faster storage reduce
-        self.reduce_observers(mpi_comm.allreduce)
-
-    def reduce_observers(self, func):
         """
-        Reduce all observed value by a function, used when running with multiple processes.
+        Exit sampling loop, reduce observed values, used when running with multiple processes. reduce all values
+        collected except Deltas, which is handled specially.
         """
+        buffer = []
         for name, observers in self._observer.items():
             for positions in observers:
-                self._result[name][positions] = func(self._result[name][positions])
-                self._result_square[name][positions] = func(self._result_square[name][positions])
-        self._count = func(self._count)
-        self._total_weight = func(self._total_weight)
-        self._total_weight_square = func(self._total_weight_square)
+                buffer.append(self._result[name][positions])
+                buffer.append(self._result_square[name][positions])
+        buffer.append(self._count)
+        buffer.append(self._total_weight)
+        buffer.append(self._total_weight_square)
+
+        buffer = np.array(buffer)
+        allreduce_buffer(buffer)
+        buffer = buffer.tolist()
+
+        self._total_weight_square = buffer.pop()
+        self._total_weight = buffer.pop()
+        self._count = buffer.pop()
+        for name, observers in reversed(self._observer.items()):
+            for positions in reversed(observers):
+                self._result_square[name][positions] = buffer.pop()
+                self._result[name][positions] = buffer.pop()
+
         if self._enable_gradient:
-            for l1 in range(self._owner.L1):
-                for l2 in range(self._owner.L2):
-                    self._Delta[l1][l2] = func(self._Delta[l1][l2])
-                    self._EDelta[l1][l2] = func(self._EDelta[l1][l2])
-            # Deltas is reduce individually
-            # if self._enable_natural:
-            #     self._Deltas = func(self._Deltas)
+            allreduce_lattice_buffer(self._Delta)
+            allreduce_lattice_buffer(self._EDelta)
 
     def __init__(self, owner):
         """
@@ -414,31 +441,6 @@ class Observer():
         self._Delta = None  # list[list[Tensor]]
         self._EDelta = None  # list[list[Tensor]]
         self._Deltas = None
-
-    def _flush(self):
-        """
-        Flush all cached data in the observer object, need to be called every time a sampling sequence start.
-        """
-        self._result = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
-        }
-        self._result_square = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
-        }
-        self._count = 0
-        self._total_weight = 0.0
-        self._total_weight_square = 0.0
-        if self._enable_gradient:
-            self._Delta = [[self._owner[l1, l2].same_shape().zero()
-                            for l2 in range(self._owner.L2)]
-                           for l1 in range(self._owner.L1)]
-            self._EDelta = [[self._owner[l1, l2].same_shape().zero()
-                             for l2 in range(self._owner.L2)]
-                            for l1 in range(self._owner.L1)]
-            if self._enable_natural:
-                self._Deltas = []
 
     def add_observer(self, name, observers):
         """
@@ -684,7 +686,7 @@ class Observer():
         return self._lattice_map(lambda x1, x2: 2 * (x1 / self._total_weight) - 2 * energy * (x2 / self._total_weight),
                                  self._EDelta, self._Delta)
 
-    def _lattice_metric_mv(self, gradient, epsilon, func):
+    def _lattice_metric_mv(self, gradient, epsilon):
         """
         Product metric tensors and hole tensors, like matrix multiply vector. Metric is generated by Deltas and Delta.
 
@@ -694,8 +696,6 @@ class Observer():
             The hole tensors.
         epsilon : float
             The epsilon to avoid singularity of metric.
-        func
-            The reduce function to calculate summation over mpi process.
 
         Returns
         -------
@@ -710,7 +710,7 @@ class Observer():
             param = self._lattice_dot(deltas, gradient) * reweight / self._total_weight
             to_sum = self._lattice_map(lambda x1: param * x1, deltas)
             self._lattice_sum(result_1, to_sum)
-        result_1 = self._lattice_map(lambda x1: func(x1), result_1)
+        allreduce_lattice_buffer(result_1)
 
         delta = self._lattice_map(lambda x1: x1 / self._total_weight, self._Delta)
         param = self._lattice_dot(delta, gradient)
@@ -753,7 +753,7 @@ class Observer():
         """
         return [[func(*(t[l1][l2] for t in args)) for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
 
-    def natural_gradient(self, step, epsilon, func):
+    def natural_gradient(self, step, epsilon):
         """
         Get the energy natural gradient for every tensor.
 
@@ -763,8 +763,6 @@ class Observer():
             conjugate gradient method step count.
         epsilon : float
             The epsilon to avoid singularity of metric.
-        func
-            The reduce function to calculate summation over mpi process.
 
         Returns
         -------
@@ -777,16 +775,16 @@ class Observer():
 
         x = [[t.same_shape().zero() for t in row] for row in b]
         # r = b - A@x
-        r = self._lattice_map(lambda x1, x2: x1 - x2, b, self._lattice_metric_mv(x, epsilon, func))
+        r = self._lattice_map(lambda x1, x2: x1 - x2, b, self._lattice_metric_mv(x, epsilon))
         # p = r
         p = r
         for t in range(step):
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = self._lattice_dot(r, r) / self._lattice_dot(p, self._lattice_metric_mv(p, epsilon, func))
+            alpha = self._lattice_dot(r, r) / self._lattice_dot(p, self._lattice_metric_mv(p, epsilon))
             # x = x + alpha * p
             x = self._lattice_map(lambda x1, x2: x1 + alpha * x2, x, p)
             # new_r = r - alpha * A @ p
-            new_r = self._lattice_map(lambda x1, x2: x1 - alpha * x2, r, self._lattice_metric_mv(p, epsilon, func))
+            new_r = self._lattice_map(lambda x1, x2: x1 - alpha * x2, r, self._lattice_metric_mv(p, epsilon))
             # beta = (new_r @ new_r) / (r @ r)
             beta = self._lattice_dot(new_r, new_r) / self._lattice_dot(r, r)
             # r = new_r

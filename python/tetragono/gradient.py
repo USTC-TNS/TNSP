@@ -104,11 +104,7 @@ def gradient_descent(state: SamplingLattice, config):
             # Get gradient
             if config.use_natural_gradient:
                 show("calculating natural gradient")
-                grad = observer.natural_gradient(
-                    config.conjugate_gradient_method_step,
-                    config.metric_inverse_epsilon,
-                    mpi_comm.allreduce,
-                )
+                grad = observer.natural_gradient(config.conjugate_gradient_method_step, config.metric_inverse_epsilon)
                 showln("calculate natural gradient done")
             else:
                 grad = observer.gradient

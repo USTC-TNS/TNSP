@@ -36,3 +36,15 @@ def show(*args, **kwargs):
 def showln(*args, **kwargs):
     if mpi_rank == 0:
         print(clear_line, *args, **kwargs)
+
+
+def allreduce_buffer(buffer):
+    mpi_comm.Allreduce(MPI.IN_PLACE, buffer)
+
+
+def allreduce_lattice_buffer(lattice):
+    requests = []
+    for row in lattice:
+        for tensor in row:
+            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
+    MPI.Request.Waitall(requests)
