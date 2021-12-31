@@ -20,7 +20,7 @@ from __future__ import annotations
 from copyreg import _slotnames
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_variable import show, showln
+from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
 
 
 class SimpleUpdateLatticeEnvironment:
@@ -215,14 +215,64 @@ class SimpleUpdateLattice(AbstractLattice):
                 {(f"I{i}", f"O{i}") for i in range(site_number)}, step=8)
 
             updaters.append((coordinates, index_and_orbit, evolution_operator))
+
+        updaters_bundles = []
+        max_index = 0
+        while len(updaters) != 0:
+            coordinates_pool = set()
+            coordinates_map = {}
+            this_bundle = []
+            remained_updaters = []
+            index = 0
+            for coordinates, index_and_orbit, evolution_operator in updaters:
+                if len([coordinate for coordinate in coordinates if coordinate in coordinates_pool]) == 0:
+                    this_bundle.append((index, coordinates, index_and_orbit, evolution_operator))
+                    for coordinate in coordinates:
+                        coordinates_pool.add(coordinate)
+                        coordinates_map[coordinate] = index
+                    index += 1
+                else:
+                    remained_updaters.append((coordinates, index_and_orbit, evolution_operator))
+            if index > max_index:
+                max_index = index
+            updaters = remained_updaters
+            updaters_bundles.append((this_bundle, coordinates_map))
+        showln(f"Simple update max parallel size is {max_index}")
+
         for step in range(total_step):
             show(f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}")
-            for coordinates, index_and_orbit, evolution_operator in updaters:
-                self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
-            for coordinates, index_and_orbit, evolution_operator in reversed(updaters):
-                self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+            for bundle, coordinates_map in updaters_bundles:
+                for index, coordinates, index_and_orbit, evolution_operator in bundle:
+                    if index % mpi_size == mpi_rank:
+                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+                self._bcast_by_map(coordinates_map)
+            for bundle, coordinates_map in reversed(updaters_bundles):
+                for index, coordinates, index_and_orbit, evolution_operator in bundle:
+                    if index % mpi_size == mpi_rank:
+                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+                self._bcast_by_map(coordinates_map)
         showln(f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
         self._update_virtual_bond()
+
+    def _bcast_by_map(self, coordinates_map):
+        """
+        Bcast tensors according to a map recording which rank changed which tensor. The environment between two tensor
+        changed by the same rank is considered changed by that rank too.
+
+        Parameters
+        ----------
+        coordinates_map : dict[tuple[int, int], int]
+            A map recording which rank changed which tensor.
+        """
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if (l1, l2) in coordinates_map:
+                    owner_rank = coordinates_map[l1, l2] % mpi_size
+                    self[l1, l2] = mpi_comm.bcast(self[l1, l2], root=owner_rank)
+                    if (l1 - 1, l2) in coordinates_map and coordinates_map[l1 - 1, l2] % mpi_size == owner_rank:
+                        self.environment[l1, l2, "U"] = mpi_comm.bcast(self.environment[l1, l2, "U"], root=owner_rank)
+                    if (l1, l2 - 1) in coordinates_map and coordinates_map[l1, l2 - 1] % mpi_size == owner_rank:
+                        self.environment[l1, l2, "L"] = mpi_comm.bcast(self.environment[l1, l2, "L"], root=owner_rank)
 
     def _update_virtual_bond(self):
         """
