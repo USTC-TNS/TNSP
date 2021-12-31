@@ -85,6 +85,11 @@ namespace TAT {
    // block misc
 
    template<typename ScalarType, typename Symmetry>
+   struct storage_of_tensor {
+      py::object tensor;
+   };
+
+   template<typename ScalarType, typename Symmetry>
    struct blocks_of_tensor {
       py::object tensor;
    };
@@ -136,9 +141,26 @@ namespace TAT {
       auto block_m = self_m.def_submodule("Block");
       using T = Tensor<ScalarType, Symmetry>;
       using E = Edge<Symmetry>;
+      using Storage = storage_of_tensor<ScalarType, Symmetry>;
       using BS = blocks_of_tensor<ScalarType, Symmetry>;
       using B = single_block_of_tensor<ScalarType, Symmetry>;
       std::string tensor_name = scalar_short_name + symmetry_short_name;
+      py::class_<Storage>(
+            block_m,
+            "Storage",
+            ("Storage of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str(),
+            py::buffer_protocol())
+            .def_buffer([](Storage& storage) {
+               auto& tensor = py::cast<T&>(storage.tensor);
+               auto& s = tensor.storage();
+               return py::buffer_info{
+                     s.data(),
+                     sizeof(ScalarType),
+                     py::format_descriptor<ScalarType>::format(),
+                     1,
+                     std::vector<Size>{s.size()},
+                     std::vector<Size>{1}};
+            });
       py::class_<BS>(
             block_m,
             "Blocks",
@@ -236,6 +258,11 @@ namespace TAT {
                      "blocks",
                      [](const py::object& tensor) {
                         return blocks_of_tensor<ScalarType, Symmetry>{tensor};
+                     })
+               .def_property_readonly(
+                     "storage",
+                     [](const py::object& tensor) {
+                        return storage_of_tensor<ScalarType, Symmetry>{tensor};
                      })
                .def(ScalarType() + py::self)
                .def(py::self + ScalarType())
