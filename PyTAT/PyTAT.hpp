@@ -303,7 +303,8 @@ namespace TAT {
             });
          }
 #undef TAT_LOOP_OPERATOR
-         tensor_t
+         tensor_t.def_readonly_static("is_real", &is_real<ScalarType>)
+               .def_readonly_static("is_complex", &is_complex<ScalarType>)
                .def("__str__",
                     [](const T& tensor) {
                        return tensor.show();
