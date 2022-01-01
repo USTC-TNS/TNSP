@@ -299,6 +299,7 @@ namespace TAT {
          }
          const auto& real_other = *real_other_pointer;
          if (core->edges != real_other.core->edges) {
+            Nums common_block_number = 0;
             for (auto& [symmetries, block] : core->blocks) {
                if (const auto found = detail::fake_map_find(real_other.core->blocks, symmetries); found != real_other.core->blocks.end()) {
                   // check shape
@@ -311,10 +312,14 @@ namespace TAT {
                   }
                   // call function
                   std::transform(block.begin(), block.end(), found->second.begin(), block.begin(), function);
+                  common_block_number++;
                } else {
                   // call missing
                   std::transform(block.begin(), block.end(), block.begin(), missing);
                }
+            }
+            if (common_block_number != real_other.core->blocks.size()) {
+               detail::error("Try to do zip_transform on a tensor which has missing block");
             }
          } else {
             std::transform(storage().begin(), storage().end(), real_other.storage().begin(), storage().begin(), function);
