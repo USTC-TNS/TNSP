@@ -159,8 +159,7 @@ def gradient_descent(state: SamplingLattice, config):
                             showln(f"step_size is chosen as {step_size}, since step size error < 0.1")
                             break
 
-                # reweight energy is not exact, cut half to ensure the energy decrease.
-                real_step_size = step_size * param / 2
+                real_step_size = step_size * param
                 for l1 in range(state.L1):
                     for l2 in range(state.L2):
                         state[l1, l2] = saved_state[l1][l2] - real_step_size * grad[l1][l2]
