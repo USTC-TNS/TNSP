@@ -159,7 +159,7 @@ namespace TAT {
                      py::format_descriptor<ScalarType>::format(),
                      1,
                      std::vector<Size>{s.size()},
-                     std::vector<Size>{1}};
+                     std::vector<Size>{sizeof(ScalarType)}};
             });
       py::class_<BS>(
             block_m,
