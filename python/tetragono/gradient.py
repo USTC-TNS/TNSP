@@ -124,7 +124,7 @@ def gradient_descent(state: SamplingLattice, config):
                 if config.use_line_search:
                     configuration_pool.append((possibility, configuration.copy()))
                 show(f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}")
-
+        showln(f"sampling done, total_step={sampling_total_step*mpi_size}, energy={observer.energy}")
         if config.use_gradient:
             # Save log
             if config.log_file and mpi_rank == 0:
@@ -154,7 +154,8 @@ def gradient_descent(state: SamplingLattice, config):
                     if eta not in grad_dot_pool:
                         for l1 in range(state.L1):
                             for l2 in range(state.L2):
-                                state[l1, l2] = saved_state[l1][l2] - eta * param * grad[l1][l2]
+                                state[l1, l2] = saved_state[l1][l2] - eta * param * grad[l1][l2].conjugate(
+                                    positive_contract=True)
                         with reweight_observer:
                             for possibility, configuration in configuration_pool:
                                 configuration.refresh_all()
@@ -192,14 +193,14 @@ def gradient_descent(state: SamplingLattice, config):
                 real_step_size = step_size * param
                 for l1 in range(state.L1):
                     for l2 in range(state.L2):
-                        state[l1, l2] = saved_state[l1][l2] - real_step_size * grad[l1][l2]
+                        state[
+                            l1,
+                            l2] = saved_state[l1][l2] - real_step_size * grad[l1][l2].conjugate(positive_contract=True)
             else:
-                for i in range(state.L1):
-                    for j in range(state.L2):
-                        state[i, j] -= step_size * grad[i][j]
-            showln(
-                f"grad {grad_step}/{grad_total_step}, step_size={step_size}, sampling={sampling_total_step*mpi_size}, energy={observer.energy}"
-            )
+                for l1 in range(state.L1):
+                    for l2 in range(state.L2):
+                        state[l1, l2] -= step_size * grad[l1][l2].conjugate(positive_contract=True)
+            showln(f"grad {grad_step}/{grad_total_step}, step_size={step_size}")
 
             # Bcast state and refresh sampling(refresh sampling aux and sampling config)
             for l1 in range(state.L1):
@@ -212,8 +213,6 @@ def gradient_descent(state: SamplingLattice, config):
             if save_state_file and mpi_rank == 0:
                 with open(save_state_file, "w") as file:
                     pickle.dump(state, file)
-        else:
-            showln(f"sampling done, total_step={total_step*mpi_size}, energy={observer.energy}")
         if sigint_handler():
             break
     sigint_handler.end()

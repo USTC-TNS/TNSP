@@ -24,7 +24,7 @@ import TAT
 from .auxiliaries import Auxiliaries
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_variable import mpi_comm, mpi_rank, mpi_size, allreduce_lattice_buffer, allreduce_buffer
+from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, allreduce_lattice_buffer, allreduce_buffer
 from .tensor_element import tensor_element
 
 
@@ -378,10 +378,10 @@ class Observer():
         self._total_weight = 0.0
         self._total_weight_square = 0.0
         if self._enable_gradient:
-            self._Delta = [[self._owner[l1, l2].same_shape().zero()
+            self._Delta = [[self._owner[l1, l2].same_shape().conjugate().zero()
                             for l2 in range(self._owner.L2)]
                            for l1 in range(self._owner.L1)]
-            self._EDelta = [[self._owner[l1, l2].same_shape().zero()
+            self._EDelta = [[self._owner[l1, l2].same_shape().conjugate().zero()
                              for l2 in range(self._owner.L2)]
                             for l1 in range(self._owner.L1)]
             if self._enable_natural:
@@ -500,6 +500,8 @@ class Observer():
         self._total_weight += reweight
         self._total_weight_square += reweight * reweight
         ws = configuration.hole(())  # ws is a tensor
+        if ws.norm_num() == 0:
+            return
         inv_ws_conj = ws / (ws.norm_2()**2)
         inv_ws = inv_ws_conj.conjugate()
         all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
@@ -520,19 +522,19 @@ class Observer():
                 total_value = 0
                 physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)}).conjugate()
+                    wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
                     if wss.norm_num() == 0:
                         continue
-                    value = inv_ws_conj.contract(observer_shrinked,
-                                                 {(physics_names[i], f"I{i}") for i in range(body)}).edge_rename({
-                                                     f"O{i}": physics_names[i] for i in range(body)
-                                                 }).contract(wss, all_name)
-                    total_value += float(value)
-                to_save = total_value * reweight
+                    value = inv_ws.contract(observer_shrinked.conjugate(),
+                                            {(physics_names[i], f"I{i}") for i in range(body)}).edge_rename({
+                                                f"O{i}": physics_names[i] for i in range(body)
+                                            }).contract(wss, all_name)
+                    total_value += complex(value)
+                to_save = total_value.real * reweight
                 self._result[name][positions] += to_save
                 self._result_square[name][positions] += to_save * to_save
                 if calculating_gradient:
-                    Es += total_value  # reweight will be multipled later
+                    Es += total_value  # reweight will be multipled later, Es maybe complex
             if calculating_gradient:
                 holes = [[None for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
                 # \frac{\partial\langle s|\psi\rangle}{\partial x_i} / \langle s|\psi\rangle
@@ -559,6 +561,10 @@ class Observer():
                             hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
 
                         holes[l1][l2] = hole
+                if self._owner.Tensor.is_real:
+                    Es = Es.real
+                else:
+                    Es = Es.conjugate()
                 for l1 in range(self._owner.L1):
                     for l2 in range(self._owner.L2):
                         hole = holes[l1][l2] * reweight
@@ -704,7 +710,7 @@ class Observer():
         """
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = [
-            [self._owner[l1, l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)
+            [self._Delta[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)
         ]
         for reweight, deltas in self._Deltas:
             param = self._lattice_dot(deltas, gradient) * reweight / self._total_weight
@@ -744,8 +750,8 @@ class Observer():
             for l2 in range(self._owner.L2):
                 ta = a[l1][l2]
                 tb = b[l1][l2]
-                result += ta.conjugate().contract(tb, {(name, name) for name in ta.names})
-        return float(result)
+                result += ta.conjugate(positive_contract=True).contract(tb, {(name, name) for name in ta.names})
+        return complex(result).real
 
     def _lattice_map(self, func, *args):
         """
@@ -779,6 +785,7 @@ class Observer():
         # p = r
         p = r
         for t in range(step):
+            show(f"conjugate gradient step={t}")
             # alpha = (r @ r) / (p @ A @ p)
             alpha = self._lattice_dot(r, r) / self._lattice_dot(p, self._lattice_metric_mv(p, epsilon))
             # x = x + alpha * p
@@ -1010,6 +1017,9 @@ class DirectSampling(Sampling):
                         block_rho = hole.blocks[[("I0", -symmetry), ("O0", symmetry)]]
                         diag_rho = np.diagonal(block_rho)
                         rho = np.array([*rho, *diag_rho])
+                    rho = rho.real
+                    if len(rho) == 0:
+                        return self()
                     rho = rho / np.sum(rho)
                     choice = self._choice(random(), rho)
                     possibility *= rho[choice]

@@ -152,7 +152,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config.direct_sampling_cut_dimension = 4
         config.conjugate_gradient_method_step = 20
         config.metric_inverse_epsilon = 0.01
-        config.use_gradient = grad_total_step != 0
+        config.use_gradient = grad_step_size != 0
         config.use_natural_gradient = kv.get("use_natural_gradient", 0) == 1
         config.use_line_search = kv.get("use_line_search", 0) == 1
         config.save_state_file = lambda x: None
