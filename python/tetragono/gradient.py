@@ -154,7 +154,7 @@ def gradient_descent(state: SamplingLattice, config):
                         else:
                             end = x
                         # Step error is 0.1 now
-                        if (end - begin) / end > 0.1:
+                        if (end - begin) / end < 0.1:
                             step_size = begin
                             showln(f"step_size is chosen as {step_size}, since step size error < 0.1")
                             break
