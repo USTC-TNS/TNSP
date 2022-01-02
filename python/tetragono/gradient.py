@@ -135,29 +135,29 @@ def gradient_descent(state: SamplingLattice, config):
                         grad_dot_pool[eta] = result
                     return grad_dot_pool[eta]
 
-                begin = 0.0
-                end = step_size * 1.25
+                grad_dot_pool[0] = mpi_comm.bcast(observer._lattice_dot(grad, observer.gradient), root=0)
+                if grad_dot(0.0) > 0:
+                    begin = 0.0
+                    end = step_size * 1.25
 
-                if grad_dot(end) > 0:
-                    step_size = end
+                    if grad_dot(end) > 0:
+                        step_size = end
+                        showln(f"step_size is chosen as {step_size}, since grad_dot(begin) > 0, grad_dot(end) > 0")
+                    else:
+                        while True:
+                            x = (begin + end) / 2
+                            if grad_dot(x) > 0:
+                                begin = x
+                            else:
+                                end = x
+                            # Step error is 0.1 now
+                            if (end - begin) / end < 0.1:
+                                step_size = begin
+                                showln(f"step_size is chosen as {step_size}, since step size error < 0.1")
+                                break
                 else:
-                    grad_dot_pool[0] = mpi_comm.bcast(observer._lattice_dot(grad, observer.gradient), root=0)
-                    while True:
-                        x = (begin + end) / 2
-                        # Grad is nearly vertical
-                        if abs(grad_dot(x) / grad_dot(0) < 0.01):
-                            step_size = x
-                            showln(f"step_size is chosen as {step_size}, since grad dot < 0.01")
-                            break
-                        if grad_dot(x) > 0:
-                            begin = x
-                        else:
-                            end = x
-                        # Step error is 0.1 now
-                        if (end - begin) / end < 0.1:
-                            step_size = begin
-                            showln(f"step_size is chosen as {step_size}, since step size error < 0.1")
-                            break
+                    showln(f"step_size is chosen as {step_size}, since grad_dot(begin) < 0")
+                    step_size = step_size
 
                 real_step_size = step_size * param
                 for l1 in range(state.L1):
