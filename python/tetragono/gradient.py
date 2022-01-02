@@ -18,9 +18,37 @@
 
 from __future__ import annotations
 import pickle
+import signal
 import TAT
 from .sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
 from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
+
+
+class SigintHandler():
+
+    def __init__(self):
+        self.sigint_recv = 0
+        self.saved_handler = None
+
+    def begin(self):
+
+        def handler(signum, frame):
+            if self.sigint_recv == 1:
+                self.saved_handler(signum, frame)
+            else:
+                self.sigint_recv = 1
+
+        self.saved_handler = signal.signal(signal.SIGINT, handler)
+
+    def __call__(self):
+        if self.sigint_recv:
+            print(f" process {mpi_rank} receive SIGINT")
+        result = mpi_comm.allreduce(self.sigint_recv)
+        self.sigint_recv = 0
+        return result != 0
+
+    def end(self):
+        signal.signal(signal.SIGINT, self.saved_handler)
 
 
 class SeedDiffer:
@@ -83,6 +111,8 @@ def gradient_descent(state: SamplingLattice, config):
     else:
         grad_total_step = 1
 
+    sigint_handler = SigintHandler()
+    sigint_handler.begin()
     for grad_step in range(grad_total_step):
         if config.use_line_search:
             configuration_pool = []
@@ -184,3 +214,6 @@ def gradient_descent(state: SamplingLattice, config):
                     pickle.dump(state, file)
         else:
             showln(f"sampling done, total_step={total_step*mpi_size}, energy={observer.energy}")
+        if sigint_handler():
+            break
+    sigint_handler.end()
