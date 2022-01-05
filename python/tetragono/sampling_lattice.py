@@ -964,7 +964,7 @@ class ErgodicSampling(Sampling):
                         self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
                     else:
                         self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
-                        return 1., self.configuration
+                        return
 
     def __call__(self):
         for t in range(mpi_size):
