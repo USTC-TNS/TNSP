@@ -99,21 +99,25 @@ def gradient_descent(state: SamplingLattice, config):
         observer.enable_gradient()
         if config.use_natural_gradient:
             observer.enable_natural_gradient()
-        if config.use_line_search:
+        need_reweight_observer = config.use_line_search or config.check_difference
+        if need_reweight_observer:
             reweight_observer = Observer(state)
             reweight_observer.add_energy()
             reweight_observer.enable_gradient()
         step_size = config.grad_step_size
 
     if config.use_gradient:
-        grad_total_step = config.grad_total_step
+        if config.check_difference:
+            grad_total_step = 1
+        else:
+            grad_total_step = config.grad_total_step
     else:
         grad_total_step = 1
 
     sigint_handler = SigintHandler()
     sigint_handler.begin()
     for grad_step in range(grad_total_step):
-        if config.use_line_search:
+        if need_reweight_observer:
             configuration_pool = []
         # Sampling and observe
         with seed_differ, observer:
@@ -121,7 +125,7 @@ def gradient_descent(state: SamplingLattice, config):
                 if sampling_step % mpi_size == mpi_rank:
                     possibility, configuration = sampling()
                     observer(possibility, configuration)
-                    if config.use_line_search:
+                    if need_reweight_observer:
                         configuration_pool.append((possibility, configuration.copy()))
                     show(f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}")
         showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
@@ -140,7 +144,38 @@ def gradient_descent(state: SamplingLattice, config):
                 grad = observer.gradient
 
             # Change state
-            if config.use_line_search:
+            if config.check_difference:
+                showln("checking difference")
+
+                def get_energy():
+                    with reweight_observer:
+                        for possibility, configuration in configuration_pool:
+                            configuration.refresh_all()
+                            reweight_observer(possibility, configuration)
+                    return reweight_observer.energy[0] * state.site_number
+
+                original_energy = observer.energy[0] * state.site_number
+                delta = 1e-8
+                for l1 in range(state.L1):
+                    for l2 in range(state.L2):
+                        showln(l1, l2)
+                        s = state[l1, l2].storage
+                        g = grad[l1][l2].conjugate(positive_contract=True).storage
+                        for i in range(len(s)):
+                            s[i] += delta
+                            now_energy = get_energy()
+                            rgrad = (now_energy - original_energy) / delta
+                            s[i] -= delta
+                            if state.Tensor.is_complex:
+                                s[i] += delta * 1j
+                                now_energy = get_energy()
+                                igrad = (now_energy - original_energy) / delta
+                                s[i] -= delta * 1j
+                                cgrad = rgrad + igrad * 1j
+                            else:
+                                cgrad = rgrad
+                            showln(" ", cgrad, g[i])
+            elif config.use_line_search:
                 showln("line searching")
 
                 saved_state = [[state[l1, l2] for l2 in range(state.L2)] for l1 in range(state.L1)]

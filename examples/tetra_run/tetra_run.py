@@ -156,6 +156,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config.use_natural_gradient = kv.get("use_natural_gradient", 0) == 1
         config.use_line_search = kv.get("use_line_search", 0) == 1
         config.save_state_file = lambda x: None
+        config.check_difference = kv.get("check_difference", 0) == 1
         tet.gradient_descent(self.gm, config)
 
     def do_gm_dump(self, line):
