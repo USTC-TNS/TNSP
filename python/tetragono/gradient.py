@@ -77,20 +77,19 @@ seed_differ = SeedDiffer()
 def gradient_descent(state: SamplingLattice, config):
 
     # Sampling method
-    sampling = DirectSampling(state, config.direct_sampling_cut_dimension)
     if config.sampling_method == "sweep":
+        # Use direct sampling to find sweep sampling initial configuration.
+        sampling = DirectSampling(state, config.direct_sampling_cut_dimension)
         sampling()
         configuration = sampling.configuration
         sampling = SweepSampling(state)
         sampling.configuration = configuration
         sampling_total_step = config.sampling_total_step
     elif config.sampling_method == "ergodic":
-        sampling()
-        configuration = sampling.configuration
         sampling = ErgodicSampling(state)
-        sampling.configuration = configuration
         sampling_total_step = sampling.total_step
     elif config.sampling_method == "direct":
+        sampling = DirectSampling(state, config.direct_sampling_cut_dimension)
         sampling_total_step = config.sampling_total_step
 
     # Prepare observers
@@ -119,12 +118,13 @@ def gradient_descent(state: SamplingLattice, config):
         # Sampling and observe
         with seed_differ, observer:
             for sampling_step in range(sampling_total_step):
-                possibility, configuration = sampling()
-                observer(possibility, configuration)
-                if config.use_line_search:
-                    configuration_pool.append((possibility, configuration.copy()))
-                show(f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}")
-        showln(f"sampling done, total_step={sampling_total_step*mpi_size}, energy={observer.energy}")
+                if sampling_step % mpi_size == mpi_rank:
+                    possibility, configuration = sampling()
+                    observer(possibility, configuration)
+                    if config.use_line_search:
+                        configuration_pool.append((possibility, configuration.copy()))
+                    show(f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}")
+        showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
         if config.use_gradient:
             # Save log
             if config.log_file and mpi_rank == 0:

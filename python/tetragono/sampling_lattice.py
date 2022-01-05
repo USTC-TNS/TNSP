@@ -942,10 +942,19 @@ class ErgodicSampling(Sampling):
                 for orbit, edge in self._edges[l1][l2].items():
                     self.total_step *= edge.dimension
 
-    def __call__(self):
+        self._zero_configuration()
+        for t in range(mpi_rank):
+            self._next_configuration()
+
+    def _zero_configuration(self):
         owner = self._owner
-        if not self.configuration.valid():
-            raise RuntimeError("Configuration not initialized")
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit, edge in self._edges[l1][l2].items():
+                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
+
+    def _next_configuration(self):
+        owner = self._owner
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
                 for orbit, edge in self._edges[l1][l2].items():
@@ -956,6 +965,10 @@ class ErgodicSampling(Sampling):
                     else:
                         self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
                         return 1., self.configuration
+
+    def __call__(self):
+        for t in range(mpi_size):
+            self._next_configuration()
         return 1., self.configuration
 
 
