@@ -232,9 +232,13 @@ def gradient_descent(state: SamplingLattice, config):
                             l1,
                             l2] = saved_state[l1][l2] - real_step_size * grad[l1][l2].conjugate(positive_contract=True)
             else:
+                param = mpi_comm.bcast(
+                    (observer._lattice_dot(state._lattice, state._lattice) / observer._lattice_dot(grad, grad))**0.5,
+                    root=0)
+                real_step_size = step_size * param
                 for l1 in range(state.L1):
                     for l2 in range(state.L2):
-                        state[l1, l2] -= step_size * grad[l1][l2].conjugate(positive_contract=True)
+                        state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
             showln(f"grad {grad_step}/{grad_total_step}, step_size={step_size}")
 
             # Bcast state and refresh sampling(refresh sampling aux and sampling config)
