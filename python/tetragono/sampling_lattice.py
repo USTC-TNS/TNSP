@@ -33,7 +33,7 @@ class Configuration(Auxiliaries):
     Configuration system for square sampling lattice.
     """
 
-    __slots__ = ["_owner", "_configuration"]
+    __slots__ = ["_owner", "_configuration", "_holes"]
 
     def copy(self, cp=None):
         """
@@ -55,6 +55,7 @@ class Configuration(Auxiliaries):
         result._configuration = [[{
             orbit: self._configuration[l1][l2][orbit] for orbit, edge in self._owner.physics_edges[l1, l2].items()
         } for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+        result._holes = self._holes
         return result
 
     def __init__(self, owner):
@@ -78,6 +79,7 @@ class Configuration(Auxiliaries):
             for l2 in range(owner.L2):
                 for orbit, edge in self._owner.physics_edges[l1, l2].items():
                     self[l1, l2, orbit] = self[l1, l2, orbit]
+        self._holes = None
 
     def site_valid(self, l1, l2):
         """
@@ -155,6 +157,7 @@ class Configuration(Auxiliaries):
             if self.site_valid(l1, l2):
                 shrinked_site = self._shrink_configuration((l1, l2), self._configuration[l1][l2])
                 super().__setitem__((l1, l2), shrinked_site)
+                self._holes = None
 
     def __delitem__(self, l1l2o):
         """
@@ -295,6 +298,52 @@ class Configuration(Auxiliaries):
             for l2 in range(self._owner.L2):
                 for orbit, edge in self._owner.physics_edges[l1, l2].items():
                     self.refresh_site((l1, l2, orbit))
+
+    def holes(self):
+        """
+        Get the lattice holes of this configuration.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The holes of this configuration.
+        """
+        if self._holes is None:
+            # Prepare
+            ws = self.hole(())
+            inv_ws_conj = ws / (ws.norm_2()**2)
+            inv_ws = inv_ws_conj.conjugate()
+            all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
+                                       for l2 in range(self._owner.L2)
+                                       for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+
+            # Calculate
+            holes = [[None for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+            # \frac{\partial\langle s|\psi\rangle}{\partial x_i} / \langle s|\psi\rangle
+            for l1 in range(self._owner.L1):
+                for l2 in range(self._owner.L2):
+                    contract_name = all_name.copy()
+                    for orbit, edge in self._owner.physics_edges[l1, l2].items():
+                        contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
+                    if l1 == l2 == 0:
+                        contract_name.remove(("T", "T"))
+                    hole = self.hole(((l1, l2),)).contract(inv_ws, contract_name)
+                    hole = hole.edge_rename({
+                        "L0": "R",
+                        "R0": "L",
+                        "U0": "D",
+                        "D0": "U"
+                    } | {
+                        f"P_{l1}_{l2}_{orbit}": f"P{orbit}"
+                        for orbit, edge in self._owner.physics_edges[l1, l2].items()
+                    })
+
+                    for orbit, shrinker in self._get_shrinker((l1, l2), self._configuration[l1][l2]):
+                        hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
+
+                    holes[l1][l2] = hole
+            self._holes = holes
+        return self._holes
 
 
 class SamplingLattice(AbstractLattice):
@@ -536,31 +585,7 @@ class Observer():
                 if calculating_gradient:
                     Es += total_value  # reweight will be multipled later, Es maybe complex
             if calculating_gradient:
-                holes = [[None for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
-                # \frac{\partial\langle s|\psi\rangle}{\partial x_i} / \langle s|\psi\rangle
-                for l1 in range(self._owner.L1):
-                    for l2 in range(self._owner.L2):
-                        contract_name = all_name.copy()
-                        for orbit, edge in self._owner.physics_edges[l1, l2].items():
-                            contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
-                        if l1 == l2 == 0:
-                            contract_name.remove(("T", "T"))
-                        hole = configuration.hole(((l1, l2),)).contract(inv_ws, contract_name)
-                        hole = hole.edge_rename({
-                            "L0": "R",
-                            "R0": "L",
-                            "U0": "D",
-                            "D0": "U"
-                        } | {
-                            f"P_{l1}_{l2}_{orbit}": f"P{orbit}"
-                            for orbit, edge in self._owner.physics_edges[l1, l2].items()
-                        })
-
-                        for orbit, shrinker in configuration._get_shrinker((l1, l2),
-                                                                           configuration._configuration[l1][l2]):
-                            hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
-
-                        holes[l1][l2] = hole
+                holes = configuration.holes()
                 if self._owner.Tensor.is_real:
                     Es = Es.real
                 else:
@@ -964,7 +989,7 @@ class ErgodicSampling(Sampling):
                         self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
                     else:
                         self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
-                        return 1., self.configuration
+                        return
 
     def __call__(self):
         for t in range(mpi_size):
