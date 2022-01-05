@@ -111,8 +111,8 @@ namespace TAT {
    }
 
    template<typename Block>
-   auto try_get_numpy_array(Block& block) {
-      auto result = py::cast(block, py::return_value_policy::move); // it cast to Single Block
+   auto try_get_numpy_array(Block&& block) {
+      auto result = py::cast(std::move(block), py::return_value_policy::move); // it cast to Single Block
       try {
          return py::module_::import("numpy").attr("array")(result, py::arg("copy") = false);
       } catch (const py::error_already_set&) {
@@ -121,8 +121,8 @@ namespace TAT {
    }
 
    template<typename Block>
-   auto try_set_numpy_array(Block& block, const py::object& object) {
-      auto result = py::cast(block, py::return_value_policy::move);
+   auto try_set_numpy_array(Block&& block, const py::object& object) {
+      auto result = py::cast(std::move(block), py::return_value_policy::move);
       try {
          result = py::module_::import("numpy").attr("array")(result, py::arg("copy") = false);
       } catch (const py::error_already_set&) {
@@ -167,22 +167,18 @@ namespace TAT {
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
             .def("__getitem__",
                  [](const BS& bs, std::vector<std::pair<DefaultName, Symmetry>> position) {
-                    auto block = B{bs.tensor, std::move(position)};
-                    return try_get_numpy_array(block);
+                    return try_get_numpy_array(B{bs.tensor, std::move(position)});
                  })
             .def("__setitem__",
                  [](BS& bs, std::vector<std::pair<DefaultName, Symmetry>> position, const py::object& object) {
-                    auto block = B{bs.tensor, std::move(position)};
-                    try_set_numpy_array(block, object);
+                    try_set_numpy_array(B{bs.tensor, std::move(position)}, object);
                  })
             .def("__getitem__",
                  [](const BS& bs, const std::vector<DefaultName>& position) {
-                    auto block = B{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)};
-                    return try_get_numpy_array(block);
+                    return try_get_numpy_array(B{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)});
                  })
             .def("__setitem__", [](BS& bs, const std::vector<DefaultName>& position, const py::object& object) {
-               auto block = B{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)};
-               try_set_numpy_array(block, object);
+               try_set_numpy_array(B{bs.tensor, generate_vector_of_name_and_symmetry<Symmetry>(position)}, object);
             });
       py::class_<B>(
             block_m,
@@ -262,7 +258,7 @@ namespace TAT {
                .def_property_readonly(
                      "storage",
                      [](const py::object& tensor) {
-                        return storage_of_tensor<ScalarType, Symmetry>{tensor};
+                        return try_get_numpy_array(storage_of_tensor<ScalarType, Symmetry>{tensor});
                      })
                .def(ScalarType() + py::self)
                .def(py::self + ScalarType())
