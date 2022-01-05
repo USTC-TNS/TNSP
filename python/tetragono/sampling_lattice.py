@@ -401,6 +401,51 @@ class SamplingLattice(AbstractLattice):
         self._lattice[l1][l2] = value
 
 
+class ConfigurationPool:
+
+    def __init__(self, owner):
+        self._owner = owner
+        self.pool = {}
+
+    def add(self, configuration):
+        configuration = configuration.copy()
+        self.pool[self._get_config(configuration)] = configuration
+        return configuration
+
+    def _get_config(self, configuration):
+        config = []
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit, _ in self._owner.physics_edges[l1, l2].items():
+                    config.append(configuration[l1, l2, orbit])
+        return tuple(config)
+
+    def _nearest_configuration(self, config):
+        min_diff = None
+        configuration = None
+        for near_config, near_configuration in self.pool.items():
+            diff = sum(1 if i != j else 0 for i, j in zip(near_config, config))
+            if min_diff is None or diff < min_diff:
+                min_diff = diff
+                configuration = near_configuration
+        return configuration
+
+    def _calculate_configuration(self, config):
+        configuration = self._nearest_configuration(config).copy()
+        index = 0
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit, _ in self._owner.physics_edges[l1, l2].items():
+                    configuration[l1, l2, orbit] = config[index]
+                    index += 1
+        return configuration
+
+    def __call__(self, config):
+        if config not in self.pool:
+            self.pool[config] = self._calculate_configuration(config)
+        return self.pool[config]
+
+
 class Observer():
     """
     Helper type for Observing the sampling lattice.
@@ -408,7 +453,7 @@ class Observer():
 
     __slots__ = [
         "_owner", "_enable_gradient", "_enable_natural", "_start", "_observer", "_result", "_result_square", "_count",
-        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas"
+        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas", "_configuration_pool"
     ]
 
     def __enter__(self):
@@ -436,6 +481,7 @@ class Observer():
             if self._enable_natural:
                 self._Deltas = []
         self._start = True
+        self._configuration_pool = ConfigurationPool(self._owner)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -490,6 +536,7 @@ class Observer():
         self._Delta = None  # list[list[Tensor]]
         self._EDelta = None  # list[list[Tensor]]
         self._Deltas = None
+        self._configuration_pool = None
 
     def add_observer(self, name, observers):
         """
@@ -544,6 +591,8 @@ class Observer():
         configuration : Configuration
             The configuration system of the lattice.
         """
+        configuration = self._configuration_pool.add(configuration)
+
         reweight = configuration.hole(()).norm_2()**2 / possibility
         self._count += 1
         self._total_weight += reweight
@@ -596,7 +645,7 @@ class Observer():
                         self._Delta[l1][l2] += hole
                         self._EDelta[l1][l2] += Es * hole
                 if self._enable_natural:
-                    self._Deltas.append((reweight, holes))
+                    self._Deltas.append((reweight, holes, configuration))
 
     def _expect_and_deviation_before_reweight(self, total, total_square):
         """
@@ -733,20 +782,74 @@ class Observer():
         list[list[Tensor]]
             The product result.
         """
-        # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
+        shift_per_site = 0.179666
+        shift = shift_per_site * self._owner.site_number
+
         result_1 = [
-            [self._Delta[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)
+            [self._owner[l1, l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)
         ]
-        for reweight, deltas in self._Deltas:
-            param = self._lattice_dot(deltas, gradient) * reweight / self._total_weight
+        all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
+                                   for l2 in range(self._owner.L2)
+                                   for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+        for reweight, deltas, configuration in self._Deltas:
+            ws = configuration.hole(())
+            inv_ws_conj = ws / (ws.norm_2()**2)
+            inv_ws = inv_ws_conj.conjugate()
+            config = self._configuration_pool._get_config(configuration)
+            param_pool = {}
+            for positions, observer in self._observer["energy"].items():
+                body = observer.rank // 2
+                current_configuration = tuple(configuration[positions[i]] for i in range(body))
+                element_pool = tensor_element(observer)
+                if current_configuration not in element_pool:
+                    continue
+                physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
+                for other_configuration, observer_shrinked in element_pool[current_configuration].items():
+                    other_config = list(config)
+                    index = 0
+                    for l1 in range(self._owner.L1):
+                        for l2 in range(self._owner.L2):
+                            for orbit, _ in self._owner.physics_edges[l1, l2].items():
+                                if (l1, l2, orbit) in positions:
+                                    other_config[index] = other_configuration[positions.index((l1, l2, orbit))]
+                                index += 1
+                    other_config = tuple(other_config)
+
+                    wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
+                    if wss.norm_num() == 0:
+                        continue
+                    value = inv_ws.contract(observer_shrinked.conjugate(),
+                                            {(physics_names[i], f"I{i}") for i in range(body)}).edge_rename({
+                                                f"O{i}": physics_names[i] for i in range(body)
+                                            }).contract(wss, all_name)
+                    value = float(value)  # TODO what if it is complex
+                    if other_config in param_pool:
+                        param_pool[other_config] += value
+                    else:
+                        param_pool[other_config] = value
+            param = 0
+            for config, value in param_pool.items():
+                holes = self._configuration_pool(config).holes()
+                param += self._lattice_dot(holes, gradient) * value
+            param += shift * self._lattice_dot(configuration.holes(), gradient)
+            param *= reweight / self._total_weight
             to_sum = self._lattice_map(lambda x1: param * x1, deltas)
             self._lattice_sum(result_1, to_sum)
         allreduce_lattice_buffer(result_1)
 
         delta = self._lattice_map(lambda x1: x1 / self._total_weight, self._Delta)
-        param = self._lattice_dot(delta, gradient)
+        edelta = self._lattice_map(lambda x1: x1 / self._total_weight, self._EDelta)
+
+        param = self._lattice_dot(delta, gradient) * (self._total_energy[0] + shift)
         result_2 = self._lattice_map(lambda x1: x1 * param, delta)
-        return self._lattice_map(lambda x1, x2, x3: x1 - x2 + epsilon * x3, result_1, result_2, gradient)
+
+        param = self._lattice_dot(delta, gradient)
+        result_3 = self._lattice_map(lambda x1: x1 * param, edelta)
+        param = self._lattice_dot(edelta, gradient)
+        result_4 = self._lattice_map(lambda x1: x1 * param, delta)
+
+        return self._lattice_map(lambda x1, x2, x3, x4, x5: x1 + x2 - x3 - x4 + epsilon * x3, result_1, result_2,
+                                 result_3, result_4, gradient)
 
     def _lattice_sum(self, result, to_sum):
         """
