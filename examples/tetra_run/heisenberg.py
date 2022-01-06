@@ -21,6 +21,16 @@ import tetragono as tet
 
 
 def create(L1, L2, D):
+    """
+    Create heisenberg lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    """
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     state.physics_edges[...] = 2
     state.hamiltonians["vertical_bond"] = tet.common_variable.No.SS

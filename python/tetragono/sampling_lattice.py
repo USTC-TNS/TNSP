@@ -784,7 +784,7 @@ class Observer():
         """
         return [[func(*(t[l1][l2] for t in args)) for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
 
-    def natural_gradient(self, step, epsilon):
+    def natural_gradient(self, step, epsilon, *, sj_shift_per_site=None):
         """
         Get the energy natural gradient for every tensor.
 
@@ -794,6 +794,8 @@ class Observer():
             conjugate gradient method step count.
         epsilon : float
             The epsilon to avoid singularity of metric.
+        sj_shift_per_site : float, optional
+            Set sj's metric energy shift, if it is not None, use sj's method instead of standard natural gradient.
 
         Returns
         -------

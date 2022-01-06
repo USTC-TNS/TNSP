@@ -16,26 +16,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
 import cmd
 import pickle
 import TAT
 import tetragono as tet
 
 
-class TetragonoCommandApp(cmd.Cmd):
-    license = """
-Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
-This is free software; see the source for copying conditions.  There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-    """
+class Config():
 
-    intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + license
-
-    prompt = "TET> "
-
-    stored_line = ""
-
-    def _int_float_str(self, i):
+    @staticmethod
+    def _parse(i):
+        if i == "True":
+            return True
+        if i == "False":
+            return False
         try:
             return int(i)
         except ValueError:
@@ -46,165 +41,327 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             pass
         return i
 
-    def _parse(self, line, kw=False):
-        split = line.split()
-        args = [i for i in split if "=" not in i]
-        kwargs = [i.split("=") for i in split if "=" in i]
-        result = [self._int_float_str(i) for i in args]
-        if kw:
-            kv = {k: self._int_float_str(v) for k, v in kwargs}
-            result.append(kv)
-        else:
-            if kwargs:
-                raise ValueError
-        return tuple(result)
+    def __init__(self, line):
+        self.args = []
+        self.kwargs = {}
+        for arg in line.split():
+            if "=" in arg:
+                k, v = arg.split("=")
+                self.kwargs[k] = self._parse(v)
+            else:
+                v = self._parse(arg)
+                self.args.append(v)
+
+
+class TetragonoCommandApp(cmd.Cmd):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.prompt = "TET> "
+        self.stored_line = ""
+        self.license = """
+Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+"""
+        if tet.common_variable.mpi_rank == 0:
+            self.intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + self.license
 
     def precmd(self, line):
-        if len(line) == 0:
-            return line
-        if line[-1] == "\\":
-            self.stored_line = self.stored_line + " " + line[:-1]
+        line = line.split("#")[0].strip()
+        if line.endswith("\\"):
+            self.stored_line = self.stored_line + line[:-1].strip() + " "
+            self.prompt = ".... "
             return ""
-        line = self.stored_line + " " + line
+        line = self.stored_line + line
         self.stored_line = ""
-        line = line.split("#")[0]
+
+        self.prompt = "TET> "
         return line
 
     def emptyline(self):
         pass
 
+    def do_shell(self, line):
+        """
+        Run shell command.
+        """
+        if tet.common_variable.mpi_rank == 0:
+            os.system(line)
+        tet.common_variable.mpi_comm.barrier()
+
     def do_EOF(self, line):
-        () = self._parse(line)
+        """
+        Exit tetra shell.
+        """
+        return True
+
+    def do_exit(self, line):
+        """
+        Exit tetra shell.
+        """
+        return True
+
+    def do_quit(self, line):
+        """
+        Exit tetra shell.
+        """
         return True
 
     def do_seed(self, line):
-        seed, = self._parse(line)
+        """
+        Set random seed.
+
+        Parameters
+        ----------
+        seed : int
+            The new random seed.
+        """
+        config = Config(line)
+        self.seed(*config.args, **config.kwargs)
+
+    def seed(self, seed):
         TAT.random.seed(seed)
 
     def do_su_create(self, line):
-        args = self._parse(line, True)
-        model = __import__(args[0])
-        kwargs = args[-1]
-        args = args[1:-1]
-        self.su = model.create(*args, **kwargs)
+        """
+        Create a lattice used for simple update.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        config = Config(line)
+        model = __import__(config.args[0])
+        if len(config.args) == 2 and config.args[-1] == "help":
+            print(model.create.__doc__.replace("\n", "\n    "))
+        else:
+            self.su = model.create(*config.args[1:], **config.kwargs)
 
     def do_su_dump(self, line):
-        name, = self._parse(line)
+        """
+        Dump the simple update lattice into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.su_dump(*config.args, **config.kwargs)
+
+    def su_dump(self, name):
         if tet.common_variable.mpi_rank == 0:
             with open(name, "wb") as file:
                 pickle.dump(self.su, file)
+        tet.common_variable.mpi_comm.barrier()
 
     def do_su_load(self, line):
-        name, = self._parse(line)
+        """
+        Load the simple update lattice from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.su_load(*config.args, **config.kwargs)
+
+    def su_load(self, name):
         with open(name, "rb") as file:
             self.su = pickle.load(file)
 
     def do_su_update(self, line):
-        total_step, delta_tau, new_dimension = self._parse(line)
+        """
+        Do simple update.
+
+        Parameters
+        ----------
+        total_step : int
+            The simple update total step to do.
+        delta_tau : float
+            The imaginary time, delta tau.
+        new_dimension : int
+            The new cut dimension used in simple update.
+        """
+        config = Config(line)
+        self.su_update(*config.args, **config.kwargs)
+
+    def su_update(self, total_step, delta_tau, new_dimension):
         self.su.update(total_step, delta_tau, new_dimension)
 
     def do_su_energy(self, line):
-        cut_dimension, = self._parse(line)
+        """
+        Calculate simple update lattice with double layer auxiliaries.
+
+        Parameters
+        ----------
+        cut_dimension : int
+            The cut_dimension used in double layer auxiliaries.
+        """
+        config = Config(line)
+        self.su_energy(*config.args, **config.kwargs)
+
+    def su_energy(self, cut_dimension):
         self.su.initialize_auxiliaries(cut_dimension)
         tet.common_variable.showln("Simple update lattice energy is", self.su.observe_energy())
 
     def do_su_to_ex(self, line):
-        () = self._parse(line)
+        """
+        Convert simple update lattice to exact lattice.
+        """
         self.ex = tet.conversion.simple_update_lattice_to_exact_state(self.su)
 
     def do_su_to_gm(self, line):
-        cut_dimension, = self._parse(line)
+        """
+        Convert simple update lattice to sampling lattice.
+        """
+        config = Config(line)
+        self.su_to_gm(*config.args, **config.kwargs)
+
+    def su_to_gm(self, cut_dimension):
         self.gm = tet.conversion.simple_update_lattice_to_sampling_lattice(self.su, cut_dimension)
 
     def do_ex_update(self, line):
-        total_step, approximate_energy = self._parse(line)
+        """
+        Do exact update.
+
+        Parameters
+        ----------
+        total_step : int
+            The update total step to do.
+        approximate_energy : float
+            The approximate energy per site, it should ensure the ground state energy is the largest after shifting.
+        """
+        config = Config(line)
+        self.ex_update(*config.args, **config.kwargs)
+
+    def ex_update(self, total_step, approximate_energy):
         self.ex.update(total_step, approximate_energy)
 
     def do_ex_energy(self, line):
-        () = self._parse(line)
+        """
+        Calculate exact energy.
+        """
         tet.common_variable.showln("Exact state energy is", self.ex.observe_energy())
 
     def do_ex_dump(self, line):
-        name, = self._parse(line)
+        """
+        Dump the exact update lattice into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.ex_dump(*config.args, **config.kwargs)
+
+    def ex_dump(self, name):
         if tet.common_variable.mpi_rank == 0:
             with open(name, "wb") as file:
                 pickle.dump(self.ex, file)
+        tet.common_variable.mpi_comm.barrier()
 
     def do_ex_load(self, line):
-        name, = self._parse(line)
+        """
+        Load the exact update lattice from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.ex_load(*config.args, **config.kwargs)
+
+    def ex_load(self, name):
         with open(name, "rb") as file:
             self.ex = pickle.load(file)
 
-    def do_gm_cut(self, line):
-        cut, = self._parse(line)
-        self.gm.cut_dimension = cut
-
     def do_gm_run(self, line):
-        sampling_total_step, grad_total_step, grad_step_size, kv = self._parse(line, kw=True)
-
-        config = type("Config", (object,), {})()
-
-        config.sampling_total_step = sampling_total_step
-        config.grad_total_step = grad_total_step
-        config.grad_step_size = grad_step_size
-        config.sampling_method = kv.get("sampling_method", "direct")
-        config.log_file = kv.get("log_file", None)
-        config.direct_sampling_cut_dimension = 4
-        config.conjugate_gradient_method_step = 20
-        config.metric_inverse_epsilon = 0.01
-        config.use_gradient = grad_step_size != 0
-        config.use_natural_gradient = kv.get("use_natural_gradient", 0) == 1
-        config.use_line_search = kv.get("use_line_search", 0) == 1
-        config.save_state_file = lambda x: None
-        config.check_difference = kv.get("check_difference", 0) == 1
-        tet.gradient_descent(self.gm, config)
+        """
+        Do gradient descent. see gradient.py for details.
+        """
+        config = Config(line)
+        tet.gradient_descent(self.gm, *config.args, **config.kwargs)
 
     def do_gm_dump(self, line):
-        name, = self._parse(line)
+        """
+        Dump the sampling lattice into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.gm_dump(*config.args, **config.kwargs)
+
+    def gm_dump(self, name):
         if tet.common_variable.mpi_rank == 0:
             with open(name, "wb") as file:
                 pickle.dump(self.gm, file)
+        tet.common_variable.mpi_comm.barrier()
 
     def do_gm_load(self, line):
-        name, = self._parse(line)
+        """
+        Load the sampling lattice from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.gm_load(*config.args, **config.kwargs)
+
+    def gm_load(self, name):
         with open(name, "rb") as file:
             self.gm = pickle.load(file)
 
 
 class TetragonoScriptApp(TetragonoCommandApp):
-    intro = """Welcome to the Tetragono shell.""" + TetragonoCommandApp.license
-    use_rawinput = False
-    prompt = ""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.use_rawinput = False
+        self.prompt = ""
+        if tet.common_variable.mpi_rank == 0:
+            self.intro = """Welcome to the Tetragono shell.""" + self.license
 
     def precmd(self, line):
-        line = super().precmd(line)
-        if line.replace(" ", "") != "":
-            tet.common_variable.showln(super().prompt, line.strip(), sep="")
+        line = line.strip()
+        line = super().precmd(line).strip()
+        if line != "":
+            tet.common_variable.showln("TET> ", line, sep="")
+        self.prompt = ""
         return line
 
-
-override_intro = None
-if tet.common_variable.mpi_rank != 0:
-    override_intro = ""
 
 if __name__ == "__main__":
     import sys
     help_message = "Usage: tetra_run.py [script_file]"
     if len(sys.argv) == 1:
-        TetragonoCommandApp().cmdloop(intro=override_intro)
+        TetragonoCommandApp().cmdloop()
     elif len(sys.argv) == 2:
         script_file = sys.argv[1]
         if script_file in ["-h", "--help", "-help"]:
             tet.common_variable.showln(help_message)
         else:
             with open(sys.argv[1], 'rt') as file:
-                TetragonoScriptApp(stdin=file).cmdloop(intro=override_intro)
+                TetragonoScriptApp(stdin=file).cmdloop()
     elif sys.argv[1] == "--":
         commands = " ".join(sys.argv[2:]).replace("-", "\n")
         from io import StringIO
         file = StringIO(commands)
-        TetragonoScriptApp(stdin=file).cmdloop(intro=override_intro)
+        TetragonoScriptApp(stdin=file).cmdloop()
     else:
         tet.common_variable.showln("tetra_run: Error: unrecognized command-line option")
         tet.common_variable.showln(help_message)
         exit(1)
+    tet.common_variable.mpi_comm.barrier()
