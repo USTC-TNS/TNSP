@@ -148,6 +148,7 @@ class Configuration(Auxiliaries):
         if value is None:
             self._configuration[l1][l2][orbit] = None
             super().__setitem__((l1, l2), None)
+            self._holes = None
             return
         this_configuration = self._construct_edge_point(value)
         if this_configuration == self._configuration[l1][l2][orbit]:

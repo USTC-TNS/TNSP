@@ -311,7 +311,7 @@ def gradient_descent(
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0:
                     if save_state_file and mpi_rank == 0:
-                        with open(save_state_file, "w") as file:
+                        with open(save_state_file, "wb") as file:
                             pickle.dump(state, file)
             if sigint_handler():
                 break
