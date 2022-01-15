@@ -1,7 +1,7 @@
 /**
  * \file get_item_and_clear_symmetry.hpp
  *
- * Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
