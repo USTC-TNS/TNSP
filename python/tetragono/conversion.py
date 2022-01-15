@@ -22,14 +22,13 @@ from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
 
 
-def simple_update_lattice_to_sampling_lattice(state, cut_dimension):
+def simple_update_lattice_to_sampling_lattice(state):
     """
     Convert SimpleUpdateLattice to ExactState
 
     Parameters
     ----------
     state : SimpleUpdateLattice
-    cut_dimension : int
 
     Returns
     -------
@@ -37,7 +36,7 @@ def simple_update_lattice_to_sampling_lattice(state, cut_dimension):
     """
     if type(state) != SimpleUpdateLattice:
         raise ValueError("Conversion input type mismatch")
-    result = SamplingLattice(state, cut_dimension)
+    result = SamplingLattice(state)
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             this = state[l1, l2]

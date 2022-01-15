@@ -220,11 +220,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Convert simple update lattice to sampling lattice.
         """
-        config = Config(line)
-        self.su_to_gm(*config.args, **config.kwargs)
-
-    def su_to_gm(self, cut_dimension):
-        self.gm = tet.conversion.simple_update_lattice_to_sampling_lattice(self.su, cut_dimension)
+        self.gm = tet.conversion.simple_update_lattice_to_sampling_lattice(self.su)
 
     def do_ex_update(self, line):
         """

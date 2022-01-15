@@ -166,6 +166,7 @@ def gradient_descent(
         *,
         # About sampling
         sampling_method="direct",
+        configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
         # About natural gradient
         use_natural_gradient=False,
@@ -217,19 +218,19 @@ def gradient_descent(
     if sampling_method == "sweep":
         showln("using sweep sampling")
         # Use direct sampling to find sweep sampling initial configuration.
-        sampling = DirectSampling(state, direct_sampling_cut_dimension)
+        sampling = DirectSampling(state, configuration_cut_dimension, direct_sampling_cut_dimension)
         sampling()
         configuration = sampling.configuration
-        sampling = SweepSampling(state)
+        sampling = SweepSampling(state, configuration_cut_dimension)
         sampling.configuration = configuration
         sampling_total_step = sampling_total_step
     elif sampling_method == "ergodic":
         showln("using ergodic sampling")
-        sampling = ErgodicSampling(state)
+        sampling = ErgodicSampling(state, configuration_cut_dimension)
         sampling_total_step = sampling.total_step
     elif sampling_method == "direct":
         showln("using direct sampling")
-        sampling = DirectSampling(state, direct_sampling_cut_dimension)
+        sampling = DirectSampling(state, configuration_cut_dimension, direct_sampling_cut_dimension)
         sampling_total_step = sampling_total_step
     else:
         raise ValueError("Invalid sampling method")

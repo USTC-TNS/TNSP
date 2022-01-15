@@ -58,7 +58,7 @@ class Configuration(Auxiliaries):
         result._holes = self._holes
         return result
 
-    def __init__(self, owner):
+    def __init__(self, owner, cut_dimension):
         """
         Create configuration system for the given sampling lattice.
 
@@ -66,8 +66,10 @@ class Configuration(Auxiliaries):
         ----------
         owner : SamplingLattice
             The sampling lattice owning this configuration system.
+        cut_dimension : int
+            The cut dimension in single layer auxiliaries.
         """
-        super().__init__(owner.L1, owner.L2, owner.cut_dimension, False, owner.Tensor)
+        super().__init__(owner.L1, owner.L2, cut_dimension, False, owner.Tensor)
         self._owner = owner
         # EdgePoint = tuple[self.Symmetry, int]
         self._configuration = [[{orbit: None
@@ -351,9 +353,9 @@ class SamplingLattice(AbstractLattice):
     Square lattice used for sampling.
     """
 
-    __slots__ = ["_lattice", "cut_dimension"]
+    __slots__ = ["_lattice"]
 
-    def __init__(self, abstract, cut_dimension):
+    def __init__(self, abstract):
         """
         Create a simple update lattice from abstract lattice.
 
@@ -361,13 +363,10 @@ class SamplingLattice(AbstractLattice):
         ----------
         abstract : AbstractLattice
             The abstract lattice used to create simple update lattice.
-        cut_dimension : int
-            The cut dimension when calculating auxiliary tensors.
         """
         super()._init_by_copy(abstract)
 
         self._lattice = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
-        self.cut_dimension = cut_dimension
 
     def __getitem__(self, l1l2):
         """
@@ -833,9 +832,9 @@ class Sampling:
     Helper type for run sampling for sampling lattice.
     """
 
-    __slots__ = ["_owner", "configuration"]
+    __slots__ = ["_owner", "_cut_dimension", "configuration"]
 
-    def __init__(self, owner):
+    def __init__(self, owner, cut_dimension):
         """
         Create sampling object for the given sampling lattice.
 
@@ -843,9 +842,12 @@ class Sampling:
         ----------
         owner : SamplingLattice
             The owner of this sampling object.
+        cut_dimension : int
+            The cut dimension in single layer auxiliaries.
         """
         self._owner = owner
-        self.configuration = Configuration(self._owner)
+        self._cut_dimension = cut_dimension
+        self.configuration = Configuration(self._owner, self._cut_dimension)
 
     def refresh_all(self):
         """
@@ -872,8 +874,8 @@ class SweepSampling(Sampling):
 
     __slots__ = ["_sweep_order"]
 
-    def __init__(self, owner):
-        super().__init__(owner)
+    def __init__(self, owner, cut_dimension):
+        super().__init__(owner, cut_dimension)
         self._sweep_order = None  # list[tuple[tuple[int, int, int], ...]]
 
     def _single_term(self, positions, hamiltonian, ws):
@@ -956,8 +958,8 @@ class ErgodicSampling(Sampling):
 
     __slots__ = ["total_step", "_edges"]
 
-    def __init__(self, owner):
-        super().__init__(owner)
+    def __init__(self, owner, cut_dimension):
+        super().__init__(owner, cut_dimension)
 
         self._edges = [[{
             orbit: self._owner[l1, l2].edges(f"P{orbit}") for orbit, edge in self._owner.physics_edges[l1, l2].items()
@@ -1004,18 +1006,18 @@ class DirectSampling(Sampling):
     Direct sampling.
     """
 
-    __slots__ = ["_cut_dimension", "_double_layer_auxiliaries"]
+    __slots__ = ["_double_layer_cut_dimension", "_double_layer_auxiliaries"]
 
-    def __init__(self, owner, cut_dimension):
-        super().__init__(owner)
-        self._cut_dimension = cut_dimension
+    def __init__(self, owner, cut_dimension, double_layer_cut_dimension):
+        super().__init__(owner, cut_dimension)
+        self._double_layer_cut_dimension = double_layer_cut_dimension
         self.refresh_all()
 
     def refresh_all(self):
         super().refresh_all()
         owner = self._owner
-        self._double_layer_auxiliaries = DoubleLayerAuxiliaries(owner.L1, owner.L2, self._cut_dimension, False,
-                                                                owner.Tensor)
+        self._double_layer_auxiliaries = DoubleLayerAuxiliaries(owner.L1, owner.L2, self._double_layer_cut_dimension,
+                                                                False, owner.Tensor)
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
                 this = owner[l1, l2].copy()
