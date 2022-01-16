@@ -219,8 +219,7 @@ def gradient_descent(
         showln("using sweep sampling")
         # Use direct sampling to find sweep sampling initial configuration.
         sampling = DirectSampling(state, configuration_cut_dimension, direct_sampling_cut_dimension)
-        sampling()
-        configuration = sampling.configuration
+        _, configuration = sampling()
         sampling = SweepSampling(state, configuration_cut_dimension)
         sampling.configuration = configuration
         sampling_total_step = sampling_total_step
@@ -247,7 +246,7 @@ def gradient_descent(
                         possibility, configuration = sampling()
                         observer(possibility, configuration)
                         if need_reweight_observer:
-                            configuration_pool.append((possibility, configuration.copy()))
+                            configuration_pool.append((possibility, configuration))
                         show(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
