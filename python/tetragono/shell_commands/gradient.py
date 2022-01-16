@@ -194,6 +194,9 @@ def gradient_descent(
             observer.add_observer(measurement_name, measurement_module.measurement(state))
     if cache_configuration:
         observer.cache_configuration()
+    n = state.Tensor(["I0", "O0"], [2, 2])
+    n.blocks[n.names] = [[0, 0], [0, 1]]
+    observer.add_observer("n", {((l1, l2, 0),): n for l1 in range(state.L1) for l2 in range(state.L2)})
     if use_gradient:
         showln("calculate gradient")
         observer.enable_gradient()
@@ -280,9 +283,11 @@ def gradient_descent(
                     measurement_modules[measurement_name].save_result(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
+                n = observer.result["n"]
+                n = [n[(l1, l2, 0),][0] for l1 in range(state.L1) for l2 in range(state.L2)]
                 with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a",
                           encoding="utf-8") as file:
-                    print(*observer.energy, file=file)
+                    print(*observer.energy, *n, file=file)
             # Dump configuration
             if configuration_dump_file:
                 if sampling_method == "sweep":
