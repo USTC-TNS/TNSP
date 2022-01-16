@@ -141,6 +141,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         else:
             self.su = model.create(*config.args[1:], **config.kwargs)
 
+        # pre normalize the tensor
+        for l1 in range(self.su.L1):
+            for l2 in range(self.su.L2):
+                self.su[l1, l2] /= self.su[l1, l2].norm_max()
+
     def do_su_dump(self, line):
         """
         Dump the simple update lattice into file.

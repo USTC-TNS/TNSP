@@ -1146,7 +1146,7 @@ class DirectSampling(Sampling):
     def refresh_all(self):
         owner = self._owner
         self._double_layer_auxiliaries = DoubleLayerAuxiliaries(owner.L1, owner.L2, self._double_layer_cut_dimension,
-                                                                False, owner.Tensor)
+                                                                True, owner.Tensor)
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
                 this = owner[l1, l2].copy()
@@ -1164,7 +1164,7 @@ class DirectSampling(Sampling):
         possibility = 1.
         for l1 in range(owner.L1):
 
-            three_line_auxiliaries = DoubleLayerAuxiliaries(3, owner.L2, -1, False, owner.Tensor)
+            three_line_auxiliaries = DoubleLayerAuxiliaries(3, owner.L2, -1, True, owner.Tensor)
             line_3 = []
             for l2 in range(owner.L2):
                 tensor_1 = configuration._up_to_down_site[l1 - 1, l2]()

@@ -158,6 +158,14 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
     return mpi_comm.bcast(step_size, root=0)
 
 
+def try_normalize(state, reweight):
+    param = reweight**(1 / state.site_number)
+    param = param**(1 / 2)
+    for l1 in range(state.L1):
+        for l2 in range(state.L2):
+            state[l1, l2] /= param
+
+
 def gradient_descent(
         state: SamplingLattice,
         sampling_total_step=0,
@@ -301,6 +309,7 @@ def gradient_descent(
                             state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
+                try_normalize(state, observer._total_weight / observer._count)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 for l1 in range(state.L1):
                     for l2 in range(state.L2):
