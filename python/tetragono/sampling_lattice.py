@@ -370,6 +370,50 @@ class ConfigurationPool:
         self._owner = owner
         self._pool = {}
 
+    def wss(self, configuration, replacement):
+        """
+        Calculate wss of the configuration with the given replacement.
+
+        Parameters
+        ----------
+        configuration : Configuration
+            The given configuration.
+        replacement : dict[tuple[int, int, int], ?EdgePoint]
+            Replacement plan to modify configuration.
+
+        Tensor
+            $\langle s\psi\rangle$ with several $s$ replaced.
+        """
+        config = self._get_config(configuration)
+        config = self._replace_config(config, replacement)
+        return self(config).hole(())
+
+    def _replace_config(self, config, replacement):
+        """
+        Get the replaced config.
+
+        Parameters
+        ----------
+        config : tuple[EdgePoint, ...]
+            The input config tuple.
+        replacement : dict[tuple[int, int, int], ?EdgePoint]
+            Replacement plan to modify configuration.
+
+        Returns
+        -------
+        tuple[EdgePoint, ...]
+            The result config tuple.
+        """
+        config = list(config)
+        index = 0
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit, _ in self._owner.physics_edges[l1, l2].items():
+                    if (l1, l2, orbit) in replacement:
+                        config[index] = replacement[l1, l2, orbit]
+                    index += 1
+        return tuple(config)
+
     def add(self, configuration):
         """
         Add the configuration into pool, the configuration is not copied, it is inserted into a dict directly.
@@ -378,10 +422,17 @@ class ConfigurationPool:
         ----------
         configuration : Configuration
             The configuration to be added.
+
+        Returns
+        -------
+        Configuration
+            If the configuration exists already, return the former configuration, otherwise return the input
+        configuration.
         """
         config = self._get_config(configuration)
         if config not in self._pool:
             self._pool[config] = configuration
+        return self._pool[config]
 
     def _get_config(self, configuration):
         """
@@ -477,12 +528,12 @@ class SamplingLattice(AbstractLattice):
 
     def __init__(self, abstract):
         """
-        Create a simple update lattice from abstract lattice.
+        Create a sampling lattice from abstract lattice.
 
         Parameters
         ----------
         abstract : AbstractLattice
-            The abstract lattice used to create simple update lattice.
+            The abstract lattice used to create sampling lattice.
         """
         super()._init_by_copy(abstract)
 
@@ -527,7 +578,7 @@ class Observer():
 
     __slots__ = [
         "_owner", "_enable_gradient", "_enable_natural", "_start", "_observer", "_result", "_result_square", "_count",
-        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas"
+        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas", "_cache_configuration", "_pool"
     ]
 
     def __enter__(self):
@@ -554,6 +605,8 @@ class Observer():
                             for l1 in range(self._owner.L1)]
             if self._enable_natural:
                 self._Deltas = []
+        if self._cache_configuration:
+            self._pool = ConfigurationPool(self._owner)
         self._start = True
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -610,6 +663,17 @@ class Observer():
         self._EDelta = None  # list[list[Tensor]]
         self._Deltas = None
 
+        self._cache_configuration = False
+        self._pool = None
+
+    def cache_configuration(self):
+        """
+        Enable caching the configurations into one pool.
+        """
+        if self._start:
+            raise RuntimeError("Cannot enable caching after sampling start")
+        self._cache_configuration = True
+
     def add_observer(self, name, observers):
         """
         Add an observer set into this observer object, cannot add observer once observer started.
@@ -663,6 +727,8 @@ class Observer():
         configuration : Configuration
             The configuration system of the lattice.
         """
+        if self._cache_configuration:
+            configuration = self._pool.add(configuration)
         reweight = configuration.hole(()).norm_2()**2 / possibility
         self._count += 1
         self._total_weight += reweight
@@ -690,7 +756,10 @@ class Observer():
                 total_value = 0
                 physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
+                    if self._cache_configuration:
+                        wss = self._pool.wss(configuration, {positions[i]: other_configuration[i] for i in range(body)})
+                    else:
+                        wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
                     if wss.norm_num() == 0:
                         continue
                     value = inv_ws.contract(observer_shrinked.conjugate(),

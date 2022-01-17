@@ -172,6 +172,8 @@ def gradient_descent(
         grad_total_step=1,
         grad_step_size=0,
         *,
+        # About observer
+        cache_configuration=False,
         # About sampling
         sampling_method="direct",
         configuration_cut_dimension=None,
@@ -209,6 +211,8 @@ def gradient_descent(
     # Prepare observers
     observer = Observer(state)
     observer.add_energy()
+    if cache_configuration:
+        observer.cache_configuration()
     if use_gradient:
         showln("calculate gradient")
         observer.enable_gradient()
@@ -219,6 +223,8 @@ def gradient_descent(
             reweight_observer = Observer(state)
             reweight_observer.add_energy()
             reweight_observer.enable_gradient()
+            if cache_configuration:
+                reweight_observer.cache_configuration()
     else:
         showln("do NOT calculate gradient")
 
