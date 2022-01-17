@@ -207,6 +207,9 @@ def gradient_descent(
     else:
         grad_total_step = 1
     showln(f"gradient total step={grad_total_step}")
+    if sj_shift_per_site != None:
+        cache_configuration = True
+        showln(f"using shaojun's method, cache configuration")
 
     # Prepare observers
     observer = Observer(state)
