@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 import pickle
+import importlib
 import signal
 import TAT
 from .sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
@@ -220,7 +221,7 @@ def gradient_descent(
         measurement_modules = {}
         measurement_names = measurement.split(",")
         for measurement_name in measurement_names:
-            measurement_module = __import__(measurement_name)
+            measurement_module = importlib.import_module(measurement_name)
             measurement_modules[measurement_name] = measurement_module
             observer.add_observer(measurement_name, measurement_module.measurement(state))
     if cache_configuration:

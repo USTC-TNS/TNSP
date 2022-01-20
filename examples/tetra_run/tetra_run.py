@@ -19,6 +19,7 @@
 import os
 import cmd
 import pickle
+import importlib
 import TAT
 import tetragono as tet
 
@@ -135,7 +136,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             Arguments passed to model creater function.
         """
         config = Config(line)
-        model = __import__(config.args[0])
+        model = importlib.import_module(config.args[0])
         if len(config.args) == 2 and config.args[-1] == "help":
             print(model.create.__doc__.replace("\n", "\n    "))
         else:

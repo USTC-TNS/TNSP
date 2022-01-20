@@ -5,7 +5,7 @@ seed                 2333
 
 # what you can create is lattice for simple update only
 # different model have different parameter for create
-su_create            kitaev L1=2 L2=2 D=6 Jx=1 Jy=1 Jz=1
+su_create            kitaev L1=2 L2=2 D=4 Jx=1 Jy=1 Jz=1
 
 # save or open file
 su_dump              /dev/null
@@ -19,5 +19,10 @@ ex_energy
 ex_update            1000 4
 ex_energy
 
-su_to_gm             10
-gm_run               1000 1 0 log_file=data.log
+su_to_gm
+gm_run               100 10 0.01 \
+                     configuration_cut_dimension=8 \
+                     use_natural_gradient=True \
+                     use_line_search=True \
+                     log_file=run.log \
+                     measurement=kitaev_Sz
