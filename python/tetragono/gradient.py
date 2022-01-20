@@ -195,7 +195,9 @@ def gradient_descent(
         line_search_amplitude=1.25,
         line_search_error_threshold=0.1,
         # About check difference
-        check_difference_delta=1e-8):
+        check_difference_delta=1e-8,
+        # About Measurement
+        measurement=None):
 
     # Gradient step
     use_gradient = grad_step_size != 0 or use_check_difference
@@ -214,6 +216,13 @@ def gradient_descent(
     # Prepare observers
     observer = Observer(state)
     observer.add_energy()
+    if measurement:
+        measurement_modules = {}
+        measurement_names = measurement.split(",")
+        for measurement_name in measurement_names:
+            measurement_module = __import__(measurement_name)
+            measurement_modules[measurement_name] = measurement_module
+            observer.add_observer(measurement_name, measurement_module.measurement(state))
     if cache_configuration:
         observer.cache_configuration()
     if use_gradient:
@@ -268,6 +277,10 @@ def gradient_descent(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
+            if measurement and mpi_rank == 0:
+                for measurement_name in measurement_names:
+                    measurement_result = observer.result[measurement_name]
+                    measurement_modules[measurement_name].save_result(state, measurement_result)
             if use_gradient:
                 # Save log
                 if log_file and mpi_rank == 0:
