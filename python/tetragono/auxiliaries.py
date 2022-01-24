@@ -526,21 +526,29 @@ class Auxiliaries:
             if hint is not None:
                 raise ValueError("Unrecognized hint")
             if p0[0] == p1[0]:
-                if p0[1] + 1 == p1[1]:
+                if p0[1] + 2 == p1[1]:
                     left_part = self._inline_left_to_right_tailed[p0[0], p0[1] - 1]()
                     left_dot = self._down_to_up_site[p0[0] + 1, p0[1]]()
+                    down_dot = self._down_to_up_site[p0[0] + 1, p0[1] + 1]()
+                    middle_dot = self._lattice[p0[0]][p0[1] + 1]()
+                    up_dot = self._up_to_down_site[p1[0] - 1, p1[1] - 1]()
                     right_part = self._inline_right_to_left_tailed[p1[0], p1[1] + 1]()
                     right_dot = self._up_to_down_site[p1[0] - 1, p1[1]]()
                     result = safe_rename(safe_contract(left_part, safe_rename(left_dot, {"R": "R3"}), {("R3", "L")}), {
                         "D": "D0",
-                        "U": "U0"
+                        "U": "U0",
                     })
+                    result = safe_contract(result, safe_rename(up_dot, {"R": "R1"}), {("R1", "L")})
+                    result = safe_contract(result, middle_dot, {("D", "U")})
+                    result = safe_contract(result, safe_rename(down_dot, {"R": "R3"}), {("R3", "L"), ("D", "U")})
                     result = safe_rename(safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")}),
                                          {"D": "D1"})
                     result = safe_rename(safe_contract(result, right_part, {("R1", "L1"), ("R3", "L3")}), {
                         "U": "U1",
                         "R2": "R0",
-                        "L2": "L1"
+                        "L2": "L1",
+                        "L": "L0",
+                        "R": "R0"
                     })
                     return result
                 if p0[1] == p1[1] + 1:
