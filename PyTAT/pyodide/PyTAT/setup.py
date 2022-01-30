@@ -10,4 +10,4 @@ ext_modules = [
               extra_compile_args=["-std=c++17", "-g0"]),
 ]
 
-setup(name="PyTAT", version="0.1.4", ext_modules=ext_modules)
+setup(name="PyTAT", version="0.2.0", ext_modules=ext_modules)
