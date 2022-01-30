@@ -15,14 +15,17 @@
 /.cache
 /git-worktree
 /*.html
+/dist
 __pycache__
 ltximg
 auto
 .ipynb_checkpoints
 data.*
+run.*
 *.dll
 *.lib
 *.so
 *.a
 *.tex
 *.pdf
+*.egg-info

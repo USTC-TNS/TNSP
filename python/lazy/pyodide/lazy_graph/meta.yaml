@@ -1,5 +1,5 @@
 package:
-  name: lazy
+  name: lazy_graph
   version: 0.1.4
 
 source:
