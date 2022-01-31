@@ -818,24 +818,6 @@ namespace TAT {
          Tensor<ScalarType, Symmetry, Name> R;
       };
 
-      [[nodiscard, deprecated("Explicit singular tensor edge name required in future")]] svd_result
-      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v) const {
-         return svd(free_name_set_u, common_name_u, common_name_v, InternalName<Name>::SVD_U, InternalName<Name>::SVD_V, NoCut());
-      }
-      [[nodiscard, deprecated("Explicit singular tensor edge name required in future")]] svd_result
-      svd(const std::set<Name>& free_name_set_u, const Name& common_name_u, const Name& common_name_v, Cut cut) const {
-         return svd(free_name_set_u, common_name_u, common_name_v, InternalName<Name>::SVD_U, InternalName<Name>::SVD_V, cut);
-      }
-      [[nodiscard, deprecated("Put cut to the last argument")]] svd_result
-      svd(const std::set<Name>& free_name_set_u,
-          const Name& common_name_u,
-          const Name& common_name_v,
-          Cut cut,
-          const Name& singular_name_u,
-          const Name& singular_name_v) const {
-         return svd(free_name_set_u, common_name_u, common_name_v, singular_name_u, singular_name_v, cut);
-      }
-
       /**
        * Calculate SVD of the tensor
        * \param free_name_set_u U tensor free name after SVD

@@ -52,7 +52,7 @@ namespace net {
       auto a = T({{"A", "1"}}, {5}).range();
       std::cout << a << "\n";
 
-      auto s = a.svd({{"A", "1"}}, {"A", "U"}, {"A", "V"});
+      auto s = a.svd({{"A", "1"}}, {"A", "U"}, {"A", "V"}, {"S", "U"}, {"S", "V"});
       std::cout << s.U << "\n";
       std::cout << s.S << "\n";
       std::cout << s.V << "\n";

@@ -21,29 +21,27 @@
 #include "run_test.hpp"
 
 void run_test() {
-   const auto& name_u = TAT::InternalName<TAT::DefaultName>::SVD_U;
-   const auto& name_v = TAT::InternalName<TAT::DefaultName>::SVD_V;
    do {
       auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << a << "\n";
-      auto [u, s, v] = a.svd({"C", "A"}, "E", "F");
+      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", "U", "V");
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s << "\n";
-      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_u}}).edge_rename({{name_v, "F"}}), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"})
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", "U"}}).edge_rename({{"V", "F"}}), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"})
                 << "\n";
    } while (false);
    do {
       auto b = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << b << "\n";
-      auto [u, s, v] = b.svd({"A", "D"}, "E", "F");
+      auto [u, s, v] = b.svd({"A", "D"}, "E", "F", "U", "V");
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s << "\n";
       std::cout << decltype(v)::contract(v, v.edge_rename({{"F", "F2"}}), {{"B", "B"}, {"C", "C"}}).transform([](auto i) {
          return std::abs(i) > 1e-5 ? i : 0;
       }) << "\n";
-      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_v}}).edge_rename({{name_u, "F"}}), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"})
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", "V"}}).edge_rename({{"U", "F"}}), u, {{"F", "E"}}).transpose({"A", "B", "C", "D"})
                 << "\n";
    } while (false);
 #define t_edge(...) \
@@ -56,18 +54,18 @@ void run_test() {
                   {"A", "B", "C", "D"},
                   {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range();
-      auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", "U", "V");
       std::cout << u << "\n";
       std::cout << s << "\n";
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_v}}).edge_rename({{name_u, "F"}}), u, {{"F", "E"}})
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", "V"}}).edge_rename({{"U", "F"}}), u, {{"F", "E"}})
                          .transpose({"A", "B", "C", "D"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
                          })
                 << "\n";
-      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", name_u}}).edge_rename({{name_v, "E"}}), {{"F", "E"}})
+      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", "U"}}).edge_rename({{"V", "E"}}), {{"F", "E"}})
                          .transpose({"A", "B", "C", "D"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
@@ -77,11 +75,11 @@ void run_test() {
    do {
       auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << a << "\n";
-      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", 2);
+      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", "U", "V", 2);
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s << "\n";
-      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_u}}).edge_rename({{name_v, "F"}}), u, {{"F", "E"}})
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", "U"}}).edge_rename({{"V", "F"}}), u, {{"F", "E"}})
                          .transpose({"A", "B", "C", "D"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
@@ -94,18 +92,18 @@ void run_test() {
                   {"A", "B", "C", "D"},
                   {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range();
-      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", 7);
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", "U", "V", 7);
       std::cout << u << "\n";
       std::cout << s << "\n";
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_v}}).edge_rename({{name_u, "F"}}), u, {{"F", "E"}})
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", "V"}}).edge_rename({{"U", "F"}}), u, {{"F", "E"}})
                          .transpose({"A", "B", "C", "D"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
                          })
                 << "\n";
-      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", name_u}}).edge_rename({{name_v, "E"}}), {{"F", "E"}})
+      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", "U"}}).edge_rename({{"V", "E"}}), {{"F", "E"}})
                          .transpose({"A", "B", "C", "D"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
@@ -119,18 +117,18 @@ void run_test() {
                   {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range()
                   .transpose({"D", "C", "B", "A"});
-      auto [u, s, v] = c.svd({"C", "A"}, "E", "F");
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", "U", "V");
       std::cout << u << "\n";
       std::cout << s << "\n";
       std::cout << v << "\n";
       std::cout << c << "\n";
-      std::cout << decltype(v)::contract(v.contract(s, {{"F", name_v}}).edge_rename({{name_u, "F"}}), u, {{"F", "E"}})
+      std::cout << decltype(v)::contract(v.contract(s, {{"F", "V"}}).edge_rename({{"U", "F"}}), u, {{"F", "E"}})
                          .transpose({"D", "C", "B", "A"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
                          })
                 << "\n";
-      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", name_u}}).edge_rename({{name_v, "E"}}), {{"F", "E"}})
+      std::cout << decltype(v)::contract(v, u.contract(s, {{"E", "U"}}).edge_rename({{"V", "E"}}), {{"F", "E"}})
                          .transpose({"D", "C", "B", "A"})
                          .transform([](auto i) {
                             return std::abs(i) < 0.01 ? 0 : i;
