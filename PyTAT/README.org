@@ -1,0 +1,727 @@
+#+OPTIONS: toc:nil
+
+* PyTAT
+
+PyTAT is python binding for [[https://github.com/hzhangxyz/TAT][TAT]], which is a c++ tensor library with
+support for symmetry and fermion tensor.
+
+** Install
+
+You can build by yourself, see [[/README.org][this]] for details. Or use =pip= to obtain
+built distribution (currently only work for linux): =pip install PyTAT=.
+
+** Documents
+
+#+begin_src emacs-lisp :exports none :results silent
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+#+end_src
+
+*** Create tensor
+
+To create a no symmetry tensor, pass names and dimension for each dimension of the tensor
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j"], [3, 4]).zero()
+  print(A)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[3,4],blocks:[0,0,0,0,0,0,0,0,0,0,0,0]}
+#+end_example
+
+the code above create a rank-2 tensor named =A= which two edges are =i= and =j=,
+and their dimensions are =3= and =4=, then print tensor =A= to =std::cout=.
+
+Please notice that TAT will NOT initialize content of tensor when create it
+so remember to clear the value of tensor by calling method =zero=.
+
+To create a Z2 symmetry tensor, you need to describe the detail of each edge
+
+#+begin_src python :results output :exports both
+  from TAT.Z2.D import Tensor
+
+  A = Tensor(["i", "j"], [[(False, 2), (True, 4)], [(False, 3), (True, 1)]]).range()
+  print(A)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+#+end_example
+
+It means this symmetric tensor have two block, one's symmetries is 0, 0 and the other's is 1, 1.
+=range= is a function to initialize the value of tensor for test.
+
+#+begin_src python :results output :exports both
+  from TAT.Z2.D import Tensor
+
+  A = Tensor(["i", "j"], [[(False, 2), (True, 4)], [(False, 3), (True, 1)]]).range()
+  B = A.clear_symmetry()
+  print(B)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[6,4],blocks:[0,1,2,0,3,4,5,0,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9]}
+#+end_example
+
+You can clear the symmetry and convert a symmetric tensor to a normal no symmetry tensor by method =clear_symmetry=.
+
+the U1 symmety edge can be more complex
+
+#+begin_src python :results output :exports both
+  from TAT.U1.D import Tensor
+
+  A = Tensor(["i", "j"], [[(0, 2), (2, 4), (1, 1)], [(0, 3), (-2, 1), (-1, 3)]]).range()
+  B = A.clear_symmetry()
+  print(A)
+  print(B)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[{0:2,2:4,1:1},{0:3,-2:1,-1:3}],blocks:{[0,0]:[0,1,2,3,4,5],[1,-1]:[6,7,8],[2,-2]:[9,10,11,12]}}
+{names:[i,j],edges:[7,7],blocks:[0,1,2,0,0,0,0,3,4,5,0,0,0,0,0,0,0,9,0,0,0,0,0,0,10,0,0,0,0,0,0,11,0,0,0,0,0,0,12,0,0,0,0,0,0,0,6,7,8]}
+#+end_example
+
+Please notice that the order of symmetry segment is important.
+
+*** Access element of tensor
+
+You can easily access elements of tensor by a map from name of edge to index
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+  # Create a tensor and initialize it to zero
+  A = Tensor(["i", "j"], [3, 4]).zero()
+  # Set an element of tensor A to 3
+  A[{"i": 2, "j": 2}] = 3
+  # print tensor A
+  print(A)
+  # print the element set as 3
+  print(A[{"i": 2, "j": 2}])
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[3,4],blocks:[0,0,0,0,0,0,0,0,0,0,3,0]}
+3.0
+#+end_example
+
+For symmetric tensor, you can specify the pair of symmetry and sub-index or the total index.
+
+#+begin_src python :results output :exports both
+  from TAT.U1.D import Tensor
+
+  A = Tensor(["i", "j"], [[(0, 2), (2, 4), (1, 1)], [(0, 3), (-2, 1), (-1, 3)]]).zero()
+  A[{"i": 1, "j": 2}] = 233
+  A[{"i": (2, 2), "j": (-2, 0)}] = 43
+  # print tensor A
+  print(A)
+  # print the element set
+  print(A[{"i": (0, 1), "j": (0, 2)}])
+  print(A[{"j": 3, "i": 4}])
+  B = A.clear_symmetry()
+  print(B[{"j": 3, "i": 4}])
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[{0:2,2:4,1:1},{0:3,-2:1,-1:3}],blocks:{[0,0]:[0,0,0,0,0,233],[1,-1]:[0,0,0],[2,-2]:[0,0,43,0]}}
+233.0
+43.0
+43.0
+#+end_example
+
+*** Scalar operators
+
+You can do scalar operators directly
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+  # Create two rank-1 tensors
+  A = Tensor(["i"], [4])
+  B = Tensor(["i"], [4])
+  A[{"i": 0}] = 1
+  A[{"i": 1}] = 2
+  A[{"i": 2}] = 3
+  A[{"i": 3}] = 4
+  B[{"i": 0}] = 10
+  B[{"i": 1}] = 20
+  B[{"i": 2}] = 30
+  B[{"i": 3}] = 40
+
+  # Add two tensor
+  print(A + B)
+
+  # A number over a tensor
+  print(1 / A)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i],edges:[4],blocks:[11,22,33,44]}
+{names:[i],edges:[4],blocks:[1,0.5,0.333333,0.25]}
+#+end_example
+
+It always requires two tensor share the same shape, but edge order is not important
+
+#+begin_src python :results output :exports both
+  from TAT.U1.D import Tensor
+
+  A = Tensor(["i", "j"], [[(0, 2), (2, 4), (1, 1)], [(0, 3), (-2, 1), (-1, 3)]]).range()
+  B = Tensor(["j", "i"], [[(0, 3), (-2, 1), (-1, 3)], [(0, 2), (2, 4), (1, 1)]]).range()
+  print(A + B)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[{0:2,2:4,1:1},{0:3,-2:1,-1:3}],blocks:{[0,0]:[7,10,13,11,14,17],[1,-1]:[10,12,14],[2,-2]:[9,11,13,15]}}
+#+end_example
+
+For symmetry tensor, symmetry segment order is also important,
+if their order is different, an error will be thrown.
+
+#+begin_src python :results output :exports both
+  from TAT.U1.D import Tensor
+
+  A = Tensor(["i", "j"], [[(0, 2), (2, 4), (1, 1)], [(0, 3), (-2, 1), (-1, 3)]]).range()
+  B = Tensor(["j", "i"], [[(0, 3), (-2, 1), (-1, 3)], [(0, 2), (1, 1), (2, 4)]]).range()
+  try:
+      print(A + B)
+  except RuntimeError as error:
+      print(error)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Try to do zip_map on two tensors which edges not compatible
+#+end_example
+
+*** Rank-0 tensor and number
+
+You can convert between rank-0 tensor and number directly
+
+#+begin_src python :results output :exports both
+  import TAT
+
+  # Directly initialize a tensor with a number
+  A = TAT.No.D.Tensor(233)
+  # Convert rank-0 tensor to number
+  a = float(A)
+  print(a)
+
+  B = TAT.U1.D.Tensor(233)
+  print(B)
+  b = float(B)
+  print(b)
+
+  C = TAT.U1.Z.Tensor(233 + 666j, ["i", "j"], [2, -2])
+  print(C)
+  c = complex(C)
+  print(c)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+233.0
+{names:[],edges:[],blocks:{[]:[233]}}
+233.0
+{names:[i,j],edges:[{2:1},{-2:1}],blocks:{[2,-2]:[233+666i]}}
+(233+666j)
+#+end_example
+
+You can also create a scalar like non-rank-0 tensor directly,
+it can also be converted into scalar directly.
+
+*** Explicitly copy
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  # Due to python feature, assigning will not copy data, it would share the same data,
+  # So changing data in A will get tensor B changed.
+  A = Tensor(233)
+  B = A
+  A[{}] = 1
+  print(B)
+
+  # Copy tensor excplicitly, A and B is two tensor without data shared.
+  A = Tensor(233)
+  B = A.copy()
+  A[{}] = 1
+  print(B)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[],edges:[],blocks:[1]}
+{names:[],edges:[],blocks:[233]}
+#+end_example
+
+*** Create same shape tensor and some elementwise operator
+
+Create a tensor with same shape to another can be achieve by method =same_shape=.
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j"], [2, 2])
+  A[{"i": 0, "j": 0}] = 1
+  A[{"i": 0, "j": 1}] = 2
+  A[{"i": 1, "j": 0}] = 3
+  A[{"i": 1, "j": 1}] = 4
+  # tensor B copy the shape of A but not content of A
+  B = A.same_shape().zero()
+  print(B)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[2,2],blocks:[0,0,0,0]}
+#+end_example
+
+=map=/=transform= is outplace/inplace elementwise operator method.
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j"], [2, 2])
+  # Another easy test data setter for tensor
+  # which will fill meanless test data into tensor
+  A.range()
+  # Every element is transformed by a function inplacely
+  A.transform(lambda x: x * x)
+  print(A)
+
+  # Every element is transformed by a function outplacely
+  B = A.map(lambda x: x + 1)
+  print(B)
+  print(A)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j],edges:[2,2],blocks:[0,1,4,9]}
+{names:[i,j],edges:[2,2],blocks:[1,2,5,10]}
+{names:[i,j],edges:[2,2],blocks:[0,1,4,9]}
+#+end_example
+
+method =to= is used for type conversion.
+
+#+begin_src python :results output :exports both
+  import TAT
+
+  A = TAT.No.D.Tensor(233)
+  print(type(A))
+  # Convert A to a complex tensor
+  B = A.to(complex)
+  print(type(B))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+<class 'TAT.No.D.Tensor'>
+<class 'TAT.No.Z.Tensor'>
+#+end_example
+
+*** Norm
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i"], [10]).range()
+  # Get maximum norm
+  print(A.norm_max())
+  # Get 0 norm
+  print(A.norm_num())
+  # Get 1 norm
+  print(A.norm_sum())
+  # Get 2 norm
+  print(A.norm_2())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+9.0
+10.0
+45.0
+16.881943016134134
+#+end_example
+
+*** Contract
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j", "k"], [2, 3, 4]).range()
+  B = Tensor(["a", "b", "c", "d"], [2, 5, 3, 6]).range()
+  # Contract edge i of A and edge a of B, edge j of A and edge c of B
+  C = A.contract(B, {("i", "a"), ("j", "c")})
+  print(C)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[k,b,d],edges:[4,5,6],blocks:[4776,4836,4896,4956,5016,5076,5856,5916,5976,6036,6096,6156,6936,6996,7056,7116,7176,7236,8016,8076,8136,8196,8256,8316,9096,9156,9216,9276,9336,9396,5082,5148,5214,5280,5346,5412,6270,6336,6402,6468,6534,6600,7458,7524,7590,7656,7722,7788,8646,8712,8778,8844,8910,8976,9834,9900,9966,10032,10098,10164,5388,5460,5532,5604,5676,5748,6684,6756,6828,6900,6972,7044,7980,8052,8124,8196,8268,8340,9276,9348,9420,9492,9564,9636,10572,10644,10716,10788,10860,10932,5694,5772,5850,5928,6006,6084,7098,7176,7254,7332,7410,7488,8502,8580,8658,8736,8814,8892,9906,9984,10062,10140,10218,10296,11310,11388,11466,11544,11622,11700]}
+#+end_example
+
+#+begin_src python :results output :exports both
+  from TAT.U1.D import Tensor
+
+  a = Tensor(["A", "B", "C", "D"], [
+      [(-1, 1), (0, 1), (-2, 1)],
+      [(0, 1), (1, 2)],
+      [(0, 2), (1, 2)],
+      [(-2, 2), (-1, 1), (0, 2)],
+  ]).range()
+  b = Tensor(["E", "F", "G", "H"], [
+      [(0, 2), (1, 1)],
+      [(-2, 1), (-1, 1), (0, 2)],
+      [(0, 1), (-1, 2)],
+      [(2, 2), (1, 1), (0, 2)],
+  ]).range()
+  print(a)
+  print(b)
+  print(Tensor.contract(a, b, {("B", "G"), ("D", "H")}))
+  print(Tensor.contract(a.transpose(["A", "C", "B", "D"]), b.transpose(["G", "H", "E", "F"]), {("B", "G"), ("D", "H")}))
+  c = a.clear_symmetry()
+  d = b.clear_symmetry()
+  e = Tensor.contract(a, b, {("B", "G"), ("D", "H")}).clear_symmetry()
+  f = type(c).contract(c, d, {("B", "G"), ("D", "H")})
+  print(e)
+  print(f)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[A,B,C,D],edges:[{-1:1,0:1,-2:1},{0:1,1:2},{0:2,1:2},{-2:2,-1:1,0:2}],blocks:{[-2,1,1,0]:[0,1,2,3,4,5,6,7],[-1,0,1,0]:[8,9,10,11],[-1,1,0,0]:[12,13,14,15,16,17,18,19],[-1,1,1,-1]:[20,21,22,23],[0,0,0,0]:[24,25,26,27],[0,0,1,-1]:[28,29],[0,1,0,-1]:[30,31,32,33],[0,1,1,-2]:[34,35,36,37,38,39,40,41]}}
+{names:[E,F,G,H],edges:[{0:2,1:1},{-2:1,-1:1,0:2},{0:1,-1:2},{2:2,1:1,0:2}],blocks:{[0,-2,0,2]:[0,1,2,3],[0,-1,-1,2]:[4,5,6,7,8,9,10,11],[0,-1,0,1]:[12,13],[0,0,-1,1]:[14,15,16,17,18,19,20,21],[0,0,0,0]:[22,23,24,25,26,27,28,29],[1,-2,-1,2]:[30,31,32,33],[1,-2,0,1]:[34],[1,-1,-1,1]:[35,36],[1,-1,0,0]:[37,38],[1,0,-1,0]:[39,40,41,42,43,44,45,46]}}
+{names:[A,C,E,F],edges:[{-1:1,0:1,-2:1},{0:2,1:2},{0:2,1:1},{-2:1,-1:1,0:2}],blocks:{[-2,1,1,0]:[414,454,738,810],[-1,0,1,0]:[2358,2590,2682,2946],[-1,1,0,0]:[993,1111,1229,1347,1112,1242,1372,1502],[-1,1,1,-1]:[2130,2351],[0,0,0,0]:[2003,2225,2447,2669,2122,2356,2590,2824],[0,0,1,-1]:[4040,4261],[0,1,0,-1]:[1148,1760,1204,1849],[0,1,1,-2]:[5560,5846]}}
+{names:[A,C,E,F],edges:[{-1:1,0:1,-2:1},{0:2,1:2},{0:2,1:1},{-2:1,-1:1,0:2}],blocks:{[-2,1,1,0]:[414,454,738,810],[-1,0,1,0]:[2358,2590,2682,2946],[-1,1,0,0]:[993,1111,1229,1347,1112,1242,1372,1502],[-1,1,1,-1]:[2130,2351],[0,0,0,0]:[2003,2225,2447,2669,2122,2356,2590,2824],[0,0,1,-1]:[4040,4261],[0,1,0,-1]:[1148,1760,1204,1849],[0,1,1,-2]:[5560,5846]}}
+{names:[A,C,E,F],edges:[3,4,3,4],blocks:[0,0,0,0,0,0,0,0,0,0,2358,2590,0,0,0,0,0,0,0,0,0,0,2682,2946,0,0,993,1111,0,0,1229,1347,0,2130,0,0,0,0,1112,1242,0,0,1372,1502,0,2351,0,0,0,0,2003,2225,0,0,2447,2669,0,4040,0,0,0,0,2122,2356,0,0,2590,2824,0,4261,0,0,0,1148,0,0,0,1760,0,0,5560,0,0,0,0,1204,0,0,0,1849,0,0,5846,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,414,454,0,0,0,0,0,0,0,0,0,0,738,810]}
+{names:[A,C,E,F],edges:[3,4,3,4],blocks:[0,0,0,0,0,0,0,0,0,0,2358,2590,0,0,0,0,0,0,0,0,0,0,2682,2946,0,0,993,1111,0,0,1229,1347,0,2130,0,0,0,0,1112,1242,0,0,1372,1502,0,2351,0,0,0,0,2003,2225,0,0,2447,2669,0,4040,0,0,0,0,2122,2356,0,0,2590,2824,0,4261,0,0,0,1148,0,0,0,1760,0,0,5560,0,0,0,0,1204,0,0,0,1849,0,0,5846,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,414,454,0,0,0,0,0,0,0,0,0,0,738,810]}
+#+end_example
+
+Since edge "B" and edge "G", edge "D" and edge "H" have the compatible order, the contract result
+of clear_symmetry equals to clear_symmetry of contract result.
+
+*** Merge and split edge
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j", "k"], [2, 3, 4]).range()
+  # Merge edge i and edge j into a single edge a,
+  # and Merge no edge to get a trivial edge b
+  B = A.merge_edge({"a": ["i", "j"], "b": []})
+  print(B)
+
+  # Split edge a back to edge i and edge j, and split
+  # trivial edge b to no edge
+  C = B.split_edge({"b": [], "a": [("i", 2), ("j", 3)]})
+  print(C)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[b,a,k],edges:[1,6,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}
+{names:[i,j,k],edges:[2,3,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}
+#+end_example
+
+*** Edge rename and transpose
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j", "k"], [2, 3, 4]).range()
+  # Rename edge i to edge x
+  B = A.edge_rename({"i": "x"})
+  print(B)
+  # =edge_rename= is an outplace operator
+  print(A)
+
+  # Transpose tensor A with specific order
+  C = A.transpose(["k", "j", "i"])
+  print(C)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[x,j,k],edges:[2,3,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}
+{names:[i,j,k],edges:[2,3,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}
+{names:[k,j,i],edges:[4,3,2],blocks:[0,12,4,16,8,20,1,13,5,17,9,21,2,14,6,18,10,22,3,15,7,19,11,23]}
+#+end_example
+
+*** SVD and QR decomposition
+
+**** QR decomposition
+
+#+begin_src python :results output :exports both
+  def f_edge(*args):
+      return (args, False)
+
+
+  def t_edge(*args):
+      return (args, True)
+
+
+  from TAT.Fermi.D import Tensor
+
+  A = Tensor(["i", "j", "k"], [
+      t_edge((-1, 2), (0, 2), (-2, 2)),
+      f_edge((0, 2), (1, 2)),
+      f_edge((0, 2), (1, 2)),
+  ]).range()
+
+  # Do QR decomposition, specify Q matrix edge is edge k
+  # You can also write is as =Q, R = A.qr('r', {"i", "j"}, "Q", "R")=
+  # The last two argument is the name of new edges generated
+  # by QR decomposition
+  Q, R = A.qr('q', {"k"}, "Q", "R")
+  # Q is an unitary matrix, which edge name is Q and k
+  print(Q.conjugate().edge_rename({"Q": "Q1"}).contract(Q.edge_rename({"Q": "Q2"}), {("k", "k")}))
+  # Q R - A is 0
+  print((Q.contract(R, {("Q", "R")}) - A).norm_max())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[Q1,Q2],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[0,0]:[1,1.70156e-16,1.70156e-16,1],[1,-1]:[1,6.34378e-17,6.34378e-17,1]}}
+2.1316282072803006e-14
+#+end_example
+
+**** SVD decomposition
+
+#+begin_src python :results output :exports both
+  def f_edge(*args):
+      return (args, False)
+
+
+  def t_edge(*args):
+      return (args, True)
+
+
+  from TAT.Fermi.D import Tensor
+
+  A = Tensor(["i", "j", "k"], [
+      t_edge((-1, 2), (0, 2), (-2, 2)),
+      f_edge((0, 2), (1, 2)),
+      f_edge((0, 2), (1, 2)),
+  ]).range()
+
+  # Do SVD decomposition with cut=3, if cut not specified,
+  # svd will not cut the edge.
+  # The first argument is edge set of matrix U, SVD does not
+  # supply function to specify edge set of matrix V like what
+  # is done in QR since SVD is symmetric between U and V.
+  # The later two argument is new edges generated in tensor U
+  # and tensor V. The later two argument is new edges of tensor
+  # S. and the last argument is dimension cut.
+  U, S, V = A.svd({"k"}, "U", "V", "SU", "SV")
+  # U is an rank-3 unitary matrix
+  print(U.conjugate().edge_rename({"U": "U1"}).contract(U.edge_rename({"U": "U2"}), {("k", "k")}))
+  # U S V - A is a small value
+  print((U.contract(S, {("U", "SU")}).contract(V, {("SV", "V")}) - A).norm_max())
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[U1,U2],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[0,0]:[1,5.02471e-18,5.02471e-18,1],[1,-1]:[1,-2.44838e-18,-2.44838e-18,1]}}
+1.0658141036401503e-14
+#+end_example
+
+*** Identity, exponential and trace
+
+#+begin_src python :results output :exports both
+  from TAT.No.D import Tensor
+  # Please notice that identity is INPLACE operator
+  # For any i, j, k, l, we have
+  # =A[{"i":i, "j":j, "k":k, "l":l}] = delta(i,l) * delta(j,k)=
+  A = Tensor(["i", "j", "k", "l"], [2, 3, 3, 2]).identity({("i", "l"), ("j", "k")})
+
+  # calculate matrix exponential B = exp(A)
+  # second argument is iteration steps, with default value 2
+  B = A.exponential({("i", "l"), ("j", "k")}, 4)
+  print(B)
+
+  # Calculate trace or partial trace of a tenso
+  # Here it calculate =A[{"i":i, "j":j, "k":k, "l":l}] * delta(i,l) * delta(j,k)=
+  C = A.trace({("i", "l"), ("j", "k")})
+  print(C)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[j,i,k,l],edges:[3,2,3,2],blocks:[2.71828,0,0,0,0,0,0,2.71828,0,0,0,0,0,0,2.71828,0,0,0,0,0,0,2.71828,0,0,0,0,0,0,2.71828,0,0,0,0,0,0,2.71828]}
+{names:[],edges:[],blocks:[6]}
+#+end_example
+
+#+begin_src python :results output :exports both
+  from TAT.U1.D import Tensor
+
+  A = Tensor(["i", "j", "k", "l", "m"], [
+      [(-1, 2), (0, 2), (+1, 2)],
+      [(0, 2), (1, 2)],
+      [(0, 2), (-1, 2)],
+      [(0, 2), (2, 3)],
+      [(0, 2), (-2, 3)],
+  ]).range()
+  identity = Tensor(["k", "j", "m", "l"], [
+      [(0, 2), (1, 2)],
+      [(0, 2), (-1, 2)],
+      [(0, 2), (2, 3)],
+      [(0, 2), (-2, 3)],
+  ]).identity({("j", "k"), ("m", "l")})
+  print(A.trace({("j", "k"), ("l", "m")}))
+  print(A.contract(identity, {("j", "j"), ("k", "k"), ("l", "l"), ("m", "m")}))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i],edges:[{0:2}],blocks:{[0]:[4734,5294]}}
+{names:[i],edges:[{0:2}],blocks:{[0]:[4734,5294]}}
+#+end_example
+
+*** IO
+
+You can pickle load/dump a tensor directly, and even read data from =str= printed by a tensor.
+
+#+begin_src python :results output :exports both
+  import pickle
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j", "k", "l"], [2, 3, 3, 2]).identity({("i", "l"), ("j", "k")})
+  B = pickle.loads(pickle.dumps(A))
+  C = Tensor(str(B))
+  print(A)
+  print(B)
+  print(C)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i,j,k,l],edges:[2,3,3,2],blocks:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1]}
+{names:[i,j,k,l],edges:[2,3,3,2],blocks:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1]}
+{names:[i,j,k,l],edges:[2,3,3,2],blocks:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1]}
+#+end_example
+
+*** Fill random number into tensor
+
+PyTAT contains a random generator inside.
+
+#+begin_src python :results output :exports both
+  import TAT
+  # Sed random seed
+  TAT.random.seed(2333)
+  # Generate normal distributed random variables into a tensor.
+  A = TAT.No.D.Tensor(["i"], [10]).randn()
+  print(A)
+  # Generate uniform distributed random variables into a tensor.
+  B = TAT.No.Z.Tensor(["i"], [10]).randn()
+  print(B)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+{names:[i],edges:[10],blocks:[0.465246,0.529748,1.17368,0.544866,1.13411,0.611783,0.7999,-0.9954,0.9015,-1.69905]}
+{names:[i],edges:[10],blocks:[-0.263321+0.872706i,0.340596+0.75738i,-1.00095+0.630635i,1.24853-1.67437i,-0.352834+0.158421i,0.0561893-1.15738i,-0.579757-0.761532i,-2.13231-1.00284i,-0.118861+1.90261i,-0.271529-0.554287i]}
+#+end_example
+
+PyTAT also provide function to generate single random number.
+
+#+begin_src python :results output :exports both
+  import TAT
+  # Sed random seed
+  TAT.random.seed(6666)
+  # Generate uniform distributed random int in =[0, 9]=.
+  generator = TAT.random.uniform_int(0, 4)
+  print([generator() for _ in range(10)])
+  # Generate uniform distributed random real in =[-1, +1]=.
+  generator = TAT.random.uniform_real(-1, +1)
+  print([generator() for _ in range(10)])
+  # And normal distribution with $\mu=0, \sigma=2$.
+  generator = TAT.random.normal(0, 2)
+  print([generator() for _ in range(10)])
+#+end_src
+
+#+RESULTS:
+#+begin_example
+[0, 4, 4, 1, 2, 2, 2, 1, 0, 3]
+[-0.14092759016536094, -0.08462244818883502, 0.9629775447195739, -0.36778143279812037, 0.14071059784799678, -0.9461988098776835, -0.42065228922511544, 0.014462778869043014, -0.952394632542909, -0.7269948652715256]
+[-0.8028506463569834, 2.4676691747031656, 2.646095074776552, -2.238083341719702, 0.14214106921890607, 2.1826114150031, -2.0435554117053156, -0.2264418361658263, 2.4731844087444634, 5.112734591946312]
+#+end_example
+
+*** Import from and export to numpy array
+
+TAT can use [[https://docs.python.org/3/c-api/buffer.html][buffer protocol]] to transfer data from and to numpy.
+
+#+begin_src python :results output :exports both
+  import numpy as np
+  from TAT.No.D import Tensor
+
+  A = Tensor(["i", "j"], [3, 4]).zero()
+  # Export tensor to numpy array, which shape is [4, 3], because the
+  # dimension order is set as =["j", "i"]=, where "i" correspond to an
+  # edge with dimension 3 and "j" correspond to an edge with dimension
+  # 4, so the result shape is =(4, 3)=.
+  data_A = A.blocks[["j", "i"]]
+  print(data_A.shape)
+
+  # You can directly modify numpy array =data_A= to change data of tensor A,
+  # namely, numpy array and TAT tensor share the data.
+  data_A[1, 2] = 233
+  print(A)
+
+  # You can also direcly set =A.blocks[...]= to a numpy array.
+  A.blocks[["j", "i"]] = np.arange(3 * 4).reshape([4, 3])
+  print(A)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+(4, 3)
+{names:[i,j],edges:[3,4],blocks:[0,0,0,0,0,0,0,0,0,233,0,0]}
+{names:[i,j],edges:[3,4],blocks:[0,3,6,9,1,4,7,10,2,5,8,11]}
+#+end_example
+
+** FAQ
+
+*** I get error message like this when =import TAT=
+
+#+begin_example
+mca_base_component_repository_open: unable to open mca_patcher_overwrite: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_patcher_overwrite.so: undefined symbol: mca_patcher_base_patch_t_class (ignored)
+mca_base_component_repository_open: unable to open mca_shmem_posix: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_shmem_posix.so: undefined symbol: opal_shmem_base_framework (ignored)
+mca_base_component_repository_open: unable to open mca_shmem_mmap: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_shmem_mmap.so: undefined symbol: opal_show_help (ignored)
+mca_base_component_repository_open: unable to open mca_shmem_sysv: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_shmem_sysv.so: undefined symbol: opal_show_help (ignored)
+#+end_example
+
+It is a problem for some old mpi version(for example, openmpi 2.1.1 in ubuntu 18.04 LTS) if you compile mpi
+support into PyTAT, you need to load mpi dynamic shared library manually before =import TAT=,
+The way to load it manually is =import ctypes= and =ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)=.
+
+It is recommended to use =mpi4py= instead, not to compile mpi into PyTAT.
+
+*** I get error message like this when =import TAT=
+
+#+begin_example
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ImportError: /home/hzhangxyz/.local/lib/python3.10/site-packages/TAT.cpython-310-x86_64-linux-gnu.so: undefined symbol: cgesv_
+#+end_example
+
+It happens because you forgot to link =lapack= and =blas= when compile the library. You need to recompile it
+with correct compiling flags, *OR* add lapack/blas library path to environment variables =LD_PRELOAD=, just
+like =export LD_PRELOAD=/lib64/liblapack.so.3=, before running python directly.
