@@ -10,4 +10,16 @@ ext_modules = [
               extra_compile_args=["-std=c++17", "-g0"]),
 ]
 
-setup(name="PyTAT", version="0.2.0", ext_modules=ext_modules)
+setup(
+    name="PyTAT",
+    version="0.2.0",
+    description="python binding for TAT(TAT is A Tensor library)",
+    author="Hao Zhang",
+    author_email="zh970205@mail.ustc.edu.cn",
+    url="https://github.com/hzhangxyz/TAT",
+    ext_modules=ext_modules,
+    install_requires=[
+        "numpy",
+    ],
+    license="GPLv3",
+)
