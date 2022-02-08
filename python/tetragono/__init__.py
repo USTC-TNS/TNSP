@@ -31,4 +31,3 @@ from .tensor_element import tensor_element
 # Miscellaneous
 from . import common_variable
 from . import conversion
-from .gradient import gradient_descent

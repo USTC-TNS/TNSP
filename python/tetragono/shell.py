@@ -21,7 +21,9 @@ import cmd
 import pickle
 import importlib
 import TAT
-import tetragono as tet
+from . import common_variable
+from . import conversion
+from .gradient import gradient_descent
 
 
 class Config():
@@ -65,7 +67,7 @@ Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 """
-        if tet.common_variable.mpi_rank == 0:
+        if common_variable.mpi_rank == 0:
             self.intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + self.license
 
     def precmd(self, line):
@@ -87,9 +89,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Run shell command.
         """
-        if tet.common_variable.mpi_rank == 0:
+        if common_variable.mpi_rank == 0:
             os.system(line)
-        tet.common_variable.mpi_comm.barrier()
+        common_variable.mpi_comm.barrier()
 
     def do_EOF(self, line):
         """
@@ -160,10 +162,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su_dump(*config.args, **config.kwargs)
 
     def su_dump(self, name):
-        if tet.common_variable.mpi_rank == 0:
+        if common_variable.mpi_rank == 0:
             with open(name, "wb") as file:
                 pickle.dump(self.su, file)
-        tet.common_variable.mpi_comm.barrier()
+        common_variable.mpi_comm.barrier()
 
     def do_su_load(self, line):
         """
@@ -214,19 +216,19 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def su_energy(self, cut_dimension):
         self.su.initialize_auxiliaries(cut_dimension)
-        tet.common_variable.showln("Simple update lattice energy is", self.su.observe_energy())
+        common_variable.showln("Simple update lattice energy is", self.su.observe_energy())
 
     def do_su_to_ex(self, line):
         """
         Convert simple update lattice to exact lattice.
         """
-        self.ex = tet.conversion.simple_update_lattice_to_exact_state(self.su)
+        self.ex = conversion.simple_update_lattice_to_exact_state(self.su)
 
     def do_su_to_gm(self, line):
         """
         Convert simple update lattice to sampling lattice.
         """
-        self.gm = tet.conversion.simple_update_lattice_to_sampling_lattice(self.su)
+        self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
 
     def do_ex_update(self, line):
         """
@@ -249,7 +251,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Calculate exact energy.
         """
-        tet.common_variable.showln("Exact state energy is", self.ex.observe_energy())
+        common_variable.showln("Exact state energy is", self.ex.observe_energy())
 
     def do_ex_dump(self, line):
         """
@@ -264,10 +266,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex_dump(*config.args, **config.kwargs)
 
     def ex_dump(self, name):
-        if tet.common_variable.mpi_rank == 0:
+        if common_variable.mpi_rank == 0:
             with open(name, "wb") as file:
                 pickle.dump(self.ex, file)
-        tet.common_variable.mpi_comm.barrier()
+        common_variable.mpi_comm.barrier()
 
     def do_ex_load(self, line):
         """
@@ -290,7 +292,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         Do gradient descent. see gradient.py for details.
         """
         config = Config(line)
-        tet.gradient_descent(self.gm, *config.args, **config.kwargs)
+        gradient_descent(self.gm, *config.args, **config.kwargs)
 
     def do_gm_dump(self, line):
         """
@@ -305,10 +307,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_dump(*config.args, **config.kwargs)
 
     def gm_dump(self, name):
-        if tet.common_variable.mpi_rank == 0:
+        if common_variable.mpi_rank == 0:
             with open(name, "wb") as file:
                 pickle.dump(self.gm, file)
-        tet.common_variable.mpi_comm.barrier()
+        common_variable.mpi_comm.barrier()
 
     def do_gm_load(self, line):
         """
@@ -333,29 +335,41 @@ class TetragonoScriptApp(TetragonoCommandApp):
         super().__init__(*args, **kwargs)
         self.use_rawinput = False
         self.prompt = ""
-        if tet.common_variable.mpi_rank == 0:
+        if common_variable.mpi_rank == 0:
             self.intro = """Welcome to the Tetragono shell.""" + self.license
 
     def precmd(self, line):
         line = line.strip()
         line = super().precmd(line).strip()
         if line != "":
-            tet.common_variable.showln("TET> ", line, sep="")
+            common_variable.showln("TET> ", line, sep="")
         self.prompt = ""
         return line
 
 
 if __name__ == "__main__":
+    import os
     import sys
-    help_message = "Usage: tetra_run.py [script_file]"
+    help_message = """usage:
+    shell.py
+    shell.py [-h | -help | --help]
+    shell.py script_file
+    shell.py -- script"""
+    # Tetragono Path
+    if "TETPATH" in os.environ:
+        pathes = os.environ["TETPATH"]
+        for path in pathes.split(":"):
+            sys.path.append(os.path.abspath(path))
+    # Run
     if len(sys.argv) == 1:
         TetragonoCommandApp().cmdloop()
     elif len(sys.argv) == 2:
         script_file = sys.argv[1]
         if script_file in ["-h", "--help", "-help"]:
-            tet.common_variable.showln(help_message)
+            common_variable.showln(help_message)
         else:
             with open(sys.argv[1], 'rt') as file:
+                sys.path.append(os.path.dirname(os.path.abspath(sys.argv[1])))
                 TetragonoScriptApp(stdin=file).cmdloop()
     elif sys.argv[1] == "--":
         commands = " ".join(sys.argv[2:]).replace("-", "\n")
@@ -363,7 +377,7 @@ if __name__ == "__main__":
         file = StringIO(commands)
         TetragonoScriptApp(stdin=file).cmdloop()
     else:
-        tet.common_variable.showln("tetra_run: Error: unrecognized command-line option")
-        tet.common_variable.showln(help_message)
+        common_variable.showln("shell.py: Error: unrecognized command-line option")
+        common_variable.showln(help_message)
         exit(1)
-    tet.common_variable.mpi_comm.barrier()
+    common_variable.mpi_comm.barrier()
