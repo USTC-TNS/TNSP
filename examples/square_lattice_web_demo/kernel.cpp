@@ -35,14 +35,43 @@ auto SySy = Sy.edge_rename({{"I", "I1"}, {"O", "O1"}})
                   .to<double>();
 auto SS = SxSx + SySy + SzSz;
 
+using Name = TAT::DefaultName;
+
+template<typename Scalar>
+auto edge_rename(TAT::Tensor<Scalar> t, std::map<Name, Name> map) {
+   for (auto i = map.begin(); i != map.end();) {
+      auto found = std::find(t.names.begin(), t.names.end(), i->first);
+      if (found == t.names.end()) {
+         i = map.erase(i);
+      } else {
+         ++i;
+      }
+   }
+   return t.edge_rename(map);
+}
+
+template<typename Scalar>
+auto contract(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b, std::set<std::pair<Name, Name>> contract_names) {
+   for (auto i = contract_names.begin(); i != contract_names.end();) {
+      auto found_a = std::find(a.names.begin(), a.names.end(), i->first);
+      auto found_b = std::find(b.names.begin(), b.names.end(), i->second);
+      if (found_a == a.names.end() || found_b == b.names.end()) {
+         // Not exist this pair
+         i = contract_names.erase(i);
+      } else {
+         ++i;
+      }
+   }
+   return a.contract(b, std::move(contract_names));
+}
+
 template<typename Scalar>
 auto contract_all_edge(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b) {
-   using Name = TAT::DefaultName;
    auto contract_names = std::set<std::pair<Name, Name>>();
    for (const auto& i : a.names) {
       contract_names.insert({i, i});
    }
-   return a.contract(b, std::move(contract_names));
+   return contract(a, b, std::move(contract_names));
 }
 
 auto random_engine = std::default_random_engine(std::random_device()());
@@ -86,18 +115,18 @@ struct SpinLattice {
 
    template<typename Scalar>
    auto observe(const TAT::Tensor<Scalar>& op) const {
-      std::map<TAT::DefaultName, TAT::DefaultName> map;
+      std::map<Name, Name> map;
       for (const auto& n : op.names) {
          auto str = std::string(n);
          map["_" + str] = str;
       }
       if constexpr (TAT::is_complex<Scalar>) {
          auto v = state_vector.to<Scalar>();
-         Scalar value = Scalar(contract_all_edge(contract_all_edge(v, op).edge_rename(map), v));
+         Scalar value = Scalar(contract_all_edge(edge_rename(contract_all_edge(v, op), map), v));
          return value.real();
       } else {
          const auto& v = state_vector;
-         Scalar value = Scalar(contract_all_edge(contract_all_edge(v, op).edge_rename(map), v));
+         Scalar value = Scalar(contract_all_edge(edge_rename(contract_all_edge(v, op), map), v));
          return value;
       }
    }
