@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2021-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,11 +39,9 @@ def create(L1, L2, D, delta, omega, radius):
     state.physics_edges[...] = 2
 
     # hamiltonian
-    sigma = Tensor(["I0", "O0"], [2, 2])
-    sigma.blocks[sigma.names] = [[0, 1], [1, 0]]
-    n = Tensor(["I0", "O0"], [2, 2])
-    n.blocks[n.names] = [[0, 0], [0, 1]]
-    single_body_hamiltonian = sigma * omega / 2 - delta * n
+    sigma = tet.common_variable.No.pauli_x.to(float)
+    n = (tet.common_variable.No.identity.to(float) - tet.common_variable.No.pauli_z.to(float)) / 2
+    single_body_hamiltonian = omega * sigma / 2 - delta * n
     for l1 in range(L1):
         for l2 in range(L2):
             state.hamiltonians[(l1, l2, 0),] = single_body_hamiltonian
@@ -54,9 +52,11 @@ def create(L1, L2, D, delta, omega, radius):
                 for bl2 in range(L2):
                     if (al1, al2, 0) >= (bl1, bl2, 0):
                         continue
-                    distance = ((al1 - bl1)**2 + (al2 - bl2)**2)**0.5
-                    param = omega * ((radius / distance)**6)
-                    state.hamiltonians[(al1, al2, 0), (bl1, bl2, 0)] = param * nn
+                    dl1 = abs(al1 - bl1)
+                    dl2 = abs(al2 - bl2)
+                    distance = (dl1**2 + dl2**2)**0.5
+                    param = (radius / distance)**6
+                    state.hamiltonians[(al1, al2, 0), (bl1, bl2, 0)] = omega * param * nn
 
     state = tet.AbstractLattice(state)
     state.virtual_bond["R"] = D

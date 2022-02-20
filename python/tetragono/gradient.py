@@ -282,7 +282,7 @@ def gradient_descent(
             if measurement and mpi_rank == 0:
                 for measurement_name in measurement_names:
                     measurement_result = observer.result[measurement_name]
-                    measurement_modules[measurement_name].save_result(state, measurement_result)
+                    measurement_modules[measurement_name].save_result(state, measurement_result, grad_step)
             if use_gradient:
                 # Save log
                 if log_file and mpi_rank == 0:

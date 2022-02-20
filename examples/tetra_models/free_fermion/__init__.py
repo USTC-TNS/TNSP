@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2021-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,9 +21,21 @@ import tetragono as tet
 
 
 def create(L1, L2, D, T):
-    state = tet.AbstractState(TAT.Fermi.Z.Tensor, L1, L2)
-    state.physics_edges[...] = [0, 1]
-    CC = tet.common_variable.Fermi.CC.to(complex)
+    """
+    Create free fermion(no spin) lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    T : int
+        The total particle number.
+    """
+    state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
+    state.physics_edges[...] = tet.common_variable.Fermi.EF
+    CC = tet.common_variable.Fermi.CC.to(float)
     state.hamiltonians["vertical_bond"] = CC
     state.hamiltonians["horizontal_bond"] = CC
     state.total_symmetry = T

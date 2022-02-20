@@ -1,0 +1,1 @@
+$$H=-t \sum_{\langle i, j \rangle, \sigma} \left( c_{i\sigma}^\dagger c_{j\sigma} + h.c. \right) + U \sum_{i} \left( n_{i\uparrow} n_{i\downarrow} \right)$$

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2021-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,23 +20,12 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D):
-    """
-    Create heisenberg lattice.
+def measurement(state):
+    n = state.Tensor(["I0", "O0"], [2, 2])
+    n.blocks[n.names] = [[0, 0], [0, 1]]
+    return {((l1, l2, 0),): n for l1 in range(state.L1) for l2 in range(state.L2)}
 
-    Parameters
-    ----------
-    L1, L2 : int
-        The lattice size.
-    D : int
-        The cut dimension.
-    """
-    state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
-    state.physics_edges[...] = 2
-    state.hamiltonians["vertical_bond"] = tet.common_variable.No.SS
-    state.hamiltonians["horizontal_bond"] = tet.common_variable.No.SS
-    state = tet.AbstractLattice(state)
-    state.virtual_bond["R"] = D
-    state.virtual_bond["D"] = D
-    state = tet.SimpleUpdateLattice(state)
-    return state
+
+def save_result(state, result, step):
+    with open("n.log", "a") as file:
+        print(result, file=file)

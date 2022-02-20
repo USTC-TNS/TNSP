@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2021-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,59 +20,30 @@ import TAT
 import tetragono as tet
 
 
-class FakeEdge:
+def create(L1, L2, D, T, t, J):
+    """
+    Create tJ model lattice.
 
-    def __init__(self, direction):
-        self.direction = direction
-
-    def __getitem__(self, x):
-        return (list(x), self.direction)
-
-
-Fedge = FakeEdge(False)
-Tedge = FakeEdge(True)
-
-FE = ((0, 0), 0)
-FD = ((+1, -1), 0)
-FU = ((+1, +1), 0)
-TE = ((0, 0), 0)
-TD = ((-1, +1), 0)
-TU = ((-1, -1), 0)
-
-CC = TAT.FermiU1.D.Tensor(["O0", "O1", "I0", "I1"], [
-    Fedge[(0, 0), (+1, -1), (+1, +1)], Fedge[(0, 0), (+1, -1), (+1, +1)], Tedge[(0, 0), (-1, +1),
-                                                                                (-1, -1)], Tedge[(0, 0), (-1, +1),
-                                                                                                 (-1, -1)]
-]).zero()
-CC[{"O0": FD, "O1": FE, "I0": TE, "I1": TD}] = 1
-CC[{"O0": FU, "O1": FE, "I0": TE, "I1": TU}] = 1
-CC[{"O0": FE, "O1": FD, "I0": TD, "I1": TE}] = 1
-CC[{"O0": FE, "O1": FU, "I0": TU, "I1": TE}] = 1
-
-SS = CC.same_shape().zero().transpose(["O0", "I0", "O1", "I1"])
-# UUDD -1/2
-# DDUU -1/2
-# UDDU +1/2
-# DUUD +1/2
-SS[{"O0": FU, "I0": TU, "O1": FD, "I1": TD}] = -1 / 2
-SS[{"O0": FD, "I0": TD, "O1": FU, "I1": TU}] = -1 / 2
-SS[{"O0": FU, "I0": TD, "O1": FD, "I1": TU}] = +1 / 2
-SS[{"O0": FD, "I0": TU, "O1": FU, "I1": TD}] = +1 / 2
-
-t = 1
-J = 0.4
-
-H = (-t) * CC + J * SS
-# print(H.transpose(["O0", "O1", "I1", "I0"]).clear_symmetry().blocks[["O0", "O1", "I0", "I1"]].reshape([9, 9]))
-
-
-def create(L1, L2, D, T):
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    T : int
+        The half particle number.
+    t, J : float
+        tJ model parameters.
+    """
     state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
-    state.physics_edges[...] = [(0, 0), (+1, -1), (+1, +1)]  # empty, down, up
+    state.physics_edges[...] = tet.common_variable.FermiU1_tJ.EF
+    CC = tet.common_variable.FermiU1_tJ.CC.to(float)
+    SS = tet.common_variable.FermiU1_tJ.SS.to(float)
+    nn = tet.common_variable.FermiU1_tJ.nn.to(float)
+    H = (-t) * CC + (J / 2) * (SS - nn / 4)
     state.hamiltonians["vertical_bond"] = H
     state.hamiltonians["horizontal_bond"] = H
     state.total_symmetry = (T * 2, 0)  # T up and T down
-    print("total symmetry", state.total_symmetry)
     t = T / state.L1
 
     state = tet.AbstractLattice(state)

@@ -18,8 +18,7 @@
 
 import TAT
 
-CTensor = TAT.Fermi.Z.Tensor
-Tensor = TAT.Fermi.D.Tensor
+Tensor = TAT.Fermi.Z.Tensor
 
 
 class FakeEdge:
@@ -35,7 +34,24 @@ class FakeEdge:
 Fedge = FakeEdge(False)
 Tedge = FakeEdge(True)
 
-CC = Tensor(["O0", "O1", "I0", "I1"],
-            [Fedge[(0, 1), (1, 1)], Fedge[(0, 1), (1, 1)], Tedge[(0, 1), (-1, 1)], Tedge[(0, 1), (-1, 1)]]).zero()
-CC[{"O0": (1, 0), "O1": (0, 0), "I0": (0, 0), "I1": (-1, 0)}] = 1
-CC[{"O0": (0, 0), "O1": (1, 0), "I0": (-1, 0), "I1": (0, 0)}] = 1
+
+def rename_io(t, m):
+    res = {}
+    for i, j in m.items():
+        res[f"I{i}"] = f"I{j}"
+        res[f"O{i}"] = f"O{j}"
+    return t.edge_rename(res)
+
+
+EF = Fedge[0, 1]
+ET = Tedge[0, -1]
+
+CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[-1,]]).range(1, 0)
+CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[+1,]]).range(1, 0)
+C0C1 = rename_io(CP, {0: 0}).contract(rename_io(CM, {0: 1}), {("T", "T")})
+C1C0 = rename_io(CP, {0: 1}).contract(rename_io(CM, {0: 0}), {("T", "T")})
+CC = C0C1 + C1C0
+
+I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
+
+N = rename_io(CP, {0: 0}).contract(rename_io(CM, {0: 0}), {("T", "T"), ("I0", "O0")})

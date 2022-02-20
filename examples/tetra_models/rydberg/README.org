@@ -1,0 +1,1 @@
+$$H=\Omega \sum_{i < j} \left( R_b / R_{ij} \right)^6 n_i n_j - \Delta \sum_i n_i + \frac{\Omega}{2}\sum_i \sigma_i^x$$

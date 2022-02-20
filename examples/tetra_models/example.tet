@@ -25,4 +25,4 @@ gm_run               100 10 0.01 \
                      use_natural_gradient=True \
                      use_line_search=True \
                      log_file=run.log \
-                     measurement=kitaev_Sz
+                     measurement=kitaev.Sz

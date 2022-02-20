@@ -18,18 +18,28 @@
 
 import TAT
 
-CTensor = TAT.No.Z.Tensor
-Tensor = TAT.No.D.Tensor
+Tensor = TAT.No.Z.Tensor
 
-Sx = Tensor(["I0", "O0"], [2, 2])
-Sx.blocks[Sx.names] = [[0, 0.5], [0.5, 0]]
-Sy = CTensor(["I0", "O0"], [2, 2])
-Sy.blocks[Sy.names] = [[0, -0.5j], [0.5j, 0]]
-Sz = Tensor(["I0", "O0"], [2, 2])
-Sz.blocks[Sz.names] = [[0.5, 0], [0, -0.5]]
+identity = Tensor(["I0", "O0"], [2, 2])
+identity.blocks[identity.names] = [[1, 0], [0, 1]]
 
-SxSx = Sx.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sx, set()).to(float)
-SySy = Sy.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sy, set()).to(float)
-SzSz = Sz.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sz, set()).to(float)
+pauli_x = Tensor(["I0", "O0"], [2, 2])
+pauli_x.blocks[pauli_x.names] = [[0, 1], [1, 0]]
+Sx = pauli_x / 2
+
+pauli_y = Tensor(["I0", "O0"], [2, 2])
+pauli_y.blocks[pauli_y.names] = [[0, -1j], [1j, 0]]
+Sy = pauli_y / 2
+
+pauli_z = Tensor(["I0", "O0"], [2, 2])
+pauli_z.blocks[pauli_z.names] = [[1, 0], [0, -1]]
+Sz = pauli_z / 2
+
+pauli_x_pauli_x = pauli_x.edge_rename({"I0": "I1", "O0": "O1"}).contract(pauli_x, set())
+SxSx = Sx.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sx, set())
+pauli_y_pauli_y = pauli_y.edge_rename({"I0": "I1", "O0": "O1"}).contract(pauli_y, set())
+SySy = Sy.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sy, set())
+pauli_z_pauli_z = pauli_z.edge_rename({"I0": "I1", "O0": "O1"}).contract(pauli_z, set())
+SzSz = Sz.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sz, set())
 
 SS = SxSx + SySy + SzSz

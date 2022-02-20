@@ -400,7 +400,8 @@ class AbstractState:
 
         if points in self._hamiltonians:
             raise RuntimeError("This hamiltonian term is already set")
-        self._hamiltonians[points] = tensor
+        if tensor.norm_max() != 0:
+            self._hamiltonians[points] = tensor
 
     @property
     def site_number(self):

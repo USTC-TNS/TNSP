@@ -14,7 +14,6 @@
 /.mypy_cache
 /.cache
 /git-worktree
-/*.html
 /dist
 __pycache__
 ltximg
@@ -29,3 +28,4 @@ run.*
 *.tex
 *.pdf
 *.egg-info
+*.html

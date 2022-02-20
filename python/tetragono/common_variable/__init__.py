@@ -18,6 +18,8 @@
 
 from . import No
 from . import Fermi
+from . import FermiU1_tJ
+from . import Fermi_Hubbard
 
 clear_line = "\u001b[2K"
 
