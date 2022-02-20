@@ -127,7 +127,7 @@ class ExactState(AbstractState):
             self.vector.conjugate(), {(f"P_{i}_{j}_{orbit}", f"P_{i}_{j}_{orbit}") for i in range(self.L1)
                                       for j in range(self.L2)
                                       for orbit, edge in self.physics_edges[i, j].items()} | {("T", "T")})
-        return float(result)
+        return complex(result).real
 
     def observe_energy(self):
         """
