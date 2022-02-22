@@ -232,14 +232,15 @@ def gradient_descent(
         if use_natural_gradient:
             observer.enable_natural_gradient()
         need_reweight_observer = use_line_search or use_check_difference
-        if need_reweight_observer:
-            reweight_observer = Observer(state)
-            reweight_observer.add_energy()
-            reweight_observer.enable_gradient()
-            if cache_configuration:
-                reweight_observer.cache_configuration()
     else:
+        need_reweight_observer = False
         showln("do NOT calculate gradient")
+    if need_reweight_observer:
+        reweight_observer = Observer(state)
+        reweight_observer.add_energy()
+        reweight_observer.enable_gradient()
+        if cache_configuration:
+            reweight_observer.cache_configuration()
 
     # Sampling method
     if sampling_method == "sweep":
