@@ -312,7 +312,6 @@ namespace TAT {
       }
    } // namespace detail
 
-   /// \private
    template<typename ScalarType, typename Name, typename = std::enable_if_t<is_scalar<ScalarType> && is_name<Name>>>
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
@@ -320,7 +319,6 @@ namespace TAT {
          const std::set<std::pair<Name, Name>>& contract_names,
          const std::set<Name>& fuse_names);
 
-   /// \private
    template<
          typename ScalarType,
          typename Symmetry,

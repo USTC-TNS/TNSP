@@ -643,8 +643,16 @@ namespace TAT {
          const auto& [source_symmetries, source_offsets] = found->second;
 
          // get block, offset and leadings
-         const auto& source_block = blocks(source_symmetries);
-         auto& destination_block = result.blocks(destination_symmetries);
+         auto found_source_block = detail::fake_map_find(core->blocks, source_symmetries);
+         if (found_source_block == core->blocks.end()) {
+            continue;
+         }
+         const auto& source_block = found_source_block->second;
+         auto found_destination_block = detail::fake_map_find(result.core->blocks, destination_symmetries);
+         if (found_destination_block == result.core->blocks.end()) {
+            continue;
+         }
+         auto& destination_block = found_destination_block->second;
 
          Size total_source_offset = 0;
          for (auto i = 0; i < rank_before_split; i++) {
