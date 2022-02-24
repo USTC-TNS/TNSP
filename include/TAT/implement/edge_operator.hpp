@@ -124,7 +124,7 @@ namespace TAT {
       // after_split
       // flag and offset is spilt plan
       auto split_flag = pmr::vector<Rank>();
-      auto split_offset = pmr::vector<pmr::map<pmr::vector<Symmetry>, std::tuple<Symmetry, Size>>>();
+      auto split_offset = pmr::vector<pmr::vector<std::tuple<pmr::vector<Symmetry>, Symmetry, Size>>>();
       auto real_name_after_split = std::vector<Name>();
       auto edge_after_split = pmr::vector<EdgePointer<Symmetry>>();
       if (split_map.size() != 0) {
@@ -138,7 +138,9 @@ namespace TAT {
                // this edge is splitting
                const auto& this_split_begin_position_in_edge_after_split = edge_after_split.size();
                // the validity of edge after split is ensured by user
+               Size this_offset_length = 1;
                for (const auto& [split_name, split_edge] : position->second) {
+                  this_offset_length *= split_edge.segment.size();
                   real_name_after_split.push_back(split_name);
                   if constexpr (is_fermi) {
                      edge_after_split.push_back({split_edge.segment, edge_before_split[position_before_split].arrow});
@@ -153,10 +155,15 @@ namespace TAT {
                // loop between begin and end, get a map push_back into split_offset
                // this map is sym -> [sym] -> offset
                auto& this_offset = split_offset.emplace_back();
-               auto offset_bank = pmr::map<Symmetry, Size>(); // every sym contain several [sym], it is filled one by one
+               this_offset.reserve(this_offset_length);
+               auto offset_bank = pmr::vector<std::pair<Symmetry, Size>>(); // every sym contain several [sym], it is filled one by one
+               offset_bank.reserve(edge_before_split[position_before_split].segment.size());
                for (const auto& [sym, dim] : edge_before_split[position_before_split].segment) {
-                  offset_bank[sym] = 0;
+                  offset_bank.push_back({sym, 0});
                }
+               std::sort(offset_bank.begin(), offset_bank.end(), [&](const auto& a, const auto& b) {
+                  return std::get<0>(a) < std::get<0>(b);
+               });
                auto accumulated_symmetries = pmr::vector<Symmetry>(split_rank);
                auto accumulated_dimensions = pmr::vector<Size>(split_rank);
                auto current_symmetries = pmr::vector<Symmetry>(split_rank);
@@ -164,7 +171,8 @@ namespace TAT {
                      edge_after_split.data() + this_split_begin_position_in_edge_after_split,
                      split_rank,
                      [&this_offset]() {
-                        this_offset[pmr::vector<Symmetry>{}] = {Symmetry(), 0};
+                        // this_offset[pmr::vector<Symmetry>{}] = {Symmetry(), 0};
+                        this_offset.push_back({pmr::vector<Symmetry>{}, Symmetry(), 0});
                      },
                      []() {},
                      [&](const auto& symmetry_iterator_list, Rank minimum_changed) {
@@ -178,12 +186,16 @@ namespace TAT {
                         auto target_symmetry = accumulated_symmetries.back();
                         auto target_dimension = accumulated_dimensions.back();
                         // the target symmetry may not exist
-                        if (auto found = offset_bank.find(target_symmetry); found != offset_bank.end()) {
-                           this_offset[current_symmetries] = {target_symmetry, found->second};
+                        if (auto found = detail::fake_map_find<false>(offset_bank, target_symmetry); found != offset_bank.end()) {
+                           // this_offset[current_symmetries] = {target_symmetry, found->second};
+                           this_offset.push_back({current_symmetries, target_symmetry, found->second});
                            found->second += target_dimension;
                         }
                         return split_rank;
                      });
+               std::sort(this_offset.begin(), this_offset.end(), [&](const auto& a, const auto& b) {
+                  return std::get<0>(a) < std::get<0>(b);
+               });
             } else {
                // no split for this edge
                real_name_after_split.push_back(name_before_split[position_before_split]);
@@ -323,7 +335,7 @@ namespace TAT {
       // the last three things
       auto reversed_after_transpose_flag = pmr::vector<bool>();
       auto result_edge = std::vector<Edge<Symmetry>>();
-      auto merge_offset = pmr::vector<pmr::map<pmr::vector<Symmetry>, std::tuple<Symmetry, Size>>>();
+      auto merge_offset = pmr::vector<pmr::vector<std::tuple<pmr::vector<Symmetry>, Symmetry, Size>>>();
       if (merge_map.size() != 0) {
          if constexpr (is_fermi) {
             reversed_after_transpose_flag.reserve(rank_at_transpose);
@@ -332,7 +344,9 @@ namespace TAT {
          merge_offset.reserve(rank_after_merge);
          for (Rank position_after_merge = 0, start_of_merge = 0, end_of_merge = 0; position_after_merge < rank_after_merge; position_after_merge++) {
             // [start, end) need be merged into one edge
+            Size this_offset_length = 1;
             while (end_of_merge < rank_at_transpose && merge_flag[end_of_merge] == position_after_merge) {
+               this_offset_length *= edge_before_merge[end_of_merge].segment.size();
                end_of_merge++;
             }
             // arrow begin
@@ -362,6 +376,7 @@ namespace TAT {
             // result edge and offset
             auto merged_edge = std::vector<std::pair<Symmetry, Size>>();
             auto& this_offset = merge_offset.emplace_back();
+            this_offset.reserve(this_offset_length);
 
             const Rank merge_rank = end_of_merge - start_of_merge;
             auto accumulated_symmetries = pmr::vector<Symmetry>(merge_rank);
@@ -374,7 +389,8 @@ namespace TAT {
                      merge_rank,
                      [&merged_edge, &this_offset]() {
                         merged_edge.push_back({Symmetry(), 1});
-                        this_offset[pmr::vector<Symmetry>{}] = {Symmetry(), 0};
+                        // this_offset[pmr::vector<Symmetry>{}] = {Symmetry(), 0};
+                        this_offset.push_back({pmr::vector<Symmetry>{}, Symmetry(), 0});
                      },
                      []() {},
                      [&](const auto& symmetry_iterator_list, const Rank minimum_changed) {
@@ -393,10 +409,14 @@ namespace TAT {
                            merged_edge.push_back({target_symmetry, 0});
                            found = std::prev(merged_edge.end());
                         }
-                        this_offset[current_symmetries] = {target_symmetry, found->second};
+                        // this_offset[current_symmetries] = {target_symmetry, found->second};
+                        this_offset.push_back({current_symmetries, target_symmetry, found->second});
                         found->second += accumulated_dimensions.back();
                         return merge_rank;
                      });
+               std::sort(this_offset.begin(), this_offset.end(), [&](const auto& a, const auto& b) {
+                  return std::get<0>(a) < std::get<0>(b);
+               });
                auto& real_merged_edge = result_edge.emplace_back(std::move(merged_edge));
                if constexpr (is_fermi) {
                   real_merged_edge.arrow = arrow;
@@ -455,14 +475,15 @@ namespace TAT {
       // reversed_after_transpose_flag_mark
       // merge_flag_mark
 
-      using MapFromTransposeToSourceDestination = pmr::map<pmr::vector<Symmetry>, std::tuple<pmr::vector<Symmetry>, pmr::vector<Size>>>;
+      using MapFromTransposeToSourceDestination = pmr::vector<std::tuple<pmr::vector<Symmetry>, pmr::vector<Symmetry>, pmr::vector<Size>>>;
       // split part
       auto data_before_transpose_to_source = MapFromTransposeToSourceDestination();
       if (split_map.size() != 0) {
          // if some edge is cut, some symmetries list should not appear in the data_before_transpose_to_source
          // so main copy loop should be loop by data_after_transpose_to_destination
-         for (auto& [symmetries_before_transpose, size] :
-              initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_after_split.data(), edge_after_split.size())) {
+         auto map_pool = initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_after_split.data(), edge_after_split.size());
+         data_before_transpose_to_source.reserve(map_pool.size());
+         for (auto& [symmetries_before_transpose, size] : map_pool) {
             // convert sym -> target_sym and offsets
             // and add to map
             auto symmetries = pmr::vector<Symmetry>();
@@ -480,9 +501,10 @@ namespace TAT {
                // if no split happened, do not use split_offset
                if (split_group_symmetries.size() != 1) {
                   // if it is empty split, split_group_symmetries = {}, it also work
-                  if (auto found = split_offset[position_before_split].find(split_group_symmetries);
+                  if (auto found = detail::fake_map_find(split_offset[position_before_split], split_group_symmetries);
                       found != split_offset[position_before_split].end()) {
-                     const auto& [this_symmetry, this_offset] = found->second;
+                     const auto& this_symmetry = std::get<1>(*found);
+                     const auto& this_offset = std::get<2>(*found);
                      symmetries.push_back(this_symmetry);
                      offsets.push_back(this_offset);
                   } else {
@@ -495,22 +517,28 @@ namespace TAT {
                }
             }
             if (success) {
-               data_before_transpose_to_source[symmetries_before_transpose] = {std::move(symmetries), std::move(offsets)};
+               data_before_transpose_to_source.push_back({std::move(symmetries_before_transpose), std::move(symmetries), std::move(offsets)});
             }
          }
       } else {
          // no split indeed
+         data_before_transpose_to_source.reserve(core->blocks.size());
          for (const auto& [symmetries, block] : core->blocks) {
-            data_before_transpose_to_source[pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()}] = {
-                  pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
-                  pmr::vector<Size>(rank_before_split, 0)};
+            data_before_transpose_to_source.push_back(
+                  {pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
+                   pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
+                   pmr::vector<Size>(rank_before_split, 0)});
          }
       }
+      std::sort(data_before_transpose_to_source.begin(), data_before_transpose_to_source.end(), [&](const auto& a, const auto& b) {
+         return std::get<0>(a) < std::get<0>(b);
+      });
       // merge part
       auto data_after_transpose_to_destination = MapFromTransposeToSourceDestination();
       if (merge_map.size() != 0) {
-         for (auto& [symmetries_after_transpose, size] :
-              initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_before_merge.data(), edge_before_merge.size())) {
+         auto map_pool = initialize_block_symmetries_with_check<detail::polymorphic_allocator>(edge_before_merge.data(), edge_before_merge.size());
+         data_after_transpose_to_destination.reserve(map_pool.size());
+         for (auto& [symmetries_after_transpose, size] : map_pool) {
             // convert sym -> target_sym and offsets
             // and add to map
             auto symmetries = pmr::vector<Symmetry>();
@@ -527,9 +555,10 @@ namespace TAT {
                }
                // if no merge happened, do not use merge_offset
                if (merge_group_symmetries.size() != 1) {
-                  if (auto found = merge_offset[position_after_merge].find(merge_group_symmetries);
+                  if (auto found = detail::fake_map_find(merge_offset[position_after_merge], merge_group_symmetries);
                       found != merge_offset[position_after_merge].end()) {
-                     const auto& [this_symmetry, this_offset] = found->second;
+                     const auto& this_symmetry = std::get<1>(*found);
+                     const auto& this_offset = std::get<2>(*found);
                      symmetries.push_back(this_symmetry);
                      offsets.push_back(this_offset);
                   } else {
@@ -542,17 +571,20 @@ namespace TAT {
                }
             }
             if (success) {
-               data_after_transpose_to_destination[symmetries_after_transpose] = {std::move(symmetries), std::move(offsets)};
+               data_after_transpose_to_destination.push_back({std::move(symmetries_after_transpose), std::move(symmetries), std::move(offsets)});
             }
          }
       } else {
          // no merge indeed
+         data_after_transpose_to_destination.reserve(result.core->blocks.size());
          for (const auto& [symmetries, block] : result.core->blocks) {
-            data_after_transpose_to_destination[pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()}] = {
-                  pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
-                  pmr::vector<Size>(rank_after_merge, 0)};
+            data_after_transpose_to_destination.push_back(
+                  {pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
+                   pmr::vector<Symmetry>{symmetries.begin(), symmetries.end()},
+                   pmr::vector<Size>(rank_after_merge, 0)});
          }
       }
+      // not need to sort data_after_transpose_to_destination
 
       // marks
       auto split_flag_mark = pmr::vector<bool>();
@@ -604,7 +636,7 @@ namespace TAT {
       }
 
       // Main copy loop
-      for (const auto& [symmetries_after_transpose, destination_symmetries_and_offsets] : data_after_transpose_to_destination) {
+      for (const auto& [symmetries_after_transpose, destination_symmetries, destination_offsets] : data_after_transpose_to_destination) {
          // Table of transpose info
          //                   source                     destination
          // symmetries        symmetry[before_split]     symmetry[after_merge]
@@ -621,7 +653,6 @@ namespace TAT {
          // leadings
          // leadings_of_source[before_split] -> leadings_before_transpose[at_transpose]
          // leadings_of_destination[after_merge] -> leadings_after_transpose[at_transpose]
-         const auto& [destination_symmetries, destination_offsets] = destination_symmetries_and_offsets;
 
          auto symmetries_before_transpose = pmr::vector<Symmetry>(rank_at_transpose);
          auto dimensions_after_transpose = pmr::vector<Size>(rank_at_transpose);
@@ -636,11 +667,12 @@ namespace TAT {
          }
 
          // split may generate a empty block
-         auto found = data_before_transpose_to_source.find(symmetries_before_transpose);
+         auto found = detail::fake_map_find(data_before_transpose_to_source, symmetries_before_transpose);
          if (found == data_before_transpose_to_source.end()) {
             continue;
          }
-         const auto& [source_symmetries, source_offsets] = found->second;
+         const auto& source_symmetries = std::get<1>(*found);
+         const auto& source_offsets = std::get<2>(*found);
 
          // get block, offset and leadings
          auto found_source_block = detail::fake_map_find(core->blocks, source_symmetries);
