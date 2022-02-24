@@ -18,7 +18,7 @@
 
 import TAT
 from . import Fermi
-from .Fermi import Tensor, rename_io, CC, I, N
+from .Fermi import Tensor, rename_io, CC, I, N, C0C1, C1C0
 
 
 def dot(res, *b):
@@ -51,6 +51,7 @@ CSCS = dot(
     rename_io(I, {0: 0}),
     rename_io(I, {0: 1}),
 )
+# Merge order: Up, Down
 CSCS = CSCS.merge_edge({
     "I0": ["I0", "I2"],
     "O0": ["O0", "O2"],
@@ -60,6 +61,23 @@ CSCS = CSCS.merge_edge({
 
 NN = dot(rename_io(N, {0: 0}), rename_io(N, {0: 1}))
 NN = NN.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+}, put_sign_in_H, {"O0"})
+
+CUCD = C0C1.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+}, put_sign_in_H, {"O0"})
+CDCU = C1C0.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+}, put_sign_in_H, {"O0"})
+CUCU = dot(rename_io(N, {0: 0}), rename_io(I, {0: 1})).merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+}, put_sign_in_H, {"O0"})
+CDCD = dot(rename_io(I, {0: 0}), rename_io(N, {0: 1})).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
