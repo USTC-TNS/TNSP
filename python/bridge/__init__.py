@@ -80,16 +80,23 @@ def bridge(getline):
     flag = getline()
     if flag == " T T T T":
         return bridge_fermi(getline)
+    elif flag == " T T T F":
+        return bridge_fermi(getline, named=False)
     elif flag == " T F F T":
         return bridge_no(getline)
+    elif flag == " T F F F":
+        return bridge_no(getline, named=False)
     raise RuntimeError("bridge error")
 
 
-def bridge_no(getline):
+def bridge_no(getline, named=True):
     read_empty(getline)
     read_empty(getline)
     _, [dimensions] = read_block(getline)
-    names = getline().split()
+    if named:
+        names = getline().split()
+    else:
+        names = [f"UnnamedEdge{i}" for i in range(len(dimensions))]
 
     content_type, content = read_block(getline)
     tensor_type = TAT(content_type)
@@ -101,7 +108,7 @@ def bridge_no(getline):
     return tensor
 
 
-def bridge_fermi(getline):
+def bridge_fermi(getline, named=True):
     _, symmetry = read_block(getline)
     _, dimension = read_block(getline)
     _, [block_number, arrow] = read_block(getline)
@@ -113,7 +120,10 @@ def bridge_fermi(getline):
             raise RuntimeError("bridge error")
     arrow = [False if i == 1 else True for i in arrow]
     edges = [([(int(s), d) for s, d in zip(symmetry[i], dimension[i])], arrow[i]) for i in range(rank)]
-    names = getline().split()
+    if named:
+        names = getline().split()
+    else:
+        names = [f"UnnamedEdge{i}" for i in range(len(dimensions))]
 
     content_type, content = read_block(getline)
     tensor_type = TAT(content_type, "Fermi")
