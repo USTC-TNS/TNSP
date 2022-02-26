@@ -29,6 +29,12 @@ t = [float(line.split()[1]) for line in info_data if line.split()[0] == "t"][0]
 U = [float(line.split()[1]) for line in info_data if line.split()[0] == "U"][0]
 print(f" lattice {L1}x{L2}, t={t}, U={U}")
 
+
+def try_rename_env(tensor):
+    if tensor != None:
+        return tensor.edge_rename({"Lambda.D": "D", "Lambda.U": "U", "Lambda.L": "L", "Lambda.R": "R"})
+
+
 pool = {}
 for i in range(L1):
     for j in range(L2):
@@ -45,15 +51,14 @@ for i in range(L1):
             f"{site_name}.TotalN": "T"
         })
         pool[i, j, "s"] = site
-        rename_env = {"Lambda.D": "D", "Lambda.U": "U", "Lambda.L": "L", "Lambda.R": "R"}
         print(f"  reading env tensor u")
-        pool[i, j, "u"] = bridge(data.pop).edge_rename(rename_env)
+        pool[i, j, "u"] = try_rename_env(bridge(data.pop))
         print(f"  reading env tensor d")
-        pool[i, j, "d"] = bridge(data.pop).edge_rename(rename_env)
+        pool[i, j, "d"] = try_rename_env(bridge(data.pop))
         print(f"  reading env tensor r")
-        pool[i, j, "r"] = bridge(data.pop).edge_rename(rename_env)
+        pool[i, j, "r"] = try_rename_env(bridge(data.pop))
         print(f"  reading env tensor l")
-        pool[i, j, "l"] = bridge(data.pop).edge_rename(rename_env)
+        pool[i, j, "l"] = try_rename_env(bridge(data.pop))
 
 for i in range(L1):
     for j in range(L2):

@@ -23,10 +23,21 @@ import TAT
 
 def read_block(getline):
     """
-    Read single block, used in many style, like tensor shape or tensor content.
+    Read single block.
     """
-    if getline() != " readable_data T":
+    head = getline()
+    if head == " readable_data T":
+        return read_data(getline)
+    elif head == " readable_data F":
+        return read_empty(getline)
+    else:
         raise RuntimeError("format error")
+
+
+def read_data(getline):
+    """
+    Read single unempty block, used in many style, like tensor shape or tensor content.
+    """
     value_type, total_number, block_number, _ = (int(i) for i in getline().split())
     block_begin = [int(i) for i in getline().split()]
     block_end = [int(i) for i in getline().split()]
@@ -57,10 +68,9 @@ def read_empty(getline):
     """
     Read single empty block.
     """
-    if getline() != " readable_data F":
-        raise RuntimeError("format error")
     if getline() != " Empty DataArray":
         raise RuntimeError("format error")
+    return None, None
 
 
 def bridge(getline):
@@ -90,8 +100,8 @@ def bridge(getline):
 
 
 def bridge_no(getline, named=True):
-    read_empty(getline)
-    read_empty(getline)
+    read_block(getline)
+    read_block(getline)
     _, [dimensions] = read_block(getline)
     if named:
         names = getline().split()
@@ -99,6 +109,8 @@ def bridge_no(getline, named=True):
         names = [f"UnnamedEdge{i}" for i in range(len(dimensions))]
 
     content_type, content = read_block(getline)
+    if content_type == None:
+        return
     tensor_type = TAT(content_type)
     tensor = tensor_type(names, dimensions).zero()
     names.reverse()
@@ -126,6 +138,8 @@ def bridge_fermi(getline, named=True):
         names = [f"UnnamedEdge{i}" for i in range(len(dimensions))]
 
     content_type, content = read_block(getline)
+    if content_type == None:
+        return
     tensor_type = TAT(content_type, "Fermi")
     tensor = tensor_type(names, edges).zero()
     names.reverse()
