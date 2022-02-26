@@ -1,0 +1,5 @@
+SavingData/*
+outputSave/*
+state.dat
+!SavingData/.gitkeep
+!outputSave/.gitkeep
