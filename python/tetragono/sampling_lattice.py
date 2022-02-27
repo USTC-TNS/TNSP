@@ -23,6 +23,7 @@ import lazy
 import TAT
 from .auxiliaries import Auxiliaries
 from .double_layer_auxiliaries import DoubleLayerAuxiliaries
+from .three_line_auxiliaries import ThreeLineAuxiliaries
 from .abstract_lattice import AbstractLattice
 from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, allreduce_lattice_buffer, allreduce_buffer
 from .tensor_element import tensor_element
@@ -1304,8 +1305,7 @@ class DirectSampling(Sampling):
         possibility = 1.
         for l1 in range(owner.L1):
 
-            three_line_auxiliaries = DoubleLayerAuxiliaries(3, owner.L2, self._cut_dimension, True, owner.Tensor)
-            line_3 = []
+            three_line_auxiliaries = ThreeLineAuxiliaries(owner.L2, owner.Tensor)
             for l2 in range(owner.L2):
                 tensor_1 = configuration._up_to_down_site[l1 - 1, l2]()
                 three_line_auxiliaries[0, l2, "n"] = tensor_1
@@ -1313,15 +1313,14 @@ class DirectSampling(Sampling):
                 tensor_2 = owner[l1, l2]
                 three_line_auxiliaries[1, l2, "n"] = tensor_2
                 three_line_auxiliaries[1, l2, "c"] = tensor_2.conjugate()
-                line_3.append(self._double_layer_auxiliaries._down_to_up_site[l1 + 1, l2]())
-            three_line_auxiliaries._down_to_up[2].reset(line_3)
+                three_line_auxiliaries[2, l2] = self._double_layer_auxiliaries._down_to_up_site[l1 + 1, l2]()
 
             for l2 in range(owner.L2):
                 shrinked_site_tensor = owner[l1, l2]
                 config = {}
                 shrinkers = configuration._get_shrinker((l1, l2), config)
                 for orbit, edge in owner.physics_edges[l1, l2].items():
-                    hole = three_line_auxiliaries.hole([(1, l2, orbit)]).transpose(["I0", "O0"])
+                    hole = three_line_auxiliaries.hole(l2, orbit).transpose(["I0", "O0"])
                     hole_edge = hole.edges("O0")
                     rho = np.array([])
                     for seg in hole_edge.segment:
