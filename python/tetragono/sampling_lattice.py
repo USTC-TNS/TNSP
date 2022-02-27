@@ -1304,7 +1304,7 @@ class DirectSampling(Sampling):
         possibility = 1.
         for l1 in range(owner.L1):
 
-            three_line_auxiliaries = DoubleLayerAuxiliaries(3, owner.L2, -1, True, owner.Tensor)
+            three_line_auxiliaries = DoubleLayerAuxiliaries(3, owner.L2, self._cut_dimension, True, owner.Tensor)
             line_3 = []
             for l2 in range(owner.L2):
                 tensor_1 = configuration._up_to_down_site[l1 - 1, l2]()

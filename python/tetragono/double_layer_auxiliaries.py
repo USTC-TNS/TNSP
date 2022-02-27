@@ -420,56 +420,81 @@ class DoubleLayerAuxiliaries:
         down_c = down + "C"
         left0 = left + "0"
         left1 = left + "1"
-        left2 = left + "2"
         right0 = right + "0"
         right1 = right + "1"
-        right2 = right + "2"
 
         length = len(line_1)
         if len(line_1) != len(line_2):
             raise ValueError("Different Length in Two Line to One Line")
 
+        # do approximation in two stage which can reduce the time complexity.
         # contract line_1 with one part of line_2 first then, contract to another part is faster
-        # than contracting two parts of line_2 first, then contract into line_1
-        double_line = []
+        # than contracting two parts of line_2 first, then contract into line_1.
+        # line_1[i]: L, R, DN, DC
+        # line_2[i][0]: L, R, U, D, P
+        # line_2[i][1]: L, R, U, D, P
+
+        # Stage 1:
+        stage_1 = []
         for i in range(length):
-            # line_1[i]: L, R, DN, DC
-            # line_2[i][0]: L, R, U, D, P
-            # line_2[i][1]: L, R, U, D, P
-            this_site = safe_contract(safe_rename(line_1[i], {
-                left: left2,
-                right: right2
-            }), safe_rename(line_2[i][0], {
-                left: left0,
-                right: right0,
-                down: down_n
-            }), {(down_n, up)})
-            this_site = safe_contract(this_site,
-                                      safe_rename(line_2[i][1], {
-                                          left: left1,
-                                          right: right1,
-                                          down: down_c
-                                      }), {("T", "T"), (down_c, up)},
-                                      contract_all_physics_edges=True)
-            double_line.append(this_site)
+            this_site = safe_contract(
+                safe_rename(line_1[i], {
+                    left: left1,
+                    right: right1
+                }),
+                safe_rename(line_2[i][0], {
+                    left: left0,
+                    right: right0,
+                    down: down_n
+                }),
+                {(down_n, up)},
+            )
+
+            stage_1.append(this_site)
 
         for i in range(length - 1):
-            q, r = double_line[i].qr("R",
-                                     {r_name for r_name in (right1, right2, right0) if r_name in double_line[i].names},
-                                     right, left)
-            double_line[i] = q
-            double_line[i + 1] = safe_contract(double_line[i + 1], r, {(left1, right1), (left2, right2),
-                                                                       (left0, right0)})
+            q, r = stage_1[i].qr("R", {r_name for r_name in (right1, right0) if r_name in stage_1[i].names}, right,
+                                 left)
+            stage_1[i] = q
+            stage_1[i + 1] = safe_contract(stage_1[i + 1], r, {(left1, right1), (left0, right0)})
 
         for i in reversed(range(1, length)):
-            [u, s, v] = double_line[i].svd({left}, right, left, left, right, cut)
+            [u, s, v] = stage_1[i].svd({left}, right, left, left, right, cut)
             if normalize:
                 s /= s.norm_sum()
-            double_line[i] = v
-            double_line[i - 1] = safe_contract(safe_contract(double_line[i - 1], u, {(right, left)}), s,
-                                               {(right, left)})
+            stage_1[i] = v
+            stage_1[i - 1] = safe_contract(safe_contract(stage_1[i - 1], u, {(right, left)}), s, {(right, left)})
 
-        return double_line
+        # Stage 2:
+        stage_2 = []
+        for i in range(length):
+            this_site = safe_contract(
+                stage_1[i].edge_rename({
+                    left: left1,
+                    right: right1
+                }),
+                safe_rename(line_2[i][1], {
+                    left: left0,
+                    right: right0,
+                    down: down_c
+                }),
+                {("T", "T"), (down_c, up)},
+                contract_all_physics_edges=True,
+            )
+            stage_2.append(this_site)
+        for i in range(length - 1):
+            q, r = stage_2[i].qr("R", {r_name for r_name in (right1, right0) if r_name in stage_2[i].names}, right,
+                                 left)
+            stage_2[i] = q
+            stage_2[i + 1] = safe_contract(stage_2[i + 1], r, {(left1, right1), (left0, right0)})
+
+        for i in reversed(range(1, length)):
+            [u, s, v] = stage_2[i].svd({left}, right, left, left, right, cut)
+            if normalize:
+                s /= s.norm_sum()
+            stage_2[i] = v
+            stage_2[i - 1] = safe_contract(safe_contract(stage_2[i - 1], u, {(right, left)}), s, {(right, left)})
+        return stage_2
 
     def hole(self, positions, *, hint=None):
         coordinates = []
