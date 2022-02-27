@@ -23,6 +23,8 @@ import importlib
 import TAT
 from . import common_variable
 from . import conversion
+from .simple_update_lattice import SimpleUpdateLattice
+from .sampling_lattice import SamplingLattice
 from .gradient import gradient_descent
 
 
@@ -126,7 +128,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def seed(self, seed):
         TAT.random.seed(seed)
 
-    def do_su_create(self, line):
+    def _do_create(self, line, lattice_type):
         """
         Create a lattice used for simple update.
 
@@ -141,13 +143,30 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         model = importlib.import_module(config.args[0])
         if len(config.args) == 2 and config.args[-1] == "help":
             print(model.create.__doc__.replace("\n", "\n    "))
+            return
         else:
-            self.su = model.create(*config.args[1:], **config.kwargs)
+            state = lattice_type(model.create(*config.args[1:], **config.kwargs))
 
         # pre normalize the tensor
-        for l1 in range(self.su.L1):
-            for l2 in range(self.su.L2):
-                self.su[l1, l2] /= self.su[l1, l2].norm_max()
+        for l1 in range(state.L1):
+            for l2 in range(state.L2):
+                state[l1, l2] /= state[l1, l2].norm_max()
+        return state
+
+    def do_su_create(self, line):
+        """
+        Create a lattice used for simple update.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        state = self._do_create(line, SimpleUpdateLattice)
+        if state != None:
+            self.su = state
 
     def do_su_dump(self, line):
         """
@@ -286,6 +305,21 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def ex_load(self, name):
         with open(name, "rb") as file:
             self.ex = pickle.load(file)
+
+    def do_gm_create(self, line):
+        """
+        Create a lattice used for gradient method.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        state = self._do_create(line, SamplingLattice)
+        if state != None:
+            self.gm = state
 
     def do_gm_run(self, line):
         """

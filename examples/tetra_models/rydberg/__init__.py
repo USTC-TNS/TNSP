@@ -61,5 +61,4 @@ def create(L1, L2, D, delta, omega, radius):
     state = tet.AbstractLattice(state)
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
-    state = tet.SimpleUpdateLattice(state)
     return state

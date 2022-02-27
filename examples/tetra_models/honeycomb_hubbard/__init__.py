@@ -73,5 +73,4 @@ def create(L1, L2, D, T, t, U):
             Q = int(tt * (state.L2 - l2 - 1) / state.L2)
             state.virtual_bond[l1, l2, "R"] = [(Q - 1, D), (Q, D), (Q + 1, D)]
 
-    state = tet.SimpleUpdateLattice(state)
     return state

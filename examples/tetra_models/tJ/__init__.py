@@ -62,5 +62,4 @@ def create(L1, L2, D, T, t, J):
                                                ((2 * Q, -2), D), ((2 * Q, 0), D), ((2 * Q, +2), D),
                                                ((2 * Q + 1, -1), D), ((2 * Q + 1, +1), D), ((2 * Q + 2, 0), D)]
 
-    state = tet.SimpleUpdateLattice(state)
     return state
