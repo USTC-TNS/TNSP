@@ -50,11 +50,12 @@ class ExactState(AbstractState):
             The state vector
         """
         names = [
-            f"P_{i}_{j}_{orbit}" for i in range(self.L1) for j in range(self.L2)
-            for orbit, edge in self.physics_edges[i, j].items()
+            f"P_{l1}_{l2}_{orbit}" for l1 in range(self.L1) for l2 in range(self.L2)
+            for orbit, edge in self.physics_edges[l1, l2].items()
         ]
         edges = [
-            edge for i in range(self.L1) for j in range(self.L2) for orbit, edge in self.physics_edges[i, j].items()
+            edge for l1 in range(self.L1) for l2 in range(self.L2)
+            for orbit, edge in self.physics_edges[l1, l2].items()
         ]
         names.append("T")
         edges.append(self._total_symmetry_edge)
@@ -121,12 +122,12 @@ class ExactState(AbstractState):
             result = self.vector
         else:
             result = self.vector.contract(
-                observer.edge_rename({f"O{t}": f"P_{i}_{j}_{orbit}" for t, [i, j, orbit] in enumerate(positions)}),
-                {(f"P_{i}_{j}_{orbit}", f"I{t}") for t, [i, j, orbit] in enumerate(positions)})
+                observer.edge_rename({f"O{t}": f"P_{l1}_{l2}_{orbit}" for t, [l1, l2, orbit] in enumerate(positions)}),
+                {(f"P_{l1}_{l2}_{orbit}", f"I{t}") for t, [l1, l2, orbit] in enumerate(positions)})
         result = result.contract(
-            self.vector.conjugate(), {(f"P_{i}_{j}_{orbit}", f"P_{i}_{j}_{orbit}") for i in range(self.L1)
-                                      for j in range(self.L2)
-                                      for orbit, edge in self.physics_edges[i, j].items()} | {("T", "T")})
+            self.vector.conjugate(), {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.L1)
+                                      for l2 in range(self.L2)
+                                      for orbit, edge in self.physics_edges[l1, l2].items()} | {("T", "T")})
         return complex(result).real
 
     def observe_energy(self):

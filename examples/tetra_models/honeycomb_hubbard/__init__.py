@@ -37,28 +37,28 @@ def create(L1, L2, D, T, t, U):
     """
     state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
     state.total_symmetry = T
-    for i in range(L1):
-        for j in range(L2):
-            if (i, j) != (0, 0):
-                state.physics_edges[i, j, 0] = [(0, 1), (1, 2), (2, 1)]
-            if (i, j) != (L1 - 1, L2 - 1):
-                state.physics_edges[i, j, 1] = [(0, 1), (1, 2), (2, 1)]
+    for l1 in range(L1):
+        for l2 in range(L2):
+            if (l1, l2) != (0, 0):
+                state.physics_edges[l1, l2, 0] = [(0, 1), (1, 2), (2, 1)]
+            if (l1, l2) != (L1 - 1, L2 - 1):
+                state.physics_edges[l1, l2, 1] = [(0, 1), (1, 2), (2, 1)]
     NN = tet.common_variable.Fermi_Hubbard.NN.to(float)
     CSCS = tet.common_variable.Fermi_Hubbard.CSCS.to(float)
     UNN = U * NN
     tCSCS = -t * CSCS
-    for i in range(L1):
-        for j in range(L2):
-            if (i, j) != (0, 0):
-                state.hamiltonians[(i, j, 0),] = UNN
-            if (i, j) != (L1 - 1, L2 - 1):
-                state.hamiltonians[(i, j, 1),] = UNN
-            if (i, j) != (0, 0) and (i, j) != (L1 - 1, L2 - 1):
-                state.hamiltonians[(i, j, 0), (i, j, 1)] = tCSCS
-            if i != 0:
-                state.hamiltonians[(i - 1, j, 1), (i, j, 0)] = tCSCS
-            if j != 0:
-                state.hamiltonians[(i, j - 1, 1), (i, j, 0)] = tCSCS
+    for l1 in range(L1):
+        for l2 in range(L2):
+            if (l1, l2) != (0, 0):
+                state.hamiltonians[(l1, l2, 0),] = UNN
+            if (l1, l2) != (L1 - 1, L2 - 1):
+                state.hamiltonians[(l1, l2, 1),] = UNN
+            if (l1, l2) != (0, 0) and (l1, l2) != (L1 - 1, L2 - 1):
+                state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = tCSCS
+            if l1 != 0:
+                state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = tCSCS
+            if l2 != 0:
+                state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = tCSCS
 
     state = tet.AbstractLattice(state)
     tt = T / state.L1

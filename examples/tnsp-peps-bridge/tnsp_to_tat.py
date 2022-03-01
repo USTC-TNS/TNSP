@@ -36,11 +36,11 @@ def try_rename_env(tensor):
 
 
 pool = {}
-for i in range(L1):
-    for j in range(L2):
-        print(f" reading site {i},{j}")
+for l1 in range(L1):
+    for l2 in range(L2):
+        print(f" reading site {l1},{l2}")
         print(f"  reading site tensor")
-        site_name = f"A{i+1}_{j+1}"
+        site_name = f"A{l1+1}_{l2+1}"
         site = bridge(data.pop).edge_rename({
             f"{site_name}.L": "L",
             f"{site_name}.R": "R",
@@ -50,69 +50,69 @@ for i in range(L1):
             f"{site_name}.o2n": "P1",
             f"{site_name}.TotalN": "T"
         })
-        pool[i, j, "s"] = site
+        pool[l1, l2, "s"] = site
         print(f"  reading env tensor u")
-        pool[i, j, "u"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "u"] = try_rename_env(bridge(data.pop))
         print(f"  reading env tensor d")
-        pool[i, j, "d"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "d"] = try_rename_env(bridge(data.pop))
         print(f"  reading env tensor r")
-        pool[i, j, "r"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "r"] = try_rename_env(bridge(data.pop))
         print(f"  reading env tensor l")
-        pool[i, j, "l"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "l"] = try_rename_env(bridge(data.pop))
 
-for i in range(L1):
-    for j in range(L2):
-        if i != 0:
-            diff = pool[i - 1, j, "d"] - pool[i, j, "u"]
+for l1 in range(L1):
+    for l2 in range(L2):
+        if l1 != 0:
+            diff = pool[l1 - 1, l2, "d"] - pool[l1, l2, "u"]
             assert diff.norm_max() < 1e-6
-        if j != 0:
-            diff = pool[i, j - 1, "r"] - pool[i, j, "l"]
+        if l2 != 0:
+            diff = pool[l1, l2 - 1, "r"] - pool[l1, l2, "l"]
             assert diff.norm_max() < 1e-6
 
 CSCS = tet.common_variable.Fermi_Hubbard.CSCS.to(float)
 NN = tet.common_variable.Fermi_Hubbard.NN.to(float)
 
 state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
-for i in range(L1):
-    for j in range(L2):
-        if (i, j) != (0, 0):
-            state.physics_edges[i, j, 0] = pool[i, j, "s"].edges("P0")
-            state.hamiltonians[(i, j, 0),] = U * NN
-        if (i, j) != (L1 - 1, L2 - 1):
-            state.physics_edges[i, j, 1] = pool[i, j, "s"].edges("P1")
-            state.hamiltonians[(i, j, 1),] = U * NN
-        if (i, j) != (0, 0) and (i, j) != (L1 - 1, L2 - 1):
-            state.hamiltonians[(i, j, 0), (i, j, 1)] = t * CSCS
-        if i != 0:
-            state.hamiltonians[(i - 1, j, 1), (i, j, 0)] = t * CSCS
-        if j != 0:
-            state.hamiltonians[(i, j - 1, 1), (i, j, 0)] = t * CSCS
+for l1 in range(L1):
+    for l2 in range(L2):
+        if (l1, l2) != (0, 0):
+            state.physics_edges[l1, l2, 0] = pool[l1, l2, "s"].edges("P0")
+            state.hamiltonians[(l1, l2, 0),] = U * NN
+        if (l1, l2) != (L1 - 1, L2 - 1):
+            state.physics_edges[l1, l2, 1] = pool[l1, l2, "s"].edges("P1")
+            state.hamiltonians[(l1, l2, 1),] = U * NN
+        if (l1, l2) != (0, 0) and (l1, l2) != (L1 - 1, L2 - 1):
+            state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = t * CSCS
+        if l1 != 0:
+            state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = t * CSCS
+        if l2 != 0:
+            state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = t * CSCS
 
 state = tet.AbstractLattice(state)
-for i in range(L1):
-    for j in range(L2):
-        if i != 0:
-            state.virtual_bond[i, j, "U"] = pool[i, j, "s"].edges("U")
-        if j != 0:
-            state.virtual_bond[i, j, "L"] = pool[i, j, "s"].edges("L")
+for l1 in range(L1):
+    for l2 in range(L2):
+        if l1 != 0:
+            state.virtual_bond[l1, l2, "U"] = pool[l1, l2, "s"].edges("U")
+        if l2 != 0:
+            state.virtual_bond[l1, l2, "L"] = pool[l1, l2, "s"].edges("L")
 
 state = tet.SimpleUpdateLattice(state)
-for i in range(L1):
-    for j in range(L2):
+for l1 in range(L1):
+    for l2 in range(L2):
         # Need to use tnsp tensor, because our T position is different
-        state[i, j] = pool[i, j, "s"]
-        if i != 0:
-            state.environment[i, j, "U"] = pool[i, j, "u"]
-        if j != 0:
-            state.environment[i, j, "L"] = pool[i, j, "l"]
+        state[l1, l2] = pool[l1, l2, "s"]
+        if l1 != 0:
+            state.environment[l1, l2, "U"] = pool[l1, l2, "u"]
+        if l2 != 0:
+            state.environment[l1, l2, "L"] = pool[l1, l2, "l"]
 
-for i in range(L1):
-    for j in range(L2):
+for l1 in range(L1):
+    for l2 in range(L2):
         # SJ.Dong contract env into state
-        state[i, j] = state._try_multiple(state[i, j], i, j, "L", True)
-        state[i, j] = state._try_multiple(state[i, j], i, j, "R", True)
-        state[i, j] = state._try_multiple(state[i, j], i, j, "U", True)
-        state[i, j] = state._try_multiple(state[i, j], i, j, "D", True)
+        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "L", True)
+        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "R", True)
+        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "U", True)
+        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "D", True)
 
 with open("state.dat", "wb") as file:
     pickle.dump(state, file)

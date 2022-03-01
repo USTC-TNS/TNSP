@@ -69,9 +69,9 @@ class AbstractLatticeVirtualBond:
         """
         if isinstance(where, str):
             direction = where
-            for i in range(self._owner.L1):
-                for j in range(self._owner.L2):
-                    self._owner._set_virtual_bond((i, j, direction), value)
+            for l1 in range(self._owner.L1):
+                for l2 in range(self._owner.L2):
+                    self._owner._set_virtual_bond((l1, l2, direction), value)
         else:
             l1, l2, direction = where
             self._owner._set_virtual_bond((l1, l2, direction), value)

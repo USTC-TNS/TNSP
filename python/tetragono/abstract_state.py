@@ -134,19 +134,19 @@ class AbstractStateHamiltonian:
         if isinstance(arg, str):
             if arg == "single_site":
                 # Set hamiltonian to all first orbit of every site
-                for i in range(self._owner.L1):
-                    for j in range(self._owner.L2):
-                        self._owner._set_hamiltonian(((i, j, 0),), tensor)
+                for l1 in range(self._owner.L1):
+                    for l2 in range(self._owner.L2):
+                        self._owner._set_hamiltonian(((l1, l2, 0),), tensor)
             elif arg == "vertical_bond":
                 # Set hamiltonian to all vertical bond connecting first orbits
-                for i in range(self._owner.L1 - 1):
-                    for j in range(self._owner.L2):
-                        self._owner._set_hamiltonian(((i, j, 0), (i + 1, j, 0)), tensor)
+                for l1 in range(self._owner.L1 - 1):
+                    for l2 in range(self._owner.L2):
+                        self._owner._set_hamiltonian(((l1, l2, 0), (l1 + 1, l2, 0)), tensor)
             elif arg == "horizontal_bond":
                 # Set hamiltonian to all horinzontal bond connecting first orbits
-                for i in range(self._owner.L1):
-                    for j in range(self._owner.L2 - 1):
-                        self._owner._set_hamiltonian(((i, j, 0), (i, j + 1, 0)), tensor)
+                for l1 in range(self._owner.L1):
+                    for l2 in range(self._owner.L2 - 1):
+                        self._owner._set_hamiltonian(((l1, l2, 0), (l1, l2 + 1, 0)), tensor)
             else:
                 raise ValueError("Unknown kind of hamiltonian")
         else:
@@ -253,7 +253,7 @@ class AbstractState:
         self._Tensor = other._Tensor
         self._L1 = other._L1
         self._L2 = other._L2
-        self._physics_edges = [[other._physics_edges[i][j].copy() for j in range(self.L2)] for i in range(self.L1)]
+        self._physics_edges = [[other._physics_edges[l1][l2].copy() for l2 in range(self.L2)] for l1 in range(self.L1)]
         self._hamiltonians = other._hamiltonians.copy()
         self._total_symmetry = other._total_symmetry
         self._site_number = other._site_number
