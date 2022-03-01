@@ -26,6 +26,7 @@ from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
 from .gradient import gradient_descent
+from .normalize import normalize_state
 
 
 class Config():
@@ -310,6 +311,22 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         state = self.su_gm_create(line, SamplingLattice)
         if state != None:
             self.gm = state
+
+    def do_gm_normalize(self, line):
+        """
+        Normalize the lattice used for gradient method.
+
+        Parameters
+        ----------
+        sampling_total_step : int
+            The sampling total step.
+        configuration_cut_dimension : int
+            The cut dimension used in calculate configuration.
+        direct_sampling_cut_dimension : int
+            The cut dimension used in direct sampling.
+        """
+        config = Config(line)
+        normalize_state(self.gm, *config.args, **config.kwargs)
 
     def do_gm_run(self, line):
         """
