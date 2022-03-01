@@ -21,8 +21,7 @@ import tetragono as tet
 
 
 def measurement(state):
-    n = state.Tensor(["I0", "O0"], [2, 2])
-    n.blocks[n.names] = [[0, 0], [0, 1]]
+    n = (tet.common_variable.No.identity.to(float) - tet.common_variable.No.pauli_z.to(float)) / 2
     return {((l1, l2, 0),): n for l1 in range(state.L1) for l2 in range(state.L2)}
 
 
