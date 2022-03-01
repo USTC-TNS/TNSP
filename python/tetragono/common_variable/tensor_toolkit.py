@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,20 +16,30 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import TAT
-from .tensor_toolkit import Fedge, Tedge, rename_io
 
-Tensor = TAT.Fermi.Z.Tensor
+class FakeEdge:
+    __slots__ = ["direction"]
 
-EF = Fedge[0, 1]
-ET = Tedge[0, -1]
+    def __init__(self, direction):
+        self.direction = direction
 
-CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[-1,]]).range(1, 0)
-CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[+1,]]).range(1, 0)
-C0C1 = rename_io(CP, {0: 0}).contract(rename_io(CM, {0: 1}), {("T", "T")})
-C1C0 = rename_io(CP, {0: 1}).contract(rename_io(CM, {0: 0}), {("T", "T")})
-CC = C0C1 + C1C0
+    def __getitem__(self, x):
+        return (list(x), self.direction)
 
-I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
 
-N = rename_io(CP, {0: 0}).contract(rename_io(CM, {0: 0}), {("T", "T"), ("I0", "O0")})
+Fedge = FakeEdge(False)
+Tedge = FakeEdge(True)
+
+
+def rename_io(t, m):
+    res = {}
+    for i, j in m.items():
+        res[f"I{i}"] = f"I{j}"
+        res[f"O{i}"] = f"O{j}"
+    return t.edge_rename(res)
+
+
+def dot(res, *b):
+    for i in b:
+        res = res.contract(i, set())
+    return res

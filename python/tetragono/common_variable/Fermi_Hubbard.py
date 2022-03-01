@@ -18,14 +18,8 @@
 
 import TAT
 from . import Fermi
-from .Fermi import Tensor, rename_io, CC, I, N, C0C1, C1C0
-
-
-def dot(res, *b):
-    for i in b:
-        res = res.contract(i, set())
-    return res
-
+from .tensor_toolkit import rename_io, dot
+from .Fermi import Tensor, CC, I, N, C0C1, C1C0
 
 # Merge two spin
 # This is following sjdong's convension

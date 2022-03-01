@@ -17,31 +17,9 @@
 #
 
 import TAT
+from .tensor_toolkit import Fedge, Tedge, rename_io
 
 Tensor = TAT.FermiU1.Z.Tensor
-
-
-class FakeEdge:
-    __slots__ = ["direction"]
-
-    def __init__(self, direction):
-        self.direction = direction
-
-    def __getitem__(self, x):
-        return (list(x), self.direction)
-
-
-Fedge = FakeEdge(False)
-Tedge = FakeEdge(True)
-
-
-def rename_io(t, m):
-    res = {}
-    for i, j in m.items():
-        res[f"I{i}"] = f"I{j}"
-        res[f"O{i}"] = f"O{j}"
-    return t.edge_rename(res)
-
 
 # Empty, Down, Up
 EF = Fedge[(0, 0), (+1, -1), (+1, +1)]

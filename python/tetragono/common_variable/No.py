@@ -17,6 +17,7 @@
 #
 
 import TAT
+from .tensor_toolkit import rename_io, dot
 
 Tensor = TAT.No.Z.Tensor
 
@@ -35,11 +36,20 @@ pauli_z = Tensor(["I0", "O0"], [2, 2])
 pauli_z.blocks[pauli_z.names] = [[1, 0], [0, -1]]
 Sz = pauli_z / 2
 
-pauli_x_pauli_x = pauli_x.edge_rename({"I0": "I1", "O0": "O1"}).contract(pauli_x, set())
-SxSx = Sx.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sx, set())
-pauli_y_pauli_y = pauli_y.edge_rename({"I0": "I1", "O0": "O1"}).contract(pauli_y, set())
-SySy = Sy.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sy, set())
-pauli_z_pauli_z = pauli_z.edge_rename({"I0": "I1", "O0": "O1"}).contract(pauli_z, set())
-SzSz = Sz.edge_rename({"I0": "I1", "O0": "O1"}).contract(Sz, set())
+pauli_x_pauli_x = dot(
+    rename_io(pauli_x, {0: 0}),
+    rename_io(pauli_x, {0: 1}),
+)
+pauli_y_pauli_y = dot(
+    rename_io(pauli_y, {0: 0}),
+    rename_io(pauli_y, {0: 1}),
+)
+pauli_z_pauli_z = dot(
+    rename_io(pauli_z, {0: 0}),
+    rename_io(pauli_z, {0: 1}),
+)
+SxSx = pauli_x_pauli_x / 4
+SySy = pauli_y_pauli_y / 4
+SzSz = pauli_z_pauli_z / 4
 
 SS = SxSx + SySy + SzSz
