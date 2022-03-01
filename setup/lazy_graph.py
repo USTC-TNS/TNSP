@@ -10,4 +10,5 @@ setup(
     packages=["lazy"],
     package_dir={"": "python"},
     license="GPLv3",
+    python_requires=">=3.7",
 )

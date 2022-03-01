@@ -16,4 +16,5 @@ setup(
         "numpy",
     ],
     license="GPLv3",
+    python_requires=">=3.9",
 )
