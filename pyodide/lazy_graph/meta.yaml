@@ -4,5 +4,7 @@ package:
 
 source:
   url: https://github.com/hzhangxyz/TAT/archive/refs/heads/dev.zip
-  extras:
-    - [setup.py, setup.py]
+
+build:
+  script: |
+     cp setup/lazy_graph.py setup.py

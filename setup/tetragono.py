@@ -11,7 +11,7 @@ setup(
     package_dir={"": "python"},
     install_requires=[
         "PyTAT",
-        "lazy-graph",
+        "lazy_graph",
         "mpi4py",
         "numpy",
     ],

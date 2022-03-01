@@ -4,8 +4,6 @@ package:
 
 source:
   url: https://github.com/hzhangxyz/TAT/archive/refs/heads/dev.zip
-  extras:
-    - [setup.py, setup.py]
 
 build:
   script: |
@@ -13,6 +11,7 @@ build:
      cd PyTAT
      bash ./generator.sh
      cd ..
+     cp setup/PyTAT.py setup.py
 
 requirements:
   run:
