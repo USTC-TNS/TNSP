@@ -128,17 +128,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def seed(self, seed):
         TAT.random.seed(seed)
 
-    def _do_create(self, line, lattice_type):
-        """
-        Create a lattice used for simple update.
-
-        Parameters
-        ----------
-        model : str
-            The model names.
-        args, kwargs
-            Arguments passed to model creater function.
-        """
+    def su_gm_create(self, line, lattice_type):
         config = Config(line)
         model = importlib.import_module(config.args[0])
         if len(config.args) == 2 and config.args[-1] == "help":
@@ -164,7 +154,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        state = self._do_create(line, SimpleUpdateLattice)
+        state = self.su_gm_create(line, SimpleUpdateLattice)
         if state != None:
             self.su = state
 
@@ -317,7 +307,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        state = self._do_create(line, SamplingLattice)
+        state = self.su_gm_create(line, SamplingLattice)
         if state != None:
             self.gm = state
 
