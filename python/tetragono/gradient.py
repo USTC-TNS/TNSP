@@ -160,8 +160,7 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
 
 
 def try_normalize(state, reweight):
-    param = reweight**(1 / state.site_number)
-    param = param**(1 / 2)
+    param = reweight**(1 / (state.L1 * state.L2 * 2))
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             state[l1, l2] /= param
@@ -279,15 +278,18 @@ def gradient_descent(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
+
+            # Measure log
             if measurement and mpi_rank == 0:
                 for measurement_name in measurement_names:
                     measurement_result = observer.result[measurement_name]
                     measurement_modules[measurement_name].save_result(state, measurement_result, grad_step)
+            # Energy log
+            if log_file and mpi_rank == 0:
+                with open(log_file, "a") as file:
+                    print(*observer.energy, file=file)
+
             if use_gradient:
-                # Save log
-                if log_file and mpi_rank == 0:
-                    with open(log_file, "a") as file:
-                        print(*observer.energy, file=file)
 
                 # Get gradient
                 if use_natural_gradient:
@@ -333,6 +335,7 @@ def gradient_descent(
                             state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
+                # Normalize state
                 try_normalize(state, observer._total_weight / observer._count)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 for l1 in range(state.L1):
