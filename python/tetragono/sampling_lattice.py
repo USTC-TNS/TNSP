@@ -688,6 +688,9 @@ class Observer():
         """
         if self._start:
             raise RuntimeError("Cannot enable hole after sampling start")
+        for positions, observer in observers.items():
+            if not isinstance(observer, self._owner.Tensor):
+                raise TypeError("Wrong observer type")
         self._observer[name] = observers
 
     def add_energy(self):
