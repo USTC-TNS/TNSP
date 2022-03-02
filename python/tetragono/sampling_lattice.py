@@ -353,6 +353,53 @@ class Configuration(Auxiliaries):
         return self._holes
 
 
+class TailDictTree:
+    __slots__ = ["_pool"]
+
+    def __init__(self):
+        self._pool = {}
+
+    def __setitem__(self, key, value):
+        key = list(key)
+        current = self._pool
+        while len(key) != 1:
+            node = key.pop()
+            if node not in current:
+                current[node] = {}
+            current = current[node]
+        node = key.pop()
+        current[node] = value
+
+    def __getitem__(self, key):
+        key = list(key)
+        current = self._pool
+        while len(key) != 0:
+            node = key.pop()
+            current = current[node]
+        return current
+
+    def nearest(self, key):
+        key = list(key)
+        current = self._pool
+        while len(key) != 0:
+            node = key.pop()
+            if node in current:
+                current = current[node]
+            else:
+                current = next(iter(current.values()))
+        return current
+
+    def __contains__(self, key):
+        key = list(key)
+        current = self._pool
+        while len(key) != 0:
+            node = key.pop()
+            if node not in current:
+                return False
+            current = current[node]
+        return True
+
+
 class ConfigurationPool:
     """
     Configuration pool for one sampling lattice and multiple configuration.
@@ -370,7 +417,7 @@ class ConfigurationPool:
             The sampling lattice owning this configuration pool.
         """
         self._owner = owner
-        self._pool = {}
+        self._pool = TailDictTree()
 
     def wss(self, configuration, replacement):
         """
@@ -395,9 +442,6 @@ class ConfigurationPool:
         if config in self._pool:
             return self._pool[config].hole(())
 
-        # TODO if nearest configuration is slow
-        # should use configuration as hint directly, put here:
-        # return self(config, hint=configuration).hole(())
         nearest = self._nearest_configuration(config)
         wss = nearest.replace(replacement)
         if wss != None:
@@ -485,15 +529,7 @@ class ConfigurationPool:
         Configuration
             The configuration which is the nearest to the given config tuple.
         """
-        min_diff = None
-        configuration = None
-        for near_config, near_configuration in self._pool.items():
-            # TODO Should find a config share the largest common tail
-            diff = sum(1 if i != j else 0 for i, j in zip(near_config, config))
-            if min_diff is None or diff < min_diff:
-                min_diff = diff
-                configuration = near_configuration
-        return configuration
+        return self._pool.nearest(config)
 
     def _calculate_configuration(self, config, *, hint=None):
         """
