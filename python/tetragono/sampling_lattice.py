@@ -386,9 +386,23 @@ class ConfigurationPool:
         Tensor
             $\langle s\psi\rangle$ with several $s$ replaced.
         """
+        wss = configuration.replace(replacement)
+        if wss != None:
+            return wss
+
         config = self._get_config(configuration)
         config = self._replace_config(config, replacement)
-        return self(config).hole(())
+        if config in self._pool:
+            return self._pool[config].hole(())
+
+        # TODO if nearest configuration is slow
+        # should use configuration as hint directly, put here:
+        # return self(config, hint=configuration).hole(())
+        nearest = self._nearest_configuration(config)
+        wss = nearest.replace(replacement)
+        if wss != None:
+            return wss
+        return self(config, hint=nearest).hole(())
 
     def _replace_config(self, config, replacement):
         """
@@ -474,13 +488,14 @@ class ConfigurationPool:
         min_diff = None
         configuration = None
         for near_config, near_configuration in self._pool.items():
+            # TODO Should find a config share the largest common tail
             diff = sum(1 if i != j else 0 for i, j in zip(near_config, config))
             if min_diff is None or diff < min_diff:
                 min_diff = diff
                 configuration = near_configuration
         return configuration
 
-    def _calculate_configuration(self, config):
+    def _calculate_configuration(self, config, *, hint=None):
         """
         Calculate the configuration from the given config.
 
@@ -488,12 +503,17 @@ class ConfigurationPool:
         ----------
         config : tuple[EdgePoint, ...]
             the config tuple.
+        hint : Configuration, optional
+            A similar configuration used to copy
 
         Returns
         -------
             The result configuration of the given config tuple.
         """
-        configuration = self._nearest_configuration(config).copy()
+        if hint != None:
+            configuration = hint.copy()
+        else:
+            configuration = self._nearest_configuration(config).copy()
         index = 0
         for l1 in range(self._owner.L1):
             for l2 in range(self._owner.L2):
@@ -503,21 +523,23 @@ class ConfigurationPool:
                     index += 1
         return configuration
 
-    def __call__(self, config):
+    def __call__(self, config, *, hint=None):
         """
         Get the configuration from the given config tuple.
 
         Parameters
         ----------
         config : tuple[EdgePoint, ...]
-            the config tuple.
+            The config tuple.
+        hint : Configuration, optional
+            A similar configuration used to copy if the given config is not calculated yet.
 
         Returns
         -------
             The result configuration.
         """
         if config not in self._pool:
-            self._pool[config] = self._calculate_configuration(config)
+            self._pool[config] = self._calculate_configuration(config, hint=hint)
         return self._pool[config]
 
 
@@ -761,12 +783,11 @@ class Observer():
                 total_value = 0
                 physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
-                    if wss == None:
-                        if self._cache_configuration:
-                            wss = self._pool.wss(configuration,
-                                                 {positions[i]: other_configuration[i] for i in range(body)})
-                        else:
+                    if self._cache_configuration:
+                        wss = self._pool.wss(configuration, {positions[i]: other_configuration[i] for i in range(body)})
+                    else:
+                        wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
+                        if wss == None:
                             raise NotImplementedError(
                                 "not implemented replace style, set cache_configuration to True to calculate it")
 
