@@ -26,6 +26,9 @@ def plus_log(loga, logb):
 
 
 def normalize_state(state, sampling_total_step, configuration_cut_dimension, direct_sampling_cut_dimension):
+    for l1 in range(2, state.L1 - 2):
+        for l2 in range(2, state.L2 - 2):
+            state[l1, l2] = state[2, 2].copy()
     sampling = DirectSampling(state, configuration_cut_dimension, None, direct_sampling_cut_dimension)
     log_prod_ws = 0.0
     with seed_differ:

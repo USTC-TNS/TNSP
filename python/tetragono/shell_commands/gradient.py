@@ -117,6 +117,33 @@ def try_normalize(state, mean_log_ws):
             state[l1, l2] /= param
 
 
+def samize_state(state):
+    state_sum = None
+    for l1 in range(2, state.L1 - 2):
+        for l2 in range(2, state.L2 - 2):
+            if state_sum == None:
+                state_sum = state[l1, l2].copy()
+            else:
+                state_sum += state[l1, l2]
+    state_sum /= (state.L1 - 4) * (state.L2 - 4)
+    for l1 in range(2, state.L1 - 2):
+        for l2 in range(2, state.L2 - 2):
+            state[l1, l2] = state_sum.copy()
+
+
+def samize_grad(grad, state):
+    grad_sum = None
+    for l1 in range(2, state.L1 - 2):
+        for l2 in range(2, state.L2 - 2):
+            if grad_sum == None:
+                grad_sum = grad[l1][l2].copy()
+            else:
+                grad_sum += grad[l1][l2]
+    for l1 in range(2, state.L1 - 2):
+        for l2 in range(2, state.L2 - 2):
+            grad[l1][l2] = grad_sum.copy()
+
+
 def gradient_descent(
         state: SamplingLattice,
         sampling_total_step=0,
@@ -309,6 +336,7 @@ def gradient_descent(
                     showln("calculate natural gradient done")
                 else:
                     grad = observer.gradient
+                samize_grad(grad, state)
 
                 # Change state
                 if use_check_difference:
@@ -376,6 +404,8 @@ def gradient_descent(
                     fix_sampling_lattice_guage(state)
                 # Normalize state
                 try_normalize(state, log_prod_ws / sampling_total_step)
+                # Samize state
+                samize_state(state)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 bcast_lattice_buffer(state._lattice, root=0)
                 sampling.refresh_all()
