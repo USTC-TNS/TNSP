@@ -189,8 +189,9 @@ class Configuration(Auxiliaries):
 
         Returns
         -------
-        Tensor
-            $\langle s\psi\rangle$ with several $s$ replaced.
+        Tensor | None
+            $\langle s\psi\rangle$ with several $s$ replaced. If replace style is not implemented yet, None will be
+        returned.
         """
         grouped_replacement = {}  # dict[tuple[int, int], dict[int, EdgePoint]]
         for [l1, l2, orbit], edge_point in replacement.items():
@@ -760,10 +761,15 @@ class Observer():
                 total_value = 0
                 physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    if self._cache_configuration:
-                        wss = self._pool.wss(configuration, {positions[i]: other_configuration[i] for i in range(body)})
-                    else:
-                        wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
+                    wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
+                    if wss == None:
+                        if self._cache_configuration:
+                            wss = self._pool.wss(configuration,
+                                                 {positions[i]: other_configuration[i] for i in range(body)})
+                        else:
+                            raise NotImplementedError(
+                                "not implemented replace style, set cache_configuration to True to calculate it")
+
                     if wss.norm_num() == 0:
                         continue
                     value = inv_ws.contract(observer_shrinked.conjugate(),

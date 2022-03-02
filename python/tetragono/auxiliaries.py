@@ -492,7 +492,8 @@ class Auxiliaries:
                     result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
                     return result
 
-        raise NotImplementedError("Unsupported auxilary replace style")
+        # If not implemented, return None instead of raise error.
+        return None
 
     def hole(self, position, *, hint=None):
         if len(position) == 0:
