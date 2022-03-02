@@ -638,7 +638,8 @@ class Observer():
 
     __slots__ = [
         "_owner", "_enable_gradient", "_enable_natural", "_start", "_observer", "_result", "_result_square", "_count",
-        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas", "_cache_configuration", "_pool"
+        "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas", "_cache_configuration", "_pool",
+        "_restrict_subspace"
     ]
 
     def __enter__(self):
@@ -699,7 +700,7 @@ class Observer():
             allreduce_lattice_buffer(self._Delta)
             allreduce_lattice_buffer(self._EDelta)
 
-    def __init__(self, owner):
+    def __init__(self, owner, restrict_subspace):
         """
         Create observer object for the given sampling lattice.
 
@@ -707,6 +708,8 @@ class Observer():
         ----------
         owner : SamplingLattice
             The owner of this obsever object.
+        restrict_subspace
+            A function return bool to restrict sampling subspace.
         """
         self._owner = owner
         self._enable_gradient = False
@@ -725,6 +728,8 @@ class Observer():
 
         self._cache_configuration = False
         self._pool = None
+
+        self._restrict_subspace = restrict_subspace
 
     def cache_configuration(self):
         """
@@ -1155,9 +1160,9 @@ class Sampling:
     Helper type for run sampling for sampling lattice.
     """
 
-    __slots__ = ["_owner", "_cut_dimension"]
+    __slots__ = ["_owner", "_cut_dimension", "_restrict_subspace"]
 
-    def __init__(self, owner, cut_dimension):
+    def __init__(self, owner, cut_dimension, restrict_subspace):
         """
         Create sampling object for the given sampling lattice.
 
@@ -1167,9 +1172,12 @@ class Sampling:
             The owner of this sampling object.
         cut_dimension : int
             The cut dimension in single layer auxiliaries.
+        restrict_subspace
+            A function return bool to restrict sampling subspace.
         """
         self._owner = owner
         self._cut_dimension = cut_dimension
+        self._restrict_subspace = restrict_subspace
 
     def refresh_all(self):
         """
@@ -1196,8 +1204,8 @@ class SweepSampling(Sampling):
 
     __slots__ = ["_sweep_order", "configuration"]
 
-    def __init__(self, owner, cut_dimension):
-        super().__init__(owner, cut_dimension)
+    def __init__(self, owner, cut_dimension, restrict_subspace):
+        super().__init__(owner, cut_dimension, restrict_subspace)
         self.configuration = Configuration(self._owner, self._cut_dimension)
         self._sweep_order = None  # list[tuple[tuple[int, int, int], ...]]
 
@@ -1223,6 +1231,8 @@ class SweepSampling(Sampling):
 
     def __call__(self):
         owner = self._owner
+        if self._restrict_subspace != None:
+            raise NotImplementedError("restrict subspace is not implemented for sweep sampling")
         self.configuration = self.configuration.copy()
         if not self.configuration.valid():
             raise RuntimeError("Configuration not initialized")
@@ -1285,8 +1295,8 @@ class ErgodicSampling(Sampling):
 
     __slots__ = ["total_step", "_edges", "configuration"]
 
-    def __init__(self, owner, cut_dimension):
-        super().__init__(owner, cut_dimension)
+    def __init__(self, owner, cut_dimension, restrict_subspace):
+        super().__init__(owner, cut_dimension, restrict_subspace)
 
         self.configuration = Configuration(self._owner, self._cut_dimension)
 
@@ -1331,7 +1341,11 @@ class ErgodicSampling(Sampling):
         self.configuration = self.configuration.copy()
         for t in range(mpi_size):
             self._next_configuration()
-        return 1., self.configuration
+        possibility = 1.
+        if self._restrict_subspace != None:
+            if not self._restrict_subspace(self.configuration):
+                possibility = float("+inf")
+        return possibility, self.configuration
 
 
 class DirectSampling(Sampling):
@@ -1341,8 +1355,8 @@ class DirectSampling(Sampling):
 
     __slots__ = ["_double_layer_cut_dimension", "_double_layer_auxiliaries"]
 
-    def __init__(self, owner, cut_dimension, double_layer_cut_dimension):
-        super().__init__(owner, cut_dimension)
+    def __init__(self, owner, cut_dimension, restrict_subspace, double_layer_cut_dimension):
+        super().__init__(owner, cut_dimension, restrict_subspace)
         self._double_layer_cut_dimension = double_layer_cut_dimension
         self.refresh_all()
 
@@ -1403,6 +1417,9 @@ class DirectSampling(Sampling):
                     three_line_auxiliaries[1, l2, "n"] = shrinked_site_tensor
                     three_line_auxiliaries[1, l2, "c"] = shrinked_site_tensor.conjugate()
 
+        if self._restrict_subspace != None:
+            if not self._restrict_subspace(configuration):
+                return self()
         return possibility, configuration
 
     def _choice(self, p, rho):

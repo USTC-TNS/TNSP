@@ -413,7 +413,7 @@ if __name__ == "__main__":
                 sys.path.append(os.path.dirname(os.path.abspath(sys.argv[1])))
                 TetragonoScriptApp(stdin=file).cmdloop()
     elif sys.argv[1] == "--":
-        commands = " ".join(sys.argv[2:]).replace("-", "\n")
+        commands = " ".join(sys.argv[2:]).replace(" - ", "\n")
         from io import StringIO
         file = StringIO(commands)
         TetragonoScriptApp(stdin=file).cmdloop()

@@ -178,6 +178,8 @@ def gradient_descent(
         sampling_method="direct",
         configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
+        # About subspace
+        restrict_subspace=None,
         # About natural gradient
         use_natural_gradient=False,
         conjugate_gradient_method_step=20,
@@ -213,8 +215,14 @@ def gradient_descent(
         cache_configuration = True
         showln(f"using shaojun's method, cache configuration")
 
+    # Restrict subspace
+    if restrict_subspace != None:
+        restrict = importlib.import_module(restrict_subspace).restrict
+    else:
+        restrict = None
+
     # Prepare observers
-    observer = Observer(state)
+    observer = Observer(state, restrict)
     observer.add_energy()
     if measurement:
         measurement_modules = {}
@@ -235,7 +243,7 @@ def gradient_descent(
         need_reweight_observer = False
         showln("do NOT calculate gradient")
     if need_reweight_observer:
-        reweight_observer = Observer(state)
+        reweight_observer = Observer(state, restrict)
         reweight_observer.add_energy()
         reweight_observer.enable_gradient()
         if cache_configuration:
@@ -245,18 +253,18 @@ def gradient_descent(
     if sampling_method == "sweep":
         showln("using sweep sampling")
         # Use direct sampling to find sweep sampling initial configuration.
-        sampling = DirectSampling(state, configuration_cut_dimension, direct_sampling_cut_dimension)
+        sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
         _, configuration = sampling()
-        sampling = SweepSampling(state, configuration_cut_dimension)
+        sampling = SweepSampling(state, configuration_cut_dimension, restrict)
         sampling.configuration = configuration
         sampling_total_step = sampling_total_step
     elif sampling_method == "ergodic":
         showln("using ergodic sampling")
-        sampling = ErgodicSampling(state, configuration_cut_dimension)
+        sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
         sampling_total_step = sampling.total_step
     elif sampling_method == "direct":
         showln("using direct sampling")
-        sampling = DirectSampling(state, configuration_cut_dimension, direct_sampling_cut_dimension)
+        sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
         sampling_total_step = sampling_total_step
     else:
         raise ValueError("Invalid sampling method")
