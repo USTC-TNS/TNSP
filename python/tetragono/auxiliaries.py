@@ -47,7 +47,8 @@ class Auxiliaries:
         "_up_to_down", "_up_to_down_site", "_down_to_up", "_down_to_up_site", "_zip_column", "_left_to_right",
         "_left_to_right_site", "_right_to_left", "_right_to_left_site", "_inline_left_to_right",
         "_inline_left_to_right_tailed", "_inline_right_to_left", "_inline_right_to_left_tailed", "_inline_up_to_down",
-        "_inline_up_to_down_tailed", "_inline_down_to_up", "_inline_down_to_up_tailed"
+        "_inline_up_to_down_tailed", "_inline_down_to_up", "_inline_down_to_up_tailed", "_4_inline_left_to_right",
+        "_4_inline_left_to_right_tailed", "_4_inline_right_to_left", "_4_inline_right_to_left_tailed"
     ]
 
     def copy(self, cp=None, result=None):
@@ -107,6 +108,20 @@ class Auxiliaries:
             for l1 in reversed(range(self.L1 + 1)):
                 result._inline_down_to_up[l1, l2] = cp(self._inline_down_to_up[l1, l2])
                 result._inline_down_to_up_tailed[l1, l2] = cp(self._inline_down_to_up_tailed[l1, l2])
+
+        result._4_inline_left_to_right = {}
+        result._4_inline_left_to_right_tailed = {}
+        for l1 in range(self.L1 - 1):
+            for l2 in range(-1, self.L2):
+                result._4_inline_left_to_right[l1, l2] = cp(self._4_inline_left_to_right[l1, l2])
+                result._4_inline_left_to_right_tailed[l1, l2] = cp(self._4_inline_left_to_right_tailed[l1, l2])
+
+        result._4_inline_right_to_left = {}
+        result._4_inline_right_to_left_tailed = {}
+        for l1 in range(self.L1 - 1):
+            for l2 in reversed(range(self.L2 + 1)):
+                result._4_inline_right_to_left[l1, l2] = cp(self._4_inline_right_to_left[l1, l2])
+                result._4_inline_right_to_left_tailed[l1, l2] = cp(self._4_inline_right_to_left_tailed[l1, l2])
 
         return result
 
@@ -215,6 +230,40 @@ class Auxiliaries:
             for l1 in reversed(range(self.L1 + 1)):
                 self._inline_down_to_up[l1, l2] = self._construct_inline_down_to_up(l1, l2)
                 self._inline_down_to_up_tailed[l1, l2] = self._construct_inline_down_to_up_tailed(l1, l2)
+
+        #   R1 -
+        # > R2 -
+        #   R3 -
+        #   R4 -
+        #   ^
+        self._4_inline_left_to_right = {}
+        #       DR1 -
+        # > R2 - |
+        #   R3 -
+        #   R4 -
+        #   ^
+        self._4_inline_left_to_right_tailed = {}
+        for l1 in range(self.L1 - 1):
+            for l2 in range(-1, self.L2):
+                self._4_inline_left_to_right[l1, l2] = self._construct_4_inline_left_to_right(l1, l2)
+                self._4_inline_left_to_right_tailed[l1, l2] = self._construct_4_inline_left_to_right_tailed(l1, l2)
+
+        # - l1
+        # - L2 <
+        # - L3
+        # - L4
+        #   ^
+        self._4_inline_right_to_left = {}
+        #      - L1
+        #      - L2 <
+        #    | - L3
+        # - UL4
+        #        ^
+        self._4_inline_right_to_left_tailed = {}
+        for l1 in range(self.L1 - 1):
+            for l2 in reversed(range(self.L2 + 1)):
+                self._4_inline_right_to_left[l1, l2] = self._construct_4_inline_right_to_left(l1, l2)
+                self._4_inline_right_to_left_tailed[l1, l2] = self._construct_4_inline_right_to_left_tailed(l1, l2)
 
     def __setitem__(self, l1l2, tensor):
         l1, l2 = l1l2
@@ -339,6 +388,66 @@ class Auxiliaries:
     def _construct_inline_down_to_up_tailed_in_lazy(inline_down_to_up, right_to_left, l1, l2):
         # print("inline down to up tailed", l1, l2)
         return safe_rename(safe_contract(inline_down_to_up, right_to_left, {("U3", "D")}), {"U": "U3"})
+
+    def _construct_4_inline_left_to_right(self, l1, l2):
+        if l2 == -1:
+            return self._one
+        else:
+            return lazy.Node(self._construct_4_inline_left_to_right_in_lazy,
+                             self._4_inline_left_to_right_tailed[l1, l2 - 1], self._lattice[l1][l2],
+                             self._lattice[l1 + 1][l2], self._down_to_up_site[l1 + 2, l2], self.normalize, l1, l2)
+
+    @staticmethod
+    def _construct_4_inline_left_to_right_in_lazy(inline_left_to_right_tailed, lattice_2, lattice_3, down_to_up,
+                                                  normalize, l1, l2):
+        result = safe_contract(inline_left_to_right_tailed, safe_rename(lattice_2, {"R": "R2"}), {("R2", "L"),
+                                                                                                  ("D", "U")})
+        result = safe_contract(result, safe_rename(lattice_3, {"R": "R3"}), {("R3", "L"), ("D", "U")})
+        result = safe_contract(result, safe_rename(down_to_up, {"R": "R4"}), {("R4", "L"), ("D", "U")})
+        if normalize:
+            result /= result.norm_2()
+        return result
+
+    def _construct_4_inline_left_to_right_tailed(self, l1, l2):
+        if l2 == self.L2 - 1:
+            return self._4_inline_left_to_right[l1, l2]
+        else:
+            return lazy.Node(self._construct_4_inline_left_to_right_tailed_in_lazy,
+                             self._4_inline_left_to_right[l1, l2], self._up_to_down_site[l1 - 1, l2 + 1], l1, l2)
+
+    @staticmethod
+    def _construct_4_inline_left_to_right_tailed_in_lazy(inline_left_to_right, up_to_down, l1, l2):
+        return safe_rename(safe_contract(inline_left_to_right, up_to_down, {("R1", "L")}), {"R": "R1"})
+
+    def _construct_4_inline_right_to_left(self, l1, l2):
+        if l2 == self.L2:
+            return self._one
+        else:
+            return lazy.Node(self._construct_4_inline_right_to_left_in_lazy,
+                             self._4_inline_right_to_left_tailed[l1, l2 + 1], self._lattice[l1 + 1][l2],
+                             self._lattice[l1][l2], self._up_to_down_site[l1 - 1, l2], self.normalize, l1, l2)
+
+    @staticmethod
+    def _construct_4_inline_right_to_left_in_lazy(inline_right_to_left_tailed, lattice_3, lattice_2, up_to_down,
+                                                  normalize, l1, l2):
+        result = safe_contract(inline_right_to_left_tailed, safe_rename(lattice_3, {"L": "L3"}), {("L3", "R"),
+                                                                                                  ("U", "D")})
+        result = safe_contract(result, safe_rename(lattice_2, {"L": "L2"}), {("L2", "R"), ("U", "D")})
+        result = safe_contract(result, safe_rename(up_to_down, {"L": "L1"}), {("L1", "R"), ("U", "D")})
+        if normalize:
+            result /= result.norm_2()
+        return result
+
+    def _construct_4_inline_right_to_left_tailed(self, l1, l2):
+        if l2 == 0:
+            return self._4_inline_right_to_left[l1, l2]
+        else:
+            return lazy.Node(self._construct_4_inline_right_to_left_tailed_in_lazy,
+                             self._4_inline_right_to_left[l1, l2], self._down_to_up_site[l1 + 2, l2 - 1], l1, l2)
+
+    @staticmethod
+    def _construct_4_inline_right_to_left_tailed_in_lazy(inline_right_to_left, down_to_up, l1, l2):
+        return safe_rename(safe_contract(inline_right_to_left, down_to_up, {("L4", "R")}), {"L": "L4"})
 
     def _construct_up_to_down(self, l1):
         if l1 == -1:
@@ -491,6 +600,36 @@ class Auxiliaries:
                     result = safe_contract(result, safe_rename(t0, {"D": "D2"}), {("R", "L"), ("D2", "U")})
                     result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
                     return result
+
+        minl1 = min(l1 for l1, l2 in replacement.keys())
+        minl2 = min(l2 for l1, l2 in replacement.keys())
+        maxl1 = max(l1 for l1, l2 in replacement.keys())
+        maxl2 = max(l2 for l1, l2 in replacement.keys())
+        if maxl1 - minl1 == 1 and maxl2 - minl2 == 1:
+            # t11 t12
+            # t21 t22
+            t = [[self._lattice[minl1][minl2](), self._lattice[minl1][maxl2]()],
+                 [self._lattice[maxl1][minl2](), self._lattice[maxl1][maxl2]()]]
+            for [l1, l2], tensor in replacement.items():
+                t[l1 - minl1][l2 - minl2] = tensor
+
+            l1 = minl1
+            l2 = minl2
+
+            left_part = self._4_inline_left_to_right_tailed[l1, l2 - 1]()
+            left_dot = self._down_to_up_site[l1 + 2, l2]()
+            right_part = self._4_inline_right_to_left_tailed[l1, l2 + 2]()
+            right_dot = self._up_to_down_site[l1 - 1, l2 + 1]()
+
+            result = safe_contract(left_part, safe_rename(t[0][0], {"R": "R2"}), {("D", "U"), ("R2", "L")})
+            result = safe_contract(result, safe_rename(t[1][0], {"R": "R3"}), {("D", "U"), ("R3", "L")})
+            result = safe_contract(result, safe_rename(left_dot, {"R": "R4"}), {("D", "U"), ("R4", "L")})
+            result = safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")})
+            result = safe_contract(result, safe_rename(t[0][1], {"R": "R2"}), {("D", "U"), ("R2", "L")})
+            result = safe_contract(result, safe_rename(t[1][1], {"R": "R3"}), {("D", "U"), ("R3", "L")})
+            result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U"),
+                                                        ("R4", "L4")})
+            return result
 
         # If not implemented, return None instead of raise error.
         return None
