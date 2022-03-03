@@ -824,10 +824,14 @@ class Observer():
                 total_value = 0
                 physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
+                    replacement = {positions[i]: other_configuration[i] for i in range(body)}
+                    if self._restrict_subspace != None:
+                        if not self._restrict_subspace(configuration, replacement):
+                            continue
                     if self._cache_configuration:
-                        wss = self._pool.wss(configuration, {positions[i]: other_configuration[i] for i in range(body)})
+                        wss = self._pool.wss(configuration, replacement)
                     else:
-                        wss = configuration.replace({positions[i]: other_configuration[i] for i in range(body)})
+                        wss = configuration.replace(replacement)
                         if wss == None:
                             raise NotImplementedError(
                                 "not implemented replace style, set cache_configuration to True to calculate it")
@@ -1018,8 +1022,11 @@ class Observer():
                     total_value = 0
                     physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
                     for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                        other_config = self._pool._replace_config(
-                            config, {positions[i]: other_configuration[i] for i in range(body)})
+                        replacement = {positions[i]: other_configuration[i] for i in range(body)}
+                        if self._restrict_subspace != None:
+                            if not self._restrict_subspace(configuration, replacement):
+                                continue
+                        other_config = self._pool._replace_config(config, replacement)
                         wss = self._pool(other_config).hole(())
 
                         if wss.norm_num() == 0:

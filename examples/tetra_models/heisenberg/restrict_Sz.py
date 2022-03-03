@@ -17,18 +17,37 @@
 #
 
 
-def restrict(configuration):
-    owner = configuration._owner
-    n_up = 0
-    n_down = 0
-    for l1 in range(owner.L1):
-        for l2 in range(owner.L2):
-            for orbit in owner.physics_edges[l1, l2]:
-                site_config = configuration[l1, l2, orbit]
-                _, index = site_config
-                if index == 0:
-                    n_up += 1
-                else:
-                    n_down += 1
-    site_number = owner.site_number
-    return n_up == site_number // 2
+def restrict(configuration, replacement=None):
+    if replacement == None:
+        owner = configuration._owner
+        n_up = 0
+        n_down = 0
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit in owner.physics_edges[l1, l2]:
+                    site_config = configuration[l1, l2, orbit]
+                    _, index = site_config
+                    if index == 0:
+                        n_up += 1
+                    else:
+                        n_down += 1
+        site_number = owner.site_number
+        return n_up == site_number // 2
+    else:
+        n_up_old = 0
+        n_down_old = 0
+        n_up_new = 0
+        n_down_new = 0
+        for [l1, l2, orbit], new_site_config in replacement.items():
+            old_site_config = configuration[l1, l2, orbit]
+            _, old_index = old_site_config
+            _, new_index = new_site_config
+            if old_index == 0:
+                n_up_old += 1
+            else:
+                n_down_old += 1
+            if new_index == 0:
+                n_up_new += 1
+            else:
+                n_down_new += 1
+        return n_up_new == n_up_old
