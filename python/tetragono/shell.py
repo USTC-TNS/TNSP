@@ -369,6 +369,12 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         with open(name, "rb") as file:
             self.gm = pickle.load(file)
 
+    def do_gm_to_ex(self, line):
+        """
+        Convert sampling lattice to exact lattice.
+        """
+        self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
+
 
 class TetragonoScriptApp(TetragonoCommandApp):
 
