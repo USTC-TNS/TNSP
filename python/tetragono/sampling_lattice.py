@@ -78,11 +78,10 @@ class Configuration(Auxiliaries):
                                  for orbit, edge in self._owner.physics_edges[l1, l2].items()}
                                 for l2 in range(self._owner.L2)]
                                for l1 in range(self._owner.L1)]
-        # update exist configuration
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
-                for orbit, edge in self._owner.physics_edges[l1, l2].items():
-                    self[l1, l2, orbit] = self[l1, l2, orbit]
+                if len(self._owner.physics_edges[l1, l2]) == 0:
+                    super().__setitem__((l1, l2), self._owner[l1, l2])
         self._holes = None
 
     def site_valid(self, l1, l2):
