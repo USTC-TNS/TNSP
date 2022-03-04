@@ -17,7 +17,7 @@
 #
 
 
-def restrict(configuration, replacement=None):
+def restrict(configuration, replacement=None, is_energy_replace=True):
     if replacement == None:
         owner = configuration._owner
         n_up = 0
@@ -38,6 +38,8 @@ def restrict(configuration, replacement=None):
         spin_number = owner.total_symmetry.fermi
         return n_up == spin_number // 2
     else:
+        if is_energy_replace:
+            return True
         n_up_old = 0
         n_down_old = 0
         n_up_new = 0
