@@ -1248,8 +1248,7 @@ class SweepSampling(Sampling):
         for positions in self._sweep_order:
             hamiltonian = owner._hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
-        self._sweep_order.reverse()
-        for positions in self._sweep_order:
+        for positions in reversed(self._sweep_order):
             hamiltonian = owner._hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
         return ws.norm_2()**2, self.configuration
