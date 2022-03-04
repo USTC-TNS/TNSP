@@ -254,19 +254,30 @@ def gradient_descent(
     # Sampling method
     if sampling_method == "sweep":
         showln("using sweep sampling")
+        sampling = SweepSampling(state, configuration_cut_dimension, restrict)
+        sampling_total_step = sampling_total_step
+        # Initialize sweep configuration
         if initial_configuration == "direct":
             # Use direct sampling to find sweep sampling initial configuration.
-            sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
-            _, configuration = sampling()
+            direct_sampling = DirectSampling(state, configuration_cut_dimension, restrict,
+                                             direct_sampling_cut_dimension)
+            _, configuration = direct_sampling()
         elif initial_configuration == "load":
-            raise NotImplementedError("load config not impled")
+            with open(configuration_dump_file, "rb") as file:
+                configurations = pickle.load(file)
+            with seed_differ:
+                choose = TAT.random.uniform_int(0, len(configurations) - 1)()
+            config = configurations[choose]
+            configuration = sampling.configuration
+            for l1 in range(state.L1):
+                for l2 in range(state.L2):
+                    for orbit, edge_point in config[l1][l2].items():
+                        configuration[l1, l2, orbit] = edge_point
         else:
             with seed_differ:
                 initial_configuration_module = importlib.import_module(initial_configuration)
                 configuration = initial_configuration_module.initial_configuration(state, configuration_cut_dimension)
-        sampling = SweepSampling(state, configuration_cut_dimension, restrict)
         sampling.configuration = configuration
-        sampling_total_step = sampling_total_step
     elif sampling_method == "ergodic":
         showln("using ergodic sampling")
         sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
@@ -308,7 +319,10 @@ def gradient_descent(
             # Dump configuration
             if configuration_dump_file:
                 if sampling_method == "sweep":
-                    raise NotImplementedError("dump config not impled")
+                    to_dump = mpi_comm.gather(sampling.configuration._configuration, root=0)
+                    if mpi_rank == 0:
+                        with open(configuration_dump_file, "wb") as file:
+                            pickle.dump(to_dump, file)
                 else:
                     raise ValueError("Dump configuration into file is only supported for sweep sampling")
 
