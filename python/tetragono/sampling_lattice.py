@@ -1227,8 +1227,9 @@ class SweepSampling(Sampling):
             configuration_new, element = list(possible_hopping.items())[TAT.random.uniform_int(0, hopping_number - 1)()]
             hopping_number_s = len(element_pool[configuration_new])
             replacement = {positions[i]: configuration_new[i] for i in range(body)}
-            if not self._restrict_subspace(self.configuration, replacement):
-                return ws
+            if self._restrict_subspace != None:
+                if not self._restrict_subspace(self.configuration, replacement):
+                    return ws
             wss = self.configuration.replace(replacement)  # which return a tensor, we only need its norm
             p = (wss.norm_2()**2) / (ws.norm_2()**2) * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
