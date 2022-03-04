@@ -60,6 +60,8 @@ class SeedDiffer:
 
     def make_seed_diff(self):
         TAT.random.seed((self.random_int() + mpi_rank) % self.max_int)
+        # c++ random engine will generate the same first uniform int if the seed is near.
+        TAT.random.uniform_real(0, 1)()
 
     def make_seed_same(self):
         TAT.random.seed(mpi_comm.allreduce(self.random_int() // mpi_size))
