@@ -178,6 +178,8 @@ def gradient_descent(
         sampling_method="direct",
         configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
+        initial_configuration=None,
+        configuration_dump_file=None,
         # About subspace
         restrict_subspace=None,
         # About natural gradient
@@ -252,9 +254,16 @@ def gradient_descent(
     # Sampling method
     if sampling_method == "sweep":
         showln("using sweep sampling")
-        # Use direct sampling to find sweep sampling initial configuration.
-        sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
-        _, configuration = sampling()
+        if initial_configuration == "direct":
+            # Use direct sampling to find sweep sampling initial configuration.
+            sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
+            _, configuration = sampling()
+        elif initial_configuration == "load":
+            raise NotImplementedError("load config not impled")
+        else:
+            with seed_differ:
+                initial_configuration_module = importlib.import_module(initial_configuration)
+                configuration = initial_configuration_module.initial_configuration(state, configuration_cut_dimension)
         sampling = SweepSampling(state, configuration_cut_dimension, restrict)
         sampling.configuration = configuration
         sampling_total_step = sampling_total_step
@@ -296,6 +305,12 @@ def gradient_descent(
             if log_file and mpi_rank == 0:
                 with open(log_file, "a") as file:
                     print(*observer.energy, file=file)
+            # Dump configuration
+            if configuration_dump_file:
+                if sampling_method == "sweep":
+                    raise NotImplementedError("dump config not impled")
+                else:
+                    raise ValueError("Dump configuration into file is only supported for sweep sampling")
 
             if use_gradient:
 
