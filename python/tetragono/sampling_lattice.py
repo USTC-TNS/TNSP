@@ -947,9 +947,13 @@ class Observer():
             The energy per site.
         """
         name = "energy"
-        total = sum(self._result[name][positions] for positions, _ in self._observer[name].items())
-        total_square = sum(self._result_square[name][positions] for positions, _ in self._observer[name].items())
-        return self._expect_and_deviation(total, total_square)
+        result = [
+            self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions])
+            for positions, _ in self._observer[name].items()
+        ]
+        expect = sum(e for e, d in result)
+        deviation = np.sqrt(sum(d * d for e, d in result))
+        return expect, deviation
 
     @property
     def energy(self):
