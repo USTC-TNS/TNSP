@@ -263,7 +263,8 @@ def gradient_descent(
             # Use direct sampling to find sweep sampling initial configuration.
             direct_sampling = DirectSampling(state, configuration_cut_dimension, restrict,
                                              direct_sampling_cut_dimension)
-            _, configuration = direct_sampling()
+            with seed_differ:
+                _, configuration = direct_sampling()
         elif initial_configuration == "load":
             with open(configuration_dump_file, "rb") as file:
                 configurations = pickle.load(file)
