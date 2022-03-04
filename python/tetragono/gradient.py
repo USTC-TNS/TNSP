@@ -268,8 +268,11 @@ def gradient_descent(
         elif initial_configuration == "load":
             with open(configuration_dump_file, "rb") as file:
                 configurations = pickle.load(file)
-            with seed_differ:
-                choose = TAT.random.uniform_int(0, len(configurations) - 1)()
+            if len(configurations) < mpi_size:
+                with seed_differ:
+                    choose = TAT.random.uniform_int(0, len(configurations) - 1)()
+            else:
+                choose = mpi_rank
             config = configurations[choose]
             configuration = sampling.configuration
             for l1 in range(state.L1):
