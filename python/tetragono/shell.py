@@ -383,7 +383,7 @@ class TetragonoScriptApp(TetragonoCommandApp):
         self.use_rawinput = False
         self.prompt = ""
         if common_variable.mpi_rank == 0:
-            self.intro = """Welcome to the Tetragono shell.""" + self.license
+            self.intro = """Welcome to the tetragono shell.""" + self.license
 
     def precmd(self, line):
         line = line.strip()
