@@ -894,12 +894,14 @@ class Observer():
         """
         expect_of_square = total_square / self._count
         expect = total / self._count
+        if self._count == 1:
+            return expect, float("+inf")
         square_of_expect = expect * expect
         variance = expect_of_square - square_of_expect
-        variance /= self._count
+        variance /= self._count - 1
         if variance < 0.0:
             # When total summate several same values, numeric error will lead variance < 0
-            variance = 0.0
+            return expect, 0.0
         deviation = np.sqrt(variance)
         return expect, deviation
 
