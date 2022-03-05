@@ -638,13 +638,14 @@ class Observer():
     __slots__ = [
         "_owner", "_enable_gradient", "_enable_natural", "_start", "_observer", "_result", "_result_square", "_count",
         "_total_weight", "_total_weight_square", "_Delta", "_EDelta", "_Deltas", "_cache_configuration", "_pool",
-        "_restrict_subspace"
+        "_restrict_subspace", "_total_energy", "_total_energy_square"
     ]
 
     def __enter__(self):
         """
         Enter sampling loop, flush all cached data in the observer object.
         """
+        self._start = True
         self._result = {
             name: {positions: 0.0 for positions, observer in observers.items()
                   } for name, observers in self._observer.items()
@@ -667,7 +668,8 @@ class Observer():
                 self._Deltas = []
         if self._cache_configuration:
             self._pool = ConfigurationPool(self._owner)
-        self._start = True
+        self._total_energy = 0.0
+        self._total_energy_square = 0.0
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -682,11 +684,15 @@ class Observer():
         buffer.append(self._count)
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
+        buffer.append(self._total_energy)
+        buffer.append(self._total_energy_square)
 
         buffer = np.array(buffer)
         allreduce_buffer(buffer)
         buffer = buffer.tolist()
 
+        self._total_energy_square = buffer.pop()
+        self._total_energy = buffer.pop()
         self._total_weight_square = buffer.pop()
         self._total_weight = buffer.pop()
         self._count = buffer.pop()
@@ -809,9 +815,10 @@ class Observer():
                                    for l2 in range(self._owner.L2)
                                    for orbit, edge in self._owner.physics_edges[l1, l2].items()}
         for name, observers in self._observer.items():
+            if name == "energy":
+                Es = 0.0
             if name == "energy" and self._enable_gradient:
                 calculating_gradient = True
-                Es = 0
             else:
                 calculating_gradient = False
             for positions, observer in observers.items():
@@ -845,8 +852,12 @@ class Observer():
                 to_save = total_value.real * reweight
                 self._result[name][positions] += to_save
                 self._result_square[name][positions] += to_save * to_save
-                if calculating_gradient:
+                if name == "energy":
                     Es += total_value  # reweight will be multipled later, Es maybe complex
+            if name == "energy":
+                reweight_Es = reweight * Es.real
+                self._total_energy += reweight_Es
+                self._total_energy_square += reweight_Es**2
             if calculating_gradient:
                 holes = configuration.holes()
                 if self._owner.Tensor.is_real:
@@ -937,7 +948,7 @@ class Observer():
         }
 
     @property
-    def _total_energy(self):
+    def total_energy(self):
         """
         Get the observed energy.
 
@@ -946,14 +957,7 @@ class Observer():
         tuple[float, float]
             The energy per site.
         """
-        name = "energy"
-        result = [
-            self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions])
-            for positions, _ in self._observer[name].items()
-        ]
-        expect = sum(e for e, d in result)
-        deviation = np.sqrt(sum(d * d for e, d in result))
-        return expect, deviation
+        return self._expect_and_deviation(self._total_energy, self._total_energy_square)
 
     @property
     def energy(self):
@@ -965,7 +969,7 @@ class Observer():
         tuple[float, float]
             The energy per site.
         """
-        expect, deviation = self._total_energy
+        expect, deviation = self.total_energy
         site_number = self._owner.site_number
         return expect / site_number, deviation / site_number
 
@@ -979,7 +983,7 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        energy, _ = self._total_energy
+        energy, _ = self.total_energy
         return self._lattice_map(lambda x1, x2: 2 * (x1 / self._total_weight) - 2 * energy * (x2 / self._total_weight),
                                  self._EDelta, self._Delta)
 
@@ -1056,7 +1060,7 @@ class Observer():
             delta = self._lattice_map(lambda x1: x1 / self._total_weight, self._Delta)
             edelta = self._lattice_map(lambda x1: x1 / self._total_weight, self._EDelta)
 
-            param = self._lattice_dot(delta, gradient) * (self._total_energy[0] + shift)
+            param = self._lattice_dot(delta, gradient) * (self.total_energy[0] + shift)
             result_2 = self._lattice_map(lambda x1: x1 * param, delta)
 
             param = self._lattice_dot(delta, gradient)
