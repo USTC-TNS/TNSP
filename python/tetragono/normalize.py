@@ -27,7 +27,7 @@ def plus_log(loga, logb):
 
 
 def normalize_state(state, sampling_total_step, configuration_cut_dimension, direct_sampling_cut_dimension):
-    sampling = DirectSampling(state, configuration_cut_dimension, direct_sampling_cut_dimension)
+    sampling = DirectSampling(state, configuration_cut_dimension, None, direct_sampling_cut_dimension)
     log_total_weight = 0.  # weight need to -= mpi_size at last
     count = 0
     with seed_differ:
