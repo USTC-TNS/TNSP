@@ -35,6 +35,7 @@ class SignalHandler():
     def __enter__(self):
 
         def handler(signum, frame):
+            print(f"\n process {mpi_rank} receive {self.signal.name}, send again to send {self.signal.name}\u001b[2F")
             if self.sigint_recv == 1:
                 self.saved_handler(signum, frame)
             else:
