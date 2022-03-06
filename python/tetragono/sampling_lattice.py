@@ -1397,7 +1397,7 @@ class DirectSampling(Sampling):
         possibility = 1.
         for l1 in range(owner.L1):
 
-            three_line_auxiliaries = ThreeLineAuxiliaries(owner.L2, owner.Tensor)
+            three_line_auxiliaries = ThreeLineAuxiliaries(owner.L2, owner.Tensor, self._cut_dimension)
             for l2 in range(owner.L2):
                 tensor_1 = configuration._up_to_down_site[l1 - 1, l2]()
                 three_line_auxiliaries[0, l2, "n"] = tensor_1

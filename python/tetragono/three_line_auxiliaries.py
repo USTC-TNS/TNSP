@@ -23,16 +23,17 @@ from .auxiliaries import safe_contract, safe_rename
 
 class ThreeLineAuxiliaries:
     __slots__ = [
-        "L2", "Tensor", "_one", "_lattice_0n", "_lattice_0c", "_lattice_1n", "_lattice_1c", "_lattice_2",
-        "_left_to_right", "_left_to_right_tailed", "_right_to_left", "_right_to_left_tailed"
+        "L2", "Tensor", "_ones", "_lattice_0n", "_lattice_0c", "_lattice_1n", "_lattice_1c", "_lattice_2",
+        "_zip_column", "_left_to_right", "_right_to_left", "cut_dimension"
     ]
 
-    def __init__(self, L2, Tensor):
+    def __init__(self, L2, Tensor, cut_dimension):
         self.L2 = L2
         self.Tensor = Tensor
+        self.cut_dimension = cut_dimension
 
         one = self.Tensor(1)
-        self._one = lazy.Root(one)
+        self._ones = lazy.Root([one for l1 in range(5)])
 
         self._lattice_0n = [lazy.Root() for l2 in range(self.L2)]
         self._lattice_0c = [lazy.Root() for l2 in range(self.L2)]
@@ -40,103 +41,79 @@ class ThreeLineAuxiliaries:
         self._lattice_1c = [lazy.Root() for l2 in range(self.L2)]
         self._lattice_2 = [lazy.Root() for l2 in range(self.L2)]
 
+        self._zip_column = [
+            lazy.Node(
+                self._zip,
+                self._lattice_0n[l2],
+                self._lattice_1n[l2],
+                self._lattice_2[l2],
+                self._lattice_1c[l2],
+                self._lattice_0c[l2],
+            ) for l2 in range(self.L2)
+        ]
+
         self._left_to_right = {}
-        self._left_to_right_tailed = {}
         for l2 in range(-1, self.L2):
             self._left_to_right[l2] = self._construct_left_to_right(l2)
-            self._left_to_right_tailed[l2] = self._construct_left_to_right_tailed(l2)
 
         self._right_to_left = {}
-        self._right_to_left_tailed = {}
         for l2 in reversed(range(self.L2 + 1)):
             self._right_to_left[l2] = self._construct_right_to_left(l2)
-            self._right_to_left_tailed[l2] = self._construct_right_to_left_tailed(l2)
+
+    @staticmethod
+    def _zip(*args):
+        return args
+
+    @staticmethod
+    def _two_line_to_one_line(lr_name, line_1, line_2, cut):
+        left, right = lr_name
+        right_n = right + "N"
+        right_c = right + "C"
+
+        rn0, nr = line_2[0].qr('q', {right}, "D", "U")
+        n12 = safe_contract(safe_rename(nr, {"D": "D2"}), safe_rename(line_1[0], {"D": "D1"}), {(left, right)})
+        n12 = safe_contract(n12, safe_rename(line_1[1], {"D": "D1"}), {("D1", "U")})
+        n12 = safe_contract(n12, safe_rename(line_2[1], {"D": "D2"}), {(right, left), ("D2", "U")})
+
+        rc0, cr = line_2[4].qr('q', {right}, "D", "U")
+        c12 = safe_contract(safe_rename(cr, {"D": "D2"}), safe_rename(line_1[4], {"D": "D1"}), {(left, right)})
+        c12 = safe_contract(c12, safe_rename(line_1[3], {"D": "D1"}), {("D1", "U")})
+        c12 = safe_contract(c12, safe_rename(line_2[3], {"D": "D2"}), {(right, left), ("D2", "U")})
+
+        big = safe_contract(safe_rename(n12, {
+            right: right_n,
+            "U": "UN"
+        }), safe_rename(line_1[2], {"UC": "UC1"}), {("D1", "UN")})
+        big = safe_contract(big, safe_rename(line_2[2], {"UC": "UC2"}), {("D2", "UN"), (right, left)})
+        big = safe_contract(big,
+                            safe_rename(c12, {
+                                right: right_c,
+                                "U": "UC"
+                            }), {("UC1", "D1"), ("UC2", "D2"), ("T", "T")},
+                            contract_all_physics_edges=True)
+
+        u, s, v = big.svd({"UN", right_n}, "D", "UN", "UN", "D", cut)
+        rn1 = safe_rename(u, {"UN": "U", right_n: right})
+        big = safe_contract(v, s, {("UN", "D")})
+        u, s, v = big.svd({"UC", right_c}, "D", "UC", "UC", "D", cut)
+        rc1 = safe_rename(u, {"UC": "U", right_c: right})
+        big = safe_contract(v, s, {("UC", "D")})
+
+        return [rn0, rn1, big, rc1, rc0]
 
     def _construct_left_to_right(self, l2):
         if l2 == -1:
-            return self._one
+            return self._ones
         else:
-            return lazy.Node(
-                self._construct_left_to_right_in_lazy,
-                self._left_to_right_tailed[l2 - 1],
-                self._lattice_0n[l2],
-                self._lattice_1n[l2],
-                self._lattice_1c[l2],
-                self._lattice_2[l2],
-                l2,
-            )
-
-    def _construct_left_to_right_tailed(self, l2):
-        if l2 == self.L2 - 1:
-            return self._left_to_right[l2]
-        else:
-            return lazy.Node(
-                self._construct_left_to_right_tailed_in_lazy,
-                self._left_to_right[l2],
-                self._lattice_0c[l2 + 1],
-                l2,
-            )
+            return lazy.Node(self._two_line_to_one_line, "LR", self._left_to_right[l2 - 1], self._zip_column[l2],
+                             self.cut_dimension)
 
     def _construct_right_to_left(self, l2):
         if l2 == self.L2:
-            return self._one
+            return self._ones
         else:
-            return lazy.Node(
-                self._construct_right_to_left_in_lazy,
-                self._right_to_left_tailed[l2 + 1],
-                self._lattice_0c[l2],
-                self._lattice_1n[l2],
-                self._lattice_1c[l2],
-                self._lattice_2[l2],
-                l2,
-            )
-
-    def _construct_right_to_left_tailed(self, l2):
-        if l2 == 0:
-            return self._right_to_left[l2]
-        else:
-            return lazy.Node(
-                self._construct_right_to_left_tailed_in_lazy,
-                self._right_to_left[l2],
-                self._lattice_0n[l2 - 1],
-                l2,
-            )
-
-    @staticmethod
-    def _construct_left_to_right_in_lazy(left, n0, n1, c1, t2, l2):
-        result = safe_contract(left, safe_rename(c1, {"R": "RC1"}), {("RC1", "L"), ("D", "U")})
-        result = safe_contract(result, safe_rename(t2, {"R": "R2"}), {("R2", "L"), ("D", "UC")})
-        result = safe_contract(result,
-                               safe_rename(n1, {"R": "RN1"}), {("RN1", "L"), ("UN", "D"), ("T", "T")},
-                               contract_all_physics_edges=True)
-        result = safe_contract(result,
-                               safe_rename(n0, {"R": "RN0"}), {("RN0", "L"), ("U", "D"), ("T", "T")},
-                               contract_all_physics_edges=True)
-        result /= result.norm_sum()
-        return result
-
-    @staticmethod
-    def _construct_left_to_right_tailed_in_lazy(left, c0, l2):
-        result = safe_contract(left, safe_rename(c0, {"R": "RC0"}), {("RC0", "L")})
-        return result
-
-    @staticmethod
-    def _construct_right_to_left_in_lazy(right, c0, n1, c1, t2, l2):
-        result = safe_contract(right, safe_rename(n1, {"L": "LN1"}), {("LN1", "R"), ("D", "U")})
-        result = safe_contract(result, safe_rename(t2, {"L": "L2"}), {("L2", "R"), ("D", "UN")})
-        result = safe_contract(result,
-                               safe_rename(c1, {"L": "LC1"}), {("LC1", "R"), ("UC", "D"), ("T", "T")},
-                               contract_all_physics_edges=True)
-        result = safe_contract(result,
-                               safe_rename(c0, {"L": "LC0"}), {("LC0", "R"), ("U", "D"), ("T", "T")},
-                               contract_all_physics_edges=True)
-        result /= result.norm_sum()
-        return result
-
-    @staticmethod
-    def _construct_right_to_left_tailed_in_lazy(right, n0, l2):
-        result = safe_contract(right, safe_rename(n0, {"L": "LN0"}), {("LN0", "R")})
-        return result
+            return lazy.Node(self._two_line_to_one_line, "RL", self._right_to_left[l2 + 1], self._zip_column[l2],
+                             self.cut_dimension)
 
     def hole(self, l2, orbit):
         n0 = self._lattice_0n[l2]()
@@ -148,18 +125,34 @@ class ThreeLineAuxiliaries:
         n1 = safe_rename(n1, {f"P{orbit}": f"O0"})
         c1 = safe_rename(c1, {f"P{orbit}": f"I0"})
 
-        left = self._left_to_right_tailed[l2 - 1]()
-        right = self._right_to_left_tailed[l2 + 1]()
+        line = [n0, n1, t2, c1, c0]
 
-        result = safe_contract(left, safe_rename(c1, {"R": "RC1"}), {("RC1", "L"), ("D", "U")})
-        result = safe_contract(result, safe_rename(t2, {"R": "R2"}), {("R2", "L"), ("D", "UC")})
+        left = self._left_to_right[l2 - 1]()
+        right = self._right_to_left[l2 + 1]()
+
+        result = safe_contract(safe_rename(left[0], {"D": "D1"}), safe_rename(line[0], {"D": "D2"}), {("R", "L")})
+        result = safe_contract(result, safe_rename(right[0], {"D": "D3"}), {("R", "L")})
+
+        result = safe_contract(result, safe_rename(left[1], {"D": "D1"}), {("D1", "U")})
+        result = safe_contract(result, safe_rename(line[1], {"D": "D2"}), {("D2", "U"), ("R", "L")})
+        result = safe_contract(result, safe_rename(right[1], {"D": "D3"}), {("D3", "U"), ("R", "L")})
+
+        result = safe_contract(result, safe_rename(left[2], {"UC": "U1"}), {("D1", "UN")})
+        result = safe_contract(result, safe_rename(line[2], {"UC": "U2"}), {("D2", "UN"), ("R", "L")})
+        result = safe_contract(result, safe_rename(right[2], {"UC": "U3"}), {("D3", "UN"), ("R", "L")})
+
+        result = safe_contract(result, safe_rename(left[3], {"U": "U1"}), {("U1", "D")})
         result = safe_contract(result,
-                               safe_rename(n1, {"R": "RN1"}), {("RN1", "L"), ("UN", "D"), ("T", "T")},
+                               safe_rename(line[3], {"U": "U2"}), {("U2", "D"), ("R", "L"), ("T", "T")},
                                contract_all_physics_edges=True)
+        result = safe_contract(result, safe_rename(right[3], {"U": "U3"}), {("U3", "D"), ("R", "L")})
+
+        result = safe_contract(result, safe_rename(left[4], {"U": "U1"}), {("U1", "D")})
         result = safe_contract(result,
-                               right, {("RN0", "LN0"), ("RC0", "LC0"), ("RN1", "LN1"), ("RC1", "LC1"), ("R2", "L2"),
-                                       ("U", "D"), ("T", "T")},
+                               safe_rename(line[4], {"U": "U2"}), {("U2", "D"), ("R", "L"), ("T", "T")},
                                contract_all_physics_edges=True)
+        result = safe_contract(result, safe_rename(right[4], {"U": "U3"}), {("U3", "D"), ("R", "L")})
+
         return result
 
     def __setitem__(self, positions, tensor):
