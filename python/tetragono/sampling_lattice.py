@@ -920,8 +920,8 @@ class Observer():
         Wb = self._total_weight / N
         W2b = self._total_weight_square / N
 
-        EV = E2b - Eb**2
-        WV = W2b - Wb**2
+        EV = E2b - Eb * Eb
+        WV = W2b - Wb * Wb
         EWC = EWb - Eb * Wb
 
         expect = EWb / Wb
@@ -934,7 +934,8 @@ class Observer():
         #            (E2b + expect^2 - 2 expect Eb) / (Wb^2 N) Var(W) +
         #            (EWb - expect Wb) / (Wb^2 N) Cov(E,W)
         #          = [W2b EV + (E2b + expect^2 - 2 expect Eb) WV + (EWb - expect Wb) EWC] / (Wb^2 N)
-        variance = (W2b * EV + (E2b + expect**2 - 2 * expect * Eb) * WV + (EWb - expect * Wb) * EWC) / (Wb**2 * N)
+        variance = (W2b * EV + (E2b + expect * expect - 2 * expect * Eb) * WV +
+                    (EWb - expect * Wb) * EWC) / (Wb * Wb * N)
         if variance < 0.0:
             # When total summate several same values, numeric error will lead variance < 0
             deviation = 0.0
