@@ -9,7 +9,7 @@ L2s = StringCases[$ScriptCommandLine[[3]], x:NumberString:>ToExpression[x]];
 L2 = L2s[[1]];
 Ts = StringCases[$ScriptCommandLine[[4]], x:NumberString:>ToExpression[x]];
 T = Ts[[1]];
-Print[L1," * ",L2," square lattice free fermion with particle number ", T]
+Print[L1," * ",L2," square lattice free fermion with particle number ", T];
 
 H = ArrayReshape[
         Table[
@@ -22,4 +22,4 @@ H = ArrayReshape[
         {L1*L2,L1*L2}
     ];
 Energy = Total[Sort[Eigenvalues[H]][[;;T]]];
-Print[Energy/(L1*L2)]
+Print[Energy/(L1*L2)];
