@@ -27,7 +27,6 @@
 
 #include "../structure/tensor.hpp"
 
-#ifndef TAT_DOXYGEN_SHOULD_SKIP_THIS
 namespace TAT {
    // complex text io, complex bin io can be done directly
    namespace detail {
@@ -642,5 +641,4 @@ namespace TAT {
       return std::move(out);
    }
 } // namespace TAT
-#endif
 #endif
