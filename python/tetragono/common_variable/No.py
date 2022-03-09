@@ -17,7 +17,7 @@
 #
 
 import TAT
-from .tensor_toolkit import rename_io, dot
+from .tensor_toolkit import rename_io, kronecker_product
 
 Tensor = TAT.No.Z.Tensor
 
@@ -36,15 +36,15 @@ pauli_z = Tensor(["I0", "O0"], [2, 2])
 pauli_z.blocks[pauli_z.names] = [[1, 0], [0, -1]]
 Sz = pauli_z / 2
 
-pauli_x_pauli_x = dot(
+pauli_x_pauli_x = kronecker_product(
     rename_io(pauli_x, {0: 0}),
     rename_io(pauli_x, {0: 1}),
 )
-pauli_y_pauli_y = dot(
+pauli_y_pauli_y = kronecker_product(
     rename_io(pauli_y, {0: 0}),
     rename_io(pauli_y, {0: 1}),
 )
-pauli_z_pauli_z = dot(
+pauli_z_pauli_z = kronecker_product(
     rename_io(pauli_z, {0: 0}),
     rename_io(pauli_z, {0: 1}),
 )

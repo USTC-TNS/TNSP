@@ -39,7 +39,7 @@ def rename_io(t, m):
     return t.edge_rename(res)
 
 
-def dot(res, *b):
+def kronecker_product(res, *b):
     for i in b:
         res = res.contract(i, set())
     return res

@@ -18,7 +18,7 @@
 
 import TAT
 import tetragono as tet
-from tetragono.common_variable.tensor_toolkit import rename_io, dot
+from tetragono.common_variable.tensor_toolkit import rename_io, kronecker_product
 
 
 def create(L1, L2, D, Jx, Jz):
@@ -38,13 +38,13 @@ def create(L1, L2, D, Jx, Jz):
     state.physics_edges[...] = 2
     sigma_x = tet.common_variable.No.pauli_x.to(float)
     sigma_z = tet.common_variable.No.pauli_z.to(float)
-    sigma_xxxx = dot(
+    sigma_xxxx = kronecker_product(
         rename_io(sigma_x, {0: 0}),
         rename_io(sigma_x, {0: 1}),
         rename_io(sigma_x, {0: 2}),
         rename_io(sigma_x, {0: 3}),
     )
-    sigma_zzzz = dot(
+    sigma_zzzz = kronecker_product(
         rename_io(sigma_z, {0: 0}),
         rename_io(sigma_z, {0: 1}),
         rename_io(sigma_z, {0: 2}),

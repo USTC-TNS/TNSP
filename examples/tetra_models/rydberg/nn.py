@@ -18,12 +18,12 @@
 
 import TAT
 import tetragono as tet
-from tetragono.common_variable.tensor_toolkit import rename_io, dot
+from tetragono.common_variable.tensor_toolkit import rename_io, kronecker_product
 
 
 def measurement(state):
     n = (tet.common_variable.No.identity.to(float) - tet.common_variable.No.pauli_z.to(float)) / 2
-    nn = dot(rename_io(n, {0: 0}), rename_io(n, {0: 1}))
+    nn = kronecker_product(rename_io(n, {0: 0}), rename_io(n, {0: 1}))
     return {((al1, al2, 0), (bl1, bl2, 0)): nn for al1 in range(state.L1) for al2 in range(state.L2)
             for bl1 in range(state.L1) for bl2 in range(state.L2) if (al1, al2) != (bl1, bl2)}
 

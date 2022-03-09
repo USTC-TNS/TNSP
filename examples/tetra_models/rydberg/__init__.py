@@ -18,7 +18,7 @@
 
 import TAT
 import tetragono as tet
-from tetragono.common_variable.tensor_toolkit import rename_io, dot
+from tetragono.common_variable.tensor_toolkit import rename_io, kronecker_product
 
 
 def create(L1, L2, D, delta, omega, radius):
@@ -46,7 +46,7 @@ def create(L1, L2, D, delta, omega, radius):
     for l1 in range(L1):
         for l2 in range(L2):
             state.hamiltonians[(l1, l2, 0),] = single_body_hamiltonian
-    nn = dot(rename_io(n, {0: 0}), rename_io(n, {0: 1}))
+    nn = kronecker_product(rename_io(n, {0: 0}), rename_io(n, {0: 1}))
     for al1 in range(L1):
         for al2 in range(L2):
             for bl1 in range(L1):

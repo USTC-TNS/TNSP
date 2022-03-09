@@ -18,7 +18,7 @@
 
 import TAT
 import tetragono as tet
-from tetragono.common_variable.tensor_toolkit import rename_io, dot
+from tetragono.common_variable.tensor_toolkit import rename_io, kronecker_product
 
 
 def create(L1, L2, D, delta, omega, U):
@@ -74,7 +74,7 @@ def create(L1, L2, D, delta, omega, U):
             if l1 != L1 - 1:
                 state.hamiltonians[(l1, l2, 5),] = H
 
-    nn = dot(rename_io(n, {0: 0}), rename_io(n, {0: 1}))
+    nn = kronecker_product(rename_io(n, {0: 0}), rename_io(n, {0: 1}))
     Unn = U * nn
     for l1 in range(L1):
         for l2 in range(L2):

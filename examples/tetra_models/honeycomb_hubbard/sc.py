@@ -19,32 +19,56 @@
 import numpy as np
 import TAT
 import tetragono as tet
-from tetragono.common_variable.tensor_toolkit import dot, rename_io
+from tetragono.common_variable.tensor_toolkit import kronecker_product, rename_io
 from tetragono.common_variable.Fermi import CP, CM, I
 from tetragono.common_variable.Fermi_Hubbard import put_sign_in_H
 
 # merge order: up down
-CPU = dot(rename_io(CP, {0: 0}), rename_io(I, {0: 1})).merge_edge({
+CPU = kronecker_product(rename_io(CP, {0: 0}), rename_io(I, {0: 1})).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"]
 }, put_sign_in_H, {"O0"})
-CPD = dot(rename_io(CP, {0: 1}), rename_io(I, {0: 0})).merge_edge({
+CPD = kronecker_product(rename_io(CP, {0: 1}), rename_io(I, {0: 0})).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"]
 }, put_sign_in_H, {"O0"})
-CMU = dot(rename_io(CM, {0: 0}), rename_io(I, {0: 1})).merge_edge({
+CMU = kronecker_product(rename_io(CM, {0: 0}), rename_io(I, {0: 1})).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"]
 }, put_sign_in_H, {"O0"})
-CMD = dot(rename_io(CM, {0: 1}), rename_io(I, {0: 0})).merge_edge({
+CMD = kronecker_product(rename_io(CM, {0: 1}), rename_io(I, {0: 0})).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"]
 }, put_sign_in_H, {"O0"})
 
-CMUD = dot(rename_io(CMU, {0: 0}).edge_rename({"T": "T0"}), rename_io(CMD, {0: 1}).edge_rename({"T": "T1"}))
-CMDU = dot(rename_io(CMD, {0: 0}).edge_rename({"T": "T0"}), rename_io(CMU, {0: 1}).edge_rename({"T": "T1"}))
-CPUD = dot(rename_io(CPU, {0: 0}).edge_rename({"T": "T0"}), rename_io(CPD, {0: 1}).edge_rename({"T": "T1"}))
-CPDU = dot(rename_io(CPD, {0: 0}).edge_rename({"T": "T0"}), rename_io(CPU, {0: 1}).edge_rename({"T": "T1"}))
+CMUD = kronecker_product(
+    rename_io(CMU, {
+        0: 0
+    }).edge_rename({"T": "T0"}),
+    rename_io(CMD, {
+        0: 1
+    }).edge_rename({"T": "T1"}))
+CMDU = kronecker_product(
+    rename_io(CMD, {
+        0: 0
+    }).edge_rename({"T": "T0"}),
+    rename_io(CMU, {
+        0: 1
+    }).edge_rename({"T": "T1"}))
+CPUD = kronecker_product(
+    rename_io(CPU, {
+        0: 0
+    }).edge_rename({"T": "T0"}),
+    rename_io(CPD, {
+        0: 1
+    }).edge_rename({"T": "T1"}))
+CPDU = kronecker_product(
+    rename_io(CPD, {
+        0: 0
+    }).edge_rename({"T": "T0"}),
+    rename_io(CPU, {
+        0: 1
+    }).edge_rename({"T": "T1"}))
 
 # CPAB CMCD will give (c_0A c_1B)^dagger (c_0C c_1D)
 # CPAB.contract(CMCD, {("T0","T0"), ("T1","T1")})

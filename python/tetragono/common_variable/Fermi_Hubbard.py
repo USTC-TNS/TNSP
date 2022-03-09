@@ -18,7 +18,7 @@
 
 import TAT
 from . import Fermi
-from .tensor_toolkit import rename_io, dot
+from .tensor_toolkit import rename_io, kronecker_product
 from .Fermi import Tensor, CC, I, N, C0C1, C1C0
 
 # Merge two spin
@@ -30,14 +30,14 @@ put_sign_in_H = True
 # site1 down: 2
 # site2 down: 3
 # CSCS = CC(0,1)I(2)I(3) + I(0)I(1)CC(2,3)
-CSCS = dot(
+CSCS = kronecker_product(
     rename_io(CC, {
         0: 0,
         1: 1
     }),
     rename_io(I, {0: 2}),
     rename_io(I, {0: 3}),
-) + dot(
+) + kronecker_product(
     rename_io(CC, {
         0: 2,
         1: 3
@@ -53,7 +53,7 @@ CSCS = CSCS.merge_edge({
     "O1": ["O1", "O3"],
 }, put_sign_in_H, {"O0", "O1"})
 
-NN = dot(rename_io(N, {0: 0}), rename_io(N, {0: 1}))
+NN = kronecker_product(rename_io(N, {0: 0}), rename_io(N, {0: 1}))
 NN = NN.merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
@@ -67,11 +67,17 @@ CDCU = C1C0.merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
-CUCU = dot(rename_io(N, {0: 0}), rename_io(I, {0: 1})).merge_edge({
+CUCU = kronecker_product(
+    rename_io(N, {0: 0}),
+    rename_io(I, {0: 1}),
+).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
-CDCD = dot(rename_io(I, {0: 0}), rename_io(N, {0: 1})).merge_edge({
+CDCD = kronecker_product(
+    rename_io(I, {0: 0}),
+    rename_io(N, {0: 1}),
+).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
