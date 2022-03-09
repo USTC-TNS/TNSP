@@ -20,6 +20,7 @@ from __future__ import annotations
 import pickle
 import importlib
 import signal
+import numpy as np
 import TAT
 from .sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
 from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
@@ -194,6 +195,7 @@ def gradient_descent(
         use_check_difference=False,
         use_line_search=False,
         use_fix_relative_step_size=False,
+        use_random_gradient=False,
         # About log and save state
         log_file=None,
         save_state_interval=None,
@@ -363,20 +365,29 @@ def gradient_descent(
                     for l1 in range(state.L1):
                         for l2 in range(state.L2):
                             state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
-                elif use_fix_relative_step_size:
-                    showln("fix relative step size")
-                    param = mpi_comm.bcast((observer._lattice_dot(state._lattice, state._lattice) /
-                                            observer._lattice_dot(grad, grad))**0.5,
-                                           root=0)
-                    real_step_size = grad_step_size * param
-                    for l1 in range(state.L1):
-                        for l2 in range(state.L2):
-                            state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                 else:
-                    real_step_size = grad_step_size
-                    for l1 in range(state.L1):
-                        for l2 in range(state.L2):
-                            state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
+                    if use_random_gradient:
+                        showln("use random gradient")
+                        for l1 in range(state.L1):
+                            for l2 in range(state.L2):
+                                this_site_grad = grad[l1][l2]
+                                random_same_shape = this_site_grad.same_shape().rand(0, 1)
+                                random_same_shape.storage[::] *= np.sign(this_site_grad.storage)
+                                grad[l1][l2] = random_same_shape
+                    if use_fix_relative_step_size:
+                        showln("fix relative step size")
+                        param = mpi_comm.bcast((observer._lattice_dot(state._lattice, state._lattice) /
+                                                observer._lattice_dot(grad, grad))**0.5,
+                                               root=0)
+                        real_step_size = grad_step_size * param
+                        for l1 in range(state.L1):
+                            for l2 in range(state.L2):
+                                state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
+                    else:
+                        real_step_size = grad_step_size
+                        for l1 in range(state.L1):
+                            for l2 in range(state.L2):
+                                state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Normalize state
