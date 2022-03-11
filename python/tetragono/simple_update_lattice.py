@@ -119,7 +119,18 @@ class SimpleUpdateLattice(AbstractLattice):
 
     __slots__ = ["_lattice", "_environment_v", "_environment_h", "_auxiliaries"]
 
+    def _v1_to_v2_multiple(self):
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                this = self[l1, l2]
+                this = self._try_multiple(this, l1, l2, "L")
+                this = self._try_multiple(this, l1, l2, "R")
+                this = self._try_multiple(this, l1, l2, "U")
+                this = self._try_multiple(this, l1, l2, "D")
+                self[l1, l2] = this
+
     def __setstate__(self, state):
+        call_at_last = []
         # before data_version mechanism, state is (None, state)
         if isinstance(state, tuple):
             state = state[1]
@@ -129,10 +140,16 @@ class SimpleUpdateLattice(AbstractLattice):
         # version 0 to version 1
         if state["data_version"] == 0:
             state["data_version"] = 1
+        # version 1 to version 2
+        if state["data_version"] == 1:
+            state["data_version"] = 2
+            call_at_last.append(self._v1_to_v2_multiple)
         # setstate
         state["_auxiliaries"] = None
         for key, value in state.items():
             setattr(self, key, value)
+        for call in call_at_last:
+            call()
 
     def __getstate__(self):
         # getstate
@@ -381,34 +398,32 @@ class SimpleUpdateLattice(AbstractLattice):
             raise RuntimeError("Wrong simple update dispatch")
         body = len(index_and_orbit)
         left = self[i, j]
-        left = self._try_multiple(left, i, j, "L")
-        left = self._try_multiple(left, i, j, "U")
-        left = self._try_multiple(left, i, j, "D")
-        left = self._try_multiple(left, i, j, "R")
         right = self[i, j + 1]
-        right = self._try_multiple(right, i, j + 1, "U")
-        right = self._try_multiple(right, i, j + 1, "D")
-        right = self._try_multiple(right, i, j + 1, "R")
+        right = self._try_multiple(right, i, j + 1, "L", True)
         left_q, left_r = left.qr("r", {*(f"P{orbit}" for body_index, orbit in left_index_and_orbit), "R"}, "R", "L")
         right_q, right_r = right.qr("r", {*(f"P{orbit}" for body_index, orbit in right_index_and_orbit), "L"}, "L", "R")
-        u, s, v = left_r.edge_rename({
-            f"P{orbit}": f"P{body_index}" for body_index, orbit in left_index_and_orbit
-        }).contract(right_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in right_index_and_orbit}),
-                    {("R", "L")}).contract(evolution_operator,
-                                           {(f"P{body_index}", f"I{body_index}") for body_index in range(body)}).svd(
-                                               {*(f"O{body_index}" for body_index, orbit in left_index_and_orbit), "L"},
-                                               "R", "L", "L", "R", new_dimension)
+        u, s, v = left_r.edge_rename(
+            {f"P{orbit}": f"P{body_index}" for body_index, orbit in left_index_and_orbit}).contract(
+                right_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in right_index_and_orbit}),
+                {("R", "L")},
+            ).contract(
+                evolution_operator,
+                {(f"P{body_index}", f"I{body_index}") for body_index in range(body)},
+            ).svd(
+                {*(f"O{body_index}" for body_index, orbit in left_index_and_orbit), "L"},
+                "R",
+                "L",
+                "L",
+                "R",
+                new_dimension,
+            )
         s /= s.norm_2()
         self.environment[i, j, "R"] = s
-        left_q = self._try_multiple(left_q, i, j, "L", True)
-        left_q = self._try_multiple(left_q, i, j, "U", True)
-        left_q = self._try_multiple(left_q, i, j, "D", True)
+        u = self._try_multiple(u, i, j, "R")
         u = u.contract(left_q, {("L", "R")}).edge_rename(
             {f"O{body_index}": f"P{orbit}" for body_index, orbit in left_index_and_orbit})
         self[i, j] = u
-        right_q = self._try_multiple(right_q, i, j + 1, "U", True)
-        right_q = self._try_multiple(right_q, i, j + 1, "D", True)
-        right_q = self._try_multiple(right_q, i, j + 1, "R", True)
+        v = self._try_multiple(v, i, j + 1, "L")
         v = v.contract(right_q, {("R", "L")}).edge_rename(
             {f"O{body_index}": f"P{orbit}" for body_index, orbit in right_index_and_orbit})
         self[i, j + 1] = v
@@ -445,34 +460,32 @@ class SimpleUpdateLattice(AbstractLattice):
             raise RuntimeError("Wrong simple update dispatch")
         body = len(index_and_orbit)
         up = self[i, j]
-        up = self._try_multiple(up, i, j, "L")
-        up = self._try_multiple(up, i, j, "U")
-        up = self._try_multiple(up, i, j, "D")
-        up = self._try_multiple(up, i, j, "R")
         down = self[i + 1, j]
-        down = self._try_multiple(down, i + 1, j, "L")
-        down = self._try_multiple(down, i + 1, j, "D")
-        down = self._try_multiple(down, i + 1, j, "R")
+        down = self._try_multiple(down, i + 1, j, "U", True)
         up_q, up_r = up.qr("r", {*(f"P{orbit}" for body_index, orbit in up_index_and_orbit), "D"}, "D", "U")
         down_q, down_r = down.qr("r", {*(f"P{orbit}" for body_index, orbit in down_index_and_orbit), "U"}, "U", "D")
-        u, s, v = up_r.edge_rename({
-            f"P{orbit}": f"P{body_index}" for body_index, orbit in up_index_and_orbit
-        }).contract(down_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in down_index_and_orbit}),
-                    {("D", "U")}).contract(evolution_operator,
-                                           {(f"P{body_index}", f"I{body_index}") for body_index in range(body)}).svd(
-                                               {*(f"O{body_index}" for body_index, orbit in up_index_and_orbit), "U"},
-                                               "D", "U", "U", "D", new_dimension)
+        u, s, v = up_r.edge_rename(
+            {f"P{orbit}": f"P{body_index}" for body_index, orbit in up_index_and_orbit}).contract(
+                down_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in down_index_and_orbit}),
+                {("D", "U")},
+            ).contract(
+                evolution_operator,
+                {(f"P{body_index}", f"I{body_index}") for body_index in range(body)},
+            ).svd(
+                {*(f"O{body_index}" for body_index, orbit in up_index_and_orbit), "U"},
+                "D",
+                "U",
+                "U",
+                "D",
+                new_dimension,
+            )
         s /= s.norm_2()
         self.environment[i, j, "D"] = s
-        up_q = self._try_multiple(up_q, i, j, "L", True)
-        up_q = self._try_multiple(up_q, i, j, "U", True)
-        up_q = self._try_multiple(up_q, i, j, "R", True)
+        u = self._try_multiple(u, i, j, "D")
         u = u.contract(up_q, {("U", "D")}).edge_rename(
             {f"O{body_index}": f"P{orbit}" for body_index, orbit in up_index_and_orbit})
         self[i, j] = u
-        down_q = self._try_multiple(down_q, i + 1, j, "L", True)
-        down_q = self._try_multiple(down_q, i + 1, j, "D", True)
-        down_q = self._try_multiple(down_q, i + 1, j, "R", True)
+        v = self._try_multiple(v, i + 1, j, "U")
         v = v.contract(down_q, {("D", "U")}).edge_rename(
             {f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit})
         self[i + 1, j] = v

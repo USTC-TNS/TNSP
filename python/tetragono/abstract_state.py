@@ -242,7 +242,7 @@ class AbstractState:
         self._hamiltonians = {}
         self._total_symmetry = self.Symmetry()
         self._site_number = None
-        self.data_version = 1
+        self.data_version = 2
 
     def _init_by_copy(self, other):
         """

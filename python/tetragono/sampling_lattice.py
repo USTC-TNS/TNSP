@@ -598,6 +598,9 @@ class SamplingLattice(AbstractLattice):
             # version 0 MAY have useless _cut_dimension
             if "_cut_dimension" in state:
                 del state["_cut_dimension"]
+        # version 1 to version 2
+        if state["data_version"] == 1:
+            state["data_version"] = 2
         # setstate
         for key, value in state.items():
             setattr(self, key, value)

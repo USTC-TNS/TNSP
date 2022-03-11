@@ -39,6 +39,9 @@ class ExactState(AbstractState):
         # version 0 to version 1
         if state["data_version"] == 0:
             state["data_version"] = 1
+        # version 1 to version 2
+        if state["data_version"] == 1:
+            state["data_version"] = 2
         # setstate
         for key, value in state.items():
             setattr(self, key, value)
