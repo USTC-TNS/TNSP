@@ -44,7 +44,7 @@
  */
 namespace TAT {
 #ifndef TAT_VERSION
-#define TAT_VERSION "0.2.1"
+#define TAT_VERSION "0.2.2"
 #endif
 
    /**
