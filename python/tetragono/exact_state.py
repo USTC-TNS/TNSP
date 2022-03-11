@@ -17,6 +17,7 @@
 #
 
 from __future__ import annotations
+from copyreg import _slotnames
 from .common_variable import show, showln
 from .abstract_state import AbstractState
 
@@ -27,6 +28,25 @@ class ExactState(AbstractState):
     """
 
     __slots__ = ["vector"]
+
+    def __setstate__(self, state):
+        # before data_version mechanism, state is (None, state)
+        if isinstance(state, tuple):
+            state = state[1]
+        # before data_version mechanism, there is no data_version field
+        if "data_version" not in state:
+            state["data_version"] = 0
+        # version 0 to version 1
+        if state["data_version"] == 0:
+            state["data_version"] = 1
+        # setstate
+        for key, value in state.items():
+            setattr(self, key, value)
+
+    def __getstate__(self):
+        # getstate
+        state = {key: getattr(self, key) for key in _slotnames(self.__class__)}
+        return state
 
     def __init__(self, abstract):
         """

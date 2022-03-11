@@ -120,12 +120,24 @@ class SimpleUpdateLattice(AbstractLattice):
     __slots__ = ["_lattice", "_environment_v", "_environment_h", "_auxiliaries"]
 
     def __setstate__(self, state):
+        # before data_version mechanism, state is (None, state)
+        if isinstance(state, tuple):
+            state = state[1]
+        # before data_version mechanism, there is no data_version field
+        if "data_version" not in state:
+            state["data_version"] = 0
+        # version 0 to version 1
+        if state["data_version"] == 0:
+            state["data_version"] = 1
+        # setstate
+        state["_auxiliaries"] = None
         for key, value in state.items():
             setattr(self, key, value)
-        self._auxiliaries = None
 
     def __getstate__(self):
-        state = {key: getattr(self, key) for key in _slotnames(self.__class__) if key != "_auxiliaries"}
+        # getstate
+        state = {key: getattr(self, key) for key in _slotnames(self.__class__)}
+        del state["_auxiliaries"]  # aux is lazy graph, should not be dumped.
         return state
 
     def __init__(self, abstract):

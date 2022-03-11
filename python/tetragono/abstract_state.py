@@ -158,7 +158,9 @@ class AbstractState:
     Abstract state, which is used to construct other type of state.
     """
 
-    __slots__ = ["_Tensor", "_L1", "_L2", "_physics_edges", "_hamiltonians", "_total_symmetry", "_site_number"]
+    __slots__ = [
+        "_Tensor", "_L1", "_L2", "_physics_edges", "_hamiltonians", "_total_symmetry", "_site_number", "data_version"
+    ]
 
     @property
     def Tensor(self):
@@ -240,6 +242,7 @@ class AbstractState:
         self._hamiltonians = {}
         self._total_symmetry = self.Symmetry()
         self._site_number = None
+        self.data_version = 1
 
     def _init_by_copy(self, other):
         """
@@ -257,6 +260,7 @@ class AbstractState:
         self._hamiltonians = other._hamiltonians.copy()
         self._total_symmetry = other._total_symmetry
         self._site_number = other._site_number
+        self.data_version = other.data_version
 
     def _construct_symmetry(self, value):
         """
