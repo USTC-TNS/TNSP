@@ -26,6 +26,7 @@
 #include <type_traits>
 
 #include "../structure/tensor.hpp"
+#include "../utility/timer.hpp"
 
 namespace TAT {
    // complex text io, complex bin io can be done directly
@@ -550,12 +551,15 @@ namespace TAT {
       return *this;
    }
 
+   inline timer tensor_dump_guard("tensor_dump");
+
    template<
          typename ScalarType,
          typename Symmetry,
          typename Name,
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
+      auto timer_guard = tensor_dump_guard();
       tensor.meta_put(out).data_put(out);
       return out;
    }
@@ -584,12 +588,15 @@ namespace TAT {
       return *this;
    }
 
+   inline timer tensor_load_guard("tensor_load");
+
    template<
          typename ScalarType,
          typename Symmetry,
          typename Name,
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
+      auto timer_guard = tensor_load_guard();
       tensor.meta_get(in).data_get(in);
       if constexpr (debug_mode) {
          tensor.check_valid_name();
