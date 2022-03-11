@@ -36,7 +36,6 @@ namespace TAT {
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination, // leading_destination is the proper order
          const Rank rank,
-         const Rank line_rank = 0,
          const LineSizeType line_size = 0) {
       auto timer_guard = transpose_kernel_core_guard();
 
@@ -48,10 +47,7 @@ namespace TAT {
 
          if constexpr (loop_last) {
             // come into this branch iff the last dimension is the same and its leading is 1.
-            for (Size line_index = line_rank; line_index < rank - 1; line_index++) {
-               index_list[line_index] = dimension[line_index] - 1;
-            }
-            index_list[rank - 1] = dimension[rank - 1];
+            index_list[active_position] = dimension[active_position];
             const Size line_size_value = line_size.value();
             for (Size i = 0; i < line_size_value; i++) {
                if constexpr (parity) {
@@ -107,39 +103,53 @@ namespace TAT {
          leadings_source_by_destination.push_back(leadings_source[j]);
       }
 
-      if (leadings_source_by_destination[rank - 1] == 1 && leadings_destination[rank - 1] == 1) {
-         Rank line_rank = rank - 1;
-         Size expect_leading = 1;
-         while (expect_leading *= dimensions_destination[line_rank],
-                leadings_source_by_destination[line_rank - 1] == expect_leading && leadings_destination[line_rank - 1] == expect_leading) {
-            if (line_rank == 0) {
-               // totally linear copy
-               break;
-            }
-            line_rank--;
+      const auto& origin_dimensions = dimensions_destination;
+      const auto& origin_leadings_source = leadings_source_by_destination;
+      const auto& origin_leadings_destination = leadings_destination;
+
+      auto result_dimensions = pmr::vector<Size>();
+      auto result_leadings_source = pmr::vector<Size>();
+      auto result_leadings_destination = pmr::vector<Size>();
+      Rank result_rank = 0;
+      Rank current_rank = 0;
+      while (current_rank < rank) {
+         Size this_dimension = origin_dimensions[current_rank];
+         while ((current_rank < rank) &&
+                (origin_leadings_destination[current_rank] == origin_leadings_destination[current_rank + 1] * origin_dimensions[current_rank + 1]) &&
+                (origin_leadings_source[current_rank] == origin_leadings_source[current_rank + 1] * origin_dimensions[current_rank + 1])) {
+            current_rank++;
+            this_dimension *= origin_dimensions[current_rank];
          }
-         const auto const_expect_leading_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(expect_leading);
+         result_dimensions.push_back(this_dimension);
+         result_leadings_destination.push_back(origin_leadings_destination[current_rank]);
+         result_leadings_source.push_back(origin_leadings_source[current_rank]);
+         result_rank++;
+         current_rank++;
+      }
+
+      if (result_leadings_source.back() == 1 && result_leadings_destination.back() == 1) {
+         Size line_size = result_dimensions.back();
+         const auto const_line_size_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(line_size);
          std::visit(
-               [&](const auto& const_expect_leading) {
+               [&](const auto& const_line_size) {
                   tensor_transpose_kernel<ScalarType, parity, true>(
                         data_source,
                         data_destination,
-                        dimensions_destination.data(),
-                        leadings_source_by_destination.data(),
-                        leadings_destination.data(),
-                        rank,
-                        line_rank,
-                        const_expect_leading);
+                        result_dimensions.data(),
+                        result_leadings_source.data(),
+                        result_leadings_destination.data(),
+                        result_rank,
+                        const_line_size);
                },
-               const_expect_leading_variant);
+               const_line_size_variant);
       } else {
          tensor_transpose_kernel<ScalarType, parity>(
                data_source,
                data_destination,
-               dimensions_destination.data(),
-               leadings_source_by_destination.data(),
-               leadings_destination.data(),
-               rank);
+               result_dimensions.data(),
+               result_leadings_source.data(),
+               result_leadings_destination.data(),
+               result_rank);
       }
    }
 
