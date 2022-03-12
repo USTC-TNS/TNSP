@@ -112,19 +112,33 @@ namespace TAT {
       auto result_leadings_destination = pmr::vector<Size>();
       Rank result_rank = 0;
       Rank current_rank = 0;
+      // If all dimension is 1, program will not run into this function.
+      while (origin_dimensions[current_rank] == 1) {
+         current_rank++;
+      }
       while (current_rank < rank) {
+         result_rank++;
          Size this_dimension = origin_dimensions[current_rank];
-         while ((current_rank < rank) &&
-                (origin_leadings_destination[current_rank] == origin_leadings_destination[current_rank + 1] * origin_dimensions[current_rank + 1]) &&
-                (origin_leadings_source[current_rank] == origin_leadings_source[current_rank + 1] * origin_dimensions[current_rank + 1])) {
-            current_rank++;
-            this_dimension *= origin_dimensions[current_rank];
+         Size this_leadings_destination = origin_leadings_destination[current_rank];
+         Size this_leadings_source = origin_leadings_source[current_rank];
+         current_rank++;
+         while (current_rank < rank) {
+            if (origin_dimensions[current_rank] == 1) {
+               current_rank++;
+            } else if (
+                  (this_leadings_destination == origin_leadings_destination[current_rank] * origin_dimensions[current_rank]) &&
+                  (this_leadings_source == origin_leadings_source[current_rank] * origin_dimensions[current_rank])) {
+               this_dimension *= origin_dimensions[current_rank];
+               this_leadings_destination = origin_leadings_destination[current_rank];
+               this_leadings_source = origin_leadings_source[current_rank];
+               current_rank++;
+            } else {
+               break;
+            }
          }
          result_dimensions.push_back(this_dimension);
-         result_leadings_destination.push_back(origin_leadings_destination[current_rank]);
-         result_leadings_source.push_back(origin_leadings_source[current_rank]);
-         result_rank++;
-         current_rank++;
+         result_leadings_destination.push_back(this_leadings_destination);
+         result_leadings_source.push_back(this_leadings_source);
       }
 
       if (result_leadings_source.back() == 1 && result_leadings_destination.back() == 1) {
