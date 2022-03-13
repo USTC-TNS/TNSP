@@ -385,7 +385,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         expand_sampling_lattice_dimension(self.gm, *config.args, **config.kwargs)
 
     def do_gm_extend(self, line):
-        print(" ###### DEPRECATED WARNING: gm_extend is deprecated, use gm_expand instead. ###### ")
+        print(" ###### DEPRECATE WARNING: gm_extend is deprecated, use gm_expand instead. ###### ")
         self.do_gm_expand(line)
 
     def do_gm_to_ex(self, line):
