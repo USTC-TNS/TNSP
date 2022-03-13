@@ -27,7 +27,7 @@ from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
 from .gradient import gradient_descent
 from .normalize import normalize_state
-from .sampling_extend import extend_sampling_lattice_dimension
+from .expand_sampling import expand_sampling_lattice_dimension
 
 
 class Config():
@@ -370,9 +370,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         with open(name, "rb") as file:
             self.gm = pickle.load(file)
 
-    def do_gm_extend(self, line):
+    def do_gm_expand(self, line):
         """
-        Extend dimension of sampling lattice.
+        Expand dimension of sampling lattice.
 
         Parameters
         ----------
@@ -382,7 +382,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The relative error added into tensor.
         """
         config = Config(line)
-        extend_sampling_lattice_dimension(self.gm, *config.args, **config.kwargs)
+        expand_sampling_lattice_dimension(self.gm, *config.args, **config.kwargs)
+
+    def do_gm_extend(self, line):
+        print(" ###### DEPRECATED WARNING: gm_extend is deprecated, use gm_expand instead. ###### ")
+        self.do_gm_expand(line)
 
     def do_gm_to_ex(self, line):
         """

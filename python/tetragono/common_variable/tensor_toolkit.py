@@ -43,3 +43,8 @@ def kronecker_product(res, *b):
     for i in b:
         res = res.contract(i, set())
     return res
+
+
+def dot(*args):
+    print(" ###### DEPRECATE WARNING: dot is deprecated, use kronecker_product instead. ###### ")
+    return kronecker_product(*args)

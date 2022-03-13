@@ -17,16 +17,16 @@
 #
 
 
-def extend_sampling_lattice_dimension(state, new_dimension, epsilon):
+def expand_sampling_lattice_dimension(state, new_dimension, epsilon):
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             if l1 != 0:
-                extend_vertical(state, l1 - 1, l2, new_dimension, epsilon)
+                expand_vertical(state, l1 - 1, l2, new_dimension, epsilon)
             if l2 != 0:
-                extend_horizontal(state, l1, l2 - 1, new_dimension, epsilon)
+                expand_horizontal(state, l1, l2 - 1, new_dimension, epsilon)
 
 
-def extend_horizontal(state, l1, l2, new_dimension, epsilon):
+def expand_horizontal(state, l1, l2, new_dimension, epsilon):
     left = state[l1, l2]
     right = state[l1, l2 + 1]
     left_q, left_r = left.qr("r", {*(p_name for p_name in left.names if p_name[0] == "P"), "R"}, "R", "L")
@@ -43,7 +43,7 @@ def extend_horizontal(state, l1, l2, new_dimension, epsilon):
     state[l1, l2 + 1] = right.edge_rename({r_name: r_name[2:] for r_name in right.names if r_name[:2] == "R_"})
 
 
-def extend_vertical(state, l1, l2, new_dimension, epsilon):
+def expand_vertical(state, l1, l2, new_dimension, epsilon):
     up = state[l1, l2]
     down = state[l1 + 1, l2]
     up_q, up_r = up.qr("r", {*(p_name for p_name in up.names if p_name[0] == "P"), "D"}, "D", "U")
