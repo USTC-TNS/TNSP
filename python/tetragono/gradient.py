@@ -24,6 +24,7 @@ import numpy as np
 import TAT
 from .sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
 from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
+from .fix_gauge_sampling import fix_sampling_lattice_guage
 
 
 class SignalHandler():
@@ -392,6 +393,8 @@ def gradient_descent(
 
                 # Normalize state
                 try_normalize(state, observer._total_weight / observer._count)
+                # Fix gauge
+                fix_sampling_lattice_guage(state)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 for l1 in range(state.L1):
                     for l2 in range(state.L2):
