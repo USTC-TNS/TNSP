@@ -20,9 +20,19 @@
 def expand_sampling_lattice_dimension(state, new_dimension, epsilon):
     for l1 in range(state.L1):
         for l2 in range(state.L2):
-            if l1 != 0:
+            if l1 != 0 and l1 % 2 == 0:
                 expand_vertical(state, l1 - 1, l2, new_dimension, epsilon)
-            if l2 != 0:
+    for l1 in range(state.L1):
+        for l2 in range(state.L2):
+            if l1 != 0 and l1 % 2 == 1:
+                expand_vertical(state, l1 - 1, l2, new_dimension, epsilon)
+    for l1 in range(state.L1):
+        for l2 in range(state.L2):
+            if l2 != 0 and l2 % 2 == 0:
+                expand_horizontal(state, l1, l2 - 1, new_dimension, epsilon)
+    for l1 in range(state.L1):
+        for l2 in range(state.L2):
+            if l2 != 0 and l2 % 2 == 1:
                 expand_horizontal(state, l1, l2 - 1, new_dimension, epsilon)
 
 
