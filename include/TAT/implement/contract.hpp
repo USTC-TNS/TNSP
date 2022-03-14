@@ -266,11 +266,15 @@ namespace TAT {
          }
       }
 
-      template<int i, typename Name, typename SetNameAndName>
-      auto find_in_contract_names(const SetNameAndName& contract_names, const Name& name) {
-         return std::find_if(contract_names.begin(), contract_names.end(), [&name](const auto& pair) {
-            return name == std::get<i>(pair);
-         });
+      template<typename Name, typename SetNameName>
+      auto generate_contract_map(const SetNameName& contract_names) {
+         auto map_1_2 = pmr::map<Name, Name>();
+         auto map_2_1 = pmr::map<Name, Name>();
+         for (const auto& [name_1, name_2] : contract_names) {
+            map_1_2[name_1] = name_2;
+            map_2_1[name_2] = name_1;
+         }
+         return std::make_tuple(map_1_2, map_2_1);
       }
 
       template<typename ScalarType, typename Symmetry, typename Name>
@@ -278,6 +282,8 @@ namespace TAT {
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
             const std::set<std::pair<Name, Name>>& contract_names,
+            const pmr::map<Name, Name>& contract_names_1_2,
+            const pmr::map<Name, Name>& contract_names_2_1,
             const std::set<Name>& fuse_names = {}) {
          // check if some missing name in contract
          for (const auto& [name_1, name_2] : contract_names) {
@@ -303,8 +309,7 @@ namespace TAT {
          for (const auto& name_1 : tensor_1.names) {
             for (const auto& name_2 : tensor_2.names) {
                if ((name_1 == name_2) && (fuse_names.find(name_1) == fuse_names.end()) &&
-                   (find_in_contract_names<0>(contract_names, name_1) == contract_names.end() &&
-                    find_in_contract_names<1>(contract_names, name_2) == contract_names.end())) {
+                   (contract_names_1_2.find(name_1) == contract_names_1_2.end() && contract_names_2_1.find(name_2) == contract_names_2_1.end())) {
                   detail::error("Duplicated name in two contracting tensor but not fusing");
                }
             }
@@ -362,8 +367,9 @@ namespace TAT {
       const Rank common_rank = contract_names.size();
       const Rank free_rank_1 = rank_1 - common_rank;
       const Rank free_rank_2 = rank_2 - common_rank;
+      const auto& [contract_names_1_2, contract_names_2_1] = detail::generate_contract_map<Name>(contract_names);
       if constexpr (debug_mode) {
-         detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names);
+         detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names, contract_names_1_2, contract_names_2_1);
       }
       // reverse -> merge -> product -> split -> reverse
       // reverse free name all two false and recovery them at last, both not apply sign
@@ -406,7 +412,7 @@ namespace TAT {
 
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
-         if (detail::find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
+         if (contract_names_1_2.find(n) == contract_names_1_2.end()) {
             // it is free name
             free_name_1.push_back(n);
             split_map_result_part_1.push_back({n, {tensor_1.edges(i).segment}});
@@ -431,7 +437,7 @@ namespace TAT {
       }
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
-         if (detail::find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
+         if (contract_names_2_1.find(n) == contract_names_2_1.end()) {
             // it is free name
             free_name_2.push_back(n);
             split_map_result_part_2.push_back({n, {tensor_2.edges(i).segment}});
@@ -458,7 +464,7 @@ namespace TAT {
       bool put_common_2_right;
       auto fit_tensor_1_common_edge = [&]() {
          for (const auto& n : tensor_1.names) {
-            if (auto position = detail::find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
+            if (auto position = contract_names_1_2.find(n); position != contract_names_1_2.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
             }
@@ -466,9 +472,9 @@ namespace TAT {
       };
       auto fit_tensor_2_common_edge = [&]() {
          for (const auto& n : tensor_2.names) {
-            if (auto position = detail::find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
-               common_name_1.push_back(std::get<0>(*position));
-               common_name_2.push_back(std::get<1>(*position));
+            if (auto position = contract_names_2_1.find(n); position != contract_names_2_1.end()) {
+               common_name_1.push_back(std::get<1>(*position));
+               common_name_2.push_back(std::get<0>(*position));
             }
          }
       };
@@ -706,8 +712,9 @@ namespace TAT {
       const Rank fuse_rank = fuse_names.size();
       const Rank free_rank_1 = rank_1 - common_rank - fuse_rank;
       const Rank free_rank_2 = rank_2 - common_rank - fuse_rank;
+      const auto& [contract_names_1_2, contract_names_2_1] = detail::generate_contract_map<Name>(contract_names);
       if constexpr (debug_mode) {
-         detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names, fuse_names);
+         detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names, contract_names_1_2, contract_names_2_1, fuse_names);
       }
       // merge -> product -> split
       // merge to two rank 3 tensor
@@ -753,7 +760,7 @@ namespace TAT {
 
       for (Rank i = 0; i < rank_1; i++) {
          const auto& n = tensor_1.names[i];
-         if (detail::find_in_contract_names<0>(contract_names, n) == contract_names.end()) {
+         if (contract_names_1_2.find(n) == contract_names_1_2.end()) {
             // it is free or fuse
             if (fuse_names.find(n) == fuse_names.end()) {
                // it is free
@@ -765,7 +772,7 @@ namespace TAT {
       }
       for (Rank i = 0; i < rank_2; i++) {
          const auto& n = tensor_2.names[i];
-         if (detail::find_in_contract_names<1>(contract_names, n) == contract_names.end()) {
+         if (contract_names_2_1.find(n) == contract_names_2_1.end()) {
             // it is free or fuse
             if (fuse_names.find(n) == fuse_names.end()) {
                // it is free
@@ -781,7 +788,7 @@ namespace TAT {
       bool put_common_2_right;
       auto fit_tensor_1_common_edge = [&]() {
          for (const auto& n : tensor_1.names) {
-            if (auto position = detail::find_in_contract_names<0>(contract_names, n); position != contract_names.end()) {
+            if (auto position = contract_names_1_2.find(n); position != contract_names_1_2.end()) {
                common_name_1.push_back(std::get<0>(*position));
                common_name_2.push_back(std::get<1>(*position));
             }
@@ -789,9 +796,9 @@ namespace TAT {
       };
       auto fit_tensor_2_common_edge = [&]() {
          for (const auto& n : tensor_2.names) {
-            if (auto position = detail::find_in_contract_names<1>(contract_names, n); position != contract_names.end()) {
-               common_name_1.push_back(std::get<0>(*position));
-               common_name_2.push_back(std::get<1>(*position));
+            if (auto position = contract_names_2_1.find(n); position != contract_names_2_1.end()) {
+               common_name_1.push_back(std::get<1>(*position));
+               common_name_2.push_back(std::get<0>(*position));
             }
          }
       };
