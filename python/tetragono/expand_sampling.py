@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from .common_variable import mpi_comm
+
 
 def expand_sampling_lattice_dimension(state, new_dimension, epsilon):
     for l1 in range(state.L1):
@@ -34,6 +36,10 @@ def expand_sampling_lattice_dimension(state, new_dimension, epsilon):
         for l2 in range(state.L2):
             if l2 != 0 and l2 % 2 == 1:
                 expand_horizontal(state, l1, l2 - 1, new_dimension, epsilon)
+
+    for l1 in range(state.L1):
+        for l2 in range(state.L2):
+            state[l1, l2] = mpi_comm.bcast(state[l1, l2], root=0)
 
 
 def expand_horizontal(state, l1, l2, new_dimension, epsilon):
