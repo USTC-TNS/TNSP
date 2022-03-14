@@ -303,16 +303,24 @@ namespace TAT {
       auto plan_destination_to_source = pmr::vector<Rank>(rank_at_transpose);
 
       // and edge after transpose
+      pmr::vector<std::tuple<Name, int>> name_after_split_to_index;
+      name_after_split_to_index.reserve(rank_at_transpose);
+      for (Rank i = 0; i < rank_at_transpose; i++) {
+         name_after_split_to_index.emplace_back(name_after_split[i], i);
+      }
+      std::sort(name_after_split_to_index.begin(), name_after_split_to_index.end(), [](const auto& a, const auto& b) {
+         return std::get<0>(a) < std::get<0>(b);
+      });
       auto edge_after_transpose = pmr::vector<EdgePointer<Symmetry>>();
       edge_after_transpose.reserve(rank_at_transpose);
       for (auto i = 0; i < rank_at_transpose; i++) {
-         auto found = std::find(name_after_split.begin(), name_after_split.end(), name_before_merge[i]);
+         auto found = detail::fake_map_find<false>(name_after_split_to_index, name_before_merge[i]);
          if constexpr (debug_mode) {
-            if (found == name_after_split.end()) {
+            if (found == name_after_split_to_index.end()) {
                detail::error("Tensor to transpose with incompatible name list");
             }
          }
-         plan_destination_to_source[i] = std::distance(name_after_split.begin(), found);
+         plan_destination_to_source[i] = std::get<1>(*found);
          plan_source_to_destination[plan_destination_to_source[i]] = i;
          edge_after_transpose.push_back(edge_before_transpose[plan_destination_to_source[i]]);
       }
