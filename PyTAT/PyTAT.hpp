@@ -256,10 +256,13 @@ namespace TAT {
                      [](const py::object& tensor) {
                         return blocks_of_tensor<ScalarType, Symmetry>{tensor};
                      })
-               .def_property_readonly(
+               .def_property(
                      "storage",
                      [](const py::object& tensor) {
                         return try_get_numpy_array(storage_of_tensor<ScalarType, Symmetry>{tensor});
+                     },
+                     [](const py::object& tensor, const py::object& object) {
+                        return try_set_numpy_array(storage_of_tensor<ScalarType, Symmetry>{tensor}, object);
                      })
                .def(ScalarType() + py::self)
                .def(py::self + ScalarType())
