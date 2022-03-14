@@ -373,7 +373,7 @@ def gradient_descent(
                             for l2 in range(state.L2):
                                 this_site_grad = grad[l1][l2]
                                 random_same_shape = this_site_grad.same_shape().rand(0, 1)
-                                random_same_shape.storage[::] *= np.sign(this_site_grad.storage)
+                                random_same_shape.storage *= np.sign(this_site_grad.storage)
                                 grad[l1][l2] = random_same_shape
                     if use_fix_relative_step_size:
                         showln("fix relative step size")

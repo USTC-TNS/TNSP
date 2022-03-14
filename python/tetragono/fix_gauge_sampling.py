@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import numpy as np
+
 
 def fix_sampling_lattice_guage(state):
     for l1 in range(state.L1):
@@ -43,9 +45,13 @@ def fix_gauge_horizontal(state, l1, l2):
     right_q, right_r = right.qr("r", {"L"}, "L", "R")
     big = left_r.contract(right_r, {("R", "L")})
     u, s, v = big.svd({"L"}, "R", "L", "L", "R")
-    half_s = s.sqrt()
-    state[l1, l2] = left_q.contract(u, {("R", "L")}).contract(half_s, {("R", "L")})
-    state[l1, l2 + 1] = right_q.contract(v, {("L", "R")}).contract(half_s, {("L", "R")})
+    i = s.same_shape().identity({("L", "R")})
+    delta = np.sqrt(np.abs(s.storage))
+    delta[delta == 0] = 1
+    s.storage /= delta
+    i.storage *= delta
+    state[l1, l2] = left_q.contract(u, {("R", "L")}).contract(s, {("R", "L")})
+    state[l1, l2 + 1] = right_q.contract(v, {("L", "R")}).contract(i, {("L", "R")})
 
 
 def fix_gauge_vertical(state, l1, l2):
@@ -55,6 +61,10 @@ def fix_gauge_vertical(state, l1, l2):
     down_q, down_r = down.qr("r", {"U"}, "U", "D")
     big = up_r.contract(down_r, {("D", "U")})
     u, s, v = big.svd({"U"}, "D", "U", "U", "D")
-    half_s = s.sqrt()
-    state[l1, l2] = up_q.contract(u, {("D", "U")}).contract(half_s, {("D", "U")})
-    state[l1 + 1, l2] = down_q.contract(v, {("U", "D")}).contract(half_s, {("U", "D")})
+    i = s.same_shape().identity({("U", "D")})
+    delta = np.sqrt(np.abs(s.storage))
+    delta[delta == 0] = 1
+    s.storage /= delta
+    i.storage *= delta
+    state[l1, l2] = up_q.contract(u, {("D", "U")}).contract(s, {("D", "U")})
+    state[l1 + 1, l2] = down_q.contract(v, {("U", "D")}).contract(i, {("U", "D")})
