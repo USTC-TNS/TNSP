@@ -29,6 +29,8 @@
 #include <utility>
 #include <vector>
 
+#include "../utility/common_toolkit.hpp"
+
 namespace TAT {
    /**
     * FastName as tensor edge name

@@ -22,8 +22,6 @@
 #define TAT_EDGE_HPP
 
 #include <algorithm>
-#include <map>
-#include <set>
 #include <vector>
 
 #include "symmetry.hpp"

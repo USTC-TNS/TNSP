@@ -24,6 +24,7 @@
 #include <tuple>
 
 #include "../utility/allocator.hpp"
+#include "../utility/common_toolkit.hpp"
 
 namespace TAT {
    // A symmetry is a tuple of several int or bool, which may be fermi or bose
