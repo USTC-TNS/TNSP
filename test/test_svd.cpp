@@ -75,7 +75,7 @@ void run_test() {
    do {
       auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {2, 3, 4, 5}}.range();
       std::cout << a << "\n";
-      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", "U", "V", 2);
+      auto [u, s, v] = a.svd({"C", "A"}, "E", "F", "U", "V", TAT::RemainCut(2));
       std::cout << u << "\n";
       std::cout << v << "\n";
       std::cout << s << "\n";
@@ -92,7 +92,7 @@ void run_test() {
                   {"A", "B", "C", "D"},
                   {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range();
-      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", "U", "V", 7);
+      auto [u, s, v] = c.svd({"C", "A"}, "E", "F", "U", "V", TAT::RemainCut(7));
       std::cout << u << "\n";
       std::cout << s << "\n";
       std::cout << v << "\n";

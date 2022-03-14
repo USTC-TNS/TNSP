@@ -79,9 +79,7 @@ namespace TAT {
 
    struct RemainCut {
       Size value;
-      // TODO RemainCut from Size should be explicit
-      // implicit to be compatible with former interface
-      RemainCut(Size v) : value(v) {}
+      explicit RemainCut(Size v) : value(v) {}
    };
    struct RelativeCut {
       double value;
