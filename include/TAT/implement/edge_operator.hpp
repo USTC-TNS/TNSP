@@ -501,7 +501,7 @@ namespace TAT {
                // if no split happened, do not use split_offset
                if (split_group_symmetries.size() != 1) {
                   // if it is empty split, split_group_symmetries = {}, it also work
-                  if (auto found = detail::fake_map_find(split_offset[position_before_split], split_group_symmetries);
+                  if (auto found = detail::fake_map_find<true>(split_offset[position_before_split], split_group_symmetries);
                       found != split_offset[position_before_split].end()) {
                      const auto& this_symmetry = std::get<1>(*found);
                      const auto& this_offset = std::get<2>(*found);
@@ -555,7 +555,7 @@ namespace TAT {
                }
                // if no merge happened, do not use merge_offset
                if (merge_group_symmetries.size() != 1) {
-                  if (auto found = detail::fake_map_find(merge_offset[position_after_merge], merge_group_symmetries);
+                  if (auto found = detail::fake_map_find<true>(merge_offset[position_after_merge], merge_group_symmetries);
                       found != merge_offset[position_after_merge].end()) {
                      const auto& this_symmetry = std::get<1>(*found);
                      const auto& this_offset = std::get<2>(*found);
@@ -667,7 +667,7 @@ namespace TAT {
          }
 
          // split may generate a empty block
-         auto found = detail::fake_map_find(data_before_transpose_to_source, symmetries_before_transpose);
+         auto found = detail::fake_map_find<true>(data_before_transpose_to_source, symmetries_before_transpose);
          if (found == data_before_transpose_to_source.end()) {
             continue;
          }
@@ -675,12 +675,12 @@ namespace TAT {
          const auto& source_offsets = std::get<2>(*found);
 
          // get block, offset and leadings
-         auto found_source_block = detail::fake_map_find(core->blocks, source_symmetries);
+         auto found_source_block = detail::fake_map_find<true>(core->blocks, source_symmetries);
          if (found_source_block == core->blocks.end()) {
             continue;
          }
          const auto& source_block = found_source_block->second;
-         auto found_destination_block = detail::fake_map_find(result.core->blocks, destination_symmetries);
+         auto found_destination_block = detail::fake_map_find<true>(result.core->blocks, destination_symmetries);
          if (found_destination_block == result.core->blocks.end()) {
             continue;
          }

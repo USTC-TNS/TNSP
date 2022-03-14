@@ -21,7 +21,10 @@
 #ifndef TAT_TRANSPOSE_HPP
 #define TAT_TRANSPOSE_HPP
 
+#include "../utility/allocator.hpp"
+#include "../utility/common_toolkit.hpp"
 #include "../utility/const_integral.hpp"
+#include "../utility/timer.hpp"
 
 namespace TAT {
 

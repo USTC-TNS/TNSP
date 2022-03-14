@@ -38,8 +38,32 @@
 
 namespace TAT {
    namespace detail {
+      // set and map have method `find`
+      template<typename Container>
+      using find_checker = decltype(&Container::find);
+      template<typename Container>
+      constexpr bool have_find_v = is_detected_v<find_checker, Container>;
+
+      template<typename Set, typename Key>
+      auto fake_set_find(Set& v, const Key& k) {
+         if constexpr (have_find_v<Set>) {
+            return v.find(k);
+         } else {
+            auto result = std::lower_bound(v.begin(), v.end(), k);
+            if (result == v.end()) {
+               return v.end();
+            } else if (k == *result) {
+               return result;
+            } else {
+               return v.end();
+            }
+         }
+      }
+
       /**
        * If given a Key, return itself, else return a.first;
+       *
+       * It is used in fake_map find.
        */
       template<typename Key, typename A>
       const auto& get_key(const A& a) {
@@ -50,29 +74,34 @@ namespace TAT {
          }
       }
 
-      template<bool is_range = true, typename Map, typename Key>
-      auto fake_map_find(Map& v, const Key& key) {
-         auto result = std::lower_bound(v.begin(), v.end(), key, [](const auto& a, const auto& b) {
-            if constexpr (is_range) {
-               return std::lexicographical_compare(get_key<Key>(a).begin(), get_key<Key>(a).end(), get_key<Key>(b).begin(), get_key<Key>(b).end());
-            } else {
-               return get_key<Key>(a) < get_key<Key>(b);
-            }
-         });
-         if (result == v.end()) {
-            // result may be un dereferencable
-            return v.end();
+      template<bool is_range, typename Map, typename Key>
+      auto fake_map_find(Map& v, const Key& k) {
+         if constexpr (have_find_v<Map>) {
+            // TODO what if have_find and is_range
+            return v.find(k);
          } else {
-            if constexpr (is_range) {
-               if (std::equal(std::get<0>(*result).begin(), std::get<0>(*result).end(), key.begin(), key.end())) {
-                  return result;
+            auto result = std::lower_bound(v.begin(), v.end(), k, [](const auto& a, const auto& b) {
+               if constexpr (is_range) {
+                  return std::lexicographical_compare(get_key<Key>(a).begin(), get_key<Key>(a).end(), get_key<Key>(b).begin(), get_key<Key>(b).end());
+               } else {
+                  return get_key<Key>(a) < get_key<Key>(b);
                }
+            });
+            if (result == v.end()) {
+               // result may be un dereferencable
+               return v.end();
             } else {
-               if (std::get<0>(*result) == key) {
-                  return result;
+               if constexpr (is_range) {
+                  if (std::equal(std::get<0>(*result).begin(), std::get<0>(*result).end(), k.begin(), k.end())) {
+                     return result;
+                  }
+               } else {
+                  if (std::get<0>(*result) == k) {
+                     return result;
+                  }
                }
+               return v.end();
             }
-            return v.end();
          }
       }
    } // namespace detail
@@ -244,7 +273,6 @@ namespace TAT {
          }
       }
 
-      /// \private
       [[nodiscard]] static auto
       get_edge_from_edge_symmetry_and_arrow(const std::vector<Symmetry>& edge_symmetry, const std::vector<Arrow>& edge_arrow, Rank rank) {
          // used in Tensor(ScalarType, ...)
@@ -299,7 +327,7 @@ namespace TAT {
          if (core->edges != real_other.core->edges) {
             Nums common_block_number = 0;
             for (auto& [symmetries, block] : core->blocks) {
-               if (const auto found = detail::fake_map_find(real_other.core->blocks, symmetries); found != real_other.core->blocks.end()) {
+               if (const auto found = detail::fake_map_find<true>(real_other.core->blocks, symmetries); found != real_other.core->blocks.end()) {
                   // check shape
                   if constexpr (debug_mode) {
                      for (auto i = 0; i < get_rank(); i++) {
@@ -529,7 +557,6 @@ namespace TAT {
          return storage().front();
       }
 
-      /// \private
       template<typename PositionType>
       [[nodiscard]] const ScalarType& get_item(const PositionType& position) const&;
 
@@ -564,7 +591,7 @@ namespace TAT {
       template<typename SymmetryList = std::vector<Symmetry>>
       const typename core_t::content_vector_t& blocks(const SymmetryList& symmetry_list) const& {
          // it maybe used from other tensor function
-         auto found = detail::fake_map_find(core->blocks, symmetry_list);
+         auto found = detail::fake_map_find<true>(core->blocks, symmetry_list);
          if (found == core->blocks.end()) {
             detail::error("No such symmetry block in the tensor");
          }
@@ -628,7 +655,6 @@ namespace TAT {
          // it is not proper to expose to users
       }
 
-      /// \private
       template<typename A, typename B, typename C, typename D, typename E, typename F, typename G, typename H>
       [[nodiscard]] auto edge_operator_implement(
             const A& split_map,
@@ -718,7 +744,6 @@ namespace TAT {
 
       // Contract
       // maybe calculate tensor product directly without transpose, but it is very hard
-      /// \private
       [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract_implement(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
@@ -865,13 +890,9 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(const std::map<Name, EdgePointShrink>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
-      /// \private
       const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;
-      /// \private
       const Tensor<ScalarType, Symmetry, Name>& data_put(std::ostream&) const;
-      /// \private
       Tensor<ScalarType, Symmetry, Name>& meta_get(std::istream&);
-      /// \private
       Tensor<ScalarType, Symmetry, Name>& data_get(std::istream&);
 
       [[nodiscard]] std::string show() const;

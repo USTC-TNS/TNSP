@@ -22,6 +22,7 @@
 #define TAT_TRACE_HPP
 
 #include "../structure/tensor.hpp"
+#include "../utility/const_integral.hpp"
 #include "../utility/timer.hpp"
 
 namespace TAT {
