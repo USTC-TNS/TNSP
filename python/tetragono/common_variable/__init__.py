@@ -50,3 +50,15 @@ def allreduce_lattice_buffer(lattice):
         for tensor in row:
             requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
     MPI.Request.Waitall(requests)
+
+
+def bcast_buffer(buffer, root):
+    mpi_comm.Bcast(buffer, root=root)
+
+
+def bcast_lattice_buffer(lattice, root):
+    requests = []
+    for row in lattice:
+        for tensor in row:
+            requests.append(mpi_comm.Ibcast(tensor.storage, root=root))
+    MPI.Request.Waitall(requests)
