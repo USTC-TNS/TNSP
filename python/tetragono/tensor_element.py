@@ -97,7 +97,7 @@ def calculate_element(tensor):
     # so all edge have arrow=False
     result = {}
     names = tensor.names
-    names_to_index = {n: i for i, n in enumerate(names)}
+    names_to_index = {str(n): i for i, n in enumerate(names)}
     rank = tensor.rank
     body = rank // 2
     for edge_point, value in loop_nonzero_tensor(tensor, names, rank):
