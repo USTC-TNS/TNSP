@@ -216,15 +216,15 @@ namespace TAT {
    std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
       out < count;
-      if constexpr (std::is_trivially_destructible_v<T>) {
+      if constexpr (is_name<T>) {
+         for (const auto& i : list) {
+            NameTraits<T>::write(out, i);
+         }
+      } else if constexpr (std::is_trivially_destructible_v<T>) {
          out.write(reinterpret_cast<const char*>(list.data()), sizeof(T) * count);
       } else {
          for (const auto& i : list) {
-            if constexpr (is_name<T>) {
-               NameTraits<T>::write(out, i);
-            } else {
-               out < i;
-            }
+            out < i;
          }
       }
       return out;
@@ -234,17 +234,18 @@ namespace TAT {
       list.clear();
       Size count;
       in > count;
-      if constexpr (std::is_trivially_destructible_v<T>) {
+      if constexpr (is_name<T>) {
+         for (Size i = 0; i < count; i++) {
+            auto& item = list.emplace_back();
+            NameTraits<T>::read(in, item);
+         }
+      } else if constexpr (std::is_trivially_destructible_v<T>) {
          list.resize(count);
          in.read(reinterpret_cast<char*>(list.data()), sizeof(T) * count);
       } else {
          for (Size i = 0; i < count; i++) {
             auto& item = list.emplace_back();
-            if constexpr (is_name<T>) {
-               NameTraits<T>::read(in, item);
-            } else {
-               in > item;
-            }
+            in > item;
          }
       }
       return in;
