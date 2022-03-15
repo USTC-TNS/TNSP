@@ -106,13 +106,5 @@ for l1 in range(L1):
         if l2 != 0:
             state.environment[l1, l2, "L"] = pool[l1, l2, "l"]
 
-for l1 in range(L1):
-    for l2 in range(L2):
-        # SJ.Dong contract env into state
-        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "L", True)
-        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "R", True)
-        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "U", True)
-        state[l1, l2] = state._try_multiple(state[l1, l2], l1, l2, "D", True)
-
 with open("state.dat", "wb") as file:
     pickle.dump(state, file)
