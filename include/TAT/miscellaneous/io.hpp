@@ -176,10 +176,22 @@ namespace TAT {
       return in;
    }
 
+   inline std::ostream& write_fastname(std::ostream& out, const FastName& name) {
+      return out < static_cast<std::string>(name);
+   }
+
+   inline std::istream& read_fastname(std::istream& in, FastName& name) {
+      std::string name_string;
+      in > name_string;
+      name = FastName(name_string);
+      return in;
+   }
+
    template<>
    struct NameTraits<FastName> {
-      static constexpr name_out_operator_t<FastName> write = operator<; // it is trivial type
-      static constexpr name_in_operator_t<FastName> read = operator>;   // it is trivial type
+      // Although FastName is trivial type, but write string explicitly for good compatibility.
+      static constexpr name_out_operator_t<FastName> write = write_fastname;
+      static constexpr name_in_operator_t<FastName> read = read_fastname;
       static constexpr name_out_operator_t<FastName> print = operator<<;
       static constexpr name_in_operator_t<FastName> scan = scan_fastname_for_name;
    };
