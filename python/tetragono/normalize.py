@@ -28,20 +28,16 @@ def plus_log(loga, logb):
 
 def normalize_state(state, sampling_total_step, configuration_cut_dimension, direct_sampling_cut_dimension):
     sampling = DirectSampling(state, configuration_cut_dimension, None, direct_sampling_cut_dimension)
-    log_total_weight = 0.  # weight need to -= mpi_size at last
-    count = 0
+    log_prod_ws = 0.0
     with seed_differ:
         for sampling_step in range(sampling_total_step):
             if sampling_step % mpi_size == mpi_rank:
                 possibility, configuration = sampling()
-                log_reweight = np.log(abs(complex(configuration.hole(())).real)) * 2 - np.log(possibility)
-                log_total_weight = plus_log(log_total_weight, log_reweight)
-                count += 1
+                log_prod_ws += np.log(np.abs(complex(configuration.hole(())).real))
                 show(f"normalizing, total_step={sampling_total_step}, step={sampling_step}")
-    log_total_weight = mpi_comm.allreduce(log_total_weight, plus_log)
-    log_total_weight += np.log(1 - np.exp(np.log(mpi_size) - log_total_weight)) - np.log(sampling_total_step)
-    showln(f"normalizing done, total_step={sampling_total_step}, log<psi|psi>={log_total_weight}")
-    param = np.exp(log_total_weight / (state.L1 * state.L2 * 2))
+    log_prod_ws = mpi_comm.allreduce(log_prod_ws)
+    showln(f"normalizing done, total_step={sampling_total_step}")
+    param = np.exp((log_prod_ws / sampling_total_step) / (state.L1 * state.L2))
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             state[l1, l2] /= param

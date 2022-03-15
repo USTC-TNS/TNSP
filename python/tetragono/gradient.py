@@ -164,8 +164,8 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
     return mpi_comm.bcast(step_size, root=0)
 
 
-def try_normalize(state, reweight):
-    param = reweight**(1 / (state.L1 * state.L2 * 2))
+def try_normalize(state, mean_log_ws):
+    param = np.exp(mean_log_ws / (state.L1 * state.L2))
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             state[l1, l2] /= param
@@ -305,16 +305,19 @@ def gradient_descent(
             if need_reweight_observer:
                 configuration_pool = []
             # Sampling and observe
+            log_prod_ws = 0.0
             with seed_differ, observer:
                 for sampling_step in range(sampling_total_step):
                     if sampling_step % mpi_size == mpi_rank:
                         possibility, configuration = sampling()
+                        log_prod_ws += np.log(np.abs(complex(configuration.hole(())).real))
                         observer(possibility, configuration)
                         if need_reweight_observer:
                             configuration_pool.append((possibility, configuration))
                         show(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
+            log_prod_ws = mpi_comm.allreduce(log_prod_ws)
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
 
             # Measure log
@@ -391,10 +394,10 @@ def gradient_descent(
                                 state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
-                # Normalize state
-                try_normalize(state, observer._total_weight / observer._count)
                 # Fix gauge
                 fix_sampling_lattice_guage(state)
+                # Normalize state
+                try_normalize(state, log_prod_ws / sampling_total_step)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 bcast_lattice_buffer(state._lattice, root=0)
                 sampling.refresh_all()
