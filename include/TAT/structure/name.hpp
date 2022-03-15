@@ -51,6 +51,8 @@ namespace TAT {
 
       hash_t hash;
 
+      FastName() : hash(0) {} // A Temporary name
+
       // Specify name by its hash directly
       explicit FastName(const hash_t hash) : hash(hash) {}
 
