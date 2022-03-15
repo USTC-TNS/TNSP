@@ -19,6 +19,7 @@
 
 namespace TAT {
    // declare some function defined in other file
+   void set_name(py::module_&);
    void set_navigator(py::module_&);
    void set_random(py::module_&);
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
@@ -40,6 +41,8 @@ namespace TAT {
       tat_m.attr("information") = information;
       // random
       set_random(tat_m);
+      // name
+      set_name(tat_m);
       // symmetry and edge and edge segment
       auto No_m = tat_m.def_submodule("No");
       declare_symmetry<NoSymmetry>(No_m, "No").def(py::init<>());
