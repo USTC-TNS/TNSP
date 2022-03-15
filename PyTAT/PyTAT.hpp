@@ -28,6 +28,7 @@
 #include <pybind11/stl.h>
 
 #define TAT_ERROR_BITS 1
+#define TAT_USE_FAST_NAME
 #include <TAT/TAT.hpp>
 
 #define TAT_SINGLE_SYMMETRY_ALL_SCALAR(SYM) \
