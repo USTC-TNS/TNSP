@@ -374,7 +374,9 @@ namespace TAT {
       const Rank common_rank = contract_names.size();
       const Rank free_rank_1 = rank_1 - common_rank;
       const Rank free_rank_2 = rank_2 - common_rank;
-      const auto& [contract_names_1_2, contract_names_2_1] = detail::generate_contract_map<Name>(contract_names);
+      const auto& contract_names_maps = detail::generate_contract_map<Name>(contract_names);
+      const auto& contract_names_1_2 = std::get<0>(contract_names_maps);
+      const auto& contract_names_2_1 = std::get<1>(contract_names_maps);
       if constexpr (debug_mode) {
          detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names, contract_names_1_2, contract_names_2_1);
       }
@@ -719,7 +721,9 @@ namespace TAT {
       const Rank fuse_rank = fuse_names.size();
       const Rank free_rank_1 = rank_1 - common_rank - fuse_rank;
       const Rank free_rank_2 = rank_2 - common_rank - fuse_rank;
-      const auto& [contract_names_1_2, contract_names_2_1] = detail::generate_contract_map<Name>(contract_names);
+      const auto& contract_names_maps = detail::generate_contract_map<Name>(contract_names);
+      const auto& contract_names_1_2 = std::get<0>(contract_names_maps);
+      const auto& contract_names_2_1 = std::get<1>(contract_names_maps);
       if constexpr (debug_mode) {
          detail::check_valid_contract_plan(tensor_1, tensor_2, contract_names, contract_names_1_2, contract_names_2_1, fuse_names);
       }
