@@ -25,6 +25,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -35,51 +36,47 @@ namespace TAT {
    /**
     * FastName as tensor edge name
     *
-    * Use id to represent a string via dataset map
+    * Use hash to represent a string via dataset map
     */
    struct FastName {
-      using id_t = std::uint32_t;
+      using hash_t = std::uint64_t;
 
       // Singleton
       struct dataset_t {
-         id_t fastname_number;
-
-         std::map<std::string, id_t> name_to_id;
-
-         std::vector<std::string> id_to_name;
-
-         dataset_t() : fastname_number(1), name_to_id({{"", 0}}), id_to_name({""}) {}
+         std::map<hash_t, std::string> hash_to_name;
+         std::hash<std::string_view> hash_function;
       };
       inline static auto dataset = dataset_t();
+      inline static auto unknown_prefix = "UnknownName";
 
-      id_t id = 0; // default is zero, means "", keep the same behavior to std::string
+      hash_t hash;
 
-      FastName() = default;
-
-      // Specify name by its id directly
-      explicit FastName(const id_t id) : id(id) {}
+      // Specify name by its hash directly
+      explicit FastName(const hash_t hash) : hash(hash) {}
 
       template<
             typename String,
-            typename = std::enable_if_t<std::is_convertible_v<String, std::string> && !std::is_same_v<remove_cvref_t<String>, FastName>>>
-      FastName(String&& name) {
-         // use template to avoid type convension here, most case std::string constructor is not needed
-         if (const auto found = dataset.name_to_id.find(name); found == dataset.name_to_id.end()) {
-            dataset.id_to_name.emplace_back(name);
-            id = dataset.name_to_id[name] = dataset.fastname_number++;
-         } else {
-            id = found->second;
+            typename = std::enable_if_t<std::is_convertible_v<String, std::string_view> && !std::is_same_v<remove_cvref_t<String>, FastName>>>
+      FastName(String&& name) : hash(dataset.hash_function(name)) {
+         auto found = dataset.hash_to_name.find(hash);
+         if (found == dataset.hash_to_name.end()) {
+            dataset.hash_to_name[hash] = name;
          }
       }
 
-      operator const std::string&() const {
-         return dataset.id_to_name[id];
+      operator const std::string() const {
+         auto found = dataset.hash_to_name.find(hash);
+         if (found == dataset.hash_to_name.end()) {
+            return unknown_prefix + std::to_string(hash);
+         } else {
+            return found->second;
+         }
       }
 
 #define TAT_DEFINE_FASTNAME_COMPARE(OP, EVAL) \
    inline bool OP(const FastName& other) const { \
-      const auto& a = id; \
-      const auto& b = other.id; \
+      const auto& a = hash; \
+      const auto& b = other.hash; \
       return EVAL; \
    }
       TAT_DEFINE_FASTNAME_COMPARE(operator==, a == b)

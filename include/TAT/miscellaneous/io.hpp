@@ -113,7 +113,13 @@ namespace TAT {
    // name type io
 
    inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      return out << static_cast<const std::string&>(name);
+      auto found = FastName::dataset.hash_to_name.find(name.hash);
+      if (found == FastName::dataset.hash_to_name.end()) {
+         out << FastName::unknown_prefix << name.hash;
+      } else {
+         out << found->second;
+      }
+      return out;
    }
 
    namespace detail {
@@ -614,14 +620,21 @@ namespace TAT {
    // fast name dataset
 
    inline std::ostream& operator<(std::ostream& out, const FastName::dataset_t& dataset) {
-      return out < dataset.id_to_name;
+      Size size = dataset.hash_to_name.size();
+      out < size;
+      for (const auto& [hash, name] : dataset.hash_to_name) {
+         out < name;
+      }
+      return out;
    }
    inline std::istream& operator>(std::istream& in, FastName::dataset_t& dataset) {
-      in > dataset.id_to_name;
-      dataset.fastname_number = dataset.id_to_name.size();
-      dataset.name_to_id.clear();
-      for (auto i = 0; i < dataset.fastname_number; i++) {
-         dataset.name_to_id[dataset.id_to_name[i]] = i;
+      Size size;
+      in > size;
+      for (auto i = 0; i < size; i++) {
+         std::string name;
+         in > name;
+         auto hash = dataset.hash_function(name);
+         dataset.hash_to_name[hash] = std::move(name);
       }
       return in;
    }
