@@ -303,22 +303,17 @@ namespace TAT {
       auto plan_destination_to_source = pmr::vector<Rank>(rank_at_transpose);
 
       // and edge after transpose
-      pmr::vector<std::tuple<std::size_t, int>> name_after_split_hash_to_index;
-      name_after_split_hash_to_index.reserve(rank_at_transpose);
-      auto hash_function = std::hash<DefaultName>();
+      pmr::unordered_map<Name, int> name_after_split_to_index(rank_at_transpose);
       for (Rank i = 0; i < rank_at_transpose; i++) {
-         name_after_split_hash_to_index.emplace_back(hash_function(name_after_split[i]), i);
+         name_after_split_to_index[name_after_split[i]] = i;
       }
-      std::sort(name_after_split_hash_to_index.begin(), name_after_split_hash_to_index.end(), [](const auto& a, const auto& b) {
-         return std::get<0>(a) < std::get<0>(b);
-      });
 
       auto edge_after_transpose = pmr::vector<EdgePointer<Symmetry>>();
       edge_after_transpose.reserve(rank_at_transpose);
       for (auto i = 0; i < rank_at_transpose; i++) {
-         auto found = detail::fake_map_find<false>(name_after_split_hash_to_index, hash_function(name_before_merge[i]));
+         auto found = name_after_split_to_index.find(name_before_merge[i]);
          if constexpr (debug_mode) {
-            if (found == name_after_split_hash_to_index.end()) {
+            if (found == name_after_split_to_index.end()) {
                detail::error("Tensor to transpose with incompatible name list");
             }
          }
