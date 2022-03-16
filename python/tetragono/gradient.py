@@ -183,7 +183,7 @@ def gradient_descent(
         sampling_method="direct",
         configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
-        initial_configuration=None,
+        sweep_initial_configuration=None,
         configuration_dump_file=None,
         # About subspace
         restrict_subspace=None,
@@ -263,13 +263,13 @@ def gradient_descent(
         sampling = SweepSampling(state, configuration_cut_dimension, restrict)
         sampling_total_step = sampling_total_step
         # Initialize sweep configuration
-        if initial_configuration == "direct":
+        if sweep_initial_configuration == "direct":
             # Use direct sampling to find sweep sampling initial configuration.
             direct_sampling = DirectSampling(state, configuration_cut_dimension, restrict,
                                              direct_sampling_cut_dimension)
             with seed_differ:
                 _, configuration = direct_sampling()
-        elif initial_configuration == "load":
+        elif sweep_initial_configuration == "load":
             with open(configuration_dump_file, "rb") as file:
                 configurations = pickle.load(file)
             if len(configurations) < mpi_size:
@@ -285,7 +285,7 @@ def gradient_descent(
                         configuration[l1, l2, orbit] = edge_point
         else:
             with seed_differ:
-                initial_configuration_module = importlib.import_module(initial_configuration)
+                initial_configuration_module = importlib.import_module(sweep_initial_configuration)
                 configuration = initial_configuration_module.initial_configuration(state, configuration_cut_dimension)
         sampling.configuration = configuration
     elif sampling_method == "ergodic":
