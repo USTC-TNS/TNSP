@@ -391,21 +391,21 @@ namespace TAT {
       // reverse set result
       // and three result edge name order
       //    -> two put what right and name_result
-      auto reversed_set_1 = pmr::unordered_set<Name>();
-      auto free_name_1 = pmr::vector<Name>();                 // used for merge
-      auto common_name_1 = pmr::vector<Name>();               // used for merge
-      auto common_reverse_set_1 = pmr::unordered_set<Name>(); // used for reverse merge flag
+      auto reversed_set_1 = pmr::unordered_set<Name>(free_rank_1);
+      auto free_name_1 = pmr::vector<Name>();                            // used for merge
+      auto common_name_1 = pmr::vector<Name>();                          // used for merge
+      auto common_reverse_set_1 = pmr::unordered_set<Name>(common_rank); // used for reverse merge flag
       free_name_1.reserve(free_rank_1);
       common_name_1.reserve(common_rank); // this will be set later
 
-      auto reversed_set_2 = pmr::unordered_set<Name>();
+      auto reversed_set_2 = pmr::unordered_set<Name>(free_rank_2);
       auto free_name_2 = pmr::vector<Name>();   // used for merge
       auto common_name_2 = pmr::vector<Name>(); // used for merge
       free_name_2.reserve(free_rank_2);
       common_name_2.reserve(common_rank); // this will be set later
 
-      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry>>>>();
-      auto reversed_set_result = pmr::unordered_set<Name>();
+      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry>>>>(3);
+      auto reversed_set_result = pmr::unordered_set<Name>(free_rank_1 + free_rank_2 + common_rank);
       auto name_result = std::vector<Name>();
       auto& split_map_result_part_1 = split_map_result[InternalName<Name>::Contract_1];
       auto& split_map_result_part_2 = split_map_result[InternalName<Name>::Contract_2];
@@ -511,8 +511,8 @@ namespace TAT {
 
       // delete uncommon symmetry
       // and check symmetry order
-      auto delete_1 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>();
-      auto delete_2 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>();
+      auto delete_1 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(common_rank);
+      auto delete_2 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(common_rank);
       for (Rank i = 0; i < common_rank; i++) {
          const auto& name_1 = common_name_1[i];
          const auto& name_2 = common_name_2[i];
@@ -527,7 +527,7 @@ namespace TAT {
                   }
                }
             }
-            auto delete_map = pmr::unordered_map<Symmetry, Size>();
+            auto delete_map = pmr::unordered_map<Symmetry, Size>(edge_this.segment.size());
             for (const auto& [symmetry, dimension] : edge_this.segment) {
                auto found = edge_other.find_by_symmetry(-symmetry);
                if (found != edge_other.segment.end()) {
