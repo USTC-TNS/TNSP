@@ -391,21 +391,21 @@ namespace TAT {
       // reverse set result
       // and three result edge name order
       //    -> two put what right and name_result
-      auto reversed_set_1 = pmr::set<Name>();
-      auto free_name_1 = pmr::vector<Name>();       // used for merge
-      auto common_name_1 = pmr::vector<Name>();     // used for merge
-      auto common_reverse_set_1 = pmr::set<Name>(); // used for reverse merge flag
+      auto reversed_set_1 = pmr::unordered_set<Name>();
+      auto free_name_1 = pmr::vector<Name>();                 // used for merge
+      auto common_name_1 = pmr::vector<Name>();               // used for merge
+      auto common_reverse_set_1 = pmr::unordered_set<Name>(); // used for reverse merge flag
       free_name_1.reserve(free_rank_1);
       common_name_1.reserve(common_rank); // this will be set later
 
-      auto reversed_set_2 = pmr::set<Name>();
+      auto reversed_set_2 = pmr::unordered_set<Name>();
       auto free_name_2 = pmr::vector<Name>();   // used for merge
       auto common_name_2 = pmr::vector<Name>(); // used for merge
       free_name_2.reserve(free_rank_2);
       common_name_2.reserve(common_rank); // this will be set later
 
-      auto split_map_result = pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry>>>>();
-      auto reversed_set_result = pmr::set<Name>();
+      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry>>>>();
+      auto reversed_set_result = pmr::unordered_set<Name>();
       auto name_result = std::vector<Name>();
       auto& split_map_result_part_1 = split_map_result[InternalName<Name>::Contract_1];
       auto& split_map_result_part_2 = split_map_result[InternalName<Name>::Contract_2];
@@ -511,8 +511,8 @@ namespace TAT {
 
       // delete uncommon symmetry
       // and check symmetry order
-      auto delete_1 = pmr::map<Name, pmr::map<Symmetry, Size>>();
-      auto delete_2 = pmr::map<Name, pmr::map<Symmetry, Size>>();
+      auto delete_1 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>();
+      auto delete_2 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>();
       for (Rank i = 0; i < common_rank; i++) {
          const auto& name_1 = common_name_1[i];
          const auto& name_2 = common_name_2[i];
@@ -527,7 +527,7 @@ namespace TAT {
                   }
                }
             }
-            auto delete_map = pmr::map<Symmetry, Size>();
+            auto delete_map = pmr::unordered_map<Symmetry, Size>();
             for (const auto& [symmetry, dimension] : edge_this.segment) {
                auto found = edge_other.find_by_symmetry(-symmetry);
                if (found != edge_other.segment.end()) {
@@ -553,7 +553,7 @@ namespace TAT {
          auto delete_map_edge_2_iterator = delete_unused_dimension(edge_2, edge_1, name_2, delete_2);
          if constexpr (debug_mode) {
             // check different order
-            auto empty_delete_map = pmr::map<Symmetry, Size>();
+            auto empty_delete_map = pmr::unordered_map<Symmetry, Size>();
             const auto& delete_map_edge_1 = [&]() -> const auto& {
                if (delete_map_edge_1_iterator == delete_1.end()) {
                   return empty_delete_map;
@@ -592,7 +592,7 @@ namespace TAT {
       auto tensor_1_merged = tensor_1.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reversed_set_1,
-            pmr::map<Name, pmr::vector<Name>>{
+            pmr::unordered_map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_1, std::move(free_name_1)},
                   {InternalName<Name>::Contract_2, std::move(common_name_1)}},
             put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
@@ -601,12 +601,12 @@ namespace TAT {
             empty_list<Name>(),
             common_reverse_set_1,
             empty_list<Name>(),
-            pmr::set<Name>{InternalName<Name>::Contract_2},
+            pmr::unordered_set<Name>{InternalName<Name>::Contract_2},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reversed_set_2,
-            pmr::map<Name, pmr::vector<Name>>{
+            pmr::unordered_map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_2, std::move(free_name_2)},
                   {InternalName<Name>::Contract_1, std::move(common_name_2)}},
             put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
@@ -849,7 +849,7 @@ namespace TAT {
       auto tensor_1_merged = tensor_1.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry<>>>>>>(),
             empty_list<Name>(),
-            pmr::map<Name, pmr::vector<Name>>{
+            pmr::unordered_map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_1, std::move(free_name_1)},
                   {InternalName<Name>::Contract_2, std::move(common_name_1)},
                   {InternalName<Name>::Contract_0, fuse_names_list}},
@@ -864,7 +864,7 @@ namespace TAT {
       auto tensor_2_merged = tensor_2.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry<>>>>>>(),
             empty_list<Name>(),
-            pmr::map<Name, pmr::vector<Name>>{
+            pmr::unordered_map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_2, std::move(free_name_2)},
                   {InternalName<Name>::Contract_1, std::move(common_name_2)},
                   {InternalName<Name>::Contract_0, std::move(fuse_names_list)}},
