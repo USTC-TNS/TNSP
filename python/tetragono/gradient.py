@@ -200,7 +200,7 @@ def gradient_descent(
         use_random_gradient=False,
         momentum_parameter=0.0,
         # About gauge fixing
-        fix_gauge=True,
+        fix_gauge=False,
         # About log and save state
         log_file=None,
         save_state_interval=None,
