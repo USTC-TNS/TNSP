@@ -130,14 +130,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def seed(self, seed):
         TAT.random.seed(seed)
 
-    def su_gm_create(self, line, lattice_type):
-        config = Config(line)
-        model = importlib.import_module(config.args[0])
-        if len(config.args) == 2 and config.args[-1] == "help":
+    def su_gm_create(self, lattice_type, *args, **kwargs):
+        model = importlib.import_module(args[0])
+        if len(args) == 2 and args[-1] == "help":
             print(model.create.__doc__.replace("\n", "\n    "))
             return
         else:
-            state = lattice_type(model.create(*config.args[1:], **config.kwargs))
+            state = lattice_type(model.create(*args[1:], **kwargs))
 
         # pre normalize the tensor
         for l1 in range(state.L1):
@@ -156,7 +155,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        state = self.su_gm_create(line, SimpleUpdateLattice)
+        config = Config(line)
+        self.su_create(*config.args, **config.kwargs)
+
+    def su_create(self, *args, **kwargs):
+        state = self.su_gm_create(SimpleUpdateLattice, *args, **kwargs)
         if state != None:
             self.su = state
 
@@ -233,12 +236,20 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Convert simple update lattice to exact lattice.
         """
+        config = Config(line)
+        self.su_to_ex(*config.args, **config.kwargs)
+
+    def su_to_ex(self):
         self.ex = conversion.simple_update_lattice_to_exact_state(self.su)
 
     def do_su_to_gm(self, line):
         """
         Convert simple update lattice to sampling lattice.
         """
+        config = Config(line)
+        self.su_to_gm(*config.args, **config.kwargs)
+
+    def su_to_gm(self):
         self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
 
     def do_ex_update(self, line):
@@ -262,6 +273,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Calculate exact energy.
         """
+        config = Config(line)
+        self.ex_energy(*config.args, **config.kwargs)
+
+    def ex_energy(self):
         common_variable.showln("Exact state energy is", self.ex.observe_energy())
 
     def do_ex_dump(self, line):
@@ -309,7 +324,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        state = self.su_gm_create(line, SamplingLattice)
+        config = Config(line)
+        self.gm_create(*config.args, **config.kwargs)
+
+    def gm_create(self, *args, **kwargs):
+        state = self.su_gm_create(SamplingLattice, *args, **kwargs)
         if state != None:
             self.gm = state
 
@@ -327,14 +346,20 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The cut dimension used in direct sampling.
         """
         config = Config(line)
-        normalize_state(self.gm, *config.args, **config.kwargs)
+        self.gm_normalize(self.gm, *config.args, **config.kwargs)
+
+    def gm_normalize(self, *args, **kwargs):
+        normalize_state(self.gm, *args, **kwargs)
 
     def do_gm_run(self, line):
         """
         Do gradient descent. see gradient.py for details.
         """
         config = Config(line)
-        gradient_descent(self.gm, *config.args, **config.kwargs)
+        self.gm_run(*config.args, **config.kwargs)
+
+    def gm_run(self, *args, **kwargs):
+        gradient_descent(self.gm, *args, **kwargs)
 
     def do_gm_dump(self, line):
         """
@@ -382,6 +407,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The relative error added into tensor.
         """
         config = Config(line)
+        self.gm_expand(*config.args, **config.kwargs)
+
+    def gm_expand(self, *args, **kwargs):
         expand_sampling_lattice_dimension(self.gm, *config.args, **config.kwargs)
 
     def do_gm_extend(self, line):
@@ -392,6 +420,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Convert sampling lattice to exact lattice.
         """
+        config = Config(line)
+        self.gm_to_ex(self.gm, *config.args, **config.kwargs)
+
+    def gm_to_ex(self):
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
 
@@ -447,3 +479,36 @@ if __name__ == "__main__":
         common_variable.showln(help_message)
         exit(1)
     common_variable.mpi_comm.barrier()
+else:
+    import os
+    import sys
+    # Tetragono Path
+    if "TETPATH" in os.environ:
+        pathes = os.environ["TETPATH"]
+        for path in pathes.split(":"):
+            sys.path.append(os.path.abspath(path))
+    # Run
+    app = TetragonoCommandApp()
+
+    seed = app.seed
+
+    su_create = app.su_create
+    su_dump = app.su_dump
+    su_load = app.su_load
+    su_update = app.su_update
+    su_energy = app.su_energy
+    su_to_ex = app.su_to_ex
+    su_to_gm = app.su_to_gm
+
+    ex_update = app.ex_update
+    ex_energy = app.ex_energy
+    ex_dump = app.ex_dump
+    ex_load = app.ex_load
+
+    gm_create = app.gm_create
+    gm_normalize = app.gm_normalize
+    gm_run = app.gm_run
+    gm_dump = app.gm_dump
+    gm_load = app.gm_load
+    gm_expand = app.gm_expand
+    gm_to_ex = app.gm_to_ex
