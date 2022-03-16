@@ -27,6 +27,16 @@ namespace net {
    }
 } // namespace net
 
+namespace std {
+   template<>
+   struct hash<net::pss> {
+      size_t operator()(const net::pss& name) const {
+         std::hash<std::string> string_hash;
+         return string_hash(name.first) ^ !string_hash(name.second);
+      }
+   };
+} // namespace std
+
 namespace TAT {
    using net::pss;
 
