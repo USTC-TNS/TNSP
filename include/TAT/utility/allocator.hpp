@@ -301,6 +301,8 @@ namespace TAT {
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace TAT {
@@ -334,6 +336,12 @@ namespace TAT {
 
       template<class Key, class Compare = std::less<Key>>
       using set = std::set<Key, Compare, detail::polymorphic_allocator<Key>>;
+
+      template<typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+      using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, detail::polymorphic_allocator<std::pair<const Key, T>>>;
+
+      template<class Key, class Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
+      using unordered_set = std::unordered_set<Key, Hash, KeyEqual, detail::polymorphic_allocator<Key>>;
    } // namespace pmr
 } // namespace TAT
 #endif
