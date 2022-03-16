@@ -20,6 +20,7 @@ from __future__ import annotations
 import pickle
 import importlib
 import signal
+from datetime import datetime
 import numpy as np
 import TAT
 from .sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
@@ -212,6 +213,8 @@ def gradient_descent(
         # About Measurement
         measurement=None):
 
+    time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
+
     # Gradient step
     use_gradient = grad_step_size != 0 or use_check_difference
     if use_gradient:
@@ -330,7 +333,7 @@ def gradient_descent(
                     measurement_modules[measurement_name].save_result(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
-                with open(log_file, "a") as file:
+                with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a") as file:
                     print(*observer.energy, file=file)
             # Dump configuration
             if configuration_dump_file:
@@ -416,7 +419,7 @@ def gradient_descent(
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0:
                     if save_state_file and mpi_rank == 0:
-                        with open(save_state_file, "wb") as file:
+                        with open(save_state_file.replace("%s", str(grad_step)).replace("%t", time_str), "wb") as file:
                             pickle.dump(state, file)
             if sigint_handler():
                 break
