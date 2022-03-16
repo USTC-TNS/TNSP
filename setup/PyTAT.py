@@ -40,7 +40,7 @@ class build_ext(build_ext_original):
 
 setup(
     name="PyTAT",
-    version="0.2.2",
+    version="0.2.3",
     description="python binding for TAT(TAT is A Tensor library)",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",

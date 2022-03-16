@@ -1,8 +1,10 @@
 from setuptools import setup
 
+version = "0.2.3"
+
 setup(
     name="tetragono",
-    version="0.2.2",
+    version=version,
     description="OBC square tensor network state(PEPS) library",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
@@ -10,8 +12,8 @@ setup(
     packages=["tetragono", "tetragono/common_variable"],
     package_dir={"": "python"},
     install_requires=[
-        "PyTAT",
-        "lazy_graph",
+        f"PyTAT=={version}",
+        f"lazy_graph=={version}",
         "mpi4py",
         "numpy",
     ],
