@@ -197,6 +197,7 @@ def gradient_descent(
         use_line_search=False,
         use_fix_relative_step_size=False,
         use_random_gradient=False,
+        momentum_parameter=0.0,
         # About gauge fixing
         fix_gauge=True,
         # About log and save state
@@ -386,14 +387,21 @@ def gradient_descent(
                                                 observer._lattice_dot(grad, grad))**0.5,
                                                root=0)
                         real_step_size = grad_step_size * param
-                        for l1 in range(state.L1):
-                            for l2 in range(state.L2):
-                                state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                     else:
                         real_step_size = grad_step_size
+                    if grad_step == 0 or momentum_parameter == 0.0:
+                        delta_state = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
                         for l1 in range(state.L1):
                             for l2 in range(state.L2):
-                                state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
+                                delta_state[l1][l2] = real_step_size * grad[l1][l2].conjugate(positive_contract=True)
+                    else:
+                        for l1 in range(state.L1):
+                            for l2 in range(state.L2):
+                                delta_state[l1][l2] *= momentum_parameter
+                                delta_state[l1][l2] += real_step_size * grad[l1][l2].conjugate(positive_contract=True)
+                    for l1 in range(state.L1):
+                        for l2 in range(state.L2):
+                            state[l1, l2] -= delta_state[l1][l2]
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge
