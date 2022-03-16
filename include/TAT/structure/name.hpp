@@ -39,7 +39,7 @@ namespace TAT {
     * Use hash to represent a string via dataset map
     */
    struct FastName {
-      using hash_t = std::uint64_t;
+      using hash_t = std::size_t;
 
       // Singleton
       struct dataset_t {
@@ -203,4 +203,13 @@ namespace TAT {
    constexpr bool is_name = is_detected_v<detail::name_trait_write_checker, Name> || is_detected_v<detail::name_trait_read_checker, Name> ||
                             is_detected_v<detail::name_trait_print_checker, Name> || is_detected_v<detail::name_trait_scan_checker, Name>;
 } // namespace TAT
+
+namespace std {
+   template<>
+   struct hash<TAT::FastName> {
+      size_t operator()(const TAT::FastName& name) const {
+         return name.hash;
+      }
+   };
+} // namespace std
 #endif
