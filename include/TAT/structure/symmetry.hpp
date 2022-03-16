@@ -187,6 +187,27 @@ namespace TAT {
          return negative_symmetry(*this, index_sequence_t());
       }
 
+      // hash
+    private:
+      template<std::size_t Index>
+      void hash_helper(std::size_t& seed) const {
+         if constexpr (Index != 0) {
+            hash_helper<Index - 1>(seed);
+         }
+         // Code from boost
+         const auto value = std::get<Index>(*this);
+         seed ^= std::hash<std::tuple_element_t<Index, base_tuple_t>>()(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+      }
+
+    public:
+      std::size_t hash() const {
+         std::size_t seed = length;
+         if constexpr (length != 0) {
+            hash_helper<length - 1>(seed);
+         }
+         return seed;
+      }
+
       // parity
     private:
       /**
@@ -345,4 +366,13 @@ namespace TAT {
    using FermiU1Symmetry = Symmetry<fermi_wrap<U1>, U1>;
    using ParitySymmetry = Symmetry<fermi_wrap<Z2>>;
 } // namespace TAT
+
+namespace std {
+   template<typename... T>
+   struct hash<TAT::Symmetry<T...>> {
+      size_t operator()(const TAT::Symmetry<T...>& symmetry) const {
+         return symmetry.hash();
+      }
+   };
+} // namespace std
 #endif
