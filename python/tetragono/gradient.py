@@ -197,6 +197,8 @@ def gradient_descent(
         use_line_search=False,
         use_fix_relative_step_size=False,
         use_random_gradient=False,
+        # About gauge fixing
+        fix_gauge=True,
         # About log and save state
         log_file=None,
         save_state_interval=None,
@@ -395,7 +397,8 @@ def gradient_descent(
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge
-                fix_sampling_lattice_guage(state)
+                if fix_gauge:
+                    fix_sampling_lattice_guage(state)
                 # Normalize state
                 try_normalize(state, log_prod_ws / sampling_total_step)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
