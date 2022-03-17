@@ -71,7 +71,7 @@ namespace TAT {
             new_edges.push_back({{{symmetry, dimension}}});
          }
       }
-      auto contract_names = std::set<std::pair<Name, Name>>();
+      auto contract_names = std::unordered_set<std::pair<Name, Name>>();
       if (old_name != InternalName<Name>::No_Old_Name) {
          contract_names.insert({old_name, InternalName<Name>::No_Old_Name});
          new_names.push_back(InternalName<Name>::No_Old_Name);
@@ -132,7 +132,7 @@ namespace TAT {
       new_edges.reserve(reserve_size);
       auto total_symmetry = Symmetry();
       Size total_offset = 0;
-      auto contract_names = std::set<std::pair<Name, Name>>();
+      auto contract_names = std::unordered_set<std::pair<Name, Name>>();
       for (const auto& name : names) {
          if (auto found_position = configure.find(name); found_position != configure.end()) {
             // shrinking

@@ -148,7 +148,8 @@ namespace TAT {
    inline timer exponential_guard("exponential");
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::exponential(const std::set<std::pair<Name, Name>>& pairs, int step) const {
+   Tensor<ScalarType, Symmetry, Name>
+   Tensor<ScalarType, Symmetry, Name>::exponential(const std::unordered_set<std::pair<Name, Name>>& pairs, int step) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = exponential_guard();
 

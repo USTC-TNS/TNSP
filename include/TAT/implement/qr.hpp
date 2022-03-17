@@ -323,7 +323,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr(
          char free_name_direction,
-         const std::set<Name>& free_name_set,
+         const std::unordered_set<Name>& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
       auto pmr_guard = scope_resource(default_buffer_size);

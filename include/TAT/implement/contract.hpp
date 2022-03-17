@@ -282,10 +282,10 @@ namespace TAT {
       void check_valid_contract_plan(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-            const std::set<std::pair<Name, Name>>& contract_names,
+            const std::unordered_set<std::pair<Name, Name>>& contract_names,
             const pmr::unordered_map<Name, Name>& contract_names_1_2,
             const pmr::unordered_map<Name, Name>& contract_names_2_1,
-            const std::set<Name>& fuse_names = {}) {
+            const std::unordered_set<Name>& fuse_names = {}) {
          // check if some missing name in contract
          for (const auto& [name_1, name_2] : contract_names) {
             if (auto found = tensor_1.find_rank_from_name(name_1) == tensor_1.names.end()) {
@@ -322,8 +322,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_2,
-         const std::set<std::pair<Name, Name>>& contract_names,
-         const std::set<Name>& fuse_names);
+         const std::unordered_set<std::pair<Name, Name>>& contract_names,
+         const std::unordered_set<Name>& fuse_names);
 
    template<
          typename ScalarType,
@@ -333,7 +333,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::set<std::pair<Name, Name>>& contract_names);
+         const std::unordered_set<std::pair<Name, Name>>& contract_names);
 
    inline timer contract_guard("contract");
 
@@ -341,8 +341,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract_implement(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::set<std::pair<Name, Name>>& contract_names,
-         const std::set<Name>& fuse_names) {
+         const std::unordered_set<std::pair<Name, Name>>& contract_names,
+         const std::unordered_set<Name>& fuse_names) {
       auto timer_guard = contract_guard();
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::length == 0) {
@@ -361,7 +361,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::set<std::pair<Name, Name>>& contract_names) {
+         const std::unordered_set<std::pair<Name, Name>>& contract_names) {
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       const Rank rank_1 = tensor_1.get_rank();
       const Rank rank_2 = tensor_2.get_rank();
@@ -707,8 +707,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_2,
-         const std::set<std::pair<Name, Name>>& contract_names,
-         const std::set<Name>& fuse_names) {
+         const std::unordered_set<std::pair<Name, Name>>& contract_names,
+         const std::unordered_set<Name>& fuse_names) {
       const Rank rank_1 = tensor_1.get_rank();
       const Rank rank_2 = tensor_2.get_rank();
       const Rank common_rank = contract_names.size();

@@ -29,7 +29,7 @@ namespace TAT {
    inline timer trace_guard("trace");
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::set<std::pair<Name, Name>>& trace_names) const {
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::unordered_set<std::pair<Name, Name>>& trace_names) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = trace_guard();
 

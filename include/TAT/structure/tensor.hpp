@@ -632,14 +632,14 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
             const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>&
                   split_map, // order of edge symmetry is specify here
-            const std::set<Name>& reversed_name,
+            const std::unordered_set<Name>& reversed_name,
             const std::unordered_map<Name, std::vector<Name>>& merge_map, // if you want, you can reorder the edge symemtry easily after edge operator
             std::vector<Name> new_names,                                  // move into result tensor
             const bool apply_parity = false,
-            const std::set<Name>& parity_exclude_name_split = {},
-            const std::set<Name>& parity_exclude_name_reversed_before_transpose = {},
-            const std::set<Name>& parity_exclude_name_reversed_after_transpose = {},
-            const std::set<Name>& parity_exclude_name_merge = {}) const {
+            const std::unordered_set<Name>& parity_exclude_name_split = {},
+            const std::unordered_set<Name>& parity_exclude_name_reversed_before_transpose = {},
+            const std::unordered_set<Name>& parity_exclude_name_reversed_after_transpose = {},
+            const std::unordered_set<Name>& parity_exclude_name_merge = {}) const {
          auto pmr_guard = scope_resource(default_buffer_size);
          return edge_operator_implement(
                split_map,
@@ -707,8 +707,10 @@ namespace TAT {
        * \param parity_exclude_name set of edge which apply sign differently with default behavior
        * \return tensor with edge reversed
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      reverse_edge(const std::set<Name>& reversed_name, bool apply_parity = false, const std::set<Name>& parity_exclude_name = {}) const {
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> reverse_edge(
+            const std::unordered_set<Name>& reversed_name,
+            bool apply_parity = false,
+            const std::unordered_set<Name>& parity_exclude_name = {}) const {
          auto pmr_guard = scope_resource(default_buffer_size);
          return edge_operator_implement(
                empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
@@ -731,8 +733,8 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
             const std::unordered_map<Name, std::vector<Name>>& merge,
             bool apply_parity = false,
-            const std::set<Name>&& parity_exclude_name_merge = {},
-            const std::set<Name>& parity_exclude_name_reverse = {}) const;
+            const std::unordered_set<Name>&& parity_exclude_name_merge = {},
+            const std::unordered_set<Name>& parity_exclude_name_reverse = {}) const;
 
       /**
        * Split some edge of a tensor
@@ -741,15 +743,15 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> split_edge(
             const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
             bool apply_parity = false,
-            const std::set<Name>& parity_exclude_name_split = {}) const;
+            const std::unordered_set<Name>& parity_exclude_name_split = {}) const;
 
       // Contract
       // maybe calculate tensor product directly without transpose, but it is very hard
       [[nodiscard]] static Tensor<ScalarType, Symmetry, Name> contract_implement(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-            const std::set<std::pair<Name, Name>>& contract_names,
-            const std::set<Name>& fuse_names);
+            const std::unordered_set<std::pair<Name, Name>>& contract_names,
+            const std::unordered_set<Name>& fuse_names);
 
       /**
        * Calculate product of two tensor
@@ -763,8 +765,8 @@ namespace TAT {
       [[nodiscard]] static auto contract(
             const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
-            const std::set<std::pair<Name, Name>>& contract_names,
-            const std::set<Name>& fuse_names = {}) {
+            const std::unordered_set<std::pair<Name, Name>>& contract_names,
+            const std::unordered_set<Name>& fuse_names = {}) {
          using ResultScalarType = std::common_type_t<ScalarType1, ScalarType2>;
          using ResultTensor = Tensor<ResultScalarType, Symmetry, Name>;
          if constexpr (std::is_same_v<ResultScalarType, ScalarType1>) {
@@ -789,8 +791,8 @@ namespace TAT {
       template<typename OtherScalarType, typename = std::enable_if_t<is_scalar<OtherScalarType>>>
       [[nodiscard]] auto contract(
             const Tensor<OtherScalarType, Symmetry, Name>& tensor_2,
-            const std::set<std::pair<Name, Name>>& contract_names,
-            const std::set<Name>& fuse_names = {}) const {
+            const std::unordered_set<std::pair<Name, Name>>& contract_names,
+            const std::unordered_set<Name>& fuse_names = {}) const {
          return contract(*this, tensor_2, contract_names, fuse_names);
       }
 
@@ -806,9 +808,9 @@ namespace TAT {
        * Set the tensor as identity inplacely
        * \param pairs pair set describing how to treat the tensor as matrix
        */
-      Tensor<ScalarType, Symmetry, Name>& identity(const std::set<std::pair<Name, Name>>& pairs) &;
+      Tensor<ScalarType, Symmetry, Name>& identity(const std::unordered_set<std::pair<Name, Name>>& pairs) &;
 
-      Tensor<ScalarType, Symmetry, Name>&& identity(const std::set<std::pair<Name, Name>>& pairs) && {
+      Tensor<ScalarType, Symmetry, Name>&& identity(const std::unordered_set<std::pair<Name, Name>>& pairs) && {
          return std::move(identity(pairs));
       }
 
@@ -817,13 +819,13 @@ namespace TAT {
        * \param pairs pair set describing how to treat the tensor as matrix
        * \param step iteration step
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::set<std::pair<Name, Name>>& pairs, int step = 2) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::unordered_set<std::pair<Name, Name>>& pairs, int step = 2) const;
 
       /**
        * Get trace of tensor
        * \param pairs pair set describing how to trace the tensor
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::set<std::pair<Name, Name>>& trace_names) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::unordered_set<std::pair<Name, Name>>& trace_names) const;
 
       /**
        * SVD result type
@@ -854,7 +856,7 @@ namespace TAT {
        * \see svd_result
        */
       [[nodiscard]] svd_result
-      svd(const std::set<Name>& free_name_set_u,
+      svd(const std::unordered_set<Name>& free_name_set_u,
           const Name& common_name_u,
           const Name& common_name_v,
           const Name& singular_name_u,
@@ -871,7 +873,7 @@ namespace TAT {
        * \see qr_result
        */
       [[nodiscard]] qr_result
-      qr(char free_name_direction, const std::set<Name>& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
+      qr(char free_name_direction, const std::unordered_set<Name>& free_name_set, const Name& common_name_q, const Name& common_name_r) const;
 
       using EdgePointShrink = std::conditional_t<Symmetry::length == 0, Size, std::tuple<Symmetry, Size>>;
       using EdgePointExpand = std::conditional_t<
@@ -919,7 +921,7 @@ namespace TAT {
    [[nodiscard]] auto contract(
          const Tensor<ScalarType1, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType2, Symmetry, Name>& tensor_2,
-         std::set<std::pair<Name, Name>> contract_names) {
+         std::unordered_set<std::pair<Name, Name>> contract_names) {
       return tensor_1.contract(tensor_2, std::move(contract_names));
    }
 

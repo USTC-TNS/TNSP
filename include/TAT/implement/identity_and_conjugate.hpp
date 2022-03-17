@@ -131,7 +131,7 @@ namespace TAT {
    } // namespace detail
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::pair<Name, Name>>& pairs) & {
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::unordered_set<std::pair<Name, Name>>& pairs) & {
       // the order of fermi arrow should be (false true) before set to delta
       auto pmr_guard = scope_resource(default_buffer_size);
       auto rank = get_rank();

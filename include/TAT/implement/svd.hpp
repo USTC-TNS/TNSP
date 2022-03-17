@@ -269,7 +269,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd(
-         const std::set<Name>& free_name_set_u,
+         const std::unordered_set<Name>& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
          const Name& singular_name_u,

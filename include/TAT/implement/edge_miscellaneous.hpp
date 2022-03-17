@@ -56,8 +56,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::merge_edge(
          const std::unordered_map<Name, std::vector<Name>>& merge,
          bool apply_parity,
-         const std::set<Name>&& parity_exclude_name_merge,
-         const std::set<Name>& parity_exclude_name_reverse) const {
+         const std::unordered_set<Name>&& parity_exclude_name_merge,
+         const std::unordered_set<Name>& parity_exclude_name_reverse) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (debug_mode) {
          // check if the edge not exist in merge map
@@ -116,7 +116,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::split_edge(
          const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
          bool apply_parity,
-         const std::set<Name>& parity_exclude_name_split) const {
+         const std::unordered_set<Name>& parity_exclude_name_split) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (debug_mode) {
          for (const auto& [old_edge, new_edges] : split) {
