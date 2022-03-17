@@ -20,7 +20,7 @@
 #include "run_test.hpp"
 
 namespace net {
-   using pss = std::pair<std::string, std::string>;
+   using pss = std::tuple<std::string, std::string>;
 
    std::ostream& operator<<(std::ostream& os, const pss& p) {
       return os << std::get<0>(p) << "." << std::get<1>(p);
@@ -32,7 +32,20 @@ namespace std {
    struct hash<net::pss> {
       size_t operator()(const net::pss& name) const {
          std::hash<std::string> string_hash;
-         return string_hash(name.first) ^ !string_hash(name.second);
+         return string_hash(std::get<0>(name)) ^ !string_hash(std::get<1>(name));
+      }
+   };
+
+   template<>
+   struct hash<pair<net::pss, net::pss>> {
+      size_t operator()(const pair<net::pss, net::pss>& names) const {
+         const auto& [name_1, name_2] = names;
+         auto hash_1 = hash<net::pss>()(name_1);
+         auto hash_2 = hash<net::pss>()(name_2);
+         auto seed = hash_1;
+         auto v = hash_2;
+         seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+         return seed;
       }
    };
 } // namespace std

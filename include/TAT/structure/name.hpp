@@ -212,5 +212,31 @@ namespace std {
          return name.hash;
       }
    };
+
+   template<>
+   struct hash<pair<TAT::FastName, TAT::FastName>> {
+      size_t operator()(const pair<TAT::FastName, TAT::FastName>& names) const {
+         const auto& [name_1, name_2] = names;
+         auto hash_1 = hash<TAT::FastName>()(name_1);
+         auto hash_2 = hash<TAT::FastName>()(name_2);
+         auto seed = hash_1;
+         auto v = hash_2;
+         seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+         return seed;
+      }
+   };
+
+   template<>
+   struct hash<pair<string, string>> {
+      size_t operator()(const pair<string, string>& names) const {
+         const auto& [name_1, name_2] = names;
+         auto hash_1 = hash<string>()(name_1);
+         auto hash_2 = hash<string>()(name_2);
+         auto seed = hash_1;
+         auto v = hash_2;
+         seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+         return seed;
+      }
+   };
 } // namespace std
 #endif
