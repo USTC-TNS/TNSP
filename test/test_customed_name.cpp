@@ -66,7 +66,7 @@ namespace net {
       std::cout << s.U << "\n";
       std::cout << s.S << "\n";
       std::cout << s.V << "\n";
-      std::cout << s.V.edge_rename(std::map<pss, std::string>{{{"A", "V"}, "V"}}) << "\n";
+      std::cout << s.V.edge_rename(std::unordered_map<pss, std::string>{{{"A", "V"}, "V"}}) << "\n";
    }
 } // namespace net
 

@@ -31,7 +31,8 @@ namespace TAT {
    const ScalarType& Tensor<ScalarType, Symmetry, Name>::get_item(const PositionType& position) const& {
       constexpr bool is_vector_not_map =
             std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::vector<std::pair<Symmetry, Size>>>;
-      constexpr bool is_index_not_point = std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::map<Name, Size>>;
+      constexpr bool is_index_not_point =
+            std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::unordered_map<Name, Size>>;
       auto pmr_guard = scope_resource(default_buffer_size);
       auto rank = get_rank();
       auto symmetries = pmr::vector<Symmetry>();

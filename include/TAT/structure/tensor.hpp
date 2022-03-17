@@ -538,8 +538,8 @@ namespace TAT {
    [[nodiscard]] const ScalarType& const_at(const __VA_ARGS__& position) const& { \
       return get_item(position); \
    }
-      TAT_DEFINE_TENSOR_AT(std::map<Name, std::pair<Symmetry, Size>>)
-      TAT_DEFINE_TENSOR_AT(std::map<Name, Size>)
+      TAT_DEFINE_TENSOR_AT(std::unordered_map<Name, std::pair<Symmetry, Size>>)
+      TAT_DEFINE_TENSOR_AT(std::unordered_map<Name, Size>)
       TAT_DEFINE_TENSOR_AT(std::vector<std::pair<Symmetry, Size>>)
       TAT_DEFINE_TENSOR_AT(std::vector<Size>)
 #undef TAT_DEFINE_TENSOR_AT
@@ -597,7 +597,7 @@ namespace TAT {
          }
          return found->second;
       }
-      const typename core_t::content_vector_t& blocks(const std::map<Name, Symmetry>& symmetry_map) const& {
+      const typename core_t::content_vector_t& blocks(const std::unordered_map<Name, Symmetry>& symmetry_map) const& {
          std::vector<Symmetry> symmetry_list;
          symmetry_list.reserve(get_rank());
          for (const auto& name : names) {
@@ -609,7 +609,7 @@ namespace TAT {
       typename core_t::content_vector_t& blocks(const SymmetryList& symmetry_list) & {
          return const_cast<typename core_t::content_vector_t&>(const_cast<const self_t*>(this)->blocks(symmetry_list));
       }
-      typename core_t::content_vector_t& blocks(const std::map<Name, Symmetry>& symmetry_map) & {
+      typename core_t::content_vector_t& blocks(const std::unordered_map<Name, Symmetry>& symmetry_map) & {
          return const_cast<typename core_t::content_vector_t&>(const_cast<const self_t*>(this)->blocks(symmetry_map));
       }
 
@@ -630,10 +630,11 @@ namespace TAT {
        * \note Since transpose generate a full sign, it will not be controled by apply_parity, it is always valid
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> edge_operator(
-            const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split_map, // order of edge symmetry is specify here
+            const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>&
+                  split_map, // order of edge symmetry is specify here
             const std::set<Name>& reversed_name,
-            const std::map<Name, std::vector<Name>>& merge_map, // if you want, you can reorder the edge symemtry easily after edge operator
-            std::vector<Name> new_names,                        // move into result tensor
+            const std::unordered_map<Name, std::vector<Name>>& merge_map, // if you want, you can reorder the edge symemtry easily after edge operator
+            std::vector<Name> new_names,                                  // move into result tensor
             const bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {},
             const std::set<Name>& parity_exclude_name_reversed_before_transpose = {},
@@ -674,7 +675,7 @@ namespace TAT {
        * \return A tensor after renaming, share the core with the original tensor
        */
       template<typename ResultName = Name, typename = std::enable_if_t<is_name<ResultName>>>
-      [[nodiscard]] auto edge_rename(const std::map<Name, ResultName>& dictionary) const;
+      [[nodiscard]] auto edge_rename(const std::unordered_map<Name, ResultName>& dictionary) const;
 
       /**
        * Transpose the tensor
@@ -728,7 +729,7 @@ namespace TAT {
        * \note the strategy to determine the result edge is to move each group of merged edge to the last edge of this merge group
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> merge_edge(
-            const std::map<Name, std::vector<Name>>& merge,
+            const std::unordered_map<Name, std::vector<Name>>& merge,
             bool apply_parity = false,
             const std::set<Name>&& parity_exclude_name_merge = {},
             const std::set<Name>& parity_exclude_name_reverse = {}) const;
@@ -738,7 +739,7 @@ namespace TAT {
        * \param split a map describing how to split
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> split_edge(
-            const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
+            const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
             bool apply_parity = false,
             const std::set<Name>& parity_exclude_name_split = {}) const;
 
@@ -883,12 +884,14 @@ namespace TAT {
        * expand a dimension-1 edge of a tensor to several wider edge
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      expand(const std::map<Name, EdgePointExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
+      expand(const std::unordered_map<Name, EdgePointExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
       /**
        * shrink several edge of a tensor to a dimension-1 edge
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      shrink(const std::map<Name, EdgePointShrink>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> shrink(
+            const std::unordered_map<Name, EdgePointShrink>& configure,
+            const Name& new_name = InternalName<Name>::No_New_Name,
+            Arrow arrow = false) const;
 
       const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;
       const Tensor<ScalarType, Symmetry, Name>& data_put(std::ostream&) const;
