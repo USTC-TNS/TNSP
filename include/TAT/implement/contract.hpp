@@ -275,7 +275,7 @@ namespace TAT {
             contract_names_1_2[name_1] = name_2;
             contract_names_2_1[name_2] = name_1;
          }
-         return std::make_tuple(contract_names_1_2, contract_names_2_1);
+         return std::make_tuple(std::move(contract_names_1_2), std::move(contract_names_2_1));
       }
 
       template<typename ScalarType, typename Symmetry, typename Name>
