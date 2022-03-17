@@ -157,12 +157,12 @@ namespace TAT {
       // reverse -> merge -> exp -> split -> reverse
 
       // split map and merge map
-      auto merge_map = pmr::unordered_map<Name, pmr::vector<Name>>();
+      auto merge_map = pmr::unordered_map<Name, pmr::vector<Name>>(2);
       auto& merge_1 = merge_map[InternalName<Name>::Exp_1];
       merge_1.resize(half_rank);
       auto& merge_2 = merge_map[InternalName<Name>::Exp_2];
       merge_2.resize(half_rank);
-      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>>();
+      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>>(2);
       auto& split_1 = split_map_result[InternalName<Name>::Exp_1];
       split_1.resize(half_rank);
       auto& split_2 = split_map_result[InternalName<Name>::Exp_2];
@@ -177,8 +177,8 @@ namespace TAT {
       // apply reverse flag
       // reverse set
       auto apply_merge_split_parity_set = pmr::unordered_set<Name>{InternalName<Name>::Exp_2};
-      auto apply_reverse_parity_set = pmr::unordered_set<Name>();
-      auto reverse_set = pmr::unordered_set<Name>();
+      auto apply_reverse_parity_set = pmr::unordered_set<Name>(rank);
+      auto reverse_set = pmr::unordered_set<Name>(rank);
       // merged edge arrow is (false true)
 
       auto valid_index = pmr::vector<bool>(rank, true);

@@ -305,12 +305,12 @@ namespace TAT {
       // result name is also needed
 
       // merge
-      auto free_name_u = pmr::vector<Name>();                // merge plan
-      auto free_name_v = pmr::vector<Name>();                // merge plan
-      auto reversed_set_origin = pmr::unordered_set<Name>(); // merge plan
+      auto free_name_u = pmr::vector<Name>();                    // merge plan
+      auto free_name_v = pmr::vector<Name>();                    // merge plan
+      auto reversed_set_origin = pmr::unordered_set<Name>(rank); // merge plan
 
-      auto reversed_set_u = pmr::unordered_set<Name>();                                             // split plan
-      auto reversed_set_v = pmr::unordered_set<Name>();                                             // split plan
+      auto reversed_set_u = pmr::unordered_set<Name>(rank);                                         // split plan
+      auto reversed_set_v = pmr::unordered_set<Name>(rank);                                         // split plan
       auto result_name_u = std::vector<Name>();                                                     // split plan
       auto result_name_v = std::vector<Name>();                                                     // split plan
       auto free_names_and_edges_u = pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>(); // split plan
@@ -411,8 +411,8 @@ namespace TAT {
       for (const auto& [symmetry, vector_s] : result_s) {
          total_dimension += vector_s.size();
       }
-      auto remain_dimension_u = pmr::unordered_map<Symmetry, Size>();
-      auto remain_dimension_v = pmr::unordered_map<Symmetry, Size>();
+      auto remain_dimension_u = pmr::unordered_map<Symmetry, Size>(result_s.size());
+      auto remain_dimension_v = pmr::unordered_map<Symmetry, Size>(result_s.size());
       if (auto cut_value = std::get_if<RemainCut>(&cut)) {
          Size cut_i = cut_value->value;
          if (cut_i < total_dimension) {
