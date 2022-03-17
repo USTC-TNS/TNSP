@@ -491,6 +491,7 @@ else:
     app = TetragonoCommandApp()
 
     seed = app.seed
+    shell = app.do_shell
 
     su_create = app.su_create
     su_dump = app.su_dump
