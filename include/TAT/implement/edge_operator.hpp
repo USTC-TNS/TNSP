@@ -156,14 +156,11 @@ namespace TAT {
                // this map is sym -> [sym] -> offset
                auto& this_offset = split_offset.emplace_back();
                this_offset.reserve(this_offset_length);
-               auto offset_bank = pmr::vector<std::pair<Symmetry, Size>>(); // every sym contain several [sym], it is filled one by one
+               auto offset_bank = pmr::unordered_map<Symmetry, Size>(); // every sym contain several [sym], it is filled one by one
                offset_bank.reserve(edge_before_split[position_before_split].segment.size());
                for (const auto& [sym, dim] : edge_before_split[position_before_split].segment) {
-                  offset_bank.push_back({sym, 0});
+                  offset_bank[sym] = 0;
                }
-               std::sort(offset_bank.begin(), offset_bank.end(), [&](const auto& a, const auto& b) {
-                  return std::get<0>(a) < std::get<0>(b);
-               });
                auto accumulated_symmetries = pmr::vector<Symmetry>(split_rank);
                auto accumulated_dimensions = pmr::vector<Size>(split_rank);
                auto current_symmetries = pmr::vector<Symmetry>(split_rank);
@@ -186,7 +183,7 @@ namespace TAT {
                         auto target_symmetry = accumulated_symmetries.back();
                         auto target_dimension = accumulated_dimensions.back();
                         // the target symmetry may not exist
-                        if (auto found = detail::fake_map_find<false>(offset_bank, target_symmetry); found != offset_bank.end()) {
+                        if (auto found = offset_bank.find(target_symmetry); found != offset_bank.end()) {
                            // this_offset[current_symmetries] = {target_symmetry, found->second};
                            this_offset.push_back({current_symmetries, target_symmetry, found->second});
                            found->second += target_dimension;
