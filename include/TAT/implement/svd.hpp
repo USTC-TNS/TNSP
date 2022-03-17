@@ -440,15 +440,14 @@ namespace TAT {
             }
 
             // delete element of tensor S
-            for (const auto& [symmetry, this_remain] : remain_dimension_u) {
-               // It is a clang 12.0.1 bug, cannot use &symmetry directly here
-               auto found = std::find_if(result_s.begin(), result_s.end(), [&sym = symmetry](const auto& pair) {
-                  return pair.first == sym;
-               });
+            for (auto it = result_s.begin(); it != result_s.end();) {
+               const auto& symmetry = it->first;
+               const auto& this_remain = remain_dimension_u.at(symmetry);
                if (this_remain == 0) {
-                  result_s.erase(found);
+                  it = result_s.erase(it);
                } else {
-                  found->second.resize(this_remain);
+                  it->second.resize(this_remain);
+                  ++it;
                }
             }
          }
@@ -474,15 +473,14 @@ namespace TAT {
          }
 
          // delete element of tensor S
-         for (const auto& [symmetry, this_remain] : remain_dimension_u) {
-            // It is a clang 12.0.1 bug, cannot use &symmetry directly here
-            auto found = std::find_if(result_s.begin(), result_s.end(), [&sym = symmetry](const auto& pair) {
-               return pair.first == sym;
-            });
+         for (auto it = result_s.begin(); it != result_s.end();) {
+            const auto& symmetry = it->first;
+            const auto& this_remain = remain_dimension_u.at(symmetry);
             if (this_remain == 0) {
-               result_s.erase(found);
+               it = result_s.erase(it);
             } else {
-               found->second.resize(this_remain);
+               it->second.resize(this_remain);
+               ++it;
             }
          }
       }
