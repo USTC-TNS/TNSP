@@ -355,12 +355,12 @@ namespace TAT {
       // merge plan
       auto free_name_1 = pmr::vector<Name>(); // part of merge map
       auto free_name_2 = pmr::vector<Name>(); // part of merge map
-      auto reversed_set_origin = pmr::unordered_set<Name>(rank);
+      auto reversed_set_origin = pmr::unordered_set<Name>(unordered_parameter * rank);
       // result name is trivial
 
       // split plan
-      auto reversed_set_1 = pmr::unordered_set<Name>(rank);
-      auto reversed_set_2 = pmr::unordered_set<Name>(rank);
+      auto reversed_set_1 = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto reversed_set_2 = pmr::unordered_set<Name>(unordered_parameter * rank);
       auto result_name_1 = std::vector<Name>();
       auto result_name_2 = std::vector<Name>();
       auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, edge_segment_t<Symmetry, true>>>(); // part of split map

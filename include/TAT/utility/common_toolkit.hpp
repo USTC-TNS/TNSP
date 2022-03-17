@@ -227,6 +227,8 @@ namespace TAT {
    };
    template<typename T>
    using type_identity_t = typename type_identity<T>::type;
+
+   constexpr std::size_t unordered_parameter = 4;
 } // namespace TAT
 
 #include <array>

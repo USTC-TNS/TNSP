@@ -156,8 +156,8 @@ namespace TAT {
                // this map is sym -> [sym] -> offset
                auto& this_offset = split_offset.emplace_back();
                this_offset.reserve(this_offset_length);
-               auto offset_bank = pmr::unordered_map<Symmetry, Size>(); // every sym contain several [sym], it is filled one by one
-               offset_bank.reserve(edge_before_split[position_before_split].segment.size());
+               auto offset_bank = pmr::unordered_map<Symmetry, Size>(unordered_parameter * edge_before_split[position_before_split].segment.size());
+               // every sym contain several [sym], it is filled one by one
                for (const auto& [sym, dim] : edge_before_split[position_before_split].segment) {
                   offset_bank[sym] = 0;
                }
@@ -300,7 +300,7 @@ namespace TAT {
       auto plan_destination_to_source = pmr::vector<Rank>(rank_at_transpose);
 
       // and edge after transpose
-      pmr::unordered_map<Name, int> name_after_split_to_index(rank_at_transpose);
+      pmr::unordered_map<Name, int> name_after_split_to_index(unordered_parameter * rank_at_transpose);
       for (Rank i = 0; i < rank_at_transpose; i++) {
          name_after_split_to_index[name_after_split[i]] = i;
       }

@@ -40,18 +40,18 @@ namespace TAT {
       auto free_rank = rank - 2 * trace_rank;
 
       // transpose to a_i = b_{jji}, this is the most fast way to trace
-      auto traced_names = pmr::unordered_set<Name>(rank);
+      auto traced_names = pmr::unordered_set<Name>(unordered_parameter * rank);
       auto trace_1_names = pmr::vector<Name>();
       auto trace_2_names = pmr::vector<Name>();
       trace_1_names.reserve(trace_rank);
       trace_2_names.reserve(trace_rank);
 
       // reverse before merge
-      auto reverse_names = pmr::unordered_set<Name>(rank);
-      auto traced_reverse_flag = pmr::unordered_set<Name>(rank);
+      auto reverse_names = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto traced_reverse_flag = pmr::unordered_set<Name>(unordered_parameter * rank);
 
       // delete empty corresponding segment of traced edge
-      auto delete_map = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(rank);
+      auto delete_map = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(unordered_parameter * rank);
 
       // traced edge
       auto valid_index = pmr::vector<bool>(rank, true);
@@ -107,7 +107,7 @@ namespace TAT {
                            }
                         }
                      }
-                     auto delete_map = pmr::unordered_map<Symmetry, Size>(edge_this.segment.size());
+                     auto delete_map = pmr::unordered_map<Symmetry, Size>(unordered_parameter * edge_this.segment.size());
                      for (const auto& [symmetry, dimension] : edge_this.segment) {
                         auto found = edge_other.find_by_symmetry(-symmetry);
                         if (found != edge_other.segment.end()) {
