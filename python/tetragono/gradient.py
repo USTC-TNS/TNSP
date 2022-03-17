@@ -376,35 +376,38 @@ def gradient_descent(
                         for l2 in range(state.L2):
                             state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                 else:
-                    if use_random_gradient:
-                        showln("use random gradient")
+                    if grad_step == 0 or momentum_parameter == 0.0:
+                        total_grad = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
                         for l1 in range(state.L1):
                             for l2 in range(state.L2):
-                                this_site_grad = grad[l1][l2]
+                                total_grad[l1][l2] = grad[l1][l2]
+                    else:
+                        for l1 in range(state.L1):
+                            for l2 in range(state.L2):
+                                total_grad[l1][l2] = total_grad[l1][l2] * momentum_parameter + grad[l1][l2] * (
+                                    1 - momentum_parameter)
+                    if use_random_gradient:
+                        showln("use random gradient")
+                        this_grad = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
+                        for l1 in range(state.L1):
+                            for l2 in range(state.L2):
+                                this_site_grad = total_grad[l1][l2]
                                 random_same_shape = this_site_grad.same_shape().rand(0, 1)
                                 random_same_shape.storage *= np.sign(this_site_grad.storage)
-                                grad[l1][l2] = random_same_shape
+                                this_grad[l1][l2] = random_same_shape
+                    else:
+                        this_grad = total_grad
                     if use_fix_relative_step_size:
                         showln("fix relative step size")
                         param = mpi_comm.bcast((observer._lattice_dot(state._lattice, state._lattice) /
-                                                observer._lattice_dot(grad, grad))**0.5,
+                                                observer._lattice_dot(this_grad, this_grad))**0.5,
                                                root=0)
                         real_step_size = grad_step_size * param
                     else:
                         real_step_size = grad_step_size
-                    if grad_step == 0 or momentum_parameter == 0.0:
-                        delta_state = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
-                        for l1 in range(state.L1):
-                            for l2 in range(state.L2):
-                                delta_state[l1][l2] = real_step_size * grad[l1][l2].conjugate(positive_contract=True)
-                    else:
-                        for l1 in range(state.L1):
-                            for l2 in range(state.L2):
-                                delta_state[l1][l2] *= momentum_parameter
-                                delta_state[l1][l2] += real_step_size * grad[l1][l2].conjugate(positive_contract=True)
                     for l1 in range(state.L1):
                         for l2 in range(state.L2):
-                            state[l1, l2] -= delta_state[l1][l2]
+                            state[l1, l2] -= real_step_size * this_grad[l1][l2].conjugate(positive_contract=True)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge
