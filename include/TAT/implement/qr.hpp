@@ -408,9 +408,7 @@ namespace TAT {
       auto tensor_merged = edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reversed_set_origin,
-            pmr::unordered_map<Name, pmr::vector<Name>>{
-                  {InternalName<Name>::QR_1, std::move(free_name_1)},
-                  {InternalName<Name>::QR_2, std::move(free_name_2)}},
+            pmr::map<Name, pmr::vector<Name>>{{InternalName<Name>::QR_1, std::move(free_name_1)}, {InternalName<Name>::QR_2, std::move(free_name_2)}},
             std::vector<Name>{InternalName<Name>::QR_1, InternalName<Name>::QR_2},
             false,
             empty_list<Name>(),
@@ -472,7 +470,7 @@ namespace TAT {
          (use_qr_not_lq ? reversed_set_1 : reversed_set_2).insert(common_name_q);
       }
       auto new_tensor_1 = tensor_1.edge_operator_implement(
-            pmr::unordered_map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry, true>>>>{
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry, true>>>>{
                   {InternalName<Name>::QR_1, std::move(free_names_and_edges_1)}},
             reversed_set_1,
             empty_list<std::pair<Name, empty_list<Name>>>(),
@@ -484,14 +482,14 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
       auto new_tensor_2 = tensor_2.edge_operator_implement(
-            pmr::unordered_map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry, true>>>>{
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry, true>>>>{
                   {InternalName<Name>::QR_2, std::move(free_names_and_edges_2)}},
             reversed_set_2,
             empty_list<std::pair<Name, empty_list<Name>>>(),
             std::move(result_name_2),
             false,
             empty_list<Name>(),
-            use_qr_not_lq ? pmr::unordered_set<Name>{} : pmr::unordered_set<Name>{common_name_q},
+            use_qr_not_lq ? pmr::set<Name>{} : pmr::set<Name>{common_name_q},
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());

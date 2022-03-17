@@ -173,7 +173,7 @@ namespace TAT {
 
       // free edge
       auto result_names = std::vector<Name>();
-      // auto reverse_names = pmr::unordered_set<Name>(); // add to the former set
+      // auto reverse_names = pmr::set<Name>(); // add to the former set
       auto split_plan = pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>();
       result_names.reserve(free_rank);
       split_plan.reserve(free_rank);
@@ -195,16 +195,16 @@ namespace TAT {
       auto merged_tensor = edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reverse_names,
-            pmr::unordered_map<Name, pmr::vector<Name>>{
+            pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Trace_1, std::move(trace_1_names)},
                   {InternalName<Name>::Trace_2, std::move(trace_2_names)},
                   {InternalName<Name>::Trace_3, {result_names.begin(), result_names.end()}}},
             std::vector<Name>{InternalName<Name>::Trace_1, InternalName<Name>::Trace_2, InternalName<Name>::Trace_3},
             false,
-            empty_list<Name>(),                                    // split
-            traced_reverse_flag,                                   // reverse
-            empty_list<Name>(),                                    // reverse
-            pmr::unordered_set<Name>{InternalName<Name>::Trace_1}, // merge
+            empty_list<Name>(),                          // split
+            traced_reverse_flag,                         // reverse
+            empty_list<Name>(),                          // reverse
+            pmr::set<Name>{InternalName<Name>::Trace_1}, // merge
             delete_map);
       // trace 1 is connected to trace_2, so one of then is applied sign, another is not
       // trace 3 will be reversed/splitted later, nothing changed
@@ -234,7 +234,7 @@ namespace TAT {
             const_line_size_variant);
 
       auto result = traced_tensor.edge_operator_implement(
-            pmr::unordered_map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>>{{InternalName<Name>::Trace_3, std::move(split_plan)}},
+            pmr::map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>>{{InternalName<Name>::Trace_3, std::move(split_plan)}},
             reverse_names, // more than it have, it contains some traced edge, but it is ok
             empty_list<std::pair<Name, empty_list<Name>>>(),
             std::move(result_names),

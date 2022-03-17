@@ -592,7 +592,7 @@ namespace TAT {
       auto tensor_1_merged = tensor_1.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reversed_set_1,
-            pmr::unordered_map<Name, pmr::vector<Name>>{
+            pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_1, std::move(free_name_1)},
                   {InternalName<Name>::Contract_2, std::move(common_name_1)}},
             put_common_1_right ? std::vector<Name>{InternalName<Name>::Contract_1, InternalName<Name>::Contract_2} :
@@ -601,12 +601,12 @@ namespace TAT {
             empty_list<Name>(),
             common_reverse_set_1,
             empty_list<Name>(),
-            pmr::unordered_set<Name>{InternalName<Name>::Contract_2},
+            pmr::set<Name>{InternalName<Name>::Contract_2},
             delete_1);
       auto tensor_2_merged = tensor_2.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reversed_set_2,
-            pmr::unordered_map<Name, pmr::vector<Name>>{
+            pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_2, std::move(free_name_2)},
                   {InternalName<Name>::Contract_1, std::move(common_name_2)}},
             put_common_2_right ? std::vector<Name>{InternalName<Name>::Contract_2, InternalName<Name>::Contract_1} :
@@ -849,7 +849,7 @@ namespace TAT {
       auto tensor_1_merged = tensor_1.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry<>>>>>>(),
             empty_list<Name>(),
-            pmr::unordered_map<Name, pmr::vector<Name>>{
+            pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_1, std::move(free_name_1)},
                   {InternalName<Name>::Contract_2, std::move(common_name_1)},
                   {InternalName<Name>::Contract_0, fuse_names_list}},
@@ -864,7 +864,7 @@ namespace TAT {
       auto tensor_2_merged = tensor_2.edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry<>>>>>>(),
             empty_list<Name>(),
-            pmr::unordered_map<Name, pmr::vector<Name>>{
+            pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::Contract_2, std::move(free_name_2)},
                   {InternalName<Name>::Contract_1, std::move(common_name_2)},
                   {InternalName<Name>::Contract_0, std::move(fuse_names_list)}},

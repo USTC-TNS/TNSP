@@ -177,7 +177,7 @@ namespace TAT {
       // apply merge/split flag
       // apply reverse flag
       // reverse set
-      auto apply_merge_split_parity_set = pmr::unordered_set<Name>{InternalName<Name>::Exp_2};
+      auto apply_merge_split_parity_set = pmr::set<Name>{InternalName<Name>::Exp_2};
       auto apply_reverse_parity_set = pmr::unordered_set<Name>(unordered_parameter * rank);
       auto reverse_set = pmr::unordered_set<Name>(unordered_parameter * rank);
       // merged edge arrow is (false true)

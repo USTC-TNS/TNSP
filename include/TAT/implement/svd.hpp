@@ -356,7 +356,7 @@ namespace TAT {
       auto tensor_merged = edge_operator_implement(
             empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
             reversed_set_origin,
-            pmr::unordered_map<Name, pmr::vector<Name>>{
+            pmr::map<Name, pmr::vector<Name>>{
                   {InternalName<Name>::SVD_U, std::move(free_name_u)},
                   {InternalName<Name>::SVD_V, std::move(free_name_v)}},
             put_v_right ? std::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
@@ -516,7 +516,7 @@ namespace TAT {
       }
       // cut happened here
       auto u = tensor_u.edge_operator_implement(
-            pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
+            pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
                   {InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
             reversed_set_u,
             empty_list<std::pair<Name, empty_list<Name>>>(),
@@ -526,9 +526,9 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
-            pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
+            pmr::map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
       auto v = tensor_v.edge_operator_implement(
-            pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
+            pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
                   {InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
             reversed_set_v,
             empty_list<std::pair<Name, empty_list<Name>>>(),
@@ -538,7 +538,7 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
-            pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
+            pmr::map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
       // (... U sym true) (-sym false S sym true) (-sym false V ...)
       return {
             std::move(u),
