@@ -27,6 +27,8 @@
 #include <utility>
 #include <vector>
 
+#include "common_toolkit.hpp"
+
 namespace TAT {
 #ifdef TAT_USE_TIMER
    /**
