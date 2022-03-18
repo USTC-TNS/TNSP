@@ -208,6 +208,8 @@ def gradient_descent(
         # About line search
         line_search_amplitude=1.25,
         line_search_error_threshold=0.1,
+        # About momentum
+        orthogonalize_momentum=False,
         # About check difference
         check_difference_delta=1e-8,
         # About Measurement
@@ -254,8 +256,8 @@ def gradient_descent(
             observer.enable_natural_gradient()
         need_reweight_observer = use_line_search or use_check_difference
     else:
-        need_reweight_observer = False
         showln("do NOT calculate gradient")
+        need_reweight_observer = False
     if need_reweight_observer:
         reweight_observer = Observer(state, restrict)
         reweight_observer.add_energy()
@@ -382,6 +384,14 @@ def gradient_descent(
                             for l2 in range(state.L2):
                                 total_grad[l1][l2] = grad[l1][l2]
                     else:
+                        if orthogonalize_momentum:
+                            # _lattice_dot always return a real number
+                            param = mpi_comm.bcast(observer._lattice_dot(total_grad, state._lattice) /
+                                                   observer._lattice_dot(state._lattice, state._lattice),
+                                                   root=0)
+                            for l1 in range(state.L1):
+                                for l2 in range(state.L2):
+                                    total_grad[l1][l2] = total_grad[l1][l2] - state[l1, l2] * param
                         for l1 in range(state.L1):
                             for l2 in range(state.L2):
                                 total_grad[l1][l2] = total_grad[l1][l2] * momentum_parameter + grad[l1][l2] * (
