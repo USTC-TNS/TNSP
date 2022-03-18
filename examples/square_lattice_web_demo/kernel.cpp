@@ -38,7 +38,7 @@ auto SS = SxSx + SySy + SzSz;
 using Name = TAT::DefaultName;
 
 template<typename Scalar>
-auto edge_rename(TAT::Tensor<Scalar> t, std::map<Name, Name> map) {
+auto edge_rename(TAT::Tensor<Scalar> t, std::unordered_map<Name, Name> map) {
    for (auto i = map.begin(); i != map.end();) {
       auto found = std::find(t.names.begin(), t.names.end(), i->first);
       if (found == t.names.end()) {
@@ -51,7 +51,7 @@ auto edge_rename(TAT::Tensor<Scalar> t, std::map<Name, Name> map) {
 }
 
 template<typename Scalar>
-auto contract(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b, std::set<std::pair<Name, Name>> contract_names) {
+auto contract(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b, std::unordered_set<std::pair<Name, Name>> contract_names) {
    for (auto i = contract_names.begin(); i != contract_names.end();) {
       auto found_a = std::find(a.names.begin(), a.names.end(), i->first);
       auto found_b = std::find(b.names.begin(), b.names.end(), i->second);
@@ -67,7 +67,7 @@ auto contract(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b, std::set<std::pair<N
 
 template<typename Scalar>
 auto contract_all_edge(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b) {
-   auto contract_names = std::set<std::pair<Name, Name>>();
+   auto contract_names = std::unordered_set<std::pair<Name, Name>>();
    for (const auto& i : a.names) {
       contract_names.insert({i, i});
    }
@@ -115,7 +115,7 @@ struct SpinLattice {
 
    template<typename Scalar>
    auto observe(const TAT::Tensor<Scalar>& op) const {
-      std::map<Name, Name> map;
+      std::unordered_map<Name, Name> map;
       for (const auto& n : op.names) {
          auto str = std::string(n);
          map["_" + str] = str;
