@@ -19,7 +19,8 @@
 from setuptools import setup
 from subprocess import check_output
 
-version = check_output(["git", "describe"]).decode("utf-8").replace("\n", "").replace("v", "")
+version = check_output(["git", "describe"]).decode("utf-8")
+version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
 setup(
     name="lazy_graph",

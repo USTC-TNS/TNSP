@@ -23,7 +23,8 @@ from subprocess import check_output
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_original
 
-version = check_output(["git", "describe"]).decode("utf-8").replace("\n", "").replace("v", "")
+version = check_output(["git", "describe"]).decode("utf-8")
+version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
 
 class CMakeExtension(Extension):
