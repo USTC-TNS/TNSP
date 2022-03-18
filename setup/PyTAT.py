@@ -1,8 +1,29 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Copyright (C) 2021-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+
 import os
 import sys
 import pathlib
+from subprocess import check_output
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_original
+
+version = check_output(["git", "describe"]).decode("utf-8").replace("\n", "").replace("v", "")
 
 
 class CMakeExtension(Extension):
@@ -28,6 +49,7 @@ class build_ext(build_ext_original):
             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + str(extension_dir.absolute()),
             "-DCMAKE_BUILD_TYPE=" + "Release",
             "-DTAT_USE_MPI=" + "OFF",
+            "-DTAT_FORCE_VERSION=" + version,
             "-DPYTHON_EXECUTABLE=" + sys.executable,
         ]
         os.chdir(str(build_dir))
@@ -40,7 +62,7 @@ class build_ext(build_ext_original):
 
 setup(
     name="PyTAT",
-    version="0.2.4",
+    version=version,
     description="python binding for TAT(TAT is A Tensor library)",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
