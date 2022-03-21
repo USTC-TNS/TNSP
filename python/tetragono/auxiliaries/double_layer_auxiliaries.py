@@ -17,7 +17,7 @@
 #
 
 import lazy
-from .auxiliaries import safe_contract, safe_rename
+from .safe_toolkit import safe_contract, safe_rename
 
 
 class DoubleLayerAuxiliaries:

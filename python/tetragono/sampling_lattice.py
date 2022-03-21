@@ -17,11 +17,11 @@
 #
 
 from copyreg import _slotnames
-from .auxiliaries import Auxiliaries
+from .auxiliaries import SingleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
 
 
-class Configuration(Auxiliaries):
+class Configuration(SingleLayerAuxiliaries):
     """
     Configuration system for square sampling lattice.
     """

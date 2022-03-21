@@ -17,7 +17,7 @@
 #
 
 from copyreg import _slotnames
-from .double_layer_auxiliaries import DoubleLayerAuxiliaries
+from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
 from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
 

@@ -29,7 +29,13 @@ setup(
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/hzhangxyz/TAT",
-    packages=["tetragono", "tetragono/common_variable", "tetragono/sampling_tools", "tetragono/shell_commands"],
+    packages=[
+        "tetragono",
+        "tetragono/common_variable",
+        "tetragono/sampling_tools",
+        "tetragono/shell_commands",
+        "tetragono/auxiliaries",
+    ],
     package_dir={"": "python"},
     install_requires=[
         f"PyTAT=={version}",
