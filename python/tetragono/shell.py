@@ -344,7 +344,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The cut dimension used in direct sampling.
         """
         config = Config(line)
-        self.gm_normalize(self.gm, *config.args, **config.kwargs)
+        self.gm_normalize(*config.args, **config.kwargs)
 
     def gm_normalize(self, *args, **kwargs):
         normalize_state(self.gm, *args, **kwargs)
@@ -419,7 +419,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         Convert sampling lattice to exact lattice.
         """
         config = Config(line)
-        self.gm_to_ex(self.gm, *config.args, **config.kwargs)
+        self.gm_to_ex(*config.args, **config.kwargs)
 
     def gm_to_ex(self):
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
