@@ -17,9 +17,8 @@
 #
 
 import numpy as np
-from .sampling_lattice import DirectSampling
-from .gradient import seed_differ
-from .common_variable import mpi_comm, mpi_size, mpi_rank, show, showln
+from ..sampling_lattice import DirectSampling
+from ..common_variable import mpi_comm, mpi_size, mpi_rank, show, showln, seed_differ
 
 
 def plus_log(loga, logb):

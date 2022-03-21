@@ -25,9 +25,7 @@ from . import common_variable
 from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
-from .gradient import gradient_descent
-from .normalize import normalize_state
-from .expand_sampling import expand_sampling_lattice_dimension
+from .shell_commands import gradient_descent, normalize_state, expand_sampling_lattice_dimension
 
 
 class Config():

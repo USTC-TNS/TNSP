@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .common_variable import mpi_comm
+from ..common_variable import mpi_comm
 
 
 def expand_sampling_lattice_dimension(state, new_dimension, epsilon):

@@ -22,65 +22,9 @@ import importlib
 import signal
 from datetime import datetime
 import numpy as np
-import TAT
-from .sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
-from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer
+from ..sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
+from ..common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler, seed_differ
 from .fix_gauge_sampling import fix_sampling_lattice_guage
-
-
-class SignalHandler():
-
-    def __init__(self, signal):
-        self.signal = signal
-        self.sigint_recv = 0
-        self.saved_handler = None
-
-    def __enter__(self):
-
-        def handler(signum, frame):
-            print(f"\n process {mpi_rank} receive {self.signal.name}, send again to send {self.signal.name}\u001b[2F")
-            if self.sigint_recv == 1:
-                self.saved_handler(signum, frame)
-            else:
-                self.sigint_recv = 1
-
-        self.saved_handler = signal.signal(self.signal, handler)
-        return self
-
-    def __call__(self):
-        if self.sigint_recv:
-            print(f" process {mpi_rank} receive {self.signal.name}")
-        result = mpi_comm.allreduce(self.sigint_recv)
-        self.sigint_recv = 0
-        return result != 0
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        signal.signal(self.signal, self.saved_handler)
-
-
-class SeedDiffer:
-    max_int = 2**31
-    random_int = TAT.random.uniform_int(0, max_int - 1)
-
-    def make_seed_diff(self):
-        TAT.random.seed((self.random_int() + mpi_rank) % self.max_int)
-        # c++ random engine will generate the same first uniform int if the seed is near.
-        TAT.random.uniform_real(0, 1)()
-
-    def make_seed_same(self):
-        TAT.random.seed(mpi_comm.allreduce(self.random_int() // mpi_size))
-
-    def __enter__(self):
-        self.make_seed_diff()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.make_seed_same()
-
-    def __init__(self):
-        self.make_seed_same()
-
-
-seed_differ = SeedDiffer()
 
 
 def check_difference(state, observer, grad, reweight_observer, configuration_pool, check_difference_delta):

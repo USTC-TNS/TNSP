@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import signal
+import TAT
 from . import No
 from . import Fermi
 from . import FermiU1_tJ
@@ -62,3 +64,58 @@ def bcast_lattice_buffer(lattice, root):
         for tensor in row:
             requests.append(mpi_comm.Ibcast(tensor.storage, root=root))
     MPI.Request.Waitall(requests)
+
+
+class SignalHandler():
+
+    def __init__(self, signal):
+        self.signal = signal
+        self.sigint_recv = 0
+        self.saved_handler = None
+
+    def __enter__(self):
+
+        def handler(signum, frame):
+            print(f"\n process {mpi_rank} receive {self.signal.name}, send again to send {self.signal.name}\u001b[2F")
+            if self.sigint_recv == 1:
+                self.saved_handler(signum, frame)
+            else:
+                self.sigint_recv = 1
+
+        self.saved_handler = signal.signal(self.signal, handler)
+        return self
+
+    def __call__(self):
+        if self.sigint_recv:
+            print(f" process {mpi_rank} receive {self.signal.name}")
+        result = mpi_comm.allreduce(self.sigint_recv)
+        self.sigint_recv = 0
+        return result != 0
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        signal.signal(self.signal, self.saved_handler)
+
+
+class SeedDiffer:
+    max_int = 2**31
+    random_int = TAT.random.uniform_int(0, max_int - 1)
+
+    def make_seed_diff(self):
+        TAT.random.seed((self.random_int() + mpi_rank) % self.max_int)
+        # c++ random engine will generate the same first uniform int if the seed is near.
+        TAT.random.uniform_real(0, 1)()
+
+    def make_seed_same(self):
+        TAT.random.seed(mpi_comm.allreduce(self.random_int() // mpi_size))
+
+    def __enter__(self):
+        self.make_seed_diff()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.make_seed_same()
+
+    def __init__(self):
+        self.make_seed_same()
+
+
+seed_differ = SeedDiffer()
