@@ -51,9 +51,8 @@ class Auxiliaries:
         "_4_inline_left_to_right_tailed", "_4_inline_right_to_left", "_4_inline_right_to_left_tailed"
     ]
 
-    def copy(self, cp=None, result=None):
-        if result is None:
-            result = Auxiliaries.__new__(Auxiliaries)
+    def copy(self, cp=None):
+        result = self.__new__(type(self))
         if cp is None:
             cp = lazy.Copy()
 

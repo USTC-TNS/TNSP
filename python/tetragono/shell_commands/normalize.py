@@ -17,7 +17,7 @@
 #
 
 import numpy as np
-from ..sampling_lattice import DirectSampling
+from ..sampling_tools import DirectSampling
 from ..common_variable import mpi_comm, mpi_size, mpi_rank, show, showln, seed_differ
 
 

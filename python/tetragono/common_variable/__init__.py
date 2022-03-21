@@ -17,6 +17,7 @@
 #
 
 import signal
+from mpi4py import MPI
 import TAT
 from . import No
 from . import Fermi
@@ -24,8 +25,6 @@ from . import FermiU1_tJ
 from . import Fermi_Hubbard
 
 clear_line = "\u001b[2K"
-
-from mpi4py import MPI
 
 mpi_comm = MPI.COMM_WORLD
 mpi_rank = mpi_comm.Get_rank()
@@ -68,8 +67,8 @@ def bcast_lattice_buffer(lattice, root):
 
 class SignalHandler():
 
-    def __init__(self, signal):
-        self.signal = signal
+    def __init__(self, handler_signal):
+        self.signal = handler_signal
         self.sigint_recv = 0
         self.saved_handler = None
 

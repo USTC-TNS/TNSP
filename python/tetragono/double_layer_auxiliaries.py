@@ -31,7 +31,7 @@ class DoubleLayerAuxiliaries:
     ]
 
     def copy(self, cp=None):
-        result = DoubleLayerAuxiliaries.__new__(DoubleLayerAuxiliaries)
+        result = self.__new__(type(self))
         if cp is None:
             cp = lazy.Copy()
 
@@ -202,18 +202,18 @@ class DoubleLayerAuxiliaries:
 
     def __setitem__(self, l1l2nc, tensor):
         l1, l2, nc = l1l2nc
-        if nc == "N" or nc == "n":
+        if nc in ("N", "n"):
             self._lattice_n[l1][l2].reset(tensor)
-        elif nc == "C" or nc == "c":
+        elif nc in ("C", "c"):
             self._lattice_c[l1][l2].reset(tensor)
         else:
             raise ValueError("Invalid layer when setting lattice")
 
     def __getitem__(self, l1l2nc):
         l1, l2, nc = l1l2nc
-        if nc == "N" or nc == "n":
+        if nc in ("N", "n"):
             return self._lattice_n[l1][l2]()
-        elif nc == "C" or nc == "c":
+        elif nc in ("C", "c"):
             return self._lattice_c[l1][l2]()
         else:
             raise ValueError("Invalid layer when setting lattice")

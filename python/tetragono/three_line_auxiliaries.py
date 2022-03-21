@@ -122,8 +122,8 @@ class ThreeLineAuxiliaries:
         c1 = self._lattice_1c[l2]()
         t2 = self._lattice_2[l2]()
 
-        n1 = safe_rename(n1, {f"P{orbit}": f"O0"})
-        c1 = safe_rename(c1, {f"P{orbit}": f"I0"})
+        n1 = safe_rename(n1, {f"P{orbit}": "O0"})
+        c1 = safe_rename(c1, {f"P{orbit}": "I0"})
 
         line = [n0, n1, t2, c1, c0]
 
@@ -163,14 +163,14 @@ class ThreeLineAuxiliaries:
             self._lattice_2[l2].reset(tensor)
         else:
             l1, l2, nc = positions
-            if nc == "N" or nc == "n":
+            if nc in ("N", "n"):
                 if l1 == 0:
                     self._lattice_0n[l2].reset(tensor)
                 elif l1 == 1:
                     self._lattice_1n[l2].reset(tensor)
                 else:
                     raise ValueError("Invalid position when setting lattice")
-            elif nc == "C" or nc == "c":
+            elif nc in ("C", "c"):
                 if l1 == 0:
                     self._lattice_0c[l2].reset(tensor)
                 elif l1 == 1:

@@ -16,8 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import TAT
-from . import Fermi
 from .tensor_toolkit import rename_io, kronecker_product
 from .Fermi import Tensor, CC, I, N, C0C1, C1C0
 

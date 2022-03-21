@@ -34,7 +34,7 @@ def simple_update_lattice_to_sampling_lattice(state):
     -------
     ExactState
     """
-    if type(state) != SimpleUpdateLattice:
+    if not isinstance(state, SimpleUpdateLattice):
         raise ValueError("Conversion input type mismatch")
     result = SamplingLattice(state)
     for l1 in range(state.L1):
@@ -58,7 +58,7 @@ def simple_update_lattice_to_exact_state(state):
     -------
     ExactState
     """
-    if type(state) != SimpleUpdateLattice:
+    if not isinstance(state, SimpleUpdateLattice):
         raise ValueError("Conversion input type mismatch")
     result = ExactState(state)
     for l1 in range(state.L1):
@@ -93,7 +93,7 @@ def sampling_lattice_to_exact_state(state):
     -------
     ExactState
     """
-    if type(state) != SamplingLattice:
+    if not isinstance(state, SamplingLattice):
         raise ValueError("Conversion input type mismatch")
     result = ExactState(state)
     for l1 in range(state.L1):

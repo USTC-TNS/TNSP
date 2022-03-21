@@ -351,7 +351,7 @@ class AbstractState:
             The result edge object used for physics edge.
         """
         result = self._construct_edge(edge)
-        if result.arrow != False:
+        if result.arrow is not False:
             raise ValueError("Edge arrow of physics bond should be False")
         return result
 

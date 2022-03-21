@@ -22,7 +22,9 @@ import importlib
 import signal
 from datetime import datetime
 import numpy as np
-from ..sampling_lattice import SamplingLattice, DirectSampling, SweepSampling, ErgodicSampling, Observer
+import TAT
+from ..sampling_lattice import SamplingLattice
+from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler, seed_differ
 from .fix_gauge_sampling import fix_sampling_lattice_guage
 
@@ -171,12 +173,12 @@ def gradient_descent(
     else:
         grad_total_step = 1
     showln(f"gradient total step={grad_total_step}")
-    if sj_shift_per_site != None:
+    if sj_shift_per_site is not None:
         cache_configuration = True
-        showln(f"using shaojun's method, cache configuration")
+        showln("using shaojun's method, cache configuration")
 
     # Restrict subspace
-    if restrict_subspace != None:
+    if restrict_subspace is not None:
         restrict = importlib.import_module(restrict_subspace).restrict
     else:
         restrict = None
@@ -279,7 +281,8 @@ def gradient_descent(
                     measurement_modules[measurement_name].save_result(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
-                with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a") as file:
+                with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a",
+                          encoding="utf-8") as file:
                     print(*observer.energy, file=file)
             # Dump configuration
             if configuration_dump_file:

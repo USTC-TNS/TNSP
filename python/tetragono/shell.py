@@ -17,6 +17,7 @@
 #
 
 import os
+import sys
 import cmd
 import pickle
 import importlib
@@ -72,6 +73,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         if common_variable.mpi_rank == 0:
             self.intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + self.license
 
+        self.su = None
+        self.ex = None
+        self.gm = None
+
     def precmd(self, line):
         line = line.split("#")[0].strip()
         if line.endswith("\\"):
@@ -119,20 +124,21 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
         Parameters
         ----------
-        seed : int
+        random_seed : int
             The new random seed.
         """
         config = Config(line)
         self.seed(*config.args, **config.kwargs)
 
-    def seed(self, seed):
-        TAT.random.seed(seed)
+    def seed(self, random_seed):
+        TAT.random.seed(random_seed)
 
-    def su_gm_create(self, lattice_type, *args, **kwargs):
+    @staticmethod
+    def su_gm_create(lattice_type, *args, **kwargs):
         model = importlib.import_module(args[0])
         if len(args) == 2 and args[-1] == "help":
             print(model.create.__doc__.replace("\n", "\n    "))
-            return
+            return None
         else:
             state = lattice_type(model.create(*args[1:], **kwargs))
 
@@ -158,7 +164,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def su_create(self, *args, **kwargs):
         state = self.su_gm_create(SimpleUpdateLattice, *args, **kwargs)
-        if state != None:
+        if state is not None:
             self.su = state
 
     def do_su_dump(self, line):
@@ -327,7 +333,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def gm_create(self, *args, **kwargs):
         state = self.su_gm_create(SamplingLattice, *args, **kwargs)
-        if state != None:
+        if state is not None:
             self.gm = state
 
     def do_gm_normalize(self, line):
@@ -408,7 +414,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_expand(*config.args, **config.kwargs)
 
     def gm_expand(self, *args, **kwargs):
-        expand_sampling_lattice_dimension(self.gm, *config.args, **config.kwargs)
+        expand_sampling_lattice_dimension(self.gm, *args, **kwargs)
 
     def do_gm_extend(self, line):
         print(" ###### DEPRECATE WARNING: gm_extend is deprecated, use gm_expand instead. ###### ")
@@ -443,49 +449,39 @@ class TetragonoScriptApp(TetragonoCommandApp):
         return line
 
 
+# Tetragono Path
+if "TETPATH" in os.environ:
+    pathes = os.environ["TETPATH"]
+    for path in pathes.split(":"):
+        sys.path.append(os.path.abspath(path))
+# Run
 if __name__ == "__main__":
-    import os
-    import sys
     help_message = """usage:
     shell.py
     shell.py [-h | -help | --help]
     shell.py script_file
     shell.py -- script"""
-    # Tetragono Path
-    if "TETPATH" in os.environ:
-        pathes = os.environ["TETPATH"]
-        for path in pathes.split(":"):
-            sys.path.append(os.path.abspath(path))
-    # Run
     if len(sys.argv) == 1:
         TetragonoCommandApp().cmdloop()
     elif len(sys.argv) == 2:
-        script_file = sys.argv[1]
-        if script_file in ["-h", "--help", "-help"]:
+        script_file_name = sys.argv[1]
+        if script_file_name in ["-h", "--help", "-help"]:
             common_variable.showln(help_message)
         else:
-            with open(sys.argv[1], 'rt') as file:
+            with open(script_file_name, "r", encoding="utf-8") as script_file:
                 sys.path.append(os.path.dirname(os.path.abspath(sys.argv[1])))
-                TetragonoScriptApp(stdin=file).cmdloop()
+                TetragonoScriptApp(stdin=script_file).cmdloop()
     elif sys.argv[1] == "--":
         commands = " ".join(sys.argv[2:]).replace(" - ", "\n")
         from io import StringIO
-        file = StringIO(commands)
-        TetragonoScriptApp(stdin=file).cmdloop()
+        script_file = StringIO(commands)
+        TetragonoScriptApp(stdin=script_file).cmdloop()
     else:
         common_variable.showln("shell.py: Error: unrecognized command-line option")
         common_variable.showln(help_message)
-        exit(1)
+        sys.exit(1)
     common_variable.mpi_comm.barrier()
 else:
-    import os
-    import sys
-    # Tetragono Path
-    if "TETPATH" in os.environ:
-        pathes = os.environ["TETPATH"]
-        for path in pathes.split(":"):
-            sys.path.append(os.path.abspath(path))
-    # Run
     app = TetragonoCommandApp()
 
     seed = app.seed
