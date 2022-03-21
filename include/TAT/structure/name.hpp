@@ -31,7 +31,7 @@
 #include <utility>
 #include <vector>
 
-#include "../utility/common_toolkit.hpp"
+#include "../utility/common_variable.hpp"
 
 namespace TAT {
    /**

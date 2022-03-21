@@ -1,5 +1,5 @@
 /**
- * \file common_toolkit.hpp
+ * \file common_variable.hpp
  *
  * Copyright (C) 2019-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,8 +18,8 @@
  */
 
 #pragma once
-#ifndef TAT_COMMON_TOOLKIT_HPP
-#define TAT_COMMON_TOOLKIT_HPP
+#ifndef TAT_COMMON_VARIABLE_HPP
+#define TAT_COMMON_VARIABLE_HPP
 
 // Macros options
 // - TAT_USE_MPI: define to enable mpi support, cmake can configure it
