@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from __future__ import annotations
 from copyreg import _slotnames
 from .auxiliaries import Auxiliaries
 from .abstract_lattice import AbstractLattice

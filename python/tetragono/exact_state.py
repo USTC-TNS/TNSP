@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from __future__ import annotations
 from copyreg import _slotnames
 from .common_variable import show, showln
 from .abstract_state import AbstractState

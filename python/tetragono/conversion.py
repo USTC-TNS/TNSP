@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from __future__ import annotations
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
