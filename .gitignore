@@ -7,14 +7,13 @@
 /html
 /pybind11
 /emscripten
-/include/fire.hpp
 /CMakeSettings.json
 /compile_commands.json
-/init.C
 /.mypy_cache
 /.cache
 /git-worktree
 /dist
+.DS_Store
 __pycache__
 ltximg
 auto
