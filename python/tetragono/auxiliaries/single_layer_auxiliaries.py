@@ -482,7 +482,7 @@ class SingleLayerAuxiliaries:
                 }), {(down, up)}))
 
         for i in range(length - 1):
-            q, r = double_line[i].qr("R", {r_name for r_name in (right1, right2) if r_name in double_line[i].names},
+            q, r = double_line[i].qr('r', {r_name for r_name in (right1, right2) if r_name in double_line[i].names},
                                      right, left)
             double_line[i] = q
             double_line[i + 1] = safe_contract(double_line[i + 1], r, {(left1, right1), (left2, right2)})

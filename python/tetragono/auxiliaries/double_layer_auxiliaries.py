@@ -452,7 +452,7 @@ class DoubleLayerAuxiliaries:
             stage_1.append(this_site)
 
         for i in range(length - 1):
-            q, r = stage_1[i].qr("R", {r_name for r_name in (right1, right0) if r_name in stage_1[i].names}, right,
+            q, r = stage_1[i].qr('r', {r_name for r_name in (right1, right0) if r_name in stage_1[i].names}, right,
                                  left)
             stage_1[i] = q
             stage_1[i + 1] = safe_contract(stage_1[i + 1], r, {(left1, right1), (left0, right0)})
@@ -482,7 +482,7 @@ class DoubleLayerAuxiliaries:
             )
             stage_2.append(this_site)
         for i in range(length - 1):
-            q, r = stage_2[i].qr("R", {r_name for r_name in (right1, right0) if r_name in stage_2[i].names}, right,
+            q, r = stage_2[i].qr('r', {r_name for r_name in (right1, right0) if r_name in stage_2[i].names}, right,
                                  left)
             stage_2[i] = q
             stage_2[i + 1] = safe_contract(stage_2[i + 1], r, {(left1, right1), (left0, right0)})
