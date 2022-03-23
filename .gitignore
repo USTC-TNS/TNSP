@@ -28,3 +28,4 @@ run.*
 *.pdf
 *.egg-info
 *.html
+*.pyc
