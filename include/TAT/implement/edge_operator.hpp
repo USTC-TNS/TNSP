@@ -634,9 +634,11 @@ namespace TAT {
       }
       // it maybe create no source block
       if constexpr (Symmetry::length != 0) {
-         // result.zero();
-         auto& result_storage = result.storage();
-         std::fill(result_storage.begin(), result_storage.end(), 0);
+         if (split_map.size() != 0) {
+            // result.zero();
+            auto& result_storage = result.storage();
+            std::fill(result_storage.begin(), result_storage.end(), 0);
+         }
       }
 
       // Main copy loop
