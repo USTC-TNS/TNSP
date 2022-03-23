@@ -57,19 +57,23 @@ jobs:
             python: 39
             bitness: 64
             platform_id: macosx_x86_64
+            cxxflags: "-target x86_64-apple-darwin"
           - os: macos-latest
             python: 310
             bitness: 64
             platform_id: macosx_x86_64
+            cxxflags: "-target x86_64-apple-darwin"
 
           - os: macos-latest
             python: 39
             bitness: 64
             platform_id: macosx_arm64
+            cxxflags: "-target arm64-apple-darwin"
           - os: macos-latest
             python: 310
             bitness: 64
             platform_id: macosx_arm64
+            cxxflags: "-target arm64-apple-darwin"
 
     steps:
       - name: checkout
@@ -98,6 +102,7 @@ jobs:
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
           CIBW_BUILD_VERBOSITY: 1
+          CXXFLAGS: ${{ matrix.cxxflags }}
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: upload artifact
         uses: actions/upload-artifact@v2
