@@ -69,12 +69,12 @@ class ThreeLineAuxiliaries:
         right_n = right + "N"
         right_c = right + "C"
 
-        rn0, nr = line_2[0].qr('q', {right}, "D", "U")
+        rn0, nr = line_2[0].qr('q', {q_name for q_name in (right,) if q_name in line_2[0].names}, "D", "U")
         n12 = safe_contract(safe_rename(nr, {"D": "D2"}), safe_rename(line_1[0], {"D": "D1"}), {(left, right)})
         n12 = safe_contract(n12, safe_rename(line_1[1], {"D": "D1"}), {("D1", "U")})
         n12 = safe_contract(n12, safe_rename(line_2[1], {"D": "D2"}), {(right, left), ("D2", "U")})
 
-        rc0, cr = line_2[4].qr('q', {right}, "D", "U")
+        rc0, cr = line_2[4].qr('q', {q_name for q_name in (right,) if q_name in line_2[0].names}, "D", "U")
         c12 = safe_contract(safe_rename(cr, {"D": "D2"}), safe_rename(line_1[4], {"D": "D1"}), {(left, right)})
         c12 = safe_contract(c12, safe_rename(line_1[3], {"D": "D1"}), {("D1", "U")})
         c12 = safe_contract(c12, safe_rename(line_2[3], {"D": "D2"}), {(right, left), ("D2", "U")})
