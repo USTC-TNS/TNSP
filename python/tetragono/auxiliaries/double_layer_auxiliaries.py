@@ -468,7 +468,7 @@ class DoubleLayerAuxiliaries:
         stage_2 = []
         for i in range(length):
             this_site = safe_contract(
-                stage_1[i].edge_rename({
+                safe_rename(stage_1[i], {
                     left: left1,
                     right: right1
                 }),
