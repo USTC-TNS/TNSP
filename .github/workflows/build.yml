@@ -83,6 +83,23 @@ jobs:
             platform_id: macosx_arm64
             cxxflags: "-target arm64-apple-darwin"
 
+          - os: windows-latest
+            python: 37
+            bitness: 64
+            platform_id: win_amd64
+          - os: windows-latest
+            python: 38
+            bitness: 64
+            platform_id: win_amd64
+          - os: windows-latest
+            python: 39
+            bitness: 64
+            platform_id: win_amd64
+          - os: windows-latest
+            python: 310
+            bitness: 64
+            platform_id: win_amd64
+
     steps:
       - name: checkout
         uses: actions/checkout@v2
@@ -105,12 +122,17 @@ jobs:
         env:
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
           CIBW_ARCHS: all
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
-          CIBW_BEFORE_ALL_LINUX: yum install -y lapack-devel
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
+
+          CIBW_BEFORE_ALL_LINUX: yum install -y lapack-devel
+          CIBW_BEFORE_ALL_WINDOWS: cmd /c python .github\scripts\get_openblas_for_windows.py && choco install -y ninja
+
+          CIBW_ENVIRONMENT: CXXFLAGS=${{ matrix.cxxflags }}
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
+          CIBW_ENVIRONMENT_WINDOWS: CMAKEFLAGS="-G|Ninja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../lib/libopenblas"
+
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
           CIBW_BUILD_VERBOSITY: 1
-          CXXFLAGS: ${{ matrix.cxxflags }}
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: upload artifact
         uses: actions/upload-artifact@v2

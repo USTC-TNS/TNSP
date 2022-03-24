@@ -53,6 +53,8 @@ class build_ext(build_ext_original):
             "-DTAT_FORCE_VERSION=" + version,
             "-DPYTHON_EXECUTABLE=" + sys.executable,
         ]
+        if "CMAKEFLAGS" in os.environ:
+            cmake_args += os.environ["CMAKEFLAGS"].split("|")
         os.chdir(str(build_dir))
         self.spawn(['cmake', str(cwd)] + cmake_args)
 
