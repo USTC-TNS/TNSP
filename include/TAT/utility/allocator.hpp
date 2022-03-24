@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <forward_list>
+#include <memory>
 
 namespace TAT {
    namespace detail {
@@ -229,10 +230,10 @@ namespace TAT {
       struct no_initialize_polymorphic_allocator : polymorphic_allocator<T> {
          using polymorphic_allocator<T>::polymorphic_allocator;
 
+         no_initialize_polymorphic_allocator(const no_initialize_polymorphic_allocator& other) = default;
          template<typename U>
-         struct rebind {
-            using other = no_initialize_polymorphic_allocator<U>;
-         };
+         no_initialize_polymorphic_allocator(const no_initialize_polymorphic_allocator<U>& other) noexcept :
+               no_initialize_polymorphic_allocator(other.resource()) {}
 
          no_initialize_polymorphic_allocator<T> select_on_container_copy_construction() const {
             return no_initialize_polymorphic_allocator<T>();
@@ -281,6 +282,17 @@ namespace TAT {
        */
       template<typename T>
       struct no_initialize_allocator : std::allocator<T> {
+         using std::allocator<T>::allocator;
+
+         no_initialize_allocator(const no_initialize_allocator& other) = default;
+         template<typename U>
+         no_initialize_allocator(const no_initialize_allocator<U>& other) noexcept : no_initialize_allocator() {}
+
+         no_initialize_allocator<T> select_on_container_copy_construction() const {
+            return no_initialize_allocator<T>();
+         }
+
+         // It is useless, but base class has it so derived class must have it.
          template<typename U>
          struct rebind {
             using other = no_initialize_allocator<U>;

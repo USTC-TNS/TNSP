@@ -520,6 +520,7 @@ namespace TAT {
          const auto& edge_2 = tensor_2.edges(name_2);
          // same to trace delete dimension
          auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
+            constexpr bool is_fermi = Symmetry::is_fermi_symmetry; // MSVC require capture it even it is constexpr
             if constexpr (debug_mode) {
                if constexpr (is_fermi) {
                   if (edge_this.arrow == edge_other.arrow) {
