@@ -22,11 +22,19 @@ jobs:
       working-directory: ${{runner.workspace}}/build
       run: ctest -E ^test_\(svd\|qr\)$
 
+  build_wheels_trigger:
+    name: trigger for building wheels
+    runs-on: ubuntu-latest
+    needs: basic_test
+    if: "github.event_name == 'push' && (startsWith(github.ref, 'refs/tags') || contains(toJSON(github.event.commits.*.message), '[force build]'))"
+    steps:
+      - name: nothing
+        run: echo this is an empty job
+
   build_pytat_wheels:
     name: build PyTAT wheels
     runs-on: ${{ matrix.os }}
-    needs: basic_test
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs: build_wheels_trigger
 
     strategy:
       fail-fast: false
@@ -112,8 +120,7 @@ jobs:
   build_lazy_graph_wheels:
     name: build lazy_graph wheels
     runs-on: ubuntu-latest
-    needs: basic_test
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs: build_wheels_trigger
 
     steps:
       - name: checkout
@@ -135,8 +142,7 @@ jobs:
   build_tetragono_wheels:
     name: build tetragono wheels
     runs-on: ubuntu-latest
-    needs: basic_test
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs: build_wheels_trigger
 
     steps:
       - name: checkout
@@ -158,8 +164,8 @@ jobs:
   upload_pypi:
     name: upload wheels to pypi
     runs-on: ubuntu-latest
-    needs: [build_pytat_wheels, build_lazy_graph_wheels, build_tetragono_wheels]
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+    needs: [build_wheels_trigger, build_pytat_wheels, build_lazy_graph_wheels, build_tetragono_wheels]
+    if: startsWith(github.ref, 'refs/tags')
 
     steps:
       - name: download artifacts
