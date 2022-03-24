@@ -83,6 +83,7 @@ namespace TAT {
             return a.first < b.first;
          });
          // symmetries_list : vector<Symmetry> -> Size
+         blocks.reserve(symmetries_list.size());
          for (auto&& [symmetries, size] : symmetries_list) {
             // symmetries list is rvalue, it can be moved
             blocks.push_back({std::move(symmetries), content_vector_t(size, &resource)});
@@ -90,6 +91,7 @@ namespace TAT {
       }
 
       core_blocks_t(const core_blocks_t& other) : storage(other.storage), resource(storage.data(), storage.size() * sizeof(ScalarType)), blocks() {
+         blocks.reserve(other.blocks.size());
          for (const auto& [symmetries, block] : other.blocks) {
             blocks.push_back({symmetries, content_vector_t(block.size(), &resource)});
          }
@@ -98,6 +100,7 @@ namespace TAT {
             storage(std::move(other.storage)),
             resource(storage.data(), storage.size() * sizeof(ScalarType)),
             blocks() {
+         blocks.reserve(other.blocks.size());
          for (auto&& [symmetries, block] : other.blocks) {
             blocks.push_back({std::move(symmetries), content_vector_t(block.size(), &resource)});
          }
