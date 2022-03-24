@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -46,9 +47,16 @@ namespace TAT {
       struct dataset_t {
          std::unordered_map<hash_t, std::string> hash_to_name;
          std::hash<std::string_view> hash_function;
+
+         static dataset_t& instance() {
+            static const auto pointer = std::make_unique<dataset_t>();
+            return *pointer;
+         }
       };
-      inline static auto dataset = dataset_t();
-      inline static auto unknown_prefix = "UnknownName";
+      static auto& dataset() {
+         return dataset_t::instance();
+      }
+      inline static const auto unknown_prefix = "UnknownName";
 
       hash_t hash;
 
@@ -60,16 +68,16 @@ namespace TAT {
       template<
             typename String,
             typename = std::enable_if_t<std::is_convertible_v<String, std::string_view> && !std::is_same_v<remove_cvref_t<String>, FastName>>>
-      FastName(String&& name) : hash(dataset.hash_function(name)) {
-         auto found = dataset.hash_to_name.find(hash);
-         if (found == dataset.hash_to_name.end()) {
-            dataset.hash_to_name[hash] = name;
+      FastName(String&& name) : hash(dataset().hash_function(name)) {
+         auto found = dataset().hash_to_name.find(hash);
+         if (found == dataset().hash_to_name.end()) {
+            dataset().hash_to_name[hash] = name;
          }
       }
 
       operator const std::string() const {
-         auto found = dataset.hash_to_name.find(hash);
-         if (found == dataset.hash_to_name.end()) {
+         auto found = dataset().hash_to_name.find(hash);
+         if (found == dataset().hash_to_name.end()) {
             return unknown_prefix + std::to_string(hash);
          } else {
             return found->second;

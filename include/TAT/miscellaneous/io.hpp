@@ -113,8 +113,8 @@ namespace TAT {
    // name type io
 
    inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      auto found = FastName::dataset.hash_to_name.find(name.hash);
-      if (found == FastName::dataset.hash_to_name.end()) {
+      auto found = FastName::dataset().hash_to_name.find(name.hash);
+      if (found == FastName::dataset().hash_to_name.end()) {
          out << FastName::unknown_prefix << name.hash;
       } else {
          out << found->second;
@@ -653,11 +653,11 @@ namespace TAT {
    }
    inline void load_fastname_dataset(const std::string& input) {
       std::istringstream in(input);
-      in > FastName::dataset;
+      in > FastName::dataset();
    }
    inline std::string dump_fastname_dataset() {
       std::ostringstream out;
-      out < FastName::dataset;
+      out < FastName::dataset();
       return out.str();
    }
 
