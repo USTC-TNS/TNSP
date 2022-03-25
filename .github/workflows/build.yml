@@ -132,6 +132,7 @@ jobs:
           CIBW_ENVIRONMENT_WINDOWS: CMAKEFLAGS="-G|Ninja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../lib/libopenblas"
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --wheel-dir {dest_dir} {wheel} --add-dll bin/libopenblas.dll"
           CIBW_BUILD_VERBOSITY: 1
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: upload artifact
