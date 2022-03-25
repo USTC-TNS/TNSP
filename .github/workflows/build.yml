@@ -147,7 +147,7 @@ jobs:
           CIBW_ENVIRONMENT_MACOS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS=-DCMAKE_CXX_FLAGS=--target=${{ matrix.mac_arch }}-apple-darwin MACOSX_DEPLOYMENT_TARGET=10.14
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
 
           CIBW_BUILD_VERBOSITY: 1
