@@ -204,6 +204,7 @@ jobs:
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: dist/artifact
 
   create_release:
     name: create github release
@@ -221,4 +222,4 @@ jobs:
       - name: release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/*
+          files: dist/artifact/*
