@@ -25,3 +25,4 @@ urllib.request.urlretrieve(openblas_url, "openblas.zip")
 
 with ZipFile("openblas.zip", "r") as zip_file:
     zip_file.extract("lib/libopenblas.lib", ".")
+    zip_file.extract("bin/libopenblas.dll", ".")
