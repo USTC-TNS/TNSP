@@ -59,7 +59,11 @@ class build_ext(build_ext_original):
         self.spawn(['cmake', str(cwd)] + cmake_args)
 
         if not self.dry_run:
-            self.spawn(["cmake", "--build", ".", "--target", extension.name])
+            if "MAKEFLAGS" in os.environ:
+                make_args = os.environ["MAKEFLAGS"].split("|")
+            else:
+                make_args = []
+            self.spawn(["cmake", "--build", ".", "--target", extension.name] + make_args)
         os.chdir(str(cwd))
 
 

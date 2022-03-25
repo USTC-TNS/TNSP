@@ -45,60 +45,72 @@ jobs:
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
+            cpu_number: 2
           - os: ubuntu-latest
             python: 38
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
+            cpu_number: 2
           - os: ubuntu-latest
             python: 39
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
+            cpu_number: 2
           - os: ubuntu-latest
             python: 310
             bitness: 64
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
+            cpu_number: 2
 
           - os: macos-latest
             python: 39
             bitness: 64
             platform_id: macosx_x86_64
-            cxxflags: "-target x86_64-apple-darwin"
+            mac_arch: x86_64
+            cpu_number: 3
           - os: macos-latest
             python: 310
             bitness: 64
             platform_id: macosx_x86_64
-            cxxflags: "-target x86_64-apple-darwin"
+            mac_arch: x86_64
+            cpu_number: 3
 
           - os: macos-latest
             python: 39
             bitness: 64
             platform_id: macosx_arm64
-            cxxflags: "-target arm64-apple-darwin"
+            mac_arch: arm64
+            cpu_number: 3
           - os: macos-latest
             python: 310
             bitness: 64
             platform_id: macosx_arm64
-            cxxflags: "-target arm64-apple-darwin"
+            mac_arch: arm64
+            cpu_number: 3
 
           - os: windows-latest
             python: 37
             bitness: 64
             platform_id: win_amd64
+            cpu_number: 2
           - os: windows-latest
             python: 38
             bitness: 64
             platform_id: win_amd64
+            cpu_number: 2
           - os: windows-latest
             python: 39
             bitness: 64
             platform_id: win_amd64
+            cpu_number: 2
           - os: windows-latest
             python: 310
             bitness: 64
             platform_id: win_amd64
+            cpu_number: 2
 
     steps:
       - name: checkout
@@ -111,9 +123,11 @@ jobs:
       - name: copy PyTAT setup.py
         working-directory: ${{github.workspace}}
         run: cp setup/PyTAT.py setup.py
-      - name: clone pybind11
-        working-directory: ${{github.workspace}}
-        run: git clone https://github.com/pybind/pybind11.git
+      - name: get pybind11
+        uses: actions/checkout@v2
+        with:
+          repository: pybind/pybind11
+          path: pybind11
       - name: setup python
         uses: actions/setup-python@v2
       - name: install cibuildwheel
@@ -126,13 +140,16 @@ jobs:
 
           CIBW_BEFORE_ALL_LINUX: yum install -y lapack-devel
           CIBW_BEFORE_ALL_WINDOWS: cmd /c python .github\scripts\get_openblas_for_windows.py && choco install -y ninja
+          CIBW_BEFORE_ALL_MACOS: ""
 
-          CIBW_ENVIRONMENT: CXXFLAGS=${{ matrix.cxxflags }}
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=10.14
-          CIBW_ENVIRONMENT_WINDOWS: CMAKEFLAGS="-G|Ninja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../lib/libopenblas"
+          CIBW_ENVIRONMENT_LINUX: MAKEFLAGS=--parallel=${{ matrix.cpu_number }}
+          CIBW_ENVIRONMENT_WINDOWS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-GNinja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../lib/libopenblas"
+          CIBW_ENVIRONMENT_MACOS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS=-DCMAKE_CXX_FLAGS=--target=${{ matrix.mac_arch }}-apple-darwin MACOSX_DEPLOYMENT_TARGET=10.14
 
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
-          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --wheel-dir {dest_dir} {wheel} --add-dll bin/libopenblas.dll"
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: ""
+
           CIBW_BUILD_VERBOSITY: 1
         run: python -m cibuildwheel --output-dir wheelhouse
       - name: upload artifact
