@@ -117,6 +117,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: recovery tag information
+        run: git fetch --tags --force
       - name: generate PyTAT code
         working-directory: ${{github.workspace}}/PyTAT
         run: bash ./generator.sh
@@ -171,6 +173,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+      - name: recovery tag information
+        run: git fetch --tags --force
       - name: setup python
         uses: actions/setup-python@v2
       - name: install wheel
