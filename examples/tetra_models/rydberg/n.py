@@ -26,5 +26,9 @@ def measurement(state):
 
 
 def save_result(state, result, step):
+    n = [result[(l1, l2, 0),][0] for l1 in range(state.L1) for l2 in range(state.L2)]
     with open("n.log", "a") as file:
-        print(result, file=file)
+        print(*n, file=file)
+    n_error = [result[(l1, l2, 0),][1] for l1 in range(state.L1) for l2 in range(state.L2)]
+    with open("n_error.log", "a") as file:
+        print(*n_error, file=file)
