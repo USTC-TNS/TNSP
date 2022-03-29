@@ -238,7 +238,7 @@ class Observer():
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
                     replacement = {positions[i]: other_configuration[i] for i in range(body)}
                     if self._restrict_subspace is not None:
-                        if not self._restrict_subspace(configuration, replacement, name == "energy"):
+                        if not self._restrict_subspace(configuration, replacement):
                             continue
                     if self._cache_configuration:
                         wss = self._pool.wss(configuration, replacement)
