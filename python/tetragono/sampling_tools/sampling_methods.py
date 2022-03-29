@@ -71,12 +71,17 @@ class SweepSampling(Sampling):
     Sweep sampling.
     """
 
-    __slots__ = ["_sweep_order", "configuration"]
+    __slots__ = ["_sweep_order", "configuration", "_hopping_hamiltonians"]
 
-    def __init__(self, owner, cut_dimension, restrict_subspace):
+    def __init__(self, owner, cut_dimension, restrict_subspace, hopping_hamiltonians):
         super().__init__(owner, cut_dimension, restrict_subspace)
         self.configuration = Configuration(self._owner, self._cut_dimension)
-        self._sweep_order = None  # list[tuple[tuple[int, int, int], ...]]
+        if hopping_hamiltonians is not None:
+            self._hopping_hamiltonians = hopping_hamiltonians
+        else:
+            self._hopping_hamiltonians = self._owner._hamiltonians
+        # list[tuple[tuple[int, int, int], ...]]
+        self._sweep_order = self._get_proper_position_order(self._hopping_hamiltonians)
 
     def _single_term(self, positions, hamiltonian, ws):
         body = hamiltonian.rank // 2
@@ -102,25 +107,22 @@ class SweepSampling(Sampling):
         return ws
 
     def __call__(self):
-        owner = self._owner
         self.configuration = self.configuration.copy()
         if not self.configuration.valid():
             raise RuntimeError("Configuration not initialized")
         ws = self.configuration.hole(())
-        if self._sweep_order is None:
-            self._sweep_order = self._get_proper_position_order()
         for positions in self._sweep_order:
-            hamiltonian = owner._hamiltonians[positions]
+            hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
         for positions in reversed(self._sweep_order):
-            hamiltonian = owner._hamiltonians[positions]
+            hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
         return ws.norm_2()**2, self.configuration
 
     def _get_proper_position_order(self):
         L1 = self._owner.L1
         L2 = self._owner.L2
-        positions = set(self._owner._hamiltonians.keys())
+        positions = set(self._hopping_hamiltonians.keys())
         result = []
         # Single site auxiliary use horizontal style contract by default
         for l1 in range(L1):

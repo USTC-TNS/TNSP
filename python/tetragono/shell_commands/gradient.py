@@ -131,6 +131,7 @@ def gradient_descent(
         direct_sampling_cut_dimension=4,
         sweep_initial_configuration=None,
         configuration_dump_file=None,
+        sweep_hopping_hamiltonians=None,
         # About subspace
         restrict_subspace=None,
         # About natural gradient
@@ -213,7 +214,11 @@ def gradient_descent(
     # Sampling method
     if sampling_method == "sweep":
         showln("using sweep sampling")
-        sampling = SweepSampling(state, configuration_cut_dimension, restrict)
+        if sweep_hopping_hamiltonians is not None:
+            hopping_hamiltonians = importlib.import_module(sweep_hopping_hamiltonians).hamiltonians(state)
+        else:
+            hopping_hamiltonians = None
+        sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
         sampling_total_step = sampling_total_step
         # Initialize sweep configuration
         if sweep_initial_configuration == "direct":
