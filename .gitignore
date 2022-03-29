@@ -29,3 +29,4 @@ run.*
 *.egg-info
 *.html
 *.pyc
+*.~undo-tree~
