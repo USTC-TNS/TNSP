@@ -223,10 +223,7 @@ class Observer():
         for name, observers in self._observer.items():
             if name == "energy":
                 Es = 0.0
-            if name == "energy" and self._enable_gradient:
-                calculating_gradient = True
-            else:
-                calculating_gradient = False
+            calculating_gradient = name == "energy" and self._enable_gradient
             for positions, observer in observers.items():
                 body = observer.rank // 2
                 current_configuration = tuple(configuration[positions[i]] for i in range(body))

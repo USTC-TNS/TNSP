@@ -18,6 +18,7 @@
 
 import pickle
 import importlib
+import inspect
 import signal
 from datetime import datetime
 import numpy as np
@@ -179,7 +180,19 @@ def gradient_descent(
 
     # Restrict subspace
     if restrict_subspace is not None:
-        restrict = importlib.import_module(restrict_subspace).restrict
+        origin_restrict = importlib.import_module(restrict_subspace).restrict
+        if len(inspect.signature(origin_restrict).parameters) == 1:
+
+            def restrict(configuration, replacement=None):
+                if replacement is None:
+                    return origin_restrict(configuration)
+                else:
+                    configuration = configuration.copy()
+                    for [l1, l2, orbit], new_site_config in replacement.items():
+                        configuration[l1, l2, orbit] = new_site_config
+                    return origin_restrict(configuration)
+        else:
+            restrict = origin_restrict
     else:
         restrict = None
 
