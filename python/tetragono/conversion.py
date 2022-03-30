@@ -39,8 +39,10 @@ def simple_update_lattice_to_sampling_lattice(state):
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             this = state[l1, l2]
-            this = state._try_multiple(this, l1, l2, "L", True)
-            this = state._try_multiple(this, l1, l2, "U", True)
+            this = state._try_multiple(this, l1, l2, "L", True, True)
+            this = state._try_multiple(this, l1, l2, "U", True, True)
+            this = state._try_multiple(this, l1, l2, "R", True, True)
+            this = state._try_multiple(this, l1, l2, "D", True, True)
             result[l1, l2] = this
     return result
 

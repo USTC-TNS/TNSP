@@ -17,6 +17,7 @@
 #
 
 from copyreg import _slotnames
+import numpy as np
 from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
 from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
@@ -489,7 +490,7 @@ class SimpleUpdateLattice(AbstractLattice):
             {f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit})
         self[i + 1, j] = v
 
-    def _try_multiple(self, tensor, i, j, direction, division=False):
+    def _try_multiple(self, tensor, i, j, direction, division=False, square_root=False):
         """
         Try to multiple environment to a given tensor.
 
@@ -503,6 +504,8 @@ class SimpleUpdateLattice(AbstractLattice):
             The direction of the environment from the site.
         division : bool, default=False
             Divide the environment instead of multiple it.
+        square_root : bool, default=False
+            Multiple or divide the square root instead of itself.
 
         Returns
         -------
@@ -513,6 +516,15 @@ class SimpleUpdateLattice(AbstractLattice):
         if environment_tensor is not None:
             if division:
                 environment_tensor = environment_tensor.map(lambda x: 0 if x == 0 else 1. / x)
+            if square_root:
+                environment_tensor = environment_tensor.copy()
+                identity = environment_tensor.same_shape().identity({tuple(environment_tensor.names)})
+                delta = np.sqrt(np.abs(environment_tensor.storage))
+                delta[delta == 0] = 1
+                environment_tensor.storage /= delta
+                identity.storage *= delta
+                if direction in ("D", "R"):
+                    environment_tensor = identity
             if direction == "L":
                 tensor = tensor.contract(environment_tensor, {("L", "R")})
             if direction == "R":
