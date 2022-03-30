@@ -1,0 +1,42 @@
+**********************************************************
+****length_and_type           16          integer
+****Below are the input parameter of type integer
+**********************************************************
+SweepDcMin                 1
+SweepDcMax                 2
+Dcmin                      1
+Dcmax                      2
+MinnumSampling             200
+MaxnumSampling             200
+nSampling                  0
+nEquilibrium               0
+numStep                    10
+num_save                   10
+min_non_zero_direction_num 20000
+samplingFlag               0
+random_Seed                233
+WsOverWsWarningNum         200
+print_cpu_info             0
+ScanTwiceFlag              0
+**********************************************************
+****length_and_type           7           real*8
+****Below are the input parameter of type real*8
+**********************************************************
+max_step                   0.00000001
+min_step                   0.00000001
+randomelement              -0.01
+zerodirction               1d-5
+smaller_zerodirction       0.2
+stopDelta                  1d-3
+amplify_num                -102
+**********************************************************
+****length_and_type           7           character
+****Below are the input parameter of type character
+**********************************************************
+SU_address                 Nodeinfo6.dat
+signflag                   sign
+configuration              null
+SVDType                    1_n
+outputname                 log
+outEnergyname              log
+Valuename                  log

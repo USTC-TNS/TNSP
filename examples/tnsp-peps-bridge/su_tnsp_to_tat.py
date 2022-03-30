@@ -106,5 +106,5 @@ for l1 in range(L1):
         if l2 != 0:
             state.environment[l1, l2, "L"] = pool[l1, l2, "l"]
 
-with open("state.dat", "wb") as file:
+with open("su.dat", "wb") as file:
     pickle.dump(state, file)
