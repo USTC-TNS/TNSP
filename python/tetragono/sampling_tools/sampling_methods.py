@@ -81,7 +81,7 @@ class SweepSampling(Sampling):
         else:
             self._hopping_hamiltonians = self._owner._hamiltonians
         # list[tuple[tuple[int, int, int], ...]]
-        self._sweep_order = self._get_proper_position_order(self._hopping_hamiltonians)
+        self._sweep_order = self._get_proper_position_order()
 
     def _single_term(self, positions, hamiltonian, ws):
         body = hamiltonian.rank // 2
