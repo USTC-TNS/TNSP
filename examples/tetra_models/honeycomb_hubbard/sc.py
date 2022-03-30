@@ -17,8 +17,6 @@
 #
 
 import numpy as np
-import TAT
-import tetragono as tet
 from tetragono.common_variable.tensor_toolkit import kronecker_product, rename_io
 from tetragono.common_variable.Fermi import CP, CM, I
 from tetragono.common_variable.Fermi_Hubbard import put_sign_in_H

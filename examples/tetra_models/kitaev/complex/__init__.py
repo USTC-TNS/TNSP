@@ -37,9 +37,9 @@ def create(L1, L2, D, Jx, Jy, Jz):
     state = tet.AbstractState(TAT.No.Z.Tensor, L1, L2)
     for l1 in range(L1):
         for l2 in range(L2):
-            if not (l1, l2) == (0, 0):
+            if (l1, l2) != (0, 0):
                 state.physics_edges[l1, l2, 0] = 2
-            if not (l1, l2) == (L1 - 1, L2 - 1):
+            if (l1, l2) != (L1 - 1, L2 - 1):
                 state.physics_edges[l1, l2, 1] = 2
     pauli_x_pauli_x = tet.common_variable.No.pauli_x_pauli_x.to(complex)
     pauli_y_pauli_y = tet.common_variable.No.pauli_y_pauli_y.to(complex)
@@ -49,7 +49,7 @@ def create(L1, L2, D, Jx, Jy, Jz):
     Hz = -Jz * pauli_z_pauli_z
     for l1 in range(L1):
         for l2 in range(L2):
-            if not ((l1, l2) == (0, 0) or (l1, l2) == (L1 - 1, L2 - 1)):
+            if (l1, l2) not in ((0, 0), (L1 - 1, L2 - 1)):
                 state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = Hx
             if l1 != 0:
                 state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = Hy

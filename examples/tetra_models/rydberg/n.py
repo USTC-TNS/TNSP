@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import TAT
 import tetragono as tet
 
 
@@ -27,8 +26,8 @@ def measurement(state):
 
 def save_result(state, result, step):
     n = [result[(l1, l2, 0),][0] for l1 in range(state.L1) for l2 in range(state.L2)]
-    with open("n.log", "a") as file:
+    with open("n.log", "a", encoding="utf-8") as file:
         print(*n, file=file)
     n_error = [result[(l1, l2, 0),][1] for l1 in range(state.L1) for l2 in range(state.L2)]
-    with open("n_error.log", "a") as file:
+    with open("n_error.log", "a", encoding="utf-8") as file:
         print(*n_error, file=file)

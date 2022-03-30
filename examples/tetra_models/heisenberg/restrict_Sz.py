@@ -18,7 +18,7 @@
 
 
 def restrict(configuration, replacement=None):
-    if replacement == None:
+    if replacement is None:
         owner = configuration._owner
         n_up = 0
         n_down = 0

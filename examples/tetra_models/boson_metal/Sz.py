@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import TAT
 import tetragono as tet
 
 
@@ -28,5 +27,5 @@ def measurement(state):
 
 def save_result(state, result, step):
     to_print = [result[(l1, l2, 0),][0] for l1 in range(state.L1) for l2 in range(state.L2)]
-    with open("Sz.log", "a") as file:
+    with open("Sz.log", "a", encoding="utf-8") as file:
         print(*to_print, file=file)

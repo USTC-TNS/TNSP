@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import TAT
 import tetragono as tet
 from tetragono.common_variable.tensor_toolkit import rename_io, kronecker_product
 
@@ -29,5 +28,5 @@ def measurement(state):
 
 
 def save_result(state, result, step):
-    with open("nn.log", "a") as file:
+    with open("nn.log", "a", encoding="utf-8") as file:
         print(result, file=file)

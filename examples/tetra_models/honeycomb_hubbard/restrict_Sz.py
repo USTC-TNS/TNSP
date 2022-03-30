@@ -18,13 +18,13 @@
 
 
 def restrict(configuration, replacement=None):
-    if replacement == None:
+    if replacement is None:
         owner = configuration._owner
         n_up = 0
         n_down = 0
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
-                for orbit, edge in owner.physics_edges[l1, l2].items():
+                for orbit in owner.physics_edges[l1, l2]:
                     site_config = configuration[l1, l2, orbit]
                     symmetry, index = site_config
                     if symmetry.fermi == 2:

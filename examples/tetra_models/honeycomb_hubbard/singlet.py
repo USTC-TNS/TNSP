@@ -57,5 +57,5 @@ def measurement(state):
 
 
 def save_result(state, result, step):
-    with open("singlet.log", "a") as file:
+    with open("singlet.log", "a", encoding="utf-8") as file:
         print(result, file=file)
