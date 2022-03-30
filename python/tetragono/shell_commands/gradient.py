@@ -131,7 +131,7 @@ def gradient_descent(
         configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
         sweep_initial_configuration=None,
-        configuration_dump_file=None,
+        sweep_configuration_dump_file=None,
         sweep_hopping_hamiltonians=None,
         # About subspace
         restrict_subspace=None,
@@ -160,7 +160,14 @@ def gradient_descent(
         # About check difference
         check_difference_delta=1e-8,
         # About Measurement
-        measurement=None):
+        measurement=None,
+        # Deprecated options
+        configuration_dump_file=None):
+    if configuration_dump_file is not None:
+        print(
+            " ###### DEPRECATE WARNING: configuration_dump_file is deprecated, use sweep_configuration_dump_file instead. ###### "
+        )
+        sweep_configuration_dump_file = configuration_dump_file
 
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
@@ -241,7 +248,7 @@ def gradient_descent(
             with seed_differ:
                 _, configuration = direct_sampling()
         elif sweep_initial_configuration == "load":
-            with open(configuration_dump_file, "rb") as file:
+            with open(sweep_configuration_dump_file, "rb") as file:
                 configurations = pickle.load(file)
             if len(configurations) < mpi_size:
                 with seed_differ:
@@ -302,11 +309,11 @@ def gradient_descent(
                           encoding="utf-8") as file:
                     print(*observer.energy, file=file)
             # Dump configuration
-            if configuration_dump_file:
+            if sweep_configuration_dump_file:
                 if sampling_method == "sweep":
                     to_dump = mpi_comm.gather(sampling.configuration._configuration, root=0)
                     if mpi_rank == 0:
-                        with open(configuration_dump_file, "wb") as file:
+                        with open(sweep_configuration_dump_file, "wb") as file:
                             pickle.dump(to_dump, file)
                 else:
                     raise ValueError("Dump configuration into file is only supported for sweep sampling")
