@@ -422,20 +422,49 @@ class ConfigurationPool:
         Tensor
             $\langle s\psi\rangle$ with several $s$ replaced.
         """
+        # Try replace directly first
         wss = configuration.replace(replacement)
         if wss is not None:
             return wss
 
+        # Try to find in the old config
         config = self._get_config(configuration)
         config = self._replace_config(config, replacement)
         if config in self._pool:
             return self._pool[config].hole(())
 
+        # Try to replace the nearest config
         nearest = self._nearest_configuration(config)
-        wss = nearest.replace(replacement)
+        nearest_replacement = self._get_replacement(nearest, configuration)
+        nearest_replacement.update(replacement)
+        wss = nearest.replace(nearest_replacement)
         if wss is not None:
             return wss
+
+        # Create new config
         return self(config, hint=nearest).hole(())
+
+    def _get_replacement(self, configuration_old, configuration_new):
+        """
+        Get the difference of two configurations.
+
+        Parameters
+        ----------
+        configuration_old, configuration_new : Configuration
+            The given two configurations.
+
+        Returns
+        -------
+        dict[tuple[int, int, int], ?EdgePoint]
+            The result replacement
+        """
+        replacement = {}
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit in self._owner.physics_edges[l1, l2]:
+                    if configuration_old[l1, l2, orbit] != configuration_new[l1, l2, orbit]:
+                        replacement[l1, l2, orbit] = configuration_new[l1, l2, orbit]
+        return replacement
 
     def _replace_config(self, config, replacement):
         """
