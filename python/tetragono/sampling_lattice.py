@@ -419,6 +419,8 @@ class ConfigurationPool:
         replacement : dict[tuple[int, int, int], ?EdgePoint]
             Replacement plan to modify configuration.
 
+        Returns
+        -------
         Tensor
             $\langle s\psi\rangle$ with several $s$ replaced.
         """
@@ -428,8 +430,8 @@ class ConfigurationPool:
             return wss
 
         # Try to find in the old config
-        config = self._get_config(configuration)
-        config = self._replace_config(config, replacement)
+        base_config = self._get_config(configuration)
+        config = self._replace_config(base_config, replacement)
         if config in self._pool:
             return self._pool[config].hole(())
 
@@ -441,8 +443,61 @@ class ConfigurationPool:
         if wss is not None:
             return wss
 
-        # Create new config
+        # Try to remove 2x2 area in replacement to find new near config
+        replacement_1, replacement_2 = self._split_replacement(replacement)
+        half_config = self._replace_config(base_config, replacement_1)
+        if half_config in self._pool:
+            return self._pool[half_config].replace(replacement_2)
+
+        # Then create this new near config
+        half_nearest = self._nearest_configuration(half_config)
+        wss = self(half_config, hint=half_nearest).replace(replacement_2)
+        if wss is not None:
+            return wss
+
+        # Should never reach here
+        raise RuntimeError("Program should never reach here")
         return self(config, hint=nearest).hole(())
+
+    def _split_replacement(self, replacement):
+        """
+        Split a replacement into two part, the second of which can be calculated by auxiliary replace.
+
+        Parameters
+        ----------
+        replacement : dict[tuple[int, int, int], ?EdgePoint]
+            The input replacement
+
+        Returns
+        -------
+        tuple[dict[tuple[int, int, int], ?EdgePoint], dict[tuple[int, int, int], ?EdgePoint]]
+            The result two replacements
+        """
+        replacement_1 = {}
+        replacement_2 = {}
+        up = self._owner.L1
+        down = -1
+        left = self._owner.L2
+        right = -1
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit in self._owner.physics_edges[l1, l2]:
+                    site = (l1, l2, orbit)
+                    if site in replacement:
+                        edge_point = replacement[site]
+                        if l1 > down - 2 and l1 < up + 2 and l2 > right - 2 and l2 < left + 2:
+                            replacement_2[site] = edge_point
+                            if l1 < up:
+                                up = l1
+                            if l1 > down:
+                                down = l1
+                            if l2 < left:
+                                left = l2
+                            if l2 > right:
+                                right = l2
+                        else:
+                            replacement_1[site] = edge_point
+        return replacement_1, replacement_2
 
     def _get_replacement(self, configuration_old, configuration_new):
         """
