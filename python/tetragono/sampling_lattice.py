@@ -318,12 +318,13 @@ class Configuration(SingleLayerAuxiliaries):
             # \frac{\partial\langle s|\psi\rangle}{\partial x_i} / \langle s|\psi\rangle
             for l1 in range(self._owner.L1):
                 for l2 in range(self._owner.L2):
+                    hole = self.hole(((l1, l2),))
                     contract_name = all_name.copy()
                     for orbit in self._owner.physics_edges[l1, l2]:
                         contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
-                    if l1 == l2 == 0:
+                    if "T" not in hole.names:
                         contract_name.remove(("T", "T"))
-                    hole = self.hole(((l1, l2),)).contract(inv_ws, contract_name)
+                    hole = hole.contract(inv_ws, contract_name)
                     hole = hole.edge_rename({
                         "L0": "R",
                         "R0": "L",
