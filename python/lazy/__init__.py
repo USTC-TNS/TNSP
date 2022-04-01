@@ -176,9 +176,20 @@ class Node:
 
             self._downstream = new_downstream
 
+    def __bool__(self):
+        """
+        Check if the value of this node is already calculated.
+
+        Returns
+        -------
+        bool
+            Return True if the value is already calculated, otherwise return False.
+        """
+        return self._value is not None
+
     def __call__(self):
         """
-        Obtain the value of this node, it will calculate the value by self._func and cache it
+        Obtain the value of this node, it will calculate the value by self._func and cache it.
 
         Returns
         -------
