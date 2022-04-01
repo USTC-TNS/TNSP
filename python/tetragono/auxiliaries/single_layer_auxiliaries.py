@@ -508,8 +508,50 @@ class SingleLayerAuxiliaries:
                 return self._inline_down_to_up[0, line]()
             else:
                 raise ValueError("Unrecognized hint")
-        elif len(replacement) == 1:
-            [l1, l2], new_tensor = list(replacement.items())[0]
+
+        minl1 = min(l1 for l1, l2 in replacement.keys())
+        minl2 = min(l2 for l1, l2 in replacement.keys())
+        maxl1 = max(l1 for l1, l2 in replacement.keys())
+        maxl2 = max(l2 for l1, l2 in replacement.keys())
+
+        if maxl1 - minl1 == 0 and maxl2 - minl2 == 0:
+            l1 = minl1
+            l2 = minl2
+            new_tensor = replacement[l1, l2]
+            if self._inline_left_to_right_tailed[l1, l2 - 1] and self._inline_right_to_left_tailed[l1, l2 + 1]:
+                left = self._inline_left_to_right_tailed[l1, l2 - 1]()
+                right = self._inline_right_to_left_tailed[l1, l2 + 1]()
+                result = safe_contract(left, new_tensor, {("R2", "L"), ("D", "U")})
+                result = safe_contract(result, right, {("R1", "L1"), ("R", "L2"), ("D", "U"), ("R3", "L3")})
+                return result
+            if self._inline_up_to_down_tailed[l1 - 1, l2] and self._inline_down_to_up_tailed[l1 + 1, l2]:
+                up = self._inline_up_to_down_tailed[l1 - 1, l2]()
+                down = self._inline_down_to_up_tailed[l1 + 1, l2]()
+                result = safe_contract(up, new_tensor, {("D2", "U"), ("R", "L")})
+                result = safe_contract(result, down, {("D1", "U1"), ("D", "U2"), ("R", "L"), ("D3", "U3")})
+                return result
+            if l1 != self.L1 - 1:
+                if self._4_inline_left_to_right_tailed[l1, l2 - 1] and self._4_inline_right_to_left_tailed[l1, l2 + 1]:
+                    left_part = self._4_inline_left_to_right_tailed[l1, l2 - 1]()
+                    right_part = self._4_inline_right_to_left_tailed[l1, l2 + 1]()
+                    another_tensor = self._lattice[l1 + 1][l2]()
+                    result = safe_contract(left_part, safe_rename(new_tensor, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, safe_rename(another_tensor, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U"),
+                                                                ("R4", "L4")})
+                    return result
+            if l1 != 0:
+                if self._4_inline_left_to_right_tailed[l1 - 1, l2 - 1] and self._4_inline_right_to_left_tailed[l1 - 1,
+                                                                                                               l2 + 1]:
+                    left_part = self._4_inline_left_to_right_tailed[l1 - 1, l2 - 1]()
+                    right_part = self._4_inline_right_to_left_tailed[l1 - 1, l2 + 1]()
+                    another_tensor = self._lattice[l1 - 1][l2]()
+                    result = safe_contract(left_part, safe_rename(another_tensor, {"R": "R2"}), {("D", "U"),
+                                                                                                 ("R2", "L")})
+                    result = safe_contract(result, safe_rename(new_tensor, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U"),
+                                                                ("R4", "L4")})
+                    return result
             if hint is None:
                 hint = "H"
             if hint == "H":
@@ -522,67 +564,120 @@ class SingleLayerAuxiliaries:
                 up = self._inline_up_to_down_tailed[l1 - 1, l2]()
                 down = self._inline_down_to_up_tailed[l1 + 1, l2]()
                 result = safe_contract(up, new_tensor, {("D2", "U"), ("R", "L")})
-                result = safe_contract(result, down, {("D1", "U1"), ("D", "U2"), ("R", "L"), ("D3", "U3 ")})
+                result = safe_contract(result, down, {("D1", "U1"), ("D", "U2"), ("R", "L"), ("D3", "U3")})
                 return result
             else:
                 raise ValueError("Unrecognized hint")
-        elif len(replacement) == 2:
+
+        if hint is not None:
+            raise ValueError("Unrecognized hint")
+        if maxl1 - minl1 == 0 and maxl2 - minl2 == 1:
+            # left right
             items = list(replacement.items())
             p0, t0 = items[0]
             p1, t1 = items[1]
-            if hint is not None:
-                raise ValueError("Unrecognized hint")
-            if p0[0] == p1[0]:
-                if p0[1] + 1 == p1[1]:
-                    left_part = self._inline_left_to_right_tailed[p0[0], p0[1] - 1]()
-                    left_dot = self._down_to_up_site[p0[0] + 1, p0[1]]()
-                    right_part = self._inline_right_to_left_tailed[p1[0], p1[1] + 1]()
-                    right_dot = self._up_to_down_site[p1[0] - 1, p1[1]]()
+            if p1[1] < p0[1]:
+                p0, t0, p1, t1 = p1, t1, p0, t0
+            l1, l2 = p0
+            if (self._inline_left_to_right_tailed[l1, l2 - 1] and self._down_to_up_site[l1 + 1, l2] and
+                    self._inline_right_to_left_tailed[l1, l2 + 2] and self._up_to_down_site[l1 - 1, l2 + 1]):
+                left_part = self._inline_left_to_right_tailed[l1, l2 - 1]()
+                left_dot = self._down_to_up_site[l1 + 1, l2]()
+                right_part = self._inline_right_to_left_tailed[l1, l2 + 2]()
+                right_dot = self._up_to_down_site[l1 - 1, l2 + 1]()
+                result = safe_contract(left_part, safe_rename(t0, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+                result = safe_contract(result, safe_rename(left_dot, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                result = safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")})
+                result = safe_contract(result, safe_rename(t1, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+                result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("D", "U"), ("R3", "L3")})
+                return result
+            if l1 != self.L1 - 1:
+                if (self._4_inline_left_to_right_tailed[l1, l2 - 1] and self._down_to_up_site[l1 + 2, l2] and
+                        self._4_inline_right_to_left_tailed[l1, l2 + 2] and self._up_to_down_site[l1 - 1, l2 + 1]):
+                    left_part = self._4_inline_left_to_right_tailed[l1, l2 - 1]()
+                    left_dot = self._down_to_up_site[l1 + 2, l2]()
+                    right_part = self._4_inline_right_to_left_tailed[l1, l2 + 2]()
+                    right_dot = self._up_to_down_site[l1 - 1, l2 + 1]()
+                    t0_down = self._lattice[l1 + 1][l2]()
+                    t1_down = self._lattice[l1 + 1][l2 + 1]()
                     result = safe_contract(left_part, safe_rename(t0, {"R": "R2"}), {("D", "U"), ("R2", "L")})
-                    result = safe_contract(result, safe_rename(left_dot, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, safe_rename(t0_down, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, safe_rename(left_dot, {"R": "R4"}), {("D", "U"), ("R4", "L")})
                     result = safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")})
                     result = safe_contract(result, safe_rename(t1, {"R": "R2"}), {("D", "U"), ("R2", "L")})
-                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("D", "U"), ("R3", "L3")})
+                    result = safe_contract(result, safe_rename(t1_down, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U"),
+                                                                ("R4", "L4")})
                     return result
-                if p0[1] == p1[1] + 1:
-                    left_part = self._inline_left_to_right_tailed[p1[0], p1[1] - 1]()
-                    left_dot = self._down_to_up_site[p1[0] + 1, p1[1]]()
-                    right_part = self._inline_right_to_left_tailed[p0[0], p0[1] + 1]()
-                    right_dot = self._up_to_down_site[p0[0] - 1, p0[1]]()
-                    result = safe_contract(left_part, safe_rename(t1, {"R": "R2"}), {("D", "U"), ("R2", "L")})
-                    result = safe_contract(result, safe_rename(left_dot, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+            if l1 != 0:
+                if (self._4_inline_left_to_right_tailed[l1 - 1, l2 - 1] and self._down_to_up_site[l1 + 1, l2] and
+                        self._4_inline_right_to_left_tailed[l1 - 1, l2 + 2] and self._up_to_down_site[l1 - 2, l2 + 1]):
+                    left_part = self._4_inline_left_to_right_tailed[l1 - 1, l2 - 1]()
+                    left_dot = self._down_to_up_site[l1 + 1, l2]()
+                    right_part = self._4_inline_right_to_left_tailed[l1 - 1, l2 + 2]()
+                    right_dot = self._up_to_down_site[l1 - 2, l2 + 1]()
+                    t0_up = self._lattice[l1 - 1][l2]()
+                    t1_up = self._lattice[l1 - 1][l2 + 1]()
+                    result = safe_contract(left_part, safe_rename(t0_up, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, safe_rename(t0, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, safe_rename(left_dot, {"R": "R4"}), {("D", "U"), ("R4", "L")})
                     result = safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")})
-                    result = safe_contract(result, safe_rename(t0, {"R": "R2"}), {("D", "U"), ("R2", "L")})
-                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("D", "U"), ("R3", "L3")})
+                    result = safe_contract(result, safe_rename(t1_up, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+                    result = safe_contract(result, safe_rename(t1, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                    result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U"),
+                                                                ("R4", "L4")})
                     return result
-            if p0[1] == p1[1]:
-                if p0[0] + 1 == p1[0]:
-                    up_part = self._inline_up_to_down_tailed[p0[0] - 1, p0[1]]()
-                    up_dot = self._right_to_left_site[p0[0], p0[1] + 1]()
-                    down_part = self._inline_down_to_up_tailed[p1[0] + 1, p1[1]]()
-                    down_dot = self._left_to_right_site[p1[0], p1[1] - 1]()
-                    result = safe_contract(up_part, safe_rename(t0, {"D": "D2"}), {("R", "L"), ("D2", "U")})
-                    result = safe_contract(result, safe_rename(up_dot, {"D": "D3"}), {("R", "L"), ("D3", "U")})
-                    result = safe_contract(result, safe_rename(down_dot, {"D": "D1"}), {("D1", "U")})
-                    result = safe_contract(result, safe_rename(t1, {"D": "D2"}), {("R", "L"), ("D2", "U")})
-                    result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
-                    return result
-                if p0[0] == p1[0] + 1:
-                    up_part = self._inline_up_to_down_tailed[p1[0] - 1, p1[1]]()
-                    up_dot = self._right_to_left_site[p1[0], p1[1] + 1]()
-                    down_part = self._inline_down_to_up_tailed[p0[0] + 1, p0[1]]()
-                    down_dot = self._left_to_right_site[p0[0], p0[1] - 1]()
-                    result = safe_contract(up_part, safe_rename(t1, {"D": "D2"}), {("R", "L"), ("D2", "U")})
-                    result = safe_contract(result, safe_rename(up_dot, {"D": "D3"}), {("R", "L"), ("D3", "U")})
-                    result = safe_contract(result, safe_rename(down_dot, {"D": "D1"}), {("D1", "U")})
-                    result = safe_contract(result, safe_rename(t0, {"D": "D2"}), {("R", "L"), ("D2", "U")})
-                    result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
-                    return result
+            left_part = self._inline_left_to_right_tailed[l1, l2 - 1]()
+            left_dot = self._down_to_up_site[l1 + 1, l2]()
+            right_part = self._inline_right_to_left_tailed[l1, l2 + 2]()
+            right_dot = self._up_to_down_site[l1 - 1, l2 + 1]()
+            result = safe_contract(left_part, safe_rename(t0, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+            result = safe_contract(result, safe_rename(left_dot, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+            result = safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")})
+            result = safe_contract(result, safe_rename(t1, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+            result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("D", "U"), ("R3", "L3")})
+            return result
+        if maxl1 - minl1 == 1 and maxl2 - minl2 == 0:
+            # up
+            # down
+            items = list(replacement.items())
+            p0, t0 = items[0]
+            p1, t1 = items[1]
+            if p1[0] < p0[0]:
+                p0, t0, p1, t1 = p1, t1, p0, t0
+            l1, l2 = p0
+            if (self._inline_up_to_down_tailed[l1 - 1, l2] and self._right_to_left_site[l1, l2 + 1] and
+                    self._inline_down_to_up_tailed[l1 + 2, l2] and self._left_to_right_site[l1 + 1, l2 - 1]):
+                up_part = self._inline_up_to_down_tailed[l1 - 1, l2]()
+                up_dot = self._right_to_left_site[l1, l2 + 1]()
+                down_part = self._inline_down_to_up_tailed[l1 + 2, l2]()
+                down_dot = self._left_to_right_site[l1 + 1, l2 - 1]()
+                result = safe_contract(up_part, safe_rename(t0, {"D": "D2"}), {("R", "L"), ("D2", "U")})
+                result = safe_contract(result, safe_rename(up_dot, {"D": "D3"}), {("R", "L"), ("D3", "U")})
+                result = safe_contract(result, safe_rename(down_dot, {"D": "D1"}), {("D1", "U")})
+                result = safe_contract(result, safe_rename(t1, {"D": "D2"}), {("R", "L"), ("D2", "U")})
+                result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
+                return result
+            if self._4_inline_left_to_right_tailed[l1, l2 - 1] and self._4_inline_right_to_left_tailed[l1, l2 + 1]:
+                left_part = self._4_inline_left_to_right_tailed[l1, l2 - 1]()
+                right_part = self._4_inline_right_to_left_tailed[l1, l2 + 1]()
 
-        minl1 = min(l1 for l1, l2 in replacement.keys())
-        minl2 = min(l2 for l1, l2 in replacement.keys())
-        maxl1 = max(l1 for l1, l2 in replacement.keys())
-        maxl2 = max(l2 for l1, l2 in replacement.keys())
+                result = safe_contract(left_part, safe_rename(t0, {"R": "R2"}), {("D", "U"), ("R2", "L")})
+                result = safe_contract(result, safe_rename(t1, {"R": "R3"}), {("D", "U"), ("R3", "L")})
+                result = safe_contract(result, right_part, {("R1", "L1"), ("R2", "L2"), ("R3", "L3"), ("D", "U"),
+                                                            ("R4", "L4")})
+                return result
+            up_part = self._inline_up_to_down_tailed[l1 - 1, l2]()
+            up_dot = self._right_to_left_site[l1, l2 + 1]()
+            down_part = self._inline_down_to_up_tailed[l1 + 2, l2]()
+            down_dot = self._left_to_right_site[l1 + 1, l2 - 1]()
+            result = safe_contract(up_part, safe_rename(t0, {"D": "D2"}), {("R", "L"), ("D2", "U")})
+            result = safe_contract(result, safe_rename(up_dot, {"D": "D3"}), {("R", "L"), ("D3", "U")})
+            result = safe_contract(result, safe_rename(down_dot, {"D": "D1"}), {("D1", "U")})
+            result = safe_contract(result, safe_rename(t1, {"D": "D2"}), {("R", "L"), ("D2", "U")})
+            result = safe_contract(result, down_part, {("D1", "U1"), ("D2", "U2"), ("R", "L"), ("D3", "U3")})
+            return result
+
         if maxl1 - minl1 == 1 and maxl2 - minl2 == 1:
             # t11 t12
             # t21 t22
