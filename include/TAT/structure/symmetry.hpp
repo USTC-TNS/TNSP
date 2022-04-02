@@ -280,13 +280,59 @@ namespace TAT {
        */
       template<typename SymList, typename RankList>
       [[nodiscard]] static bool get_transpose_parity(const SymList& symmetries, const RankList& transpose_plan) {
-         auto result = false;
-         for (Rank i = 0; i < symmetries.size(); i++) {
-            for (Rank j = i + 1; j < symmetries.size(); j++) {
-               if (transpose_plan[i] > transpose_plan[j]) {
-                  result ^= symmetries[i].get_parity() && symmetries[j].get_parity();
+         // auto result = false;
+         // for (Rank i = 0; i < symmetries.size(); i++) {
+         //    for (Rank j = i + 1; j < symmetries.size(); j++) {
+         //       if (transpose_plan[i] > transpose_plan[j]) {
+         //          result ^= symmetries[i].get_parity() && symmetries[j].get_parity();
+         //       }
+         //    }
+         // }
+         // return result;
+         const Rank rank = symmetries.size();
+         pmr::vector<Rank> fermi_plan;
+         fermi_plan.reserve(rank);
+         for (Rank i = 0; i < rank; i++) {
+            if (symmetries[i].get_parity()) {
+               fermi_plan.push_back(transpose_plan[i]);
+            }
+         }
+         const int fermi_rank = fermi_plan.size();
+         return calculate_inversion(fermi_plan, 0, fermi_rank - 1);
+      }
+
+    private:
+      template<typename PlanList>
+      static bool calculate_inversion(PlanList& plan, int begin, int end) {
+         bool result = false;
+         if (begin < end) {
+            Rank reference = plan[(begin + end) / 2];
+            int left = begin;
+            int right = end;
+            while (true) {
+               while (plan[left] < reference) {
+                  left++;
+               }
+               while (plan[right] > reference) {
+                  right--;
+               }
+               if (left < right) {
+                  result ^= true;
+                  Rank temporary = plan[left];
+                  plan[left] = plan[right];
+                  plan[right] = temporary;
+                  left++;
+                  right--;
+               } else if (left == right) {
+                  left++;
+                  right--;
+                  break;
+               } else {
+                  break;
                }
             }
+            result ^= calculate_inversion(plan, begin, right);
+            result ^= calculate_inversion(plan, left, end);
          }
          return result;
       }
