@@ -298,41 +298,44 @@ namespace TAT {
             }
          }
          const int fermi_rank = fermi_plan.size();
-         return calculate_inversion(fermi_plan, 0, fermi_rank - 1);
+         if (fermi_rank != 0) {
+            return calculate_inversion(fermi_plan.data(), fermi_plan.data() + fermi_rank - 1);
+         } else {
+            return false;
+         }
       }
 
     private:
-      template<typename PlanList>
-      static bool calculate_inversion(PlanList& plan, int begin, int end) {
+      static bool calculate_inversion(Rank* begin, Rank* end) {
          bool result = false;
          if (begin < end) {
-            Rank reference = plan[(begin + end) / 2];
-            int left = begin;
-            int right = end;
+            Rank reference = begin[(end - begin) / 2];
+            Rank* left = begin;
+            Rank* right = end;
             while (true) {
-               while (plan[left] < reference) {
-                  left++;
+               while (*left < reference) {
+                  ++left;
                }
-               while (plan[right] > reference) {
-                  right--;
+               while (*right > reference) {
+                  --right;
                }
                if (left < right) {
                   result ^= true;
-                  Rank temporary = plan[left];
-                  plan[left] = plan[right];
-                  plan[right] = temporary;
-                  left++;
-                  right--;
+                  Rank temporary = *left;
+                  *left = *right;
+                  *right = temporary;
+                  ++left;
+                  --right;
                } else if (left == right) {
-                  left++;
-                  right--;
+                  ++left;
+                  --right;
                   break;
                } else {
                   break;
                }
             }
-            result ^= calculate_inversion(plan, begin, right);
-            result ^= calculate_inversion(plan, left, end);
+            result ^= calculate_inversion(begin, right);
+            result ^= calculate_inversion(left, end);
          }
          return result;
       }
