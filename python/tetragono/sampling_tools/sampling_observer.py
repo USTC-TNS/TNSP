@@ -66,7 +66,13 @@ class Observer():
             if self._enable_natural:
                 self._Deltas = []
         if self._cache_configuration:
-            self._pool = ConfigurationPool(self._owner)
+            self._create_cache_configuration()
+
+    def _create_cache_configuration(self):
+        """
+        Create or refresh configuration cache pool.
+        """
+        self._pool = ConfigurationPool(self._owner)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -142,13 +148,18 @@ class Observer():
 
         self._restrict_subspace = restrict_subspace
 
-    def cache_configuration(self):
+    def cache_configuration(self, cache_configuration):
         """
         Enable caching the configurations into one pool.
+
+        Parameters
+        ----------
+        cache_configuration : bool | str
+            The cache clean strategy of configuration cache.
         """
         if self._start:
             raise RuntimeError("Cannot enable caching after sampling start")
-        self._cache_configuration = True
+        self._cache_configuration = cache_configuration
 
     def add_observer(self, name, observers):
         """
@@ -207,6 +218,8 @@ class Observer():
             The configuration system of the lattice.
         """
         if self._cache_configuration:
+            if self._cache_configuration == "drop":
+                self._create_cache_configuration()
             configuration = self._pool.add(configuration)
         reweight = configuration.hole(()).norm_2()**2 / possibility
         self._count += 1

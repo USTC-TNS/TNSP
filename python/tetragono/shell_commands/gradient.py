@@ -182,8 +182,9 @@ def gradient_descent(
         grad_total_step = 1
     showln(f"gradient total step={grad_total_step}")
     if sj_shift_per_site is not None:
-        cache_configuration = True
-        showln("using shaojun's method, cache configuration")
+        if not cache_configuration:
+            cache_configuration = True
+            showln("using shaojun's method, cache configuration")
 
     # Restrict subspace
     if restrict_subspace is not None:
@@ -214,7 +215,7 @@ def gradient_descent(
             measurement_modules[measurement_name] = measurement_module
             observer.add_observer(measurement_name, measurement_module.measurement(state))
     if cache_configuration:
-        observer.cache_configuration()
+        observer.cache_configuration(cache_configuration)
     if use_gradient:
         showln("calculate gradient")
         observer.enable_gradient()
@@ -229,7 +230,7 @@ def gradient_descent(
         reweight_observer.add_energy()
         reweight_observer.enable_gradient()
         if cache_configuration:
-            reweight_observer.cache_configuration()
+            reweight_observer.cache_configuration(cache_configuration)
 
     # Sampling method
     if sampling_method == "sweep":
