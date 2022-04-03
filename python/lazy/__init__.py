@@ -170,7 +170,7 @@ class Node:
             self._value = value
             new_downstream = set()
             for i in self._downstream:
-                if i():
+                if i() is not None:
                     i().reset()
                     new_downstream.add(i)
 
