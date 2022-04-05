@@ -8,7 +8,7 @@
 
 ** Prerequisites
 
-   * c++ compiler with c++17 support(such as gcc7+, clang5+, msvc19.14+)
+   * c++ compiler with c++17 support(such as gcc7+, clang5+)
    * lapack/blas or mkl
    * mpi(optional for parallel computing)
    * [[https://github.com/pybind/pybind11][pybind11]](optional for python binding)
@@ -22,7 +22,7 @@
 
    For mpi support, you need to define macro =TAT_USE_MPI= and use mpi compiler such as =mpic++= (recommend) or pass correct flag to normal compiler(for expert)
 
-   Please check comment in file [[/include/TAT/TAT.hpp#L32][ =TAT.hpp= ]] for some other macro options
+   Please check comment in file [[/include/TAT/utility/common_variable.hpp#L24][ =common_variable.hpp= ]] for some other macro options
 
    Please notice that this library need proper compiler optimization option(=-O2=, =-O3=, =-Ofast=) for good performace
 
@@ -30,13 +30,13 @@
 
 ** Python binding
 
-   Python binding is configured in [[/FindTAT.cmake#L109][ =CMakeLists.txt= ]], use cmake and build target =PyTAT=
+   Python binding is configured in [[/FindTAT.cmake#L101][ =CMakeLists.txt= ]], use cmake and build target =PyTAT=
 
    For other customed python module name, define =TAT_PYTHON_MODULE= as cmake variable
 
    If you are familiar with [[https://pybind11.readthedocs.io/en/stable/compiling.html#building-manually][pybind11]], you can compile [[/PyTAT/PyTAT.cpp][ =PyTAT/PyTAT.cpp= ]] directly with correct flag
 
-   Refer to [[/PyTAT/README.md][this]] for document of python binding
+   Refer to [[/PyTAT/README.org][this]] for document of python binding
 
 ** Use with [[https://emscripten.org/][emscripten]]
 
