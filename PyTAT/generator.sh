@@ -5,12 +5,10 @@ do
    do
       Short=`awk '{print $1}' <<< $ShortScalar`
       Scalar=`awk '{print $2}' <<< $ShortScalar`
-      Build=true
-      cat << PYTAT_DEALING > generated_code/dealing_Tensor_$Short$Sym.cpp
-#define FUNCTION_NAME dealing_Tensor_${Short}${Sym}
+      cat << PYTAT_DEALING > generated_code/dealing_Tensor_${Sym}_${Short}.cpp
+#define FUNCTION_NAME dealing_Tensor_${Sym}_${Short}
 #define SCALAR_NAME ${Scalar}
 #define SYMMETRY_NAME ${Sym}Symmetry
-#define BUILD_THIS ${Build}
 #include "../dealing_Tensor.ipp"
 PYTAT_DEALING
    done

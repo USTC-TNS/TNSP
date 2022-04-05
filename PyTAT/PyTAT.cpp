@@ -23,7 +23,7 @@ namespace TAT {
    void set_navigator(py::module_&);
    void set_random(py::module_&);
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
-   std::function<void()> dealing_Tensor_##SCALARSHORT##SYM( \
+   std::function<void()> dealing_Tensor_##SYM##_##SCALARSHORT( \
          py::module_& symmetry_m, \
          const std::string& scalar_short_name, \
          const std::string& scalar_name, \
@@ -130,7 +130,7 @@ namespace TAT {
       // tensor
       std::vector<std::function<void()>> define_tensor;
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
-   define_tensor.push_back(dealing_Tensor_##SCALARSHORT##SYM(SYM##_m, #SCALARSHORT, #SCALAR, #SYM));
+   define_tensor.push_back(dealing_Tensor_##SYM##_##SCALARSHORT(SYM##_m, #SCALARSHORT, #SCALAR, #SYM));
       TAT_LOOP_ALL_SCALAR_SYMMETRY
 #undef TAT_SINGLE_SCALAR_SYMMETRY
       for (const auto& f : define_tensor) {
