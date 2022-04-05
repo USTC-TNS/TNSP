@@ -13,6 +13,7 @@
 /.cache
 /git-worktree
 /dist
+/PyTAT/.*.cpp
 .DS_Store
 __pycache__
 ltximg
