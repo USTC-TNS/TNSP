@@ -339,9 +339,7 @@ def gradient_descent(
 
                 elif use_line_search:
                     showln("line searching")
-                    param = mpi_comm.bcast((observer._lattice_dot(state._lattice, state._lattice) /
-                                            observer._lattice_dot(grad, grad))**0.5,
-                                           root=0)
+                    param = observer.fix_relative_parameter(grad)
                     grad_step_size = line_search(state, observer, grad, reweight_observer, configuration_pool,
                                                  grad_step_size, param, line_search_amplitude,
                                                  line_search_error_threshold)
@@ -381,9 +379,7 @@ def gradient_descent(
                         this_grad = total_grad
                     if use_fix_relative_step_size:
                         showln("fix relative step size")
-                        param = mpi_comm.bcast((observer._lattice_dot(state._lattice, state._lattice) /
-                                                observer._lattice_dot(this_grad, this_grad))**0.5,
-                                               root=0)
+                        param = observer.fix_relative_parameter(this_grad)
                         real_step_size = grad_step_size * param
                     else:
                         real_step_size = grad_step_size

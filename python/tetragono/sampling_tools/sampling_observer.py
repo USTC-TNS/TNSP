@@ -18,7 +18,7 @@
 
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer
+from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer, mpi_comm
 from .tensor_element import tensor_element
 
 
@@ -584,3 +584,21 @@ class Observer():
             # p = r + beta * p
             p = self._lattice_map(lambda x1, x2: x1 + beta * x2, r, p)
         return x
+
+    def fix_relative_parameter(self, lattice):
+        """
+        Get fix relative parameter for a lattice shape data.
+
+        Parameters
+        ----------
+        lattice : list[list[Tensor]]
+            The lattice shape data.
+
+        Returns
+        -------
+        float
+            The input lattice amplified with the return number has the same norm to the owner lattice.
+        """
+        return mpi_comm.bcast(
+            (self._lattice_dot(self._owner._lattice, self._owner._lattice) / self._lattice_dot(lattice, lattice))**0.5,
+            root=0)

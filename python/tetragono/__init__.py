@@ -25,3 +25,4 @@ from .sampling_lattice import SamplingLattice
 
 # Miscellaneous
 from . import conversion
+from .sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
