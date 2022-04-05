@@ -119,9 +119,6 @@ jobs:
           fetch-depth: 0
       - name: recovery tag information
         run: git fetch --tags --force
-      - name: generate PyTAT code
-        working-directory: ${{github.workspace}}/PyTAT
-        run: bash ./generator.sh
       - name: copy PyTAT setup.py
         working-directory: ${{github.workspace}}
         run: cp setup/PyTAT.py setup.py
