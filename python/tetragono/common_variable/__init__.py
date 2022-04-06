@@ -150,3 +150,10 @@ def lattice_dot(tensor_1, tensor_2):
 def lattice_dot_sum(tensors_1, tensors_2):
     dot = lattice_dot(tensors_1, tensors_2)
     return complex(np.sum(dot)).real
+
+
+def lattice_update(tensors_1, tensors_2):
+    L1, L2 = tensors_1.shape
+    for l1 in range(L1):
+        for l2 in range(L2):
+            tensors_1[l1, l2] += tensors_2[l1, l2]

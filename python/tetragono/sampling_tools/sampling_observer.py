@@ -18,7 +18,7 @@
 
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer, lattice_dot_sum
+from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer, lattice_dot_sum, lattice_update
 from .tensor_element import tensor_element
 
 
@@ -469,7 +469,7 @@ class Observer():
                     param += lattice_dot_sum(holes, gradient) * value
                 param += shift * lattice_dot_sum(configuration.holes(), gradient)
                 param *= reweight / self._total_weight
-                result_1 += param * np.array(deltas)
+                lattice_update(result_1, param * np.array(deltas))
             allreduce_lattice_buffer(result_1)
 
             delta = np.array(self._Delta) / self._total_weight
@@ -490,7 +490,7 @@ class Observer():
                 [[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
             for reweight, deltas, _ in self._Deltas:
                 param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
-                result_1 += param * np.array(deltas)
+                lattice_update(result_1, param * np.array(deltas))
             allreduce_lattice_buffer(result_1)
 
             delta = np.array(self._Delta) / self._total_weight
