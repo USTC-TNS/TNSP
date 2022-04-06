@@ -25,7 +25,8 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler, seed_differ, lattice_conjugate, dump
+from ..common_variable import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
+                               seed_differ, lattice_conjugate, lattice_dot_sum, dump)
 from .fix_gauge_sampling import fix_sampling_lattice_guage
 
 
@@ -77,12 +78,12 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
                     configuration.refresh_all()
                     reweight_observer(possibility, configuration)
                     show(f"predicting eta={eta}, energy={reweight_observer.energy}")
-            result = mpi_comm.bcast(state.lattice_dot(grad, reweight_observer.gradient), root=0)
+            result = mpi_comm.bcast(lattice_dot_sum(grad, reweight_observer.gradient), root=0)
             showln(f"predict eta={eta}, energy={reweight_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
         return grad_dot_pool[eta]
 
-    grad_dot_pool[0] = mpi_comm.bcast(state.lattice_dot(grad, observer.gradient), root=0)
+    grad_dot_pool[0] = mpi_comm.bcast(lattice_dot_sum(grad, observer.gradient), root=0)
     if grad_dot(0.0) > 0:
         begin = 0.0
         end = step_size * line_search_amplitude
@@ -351,8 +352,8 @@ def gradient_descent(
                     else:
                         if orthogonalize_momentum:
                             # lattice_dot always return a real number
-                            param = mpi_comm.bcast(state.lattice_dot(total_grad, state._lattice) /
-                                                   state.lattice_dot(state._lattice, state._lattice),
+                            param = mpi_comm.bcast(lattice_dot_sum(total_grad, state._lattice) /
+                                                   lattice_dot_sum(state._lattice, state._lattice),
                                                    root=0)
                             total_grad = total_grad - state._lattice * param
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)

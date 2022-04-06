@@ -18,7 +18,7 @@
 
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer, mpi_comm
+from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer, lattice_dot_sum
 from .tensor_element import tensor_element
 
 
@@ -401,7 +401,8 @@ class Observer():
             The gradient for every tensor.
         """
         energy, _ = self.total_energy
-        return 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) / self._total_weight)
+        return 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) /
+                                                                                 self._total_weight)
 
     def _metric_mv(self, gradient, epsilon, *, sj_shift_per_site=None):
         """
@@ -425,7 +426,8 @@ class Observer():
         if sj_shift_per_site is not None:
             shift = sj_shift_per_site * owner.site_number
 
-            result_1 = np.array([[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
+            result_1 = np.array(
+                [[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
             all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(owner.L1)
                                        for l2 in range(owner.L2) for orbit, edge in owner.physics_edges[l1, l2].items()}
             for reweight, deltas, configuration in self._Deltas:
@@ -464,8 +466,8 @@ class Observer():
                 param = 0
                 for other_config, value in param_pool.items():
                     holes = self._pool(other_config).holes()
-                    param += owner.lattice_dot(holes, gradient) * value
-                param += shift * owner.lattice_dot(configuration.holes(), gradient)
+                    param += lattice_dot_sum(holes, gradient) * value
+                param += shift * lattice_dot_sum(configuration.holes(), gradient)
                 param *= reweight / self._total_weight
                 result_1 += param * np.array(deltas)
             allreduce_lattice_buffer(result_1)
@@ -473,27 +475,28 @@ class Observer():
             delta = np.array(self._Delta) / self._total_weight
             edelta = np.array(self._EDelta) / self._total_weight
 
-            param = owner.lattice_dot(delta, gradient) * (self.total_energy[0] + shift)
+            param = lattice_dot_sum(delta, gradient) * (self.total_energy[0] + shift)
             result_2 = delta * param
 
-            param = owner.lattice_dot(delta, gradient)
+            param = lattice_dot_sum(delta, gradient)
             result_3 = edelta * param
-            param = owner.lattice_dot(edelta, gradient)
+            param = lattice_dot_sum(edelta, gradient)
             result_4 = delta * param
 
             return result_1 + result_2 - result_3 - result_4 + epsilon * gradient
         else:
             # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
-            result_1 = np.array([[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
+            result_1 = np.array(
+                [[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
             for reweight, deltas, _ in self._Deltas:
-                param = owner.lattice_dot(deltas, gradient) * reweight / self._total_weight
+                param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
                 result_1 += param * np.array(deltas)
             allreduce_lattice_buffer(result_1)
 
             delta = np.array(self._Delta) / self._total_weight
-            param = owner.lattice_dot(delta, gradient)
+            param = lattice_dot_sum(delta, gradient)
             result_2 = delta * param
-            return  result_1 - result_2 + epsilon * gradient
+            return result_1 - result_2 + epsilon * gradient
 
     def natural_gradient(self, step, epsilon, *, sj_shift_per_site=None):
         """
@@ -526,14 +529,14 @@ class Observer():
         for t in range(step):
             show(f"conjugate gradient step={t}")
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = owner.lattice_dot(r, r) / owner.lattice_dot(
+            alpha = lattice_dot_sum(r, r) / lattice_dot_sum(
                 p, self._metric_mv(p, epsilon, sj_shift_per_site=sj_shift_per_site))
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, epsilon, sj_shift_per_site=sj_shift_per_site)
             # beta = (new_r @ new_r) / (r @ r)
-            beta = owner.lattice_dot(new_r, new_r) / owner.lattice_dot(r, r)
+            beta = lattice_dot_sum(new_r, new_r) / lattice_dot_sum(r, r)
             # r = new_r
             r = new_r
             # p = r + beta * p
@@ -555,7 +558,4 @@ class Observer():
             The input lattice amplified with the return number has the same norm to the owner lattice.
         """
         owner = self._owner
-        return mpi_comm.bcast(
-            (owner.lattice_dot(owner._lattice, owner._lattice) / owner.lattice_dot(lattice, lattice))**0.5,
-            root=0,
-        )
+        return (lattice_dot_sum(owner._lattice, owner._lattice) / lattice_dot_sum(lattice, lattice))**0.5

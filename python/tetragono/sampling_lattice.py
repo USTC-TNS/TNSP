@@ -729,25 +729,3 @@ class SamplingLattice(AbstractLattice):
         """
         l1, l2 = l1l2
         self._lattice[l1][l2] = value
-
-    def lattice_dot(self, a, b):
-        """
-        Dot of two lattice shape tensors, like vector dot product.
-
-        Parameters
-        ----------
-        a, b : list[list[Tensor]]
-            The hole tensors.
-
-        Returns
-        -------
-        float
-            The dot result.
-        """
-        result = 0.
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                ta = a[l1][l2]
-                tb = b[l1][l2]
-                result += ta.conjugate(positive_contract=True).contract(tb, {(name, name) for name in ta.names})
-        return complex(result).real
