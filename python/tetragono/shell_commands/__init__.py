@@ -17,4 +17,3 @@
 #
 
 from .gradient import gradient_descent
-from .normalize import normalize_state

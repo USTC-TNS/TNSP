@@ -74,5 +74,4 @@ for grad_step in range(10):
 # + easy usage of sweep
 # + line search
 # + momentum orthogonalize
-# + normalize
-# + all in shell_commands package
+# + simplify gradient with tetragono low level api

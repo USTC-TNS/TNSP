@@ -26,7 +26,7 @@ from . import common_variable
 from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
-from .shell_commands import gradient_descent, normalize_state
+from .shell_commands import gradient_descent
 
 
 class Config():
@@ -328,25 +328,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         if state is not None:
             self.gm = state
 
-    def do_gm_normalize(self, line):
-        """
-        Normalize the lattice used for gradient method.
-
-        Parameters
-        ----------
-        sampling_total_step : int
-            The sampling total step.
-        configuration_cut_dimension : int
-            The cut dimension used in calculate configuration.
-        direct_sampling_cut_dimension : int
-            The cut dimension used in direct sampling.
-        """
-        config = Config(line)
-        self.gm_normalize(*config.args, **config.kwargs)
-
-    def gm_normalize(self, *args, **kwargs):
-        normalize_state(self.gm, *args, **kwargs)
-
     def do_gm_run(self, line):
         """
         Do gradient descent. see gradient.py for details.
@@ -485,7 +466,6 @@ else:
     ex_load = app.ex_load
 
     gm_create = app.gm_create
-    gm_normalize = app.gm_normalize
     gm_run = app.gm_run
     gm_dump = app.gm_dump
     gm_load = app.gm_load
