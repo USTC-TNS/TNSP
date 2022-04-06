@@ -161,14 +161,7 @@ def gradient_descent(
         # About check difference
         check_difference_delta=1e-8,
         # About Measurement
-        measurement=None,
-        # Deprecated options
-        configuration_dump_file=None):
-    if configuration_dump_file is not None:
-        print(
-            " ###### DEPRECATE WARNING: configuration_dump_file is deprecated, use sweep_configuration_dump_file instead. ###### "
-        )
-        sweep_configuration_dump_file = configuration_dump_file
+        measurement=None):
 
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 

@@ -404,10 +404,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def gm_expand(self, *args, **kwargs):
         expand_sampling_lattice_dimension(self.gm, *args, **kwargs)
 
-    def do_gm_extend(self, line):
-        print(" ###### DEPRECATE WARNING: gm_extend is deprecated, use gm_expand instead. ###### ")
-        self.do_gm_expand(line)
-
     def do_gm_to_ex(self, line):
         """
         Convert sampling lattice to exact lattice.
