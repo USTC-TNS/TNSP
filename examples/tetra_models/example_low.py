@@ -46,7 +46,7 @@ for grad_step in range(10):
     with tet.common_variable.seed_differ, observer:
         # create sampling object and do sampling
         sampling = tet.DirectSampling(gm_lattice, cut_dimension=8, restrict_subspace=None, double_layer_cut_dimension=4)
-        for sampling_step in range(100):
+        for sampling_step in range(1000):
             observer(*sampling())
     tet.common_variable.showln("grad", grad_step, *observer.energy)
     # Get Sz measure result
@@ -63,6 +63,10 @@ for grad_step in range(10):
     param = observer.fix_relative_parameter(total_grad)
     # Apply gradient
     gm_lattice._lattice -= 0.01 * param * tet.common_variable.lattice_conjugate(total_grad)
+    # Fix gauge
+    gm_lattice.expand_dimension(1.0, 0)
+    # Bcast buffer to avoid numeric error
+    tet.common_variable.bcast_lattice_buffer(gm_lattice._lattice)
     # Maybe you want to save file
     tet.common_variable.dump(gm_lattice, "/dev/null")
 
@@ -70,6 +74,5 @@ for grad_step in range(10):
 # + easy usage of sweep
 # + line search
 # + momentum orthogonalize
-# + fix gauge
 # + normalize
 # + all in shell_commands package

@@ -77,12 +77,12 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
                     configuration.refresh_all()
                     reweight_observer(possibility, configuration)
                     show(f"predicting eta={eta}, energy={reweight_observer.energy}")
-            result = mpi_comm.bcast(lattice_dot_sum(grad, reweight_observer.gradient), root=0)
+            result = mpi_comm.bcast(lattice_dot_sum(grad, reweight_observer.gradient))
             showln(f"predict eta={eta}, energy={reweight_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
         return grad_dot_pool[eta]
 
-    grad_dot_pool[0] = mpi_comm.bcast(lattice_dot_sum(grad, observer.gradient), root=0)
+    grad_dot_pool[0] = mpi_comm.bcast(lattice_dot_sum(grad, observer.gradient))
     if grad_dot(0.0) > 0:
         begin = 0.0
         end = step_size * line_search_amplitude
@@ -108,7 +108,7 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             state[l1, l2] = saved_state[l1][l2]
-    return mpi_comm.bcast(step_size, root=0)
+    return mpi_comm.bcast(step_size)
 
 
 def try_normalize(state, mean_log_ws):
@@ -305,7 +305,7 @@ def gradient_descent(
             # Dump configuration
             if sweep_configuration_dump_file:
                 if sampling_method == "sweep":
-                    to_dump = mpi_comm.gather(sampling.configuration._configuration, root=0)
+                    to_dump = mpi_comm.gather(sampling.configuration._configuration)
                     if mpi_rank == 0:
                         with open(sweep_configuration_dump_file, "wb") as file:
                             pickle.dump(to_dump, file)
@@ -344,9 +344,9 @@ def gradient_descent(
                     else:
                         if orthogonalize_momentum:
                             # lattice_dot always return a real number
-                            param = mpi_comm.bcast(lattice_dot_sum(total_grad, state._lattice) /
-                                                   lattice_dot_sum(state._lattice, state._lattice),
-                                                   root=0)
+                            param = mpi_comm.bcast(
+                                lattice_dot_sum(total_grad, state._lattice) /
+                                lattice_dot_sum(state._lattice, state._lattice))
                             total_grad = total_grad - state._lattice * param
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     if use_random_gradient:
@@ -375,7 +375,7 @@ def gradient_descent(
                 # Normalize state
                 try_normalize(state, log_prod_ws / sampling_total_step)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
-                bcast_lattice_buffer(state._lattice, root=0)
+                bcast_lattice_buffer(state._lattice)
                 sampling.refresh_all()
 
                 # Save state

@@ -58,11 +58,11 @@ def allreduce_lattice_buffer(lattice):
     MPI.Request.Waitall(requests)
 
 
-def bcast_buffer(buffer, root):
+def bcast_buffer(buffer, root=0):
     mpi_comm.Bcast(buffer, root=root)
 
 
-def bcast_lattice_buffer(lattice, root):
+def bcast_lattice_buffer(lattice, root=0):
     requests = []
     for row in lattice:
         for tensor in row:
