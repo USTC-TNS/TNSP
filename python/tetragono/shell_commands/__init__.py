@@ -18,4 +18,3 @@
 
 from .gradient import gradient_descent
 from .normalize import normalize_state
-from .expand_sampling import expand_sampling_lattice_dimension

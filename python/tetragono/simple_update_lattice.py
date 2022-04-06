@@ -226,8 +226,8 @@ class SimpleUpdateLattice(AbstractLattice):
             The total step number of the simple update.
         delta_tau : float
             The delta tau in the evolution operator.
-        new_dimension : int
-            The dimension cut used in svd of simple update.
+        new_dimension : int | float
+            The dimension cut used in svd of simple update, or the amplitude of dimension expandance.
         """
         updaters = []
         for positions, hamiltonian_term in self._hamiltonians.items():
@@ -326,8 +326,8 @@ class SimpleUpdateLattice(AbstractLattice):
             The list of the coordinates index and the orbit index of every hamiltonian edge.
         evolution_operator : Tensor
             $\exp^{-\Delta\tau H}$, used to update the state.
-        new_dimension : int
-            The dimension cut used in svd of simple update.
+        new_dimension : int | float
+            The dimension cut used in svd of simple update, or the amplitude of dimension expandance.
         """
         if len(coordinates) == 1:
             return self._single_term_simple_update_single_site(
@@ -400,6 +400,9 @@ class SimpleUpdateLattice(AbstractLattice):
         left = self[i, j]
         right = self[i, j + 1]
         right = self._try_multiple(right, i, j + 1, "L", True)
+        original_dimension = left.edges("R").dimension
+        if isinstance(new_dimension, float):
+            new_dimension = round(original_dimension * new_dimension)
         left_q, left_r = left.qr("r", {*(f"P{orbit}" for body_index, orbit in left_index_and_orbit), "R"}, "R", "L")
         right_q, right_r = right.qr("r", {*(f"P{orbit}" for body_index, orbit in right_index_and_orbit), "L"}, "L", "R")
         u, s, v = left_r.edge_rename(
@@ -462,6 +465,9 @@ class SimpleUpdateLattice(AbstractLattice):
         up = self[i, j]
         down = self[i + 1, j]
         down = self._try_multiple(down, i + 1, j, "U", True)
+        original_dimension = up.edges("D").dimension
+        if isinstance(new_dimension, float):
+            new_dimension = round(original_dimension * new_dimension)
         up_q, up_r = up.qr("r", {*(f"P{orbit}" for body_index, orbit in up_index_and_orbit), "D"}, "D", "U")
         down_q, down_r = down.qr("r", {*(f"P{orbit}" for body_index, orbit in down_index_and_orbit), "U"}, "U", "D")
         u, s, v = up_r.edge_rename(

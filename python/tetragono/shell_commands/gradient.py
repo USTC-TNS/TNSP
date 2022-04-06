@@ -27,7 +27,6 @@ from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_variable import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
                                seed_differ, lattice_conjugate, lattice_dot_sum, dump)
-from .fix_gauge_sampling import fix_sampling_lattice_guage
 
 
 def check_difference(state, observer, grad, reweight_observer, configuration_pool, check_difference_delta):
@@ -372,7 +371,7 @@ def gradient_descent(
 
                 # Fix gauge
                 if fix_gauge:
-                    fix_sampling_lattice_guage(state)
+                    state.expand_dimension(1.0, 0)
                 # Normalize state
                 try_normalize(state, log_prod_ws / sampling_total_step)
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)

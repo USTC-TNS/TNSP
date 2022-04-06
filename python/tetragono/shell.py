@@ -26,7 +26,7 @@ from . import common_variable
 from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
-from .shell_commands import gradient_descent, normalize_state, expand_sampling_lattice_dimension
+from .shell_commands import gradient_descent, normalize_state
 
 
 class Config():
@@ -208,7 +208,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         delta_tau : float
             The imaginary time, delta tau.
         new_dimension : int
-            The new cut dimension used in simple update.
+            The new cut dimension used in simple update, or the amplitude of dimension expandance.
         """
         config = Config(line)
         self.su_update(*config.args, **config.kwargs)
@@ -393,16 +393,16 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
         Parameters
         ----------
-        new_dimension : int
-            The new dimension.
+        new_dimension : int | float
+            The new dimension, or the amplitude of dimension expandance.
         epsilon : float
             The relative error added into tensor.
         """
         config = Config(line)
         self.gm_expand(*config.args, **config.kwargs)
 
-    def gm_expand(self, *args, **kwargs):
-        expand_sampling_lattice_dimension(self.gm, *args, **kwargs)
+    def gm_expand(self, new_dimension, epsilon):
+        self.gm.expand_dimension(new_dimension, epsilon)
 
     def do_gm_to_ex(self, line):
         """

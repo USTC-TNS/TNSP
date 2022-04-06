@@ -729,3 +729,90 @@ class SamplingLattice(AbstractLattice):
         """
         l1, l2 = l1l2
         self._lattice[l1][l2] = value
+
+    def expand_dimension(self, new_dimension, epsilon):
+        """
+        Expand dimension of sampling lattice. If new_dimension equals to the origin dimension and epsilon is zero, this
+        function will fix the lattice gauge.
+
+        Parameters
+        ----------
+        new_dimension : int | float
+            The new dimension, or the amplitude of dimension expandance.
+        epsilon : float
+            The relative error added into tensor.
+        """
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if l1 != 0 and l1 % 2 == 0:
+                    self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if l1 != 0 and l1 % 2 == 1:
+                    self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if l2 != 0 and l2 % 2 == 0:
+                    self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                if l2 != 0 and l2 % 2 == 1:
+                    self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
+
+    def _expand_horizontal(self, l1, l2, new_dimension, epsilon):
+        left = self[l1, l2]
+        right = self[l1, l2 + 1]
+        original_dimension = left.edges("R").dimension
+        if isinstance(new_dimension, float):
+            new_dimension = round(original_dimension * new_dimension)
+        if epsilon == 0:
+            left_q, left_r = left.qr("r", {"R"}, "R", "L")
+            right_q, right_r = right.qr("r", {"L"}, "L", "R")
+        else:
+            left_q, left_r = left.qr("r", {*(name for name in left.names if name.startswith("P")), "R"}, "R", "L")
+            right_q, right_r = right.qr("r", {*(name for name in right.names if name.startswith("P")), "L"}, "L", "R")
+        left_r = left_r.edge_rename({name: f"L_{name}" for name in left_r.names})
+        right_r = right_r.edge_rename({name: f"R_{name}" for name in right_r.names})
+        big = left_r.contract(right_r, {("L_R", "R_L")})
+        norm = big.norm_max()
+        big += big.same_shape().randn() * epsilon * norm
+        u, s, v = big.svd({l_name for l_name in big.names if l_name.startswith("L_")}, "R", "L", "L", "R",
+                          new_dimension)
+        i = s.same_shape().identity({("L", "R")})
+        delta = np.sqrt(np.abs(s.storage))
+        delta[delta == 0] = 1
+        s.storage /= delta
+        i.storage *= delta
+        left = left_q.contract(u, {("R", "L_L")}).contract(s, {("R", "L")})
+        right = right_q.contract(v, {("L", "R_R")}).contract(i, {("L", "R")})
+        self[l1, l2] = left.edge_rename({l_name: l_name[2:] for l_name in left.names if l_name.startswith("L_")})
+        self[l1, l2 + 1] = right.edge_rename({r_name: r_name[2:] for r_name in right.names if r_name.startswith("R_")})
+
+    def _expand_vertical(self, l1, l2, new_dimension, epsilon):
+        up = self[l1, l2]
+        down = self[l1 + 1, l2]
+        original_dimension = up.edges("D").dimension
+        if isinstance(new_dimension, float):
+            new_dimension = round(original_dimension * new_dimension)
+        if epsilon == 0:
+            up_q, up_r = up.qr("r", {"D"}, "D", "U")
+            down_q, down_r = down.qr("r", {"U"}, "U", "D")
+        else:
+            up_q, up_r = up.qr("r", {*(name for name in up.names if name.startswith("P")), "D"}, "D", "U")
+            down_q, down_r = down.qr("r", {*(name for name in down.names if name.startswith("P")), "U"}, "U", "D")
+        up_r = up_r.edge_rename({name: f"U_{name}" for name in up_r.names})
+        down_r = down_r.edge_rename({name: f"D_{name}" for name in down_r.names})
+        big = up_r.contract(down_r, {("U_D", "D_U")})
+        norm = big.norm_max()
+        big += big.same_shape().randn() * epsilon * norm
+        u, s, v = big.svd({u_name for u_name in big.names if u_name.startswith("U_")}, "D", "U", "U", "D",
+                          new_dimension)
+        i = s.same_shape().identity({("U", "D")})
+        delta = np.sqrt(np.abs(s.storage))
+        delta[delta == 0] = 1
+        s.storage /= delta
+        i.storage *= delta
+        up = up_q.contract(u, {("D", "U_U")}).contract(s, {("D", "U")})
+        down = down_q.contract(v, {("U", "D_D")}).contract(i, {("U", "D")})
+        self[l1, l2] = up.edge_rename({u_name: u_name[2:] for u_name in up.names if u_name.startswith("U_")})
+        self[l1 + 1, l2] = down.edge_rename({d_name: d_name[2:] for d_name in down.names if d_name.startswith("D_")})
