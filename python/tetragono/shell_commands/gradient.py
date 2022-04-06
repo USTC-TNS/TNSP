@@ -25,7 +25,7 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler, seed_differ
+from ..common_variable import show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler, seed_differ, lattice_conjugate, dump
 from .fix_gauge_sampling import fix_sampling_lattice_guage
 
 
@@ -344,31 +344,18 @@ def gradient_descent(
                                                  grad_step_size, param, line_search_amplitude,
                                                  line_search_error_threshold)
                     real_step_size = grad_step_size * param
-                    state.lattice_sum(
-                        state._lattice,
-                        state.lattice_map(
-                            lambda x1: -real_step_size * x1.conjugate(positive_contract=True),
-                            grad,
-                        ))
+                    state._lattice -= real_step_size * lattice_conjugate(grad)
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
-                        total_grad = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
-                        for l1 in range(state.L1):
-                            for l2 in range(state.L2):
-                                total_grad[l1][l2] = grad[l1][l2]
+                        total_grad = grad
                     else:
                         if orthogonalize_momentum:
                             # lattice_dot always return a real number
                             param = mpi_comm.bcast(state.lattice_dot(total_grad, state._lattice) /
                                                    state.lattice_dot(state._lattice, state._lattice),
                                                    root=0)
-                            for l1 in range(state.L1):
-                                for l2 in range(state.L2):
-                                    total_grad[l1][l2] = total_grad[l1][l2] - state[l1, l2] * param
-                        for l1 in range(state.L1):
-                            for l2 in range(state.L2):
-                                total_grad[l1][l2] = total_grad[l1][l2] * momentum_parameter + grad[l1][l2] * (
-                                    1 - momentum_parameter)
+                            total_grad = total_grad - state._lattice * param
+                        total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     if use_random_gradient:
                         showln("use random gradient")
                         this_grad = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
@@ -386,12 +373,7 @@ def gradient_descent(
                         real_step_size = grad_step_size * param
                     else:
                         real_step_size = grad_step_size
-                    state.lattice_sum(
-                        state._lattice,
-                        state.lattice_map(
-                            lambda x1: -real_step_size * x1.conjugate(positive_contract=True),
-                            this_grad,
-                        ))
+                    state._lattice -= real_step_size * lattice_conjugate(this_grad)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge
@@ -404,9 +386,7 @@ def gradient_descent(
                 sampling.refresh_all()
 
                 # Save state
-                if save_state_interval and (grad_step + 1) % save_state_interval == 0:
-                    if save_state_file and mpi_rank == 0:
-                        with open(save_state_file.replace("%s", str(grad_step)).replace("%t", time_str), "wb") as file:
-                            pickle.dump(state, file)
+                if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
+                    dump(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
             if sigint_handler():
                 break

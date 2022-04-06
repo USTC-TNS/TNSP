@@ -16,12 +16,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import signal
 try:
     import cPickle as pickle
 except:
     import pickle
+import signal
 from mpi4py import MPI
+import numpy as np
 import TAT
 from . import No
 from . import Fermi
@@ -134,3 +135,8 @@ def dump(obj, file_name):
         with open(file_name, "wb") as file:
             pickle.dump(obj, file)
     mpi_comm.barrier()
+
+
+@np.vectorize
+def lattice_conjugate(tensor):
+    return tensor.conjugate(positive_contract=True)

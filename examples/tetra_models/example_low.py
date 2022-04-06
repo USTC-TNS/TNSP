@@ -58,19 +58,11 @@ for grad_step in range(10):
     if grad_step == 0:
         total_grad = grad
     else:
-        total_grad = gm_lattice.lattice_map(
-            lambda x1, x2: x1 * 0.9 + x2 * 0.1,
-            total_grad,
-            grad,
-        )
+        total_grad = total_grad * 0.9 + grad * 0.1
     # Fix relative step size
     param = observer.fix_relative_parameter(total_grad)
     # Apply gradient
-    gm_lattice._lattice = gm_lattice.lattice_map(
-        lambda x1, x2: x1 - 0.01 * param * x2.conjugate(positive_contract=True),
-        gm_lattice._lattice,
-        total_grad,
-    )
+    gm_lattice._lattice -= 0.01 * param * tet.common_variable.lattice_conjugate(total_grad)
     # Maybe you want to save file
     tet.common_variable.dump(gm_lattice, "/dev/null")
 

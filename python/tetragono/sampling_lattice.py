@@ -17,6 +17,7 @@
 #
 
 from copyreg import _slotnames
+import numpy as np
 from .auxiliaries import SingleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
 
@@ -696,7 +697,7 @@ class SamplingLattice(AbstractLattice):
         """
         super()._init_by_copy(abstract)
 
-        self._lattice = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
+        self._lattice = np.array([[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)])
 
     def __getitem__(self, l1l2):
         """
@@ -729,12 +730,6 @@ class SamplingLattice(AbstractLattice):
         l1, l2 = l1l2
         self._lattice[l1][l2] = value
 
-    def lattice_map(self, func, *args):
-        """
-        Map function to several lattice shape tensors.
-        """
-        return [[func(*(t[l1][l2] for t in args)) for l2 in range(self.L2)] for l1 in range(self.L1)]
-
     def lattice_dot(self, a, b):
         """
         Dot of two lattice shape tensors, like vector dot product.
@@ -756,11 +751,3 @@ class SamplingLattice(AbstractLattice):
                 tb = b[l1][l2]
                 result += ta.conjugate(positive_contract=True).contract(tb, {(name, name) for name in ta.names})
         return complex(result).real
-
-    def lattice_sum(self, result, to_sum):
-        """
-        Summation lattice shape tensors into result.
-        """
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                result[l1][l2] += to_sum[l1][l2]

@@ -401,11 +401,7 @@ class Observer():
             The gradient for every tensor.
         """
         energy, _ = self.total_energy
-        return self._owner.lattice_map(
-            lambda x1, x2: 2 * (x1 / self._total_weight) - 2 * energy * (x2 / self._total_weight),
-            self._EDelta,
-            self._Delta,
-        )
+        return 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) / self._total_weight)
 
     def _metric_mv(self, gradient, epsilon, *, sj_shift_per_site=None):
         """
@@ -429,7 +425,7 @@ class Observer():
         if sj_shift_per_site is not None:
             shift = sj_shift_per_site * owner.site_number
 
-            result_1 = [[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)]
+            result_1 = np.array([[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
             all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(owner.L1)
                                        for l2 in range(owner.L2) for orbit, edge in owner.physics_edges[l1, l2].items()}
             for reweight, deltas, configuration in self._Deltas:
@@ -471,74 +467,33 @@ class Observer():
                     param += owner.lattice_dot(holes, gradient) * value
                 param += shift * owner.lattice_dot(configuration.holes(), gradient)
                 param *= reweight / self._total_weight
-                to_sum = owner.lattice_map(
-                    lambda x1: param * x1,
-                    deltas,
-                )
-                owner.lattice_sum(result_1, to_sum)
+                result_1 += param * np.array(deltas)
             allreduce_lattice_buffer(result_1)
 
-            delta = owner.lattice_map(
-                lambda x1: x1 / self._total_weight,
-                self._Delta,
-            )
-            edelta = owner.lattice_map(
-                lambda x1: x1 / self._total_weight,
-                self._EDelta,
-            )
+            delta = np.array(self._Delta) / self._total_weight
+            edelta = np.array(self._EDelta) / self._total_weight
 
             param = owner.lattice_dot(delta, gradient) * (self.total_energy[0] + shift)
-            result_2 = owner.lattice_map(
-                lambda x1: x1 * param,
-                delta,
-            )
+            result_2 = delta * param
 
             param = owner.lattice_dot(delta, gradient)
-            result_3 = owner.lattice_map(
-                lambda x1: x1 * param,
-                edelta,
-            )
+            result_3 = edelta * param
             param = owner.lattice_dot(edelta, gradient)
-            result_4 = owner.lattice_map(
-                lambda x1: x1 * param,
-                delta,
-            )
+            result_4 = delta * param
 
-            return owner.lattice_map(
-                lambda x1, x2, x3, x4, x5: x1 + x2 - x3 - x4 + epsilon * x5,
-                result_1,
-                result_2,
-                result_3,
-                result_4,
-                gradient,
-            )
+            return result_1 + result_2 - result_3 - result_4 + epsilon * gradient
         else:
             # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
-            result_1 = [[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)]
+            result_1 = np.array([[self._Delta[l1][l2].same_shape().zero() for l2 in range(owner.L2)] for l1 in range(owner.L1)])
             for reweight, deltas, _ in self._Deltas:
                 param = owner.lattice_dot(deltas, gradient) * reweight / self._total_weight
-                to_sum = owner.lattice_map(
-                    lambda x1: param * x1,
-                    deltas,
-                )
-                owner.lattice_sum(result_1, to_sum)
+                result_1 += param * np.array(deltas)
             allreduce_lattice_buffer(result_1)
 
-            delta = owner.lattice_map(
-                lambda x1: x1 / self._total_weight,
-                self._Delta,
-            )
+            delta = np.array(self._Delta) / self._total_weight
             param = owner.lattice_dot(delta, gradient)
-            result_2 = owner.lattice_map(
-                lambda x1: x1 * param,
-                delta,
-            )
-            return owner.lattice_map(
-                lambda x1, x2, x3: x1 - x2 + epsilon * x3,
-                result_1,
-                result_2,
-                gradient,
-            )
+            result_2 = delta * param
+            return  result_1 - result_2 + epsilon * gradient
 
     def natural_gradient(self, step, epsilon, *, sj_shift_per_site=None):
         """
@@ -563,13 +518,9 @@ class Observer():
         # A = metric
         # A x = b
 
-        x = [[t.same_shape().zero() for t in row] for row in b]
+        x = np.array([[t.same_shape().zero() for t in row] for row in b])
         # r = b - A@x
-        r = owner.lattice_map(
-            lambda x1, x2: x1 - x2,
-            b,
-            self._metric_mv(x, epsilon, sj_shift_per_site=sj_shift_per_site),
-        )
+        r = b - self._metric_mv(x, epsilon, sj_shift_per_site=sj_shift_per_site)
         # p = r
         p = r
         for t in range(step):
@@ -578,27 +529,15 @@ class Observer():
             alpha = owner.lattice_dot(r, r) / owner.lattice_dot(
                 p, self._metric_mv(p, epsilon, sj_shift_per_site=sj_shift_per_site))
             # x = x + alpha * p
-            x = owner.lattice_map(
-                lambda x1, x2: x1 + alpha * x2,
-                x,
-                p,
-            )
+            x = x + alpha * p
             # new_r = r - alpha * A @ p
-            new_r = owner.lattice_map(
-                lambda x1, x2: x1 - alpha * x2,
-                r,
-                self._metric_mv(p, epsilon, sj_shift_per_site=sj_shift_per_site),
-            )
+            new_r = r - alpha * self._metric_mv(p, epsilon, sj_shift_per_site=sj_shift_per_site)
             # beta = (new_r @ new_r) / (r @ r)
             beta = owner.lattice_dot(new_r, new_r) / owner.lattice_dot(r, r)
             # r = new_r
             r = new_r
             # p = r + beta * p
-            p = owner.lattice_map(
-                lambda x1, x2: x1 + beta * x2,
-                r,
-                p,
-            )
+            p = r + beta * p
         return x
 
     def fix_relative_parameter(self, lattice):
