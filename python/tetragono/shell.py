@@ -180,10 +180,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su_dump(*config.args, **config.kwargs)
 
     def su_dump(self, name):
-        if common_variable.mpi_rank == 0:
-            with open(name, "wb") as file:
-                pickle.dump(self.su, file)
-        common_variable.mpi_comm.barrier()
+        common_variable.dump(self.su, name)
 
     def do_su_load(self, line):
         """
@@ -198,8 +195,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su_load(*config.args, **config.kwargs)
 
     def su_load(self, name):
-        with open(name, "rb") as file:
-            self.su = pickle.load(file)
+        self.su = common_variable.load(name)
 
     def do_su_update(self, line):
         """
@@ -296,10 +292,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex_dump(*config.args, **config.kwargs)
 
     def ex_dump(self, name):
-        if common_variable.mpi_rank == 0:
-            with open(name, "wb") as file:
-                pickle.dump(self.ex, file)
-        common_variable.mpi_comm.barrier()
+        common_variable.dump(self.ex, name)
 
     def do_ex_load(self, line):
         """
@@ -314,8 +307,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex_load(*config.args, **config.kwargs)
 
     def ex_load(self, name):
-        with open(name, "rb") as file:
-            self.ex = pickle.load(file)
+        self.ex = common_variable.load(name)
 
     def do_gm_create(self, line):
         """
@@ -378,10 +370,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_dump(*config.args, **config.kwargs)
 
     def gm_dump(self, name):
-        if common_variable.mpi_rank == 0:
-            with open(name, "wb") as file:
-                pickle.dump(self.gm, file)
-        common_variable.mpi_comm.barrier()
+        common_variable.dump(self.gm, name)
 
     def do_gm_load(self, line):
         """
@@ -396,8 +385,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_load(*config.args, **config.kwargs)
 
     def gm_load(self, name):
-        with open(name, "rb") as file:
-            self.gm = pickle.load(file)
+        self.gm = common_variable.load(name)
 
     def do_gm_expand(self, line):
         """

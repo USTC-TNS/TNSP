@@ -77,12 +77,12 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
                     configuration.refresh_all()
                     reweight_observer(possibility, configuration)
                     show(f"predicting eta={eta}, energy={reweight_observer.energy}")
-            result = mpi_comm.bcast(observer._lattice_dot(grad, reweight_observer.gradient), root=0)
+            result = mpi_comm.bcast(state.lattice_dot(grad, reweight_observer.gradient), root=0)
             showln(f"predict eta={eta}, energy={reweight_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
         return grad_dot_pool[eta]
 
-    grad_dot_pool[0] = mpi_comm.bcast(observer._lattice_dot(grad, observer.gradient), root=0)
+    grad_dot_pool[0] = mpi_comm.bcast(state.lattice_dot(grad, observer.gradient), root=0)
     if grad_dot(0.0) > 0:
         begin = 0.0
         end = step_size * line_search_amplitude
@@ -344,9 +344,12 @@ def gradient_descent(
                                                  grad_step_size, param, line_search_amplitude,
                                                  line_search_error_threshold)
                     real_step_size = grad_step_size * param
-                    for l1 in range(state.L1):
-                        for l2 in range(state.L2):
-                            state[l1, l2] -= real_step_size * grad[l1][l2].conjugate(positive_contract=True)
+                    state.lattice_sum(
+                        state._lattice,
+                        state.lattice_map(
+                            lambda x1: -real_step_size * x1.conjugate(positive_contract=True),
+                            grad,
+                        ))
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
                         total_grad = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
@@ -355,9 +358,9 @@ def gradient_descent(
                                 total_grad[l1][l2] = grad[l1][l2]
                     else:
                         if orthogonalize_momentum:
-                            # _lattice_dot always return a real number
-                            param = mpi_comm.bcast(observer._lattice_dot(total_grad, state._lattice) /
-                                                   observer._lattice_dot(state._lattice, state._lattice),
+                            # lattice_dot always return a real number
+                            param = mpi_comm.bcast(state.lattice_dot(total_grad, state._lattice) /
+                                                   state.lattice_dot(state._lattice, state._lattice),
                                                    root=0)
                             for l1 in range(state.L1):
                                 for l2 in range(state.L2):
@@ -383,9 +386,12 @@ def gradient_descent(
                         real_step_size = grad_step_size * param
                     else:
                         real_step_size = grad_step_size
-                    for l1 in range(state.L1):
-                        for l2 in range(state.L2):
-                            state[l1, l2] -= real_step_size * this_grad[l1][l2].conjugate(positive_contract=True)
+                    state.lattice_sum(
+                        state._lattice,
+                        state.lattice_map(
+                            lambda x1: -real_step_size * x1.conjugate(positive_contract=True),
+                            this_grad,
+                        ))
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge

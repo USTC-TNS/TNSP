@@ -17,6 +17,10 @@
 #
 
 import signal
+try:
+    import cPickle as pickle
+except:
+    import pickle
 from mpi4py import MPI
 import TAT
 from . import No
@@ -118,3 +122,15 @@ class SeedDiffer:
 
 
 seed_differ = SeedDiffer()
+
+
+def load(file_name):
+    with open(file_name, "rb") as file:
+        return pickle.load(file)
+
+
+def dump(obj, file_name):
+    if mpi_rank == 0:
+        with open(file_name, "wb") as file:
+            pickle.dump(obj, file)
+    mpi_comm.barrier()

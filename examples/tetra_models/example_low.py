@@ -12,9 +12,7 @@ su_lattice = tet.SimpleUpdateLattice(abstract_lattice)
 
 # Use pythonic style, aka, piclle, to save data.
 # But should check mpi rank when saving data.
-if tet.common_variable.mpi_rank == 0:
-    with open("/dev/null", "wb") as file:
-        pickle.dump(su_lattice, file)
+tet.common_variable.dump(su_lattice, "/dev/null")
 
 su_lattice.update(100, 0.01, 5)
 
@@ -26,14 +24,24 @@ tet.common_variable.showln("Exact energy is", ex_lattice.observe_energy())
 
 gm_lattice = tet.conversion.simple_update_lattice_to_sampling_lattice(su_lattice)
 # To run gradient, create observer first
-observer = tet.Observer(gm_lattice, restrict_subspace=None)
-observer.add_energy()
-observer.enable_gradient()
-observer.enable_natural_gradient()
+observer1 = tet.Observer(gm_lattice, restrict_subspace=None)
+observer1.add_energy()
+observer1.enable_gradient()
+observer1.enable_natural_gradient()
 # The measurement name is customed in fact
-observer.add_observer("Sz", kitaev.Sz.measurement(gm_lattice))
+observer1.add_observer("Sz", kitaev.Sz.measurement(gm_lattice))
+# You can create another observer
+observer2 = tet.Observer(gm_lattice, restrict_subspace=None)
+observer2.add_energy()
+observer2.enable_gradient()
+observer2.enable_natural_gradient()
 # Run gradient
 for grad_step in range(10):
+    # Choose observer
+    if grad_step % 2 == 0:
+        observer = observer1
+    else:
+        observer = observer2
     # Prepare sampling environment
     with tet.common_variable.seed_differ, observer:
         # create sampling object and do sampling
@@ -42,26 +50,29 @@ for grad_step in range(10):
             observer(*sampling())
     tet.common_variable.showln("grad", grad_step, *observer.energy)
     # Get Sz measure result
-    tet.common_variable.showln("   Sz:", observer.result["Sz"])
+    if observer == observer1:
+        tet.common_variable.showln("   Sz:", observer.result["Sz"])
     # Get gradient
     grad = observer.natural_gradient(step=20, epsilon=0.01)
     # Maybe you want to use momentum
     if grad_step == 0:
         total_grad = grad
     else:
-        for l1 in range(gm_lattice.L1):
-            for l2 in range(gm_lattice.L2):
-                total_grad[l1][l2] = total_grad[l1][l2] * 0.9 + grad[l1][l2] * 0.1
+        total_grad = gm_lattice.lattice_map(
+            lambda x1, x2: x1 * 0.9 + x2 * 0.1,
+            total_grad,
+            grad,
+        )
     # Fix relative step size
     param = observer.fix_relative_parameter(total_grad)
     # Apply gradient
-    for l1 in range(gm_lattice.L1):
-        for l2 in range(gm_lattice.L2):
-            gm_lattice[l1, l2] -= 0.01 * param * total_grad[l1][l2].conjugate(positive_contract=True)
+    gm_lattice._lattice = gm_lattice.lattice_map(
+        lambda x1, x2: x1 - 0.01 * param * x2.conjugate(positive_contract=True),
+        gm_lattice._lattice,
+        total_grad,
+    )
     # Maybe you want to save file
-    if tet.common_variable.mpi_rank == 0:
-        with open("/dev/null", "wb") as file:
-            pickle.dump(gm_lattice, file)
+    tet.common_variable.dump(gm_lattice, "/dev/null")
 
 # low level api usage TODO
 # + easy usage of sweep
