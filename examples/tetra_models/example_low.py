@@ -56,7 +56,7 @@ for grad_step in range(10):
     else:
         total_grad = total_grad * 0.9 + grad * 0.1
     # Apply gradient
-    gm_lattice._lattice -= 0.01 * tet.lattice_conjugate(gm_lattice.fix_relative_to_lattice(total_grad))
+    gm_lattice._lattice -= 0.01 * gm_lattice.fix_relative_to_lattice(total_grad)
     # Fix gauge
     gm_lattice.expand_dimension(1.0, 0)
     # Bcast buffer to avoid numeric error

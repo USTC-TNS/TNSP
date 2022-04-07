@@ -18,7 +18,7 @@
 
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_toolkit import show, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum
+from ..common_toolkit import show, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum, lattice_conjugate
 from .tensor_element import tensor_element
 
 
@@ -427,8 +427,9 @@ class Observer():
             The gradient for every tensor.
         """
         energy, _ = self.total_energy
-        return 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) /
-                                                                                 self._total_weight)
+        b = 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) /
+                                                                              self._total_weight)
+        return lattice_conjugate(b)
 
     def _metric_mv(self, gradient, epsilon, *, sj_shift_per_site=None):
         """
@@ -542,8 +543,9 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        owner = self._owner
-        b = self.gradient
+        energy, _ = self.total_energy
+        b = 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) /
+                                                                              self._total_weight)
         # A = metric
         # A x = b
 
@@ -567,4 +569,4 @@ class Observer():
             r = new_r
             # p = r + beta * p
             p = r + beta * p
-        return x
+        return lattice_conjugate(x)

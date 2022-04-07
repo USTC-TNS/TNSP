@@ -25,7 +25,7 @@ import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_conjugate, lattice_dot_sum, write_to_file, read_from_file)
+                              seed_differ, lattice_dot_sum, write_to_file, read_from_file)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -44,7 +44,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
         for l2 in range(state.L2):
             showln(l1, l2)
             s = state[l1, l2].storage
-            g = grad[l1][l2].conjugate(positive_contract=True).storage
+            g = grad[l1][l2].storage
             for i in range(len(s)):
                 s[i] += delta
                 now_energy = get_energy()
@@ -70,7 +70,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         if eta not in grad_dot_pool:
             for l1 in range(state.L1):
                 for l2 in range(state.L2):
-                    state[l1, l2] = saved_state[l1][l2] - eta * grad[l1][l2].conjugate(positive_contract=True)
+                    state[l1, l2] = saved_state[l1][l2] - eta * grad[l1][l2]
             with energy_observer:
                 for possibility, configuration in configuration_pool:
                     configuration.refresh_all()
@@ -328,7 +328,7 @@ def gradient_descent(
                     grad = state.fix_relative_to_lattice(grad)
                     grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
                                                  grad_step_size, line_search_amplitude, line_search_error_threshold)
-                    state._lattice -= grad_step_size * lattice_conjugate(grad)
+                    state._lattice -= grad_step_size * grad
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
                         total_grad = grad
@@ -354,7 +354,7 @@ def gradient_descent(
                     if use_fix_relative_step_size:
                         showln("fix relative step size")
                         this_grad = state.fix_relative_to_lattice(this_grad)
-                    state._lattice -= grad_step_size * lattice_conjugate(this_grad)
+                    state._lattice -= grad_step_size * this_grad
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge
