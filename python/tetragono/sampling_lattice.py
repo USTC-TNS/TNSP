@@ -20,6 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from .auxiliaries import SingleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
+from .common_toolkit import lattice_dot_sum
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -816,3 +817,20 @@ class SamplingLattice(AbstractLattice):
         down = down_q.contract(v, {("U", "D_D")}).contract(i, {("U", "D")})
         self[l1, l2] = up.edge_rename({u_name: u_name[2:] for u_name in up.names if u_name.startswith("U_")})
         self[l1 + 1, l2] = down.edge_rename({d_name: d_name[2:] for d_name in down.names if d_name.startswith("D_")})
+
+    def fix_relative_to_lattice(self, lattice):
+        """
+        Get fixed relative to lattice tensors for a lattice shape data.
+
+        Parameters
+        ----------
+        lattice : list[list[Tensor]]
+            The lattice shape data.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The result lattice shape data which have the same norm to the lattice tensor.
+        """
+        param = (lattice_dot_sum(self._lattice, self._lattice) / lattice_dot_sum(lattice, lattice))**0.5
+        return param * lattice
