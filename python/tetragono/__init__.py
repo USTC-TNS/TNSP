@@ -32,7 +32,6 @@ from .common_toolkit import *
 
 # Deprecated
 from . import common_variable_deprecated
-import sys
 
 
 def __getattr__(name):

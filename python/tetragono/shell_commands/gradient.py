@@ -25,7 +25,7 @@ import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_dot_sum, write_to_file, read_from_file)
+                              seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -335,20 +335,13 @@ def gradient_descent(
                     else:
                         if orthogonalize_momentum:
                             # lattice_dot always return a real number
-                            param = mpi_comm.bcast(
-                                lattice_dot_sum(total_grad, state._lattice) /
-                                lattice_dot_sum(state._lattice, state._lattice))
+                            param = lattice_dot_sum(total_grad, state._lattice) / lattice_dot_sum(
+                                state._lattice, state._lattice)
                             total_grad = total_grad - state._lattice * param
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     if use_random_gradient:
                         showln("use random gradient")
-                        this_grad = [[None for l2 in range(state.L2)] for l1 in range(state.L1)]
-                        for l1 in range(state.L1):
-                            for l2 in range(state.L2):
-                                this_site_grad = total_grad[l1][l2]
-                                random_same_shape = this_site_grad.same_shape().rand(0, 1)
-                                random_same_shape.storage *= np.sign(this_site_grad.storage)
-                                this_grad[l1][l2] = random_same_shape
+                        this_grad = lattice_randomize(total_grad)
                     else:
                         this_grad = total_grad
                     if use_fix_relative_step_size:
