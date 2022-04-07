@@ -46,7 +46,7 @@ def create(L1, L2, l1, l2, D, J):
             for i, j in enumerate(edge_pool[i1][i2]):
                 edge_map[j] = (i1, i2, i)
                 state.physics_edges[(i1, i2, i)] = 2
-    SS = tet.common_variable.No.SS.to(float)
+    SS = tet.common_tensor.No.SS.to(float)
     H = -J * SS
     for I1 in range(L1):
         for I2 in range(L2):

@@ -41,9 +41,9 @@ def create(L1, L2, D, Jx, Jy, Jz):
                 state.physics_edges[l1, l2, 0] = 2
             if (l1, l2) != (L1 - 1, L2 - 1):
                 state.physics_edges[l1, l2, 1] = 2
-    pauli_x_pauli_x = tet.common_variable.No.pauli_x_pauli_x.to(complex)
-    pauli_y_pauli_y = tet.common_variable.No.pauli_y_pauli_y.to(complex)
-    pauli_z_pauli_z = tet.common_variable.No.pauli_z_pauli_z.to(complex)
+    pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(complex)
+    pauli_y_pauli_y = tet.common_tensor.No.pauli_y_pauli_y.to(complex)
+    pauli_z_pauli_z = tet.common_tensor.No.pauli_z_pauli_z.to(complex)
     Hx = -Jx * pauli_x_pauli_x
     Hy = -Jy * pauli_y_pauli_y
     Hz = -Jz * pauli_z_pauli_z

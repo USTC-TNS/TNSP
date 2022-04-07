@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_variable import show, showln, mpi_comm, mpi_rank, mpi_size
+from .common_toolkit import show, showln, mpi_comm, mpi_rank, mpi_size
 
 
 class SimpleUpdateLatticeEnvironment:

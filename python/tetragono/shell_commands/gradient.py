@@ -25,8 +25,8 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..common_variable import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                               seed_differ, lattice_conjugate, lattice_dot_sum, dump)
+from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
+                              seed_differ, lattice_conjugate, lattice_dot_sum, write_to_file)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -304,8 +304,7 @@ def gradient_descent(
                 if sampling_method == "sweep":
                     to_dump = mpi_comm.gather(sampling.configuration._configuration)
                     if mpi_rank == 0:
-                        with open(sweep_configuration_dump_file, "wb") as file:
-                            pickle.dump(to_dump, file)
+                        write_to_file(to_dump, sweep_configuration_dump_file)
                 else:
                     raise ValueError("Dump configuration into file is only supported for sweep sampling")
 
@@ -376,6 +375,6 @@ def gradient_descent(
 
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
-                    dump(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
+                    write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
             if sigint_handler():
                 break

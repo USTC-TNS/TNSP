@@ -38,8 +38,8 @@ def create(L1, L2, D, T, t, U):
     state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
     state.total_symmetry = T
     state.physics_edges[...] = [(0, 1), (1, 2), (2, 1)]
-    NN = tet.common_variable.Fermi_Hubbard.NN.to(float)
-    CSCS = tet.common_variable.Fermi_Hubbard.CSCS.to(float)
+    NN = tet.common_tensor.Fermi_Hubbard.NN.to(float)
+    CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
     state.hamiltonians["vertical_bond"] = -t * CSCS
     state.hamiltonians["horizontal_bond"] = -t * CSCS
     state.hamiltonians["single_site"] = U * NN

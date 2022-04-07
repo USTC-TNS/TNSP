@@ -36,10 +36,10 @@ def create(L1, L2, D, T, t, J):
         tJ model parameters.
     """
     state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
-    state.physics_edges[...] = tet.common_variable.FermiU1_tJ.EF
-    CC = tet.common_variable.FermiU1_tJ.CC.to(float)
-    SS = tet.common_variable.FermiU1_tJ.SS.to(float)
-    nn = tet.common_variable.FermiU1_tJ.nn.to(float)
+    state.physics_edges[...] = tet.common_tensor.FermiU1_tJ.EF
+    CC = tet.common_tensor.FermiU1_tJ.CC.to(float)
+    SS = tet.common_tensor.FermiU1_tJ.SS.to(float)
+    nn = tet.common_tensor.FermiU1_tJ.nn.to(float)
     H = (-t) * CC + (J / 2) * (SS - nn / 4)
     state.hamiltonians["vertical_bond"] = H
     state.hamiltonians["horizontal_bond"] = H

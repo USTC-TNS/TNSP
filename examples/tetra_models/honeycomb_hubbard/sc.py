@@ -17,9 +17,9 @@
 #
 
 import numpy as np
-from tetragono.common_variable.tensor_toolkit import kronecker_product, rename_io
-from tetragono.common_variable.Fermi import CP, CM, I
-from tetragono.common_variable.Fermi_Hubbard import put_sign_in_H
+from tetragono.common_tensor.tensor_toolkit import kronecker_product, rename_io
+from tetragono.common_tensor.Fermi import CP, CM, I
+from tetragono.common_tensor.Fermi_Hubbard import put_sign_in_H
 
 # merge order: up down
 CPU = kronecker_product(rename_io(CP, {0: 0}), rename_io(I, {0: 1})).merge_edge({

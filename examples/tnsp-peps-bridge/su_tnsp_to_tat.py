@@ -69,8 +69,8 @@ for l1 in range(L1):
             diff = pool[l1, l2 - 1, "r"] - pool[l1, l2, "l"]
             assert diff.norm_max() < 1e-6
 
-CSCS = tet.common_variable.Fermi_Hubbard.CSCS.to(float)
-NN = tet.common_variable.Fermi_Hubbard.NN.to(float)
+CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
+NN = tet.common_tensor.Fermi_Hubbard.NN.to(float)
 
 state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
 for l1 in range(L1):

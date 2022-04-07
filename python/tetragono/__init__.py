@@ -26,3 +26,18 @@ from .sampling_lattice import SamplingLattice
 # Miscellaneous
 from . import conversion
 from .sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
+from . import common_tensor
+from . import common_toolkit
+
+# Deprecated
+from . import common_variable_deprecated
+import sys
+
+
+def __getattr__(name):
+    if name == "common_variable":
+        print(
+            " ###### DEPRECATE WARNING: common_variable is deprecated, use common_tensor or common_toolkit instead. ###### "
+        )
+        return common_variable_deprecated
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

@@ -35,8 +35,8 @@ def create(L1, L2, D, J, g):
     """
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     state.physics_edges[...] = 2
-    sigma_x = tet.common_variable.No.pauli_x.to(float)
-    sigma_z_sigma_z = tet.common_variable.No.pauli_z_pauli_z.to(float)
+    sigma_x = tet.common_tensor.No.pauli_x.to(float)
+    sigma_z_sigma_z = tet.common_tensor.No.pauli_z_pauli_z.to(float)
     state.hamiltonians["vertical_bond"] = -J * sigma_z_sigma_z
     state.hamiltonians["horizontal_bond"] = -J * sigma_z_sigma_z
     state.hamiltonians["single_site"] = -J * g * sigma_x

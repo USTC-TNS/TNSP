@@ -34,8 +34,8 @@ def create(L1, L2, D, T):
         The total particle number.
     """
     state = tet.AbstractState(TAT.Fermi.Z.Tensor, L1, L2)
-    state.physics_edges[...] = tet.common_variable.Fermi.EF
-    CC = tet.common_variable.Fermi.CC.to(complex)
+    state.physics_edges[...] = tet.common_tensor.Fermi.EF
+    CC = tet.common_tensor.Fermi.CC.to(complex)
     state.hamiltonians["vertical_bond"] = CC
     state.hamiltonians["horizontal_bond"] = CC
     state.total_symmetry = T

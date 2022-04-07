@@ -18,7 +18,7 @@
 
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_variable import show, allreduce_lattice_buffer, allreduce_buffer, lattice_dot_sum, lattice_update
+from ..common_toolkit import show, allreduce_lattice_buffer, allreduce_buffer, lattice_dot_sum, lattice_update
 from .tensor_element import tensor_element
 
 

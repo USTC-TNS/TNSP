@@ -41,7 +41,7 @@ def create(L1, L2, D, J):
                 state.physics_edges[l1, l2, 1] = 2
             if l2 != L2 - 1:
                 state.physics_edges[l1, l2, 2] = 2
-    SS = tet.common_variable.No.SS.to(float)
+    SS = tet.common_tensor.No.SS.to(float)
     H = -J * SS
     for l1 in range(L1):
         for l2 in range(L2):

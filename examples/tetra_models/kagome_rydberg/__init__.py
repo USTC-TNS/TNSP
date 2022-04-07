@@ -18,7 +18,7 @@
 
 import TAT
 import tetragono as tet
-from tetragono.common_variable.tensor_toolkit import rename_io, kronecker_product
+from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product
 
 
 def create(L1, L2, D, delta, omega, U):
@@ -56,8 +56,8 @@ def create(L1, L2, D, delta, omega, U):
             if l1 != L1 - 1:
                 state.physics_edges[l1, l2, 5] = 2
 
-    sigma = tet.common_variable.No.pauli_x.to(float)
-    n = (tet.common_variable.No.identity.to(float) - tet.common_variable.No.pauli_z.to(float)) / 2
+    sigma = tet.common_tensor.No.pauli_x.to(float)
+    n = (tet.common_tensor.No.identity.to(float) - tet.common_tensor.No.pauli_z.to(float)) / 2
     H = -omega * sigma / 2 - delta * n
 
     for l1 in range(L1):

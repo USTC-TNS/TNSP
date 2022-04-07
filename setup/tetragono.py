@@ -31,7 +31,7 @@ setup(
     url="https://github.com/hzhangxyz/TAT",
     packages=[
         "tetragono",
-        "tetragono/common_variable",
+        "tetragono/common_tensor",
         "tetragono/sampling_tools",
         "tetragono/shell_commands",
         "tetragono/auxiliaries",

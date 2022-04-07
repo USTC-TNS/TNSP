@@ -20,7 +20,7 @@ import tetragono as tet
 
 
 def measurement(state):
-    N_up = tet.common_variable.Fermi_Hubbard.CUCU.to(float)
+    N_up = tet.common_tensor.Fermi_Hubbard.CUCU.to(float)
     result = {((l1, l2, orbit),): N_up for l1 in range(state.L1) for l2 in range(state.L2)
               for orbit in range(0 if (l1, l2) != (0, 0) else 1, 2 if (l1, l2) != (state.L1 - 1, state.L2 - 1) else 1)}
     return result

@@ -38,10 +38,10 @@ def create(L1, L2, D, J, K, mu):
     for l1 in range(L1):
         for l2 in range(L2):
             state.physics_edges[l1, l2, 0] = 2
-    pauli_x_pauli_x = tet.common_variable.No.pauli_x_pauli_x.to(float)
-    pauli_y_pauli_y = tet.common_variable.No.pauli_y_pauli_y.to(float)
-    pauli_z = tet.common_variable.No.pauli_z.to(float)
-    identity = tet.common_variable.No.identity.to(float)
+    pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(float)
+    pauli_y_pauli_y = tet.common_tensor.No.pauli_y_pauli_y.to(float)
+    pauli_z = tet.common_tensor.No.pauli_z.to(float)
+    identity = tet.common_tensor.No.identity.to(float)
 
     plaq = Tensor(["I0", "O0", "I1", "O1", "I2", "O2", "I3", "O3"], [2, 2, 2, 2, 2, 2, 2, 2]).zero()
     plaq[{"I0": 0, "I1": 1, "I2": 0, "I3": 1, "O0": 1, "O1": 0, "O2": 1, "O3": 0}] = 1

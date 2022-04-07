@@ -43,8 +43,8 @@ def create(L1, L2, D, T, t, U):
                 state.physics_edges[l1, l2, 0] = [(0, 1), (1, 2), (2, 1)]
             if (l1, l2) != (L1 - 1, L2 - 1):
                 state.physics_edges[l1, l2, 1] = [(0, 1), (1, 2), (2, 1)]
-    NN = tet.common_variable.Fermi_Hubbard.NN.to(float)
-    CSCS = tet.common_variable.Fermi_Hubbard.CSCS.to(float)
+    NN = tet.common_tensor.Fermi_Hubbard.NN.to(float)
+    CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
     UNN = U * NN
     tCSCS = -t * CSCS
     for l1 in range(L1):

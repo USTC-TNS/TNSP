@@ -35,7 +35,7 @@ def create(L1, L2, D, J):
     """
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     state.physics_edges[...] = 2
-    SS = tet.common_variable.No.SS.to(float)
+    SS = tet.common_tensor.No.SS.to(float)
     state.hamiltonians["vertical_bond"] = -J * SS
     state.hamiltonians["horizontal_bond"] = -J * SS
     state = tet.AbstractLattice(state)

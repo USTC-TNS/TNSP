@@ -17,7 +17,7 @@
 #
 
 from copyreg import _slotnames
-from .common_variable import show, showln
+from .common_toolkit import show, showln
 from .abstract_state import AbstractState
 
 

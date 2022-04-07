@@ -20,7 +20,7 @@ import numpy as np
 import TAT
 from ..auxiliaries import DoubleLayerAuxiliaries, ThreeLineAuxiliaries
 from ..sampling_lattice import Configuration
-from ..common_variable import mpi_rank, mpi_size
+from ..common_toolkit import mpi_rank, mpi_size
 from .tensor_element import tensor_element
 
 

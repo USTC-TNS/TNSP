@@ -24,10 +24,6 @@ import signal
 from mpi4py import MPI
 import numpy as np
 import TAT
-from . import No
-from . import Fermi
-from . import FermiU1_tJ
-from . import Fermi_Hubbard
 
 clear_line = "\u001b[2K"
 
@@ -125,12 +121,12 @@ class SeedDiffer:
 seed_differ = SeedDiffer()
 
 
-def load(file_name):
+def read_from_file(file_name):
     with open(file_name, "rb") as file:
         return pickle.load(file)
 
 
-def dump(obj, file_name):
+def write_to_file(obj, file_name):
     if mpi_rank == 0:
         with open(file_name, "wb") as file:
             pickle.dump(obj, file)
