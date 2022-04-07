@@ -112,7 +112,15 @@ class Observer():
             allreduce_lattice_buffer(self._Delta)
             allreduce_lattice_buffer(self._EDelta)
 
-    def __init__(self, owner, restrict_subspace):
+    def __init__(self,
+                 owner,
+                 *,
+                 enable_energy=False,
+                 enable_gradient=False,
+                 enable_natural_gradient=False,
+                 cache_configuration=False,
+                 observer_set=None,
+                 restrict_subspace=None):
         """
         Create observer object for the given sampling lattice.
 
@@ -120,6 +128,16 @@ class Observer():
         ----------
         owner : SamplingLattice
             The owner of this obsever object.
+        enable_energy : bool
+            Enable observing the energy.
+        enable_gradient : bool
+            Enable calculating the gradient.
+        enable_natural_gradient : bool
+            Enable calculating the natural gradient.
+        cache_configuration : bool
+            Enable cache the configuration during observing.
+        observer_set : dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
+            The given observers to observe.
         restrict_subspace
             A function return bool to restrict sampling subspace.
         """
@@ -147,6 +165,14 @@ class Observer():
         self._pool = None
 
         self._restrict_subspace = restrict_subspace
+        if observer_set is not None:
+            self._observer = observer_set
+        if enable_energy:
+            self.add_energy()
+        if enable_gradient:
+            self.enable_gradient()
+        if enable_natural_gradient:
+            self.enable_natural_gradient()
 
     def cache_configuration(self, cache_configuration):
         """

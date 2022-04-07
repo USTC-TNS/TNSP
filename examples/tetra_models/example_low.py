@@ -24,17 +24,13 @@ tet.common_variable.showln("Exact energy is", ex_lattice.observe_energy())
 
 gm_lattice = tet.conversion.simple_update_lattice_to_sampling_lattice(su_lattice)
 # To run gradient, create observer first
-observer1 = tet.Observer(gm_lattice, restrict_subspace=None)
-observer1.add_energy()
-observer1.enable_gradient()
-observer1.enable_natural_gradient()
-# The measurement name is customed in fact
-observer1.add_observer("Sz", kitaev.Sz.measurement(gm_lattice))
+observer1 = tet.Observer(gm_lattice,
+                         enable_energy=True,
+                         enable_gradient=True,
+                         enable_natural_gradient=True,
+                         observer_set={"Sz": kitaev.Sz.measurement(gm_lattice)})
 # You can create another observer
-observer2 = tet.Observer(gm_lattice, restrict_subspace=None)
-observer2.add_energy()
-observer2.enable_gradient()
-observer2.enable_natural_gradient()
+observer2 = tet.Observer(gm_lattice, enable_energy=True, enable_gradient=True, enable_natural_gradient=True)
 # Run gradient
 for grad_step in range(10):
     # Choose observer

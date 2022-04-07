@@ -29,14 +29,14 @@ from ..common_variable import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast
                                seed_differ, lattice_conjugate, lattice_dot_sum, dump)
 
 
-def check_difference(state, observer, grad, reweight_observer, configuration_pool, check_difference_delta):
+def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
 
     def get_energy():
-        with reweight_observer:
+        with energy_observer:
             for possibility, configuration in configuration_pool:
                 configuration.refresh_all()
-                reweight_observer(possibility, configuration)
-        return reweight_observer.energy[0] * state.site_number
+                energy_observer(possibility, configuration)
+        return energy_observer.energy[0] * state.site_number
 
     original_energy = observer.energy[0] * state.site_number
     delta = check_difference_delta
@@ -62,7 +62,7 @@ def check_difference(state, observer, grad, reweight_observer, configuration_poo
                 showln(" ", cgrad, g[i])
 
 
-def line_search(state, observer, grad, reweight_observer, configuration_pool, step_size, param, line_search_amplitude,
+def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, param, line_search_amplitude,
                 line_search_error_threshold):
     saved_state = [[state[l1, l2] for l2 in range(state.L2)] for l1 in range(state.L1)]
     grad_dot_pool = {}
@@ -72,13 +72,13 @@ def line_search(state, observer, grad, reweight_observer, configuration_pool, st
             for l1 in range(state.L1):
                 for l2 in range(state.L2):
                     state[l1, l2] = saved_state[l1][l2] - eta * param * grad[l1][l2].conjugate(positive_contract=True)
-            with reweight_observer:
+            with energy_observer:
                 for possibility, configuration in configuration_pool:
                     configuration.refresh_all()
-                    reweight_observer(possibility, configuration)
-                    show(f"predicting eta={eta}, energy={reweight_observer.energy}")
-            result = mpi_comm.bcast(lattice_dot_sum(grad, reweight_observer.gradient))
-            showln(f"predict eta={eta}, energy={reweight_observer.energy}, gradient dot={result}")
+                    energy_observer(possibility, configuration)
+                    show(f"predicting eta={eta}, energy={energy_observer.energy}")
+            result = mpi_comm.bcast(lattice_dot_sum(grad, energy_observer.gradient))
+            showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
         return grad_dot_pool[eta]
 
@@ -198,8 +198,12 @@ def gradient_descent(
         restrict = None
 
     # Prepare observers
-    observer = Observer(state, restrict)
-    observer.add_energy()
+    observer = Observer(state,
+                        restrict_subspace=restrict,
+                        enable_energy=True,
+                        enable_gradient=use_gradient,
+                        enable_natural_gradient=use_natural_gradient,
+                        cache_configuration=cache_configuration)
     if measurement:
         measurement_modules = {}
         measurement_names = measurement.split(",")
@@ -207,23 +211,16 @@ def gradient_descent(
             measurement_module = importlib.import_module(measurement_name)
             measurement_modules[measurement_name] = measurement_module
             observer.add_observer(measurement_name, measurement_module.measurement(state))
-    if cache_configuration:
-        observer.cache_configuration(cache_configuration)
     if use_gradient:
-        showln("calculate gradient")
-        observer.enable_gradient()
-        if use_natural_gradient:
-            observer.enable_natural_gradient()
-        need_reweight_observer = use_line_search or use_check_difference
+        need_energy_observer = use_line_search or use_check_difference
     else:
-        showln("do NOT calculate gradient")
-        need_reweight_observer = False
-    if need_reweight_observer:
-        reweight_observer = Observer(state, restrict)
-        reweight_observer.add_energy()
-        reweight_observer.enable_gradient()
-        if cache_configuration:
-            reweight_observer.cache_configuration(cache_configuration)
+        need_energy_observer = False
+    if need_energy_observer:
+        energy_observer = Observer(state,
+                                   restrict_subspace=restrict,
+                                   enable_energy=True,
+                                   enable_gradient=True,
+                                   cache_configuration=cache_configuration)
 
     # Sampling method
     if sampling_method == "sweep":
@@ -274,7 +271,7 @@ def gradient_descent(
     # Main loop
     with SignalHandler(signal.SIGINT) as sigint_handler:
         for grad_step in range(grad_total_step):
-            if need_reweight_observer:
+            if need_energy_observer:
                 configuration_pool = []
             # Sampling and observe
             log_prod_ws = 0.0
@@ -284,7 +281,7 @@ def gradient_descent(
                         possibility, configuration = sampling()
                         log_prod_ws += np.log(np.abs(complex(configuration.hole(())).real))
                         observer(possibility, configuration)
-                        if need_reweight_observer:
+                        if need_energy_observer:
                             configuration_pool.append((possibility, configuration))
                         show(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
@@ -327,13 +324,12 @@ def gradient_descent(
                 # Change state
                 if use_check_difference:
                     showln("checking difference")
-                    check_difference(state, observer, grad, reweight_observer, configuration_pool,
-                                     check_difference_delta)
+                    check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta)
 
                 elif use_line_search:
                     showln("line searching")
                     param = observer.fix_relative_parameter(grad)
-                    grad_step_size = line_search(state, observer, grad, reweight_observer, configuration_pool,
+                    grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
                                                  grad_step_size, param, line_search_amplitude,
                                                  line_search_error_threshold)
                     real_step_size = grad_step_size * param
