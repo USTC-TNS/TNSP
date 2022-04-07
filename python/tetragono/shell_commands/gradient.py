@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import pickle
 import importlib
 import inspect
 import signal
@@ -26,7 +25,7 @@ import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_conjugate, lattice_dot_sum, write_to_file)
+                              seed_differ, lattice_conjugate, lattice_dot_sum, write_to_file, read_from_file)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -239,8 +238,7 @@ def gradient_descent(
             with seed_differ:
                 _, configuration = direct_sampling()
         elif sweep_initial_configuration == "load":
-            with open(sweep_configuration_dump_file, "rb") as file:
-                configurations = pickle.load(file)
+            configurations = read_from_file(sweep_configuration_dump_file)
             if len(configurations) < mpi_size:
                 with seed_differ:
                     choose = TAT.random.uniform_int(0, len(configurations) - 1)()

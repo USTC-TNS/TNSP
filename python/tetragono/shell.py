@@ -22,7 +22,7 @@ import cmd
 import pickle
 import importlib
 import TAT
-from . import common_toolkit
+from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln)
 from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice
@@ -70,7 +70,7 @@ Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 """
-        if common_toolkit.mpi_rank == 0:
+        if mpi_rank == 0:
             self.intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + self.license
 
         self.su = None
@@ -96,9 +96,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Run shell command.
         """
-        if common_toolkit.mpi_rank == 0:
+        if mpi_rank == 0:
             os.system(line)
-        common_toolkit.mpi_comm.barrier()
+        mpi_comm.barrier()
 
     def do_EOF(self, line):
         """
@@ -180,7 +180,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su_dump(*config.args, **config.kwargs)
 
     def su_dump(self, name):
-        common_toolkit.write_to_file(self.su, name)
+        write_to_file(self.su, name)
 
     def do_su_load(self, line):
         """
@@ -195,7 +195,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su_load(*config.args, **config.kwargs)
 
     def su_load(self, name):
-        self.su = common_toolkit.read_from_file(name)
+        self.su = read_from_file(name)
 
     def do_su_update(self, line):
         """
@@ -230,7 +230,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def su_energy(self, cut_dimension):
         self.su.initialize_auxiliaries(cut_dimension)
-        common_toolkit.showln("Simple update lattice energy is", self.su.observe_energy())
+        showln("Simple update lattice energy is", self.su.observe_energy())
 
     def do_su_to_ex(self, line):
         """
@@ -277,7 +277,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex_energy(*config.args, **config.kwargs)
 
     def ex_energy(self):
-        common_toolkit.showln("Exact state energy is", self.ex.observe_energy())
+        showln("Exact state energy is", self.ex.observe_energy())
 
     def do_ex_dump(self, line):
         """
@@ -292,7 +292,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex_dump(*config.args, **config.kwargs)
 
     def ex_dump(self, name):
-        common_toolkit.write_to_file(self.ex, name)
+        write_to_file(self.ex, name)
 
     def do_ex_load(self, line):
         """
@@ -307,7 +307,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex_load(*config.args, **config.kwargs)
 
     def ex_load(self, name):
-        self.ex = common_toolkit.read_from_file(name)
+        self.ex = read_from_file(name)
 
     def do_gm_create(self, line):
         """
@@ -351,7 +351,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_dump(*config.args, **config.kwargs)
 
     def gm_dump(self, name):
-        common_toolkit.write_to_file(self.gm, name)
+        write_to_file(self.gm, name)
 
     def do_gm_load(self, line):
         """
@@ -366,7 +366,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_load(*config.args, **config.kwargs)
 
     def gm_load(self, name):
-        self.gm = common_toolkit.read_from_file(name)
+        self.gm = read_from_file(name)
 
     def do_gm_expand(self, line):
         """
@@ -402,14 +402,14 @@ class TetragonoScriptApp(TetragonoCommandApp):
         super().__init__(*args, **kwargs)
         self.use_rawinput = False
         self.prompt = ""
-        if common_toolkit.mpi_rank == 0:
+        if mpi_rank == 0:
             self.intro = """Welcome to the tetragono shell.""" + self.license
 
     def precmd(self, line):
         line = line.strip()
         line = super().precmd(line).strip()
         if line != "":
-            common_toolkit.showln("TET> ", line, sep="")
+            showln("TET> ", line, sep="")
         self.prompt = ""
         return line
 
@@ -431,7 +431,7 @@ if __name__ == "__main__":
     elif len(sys.argv) == 2:
         script_file_name = sys.argv[1]
         if script_file_name in ["-h", "--help", "-help"]:
-            common_toolkit.showln(help_message)
+            showln(help_message)
         else:
             with open(script_file_name, "r", encoding="utf-8") as script_file:
                 sys.path.append(os.path.dirname(os.path.abspath(sys.argv[1])))
@@ -442,10 +442,10 @@ if __name__ == "__main__":
         script_file = StringIO(commands)
         TetragonoScriptApp(stdin=script_file).cmdloop()
     else:
-        common_toolkit.showln("shell.py: Error: unrecognized command-line option")
-        common_toolkit.showln(help_message)
+        showln("shell.py: Error: unrecognized command-line option")
+        showln(help_message)
         sys.exit(1)
-    common_toolkit.mpi_comm.barrier()
+    mpi_comm.barrier()
 else:
     app = TetragonoCommandApp()
 
