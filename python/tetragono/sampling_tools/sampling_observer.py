@@ -173,6 +173,7 @@ class Observer():
             self.enable_gradient()
         if enable_natural_gradient:
             self.enable_natural_gradient()
+        self.cache_configuration(cache_configuration)
 
     def cache_configuration(self, cache_configuration):
         """

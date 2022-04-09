@@ -19,7 +19,6 @@
 import os
 import sys
 import cmd
-import pickle
 import importlib
 import TAT
 from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln)
