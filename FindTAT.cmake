@@ -31,7 +31,8 @@ target_compile_options(TAT INTERFACE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 target_compile_options(TAT INTERFACE "$<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>")
 
 # try to enable mpi
-if(CMAKE_CXX_COMPILER MATCHES "mpi")
+get_filename_component(CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)
+if(CXX_COMPILER_NAME MATCHES "mpi")
    message(STATUS "Using mpi compiler directly")
    target_compile_definitions(TAT INTERFACE TAT_USE_MPI)
    if(NOT TAT_USE_MPI)
