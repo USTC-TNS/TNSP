@@ -28,9 +28,10 @@ class Observer():
     """
 
     __slots__ = [
-        "_owner", "_enable_gradient", "_enable_natural", "_start", "_observer", "_result", "_result_square",
-        "_result_reweight", "_count", "_total_weight", "_total_weight_square", "_total_energy", "_total_energy_square",
-        "_total_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_cache_configuration", "_pool", "_restrict_subspace"
+        "_owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_configuration", "_restrict_subspace",
+        "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight", "_total_weight_square",
+        "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight", "_Delta", "_EDelta",
+        "_Deltas", "_pool"
     ]
 
     def __enter__(self):
@@ -53,6 +54,7 @@ class Observer():
         self._count = 0
         self._total_weight = 0.0
         self._total_weight_square = 0.0
+        self._total_log_ws = 0.0
         self._total_energy = 0.0
         self._total_energy_square = 0.0
         self._total_energy_reweight = 0.0
@@ -88,6 +90,7 @@ class Observer():
         buffer.append(self._count)
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
+        buffer.append(self._total_log_ws)
         buffer.append(self._total_energy)
         buffer.append(self._total_energy_square)
         buffer.append(self._total_energy_reweight)
@@ -99,6 +102,7 @@ class Observer():
         self._total_energy_reweight = buffer.pop()
         self._total_energy_square = buffer.pop()
         self._total_energy = buffer.pop()
+        self._total_log_ws = buffer.pop()
         self._total_weight_square = buffer.pop()
         self._total_weight = buffer.pop()
         self._count = buffer.pop()
@@ -142,10 +146,13 @@ class Observer():
             A function return bool to restrict sampling subspace.
         """
         self._owner = owner
+        self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
         self._enable_gradient = False
         self._enable_natural = False
+        self._cache_configuration = False
+        self._restrict_subspace = None
+
         self._start = False
-        self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
 
         self._result = None  # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
         self._result_square = None
@@ -153,6 +160,7 @@ class Observer():
         self._count = None  # int
         self._total_weight = None  # float
         self._total_weight_square = None
+        self._total_log_ws = None
         self._total_energy = None
         self._total_energy_square = None
         self._total_energy_reweight = None
@@ -161,7 +169,6 @@ class Observer():
         self._EDelta = None  # list[list[Tensor]]
         self._Deltas = None
 
-        self._cache_configuration = False
         self._pool = None
 
         self._restrict_subspace = restrict_subspace
@@ -248,13 +255,14 @@ class Observer():
             if self._cache_configuration == "drop":
                 self._create_cache_configuration()
             configuration = self._pool.add(configuration)
-        reweight = configuration.hole(()).norm_2()**2 / possibility
         self._count += 1
-        self._total_weight += reweight
-        self._total_weight_square += reweight * reweight
         ws = configuration.hole(())  # ws is a tensor
         if ws.norm_num() == 0:
             return
+        reweight = ws.norm_2()**2 / possibility
+        self._total_weight += reweight
+        self._total_weight_square += reweight * reweight
+        self._total_log_ws += np.log(np.abs(complex(ws)))
         inv_ws_conj = ws / (ws.norm_2()**2)
         inv_ws = inv_ws_conj.conjugate()
         all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
@@ -571,3 +579,9 @@ class Observer():
             # p = r + beta * p
             p = r + beta * p
         return lattice_conjugate(x)
+
+    def normalize_lattice(self):
+        mean_log_ws = self._total_log_ws / self._count
+        # Here it should use tensor number, not site number
+        param = np.exp(mean_log_ws / (self._owner.L1 * self._owner.L2))
+        self._owner._lattice /= param

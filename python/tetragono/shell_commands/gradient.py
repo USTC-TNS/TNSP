@@ -110,13 +110,6 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
     return mpi_comm.bcast(step_size)
 
 
-def try_normalize(state, mean_log_ws):
-    param = np.exp(mean_log_ws / (state.L1 * state.L2))
-    for l1 in range(state.L1):
-        for l2 in range(state.L2):
-            state[l1, l2] /= param
-
-
 def gradient_descent(
         state: SamplingLattice,
         sampling_total_step=0,
@@ -272,19 +265,16 @@ def gradient_descent(
             if need_energy_observer:
                 configuration_pool = []
             # Sampling and observe
-            log_prod_ws = 0.0
             with seed_differ, observer:
                 for sampling_step in range(sampling_total_step):
                     if sampling_step % mpi_size == mpi_rank:
                         possibility, configuration = sampling()
-                        log_prod_ws += np.log(np.abs(complex(configuration.hole(())).real))
                         observer(possibility, configuration)
                         if need_energy_observer:
                             configuration_pool.append((possibility, configuration))
                         show(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
-            log_prod_ws = mpi_comm.allreduce(log_prod_ws)
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
 
             # Measure log
@@ -354,7 +344,7 @@ def gradient_descent(
                 if fix_gauge:
                     state.expand_dimension(1.0, 0)
                 # Normalize state
-                try_normalize(state, log_prod_ws / sampling_total_step)
+                observer.normalize_lattice()
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 bcast_lattice_buffer(state._lattice)
                 sampling.refresh_all()
