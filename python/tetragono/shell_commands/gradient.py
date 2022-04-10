@@ -324,17 +324,13 @@ def gradient_descent(
                     else:
                         if orthogonalize_momentum:
                             # lattice_dot always return a real number
-                            param = lattice_dot_sum(total_grad, state._lattice) / lattice_dot_sum(
-                                state._lattice, state._lattice)
-                            total_grad = total_grad - state._lattice * param
+                            total_grad = state.orthogonalize_to_lattice(total_grad)
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     if use_random_gradient:
-                        showln("use random gradient")
                         this_grad = lattice_randomize(total_grad)
                     else:
                         this_grad = total_grad
                     if use_fix_relative_step_size:
-                        showln("fix relative step size")
                         this_grad = state.fix_relative_to_lattice(this_grad)
                     state._lattice -= grad_step_size * this_grad
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")

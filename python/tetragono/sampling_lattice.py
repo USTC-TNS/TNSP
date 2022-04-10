@@ -834,3 +834,21 @@ class SamplingLattice(AbstractLattice):
         """
         param = (lattice_dot_sum(self._lattice, self._lattice) / lattice_dot_sum(lattice, lattice))**0.5
         return param * lattice
+
+    def orthogonalize_to_lattice(self, lattice):
+        """
+        Get orthogonalized data to lattice tensors for a lattice shape data.
+
+        Parameters
+        ----------
+        lattice : list[list[Tensor]]
+            The lattice shape data.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The result lattice shape data which is orthogonal to lattice tensors.
+        """
+        # lattice_dot always return a real number
+        param = lattice_dot_sum(lattice, state._lattice) / lattice_dot_sum(state._lattice, state._lattice)
+        return lattice - state._lattice * param

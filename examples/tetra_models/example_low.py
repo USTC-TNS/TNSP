@@ -68,6 +68,4 @@ for grad_step in range(10):
 
 # low level api usage TODO
 # + easy usage of sweep: move sampling into single grad step
-# + line search
-# + momentum orthogonalize
-# + simplify gradient with tetragono low level api
+# + line search and check difference
