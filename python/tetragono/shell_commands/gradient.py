@@ -131,7 +131,6 @@ def gradient_descent(
         use_natural_gradient=False,
         conjugate_gradient_method_step=20,
         metric_inverse_epsilon=0.01,
-        sj_shift_per_site=None,
         # About gradient method
         use_check_difference=False,
         use_line_search=False,
@@ -166,10 +165,6 @@ def gradient_descent(
     else:
         grad_total_step = 1
     showln(f"gradient total step={grad_total_step}")
-    if sj_shift_per_site is not None:
-        if not cache_configuration:
-            cache_configuration = True
-            showln("using shaojun's method, cache configuration")
 
     # Restrict subspace
     if restrict_subspace is not None:
@@ -301,9 +296,7 @@ def gradient_descent(
                 # Get gradient
                 if use_natural_gradient:
                     show("calculating natural gradient")
-                    grad = observer.natural_gradient(conjugate_gradient_method_step,
-                                                     metric_inverse_epsilon,
-                                                     sj_shift_per_site=sj_shift_per_site)
+                    grad = observer.natural_gradient(conjugate_gradient_method_step, metric_inverse_epsilon)
                     showln("calculate natural gradient done")
                 else:
                     grad = observer.gradient
