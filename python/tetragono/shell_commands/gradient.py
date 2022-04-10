@@ -131,6 +131,7 @@ def gradient_descent(
         use_natural_gradient=False,
         conjugate_gradient_method_step=20,
         metric_inverse_epsilon=0.01,
+        cache_natural_delta=None,
         # About gradient method
         use_check_difference=False,
         use_line_search=False,
@@ -185,12 +186,15 @@ def gradient_descent(
         restrict = None
 
     # Prepare observers
-    observer = Observer(state,
-                        restrict_subspace=restrict,
-                        enable_energy=True,
-                        enable_gradient=use_gradient,
-                        enable_natural_gradient=use_natural_gradient,
-                        cache_configuration=cache_configuration)
+    observer = Observer(
+        state,
+        enable_energy=True,
+        enable_gradient=use_gradient,
+        enable_natural_gradient=use_natural_gradient,
+        cache_natural_delta=cache_natural_delta,
+        cache_configuration=cache_configuration,
+        restrict_subspace=restrict,
+    )
     if measurement:
         measurement_modules = {}
         measurement_names = measurement.split(",")
@@ -203,11 +207,13 @@ def gradient_descent(
     else:
         need_energy_observer = False
     if need_energy_observer:
-        energy_observer = Observer(state,
-                                   restrict_subspace=restrict,
-                                   enable_energy=True,
-                                   enable_gradient=True,
-                                   cache_configuration=cache_configuration)
+        energy_observer = Observer(
+            state,
+            enable_energy=True,
+            enable_gradient=True,
+            cache_configuration=cache_configuration,
+            restrict_subspace=restrict,
+        )
 
     # Sampling method
     if sampling_method == "sweep":

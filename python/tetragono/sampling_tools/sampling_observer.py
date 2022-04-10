@@ -16,9 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
+import pickle
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_toolkit import show, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum, lattice_conjugate
+from ..common_toolkit import (show, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
+                              lattice_conjugate, mpi_rank)
 from .tensor_element import tensor_element
 
 
@@ -28,10 +31,10 @@ class Observer():
     """
 
     __slots__ = [
-        "_owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_configuration", "_restrict_subspace",
-        "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight", "_total_weight_square",
-        "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight", "_Delta", "_EDelta",
-        "_Deltas", "_pool"
+        "_owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
+        "_restrict_subspace", "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight",
+        "_total_weight_square", "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
+        "_Delta", "_EDelta", "_Deltas", "_pool"
     ]
 
     def __enter__(self):
@@ -67,6 +70,10 @@ class Observer():
                             for l1 in range(self._owner.L1)]
             if self._enable_natural:
                 self._Deltas = []
+        if self._cache_natural_delta is not None:
+            os.makedirs(self._cache_natural_delta, exist_ok=True)
+            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "wb") as file:
+                pass
         if self._cache_configuration:
             self._create_cache_configuration()
 
@@ -116,15 +123,18 @@ class Observer():
             allreduce_lattice_buffer(self._Delta)
             allreduce_lattice_buffer(self._EDelta)
 
-    def __init__(self,
-                 owner,
-                 *,
-                 enable_energy=False,
-                 enable_gradient=False,
-                 enable_natural_gradient=False,
-                 cache_configuration=False,
-                 observer_set=None,
-                 restrict_subspace=None):
+    def __init__(
+        self,
+        owner,
+        *,
+        observer_set=None,
+        enable_energy=False,
+        enable_gradient=False,
+        enable_natural_gradient=False,
+        cache_natural_delta=None,
+        cache_configuration=False,
+        restrict_subspace=None,
+    ):
         """
         Create observer object for the given sampling lattice.
 
@@ -132,23 +142,26 @@ class Observer():
         ----------
         owner : SamplingLattice
             The owner of this obsever object.
-        enable_energy : bool
-            Enable observing the energy.
-        enable_gradient : bool
-            Enable calculating the gradient.
-        enable_natural_gradient : bool
-            Enable calculating the natural gradient.
-        cache_configuration : bool
-            Enable cache the configuration during observing.
-        observer_set : dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
+        observer_set : dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]], optional
             The given observers to observe.
-        restrict_subspace
+        enable_energy : bool, optional
+            Enable observing the energy.
+        enable_gradient : bool, optional
+            Enable calculating the gradient.
+        enable_natural_gradient : bool, optional
+            Enable calculating the natural gradient.
+        cache_natural_delta : str, optional
+            The folder name to cache deltas used in natural gradient.
+        cache_configuration : bool, optional
+            Enable cache the configuration during observing.
+        restrict_subspace, optional
             A function return bool to restrict sampling subspace.
         """
         self._owner = owner
         self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
         self._enable_gradient = False
         self._enable_natural = False
+        self._cache_natural_delta = None
         self._cache_configuration = False
         self._restrict_subspace = None
 
@@ -171,16 +184,30 @@ class Observer():
 
         self._pool = None
 
-        self._restrict_subspace = restrict_subspace
         if observer_set is not None:
             self._observer = observer_set
+
         if enable_energy:
             self.add_energy()
         if enable_gradient:
             self.enable_gradient()
         if enable_natural_gradient:
             self.enable_natural_gradient()
+        self.cache_natural_delta(cache_natural_delta)
         self.cache_configuration(cache_configuration)
+        self._restrict_subspace = restrict_subspace
+
+    def cache_natural_delta(self, cache_natural_delta):
+        """
+        Set the cache folder to store deltas used in natural gradient.
+
+        Parameters
+        cache_natural_delta : str | None
+            The folder to store deltas.
+        """
+        if self._start:
+            raise RuntimeError("Cannot set natural delta cache folder after sampling start")
+        self._cache_natural_delta = cache_natural_delta
 
     def cache_configuration(self, cache_configuration):
         """
@@ -323,7 +350,12 @@ class Observer():
                         self._Delta[l1][l2] += hole
                         self._EDelta[l1][l2] += Es * hole
                 if self._enable_natural:
-                    self._Deltas.append((reweight, holes))
+                    if self._cache_natural_delta:
+                        with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
+                            pickle.dump(holes, file)
+                        self._Deltas.append((reweight, None))
+                    else:
+                        self._Deltas.append((reweight, holes))
 
     def _expect_and_deviation(self, total, total_square, total_reweight):
         """
@@ -456,9 +488,16 @@ class Observer():
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = np.array(
             [[self._Delta[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)])
-        for reweight, deltas in self._Deltas:
-            param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
-            lattice_update(result_1, param * np.array(deltas))
+        if self._cache_natural_delta:
+            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
+                for reweight, _ in self._Deltas:
+                    deltas = pickle.load(file)
+                    param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
+                    lattice_update(result_1, param * np.array(deltas))
+        else:
+            for reweight, deltas in self._Deltas:
+                param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
+                lattice_update(result_1, param * np.array(deltas))
         allreduce_lattice_buffer(result_1)
 
         delta = np.array(self._Delta) / self._total_weight
