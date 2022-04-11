@@ -22,6 +22,7 @@
 #define TAT_SYMMETRY_HPP
 
 #include <tuple>
+#include <utility>
 
 #include "../utility/allocator.hpp"
 #include "../utility/common_variable.hpp"
@@ -46,6 +47,46 @@ namespace TAT {
       struct fermi_wrapped_helper<fermi_wrap<T>> : std::true_type {};
       template<typename T>
       constexpr bool fermi_wrapped = fermi_wrapped_helper<T>::value;
+   } // namespace detail
+
+   namespace detail {
+      template<typename Result, typename Func, typename Tuple, std::size_t... Is>
+      auto map_on_tuple_helper(Func&& func, Tuple&& tuple, std::index_sequence<Is...>) {
+         if constexpr (std::is_same_v<Result, void>) {
+            (func(std::get<Is>(std::forward<Tuple>(tuple)), std::integral_constant<std::size_t, Is>()), ...);
+            return 0;
+         } else {
+            return Result(func(std::get<Is>(std::forward<Tuple>(tuple)), std::integral_constant<std::size_t, Is>())...);
+         }
+      }
+      template<typename Result = void, typename Func, typename Tuple>
+      auto map_on_tuple(Func&& func, Tuple&& tuple) {
+         using index_sequence_t = std::make_index_sequence<std::tuple_size_v<remove_cvref_t<Tuple>>>;
+         return map_on_tuple_helper<Result>(std::forward<Func>(func), std::forward<Tuple>(tuple), index_sequence_t());
+      }
+
+      template<typename Result, typename Func, typename Tuple1, typename Tuple2, std::size_t... Is>
+      auto map_on_2tuple_helper(Func&& func, Tuple1&& tuple1, Tuple2&& tuple2, std::index_sequence<Is...>) {
+         if constexpr (std::is_same_v<Result, void>) {
+            (func(std::get<Is>(std::forward<Tuple1>(tuple1)), std::get<Is>(std::forward<Tuple2>(tuple2)), std::integral_constant<std::size_t, Is>()),
+             ...);
+            return 0;
+         } else {
+            return Result(
+                  func(std::get<Is>(std::forward<Tuple1>(tuple1)),
+                       std::get<Is>(std::forward<Tuple2>(tuple2)),
+                       std::integral_constant<std::size_t, Is>())...);
+         }
+      }
+      template<typename Result = void, typename Func, typename Tuple1, typename Tuple2>
+      auto map_on_2tuple(Func&& func, Tuple1&& tuple1, Tuple2&& tuple2) {
+         using index_sequence_t = std::make_index_sequence<std::tuple_size_v<remove_cvref_t<Tuple1>>>;
+         return map_on_2tuple_helper<Result>(
+               std::forward<Func>(func),
+               std::forward<Tuple1>(tuple1),
+               std::forward<Tuple2>(tuple2),
+               index_sequence_t());
+      }
    } // namespace detail
 
    /**
@@ -84,164 +125,102 @@ namespace TAT {
       template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) <= length) && (std::is_integral_v<Args> && ...)>>
       Symmetry(const Args&... args) : base_tuple_t(construct_base_tuple(args...)) {}
 
-      // operators
-      // a += b
-      // a + b
-      // a -= b
-      // a - b
-      // - a
-    private:
-      template<typename Item>
-      static Item& inplace_plus_item(Item& a, const Item& b) {
-         if constexpr (std::is_same_v<Item, bool>) {
-            return a ^= b;
-         } else {
-            return a += b;
-         }
-      }
-      template<std::size_t... Is>
-      static self_t& inplace_plus_symmetry(self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
-         (inplace_plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2)), ...);
-         return symmetry_1;
-      }
-
     public:
       self_t& operator+=(const self_t& other_symmetry) & {
-         return inplace_plus_symmetry(*this, other_symmetry, index_sequence_t());
+         detail::map_on_2tuple(
+               [](auto& a, const auto& b, const auto&) {
+                  if constexpr (std::is_same_v<remove_cvref_t<decltype(a)>, bool>) {
+                     a ^= b;
+                  } else {
+                     a += b;
+                  }
+               },
+               static_cast<base_tuple_t&>(*this),
+               static_cast<const base_tuple_t&>(other_symmetry));
+         return *this;
       }
 
-    private:
-      template<typename Item>
-      static Item plus_item(const Item& a, const Item& b) {
-         if constexpr (std::is_same_v<Item, bool>) {
-            return a ^ b;
-         } else {
-            return a + b;
-         }
-      }
-      template<size_t... Is>
-      static self_t plus_symmetry(const self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
-         return self_t(plus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2))...);
-      }
-
-    public:
-      [[nodiscard]] self_t operator+(const self_t& other_symmetry) const& {
-         return plus_symmetry(*this, other_symmetry, index_sequence_t());
-      }
-
-    private:
-      template<typename Item>
-      static Item& inplace_minus_item(Item& a, const Item& b) {
-         if constexpr (std::is_same_v<Item, bool>) {
-            return a ^= b;
-         } else {
-            return a -= b;
-         }
-      }
-      template<std::size_t... Is>
-      static self_t& inplace_minus_symmetry(self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
-         (inplace_minus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2)), ...);
-         return symmetry_1;
-      }
-
-    public:
       self_t& operator-=(const self_t& other_symmetry) & {
-         return inplace_minus_symmetry(*this, other_symmetry, index_sequence_t());
+         detail::map_on_2tuple(
+               [](auto& a, const auto& b, const auto&) {
+                  if constexpr (std::is_same_v<remove_cvref_t<decltype(a)>, bool>) {
+                     a ^= b;
+                  } else {
+                     a -= b;
+                  }
+               },
+               static_cast<base_tuple_t&>(*this),
+               static_cast<const base_tuple_t&>(other_symmetry));
+         return *this;
       }
 
-    private:
-      template<typename Item>
-      static Item minus_item(const Item& a, const Item& b) {
-         if constexpr (std::is_same_v<Item, bool>) {
-            return a ^ b;
-         } else {
-            return a - b;
-         }
-      }
-      template<size_t... Is>
-      static self_t minus_symmetry(const self_t& symmetry_1, const self_t& symmetry_2, std::index_sequence<Is...>) {
-         return self_t(minus_item(std::get<Is>(symmetry_1), std::get<Is>(symmetry_2))...);
+      [[nodiscard]] self_t operator+(const self_t& other_symmetry) const& {
+         return detail::map_on_2tuple<self_t>(
+               [](auto& a, const auto& b, const auto&) {
+                  if constexpr (std::is_same_v<remove_cvref_t<decltype(a)>, bool>) {
+                     return a ^ b;
+                  } else {
+                     return a + b;
+                  }
+               },
+               static_cast<const base_tuple_t&>(*this),
+               static_cast<const base_tuple_t&>(other_symmetry));
       }
 
-    public:
       [[nodiscard]] self_t operator-(const self_t& other_symmetry) const& {
-         return minus_symmetry(*this, other_symmetry, index_sequence_t());
+         return detail::map_on_2tuple<self_t>(
+               [](auto& a, const auto& b, const auto&) {
+                  if constexpr (std::is_same_v<remove_cvref_t<decltype(a)>, bool>) {
+                     return a ^ b;
+                  } else {
+                     return a - b;
+                  }
+               },
+               static_cast<const base_tuple_t&>(*this),
+               static_cast<const base_tuple_t&>(other_symmetry));
       }
-
-    private:
-      template<typename Item>
-      static Item negative_item(const Item& a) {
-         if constexpr (std::is_same_v<Item, bool>) {
-            return a;
-         } else {
-            return -a;
-         }
-      }
-      template<size_t... Is>
-      static self_t negative_symmetry(const self_t& symmetry, std::index_sequence<Is...>) {
-         return self_t(negative_item(std::get<Is>(symmetry))...);
-      }
-
-    public:
       [[nodiscard]] self_t operator-() const& {
-         return negative_symmetry(*this, index_sequence_t());
+         return detail::map_on_tuple<self_t>(
+               [](const auto& a, const auto&) {
+                  if constexpr (std::is_same_v<remove_cvref_t<decltype(a)>, bool>) {
+                     return a;
+                  } else {
+                     return -a;
+                  }
+               },
+               static_cast<const base_tuple_t&>(*this));
       }
 
       // hash
-    private:
-      template<std::size_t Index>
-      void hash_helper(std::size_t& seed) const {
-         if constexpr (Index != 0) {
-            hash_helper<Index - 1>(seed);
-         }
-         // Code from boost
-         const auto value = std::get<Index>(*this);
-         seed ^= std::hash<std::tuple_element_t<Index, base_tuple_t>>()(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-      }
-
-    public:
       std::size_t hash() const {
          std::size_t seed = length;
-         if constexpr (length != 0) {
-            hash_helper<length - 1>(seed);
-         }
+         detail::map_on_tuple(
+               [&seed](const auto& a, const auto&) {
+                  using A = remove_cvref_t<decltype(a)>;
+                  seed ^= std::hash<A>()(a) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+               },
+               static_cast<const base_tuple_t&>(*this));
          return seed;
       }
 
       // parity
-    private:
-      /**
-       * get parity of certain term of symmetry, if it is bose term, return false
-       */
-      template<std::size_t Index>
-      [[nodiscard]] bool single_term_get_parity_helper() const {
-         if constexpr (is_fermi_item[Index]) {
-            const auto quantum_number = std::get<Index>(*this);
-            if constexpr (std::is_same_v<remove_cvref_t<decltype(quantum_number)>, bool>) {
-               return quantum_number;
-            } else {
-               return bool(quantum_number % 2);
-            }
-         } else {
-            return false;
-         }
-      }
-
-      template<std::size_t... Is>
-      bool get_parity_helper(std::index_sequence<Is...>) const {
-         return (single_term_get_parity_helper<Is>() ^ ...);
-      }
-
-    public:
       /**
        * Get the total parity, whether fermion or boson
        */
       [[nodiscard]] bool get_parity() const {
-         if constexpr (is_fermi_symmetry) {
-            return get_parity_helper(index_sequence_t());
-         } else {
-            return false;
-         }
+         bool result = false;
+         detail::map_on_tuple(
+               [&result](const auto& a, const auto& integral_constant) {
+                  if constexpr (is_fermi_item[remove_cvref_t<decltype(integral_constant)>::value]) {
+                     if constexpr (std::is_same_v<remove_cvref_t<decltype(a)>, bool>) {
+                        result ^= a;
+                     } else {
+                        result ^= bool(a % 2);
+                     }
+                  }
+               },
+               static_cast<const base_tuple_t>(*this));
+         return result;
       }
 
     public:
