@@ -102,21 +102,21 @@ def bridge(getline):
 def bridge_no(getline, named=True):
     read_block(getline)
     read_block(getline)
-    _, [dimensions] = read_block(getline)
+    _, [dimension] = read_block(getline)
     if named:
         names = getline().split()
     else:
-        names = [f"UnnamedEdge{i}" for i in range(len(dimensions))]
+        names = [f"UnnamedEdge{i}" for i in range(len(dimension))]
 
     content_type, content = read_block(getline)
     if content_type == None:
         return
     tensor_type = TAT(content_type)
-    tensor = tensor_type(names, dimensions).zero()
+    tensor = tensor_type(names, dimension).zero()
     names.reverse()
-    dimensions.reverse()
+    dimension.reverse()
     tensor = tensor.transpose(names)
-    tensor.blocks[names] = np.array(content).reshape(dimensions)
+    tensor.blocks[names] = np.array(content).reshape(dimension)
     return tensor
 
 
@@ -135,7 +135,7 @@ def bridge_fermi(getline, named=True):
     if named:
         names = getline().split()
     else:
-        names = [f"UnnamedEdge{i}" for i in range(len(dimensions))]
+        names = [f"UnnamedEdge{i}" for i in range(len(dimension))]
 
     content_type, content = read_block(getline)
     if content_type == None:
