@@ -135,12 +135,13 @@ def write_to_file(obj, file_name):
 
 @np.vectorize
 def lattice_conjugate(tensor):
-    return tensor.conjugate(positive_contract=True)
+    return tensor.conjugate(default_is_physics_edge=True)
 
 
 @np.vectorize
 def lattice_dot(tensor_1, tensor_2):
-    return tensor_1.conjugate(positive_contract=True).contract(tensor_2, {(name, name) for name in tensor_1.names})
+    return tensor_1.conjugate(default_is_physics_edge=True).contract(tensor_2,
+                                                                     {(name, name) for name in tensor_1.names})
 
 
 def lattice_dot_sum(tensors_1, tensors_2):
