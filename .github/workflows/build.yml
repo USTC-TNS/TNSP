@@ -44,25 +44,25 @@ jobs:
             python: 37
             bitness: 64
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
+            manylinux_image: manylinux2010
             cpu_number: 2
           - os: ubuntu-latest
             python: 38
             bitness: 64
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
+            manylinux_image: manylinux2010
             cpu_number: 2
           - os: ubuntu-latest
             python: 39
             bitness: 64
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
+            manylinux_image: manylinux2010
             cpu_number: 2
           - os: ubuntu-latest
             python: 310
             bitness: 64
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
+            manylinux_image: manylinux2010
             cpu_number: 2
 
           - os: macos-latest
