@@ -21,6 +21,7 @@ try:
 except:
     import pickle
 import signal
+import importlib
 from mpi4py import MPI
 import numpy as np
 import TAT
@@ -161,3 +162,10 @@ def lattice_randomize(tensor):
     random_same_shape = tensor.same_shape().rand(0, 1)
     random_same_shape.storage *= np.sign(tensor.storage)
     return random_same_shape
+
+
+def get_imported_function(module_name_or_function, function_name):
+    if isinstance(module_name_or_function, str):
+        return getattr(importlib.import_module(module_name_or_function), function_name)
+    else:
+        return module_name_or_function

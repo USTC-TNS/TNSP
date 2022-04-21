@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import importlib
 import inspect
 import signal
 from datetime import datetime
@@ -25,7 +24,8 @@ import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file)
+                              seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file,
+                              get_imported_function)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -169,7 +169,7 @@ def gradient_descent(
 
     # Restrict subspace
     if restrict_subspace is not None:
-        origin_restrict = importlib.import_module(restrict_subspace).restrict
+        origin_restrict = get_imported_function(restrict_subspace, "restrict")
         if len(inspect.signature(origin_restrict).parameters) == 1:
 
             def restrict(configuration, replacement=None):
@@ -196,12 +196,9 @@ def gradient_descent(
         restrict_subspace=restrict,
     )
     if measurement:
-        measurement_modules = {}
         measurement_names = measurement.split(",")
         for measurement_name in measurement_names:
-            measurement_module = importlib.import_module(measurement_name)
-            measurement_modules[measurement_name] = measurement_module
-            observer.add_observer(measurement_name, measurement_module.measurement(state))
+            observer.add_observer(measurement_name, get_imported_function(measurement_name, "measurement")(state))
     if use_gradient:
         need_energy_observer = use_line_search or use_check_difference
     else:
@@ -219,7 +216,7 @@ def gradient_descent(
     if sampling_method == "sweep":
         showln("using sweep sampling")
         if sweep_hopping_hamiltonians is not None:
-            hopping_hamiltonians = importlib.import_module(sweep_hopping_hamiltonians).hamiltonians(state)
+            hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians, "hamiltonians")(state)
         else:
             hopping_hamiltonians = None
         sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
@@ -246,8 +243,8 @@ def gradient_descent(
                         configuration[l1, l2, orbit] = edge_point
         else:
             with seed_differ:
-                initial_configuration_module = importlib.import_module(sweep_initial_configuration)
-                configuration = initial_configuration_module.initial_configuration(state, configuration_cut_dimension)
+                configuration = get_imported_function(sweep_initial_configuration,
+                                                      "initial_configuration")(state, configuration_cut_dimension)
         sampling.configuration = configuration
     elif sampling_method == "ergodic":
         showln("using ergodic sampling")
@@ -282,7 +279,7 @@ def gradient_descent(
             if measurement and mpi_rank == 0:
                 for measurement_name in measurement_names:
                     measurement_result = observer.result[measurement_name]
-                    measurement_modules[measurement_name].save_result(state, measurement_result, grad_step)
+                    get_imported_function(measurement_name, "save_result")(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a",
