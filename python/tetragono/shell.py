@@ -21,10 +21,11 @@ import sys
 import cmd
 import importlib
 import TAT
-from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln)
+from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
+                             get_imported_function)
 from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
-from .sampling_lattice import SamplingLattice
+from .sampling_lattice import SamplingLattice, Configuration
 from .shell_commands import gradient_descent
 
 
@@ -75,6 +76,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su = None
         self.ex = None
         self.gm = None
+        self.gm_conf = []
 
     def precmd(self, line):
         line = line.split("#")[0].strip()
@@ -250,6 +252,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def su_to_gm(self):
         self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
+        self.gm_conf = []
 
     def do_ex_update(self, line):
         """
@@ -326,6 +329,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         state = self.su_gm_create(SamplingLattice, *args, **kwargs)
         if state is not None:
             self.gm = state
+            self.gm_conf = []
 
     def do_gm_run(self, line):
         """
@@ -335,7 +339,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_run(*config.args, **config.kwargs)
 
     def gm_run(self, *args, **kwargs):
-        gradient_descent(self.gm, *args, **kwargs)
+        gradient_descent(self.gm, *args, **kwargs, sweep_initial_configuration=self.gm_conf)
 
     def do_gm_dump(self, line):
         """
@@ -352,6 +356,21 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def gm_dump(self, name):
         write_to_file(self.gm, name)
 
+    def do_gm_conf_dump(self, line):
+        """
+        Dump the sampling lattice configuration into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.gm_conf_dump(*config.args, **config.kwargs)
+
+    def gm_conf_dump(self, name):
+        write_to_file(self.gm_conf, name)
+
     def do_gm_load(self, line):
         """
         Load the sampling lattice from file.
@@ -366,6 +385,41 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def gm_load(self, name):
         self.gm = read_from_file(name)
+        self.gm_conf = []
+
+    def do_gm_conf_load(self, line):
+        """
+        Load the sampling lattice configuration from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.gm_conf_load(*config.args, **config.kwargs)
+
+    def gm_conf_load(self, name):
+        self.gm_conf = read_from_file(name)
+
+    def do_gm_conf_create(self, line):
+        """
+        Create configuration of sampling lattice.
+
+        Parameters
+        ----------
+        module_name : str
+            The module name to create initial configuration of sampling lattice.
+        """
+        config = Config(line)
+        self.gm_conf_create(*config.args, **config.kwargs)
+
+    def gm_conf_create(self, module_name):
+        with seed_differ:
+            # This configuration should never be used, so cut dimension is -1
+            configuration = Configuration(self.gm, -1)
+            configuration = get_imported_function(module_name, "initial_configuration")(configuration)
+            self.gm_conf = mpi_comm.gather(configuration._configuration)
 
     def do_gm_expand(self, line):
         """
@@ -470,3 +524,6 @@ else:
     gm_load = app.gm_load
     gm_expand = app.gm_expand
     gm_to_ex = app.gm_to_ex
+    gm_conf_dump = app.gm_conf_dump
+    gm_conf_load = app.gm_conf_load
+    gm_conf_create = app.gm_conf_create

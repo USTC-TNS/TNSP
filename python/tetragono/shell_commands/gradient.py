@@ -21,7 +21,7 @@ import signal
 from datetime import datetime
 import numpy as np
 import TAT
-from ..sampling_lattice import SamplingLattice, Configuration
+from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
                               seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file,
@@ -123,7 +123,6 @@ def gradient_descent(
         configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
         sweep_initial_configuration=None,
-        sweep_configuration_dump_file=None,
         sweep_hopping_hamiltonians=None,
         # About subspace
         restrict_subspace=None,
@@ -212,52 +211,6 @@ def gradient_descent(
             restrict_subspace=restrict,
         )
 
-    # Sampling method
-    if sampling_method == "sweep":
-        showln("using sweep sampling")
-        if sweep_hopping_hamiltonians is not None:
-            hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians, "hopping_hamiltonians")(state)
-        else:
-            hopping_hamiltonians = None
-        sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
-        sampling_total_step = sampling_total_step
-        # Initialize sweep configuration
-        if sweep_initial_configuration == "direct":
-            # Use direct sampling to find sweep sampling initial configuration.
-            direct_sampling = DirectSampling(state, configuration_cut_dimension, restrict,
-                                             direct_sampling_cut_dimension)
-            with seed_differ:
-                _, configuration = direct_sampling()
-        elif sweep_initial_configuration == "load":
-            configurations = read_from_file(sweep_configuration_dump_file)
-            if len(configurations) < mpi_size:
-                with seed_differ:
-                    choose = TAT.random.uniform_int(0, len(configurations) - 1)()
-            else:
-                choose = mpi_rank
-            config = configurations[choose]
-            configuration = sampling.configuration
-            for l1 in range(state.L1):
-                for l2 in range(state.L2):
-                    for orbit, edge_point in config[l1][l2].items():
-                        configuration[l1, l2, orbit] = edge_point
-        else:
-            with seed_differ:
-                configuration = Configuration(state, configuration_cut_dimension)
-                configuration = get_imported_function(sweep_initial_configuration,
-                                                      "initial_configuration")(configuration)
-        sampling.configuration = configuration
-    elif sampling_method == "ergodic":
-        showln("using ergodic sampling")
-        sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
-        sampling_total_step = sampling.total_step
-    elif sampling_method == "direct":
-        showln("using direct sampling")
-        sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
-        sampling_total_step = sampling_total_step
-    else:
-        raise ValueError("Invalid sampling method")
-
     # Main loop
     with SignalHandler(signal.SIGINT) as sigint_handler:
         for grad_step in range(grad_total_step):
@@ -265,6 +218,35 @@ def gradient_descent(
                 configuration_pool = []
             # Sampling and observe
             with seed_differ, observer:
+                # Sampling method
+                if sampling_method == "sweep":
+                    if sweep_hopping_hamiltonians is not None:
+                        hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians,
+                                                                     "hopping_hamiltonians")(state)
+                    else:
+                        hopping_hamiltonians = None
+                    sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
+                    sampling_total_step = sampling_total_step
+                    # Initial sweep configuration
+                    if len(sweep_initial_configuration) < mpi_size:
+                        choose = TAT.random.uniform_int(0, len(sweep_initial_configuration) - 1)()
+                    else:
+                        choose = mpi_rank
+                    config = sweep_initial_configuration[choose]
+                    for l1 in range(state.L1):
+                        for l2 in range(state.L2):
+                            for orbit, edge_point in config[l1][l2].items():
+                                sampling.configuration[l1, l2, orbit] = edge_point
+                elif sampling_method == "ergodic":
+                    sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
+                    sampling_total_step = sampling.total_step
+                elif sampling_method == "direct":
+                    sampling = DirectSampling(state, configuration_cut_dimension, restrict,
+                                              direct_sampling_cut_dimension)
+                    sampling_total_step = sampling_total_step
+                else:
+                    raise ValueError("Invalid sampling method")
+                # Sampling run
                 for sampling_step in range(sampling_total_step):
                     if sampling_step % mpi_size == mpi_rank:
                         possibility, configuration = sampling()
@@ -274,6 +256,10 @@ def gradient_descent(
                         show(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
+                # Save sweep configuration
+                gathered_configurations = mpi_comm.gather(configuration._configuration)
+                sweep_initial_configuration.clear()
+                sweep_initial_configuration += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
 
             # Measure log
@@ -286,14 +272,6 @@ def gradient_descent(
                 with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a",
                           encoding="utf-8") as file:
                     print(*observer.energy, file=file)
-            # Dump configuration
-            if sweep_configuration_dump_file:
-                if sampling_method == "sweep":
-                    to_dump = mpi_comm.gather(sampling.configuration._configuration)
-                    if mpi_rank == 0:
-                        write_to_file(to_dump, sweep_configuration_dump_file)
-                else:
-                    raise ValueError("Dump configuration into file is only supported for sweep sampling")
 
             if use_gradient:
 
@@ -340,7 +318,6 @@ def gradient_descent(
                 observer.normalize_lattice()
                 # Bcast state and refresh sampling(refresh sampling aux and sampling config)
                 bcast_lattice_buffer(state._lattice)
-                sampling.refresh_all()
 
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
