@@ -20,7 +20,7 @@ import TAT
 import tetragono as tet
 
 
-def hamiltonians(state):
+def hopping_hamiltonians(state):
     pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(float)
     pauli_y_pauli_y = tet.common_tensor.No.pauli_y_pauli_y.to(float)
     pauli_z = tet.common_tensor.No.pauli_z.to(float)

@@ -216,7 +216,7 @@ def gradient_descent(
     if sampling_method == "sweep":
         showln("using sweep sampling")
         if sweep_hopping_hamiltonians is not None:
-            hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians, "hamiltonians")(state)
+            hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians, "hopping_hamiltonians")(state)
         else:
             hopping_hamiltonians = None
         sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
