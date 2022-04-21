@@ -21,7 +21,7 @@ import signal
 from datetime import datetime
 import numpy as np
 import TAT
-from ..sampling_lattice import SamplingLattice
+from ..sampling_lattice import SamplingLattice, Configuration
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
                               seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file,
@@ -243,8 +243,9 @@ def gradient_descent(
                         configuration[l1, l2, orbit] = edge_point
         else:
             with seed_differ:
+                configuration = Configuration(state, configuration_cut_dimension)
                 configuration = get_imported_function(sweep_initial_configuration,
-                                                      "initial_configuration")(state, configuration_cut_dimension)
+                                                      "initial_configuration")(configuration)
         sampling.configuration = configuration
     elif sampling_method == "ergodic":
         showln("using ergodic sampling")
