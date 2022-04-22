@@ -34,7 +34,7 @@ class Observer():
         "_owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
         "_restrict_subspace", "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight",
         "_total_weight_square", "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
-        "_Delta", "_EDelta", "_Deltas", "_pool"
+        "_Delta", "_EDelta", "_Deltas", "_pool", "_classical_energy"
     ]
 
     def __enter__(self):
@@ -184,6 +184,8 @@ class Observer():
 
         self._pool = None
 
+        self._classical_energy = None
+
         if observer_set is not None:
             self._observer = observer_set
 
@@ -196,6 +198,17 @@ class Observer():
         self.cache_natural_delta(cache_natural_delta)
         self.cache_configuration(cache_configuration)
         self._restrict_subspace = restrict_subspace
+
+    def set_classical_energy(self, classical_energy=None):
+        """
+        Set another classical energy term to total energy.
+
+        Parameters
+        ----------
+        classical_energy
+            A function return energy with Configuration as input.
+        """
+        self._classical_energy = classical_energy
 
     def cache_natural_delta(self, cache_natural_delta):
         """
@@ -334,6 +347,8 @@ class Observer():
                 if name == "energy":
                     Es += total_value  # Es maybe complex
             if name == "energy":
+                if self._classical_energy is not None:
+                    Es += self._classical_energy(configuration)
                 to_save = Es.real
                 self._total_energy += to_save
                 self._total_energy_square += to_save * to_save
