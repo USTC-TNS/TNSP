@@ -122,7 +122,7 @@ def gradient_descent(
         sampling_method="direct",
         configuration_cut_dimension=None,
         direct_sampling_cut_dimension=4,
-        sweep_initial_configuration=None,
+        sampling_configurations=[],
         sweep_hopping_hamiltonians=None,
         # About subspace
         restrict_subspace=None,
@@ -228,11 +228,11 @@ def gradient_descent(
                     sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
                     sampling_total_step = sampling_total_step
                     # Initial sweep configuration
-                    if len(sweep_initial_configuration) < mpi_size:
-                        choose = TAT.random.uniform_int(0, len(sweep_initial_configuration) - 1)()
+                    if len(sampling_configurations) < mpi_size:
+                        choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
                     else:
                         choose = mpi_rank
-                    config = sweep_initial_configuration[choose]
+                    config = sampling_configurations[choose]
                     for l1 in range(state.L1):
                         for l2 in range(state.L2):
                             for orbit, edge_point in config[l1][l2].items():
@@ -258,8 +258,8 @@ def gradient_descent(
                         )
                 # Save sweep configuration
                 gathered_configurations = mpi_comm.gather(configuration._configuration)
-                sweep_initial_configuration.clear()
-                sweep_initial_configuration += gathered_configurations
+                sampling_configurations.clear()
+                sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
 
             # Measure log

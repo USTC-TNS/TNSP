@@ -339,7 +339,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_run(*config.args, **config.kwargs)
 
     def gm_run(self, *args, **kwargs):
-        gradient_descent(self.gm, *args, **kwargs, sweep_initial_configuration=self.gm_conf)
+        gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
 
     def do_gm_dump(self, line):
         """
