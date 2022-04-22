@@ -1,4 +1,3 @@
-import pickle
 import TAT
 import tetragono as tet
 import kitaev
@@ -65,7 +64,3 @@ for grad_step in range(10):
     tet.bcast_lattice_buffer(gm_lattice._lattice)
     # Maybe you want to save file
     tet.write_to_file(gm_lattice, "/dev/null")
-
-# low level api usage TODO
-# + easy usage of sweep: move sampling into single grad step
-# + line search and check difference

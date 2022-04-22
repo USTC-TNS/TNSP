@@ -21,7 +21,7 @@ from .abstract_state import AbstractState
 from .exact_state import ExactState
 from .abstract_lattice import AbstractLattice
 from .simple_update_lattice import SimpleUpdateLattice
-from .sampling_lattice import SamplingLattice
+from .sampling_lattice import SamplingLattice, Configuration
 
 # Miscellaneous
 from . import conversion

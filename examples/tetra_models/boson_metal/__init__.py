@@ -52,8 +52,6 @@ def create(L1, L2, D, J, K, mu):
     n_term = (pauli_z + identity) * 0.5 * (-mu)
     p_term = plaq * K
 
-    print(n_term)
-
     for l1 in range(L1):
         for l2 in range(L2):
             state.hamiltonians[(l1, l2, 0),] = n_term
