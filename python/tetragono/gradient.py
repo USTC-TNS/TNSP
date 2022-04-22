@@ -232,11 +232,7 @@ def gradient_descent(
                         choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
                     else:
                         choose = mpi_rank
-                    config = sampling_configurations[choose]
-                    for l1 in range(state.L1):
-                        for l2 in range(state.L2):
-                            for orbit, edge_point in config[l1][l2].items():
-                                sampling.configuration[l1, l2, orbit] = edge_point
+                    sampling.configuration.load_configuration(sampling_configurations[choose])
                 elif sampling_method == "ergodic":
                     sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
                     sampling_total_step = sampling.total_step

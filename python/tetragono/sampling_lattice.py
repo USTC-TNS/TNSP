@@ -168,6 +168,21 @@ class Configuration(SingleLayerAuxiliaries):
         """
         self.__setitem__(l1l2o, None)
 
+    def load_configuration(self, config):
+        """
+        Load the configuration of all the sites.
+
+        Parameters
+        ----------
+        config : list[list[dict[int, ?EdgePoint]]]
+            The configuration data of all the sites
+        """
+        owner = self._owner
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit, edge_point in config[l1][l2].items():
+                    self[l1, l2, orbit] = edge_point
+
     def replace(self, replacement, *, hint=None):
         """
         Calculate $\langle s\psi\rangle$ with several $s$ replaced.
