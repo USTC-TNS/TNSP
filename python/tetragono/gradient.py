@@ -253,7 +253,7 @@ def gradient_descent(
                             f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
                         )
                 # Save sweep configuration
-                gathered_configurations = mpi_comm.gather(configuration._configuration)
+                gathered_configurations = mpi_comm.allgather(configuration._configuration)
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")

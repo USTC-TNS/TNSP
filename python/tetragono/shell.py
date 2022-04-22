@@ -419,7 +419,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             # This configuration should never be used, so cut dimension is -1
             configuration = Configuration(self.gm, -1)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
-            self.gm_conf = mpi_comm.gather(configuration._configuration)
+            self.gm_conf = mpi_comm.allgather(configuration._configuration)
 
     def do_gm_expand(self, line):
         """
