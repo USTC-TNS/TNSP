@@ -312,8 +312,9 @@ def gradient_descent(
                     state.expand_dimension(1.0, 0)
                 # Normalize state
                 observer.normalize_lattice()
-                # Bcast state and refresh sampling(refresh sampling aux and sampling config)
+                # Bcast state
                 bcast_lattice_buffer(state._lattice)
+                # sampling is not needed to refresh since every gradient step will use a new sampling object.
 
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
