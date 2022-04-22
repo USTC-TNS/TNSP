@@ -21,11 +21,11 @@ import signal
 from datetime import datetime
 import numpy as np
 import TAT
-from ..sampling_lattice import SamplingLattice
-from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file,
-                              get_imported_function)
+from .sampling_lattice import SamplingLattice
+from .sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
+from .common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
+                             seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file,
+                             get_imported_function)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):

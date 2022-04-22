@@ -33,7 +33,6 @@ setup(
         "tetragono",
         "tetragono/common_tensor",
         "tetragono/sampling_tools",
-        "tetragono/shell_commands",
         "tetragono/auxiliaries",
     ],
     package_dir={"": "python"},

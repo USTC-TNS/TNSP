@@ -26,7 +26,7 @@ from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_f
 from . import conversion
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration
-from .shell_commands import gradient_descent
+from .gradient import gradient_descent
 
 
 class Config():
