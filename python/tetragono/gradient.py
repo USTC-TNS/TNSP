@@ -118,6 +118,7 @@ def gradient_descent(
         *,
         # About observer
         cache_configuration=False,
+        classical_energy=None,
         # About sampling
         sampling_method="direct",
         configuration_cut_dimension=None,
@@ -184,6 +185,10 @@ def gradient_descent(
     else:
         restrict = None
 
+    # Classical energy
+    if classical_energy is not None:
+        classical_energy = get_imported_function(classical_energy, "classical_energy")
+
     # Prepare observers
     observer = Observer(
         state,
@@ -198,6 +203,7 @@ def gradient_descent(
         measurement_names = measurement.split(",")
         for measurement_name in measurement_names:
             observer.add_observer(measurement_name, get_imported_function(measurement_name, "measurement")(state))
+    observer.set_classical_energy(classical_energy)
     if use_gradient:
         need_energy_observer = use_line_search or use_check_difference
     else:
@@ -210,6 +216,7 @@ def gradient_descent(
             cache_configuration=cache_configuration,
             restrict_subspace=restrict,
         )
+        energy_observer.set_classical_energy(classical_energy)
 
     # Main loop
     with SignalHandler(signal.SIGINT) as sigint_handler:
