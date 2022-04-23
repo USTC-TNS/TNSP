@@ -1,21 +1,12 @@
 import TAT
 import tetragono as tet
 from boson_metal import create
-from boson_metal.hopping_hamiltonian import hopping_hamiltonians
-from boson_metal.restrict_Sz import restrict
-from boson_metal.initial_state import initial_configuration
 
 TAT.random.seed(2333)
 
 # Create abstrace lattice first and cast it to su lattice
 abstract_lattice = create(L1=10, L2=10, D=4, J=-1, K=3, mu=-1.6)
 gm_lattice = tet.SamplingLattice(abstract_lattice)
-
-# Create initial configuration
-with tet.seed_differ:
-    configuration = tet.Configuration(gm_lattice, -1)
-    configuration = initial_configuration(configuration)
-    config = configuration._configuration
 
 # To run gradient, create observer first
 observer = tet.Observer(
@@ -24,21 +15,31 @@ observer = tet.Observer(
     enable_gradient=True,
     enable_natural_gradient=True,
 )
+
+
+def classical_energy(configuration):
+    n_up = 0
+    for l1 in range(configuration._owner.L1):
+        for l2 in range(configuration._owner.L2):
+            if configuration[l1, l2, 0][1] == 0:
+                n_up += 1
+    return (n_up - 37)**2
+
+
+observer.set_classical_energy(classical_energy)
 for grad_step in range(100):
     # Prepare sampling environment
     with tet.seed_differ, observer:
         # create sampling object and do sampling
-        sampling = tet.SweepSampling(gm_lattice,
-                                     cut_dimension=12,
-                                     restrict_subspace=restrict,
-                                     hopping_hamiltonians=hopping_hamiltonians(gm_lattice))
-        sampling.configuration.load_configuration(config)
+        sampling = tet.DirectSampling(gm_lattice,
+                                      cut_dimension=12,
+                                      restrict_subspace=None,
+                                      double_layer_cut_dimension=4)
         for sampling_step in range(1000):
             if sampling_step % tet.mpi_size == tet.mpi_rank:
                 possibility, configuration = sampling()
                 observer(possibility, configuration)
                 tet.show("sampling", sampling_step, "current energy is", *observer.energy)
-        config = configuration._configuration
     tet.showln("grad", grad_step, *observer.energy)
     # Get gradient
     grad = observer.natural_gradient(step=20, epsilon=0.01)
