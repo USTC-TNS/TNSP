@@ -24,11 +24,46 @@
 // gcc 7 and llvm does not support memory_resource so implement by myself
 
 #include <cstddef>
+#include <cstdlib>
 #include <forward_list>
 #include <memory>
 
+#include <cuda_runtime.h>
+
 namespace TAT {
    namespace detail {
+      namespace cuda {
+         template<typename T>
+         struct allocator : std::allocator<T> {
+            using std::allocator<T>::allocator;
+
+            allocator(const allocator& other) = default;
+            template<typename U>
+            allocator(const allocator<U>& other) noexcept : allocator() {}
+
+            allocator<T> select_on_container_copy_construction() const {
+               return allocator<T>();
+            }
+
+            // It is useless, but base class has it so derived class must have it.
+            template<typename U>
+            struct rebind {
+               using other = allocator<U>;
+            };
+
+            T* allocate(std::size_t n) {
+               // return static_cast<T*>(std::malloc(n * sizeof(T)));
+               T* p;
+               cudaMallocManaged(&p, n * sizeof(T));
+               return p;
+            }
+            void deallocate(T* p, std::size_t) {
+               // std::free(p);
+               cudaFree(p);
+            }
+         };
+      } // namespace cuda
+
       struct memory_resource {
          virtual ~memory_resource() noexcept {}
 
@@ -319,6 +354,11 @@ namespace TAT {
 #include <vector>
 
 namespace TAT {
+   namespace cuda {
+      template<typename T>
+      using vector = std::vector<T, detail::cuda::allocator<T>>;
+   }
+
    namespace no_initialize {
       template<typename T>
       using vector = std::vector<T, detail::no_initialize_allocator<T>>;

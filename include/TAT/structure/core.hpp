@@ -61,7 +61,7 @@ namespace TAT {
 
       using block_map_t = std::vector<std::pair<symmetry_vector_t, content_vector_t>>;
 
-      no_initialize::vector<ScalarType> storage;
+      cuda::vector<ScalarType> storage;
       detail::monotonic_buffer_resource resource;
 
       /**
