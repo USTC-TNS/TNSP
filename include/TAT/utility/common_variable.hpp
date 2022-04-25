@@ -23,8 +23,6 @@
 
 // Macros options
 // - TAT_USE_MPI: define to enable mpi support, cmake can configure it
-// - TAT_USE_MKL_TRANSPOSE: define to use mkl for matrix transpose, cmake can configure it
-// - TAT_USE_MKL_GEMM_BATCH: define to use mkl ?gemm_batch, cmake can configure it
 
 // - TAT_USE_FAST_NAME: define to use TAT::FastName as default name instead of std::string
 // - TAT_USE_TIMER: define to add timers for some common operator

@@ -21,6 +21,8 @@
 #ifndef TAT_CONTRACT_HPP
 #define TAT_CONTRACT_HPP
 
+#include <cublas_v2.h>
+
 #include "../structure/tensor.hpp"
 #include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
@@ -82,130 +84,91 @@ extern "C" {
          const std::complex<double>* beta,
          std::complex<double>* c,
          const int* ldc);
-
-#ifdef TAT_USE_MKL_GEMM_BATCH
-   int sgemm_batch_(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const float* alpha,
-         const float** a,
-         const int* lda,
-         const float** b,
-         const int* ldb,
-         const float* beta,
-         float** c,
-         const int* ldc,
-         const int* group_count,
-         const int* group_size);
-   int dgemm_batch_(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const double* alpha,
-         const double** a,
-         const int* lda,
-         const double** b,
-         const int* ldb,
-         const double* beta,
-         double** c,
-         const int* ldc,
-         const int* group_count,
-         const int* group_size);
-   int cgemm_batch_(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const std::complex<float>* alpha,
-         const std::complex<float>** a,
-         const int* lda,
-         const std::complex<float>** b,
-         const int* ldb,
-         const std::complex<float>* beta,
-         std::complex<float>** c,
-         const int* ldc,
-         const int* group_count,
-         const int* group_size);
-   int zgemm_batch_(
-         const char* transpose_a,
-         const char* transpose_b,
-         const int* m,
-         const int* n,
-         const int* k,
-         const std::complex<double>* alpha,
-         const std::complex<double>** a,
-         const int* lda,
-         const std::complex<double>** b,
-         const int* ldb,
-         const std::complex<double>* beta,
-         std::complex<double>** c,
-         const int* ldc,
-         const int* group_count,
-         const int* group_size);
-#endif
 }
 
 namespace TAT {
    namespace detail {
-      template<typename ScalarType>
-      constexpr int (*gemm)(
-            const char* transpose_a,
-            const char* transpose_b,
-            const int* m,
-            const int* n,
-            const int* k,
-            const ScalarType* alpha,
-            const ScalarType* a,
-            const int* lda,
-            const ScalarType* b,
-            const int* ldb,
-            const ScalarType* beta,
-            ScalarType* c,
-            const int* ldc) = nullptr;
-
-      template<>
-      inline auto gemm<float> = sgemm_;
-      template<>
-      inline auto gemm<double> = dgemm_;
-      template<>
-      inline auto gemm<std::complex<float>> = cgemm_;
-      template<>
-      inline auto gemm<std::complex<double>> = zgemm_;
 
       template<typename ScalarType>
-      constexpr int (*mkl_gemm_batch)(
-            const char* transpose_a,
-            const char* transpose_b,
-            const int* m,
-            const int* n,
-            const int* k,
-            const ScalarType* alpha,
-            const ScalarType** a,
-            const int* lda,
-            const ScalarType** b,
-            const int* ldb,
-            const ScalarType* beta,
-            ScalarType** c,
-            const int* ldc,
-            const int* group_count,
-            const int* group_size) = nullptr;
+      using cuda_complex_wrap = std::conditional_t<
+            is_complex<ScalarType>,
+            std::conditional_t<std::is_same_v<ScalarType, std::complex<double>>, cuDoubleComplex, cuFloatComplex>,
+            ScalarType>;
 
-#ifdef TAT_USE_MKL_GEMM_BATCH
+      template<typename T>
+      auto cuda_complex_wrap_value(T* value) {
+         if constexpr (std::is_const_v<T>) {
+            return reinterpret_cast<const cuda_complex_wrap<std::remove_const_t<T>>*>(value);
+         } else {
+            return reinterpret_cast<cuda_complex_wrap<T>*>(value);
+         }
+      }
+
+      template<typename ScalarType>
+      constexpr cublasStatus_t (*cuda_gemm)(
+            cublasHandle_t,
+            cublasOperation_t transpose_a,
+            cublasOperation_t transpose_b,
+            const int m,
+            const int n,
+            const int k,
+            const cuda_complex_wrap<ScalarType>* alpha,
+            const cuda_complex_wrap<ScalarType>* a,
+            const int lda,
+            const cuda_complex_wrap<ScalarType>* b,
+            const int ldb,
+            const cuda_complex_wrap<ScalarType>* beta,
+            cuda_complex_wrap<ScalarType>* c,
+            const int ldc) = nullptr;
+
       template<>
-      inline auto mkl_gemm_batch<float> = sgemm_batch_;
+      inline auto cuda_gemm<float> = cublasSgemm;
       template<>
-      inline auto mkl_gemm_batch<double> = dgemm_batch_;
+      inline auto cuda_gemm<double> = cublasDgemm;
       template<>
-      inline auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
+      inline auto cuda_gemm<std::complex<float>> = cublasCgemm;
       template<>
-      inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
-#endif
+      inline auto cuda_gemm<std::complex<double>> = cublasZgemm;
+
+      template<typename ScalarType>
+      int
+      gemm(const char* transpose_a,
+           const char* transpose_b,
+           const int* m,
+           const int* n,
+           const int* k,
+           const ScalarType* alpha,
+           const ScalarType* a,
+           const int* lda,
+           const ScalarType* b,
+           const int* ldb,
+           const ScalarType* beta,
+           ScalarType* c,
+           const int* ldc) {
+         cudaStream_t stream;
+         cudaStreamCreate(&stream);
+         cublasHandle_t handle;
+         cublasCreate(&handle);
+         cublasSetStream(handle, stream);
+         cuda_gemm<ScalarType>(
+               handle,
+               'N' == *transpose_a ? CUBLAS_OP_N : CUBLAS_OP_T,
+               'N' == *transpose_b ? CUBLAS_OP_N : CUBLAS_OP_T,
+               *m,
+               *n,
+               *k,
+               cuda_complex_wrap_value(alpha),
+               cuda_complex_wrap_value(a),
+               *lda,
+               cuda_complex_wrap_value(b),
+               *ldb,
+               cuda_complex_wrap_value(beta),
+               cuda_complex_wrap_value(c),
+               *ldc);
+         cublasDestroy(handle);
+         cudaStreamDestroy(stream);
+         return 0;
+      }
    } // namespace detail
 
    inline timer contract_kernel_guard("contract_kernel");
@@ -231,15 +194,6 @@ namespace TAT {
          if (batch_size == 1) {
             gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
          } else {
-#ifdef TAT_USE_MKL_GEMM_BATCH
-            if constexpr (same_shape) {
-               int group_count = 1;
-               mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
-            } else {
-               pmr::vector<int> group_size(batch_size, 1);
-               mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
-            }
-#else
             if constexpr (same_shape) {
                for (auto i = 0; i < batch_size; i++) {
                   gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
@@ -262,8 +216,8 @@ namespace TAT {
                         &ldc[i]);
                }
             }
-#endif
          }
+         cudaDeviceSynchronize();
       }
 
       template<typename Name, typename SetNameName>
