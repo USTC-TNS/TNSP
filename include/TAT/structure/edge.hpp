@@ -354,6 +354,16 @@ namespace TAT {
    template<typename T>
    constexpr bool is_general_edge = is_edge<T> || is_edge_pointer<T>;
 
+   inline U1 u1_symmetry_limit = 4;
+   template<typename Symmetry>
+   auto sum_condition(const Symmetry& sum) {
+      if constexpr (std::is_same_v<Symmetry, U1Symmetry>) {
+         return std::abs(std::get<0>(sum)) <= u1_symmetry_limit;
+      } else {
+         return true;
+      }
+   }
+
    namespace detail {
       template<typename Edge>
       using LoopEdgeIter = typename Edge::segment_t::const_iterator;
@@ -387,7 +397,15 @@ namespace TAT {
          return;
       }
       auto symmetry_iterator_list = detail::LoopEdgeIterList<Allocator, Edge>();
+      using Symmetry = typename Edge::symmetry_t;
       symmetry_iterator_list.reserve(rank);
+      auto check_summation = [&](auto i) {
+         auto sum = Symmetry();
+         for (auto j = 0; j <= i; j++) {
+            sum += symmetry_iterator_list[j]->first;
+         }
+         return sum_condition(sum);
+      };
       for (auto i = 0; i != rank; ++i) {
          const auto& segment = edges[i].segment;
          if (segment.empty()) {
@@ -401,13 +419,17 @@ namespace TAT {
       while (true) {
          minimum_changed = operate(symmetry_iterator_list, minimum_changed);
          auto edge_position = rank - 1;
-
-         while (++symmetry_iterator_list[edge_position] == edges[edge_position].segment.end()) {
+         ++symmetry_iterator_list[edge_position];
+         while (symmetry_iterator_list[edge_position] == edges[edge_position].segment.end()) {
             if (edge_position == 0) {
                return;
             }
             symmetry_iterator_list[edge_position] = edges[edge_position].segment.begin();
             --edge_position;
+            ++symmetry_iterator_list[edge_position];
+            while (symmetry_iterator_list[edge_position] != edges[edge_position].segment.end() && !check_summation(edge_position)) {
+               ++symmetry_iterator_list[edge_position];
+            }
          }
          minimum_changed = minimum_changed < edge_position ? minimum_changed : edge_position;
       }

@@ -39,6 +39,7 @@ namespace TAT {
       tat_m.doc() = "TAT is A Tensor library!";
       tat_m.attr("version") = version;
       tat_m.attr("information") = information;
+      tat_m.attr("u1_symmetry_limit") = u1_symmetry_limit;
       // random
       set_random(tat_m);
       // name
