@@ -19,10 +19,12 @@ target_compile_features(TAT INTERFACE cxx_std_17)
 
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 set(TAT_PYTHON_MODULE TAT CACHE STRING "Set python binding module name")
-set(TAT_FORCE_VERSION 0.2.13 CACHE STRING "Force set TAT version")
+set(TAT_FORCE_VERSION "" CACHE STRING "Force set TAT version")
 
 # These macros used for record compiling information
-target_compile_definitions(TAT INTERFACE TAT_VERSION="${TAT_FORCE_VERSION}")
+if(NOT ${TAT_FORCE_VERSION} STREQUAL "")
+   target_compile_definitions(TAT INTERFACE TAT_VERSION="${TAT_FORCE_VERSION}")
+endif()
 target_compile_definitions(TAT INTERFACE TAT_BUILD_TYPE="$<IF:$<STREQUAL:${CMAKE_BUILD_TYPE},>,Default,${CMAKE_BUILD_TYPE}>")
 target_compile_definitions(TAT INTERFACE TAT_COMPILER_INFORMATION="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} on ${CMAKE_SYSTEM_NAME} ${CMAKE_SYSTEM_VERSION}")
 
