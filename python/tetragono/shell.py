@@ -421,6 +421,21 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.gm_conf = mpi_comm.allgather(configuration._configuration)
 
+    def do_gm_data_load(self, line):
+        """
+        Load the lattice data from file, but preserve the current hamiltonians.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+
+    def gm_data_load(self, name):
+        data = read_from_file(name)
+        self.gm._lattice = data._lattice
+
     def do_gm_expand(self, line):
         """
         Expand dimension of sampling lattice.
@@ -527,3 +542,4 @@ else:
     gm_conf_dump = app.gm_conf_dump
     gm_conf_load = app.gm_conf_load
     gm_conf_create = app.gm_conf_create
+    gm_data_load = app.gm_data_load
