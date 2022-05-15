@@ -4,6 +4,7 @@
 
 *** Added
 + *tetragono*: Add compatibility support for python3.8.
++ *tetragono*: Add the multiple product state, which is the supertype of the string bond state.
 *** Changed
 *** Deprecated
 *** Removed
