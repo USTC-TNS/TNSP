@@ -129,12 +129,12 @@ namespace TAT {
       static constexpr bool enabled = false;
 #endif
 #ifdef TAT_USE_MPI
-      static bool initialized() noexcept {
+      static bool initialized() {
          int result;
          MPI_Initialized(&result);
          return result;
       }
-      static bool finalized() noexcept {
+      static bool finalized() {
          int result;
          MPI_Finalized(&result);
          return result;

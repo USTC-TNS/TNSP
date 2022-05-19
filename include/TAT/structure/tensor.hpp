@@ -231,9 +231,9 @@ namespace TAT {
 
       Tensor() : Tensor(1){};
       Tensor(const Tensor& other) = default;
-      Tensor(Tensor&& other) noexcept = default;
+      Tensor(Tensor&& other) = default;
       Tensor& operator=(const Tensor& other) = default;
-      Tensor& operator=(Tensor&& other) noexcept = default;
+      Tensor& operator=(Tensor&& other) = default;
       ~Tensor() = default;
 
       /**

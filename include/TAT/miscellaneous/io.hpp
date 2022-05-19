@@ -450,7 +450,7 @@ namespace TAT {
     */
    struct UnixColorCode {
       std::string color_code;
-      UnixColorCode(const char* code) noexcept : color_code(code) {}
+      UnixColorCode(const char* code) : color_code(code) {}
    };
    inline const UnixColorCode console_red = "\x1B[31m";
    inline const UnixColorCode console_green = "\x1B[32m";

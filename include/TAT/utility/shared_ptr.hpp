@@ -94,22 +94,22 @@ namespace TAT {
 
          // reset, swap I do not use it
 
-         const T* get() const noexcept {
+         const T* get() const {
             return &(m_pointer->m_object);
          }
-         T* get() noexcept {
+         T* get() {
             return &(m_pointer->m_object);
          }
-         const T& operator*() const noexcept {
+         const T& operator*() const {
             return *get();
          }
-         T& operator*() noexcept {
+         T& operator*() {
             return *get();
          }
-         const T* operator->() const noexcept {
+         const T* operator->() const {
             return get();
          }
-         T* operator->() noexcept {
+         T* operator->() {
             return get();
          }
 

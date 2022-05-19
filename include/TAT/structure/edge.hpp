@@ -43,7 +43,7 @@ namespace TAT {
       edge_segment_t(const edge_segment_t& edge) = default;
       edge_segment_t(edge_segment_t&& edge) = default;
       edge_segment_t& operator=(const edge_segment_t&) = default;
-      edge_segment_t& operator=(edge_segment_t&&) noexcept = default;
+      edge_segment_t& operator=(edge_segment_t&&) = default;
       ~edge_segment_t() = default;
 
       void check_valid_symmetry() const {
@@ -278,9 +278,9 @@ namespace TAT {
 
       Edge() = default;
       Edge(const Edge&) = default;
-      Edge(Edge&&) noexcept = default;
+      Edge(Edge&&) = default;
       Edge& operator=(const Edge&) = default;
-      Edge& operator=(Edge&&) noexcept = default;
+      Edge& operator=(Edge&&) = default;
       ~Edge() = default;
 
       template<typename Arg, typename = std::enable_if_t<!std::is_same_v<remove_cvref_t<Arg>, Edge<Symmetry, is_pointer>>>>
