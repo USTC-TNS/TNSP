@@ -60,15 +60,15 @@ namespace TAT {
 
       hash_t hash;
 
-      FastName() : hash(0) {} // A Temporary name
+      FastName() noexcept : hash(0) {} // A Temporary name
 
       // Specify name by its hash directly
-      explicit FastName(const hash_t hash) : hash(hash) {}
+      explicit FastName(const hash_t hash) noexcept : hash(hash) {}
 
       template<
             typename String,
             typename = std::enable_if_t<std::is_convertible_v<String, std::string_view> && !std::is_same_v<remove_cvref_t<String>, FastName>>>
-      FastName(String&& name) : hash(dataset().hash_function(name)) {
+      FastName(String&& name) noexcept : hash(dataset().hash_function(name)) {
          auto found = dataset().hash_to_name.find(hash);
          if (found == dataset().hash_to_name.end()) {
             dataset().hash_to_name[hash] = name;
@@ -85,7 +85,7 @@ namespace TAT {
       }
 
 #define TAT_DEFINE_FASTNAME_COMPARE(OP, EVAL) \
-   inline bool OP(const FastName& other) const { \
+   inline bool OP(const FastName& other) const noexcept { \
       const auto& a = hash; \
       const auto& b = other.hash; \
       return EVAL; \

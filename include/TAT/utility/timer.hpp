@@ -56,10 +56,10 @@ namespace TAT {
     private:
       struct timer_stack_t {
          std::stack<time_pair, std::vector<time_pair>> stack;
-         timer_stack_t() {
+         timer_stack_t() noexcept {
             stack.push({get_current_time(), time_duration::zero()});
          }
-         ~timer_stack_t() {
+         ~timer_stack_t() noexcept {
             const auto& [start_point, children_time] = stack.top();
             auto program_total_time = get_current_time() - start_point;
             auto program_misc_time = program_total_time - children_time;
@@ -84,9 +84,9 @@ namespace TAT {
       /**
        * Create a timer with given name
        */
-      timer(const char* name) : timer_name(name), timer_total_count(time_duration::zero()), timer_self_count(time_duration::zero()) {}
+      timer(const char* name) noexcept : timer_name(name), timer_total_count(time_duration::zero()), timer_self_count(time_duration::zero()) {}
 
-      ~timer() {
+      ~timer() noexcept {
          if (timer_total_count.count() != 0) {
             auto self_count_in_second = std::chrono::duration<float>(timer_self_count).count();
             auto total_count_in_second = std::chrono::duration<float>(timer_total_count).count();
@@ -99,11 +99,11 @@ namespace TAT {
          timer* owner;
 
        public:
-         timer_guard(timer* owner) : owner(owner) {
+         timer_guard(timer* owner) noexcept : owner(owner) {
             timer_stack.stack.push({get_current_time(), time_duration::zero()});
          }
 
-         ~timer_guard() {
+         ~timer_guard() noexcept {
             const auto& [start_point, children_time] = timer_stack.stack.top();
             auto this_guard_time = get_current_time() - start_point;
             owner->timer_total_count += this_guard_time;
@@ -126,7 +126,7 @@ namespace TAT {
       auto operator()() {
          return timer_guard{};
       }
-      timer(const char*) {}
+      timer(const char*) noexcept {}
    };
 #endif
 } // namespace TAT

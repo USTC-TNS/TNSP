@@ -123,7 +123,7 @@ namespace TAT {
 
     public:
       template<typename... Args, typename = std::enable_if_t<(sizeof...(Args) <= length) && (std::is_integral_v<Args> && ...)>>
-      Symmetry(const Args&... args) : base_tuple_t(construct_base_tuple(args...)) {}
+      Symmetry(const Args&... args) noexcept : base_tuple_t(construct_base_tuple(args...)) {}
 
     public:
       self_t& operator+=(const self_t& other_symmetry) & {

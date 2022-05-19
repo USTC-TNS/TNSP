@@ -37,7 +37,7 @@ namespace TAT {
          using value_type = DynamicType;
          value_type m_value;
          const_integral_t() = delete;
-         const_integral_t(value_type v) : m_value(v) {}
+         const_integral_t(value_type v) noexcept : m_value(v) {}
          value_type value() const {
             return m_value;
          }

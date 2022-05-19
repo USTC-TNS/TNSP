@@ -30,7 +30,7 @@ namespace TAT {
          T m_object;
          long m_count;
          template<typename... Args>
-         shared_ptr_helper(Args&&... args) : m_object(std::forward<Args>(args)...), m_count(1) {}
+         shared_ptr_helper(Args&&... args) noexcept : m_object(std::forward<Args>(args)...), m_count(1) {}
       };
 
       /**
@@ -46,7 +46,7 @@ namespace TAT {
 
          // (1)
          // modified by myself
-         shared_ptr(shared_ptr_helper<T>* pointer = nullptr) : m_pointer(pointer) {}
+         shared_ptr(shared_ptr_helper<T>* pointer = nullptr) noexcept : m_pointer(pointer) {}
          // (2)
          // deleted by myself
          // shared_ptr(std::nullptr_t) : m_pointer(nullptr) {}
@@ -55,18 +55,18 @@ namespace TAT {
          // shared_ptr(T* ptr) : m_pointer(ptr ? new shared_ptr_helper<T>{ptr, 1} : nullptr) {}
          // (8) no such constructor
          // (9) without polymorphism
-         shared_ptr(const shared_ptr<T>& other) : m_pointer(other.m_pointer) {
+         shared_ptr(const shared_ptr<T>& other) noexcept : m_pointer(other.m_pointer) {
             if (m_pointer) {
                m_pointer->m_count++;
             }
          }
          // (10) without polymorphism
-         shared_ptr(shared_ptr<T>&& other) : m_pointer(other.m_pointer) {
+         shared_ptr(shared_ptr<T>&& other) noexcept : m_pointer(other.m_pointer) {
             other.m_pointer = nullptr;
          }
          // (11-13) no such constructor
 
-         ~shared_ptr() {
+         ~shared_ptr() noexcept {
             if (m_pointer) {
                m_pointer->m_count--;
                if (m_pointer->m_count == 0) {
@@ -77,13 +77,13 @@ namespace TAT {
          }
 
          // (1)
-         shared_ptr<T>& operator=(const shared_ptr<T>& other) {
+         shared_ptr<T>& operator=(const shared_ptr<T>& other) noexcept {
             this->~shared_ptr();
             new (this) shared_ptr<T>(other);
             return *this;
          }
          // (2)
-         shared_ptr<T>& operator=(shared_ptr<T>&& other) {
+         shared_ptr<T>& operator=(shared_ptr<T>&& other) noexcept {
             if (this != &other) {
                this->~shared_ptr();
                new (this) shared_ptr<T>(std::move(other));

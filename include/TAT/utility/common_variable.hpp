@@ -77,8 +77,8 @@ namespace TAT {
        * Singleton, print a tips when program exits in debug mode, and control color ansi in windows
        */
       struct evil_t {
-         evil_t();
-         ~evil_t();
+         evil_t() noexcept;
+         ~evil_t() noexcept;
       };
       inline const evil_t evil;
    } // namespace detail

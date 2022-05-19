@@ -49,10 +49,10 @@ namespace TAT {
       std::ostream& out;
       bool valid;
       std::ostringstream string;
-      ~mpi_one_output_stream() {
+      ~mpi_one_output_stream() noexcept {
          out << string.str() << std::flush;
       }
-      mpi_one_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
+      mpi_one_output_stream(std::ostream& out, bool valid) noexcept : out(out), valid(valid) {}
 
       template<typename Type>
       mpi_one_output_stream& operator<<(const Type& value) & {
@@ -77,10 +77,10 @@ namespace TAT {
    struct mpi_rank_output_stream {
       std::ostream& out;
       std::ostringstream string;
-      ~mpi_rank_output_stream() {
+      ~mpi_rank_output_stream() noexcept {
          out << string.str() << std::flush;
       }
-      mpi_rank_output_stream(std::ostream& out, int rank) : out(out) {
+      mpi_rank_output_stream(std::ostream& out, int rank) noexcept : out(out) {
          if (rank != -1) {
             string << "[rank " << rank << "] ";
          }
@@ -139,14 +139,14 @@ namespace TAT {
          MPI_Finalized(&result);
          return result;
       }
-      mpi_t() {
+      mpi_t() noexcept {
          if (!initialized()) {
             MPI_Init(nullptr, nullptr);
          }
          MPI_Comm_size(MPI_COMM_WORLD, &size);
          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       }
-      ~mpi_t() {
+      ~mpi_t() noexcept {
          if (!finalized()) {
             MPI_Finalize();
          }
@@ -288,7 +288,7 @@ namespace TAT {
    };
    inline mpi_t mpi;
 
-   inline detail::evil_t::evil_t() {
+   inline detail::evil_t::evil_t() noexcept {
 #ifdef _WIN32
       HANDLE output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
       DWORD output_mode = 0;
@@ -300,7 +300,7 @@ namespace TAT {
       SetConsoleMode(error_handle, error_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
    }
-   inline detail::evil_t::~evil_t() {
+   inline detail::evil_t::~evil_t() noexcept {
       if constexpr (debug_mode) {
          mpi.log_one() << console_blue << "\n\nPremature optimization is the root of all evil!\n"
                        << console_origin << "                                       --- Donald Knuth\n\n\n";

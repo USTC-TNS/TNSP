@@ -108,11 +108,11 @@ namespace TAT {
 
    struct RemainCut {
       Size value;
-      explicit RemainCut(Size v) : value(v) {}
+      explicit RemainCut(Size v) noexcept : value(v) {}
    };
    struct RelativeCut {
       double value;
-      explicit RelativeCut(double v) : value(v) {}
+      explicit RelativeCut(double v) noexcept : value(v) {}
    };
    struct NoCut {};
    /**
@@ -221,7 +221,7 @@ namespace TAT {
        * \param edges_init edge shape
        * \see Core
        */
-      Tensor(std::vector<Name> names_init, std::vector<Edge<Symmetry>> edges_init) :
+      Tensor(std::vector<Name> names_init, std::vector<Edge<Symmetry>> edges_init) noexcept :
             names(std::move(names_init)),
             core(detail::shared_ptr<core_t>::make(std::move(edges_init))) {
          if constexpr (debug_mode) {
@@ -229,7 +229,7 @@ namespace TAT {
          }
       }
 
-      Tensor() : Tensor(1){};
+      Tensor() noexcept : Tensor(1){};
       Tensor(const Tensor& other) = default;
       Tensor(Tensor&& other) = default;
       Tensor& operator=(const Tensor& other) = default;
@@ -248,7 +248,7 @@ namespace TAT {
             ScalarType number,
             std::vector<Name> names_init = {},
             const std::vector<Symmetry>& edge_symmetry = {},
-            const std::vector<Arrow>& edge_arrow = {}) :
+            const std::vector<Arrow>& edge_arrow = {}) noexcept :
             names(std::move(names_init)),
             core(detail::shared_ptr<core_t>::make(get_edge_from_edge_symmetry_and_arrow(edge_symmetry, edge_arrow, names.size()))) {
          if constexpr (debug_mode) {

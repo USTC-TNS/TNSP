@@ -42,7 +42,7 @@ namespace TAT {
        */
       edge_vector_t edges = {};
 
-      core_edges_t(std::vector<Edge<Symmetry>> initial_edge) : edges(std::move(initial_edge)) {}
+      core_edges_t(std::vector<Edge<Symmetry>> initial_edge) noexcept : edges(std::move(initial_edge)) {}
 
       core_edges_t() = default;
       core_edges_t(const core_edges_t& other) = default;
@@ -69,7 +69,7 @@ namespace TAT {
        */
       block_map_t blocks;
 
-      core_blocks_t(std::vector<std::pair<std::vector<Symmetry>, Size>>&& symmetries_list) :
+      core_blocks_t(std::vector<std::pair<std::vector<Symmetry>, Size>>&& symmetries_list) noexcept :
             storage(std::accumulate(
                   symmetries_list.begin(),
                   symmetries_list.end(),
@@ -90,13 +90,16 @@ namespace TAT {
          }
       }
 
-      core_blocks_t(const core_blocks_t& other) : storage(other.storage), resource(storage.data(), storage.size() * sizeof(ScalarType)), blocks() {
+      core_blocks_t(const core_blocks_t& other) noexcept :
+            storage(other.storage),
+            resource(storage.data(), storage.size() * sizeof(ScalarType)),
+            blocks() {
          blocks.reserve(other.blocks.size());
          for (const auto& [symmetries, block] : other.blocks) {
             blocks.push_back({symmetries, content_vector_t(block.size(), &resource)});
          }
       }
-      core_blocks_t(core_blocks_t&& other) :
+      core_blocks_t(core_blocks_t&& other) noexcept :
             storage(std::move(other.storage)),
             resource(storage.data(), storage.size() * sizeof(ScalarType)),
             blocks() {
@@ -130,7 +133,7 @@ namespace TAT {
       using base_edges::edges;
 
       // this is the only constructor, from constructor of tensor
-      Core(std::vector<Edge<Symmetry>> initial_edge) :
+      Core(std::vector<Edge<Symmetry>> initial_edge) noexcept :
             base_edges(std::move(initial_edge)),
             base_blocks(initialize_block_symmetries_with_check(edges.data(), edges.size())) {}
 

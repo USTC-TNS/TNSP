@@ -58,14 +58,14 @@ namespace TAT {
       }
 
       // only valid if is_not_pointer
-      edge_segment_t(segment_t&& s) : segment(std::move(s)) {
+      edge_segment_t(segment_t&& s) noexcept : segment(std::move(s)) {
          static_assert(is_not_pointer);
          if constexpr (debug_mode) {
             check_valid_symmetry();
          }
       }
       // valid for both
-      edge_segment_t(const segment_t& s) : segment(s) {
+      edge_segment_t(const segment_t& s) noexcept : segment(s) {
          static_assert(true);
          if constexpr (debug_mode) {
             check_valid_symmetry();
@@ -75,7 +75,7 @@ namespace TAT {
       /**
        * construct the edge with list of symmetry, each size of them are 1
        */
-      edge_segment_t(const symlist_t& symmetries) {
+      edge_segment_t(const symlist_t& symmetries) noexcept {
          static_assert(is_not_pointer);
          segment.reserve(symmetries.size());
          for (const auto& symmetry : symmetries) {
@@ -89,7 +89,7 @@ namespace TAT {
       /**
        * construct a trivial edge, only contain a single symmetry
        */
-      edge_segment_t(const Size dimension, const Symmetry symmetry = Symmetry()) : segment({{symmetry, dimension}}) {
+      edge_segment_t(const Size dimension, const Symmetry symmetry = Symmetry()) noexcept : segment({{symmetry, dimension}}) {
          static_assert(is_not_pointer);
          if constexpr (debug_mode) {
             check_valid_symmetry();
@@ -246,15 +246,15 @@ namespace TAT {
 
    struct edge_bose_arrow_t {
       static constexpr Arrow arrow = false;
-      edge_bose_arrow_t() {}
-      edge_bose_arrow_t(Arrow) {}
+      edge_bose_arrow_t() noexcept {}
+      edge_bose_arrow_t(Arrow) noexcept {}
    };
 
    // there are background EPR pair for each edge, for fermi edge, it is needed to record the order of this EPR pair, which is so called fermi arrow
    struct edge_fermi_arrow_t {
       Arrow arrow;
-      edge_fermi_arrow_t() : arrow(false) {}
-      edge_fermi_arrow_t(Arrow arrow) : arrow(arrow) {}
+      edge_fermi_arrow_t() noexcept : arrow(false) {}
+      edge_fermi_arrow_t(Arrow arrow) noexcept : arrow(arrow) {}
    };
    template<typename Symmetry>
    using edge_arrow_t = std::conditional_t<Symmetry::is_fermi_symmetry, edge_fermi_arrow_t, edge_bose_arrow_t>;
@@ -284,11 +284,11 @@ namespace TAT {
       ~Edge() = default;
 
       template<typename Arg, typename = std::enable_if_t<!std::is_same_v<remove_cvref_t<Arg>, Edge<Symmetry, is_pointer>>>>
-      Edge(Arg&& arg, Arrow arrow = false) : base_segment_t(std::forward<Arg>(arg)), base_arrow_t(arrow) {}
-      Edge(std::initializer_list<std::pair<Symmetry, Size>> segment, Arrow arrow = false) :
+      Edge(Arg&& arg, Arrow arrow = false) noexcept : base_segment_t(std::forward<Arg>(arg)), base_arrow_t(arrow) {}
+      Edge(std::initializer_list<std::pair<Symmetry, Size>> segment, Arrow arrow = false) noexcept :
             base_segment_t(typename base_segment_t::segment_t(segment)),
             base_arrow_t(arrow) {}
-      Edge(std::initializer_list<Symmetry> symmetries, Arrow arrow = false) :
+      Edge(std::initializer_list<Symmetry> symmetries, Arrow arrow = false) noexcept :
             base_segment_t(typename base_segment_t::symlist_t(symmetries)),
             base_arrow_t(arrow) {}
 
@@ -307,20 +307,20 @@ namespace TAT {
    };
 
    template<typename Symmetry, bool is_pointer>
-   bool operator==(const edge_segment_t<Symmetry, is_pointer>& edge_1, const edge_segment_t<Symmetry, is_pointer>& edge_2) {
+   bool operator==(const edge_segment_t<Symmetry, is_pointer>& edge_1, const edge_segment_t<Symmetry, is_pointer>& edge_2) noexcept {
       return std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
    }
    template<typename Symmetry, bool is_pointer>
-   bool operator!=(const edge_segment_t<Symmetry, is_pointer>& edge_1, const edge_segment_t<Symmetry, is_pointer>& edge_2) {
+   bool operator!=(const edge_segment_t<Symmetry, is_pointer>& edge_1, const edge_segment_t<Symmetry, is_pointer>& edge_2) noexcept {
       return !std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
    }
 
    template<typename Symmetry, bool is_pointer>
-   bool operator==(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) {
+   bool operator==(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) noexcept {
       return edge_1.arrow == edge_2.arrow && std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
    }
    template<typename Symmetry, bool is_pointer>
-   bool operator!=(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) {
+   bool operator!=(const Edge<Symmetry, is_pointer>& edge_1, const Edge<Symmetry, is_pointer>& edge_2) noexcept {
       return edge_1.arrow != edge_2.arrow || !std::equal(edge_1.segment.begin(), edge_1.segment.end(), edge_2.segment.begin(), edge_2.segment.end());
    }
 

@@ -50,7 +50,7 @@ namespace TAT {
             using real_iterator_type = typename data_type::const_iterator;
             real_iterator_type real_iterator;
           public:
-            const_iterator(real_iterator_type i) : real_iterator(i) {}
+            const_iterator(real_iterator_type i) noexcept : real_iterator(i) {}
             const_iterator& operator++() {
                ++real_iterator;
                return *this;
@@ -65,10 +65,10 @@ namespace TAT {
             const value_type* operator->() const {
                return &(real_iterator->second);
             }
-            bool operator==(const const_iterator& other) const {
+            bool operator==(const const_iterator& other) const noexcept {
                return real_iterator == other.real_iterator;
             }
-            bool operator!=(const const_iterator& other) const {
+            bool operator!=(const const_iterator& other) const noexcept {
                return real_iterator != other.real_iterator;
             }
          };
