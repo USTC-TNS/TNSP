@@ -75,7 +75,7 @@ namespace TAT {
          }
       }
 
-      operator const std::string() const {
+      operator std::string() const {
          auto found = dataset().hash_to_name.find(hash);
          if (found == dataset().hash_to_name.end()) {
             return unknown_prefix + std::to_string(hash);
