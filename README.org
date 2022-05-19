@@ -8,7 +8,7 @@
 
 ** Prerequisites
 
-   * c++ compiler with c++17 support(such as gcc7+, clang5+)
+   * c++ compiler with c++17 support(such as gcc7.3+, clang6.0+)
    * lapack/blas or mkl
    * mpi(optional for parallel computing)
    * [[https://github.com/pybind/pybind11][pybind11]](optional for python binding)
