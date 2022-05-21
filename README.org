@@ -36,7 +36,7 @@
 
    If you are familiar with [[https://pybind11.readthedocs.io/en/stable/compiling.html#building-manually][pybind11]], you can compile [[/PyTAT/PyTAT.cpp][ =PyTAT/PyTAT.cpp= ]] directly with correct flag
 
-   Refer to [[/PyTAT/README.org][this]] for document of python binding
+   Refer to [[/PyTAT/README.org][this]] for more about python binding
 
 ** Use with [[https://emscripten.org/][emscripten]]
 
@@ -622,3 +622,12 @@
     #+begin_example
     {names:[i,j,k],edges:[2,3,4],blocks:[1.72434,0.0751923,-0.791637,-1.56929,-0.228975,-0.478804,1.47415,2.59481,-0.711104,0.661706,-0.0662977,-0.612105,3.10683,0.663374,-1.9786,-1.49405,0.308697,1.2056,-0.336922,0.631169,0.146169,-0.982161,0.585852,-2.37218]}
     #+end_example
+
+** FAQ
+
+*** Can I use it in windows?
+
+You can compile TAT with mingw and its library easily.
+If you want to use MSVC STL as c++ standard library with clang as compiler, please ensure release mode is turned on.
+With MSVC STL, never compile TAT in debug mode, in which segment fault will be raised, because stl class layouts are different between debug mode and release mode but TAT relies on it.
+MSVC as compiler is not supported, that I do not know how to solve, and contributions are welcome.

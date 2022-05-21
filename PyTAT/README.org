@@ -8,7 +8,7 @@ support for symmetry and fermion tensor.
 ** Install
 
 You can build by yourself, see [[/README.org][this]] for details. Or use =pip= to obtain
-built distribution (currently only work for linux): =pip install PyTAT=.
+built distribution: =pip install PyTAT=.
 
 ** Documents
 
