@@ -17,7 +17,10 @@
 #
 
 import os
-import pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
 from ..common_toolkit import (show, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
