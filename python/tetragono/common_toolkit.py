@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
 try:
     import cPickle as pickle
 except:
@@ -129,8 +130,10 @@ def read_from_file(file_name):
 
 def write_to_file(obj, file_name):
     if mpi_rank == 0:
-        with open(file_name, "wb") as file:
+        tmp_file_name = f".{file_name}.tmp"
+        with open(tmp_file_name, "wb") as file:
             pickle.dump(obj, file)
+        os.rename(tmp_file_name, file_name)
     mpi_comm.barrier()
 
 
