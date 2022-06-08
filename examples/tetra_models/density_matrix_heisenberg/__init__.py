@@ -20,36 +20,33 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, J):
+def create(L1, L2, D, J):
+    """
+    Create density matrix of a heisenberg lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    J : float
+        The heisenberg parameter.
+    """
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
-    for layer in (0, 1):
-        for l1 in range(L1):
-            for l2 in range(L2):
+    for l1 in range(L1):
+        for l2 in range(L2):
+            for layer in (0, 1):
                 state.physics_edges[(l1, l2, layer)] = 2
     SS = tet.common_tensor.No.SS.to(float)
     JSS = -J * SS
-    for layer in (0, 1):
-        for l1 in range(L1):
-            for l2 in range(L2):
-                if l1 != 0:
-                    state.hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = JSS
-                if l2 != 0:
-                    state.hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = JSS
+    for l1 in range(L1):
+        for l2 in range(L2):
+            if l1 != 0:
+                state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = JSS
+            if l2 != 0:
+                state.hamiltonians[(l1, l2 - 1, 0), (l1, l2, 0)] = JSS
     state = tet.AbstractLattice(state)
-    state.virtual_bond["R"] = 1
-    state.virtual_bond["D"] = 1
+    state.virtual_bond["R"] = D
+    state.virtual_bond["D"] = D
     return state
-
-
-TAT.random.seed(2333)
-
-L1 = 4
-L2 = 4
-abstract_lattice = create(L1=L1, L2=L2, J=-1)
-su_lattice = tet.SimpleUpdateLattice(abstract_lattice)
-for l1 in range(L1):
-    for l2 in range(L2):
-        su_lattice[l1, l2].zero()
-        su_lattice[l1, l2].storage = [1, 0, 0, 1]
-
-su_lattice.update(100, 0.01, new_dimension=5)
