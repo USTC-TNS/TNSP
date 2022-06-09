@@ -187,6 +187,11 @@ namespace TAT {
       return in;
    }
 
+   // MSVC cannot use std::operator<< directly in nametrait so wrap it by another function here.
+   inline std::ostream& print_string_for_name(std::ostream& out, const std::string& name) {
+      return out << name;
+   }
+
    template<>
    struct NameTraits<FastName> {
       // Although FastName is trivial type, but write string explicitly for good compatibility.
@@ -199,7 +204,7 @@ namespace TAT {
    struct NameTraits<std::string> {
       static constexpr name_out_operator_t<std::string> write = operator<;
       static constexpr name_in_operator_t<std::string> read = operator>;
-      static constexpr name_out_operator_t<std::string> print = std::operator<<;
+      static constexpr name_out_operator_t<std::string> print = print_string_for_name;
       static constexpr name_in_operator_t<std::string> scan = scan_string_for_name;
    };
 

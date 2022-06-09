@@ -101,7 +101,8 @@ namespace TAT {
                   // same to contract delete dimension
                   auto delete_unused_dimension = [](const auto& edge_this, const auto& edge_other, const auto& name_this, auto& delete_this) {
                      if constexpr (debug_mode) {
-                        if constexpr (is_fermi) {
+                        // MSVC cannot recognize is_fermi as constexpr value, and it complains to capture it, so use the original expression here.
+                        if constexpr (Symmetry::is_fermi_symmetry) {
                            if (edge_this.arrow == edge_other.arrow) {
                               detail::error("Different Fermi Arrow to Trace");
                            }
