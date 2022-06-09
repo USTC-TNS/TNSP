@@ -156,10 +156,12 @@ namespace TAT {
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Exp_2, 2)
 #undef TAT_DEFINE_DEFAULT_INTERNAL_NAME
 #define TAT_DEFINE_INTERNAL_NAME(x) \
+   inline const FastName target_preset_name_of_fastname_##x = "__" #x; \
+   inline const std::string target_preset_name_of_string_##x = "__" #x; \
    template<> \
-   inline const FastName& InternalName<FastName>::x = "__" #x; \
+   inline const FastName& InternalName<FastName>::x = target_preset_name_of_fastname_##x; \
    template<> \
-   inline const std::string& InternalName<std::string>::x = "__" #x;
+   inline const std::string& InternalName<std::string>::x = target_preset_name_of_string_##x;
    TAT_DEFINE_INTERNAL_NAME(Contract_0)
    TAT_DEFINE_INTERNAL_NAME(Contract_1)
    TAT_DEFINE_INTERNAL_NAME(Contract_2)
