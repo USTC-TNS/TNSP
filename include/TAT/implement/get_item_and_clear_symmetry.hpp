@@ -29,10 +29,6 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename PositionType>
    const ScalarType& Tensor<ScalarType, Symmetry, Name>::get_item(const PositionType& position) const& {
-      constexpr bool is_vector_not_map =
-            std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::vector<std::pair<Symmetry, Size>>>;
-      constexpr bool is_index_not_point =
-            std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::unordered_map<Name, Size>>;
       auto pmr_guard = scope_resource(default_buffer_size);
       auto rank = get_rank();
       auto symmetries = pmr::vector<Symmetry>();
@@ -43,7 +39,7 @@ namespace TAT {
       dimensions.reserve(rank);
       for (auto i = 0; i < rank; i++) {
          const auto& point_or_index = [&]() {
-            if constexpr (is_vector_not_map) {
+            if constexpr (std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::vector<std::pair<Symmetry, Size>>>) {
                return position[i];
             } else {
                auto found = position.find(names[i]);
@@ -56,7 +52,7 @@ namespace TAT {
             }
          }();
          const auto& [symmetry, index] = [&]() {
-            if constexpr (is_index_not_point) {
+            if constexpr (std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::unordered_map<Name, Size>>) {
                return edges(i).get_point_from_index(point_or_index);
             } else {
                return point_or_index;
