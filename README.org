@@ -8,19 +8,19 @@
 
 ** Prerequisites
 
-   * c++ compiler with c++17 support(such as gcc7.3+, clang6.0+)
-   * lapack/blas or mkl
-   * mpi(optional for parallel computing)
+   * c++ compiler with c++17 support(such as GCC 7.3+, Clang 6.0+)
+   * LAPACK/BLAS or MKL
+   * MPI(optional for parallel computing)
    * [[https://github.com/pybind/pybind11][pybind11]](optional for python binding)
    * [[https://github.com/numpy/numpy][numpy]](optional in python binding to export data into numpy array)
 
 ** Usage
 
-   Just include the file [[/include/TAT/TAT.hpp][ =include/TAT/TAT.hpp= ]] and link lapack/blas or mkl at link time
+   Just include the file [[/include/TAT/TAT.hpp][ =include/TAT/TAT.hpp= ]] and link LAPACK/BLAS or MKL at link time
 
    For good practice, pass argument =-I$path_to_TAT_root/include= to compiler and use =#include <TAT/TAT.hpp>= in your source file
 
-   For mpi support, you need to define macro =TAT_USE_MPI= and use mpi compiler such as =mpic++= (recommend) or pass correct flag to normal compiler(for expert)
+   For MPI support, you need to define macro =TAT_USE_MPI= and use MPI compiler such as =mpic++= (recommend) or pass correct flag to normal compiler(for expert)
 
    Please check comment in file [[/include/TAT/utility/common_variable.hpp#L24][ =common_variable.hpp= ]] for some other macro options
 
@@ -30,11 +30,9 @@
 
 ** Python binding
 
-   Python binding is configured in [[/FindTAT.cmake#L101][ =CMakeLists.txt= ]], use cmake and build target =PyTAT=
+   Python binding is configured in [[/FindTAT.cmake#L104][ =CMakeLists.txt= ]], use cmake and build target =PyTAT=
 
    For other customed python module name, define =TAT_PYTHON_MODULE= as cmake variable
-
-   If you are familiar with [[https://pybind11.readthedocs.io/en/stable/compiling.html#building-manually][pybind11]], you can compile [[/PyTAT/PyTAT.cpp][ =PyTAT/PyTAT.cpp= ]] directly with correct flag
 
    Refer to [[/PyTAT/README.org][this]] for more about python binding
 
@@ -628,6 +626,6 @@
 *** Can I use it in windows?
 
 You can compile TAT with mingw and its library easily.
-If you want to use MSVC STL as c++ standard library with clang as compiler, please ensure release mode is turned on.
+If you want to use MSVC STL as c++ standard library with Clang or MSVC as compiler, please ensure release mode is turned on.
 With MSVC STL, never compile TAT in debug mode, in which segment fault will be raised, because stl class layouts are different between debug mode and release mode but TAT relies on it.
-MSVC as compiler is not supported, that I do not know how to solve, and contributions are welcome.
+MSVC as compiler is available, but not tested sufficiently.
