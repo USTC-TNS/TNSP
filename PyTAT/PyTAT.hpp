@@ -189,7 +189,7 @@ namespace TAT {
             .def_buffer([](B& b) {
                // return a buffer which is writable
                auto& tensor = py::cast<T&>(b.tensor);
-               auto position_map = std::unordered_map<DefaultName, Symmetry>();
+               auto position_map = std::map<DefaultName, Symmetry>();
                for (const auto& [name, symmetry] : b.position) {
                   position_map[name] = symmetry;
                }
@@ -389,26 +389,26 @@ namespace TAT {
                      py::return_value_policy::reference_internal)
                .def(
                      "__getitem__",
-                     [](const T& tensor, const std::unordered_map<DefaultName, std::pair<Symmetry, Size>>& position) {
+                     [](const T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position) {
                         return tensor.at(position);
                      },
                      py::arg("dictionary_from_name_to_symmetry_and_dimension"))
                .def(
                      "__getitem__",
-                     [](const T& tensor, const std::unordered_map<DefaultName, Size>& position) {
+                     [](const T& tensor, const std::map<DefaultName, Size>& position) {
                         return tensor.at(position);
                      },
                      py::arg("dictionary_from_name_to_total_index"))
                .def(
                      "__setitem__",
-                     [](T& tensor, const std::unordered_map<DefaultName, std::pair<Symmetry, Size>>& position, const ScalarType& value) {
+                     [](T& tensor, const std::map<DefaultName, std::pair<Symmetry, Size>>& position, const ScalarType& value) {
                         tensor.at(position) = value;
                      },
                      py::arg("dictionary_from_name_to_symmetry_and_dimension"),
                      py::arg("value"))
                .def(
                      "__setitem__",
-                     [](T& tensor, const std::unordered_map<DefaultName, Size>& position, const ScalarType& value) {
+                     [](T& tensor, const std::map<DefaultName, Size>& position, const ScalarType& value) {
                         tensor.at(position) = value;
                      },
                      py::arg("dictionary_from_name_to_total_index"),
@@ -448,7 +448,7 @@ namespace TAT {
                .def("clear_symmetry", &T::clear_symmetry, "Convert symmetry tensor to non-symmetry tensor")
                .def(
                      "edge_rename",
-                     [](const T& tensor, const std::unordered_map<DefaultName, DefaultName>& dictionary) {
+                     [](const T& tensor, const std::map<DefaultName, DefaultName>& dictionary) {
                         return tensor.edge_rename(dictionary);
                      },
                      py::arg("name_dictionary"),
@@ -488,9 +488,7 @@ namespace TAT {
 #define TAT_LOOP_CONTRACT(ANOTHERSCALAR) \
    def( \
          "contract", \
-         [](const T& tensor_1, \
-            const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, \
-            std::unordered_set<std::pair<DefaultName, DefaultName>> contract_names) { \
+         [](const T& tensor_1, const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, std::set<std::pair<DefaultName, DefaultName>> contract_names) { \
             return tensor_1.contract(tensor_2, std::move(contract_names)); \
          }, \
          py::arg("another_tensor"), \
@@ -501,7 +499,7 @@ namespace TAT {
          tensor_t
                .def(
                      "identity",
-                     [](T& tensor, std::unordered_set<std::pair<DefaultName, DefaultName>>& pairs) -> T& {
+                     [](T& tensor, std::set<std::pair<DefaultName, DefaultName>>& pairs) -> T& {
                         return tensor.identity(pairs);
                      },
                      py::arg("pairs"),
@@ -517,7 +515,7 @@ namespace TAT {
                .def(
                      "svd",
                      [](const T& tensor,
-                        const std::unordered_set<DefaultName>& free_name_set_u,
+                        const std::set<DefaultName>& free_name_set_u,
                         const DefaultName& common_name_u,
                         const DefaultName& common_name_v,
                         const DefaultName& singular_name_u,
@@ -545,7 +543,7 @@ namespace TAT {
                      "qr",
                      [](const T& tensor,
                         char free_name_direction,
-                        const std::unordered_set<DefaultName>& free_name_set,
+                        const std::set<DefaultName>& free_name_set,
                         const DefaultName& common_name_q,
                         const DefaultName& common_name_r) {
                         auto result = tensor.qr(free_name_direction, free_name_set, common_name_q, common_name_r);

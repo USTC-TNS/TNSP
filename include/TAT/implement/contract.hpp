@@ -269,8 +269,8 @@ namespace TAT {
       template<typename Name, typename SetNameName>
       auto generate_contract_map(const SetNameName& contract_names) {
          auto size = contract_names.size();
-         auto contract_names_1_2 = pmr::unordered_map<Name, Name>(unordered_parameter * size);
-         auto contract_names_2_1 = pmr::unordered_map<Name, Name>(unordered_parameter * size);
+         auto contract_names_1_2 = pmr::map<Name, Name>();
+         auto contract_names_2_1 = pmr::map<Name, Name>();
          for (const auto& [name_1, name_2] : contract_names) {
             contract_names_1_2[name_1] = name_2;
             contract_names_2_1[name_2] = name_1;
@@ -282,10 +282,10 @@ namespace TAT {
       void check_valid_contract_plan(
             const Tensor<ScalarType, Symmetry, Name>& tensor_1,
             const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-            const std::unordered_set<std::pair<Name, Name>>& contract_names,
-            const pmr::unordered_map<Name, Name>& contract_names_1_2,
-            const pmr::unordered_map<Name, Name>& contract_names_2_1,
-            const std::unordered_set<Name>& fuse_names = {}) {
+            const std::set<std::pair<Name, Name>>& contract_names,
+            const pmr::map<Name, Name>& contract_names_1_2,
+            const pmr::map<Name, Name>& contract_names_2_1,
+            const std::set<Name>& fuse_names = {}) {
          // check if some missing name in contract
          for (const auto& [name_1, name_2] : contract_names) {
             if (auto found = tensor_1.find_rank_from_name(name_1) == tensor_1.names.end()) {
@@ -322,8 +322,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_2,
-         const std::unordered_set<std::pair<Name, Name>>& contract_names,
-         const std::unordered_set<Name>& fuse_names);
+         const std::set<std::pair<Name, Name>>& contract_names,
+         const std::set<Name>& fuse_names);
 
    template<
          typename ScalarType,
@@ -333,7 +333,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::unordered_set<std::pair<Name, Name>>& contract_names);
+         const std::set<std::pair<Name, Name>>& contract_names);
 
    inline timer contract_guard("contract");
 
@@ -341,8 +341,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::contract_implement(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::unordered_set<std::pair<Name, Name>>& contract_names,
-         const std::unordered_set<Name>& fuse_names) {
+         const std::set<std::pair<Name, Name>>& contract_names,
+         const std::set<Name>& fuse_names) {
       auto timer_guard = contract_guard();
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::length == 0) {
@@ -361,7 +361,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name> contract_without_fuse(
          const Tensor<ScalarType, Symmetry, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry, Name>& tensor_2,
-         const std::unordered_set<std::pair<Name, Name>>& contract_names) {
+         const std::set<std::pair<Name, Name>>& contract_names) {
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       const Rank rank_1 = tensor_1.get_rank();
       const Rank rank_2 = tensor_2.get_rank();
@@ -391,21 +391,21 @@ namespace TAT {
       // reverse set result
       // and three result edge name order
       //    -> two put what right and name_result
-      auto reversed_set_1 = pmr::unordered_set<Name>(unordered_parameter * free_rank_1);
-      auto free_name_1 = pmr::vector<Name>();                                                  // used for merge
-      auto common_name_1 = pmr::vector<Name>();                                                // used for merge
-      auto common_reverse_set_1 = pmr::unordered_set<Name>(unordered_parameter * common_rank); // used for reverse merge flag
+      auto reversed_set_1 = pmr::set<Name>();
+      auto free_name_1 = pmr::vector<Name>();       // used for merge
+      auto common_name_1 = pmr::vector<Name>();     // used for merge
+      auto common_reverse_set_1 = pmr::set<Name>(); // used for reverse merge flag
       free_name_1.reserve(free_rank_1);
       common_name_1.reserve(common_rank); // this will be set later
 
-      auto reversed_set_2 = pmr::unordered_set<Name>(unordered_parameter * free_rank_2);
+      auto reversed_set_2 = pmr::set<Name>();
       auto free_name_2 = pmr::vector<Name>();   // used for merge
       auto common_name_2 = pmr::vector<Name>(); // used for merge
       free_name_2.reserve(free_rank_2);
       common_name_2.reserve(common_rank); // this will be set later
 
-      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry>>>>(unordered_parameter * 3);
-      auto reversed_set_result = pmr::unordered_set<Name>(unordered_parameter * (free_rank_1 + free_rank_2 + common_rank));
+      auto split_map_result = pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry>>>>();
+      auto reversed_set_result = pmr::set<Name>();
       auto name_result = std::vector<Name>();
       auto& split_map_result_part_1 = split_map_result[InternalName<Name>::Contract_1];
       auto& split_map_result_part_2 = split_map_result[InternalName<Name>::Contract_2];
@@ -511,8 +511,8 @@ namespace TAT {
 
       // delete uncommon symmetry
       // and check symmetry order
-      auto delete_1 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(unordered_parameter * common_rank);
-      auto delete_2 = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(unordered_parameter * common_rank);
+      auto delete_1 = pmr::map<Name, pmr::map<Symmetry, Size>>();
+      auto delete_2 = pmr::map<Name, pmr::map<Symmetry, Size>>();
       for (Rank i = 0; i < common_rank; i++) {
          const auto& name_1 = common_name_1[i];
          const auto& name_2 = common_name_2[i];
@@ -528,7 +528,7 @@ namespace TAT {
                   }
                }
             }
-            auto delete_map = pmr::unordered_map<Symmetry, Size>(unordered_parameter * edge_this.segment.size());
+            auto delete_map = pmr::map<Symmetry, Size>();
             for (const auto& [symmetry, dimension] : edge_this.segment) {
                auto found = edge_other.find_by_symmetry(-symmetry);
                if (found != edge_other.segment.end()) {
@@ -554,7 +554,7 @@ namespace TAT {
          auto delete_map_edge_2_iterator = delete_unused_dimension(edge_2, edge_1, name_2, delete_2);
          if constexpr (debug_mode) {
             // check different order
-            auto empty_delete_map = pmr::unordered_map<Symmetry, Size>();
+            auto empty_delete_map = pmr::map<Symmetry, Size>();
             const auto& delete_map_edge_1 = [&]() -> const auto& {
                if (delete_map_edge_1_iterator == delete_1.end()) {
                   return empty_delete_map;
@@ -708,8 +708,8 @@ namespace TAT {
    Tensor<ScalarType, Symmetry<>, Name> contract_with_fuse(
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_1,
          const Tensor<ScalarType, Symmetry<>, Name>& tensor_2,
-         const std::unordered_set<std::pair<Name, Name>>& contract_names,
-         const std::unordered_set<Name>& fuse_names) {
+         const std::set<std::pair<Name, Name>>& contract_names,
+         const std::set<Name>& fuse_names) {
       const Rank rank_1 = tensor_1.get_rank();
       const Rank rank_2 = tensor_2.get_rank();
       const Rank common_rank = contract_names.size();

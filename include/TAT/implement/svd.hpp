@@ -269,7 +269,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd(
-         const std::unordered_set<Name>& free_name_set_u,
+         const std::set<Name>& free_name_set_u,
          const Name& common_name_u,
          const Name& common_name_v,
          const Name& singular_name_u,
@@ -305,12 +305,12 @@ namespace TAT {
       // result name is also needed
 
       // merge
-      auto free_name_u = pmr::vector<Name>();                                          // merge plan
-      auto free_name_v = pmr::vector<Name>();                                          // merge plan
-      auto reversed_set_origin = pmr::unordered_set<Name>(unordered_parameter * rank); // merge plan
+      auto free_name_u = pmr::vector<Name>();      // merge plan
+      auto free_name_v = pmr::vector<Name>();      // merge plan
+      auto reversed_set_origin = pmr::set<Name>(); // merge plan
 
-      auto reversed_set_u = pmr::unordered_set<Name>(unordered_parameter * rank);                   // split plan
-      auto reversed_set_v = pmr::unordered_set<Name>(unordered_parameter * rank);                   // split plan
+      auto reversed_set_u = pmr::set<Name>();                                                       // split plan
+      auto reversed_set_v = pmr::set<Name>();                                                       // split plan
       auto result_name_u = std::vector<Name>();                                                     // split plan
       auto result_name_v = std::vector<Name>();                                                     // split plan
       auto free_names_and_edges_u = pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>(); // split plan
@@ -411,8 +411,8 @@ namespace TAT {
       for (const auto& [symmetry, vector_s] : result_s) {
          total_dimension += vector_s.size();
       }
-      auto remain_dimension_u = pmr::unordered_map<Symmetry, Size>(unordered_parameter * result_s.size());
-      auto remain_dimension_v = pmr::unordered_map<Symmetry, Size>(unordered_parameter * result_s.size());
+      auto remain_dimension_u = pmr::map<Symmetry, Size>();
+      auto remain_dimension_v = pmr::map<Symmetry, Size>();
       if (auto cut_value = std::get_if<RemainCut>(&cut)) {
          Size cut_i = cut_value->value;
          if (cut_i < total_dimension) {
@@ -524,7 +524,7 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
-            pmr::map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
+            pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
       auto v = tensor_v.edge_operator_implement(
             pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
                   {InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
@@ -536,7 +536,7 @@ namespace TAT {
             empty_list<Name>(),
             empty_list<Name>(),
             empty_list<Name>(),
-            pmr::map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
+            pmr::map<Name, pmr::map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
       // (... U sym true) (-sym false S sym true) (-sym false V ...)
       return {
             std::move(u),

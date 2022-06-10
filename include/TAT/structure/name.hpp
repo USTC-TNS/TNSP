@@ -28,7 +28,6 @@
 #include <string>
 #include <string_view>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -45,7 +44,7 @@ namespace TAT {
 
       // Singleton
       struct dataset_t {
-         std::unordered_map<hash_t, std::string> hash_to_name;
+         std::map<hash_t, std::string> hash_to_name;
          std::hash<std::string_view> hash_function;
 
          static dataset_t& instance() {

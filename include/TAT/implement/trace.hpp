@@ -29,7 +29,7 @@ namespace TAT {
    inline timer trace_guard("trace");
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::unordered_set<std::pair<Name, Name>>& trace_names) const {
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::trace(const std::set<std::pair<Name, Name>>& trace_names) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = trace_guard();
 
@@ -40,18 +40,18 @@ namespace TAT {
       auto free_rank = rank - 2 * trace_rank;
 
       // transpose to a_i = b_{jji}, this is the most fast way to trace
-      auto traced_names = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto traced_names = pmr::set<Name>();
       auto trace_1_names = pmr::vector<Name>();
       auto trace_2_names = pmr::vector<Name>();
       trace_1_names.reserve(trace_rank);
       trace_2_names.reserve(trace_rank);
 
       // reverse before merge
-      auto reverse_names = pmr::unordered_set<Name>(unordered_parameter * rank);
-      auto traced_reverse_flag = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto reverse_names = pmr::set<Name>();
+      auto traced_reverse_flag = pmr::set<Name>();
 
       // delete empty corresponding segment of traced edge
-      auto delete_map = pmr::unordered_map<Name, pmr::unordered_map<Symmetry, Size>>(unordered_parameter * rank);
+      auto delete_map = pmr::map<Name, pmr::map<Symmetry, Size>>();
 
       // traced edge
       auto valid_index = pmr::vector<bool>(rank, true);
@@ -108,7 +108,7 @@ namespace TAT {
                            }
                         }
                      }
-                     auto delete_map = pmr::unordered_map<Symmetry, Size>(unordered_parameter * edge_this.segment.size());
+                     auto delete_map = pmr::map<Symmetry, Size>();
                      for (const auto& [symmetry, dimension] : edge_this.segment) {
                         auto found = edge_other.find_by_symmetry(-symmetry);
                         if (found != edge_other.segment.end()) {
@@ -134,7 +134,7 @@ namespace TAT {
                   auto delete_map_edge_2_iterator = delete_unused_dimension(edge_2, edge_1, name_2, delete_map);
                   if constexpr (debug_mode) {
                      // check different order
-                     auto empty_delete_map = pmr::unordered_map<Symmetry, Size>();
+                     auto empty_delete_map = pmr::map<Symmetry, Size>();
                      const auto& delete_map_edge_1 = [&]() -> const auto& {
                         if (delete_map_edge_1_iterator == delete_map.end()) {
                            return empty_delete_map;

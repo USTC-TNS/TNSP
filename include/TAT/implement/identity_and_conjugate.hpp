@@ -30,7 +30,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::conjugate(bool default_is_physics_edge, const std::unordered_set<Name>& exclude_names_set) const {
+   Tensor<ScalarType, Symmetry, Name>::conjugate(bool default_is_physics_edge, const std::set<Name>& exclude_names_set) const {
       auto timer_guard = conjugate_guard();
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::length == 0) {
@@ -135,7 +135,7 @@ namespace TAT {
    } // namespace detail
 
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::unordered_set<std::pair<Name, Name>>& pairs) & {
+   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::set<std::pair<Name, Name>>& pairs) & {
       // the order of fermi arrow should be (false true) before set to delta
       auto pmr_guard = scope_resource(default_buffer_size);
       auto rank = get_rank();

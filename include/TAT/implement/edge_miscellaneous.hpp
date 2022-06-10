@@ -26,7 +26,7 @@
 namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename ResultName, typename>
-   auto Tensor<ScalarType, Symmetry, Name>::edge_rename(const std::unordered_map<Name, ResultName>& dictionary) const {
+   auto Tensor<ScalarType, Symmetry, Name>::edge_rename(const std::map<Name, ResultName>& dictionary) const {
       if constexpr (debug_mode) {
          for (const auto& [name, new_name] : dictionary) {
             auto found = std::find(names.begin(), names.end(), name);
@@ -54,10 +54,10 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::merge_edge(
-         const std::unordered_map<Name, std::vector<Name>>& merge,
+         const std::map<Name, std::vector<Name>>& merge,
          bool apply_parity,
-         const std::unordered_set<Name>&& parity_exclude_name_merge,
-         const std::unordered_set<Name>& parity_exclude_name_reverse) const {
+         const std::set<Name>&& parity_exclude_name_merge,
+         const std::set<Name>& parity_exclude_name_reverse) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (debug_mode) {
          // check if the edge not exist in merge map
@@ -114,9 +114,9 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::split_edge(
-         const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
+         const std::map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
          bool apply_parity,
-         const std::unordered_set<Name>& parity_exclude_name_split) const {
+         const std::set<Name>& parity_exclude_name_split) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (debug_mode) {
          for (const auto& [old_edge, new_edges] : split) {

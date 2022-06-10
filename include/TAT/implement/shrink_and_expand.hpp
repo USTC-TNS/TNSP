@@ -30,7 +30,7 @@ namespace TAT {
    // TODO these can be optimize, avoid to use contract
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::expand(const std::unordered_map<Name, EdgePointExpand>& configure, const Name& old_name) const {
+   Tensor<ScalarType, Symmetry, Name>::expand(const std::map<Name, EdgePointExpand>& configure, const Name& old_name) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = expand_guard();
       // using EdgePointExpand = std::conditional_t<
@@ -71,7 +71,7 @@ namespace TAT {
             new_edges.push_back({{{symmetry, dimension}}});
          }
       }
-      auto contract_names = std::unordered_set<std::pair<Name, Name>>();
+      auto contract_names = std::set<std::pair<Name, Name>>();
       if (old_name != InternalName<Name>::No_Old_Name) {
          contract_names.insert({old_name, InternalName<Name>::No_Old_Name});
          new_names.push_back(InternalName<Name>::No_Old_Name);
@@ -116,7 +116,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::shrink(const std::unordered_map<Name, EdgePointShrink>& configure, const Name& new_name, Arrow arrow) const {
+   Tensor<ScalarType, Symmetry, Name>::shrink(const std::map<Name, EdgePointShrink>& configure, const Name& new_name, Arrow arrow) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = shrink_guard();
       constexpr bool is_no_symmetry = Symmetry::length == 0;
@@ -132,7 +132,7 @@ namespace TAT {
       new_edges.reserve(reserve_size);
       auto total_symmetry = Symmetry();
       Size total_offset = 0;
-      auto contract_names = std::unordered_set<std::pair<Name, Name>>();
+      auto contract_names = std::set<std::pair<Name, Name>>();
       for (const auto& name : names) {
          if (auto found_position = configure.find(name); found_position != configure.end()) {
             // shrinking

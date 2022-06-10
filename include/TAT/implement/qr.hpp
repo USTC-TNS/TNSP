@@ -323,7 +323,7 @@ namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::qr_result Tensor<ScalarType, Symmetry, Name>::qr(
          char free_name_direction,
-         const std::unordered_set<Name>& free_name_set,
+         const std::set<Name>& free_name_set,
          const Name& common_name_q,
          const Name& common_name_r) const {
       auto pmr_guard = scope_resource(default_buffer_size);
@@ -355,12 +355,12 @@ namespace TAT {
       // merge plan
       auto free_name_1 = pmr::vector<Name>(); // part of merge map
       auto free_name_2 = pmr::vector<Name>(); // part of merge map
-      auto reversed_set_origin = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto reversed_set_origin = pmr::set<Name>();
       // result name is trivial
 
       // split plan
-      auto reversed_set_1 = pmr::unordered_set<Name>(unordered_parameter * rank);
-      auto reversed_set_2 = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto reversed_set_1 = pmr::set<Name>();
+      auto reversed_set_2 = pmr::set<Name>();
       auto result_name_1 = std::vector<Name>();
       auto result_name_2 = std::vector<Name>();
       auto free_names_and_edges_1 = pmr::vector<std::tuple<Name, edge_segment_t<Symmetry, true>>>(); // part of split map

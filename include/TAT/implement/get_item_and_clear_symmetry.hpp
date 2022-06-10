@@ -52,7 +52,7 @@ namespace TAT {
             }
          }();
          const auto& [symmetry, index] = [&]() {
-            if constexpr (std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::unordered_map<Name, Size>>) {
+            if constexpr (std::is_same_v<PositionType, std::vector<Size>> || std::is_same_v<PositionType, std::map<Name, Size>>) {
                return edges(i).get_point_from_index(point_or_index);
             } else {
                return point_or_index;
