@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 #
 
 import numpy as np
-from TAT.Tensor import DNo as Tensor
+from TAT.No.D import Tensor
 
 max_random = 8
 
@@ -38,7 +38,7 @@ for _ in range(1000):
     A = Tensor(name_list, dim_list.tolist()).range()
     B = A.trace(trace_conf)
 
-    res = A.block[{}]
+    res = A.blocks[A.names]
     for i in range(rank_trace):
         res = res.trace(0, pair_leg[i, 0], pair_leg[i, 1])
         for j in range(i + 1, rank_trace):
@@ -53,6 +53,6 @@ for _ in range(1000):
             if pair_leg[j, 1] > pair_leg[i, 1]:
                 pair_leg[j, 1] -= 1
 
-    diff = res - B.block[{}]
+    diff = res - B.blocks[B.names]
 
     print(np.max(np.abs(diff)))

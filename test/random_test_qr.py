@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
 #
 
 import numpy as np
-from TAT.Tensor import DNo as Tensor
+from TAT.No.D import Tensor
 
 max_random = 8
 
@@ -34,12 +34,13 @@ for _ in range(100):
     re_A = Q.contract(R, {("QR.Q", "QR.R")})
     diff = re_A - A
 
-    QTQ = Q.contract_all_edge(Q.edge_rename({"QR.Q": "new"})).block[{}]
+    QTQ = Q.contract(Q.edge_rename({"QR.Q": "new"}), {(name, name) for name in Q.names if name != "QR.Q"})
+    QTQ = QTQ.blocks[QTQ.names]
 
     diff_Q = QTQ - np.identity(len(QTQ))
 
     print(np.max([diff.norm_max(), np.max(np.abs(diff_Q))]))
-    R_block = R.block[{}]
+    R_block = R.blocks[R.names]
     # print(R_block.shape)
     # print(R_block.reshape([-1, R_block.shape[-1]]))
     # print(R_block.reshape([R_block.shape[0], -1]))
