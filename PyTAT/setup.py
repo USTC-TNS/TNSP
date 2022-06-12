@@ -67,7 +67,7 @@ class build_ext(build_ext_original):
         os.chdir(str(cwd))
 
 
-with open("README.org", "rt") as file:
+with open("README.md", "rt", encoding="utf-8") as file:
     long_description = file.read()
 
 setup(
@@ -86,5 +86,5 @@ setup(
     ],
     license="GPLv3",
     long_description=long_description,
-    long_description_content_type="text/x-lisp",
+    long_description_content_type="text/markdown",
 )

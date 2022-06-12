@@ -1,6 +1,6 @@
 #+OPTIONS: toc:nil
 
-* [[https://github.com/hzhangxyz/TAT][TAT]] · [[https://github.com/hzhangxyz/TAT/tags][https://img.shields.io/github/v/tag/hzhangxyz/TAT.svg?style=flat-square]] [[/LICENSE.md][https://img.shields.io/github/license/hzhangxyz/TAT.svg?style=flat-square]] [[https://github.com/hzhangxyz/TAT/actions/workflows/build.yml][https://img.shields.io/github/workflow/status/hzhangxyz/TAT/build.svg?style=flat-square]] [[https://hzhangxyz.github.io/TAT/index.html][https://img.shields.io/github/workflow/status/hzhangxyz/TAT/doxygen.svg?color=%237f7fff&label=doc&style=flat-square]]
+* [[https://github.com/hzhangxyz/TAT][TAT]] · [[https://github.com/hzhangxyz/TAT/releases/latest][https://img.shields.io/github/v/release/hzhangxyz/TAT.svg?style=flat-square]] [[/LICENSE.md][https://img.shields.io/github/license/hzhangxyz/TAT.svg?style=flat-square]] [[https://github.com/hzhangxyz/TAT/actions/workflows/build.yml][https://img.shields.io/github/workflow/status/hzhangxyz/TAT/build.svg?style=flat-square]] [[https://hzhangxyz.github.io/TAT/index.html][https://img.shields.io/github/workflow/status/hzhangxyz/TAT/doxygen.svg?color=%237f7fff&label=reference&style=flat-square]]
   
   TAT is a header-only c++ tensor library with support for Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensor]] and [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermi tensor]]
 
