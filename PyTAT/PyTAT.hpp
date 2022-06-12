@@ -490,11 +490,13 @@ namespace TAT {
          "contract", \
          [](const T& tensor_1, \
             const Tensor<ANOTHERSCALAR, Symmetry>& tensor_2, \
-            std::unordered_set<std::pair<DefaultName, DefaultName>> contract_names) { \
-            return tensor_1.contract(tensor_2, std::move(contract_names)); \
+            std::unordered_set<std::pair<DefaultName, DefaultName>> contract_names, \
+            std::unordered_set<DefaultName> fuse_names) { \
+            return tensor_1.contract(tensor_2, std::move(contract_names), std::move(fuse_names)); \
          }, \
          py::arg("another_tensor"), \
          py::arg("contract_names"), \
+         py::arg("fuse_names") = py::set(), \
          "Contract two tensors")
          tensor_t.TAT_LOOP_CONTRACT(float).TAT_LOOP_CONTRACT(double).TAT_LOOP_CONTRACT(std::complex<float>).TAT_LOOP_CONTRACT(std::complex<double>);
 #undef TAT_LOOP_CONTRACT
