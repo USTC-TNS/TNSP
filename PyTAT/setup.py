@@ -56,7 +56,7 @@ class build_ext(build_ext_original):
         if "CMAKEFLAGS" in os.environ:
             cmake_args += os.environ["CMAKEFLAGS"].split("|")
         os.chdir(str(build_dir))
-        self.spawn(['cmake', str(cwd)] + cmake_args)
+        self.spawn(['cmake', str(cwd.parent)] + cmake_args)
 
         if not self.dry_run:
             if "MAKEFLAGS" in os.environ:
@@ -66,6 +66,9 @@ class build_ext(build_ext_original):
             self.spawn(["cmake", "--build", ".", "--target", extension.name] + make_args)
         os.chdir(str(cwd))
 
+
+with open("README.org", "rt") as file:
+    long_description = file.read()
 
 setup(
     name="PyTAT",
@@ -82,4 +85,6 @@ setup(
         "numpy",
     ],
     license="GPLv3",
+    long_description=long_description,
+    long_description_content_type="text/x-lisp",
 )

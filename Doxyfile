@@ -117,7 +117,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = include/TAT python/tetragono python/lazy
+INPUT                  = include/TAT tetragono/tetragono lazy_graph/lazy
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.cpp \
                          *.hpp \

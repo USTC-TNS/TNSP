@@ -23,14 +23,24 @@ version = check_output(["git", "describe"]).decode("utf-8")
 version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
 setup(
-    name="lazy_graph",
+    name="tetragono",
     version=version,
-    description="lazy graph framework",
+    description="OBC square tensor network state(PEPS) library",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/hzhangxyz/TAT",
-    packages=["lazy"],
-    package_dir={"": "python"},
+    packages=[
+        "tetragono",
+        "tetragono/common_tensor",
+        "tetragono/sampling_tools",
+        "tetragono/auxiliaries",
+    ],
+    install_requires=[
+        f"PyTAT=={version}",
+        f"lazy_graph=={version}",
+        "mpi4py",
+        "numpy",
+    ],
     license="GPLv3",
-    python_requires=">=3.7",
+    python_requires=">=3.9",
 )

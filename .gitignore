@@ -1,7 +1,6 @@
 /.vs
 /.idea
 /.vscode
-/build
 /out
 /CMakeSettings.json
 /compile_commands.json
@@ -10,8 +9,9 @@
 /emscripten
 /.cache
 /git-worktree
-/dist
 /PyTAT/.*.cpp
+build
+dist
 .DS_Store
 .mypy_cache
 __pycache__

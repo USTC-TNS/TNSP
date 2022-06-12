@@ -23,25 +23,13 @@ version = check_output(["git", "describe"]).decode("utf-8")
 version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
 setup(
-    name="tetragono",
+    name="tnsp_bridge",
     version=version,
-    description="OBC square tensor network state(PEPS) library",
+    description="bridge from TNSP to TAT",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/hzhangxyz/TAT",
-    packages=[
-        "tetragono",
-        "tetragono/common_tensor",
-        "tetragono/sampling_tools",
-        "tetragono/auxiliaries",
-    ],
-    package_dir={"": "python"},
-    install_requires=[
-        f"PyTAT=={version}",
-        f"lazy_graph=={version}",
-        "mpi4py",
-        "numpy",
-    ],
+    packages=["bridge"],
     license="GPLv3",
-    python_requires=">=3.9",
+    python_requires=">=3.7",
 )
