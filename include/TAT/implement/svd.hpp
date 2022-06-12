@@ -463,6 +463,8 @@ namespace TAT {
          real_scalar<ScalarType> threshold = cut_value->value * maximum_singular;
          for (const auto& [symmetry, vector_s] : result_s) {
             auto current_size = vector_s.size();
+            remain_dimension_u[symmetry] = current_size;
+            remain_dimension_v[-symmetry] = current_size;
             for (auto i = 0; i < current_size; i++) {
                if (vector_s[i] < threshold) {
                   remain_dimension_u[symmetry] = i;
