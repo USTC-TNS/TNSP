@@ -1,5 +1,4 @@
 SavingData/*
 outputSave/*
-*.dat
 !SavingData/.gitkeep
 !outputSave/.gitkeep
