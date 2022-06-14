@@ -526,26 +526,26 @@ class DoubleLayerAuxiliaries:
                 right = self._inline_right_to_left_tailed[l1, l2 + 1]()
                 result = safe_contract(
                     left,
-                    safe_rename(self._lattice_n[l1][l2](), {
-                        "R": "RN",
-                        "D": "DN"
-                    } | {
-                        f"P{orbit}": f"O{body_index}"
-                        for body_index, [index, orbit] in enumerate(index_and_orbit)
-                        if index == 0
-                    }),
+                    safe_rename(
+                        self._lattice_n[l1][l2](), {
+                            "R": "RN",
+                            "D": "DN",
+                            **{
+                                f"P{orbit}": f"O{body_index}" for body_index, [index, orbit] in enumerate(index_and_orbit) if index == 0
+                            }
+                        }),
                     {("RN", "L"), ("DN", "U")},
                 )
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_c[l1][l2](), {
-                        "R": "RC",
-                        "D": "DC"
-                    } | {
-                        f"P{orbit}": f"I{body_index}"
-                        for body_index, [index, orbit] in enumerate(index_and_orbit)
-                        if index == 0
-                    }),
+                    safe_rename(
+                        self._lattice_c[l1][l2](), {
+                            "R": "RC",
+                            "D": "DC",
+                            **{
+                                f"P{orbit}": f"I{body_index}" for body_index, [index, orbit] in enumerate(index_and_orbit) if index == 0
+                            }
+                        }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
                 )
@@ -557,26 +557,26 @@ class DoubleLayerAuxiliaries:
                 down = self._inline_down_to_up_tailed[l1 + 1, l2]()
                 result = safe_contract(
                     up,
-                    safe_rename(self._lattice_n[l1][l2](), {
-                        "R": "RN",
-                        "D": "DN"
-                    } | {
-                        f"P{orbit}": f"O{body_index}"
-                        for body_index, [index, orbit] in enumerate(index_and_orbit)
-                        if index == 0
-                    }),
+                    safe_rename(
+                        self._lattice_n[l1][l2](), {
+                            "R": "RN",
+                            "D": "DN",
+                            **{
+                                f"P{orbit}": f"O{body_index}" for body_index, [index, orbit] in enumerate(index_and_orbit) if index == 0
+                            }
+                        }),
                     {("RN", "L"), ("DN", "U")},
                 )
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_c[l1][l2](), {
-                        "R": "RC",
-                        "D": "DC"
-                    } | {
-                        f"P{orbit}": f"I{body_index}"
-                        for body_index, [index, orbit] in enumerate(index_and_orbit)
-                        if index == 0
-                    }),
+                    safe_rename(
+                        self._lattice_c[l1][l2](), {
+                            "R": "RC",
+                            "D": "DC",
+                            **{
+                                f"P{orbit}": f"I{body_index}" for body_index, [index, orbit] in enumerate(index_and_orbit) if index == 0
+                            }
+                        }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
                 )
@@ -614,18 +614,22 @@ class DoubleLayerAuxiliaries:
                 right_dot = self._up_to_down_site[i - 1, j + 1]()
                 result = safe_contract(
                     left_part,
-                    safe_rename(self._lattice_n[i][j](), {
-                        "R": "RN",
-                        "D": "DN"
-                    } | {f"P{orbit}": f"O{body_index}" for body_index, orbit in left_index_and_orbit}),
+                    safe_rename(
+                        self._lattice_n[i][j](), {
+                            "R": "RN",
+                            "D": "DN",
+                            **{f"P{orbit}": f"O{body_index}" for body_index, orbit in left_index_and_orbit}
+                        }),
                     {("RN", "L"), ("DN", "U")},
                 )
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_c[i][j](), {
-                        "R": "RC",
-                        "D": "DC",
-                    } | {f"P{orbit}": f"I{body_index}" for body_index, orbit in left_index_and_orbit}),
+                    safe_rename(
+                        self._lattice_c[i][j](), {
+                            "R": "RC",
+                            "D": "DC",
+                            **{f"P{orbit}": f"I{body_index}" for body_index, orbit in left_index_and_orbit}
+                        }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
                 )
@@ -634,18 +638,22 @@ class DoubleLayerAuxiliaries:
                 result = safe_contract(result, safe_rename(right_dot, {"R": "R1"}), {("R1", "L")})
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_n[i][j + 1](), {
-                        "R": "RN",
-                        "D": "DN"
-                    } | {f"P{orbit}": f"O{body_index}" for body_index, orbit in right_index_and_orbit}),
+                    safe_rename(
+                        self._lattice_n[i][j + 1](), {
+                            "R": "RN",
+                            "D": "DN",
+                            **{f"P{orbit}": f"O{body_index}" for body_index, orbit in right_index_and_orbit}
+                        }),
                     {("RN", "L"), ("DN", "U")},
                 )
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_c[i][j + 1](), {
-                        "R": "RC",
-                        "D": "DC"
-                    } | {f"P{orbit}": f"I{body_index}" for body_index, orbit in right_index_and_orbit}),
+                    safe_rename(
+                        self._lattice_c[i][j + 1](), {
+                            "R": "RC",
+                            "D": "DC",
+                            **{f"P{orbit}": f"I{body_index}" for body_index, orbit in right_index_and_orbit}
+                        }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
                 )
@@ -679,16 +687,18 @@ class DoubleLayerAuxiliaries:
                     up_part,
                     safe_rename(self._lattice_n[i][j](), {
                         "R": "RN",
-                        "D": "DN"
-                    } | {f"P{orbit}": f"O{body_index}" for body_index, orbit in up_index_and_orbit}),
+                        "D": "DN",
+                        **{f"P{orbit}": f"O{body_index}" for body_index, orbit in up_index_and_orbit}
+                    }),
                     {("RN", "L"), ("DN", "U")},
                 )
                 result = safe_contract(
                     result,
                     safe_rename(self._lattice_c[i][j](), {
                         "R": "RC",
-                        "D": "DC"
-                    } | {f"P{orbit}": f"I{body_index}" for body_index, orbit in up_index_and_orbit}),
+                        "D": "DC",
+                        **{f"P{orbit}": f"I{body_index}" for body_index, orbit in up_index_and_orbit}
+                    }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
                 )
@@ -697,18 +707,22 @@ class DoubleLayerAuxiliaries:
                 result = safe_contract(result, safe_rename(down_dot, {"D": "D1"}), {("D1", "U")})
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_n[i + 1][j](), {
-                        "R": "RN",
-                        "D": "DN"
-                    } | {f"P{orbit}": f"O{body_index}" for body_index, orbit in down_index_and_orbit}),
+                    safe_rename(
+                        self._lattice_n[i + 1][j](), {
+                            "R": "RN",
+                            "D": "DN",
+                            **{f"P{orbit}": f"O{body_index}" for body_index, orbit in down_index_and_orbit}
+                        }),
                     {("RN", "L"), ("DN", "U")},
                 )
                 result = safe_contract(
                     result,
-                    safe_rename(self._lattice_c[i + 1][j](), {
-                        "R": "RC",
-                        "D": "DC"
-                    } | {f"P{orbit}": f"I{body_index}" for body_index, orbit in down_index_and_orbit}),
+                    safe_rename(
+                        self._lattice_c[i + 1][j](), {
+                            "R": "RC",
+                            "D": "DC",
+                            **{f"P{orbit}": f"I{body_index}" for body_index, orbit in down_index_and_orbit}
+                        }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
                 )

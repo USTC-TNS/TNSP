@@ -346,10 +346,8 @@ class Configuration(SingleLayerAuxiliaries):
                         "L0": "R",
                         "R0": "L",
                         "U0": "D",
-                        "D0": "U"
-                    } | {
-                        f"P_{l1}_{l2}_{orbit}": f"P{orbit}"
-                        for orbit, edge in self._owner.physics_edges[l1, l2].items()
+                        "D0": "U",
+                        **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self._owner.physics_edges[l1, l2]},
                     })
 
                     for orbit, shrinker in self._get_shrinker((l1, l2), self._configuration[l1][l2]):
