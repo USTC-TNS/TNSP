@@ -12,43 +12,44 @@
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.13...v0.2.17][v0.2.17]] - 2022-06-12
 
 *** Added
-+ *tetragono*: Add support for changing hamiltonian of a existent sampling lattice.
++ *tetragono*: Add support for changing the hamiltonian of an existent sampling lattice.
   To do it, create a lattice with target hamiltonians and then call =gm_data_load(file_name)=
-  to replace tensors by data stored in file =file_name=. For low level api,
+  to replace tensors with data stored in file =file_name=. For low-level API,
   =lattice_1._lattice = lattice_2._lattice= could replace tensor data directly.
 + *PyTAT*: Add edge fusing support when contracting two tensors.
 + *TAT.hpp*: Add support for being compiled by MSVC or Intel ICC.
 *** Changed
-+ *tetragono*: Avoid data file be destroyed if file system error occur, such as size limit of quota reached.
++ *tetragono*: Avoid data files being destroyed if a file system error appears when saving,
+  such as the size limit of quota reached.
 *** Removed
 + *tetragono*: Submodule =common_variable= is removed, please use =common_tensor= or =common_toolkit= instead.
 *** Fixed
-+ *TAT.hpp*: Fix selecting wrong constructor of =Edge= when using two vector iterators to construct =Edge=.
-+ *TAT.hpp*: Fix bug when tensor svd with relative cut cutting nothing.
++ *TAT.hpp*: Fix selecting the wrong constructor of =Edge= when using two vector iterators to construct =Edge=.
++ *TAT.hpp*: Fix bug when tensor SVD with relative cut cutting nothing.
 
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.12...v0.2.13][v0.2.13]] - 2022-04-26
 
 *** Added
-+ *tetragono*: Allow passing function directly instead of module name string of various api of mid level api,
++ *tetragono*: Allow passing function directly instead of module name string of various interface of mid-level API,
   including =restrict= for restricting subspace, =measurement= for measuring values, =initial_configuration=
   for initializing sampling configurations, and =hopping_hamiltonians= for fake hamiltonians used by sweep sampling.
-+ *tetragono*: Add =load_configuration= to load configuration from a saved file to a =Configuration= object for low
-  level api.
++ *tetragono*: Add =load_configuration= to load configuration from a saved file to a =Configuration= object
+  for low-level API.
 + *tetragono*: Add classical term of energy for sampling lattice. To do it,
-  call =observer.set_classical_energy(classical_energy)= to set function with configuration as input, and returning
-  a float as classical energy. For mid level api, pass a module containing function =classical_energy= or the function
+  call =observer.set_classical_energy(classical_energy)= to set a function with configuration as input, and returns
+  a float as classical energy. For mid-level API, pass a module containing function =classical_energy= or the function
   itself as parameter =classical_energy= to =gm_run= or =gradient_descent=.
 *** Changed
-+ *tetragono*: Using =hopping_hamiltonians= instead of original =hamiltonians= for function name which generates
++ *tetragono*: Using =hopping_hamiltonians= instead of original =hamiltonians= for the name of function which generates
   fake hamiltonians used by sweep sampling.
 + *tetragono*: Updating interface for generating initial sampling configuration(=initial_configuration=).
-  Originally =state=, and =Dc= is passed, it is needed to create =Configuration= manually. Now, the input function will
-  get created =Configuration=, and set configuration on it directly.
-+ *tetragono*: Configuration information is maintained by three mid level api now: =gm_conf_create=, =gm_conf_load=,
+  Previously, =state= and =Dc= are given, it is needed to create =Configuration= manually. Currently,
+  the input function will get initiated =Configuration=, and set configuration on it directly.
++ *tetragono*: Configuration information is maintained by three mid-level API now: =gm_conf_create=, =gm_conf_load=,
   and =gm_conf_dump=. Call =gm_conf_load(file_name)= to load configuration from file. Call =gm_conf_dump(file_name)=
   to dump configuration to file after =gm_run=. Call =gm_conf_create(initial_configuration)= to using function
   =initial_configuration= to initialize configuration.
 + *tetragono*: Rename parameter name =sweep_initial_configuration= to =sampling_configurations=. Generally,
-  this parameter is not used directly by mid level api, and it is needed to use =gm_conf_create/load/dump=
-  to manipulate it. In low level api environment, =load_configuration= may be used to create configuration passed
+  this parameter is not used directly by mid-level API, and it is needed to use =gm_conf_create/load/dump=
+  to manipulate it. In the low-level API environment, =load_configuration= may be used to create configuration passed
   to =sampling_configurations=.
