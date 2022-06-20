@@ -88,8 +88,7 @@ class Observer():
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
-        Exit sampling loop, reduce observed values, used when running with multiple processes. reduce all values
-        collected except Deltas, which is handled specially.
+        Exit sampling loop, reduce observed values, used when running with multiple processes.
         """
         buffer = []
         for name, observers in self._observer.items():
