@@ -454,7 +454,7 @@ class Observer():
         Returns
         -------
         tuple[float, float]
-            The energy per site.
+            The total energy.
         """
         return self._expect_and_deviation(self._total_energy, self._total_energy_square, self._total_energy_reweight)
 
