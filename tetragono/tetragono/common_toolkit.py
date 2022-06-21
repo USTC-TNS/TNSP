@@ -95,6 +95,8 @@ class SignalHandler():
         return result != 0
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            return False
         signal.signal(self.signal, self.saved_handler)
 
 
@@ -114,6 +116,8 @@ class SeedDiffer:
         self.make_seed_diff()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            return False
         self.make_seed_same()
 
     def __init__(self):

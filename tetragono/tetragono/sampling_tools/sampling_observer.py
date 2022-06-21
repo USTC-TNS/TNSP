@@ -90,6 +90,8 @@ class Observer():
         """
         Exit sampling loop, reduce observed values, used when running with multiple processes.
         """
+        if exc_type is not None:
+            return False
         buffer = []
         for name, observers in self._observer.items():
             for positions in observers:
