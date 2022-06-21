@@ -22,7 +22,7 @@ from .abstract_ansatz import AbstractAnsatz
 from ..common_toolkit import MPI, mpi_comm
 
 
-class ClosedString(AbstractAnsatz):
+class OpenString(AbstractAnsatz):
 
     __slots__ = [
         "multiple_product_state", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list",
@@ -55,12 +55,12 @@ class ClosedString(AbstractAnsatz):
 
     def __init__(self, multiple_product_state, index_to_site, cut_dimension):
         """
-        Create closed string ansatz by given index_to_site map and cut_dimension.
+        Create open string ansatz by given index_to_site map and cut_dimension.
 
         Parameters
         ----------
         multiple_product_state : MultipleProductState
-            The multiple product state used to create closed string.
+            The multiple product state used to create open string.
         index_to_site : list[tuple[int, int, int]]
             The sites array to specify the string shape.
         cut_dimension : int

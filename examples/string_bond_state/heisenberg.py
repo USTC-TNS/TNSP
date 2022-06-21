@@ -20,7 +20,7 @@ import TAT
 import signal
 import tetragono as tet
 import tetragono.multiple_product_state
-import tetragono.multiple_product_ansatz.closed_string
+import tetragono.multiple_product_ansatz.open_string
 
 
 def create(L1, L2, D, J):
@@ -36,13 +36,13 @@ def create(L1, L2, D, J):
     for l1 in range(L1):
         for l2 in range(L2) if l1 % 2 == 0 else reversed(range(L2)):
             index_to_site.append((l1, l2, 0))
-    ansatz_1 = tet.multiple_product_ansatz.closed_string.ClosedString(state, index_to_site, D)
+    ansatz_1 = tet.multiple_product_ansatz.open_string.OpenString(state, index_to_site, D)
 
     index_to_site = []
     for l2 in range(L2):
         for l1 in range(L1) if l2 % 2 == 0 else reversed(range(L1)):
             index_to_site.append((l1, l2, 0))
-    ansatz_2 = tet.multiple_product_ansatz.closed_string.ClosedString(state, index_to_site, D)
+    ansatz_2 = tet.multiple_product_ansatz.open_string.OpenString(state, index_to_site, D)
 
     state.add_ansatz(ansatz_1)
     state.add_ansatz(ansatz_2)
