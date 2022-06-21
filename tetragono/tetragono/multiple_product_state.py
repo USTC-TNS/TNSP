@@ -21,6 +21,7 @@ import TAT
 from .abstract_state import AbstractState
 from .common_toolkit import allreduce_buffer
 from .sampling_tools.tensor_element import tensor_element
+from .multiple_product_ansatz import *
 
 
 class MultipleProductState(AbstractState):
