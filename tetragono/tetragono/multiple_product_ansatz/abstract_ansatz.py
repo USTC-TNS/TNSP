@@ -53,6 +53,28 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("delta not implemented")
 
+    def weight_and_delta(self, configurations, calculate_delta):
+        """
+        Calculate the weight and delta of the given configurations.
+
+        Parameters
+        ----------
+        configuration : list[dict[tuple[int, int, int], int]]
+            The given configuration list to calculate weight and delta.
+        calculate_delta : bool
+            Whether to calculate delta.
+
+        Returns
+        -------
+        tuple[list[float | complex], None | list[Delta]]
+        """
+        weight = [self.weight(configuration) for configuration in configurations]
+        if calculate_delta:
+            delta = [self.delta(configuration) for configuration in configurations]
+        else:
+            delta = None
+        return weight, delta
+
     @staticmethod
     def allreduce_delta(delta):
         """

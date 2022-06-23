@@ -29,3 +29,4 @@ from .sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSamp
 from . import common_tensor
 from . import common_toolkit
 from .common_toolkit import *
+from . import multiple_product_state

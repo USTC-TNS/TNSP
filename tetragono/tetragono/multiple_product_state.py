@@ -58,7 +58,7 @@ class MultipleProductState(AbstractState):
             name = str(len(self.ansatzes))
         self.ansatzes[name] = ansatz
 
-    def weight_and_delta(self, configuration, *, calculate_delta):
+    def weight_and_delta(self, configurations, calculate_delta):
         """
         Calculate weight and delta of all ansatz.
 
@@ -66,31 +66,30 @@ class MultipleProductState(AbstractState):
         ----------
         configuration : dict[tuple[int, int, int], int]
             The given configuration to calculate weight and delta
-        calculate_delta : bool
-            Whether to calculate delta.
+        calculate_delta : set[str]
+            The iterator of name of ansatz to calculate delta.
 
         Returns
         -------
-        tuple[complex | float, None | dict[str, ansatz]]
+        tuple[list[complex | float], list[dict[str, ansatz]]]
             The weight and the delta ansatz.
         """
-        if calculate_delta:
-            weight = 1.
-            delta = {}
-            for name, ansatz in self.ansatzes.items():
-                sub_weight = ansatz.weight(configuration)
-                sub_delta = ansatz.delta(configuration)
-                weight *= sub_weight
-                delta[name] = sub_delta / sub_weight
-            for name in delta:
-                delta[name] *= weight
-            return weight, delta
-        else:
-            weight = 1.
-            for name, ansatz in self.ansatzes.items():
-                sub_weight = ansatz.weight(configuration)
-                weight *= sub_weight
-            return weight, None
+        number = len(configurations)
+        weight = [1. for _ in range(number)]
+        delta = [{} for _ in range(number)]
+        for name, ansatz in self.ansatzes.items():
+            sub_weight, sub_delta = ansatz.weight_and_delta(configurations, name in calculate_delta)
+            for i in range(number):
+                weight[i] *= sub_weight[i]
+            if sub_delta is not None:
+                for i in range(number):
+                    delta[i][name] = sub_delta[i] / sub_weight[i]
+        for i in range(number):
+            this_weight = weight[i]
+            this_delta = delta[i]
+            for name in this_delta:
+                this_delta[name] *= this_weight
+        return weight, delta
 
     def apply_gradient(self, gradient, step_size, relative):
         """
@@ -105,7 +104,7 @@ class MultipleProductState(AbstractState):
         relative : bool
             Use relative step size or not.
         """
-        for name in self.ansatzes:
+        for name in gradient:
             self.ansatzes[name].apply_gradient(gradient[name], step_size, relative)
 
 
@@ -114,9 +113,9 @@ class Sampling:
     Metropois sampling object for multiple product state.
     """
 
-    __slots__ = ["_owner", "_hopping_hamiltonians"]
+    __slots__ = ["_owner", "configuration", "_hopping_hamiltonians", "ws"]
 
-    def __init__(self, owner, hopping_hamiltonians):
+    def __init__(self, owner, configuration, hopping_hamiltonians):
         """
         Create sampling object.
 
@@ -124,53 +123,51 @@ class Sampling:
         ----------
         owner : MultipleProductState
             The owner of this sampling object
+        configuration : dict[tuple[int, int, int], int]
+            The initial configuration.
         hopping_hamiltonian : None | dict[tuple[tuple[int, int, int], ...], Tensor]
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
         """
         self._owner = owner
+        self.configuration = configuration
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
             self._hopping_hamiltonians = self._owner._hamiltonians
         self._hopping_hamiltonians = list(self._hopping_hamiltonians.items())
+        self.refresh()
 
-    def next(self, configuration):
+    def __call__(self):
         """
         Get the next configuration.
-
-        Parameters
-        ----------
-        configuration : dict[tuple[int, int, int], int]
-            The old configuration.
-
-        Returns
-        -------
-        dict[tuple[int, int, int], int]
-            The new configuration.
         """
         hamiltonian_number = len(self._hopping_hamiltonians)
         positions, hamiltonian = self._hopping_hamiltonians[TAT.random.uniform_int(0, hamiltonian_number - 1)()]
         body = hamiltonian.rank // 2
-        current_configuration = tuple((TAT.No.Symmetry(), configuration[l1l2o]) for l1l2o in positions)
+        current_configuration = tuple((TAT.No.Symmetry(), self.configuration[l1l2o]) for l1l2o in positions)
         element_pool = tensor_element(hamiltonian)
         if current_configuration not in element_pool:
-            return configuration
+            return
         possible_hopping = element_pool[current_configuration]
         if len(possible_hopping) == 0:
-            return configuration
+            return
         hopping_number = len(possible_hopping)
         current_configuration_s, _ = list(possible_hopping.items())[TAT.random.uniform_int(0, hopping_number - 1)()]
         hopping_number_s = len(element_pool[current_configuration_s])
-        ws, _ = self._owner.weight_and_delta(configuration, calculate_delta=False)
-        configuration_s = configuration.copy()
+        configuration_s = self.configuration.copy()
         for i in range(body):
             _, configuration_s[positions[i]] = current_configuration_s[i]
-        wss, _ = self._owner.weight_and_delta(configuration_s, calculate_delta=False)
-        p = (np.linalg.norm(wss)**2) / (np.linalg.norm(ws)**2) * hopping_number / hopping_number_s
+        [wss], _ = self._owner.weight_and_delta([configuration_s], set())
+        p = (np.linalg.norm(wss)**2) / (np.linalg.norm(self.ws)**2) * hopping_number / hopping_number_s
         if TAT.random.uniform_real(0, 1)() < p:
-            return configuration_s
-        else:
-            return configuration
+            self.configuration = configuration_s
+            self.ws = wss
+
+    def refresh(self):
+        """
+        Refresh ws, call it after state updated.
+        """
+        [self.ws], _ = self._owner.weight_and_delta([self.configuration], set())
 
 
 class Observer:
@@ -188,7 +185,7 @@ class Observer:
         """
         self._owner = owner
 
-        self._enable_gradient = False
+        self._enable_gradient = set()
         self._observer = {}
 
         self._start = False
@@ -207,9 +204,8 @@ class Observer:
             name: {positions: 0.0 for positions, observer in observers.items()
                   } for name, observers in self._observer.items()
         }
-        if self._enable_gradient:
-            self._Delta = {name: None for name, ansatz in self._owner.ansatzes.items()}
-            self._EDelta = {name: None for name, ansatz in self._owner.ansatzes.items()}
+        self._Delta = {name: None for name in self._enable_gradient}
+        self._EDelta = {name: None for name in self._enable_gradient}
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -232,10 +228,9 @@ class Observer:
             for positions in reversed(observers):
                 self._result[name][positions] = buffer.pop()
 
-        if self._enable_gradient:
-            for name, ansatz in self._owner.ansatzes.items():
-                ansatz.allreduce_delta(self._Delta[name])
-                ansatz.allreduce_delta(self._EDelta[name])
+        for name in self._enable_gradient:
+            self._owner.ansatzes[name].allreduce_delta(self._Delta[name])
+            self._owner.ansatzes[name].allreduce_delta(self._EDelta[name])
 
     @property
     def result(self):
@@ -289,18 +284,28 @@ class Observer:
         energy = self.total_energy
         return {
             name: 2 * self._EDelta[name] / self._count - 2 * energy * self._Delta[name] / self._count
-            for name in self._owner.ansatzes
+            for name in self._enable_gradient
         }
 
-    def enable_gradient(self):
+    def enable_gradient(self, ansatz_name=None):
         """
-        Enable observing gradient.
+        Enable observing gradient for specified ansatz.
+
+        Parameters
+        ----------
+        ansatz_name : str | list[str] | None
+            The ansatzes of which the gradient should be calculated.
         """
         if self._start:
             raise RuntimeError("Cannot enable gradient after sampling start")
         if "energy" not in self._observer:
             self.add_energy()
-        self._enable_gradient = True
+        if ansatz_name is None:
+            ansatz_name = self._owner.ansatzes.keys()
+        if isinstance(ansatz_name, str):
+            ansatz_name = [ansatz_name]
+        for name in ansatz_name:
+            self._enable_gradient.add(name)
 
     def add_observer(self, name, observer):
         """
@@ -334,36 +339,47 @@ class Observer:
         """
         owner = self._owner
         self._count += 1
-        ws, delta = owner.weight_and_delta(configuration, calculate_delta=True)
+        [ws], [delta] = owner.weight_and_delta([configuration], self._enable_gradient)
+        # find wss
+        configuration_list = []
+        configuration_map = {}
         for name, observers in self._observer.items():
-            if name == "energy":
-                Es = 0.0
-            calculate_gradient = name == "energy" and self._enable_gradient
+            configuration_map[name] = {}
             for positions, observer in observers.items():
+                configuration_map[name][positions] = {}
                 body = observer.rank // 2
                 current_configuration = tuple((TAT.No.Symmetry(), configuration[positions[i]]) for i in range(body))
                 element_pool = tensor_element(observer)
                 if current_configuration not in element_pool:
-                    print(current_configuration, element_pool)
                     continue
-                total_value = 0
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
                     new_configuration = configuration.copy()
                     for i in range(body):
                         _, new_configuration[positions[i]] = other_configuration[i]
-                    wss, _ = owner.weight_and_delta(new_configuration, calculate_delta=False)
-                    value = (wss / ws) * observer_shrinked.storage[0]
+                    configuration_map[name][positions][other_configuration] = (len(configuration_list),
+                                                                               observer_shrinked.storage[0])
+                    configuration_list.append(new_configuration)
+        wss_list, _ = owner.weight_and_delta(configuration_list, set())
+        # measure
+        for name, configuration_map_name in configuration_map.items():
+            if name == "energy":
+                Es = 0.0
+            for positions, configuration_map_name_positions in configuration_map_name.items():
+                total_value = 0
+                for _, [index, hamiltonian_term] in configuration_map_name_positions.items():
+                    wss = wss_list[index]
+                    value = (wss / ws) * hamiltonian_term
                     total_value += complex(value)
                 to_save = total_value.real
                 self._result[name][positions] += to_save
                 if name == "energy":
                     Es += total_value
-            if calculate_gradient:
+            if name == "energy":
                 if self._owner.Tensor.is_real:
                     Es = Es.real
                 else:
                     Es = Es.conjugate()
-                for ansatz_name in self._owner.ansatzes:
+                for ansatz_name in self._enable_gradient:
                     this_delta = delta[ansatz_name] / ws
                     if self._Delta[ansatz_name] is None:
                         self._Delta[ansatz_name] = this_delta

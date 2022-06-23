@@ -19,42 +19,23 @@
 import TAT
 import signal
 import tetragono as tet
-import tetragono.multiple_product_state
-
-
-def create(L1, L2, D, J):
-    state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
-    state.physics_edges[...] = 2
-    SS = tet.common_tensor.No.SS.to(float)
-    state.hamiltonians["vertical_bond"] = -J * SS
-    state.hamiltonians["horizontal_bond"] = -J * SS
-
-    state = tet.multiple_product_state.MultipleProductState(state)
-
-    index_to_site = []
-    for l1 in range(L1):
-        for l2 in range(L2) if l1 % 2 == 0 else reversed(range(L2)):
-            index_to_site.append((l1, l2, 0))
-    ansatz_1 = tet.multiple_product_state.OpenString(state, index_to_site, D)
-
-    index_to_site = []
-    for l2 in range(L2):
-        for l1 in range(L1) if l2 % 2 == 0 else reversed(range(L1)):
-            index_to_site.append((l1, l2, 0))
-    ansatz_2 = tet.multiple_product_state.OpenString(state, index_to_site, D)
-
-    state.add_ansatz(ansatz_1)
-    state.add_ansatz(ansatz_2)
-
-    return state
-
 
 # Create state
 TAT.random.seed(43)
 
+import heisenberg
+
 L1 = 4
 L2 = 4
-state = create(L1, L2, D=4, J=-1)
+state = heisenberg.abstract_state(L1, L2, J=-1)
+
+state = tet.multiple_product_state.MultipleProductState(state)
+import lx_cnn
+import snake_string
+
+state.add_ansatz(lx_cnn.ansatz(state, 64))
+state.add_ansatz(snake_string.ansatz(state, "H", 2))
+state.add_ansatz(snake_string.ansatz(state, "V", 2))
 
 # Initialize config
 config = {}
@@ -63,25 +44,27 @@ for l1 in range(L1):
         config[l1, l2, 0] = (l1 + l2) % 2
 
 # Create sampling and observer
-sampling = tet.multiple_product_state.Sampling(state, hopping_hamiltonians=None)
 
 observer = tet.multiple_product_state.Observer(state)
 observer.add_energy()
 observer.enable_gradient()
 
 # Gradient descent
-total_grad_step = 10000
+total_grad_step = 1000000
 total_sampling_step = 1000
 grad_step_size = 0.01
 use_relative = True
 with tet.SignalHandler(signal.SIGINT) as sigint_handler:
     for grad_step in range(total_grad_step):
         with observer, tet.seed_differ:
+            sampling = tet.multiple_product_state.Sampling(state, config, hopping_hamiltonians=None)
             for sampling_step in range(total_sampling_step):
                 if sampling_step % tet.mpi_size == tet.mpi_rank:
-                    observer(config)
-                    config = sampling.next(config)
+                    observer(sampling.configuration)
+                    for _ in range(state.site_number):
+                        sampling()
                     tet.show(f"sampling {sampling_step}/{total_sampling_step}, energy={observer.energy}")
+            config = sampling.configuration
         tet.showln(f"gradient {grad_step}/{total_grad_step}, energy={observer.energy}")
         state.apply_gradient(observer.gradient, grad_step_size, relative=use_relative)
         if sigint_handler():

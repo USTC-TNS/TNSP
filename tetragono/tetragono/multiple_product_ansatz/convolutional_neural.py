@@ -45,11 +45,11 @@ class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
 
     def forward(self, x):
         """
-        Get the weight of configuration x
+        Get the weight of configuration x.
 
         Parameters
         ----------
-        x : list[list[x]]
+        x : list[list[int]]
             The configuration matrix.
 
         Returns
@@ -72,26 +72,39 @@ class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
 
         Returns
         -------
-        list[list[x]]
-            The configuration list as input of network.
+        list[list[list[int]]]
+            The configuration as input of network, where three dimensions are channel, width and height.
         """
-        return torch.tensor(
-            [[[-1 if configuration[l1, l2, 0] == 0 else 1
-               for l2 in range(self.multiple_product_state.L2)]
-              for l1 in range(self.multiple_product_state.L1)]],
-            dtype=self.dtype)
+        return [[[-1 if configuration[l1, l2, 0] == 0 else 1
+                  for l2 in range(self.multiple_product_state.L2)]
+                 for l1 in range(self.multiple_product_state.L1)]]
 
     def weight(self, configuration):
-        x = self.create_x(configuration)
+        x = torch.tensor([self.create_x(configuration)], dtype=self.dtype)
         weight = self(x)[0]
         return float(weight)
 
     def delta(self, configuration):
-        x = self.create_x(configuration)
+        x = torch.tensor([self.create_x(configuration)], dtype=self.dtype)
         weight = self(x)[0]
         self.zero_grad()
         weight.backward()
         return np.array([np.array(i.grad) for i in self.parameters()], dtype=object)
+
+    def weight_and_delta(self, configurations, calculate_delta):
+        xs = torch.tensor([self.create_x(configuration) for configuration in configurations], dtype=self.dtype)
+        weight = self(xs)
+        if calculate_delta:
+            number = len(configurations)
+            delta = []
+            for i in range(number):
+                self.zero_grad()
+                weight[i].backward()
+                this_delta = np.array([np.array(i.grad) for i in self.parameters()], dtype=object)
+                delta.append(this_delta)
+        else:
+            delta = None
+        return weight.tolist(), delta
 
     @staticmethod
     def allreduce_delta(delta):
