@@ -5,8 +5,13 @@
 *** Added
 + *tetragono*: Add compatibility support for python3.8.
 + *tetragono*: Add the multiple product state, which is the supertype of the string bond state.
++ *tetragono*: Add =ex_create= command for tetragono shell, which calls =abstract_state= to create an =exact_lattice=.
 *** Changed
++ *tetragono*: The function name to create a lattice changes from =create= to =abstract_lattice=. And it is recommended
+  to split it into two parts: =abstract_state= to create an abstract state and =abstract_lattice= to convert the
+  abstract state into an abstract lattice.
 *** Deprecated
++ *tetragono*: The original function name =create= to create lattice is deprecated.
 *** Removed
 *** Fixed
 

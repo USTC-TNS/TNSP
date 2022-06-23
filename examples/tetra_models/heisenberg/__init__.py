@@ -20,7 +20,26 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, J):
+def abstract_state(L1, L2, J):
+    """
+    Create heisenberg state.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    J : float
+        The heisenberg parameter.
+    """
+    state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
+    state.physics_edges[...] = 2
+    SS = tet.common_tensor.No.SS.to(float)
+    state.hamiltonians["vertical_bond"] = -J * SS
+    state.hamiltonians["horizontal_bond"] = -J * SS
+    return state
+
+
+def abstract_lattice(L1, L2, D, J):
     """
     Create heisenberg lattice.
 
@@ -33,12 +52,7 @@ def create(L1, L2, D, J):
     J : float
         The heisenberg parameter.
     """
-    state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
-    state.physics_edges[...] = 2
-    SS = tet.common_tensor.No.SS.to(float)
-    state.hamiltonians["vertical_bond"] = -J * SS
-    state.hamiltonians["horizontal_bond"] = -J * SS
-    state = tet.AbstractLattice(state)
+    state = tet.AbstractLattice(abstract_state(L1, L2, J))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

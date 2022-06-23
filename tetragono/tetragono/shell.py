@@ -19,11 +19,11 @@
 import os
 import sys
 import cmd
-import importlib
 import TAT
 from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
                              get_imported_function)
 from . import conversion
+from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration
 from .gradient import gradient_descent
@@ -134,14 +134,43 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def seed(self, random_seed):
         TAT.random.seed(random_seed)
 
+    def do_ex_create(self, line):
+        """
+        Create a state used for exact update.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        config = Config(line)
+        self.ex_create(*config.args, **config.kwargs)
+
+    def ex_create(self, model_name, *args, **kwargs):
+        abstract_state = get_imported_function(model_name, "abstract_state")
+        if len(args) == 1 and args[0] == "help":
+            print(abstract_state.__doc__.replace("\n", "\n    "))
+        else:
+            self.ex = ExactState(abstract_state(*args, **kwargs))
+
     @staticmethod
-    def su_gm_create(lattice_type, *args, **kwargs):
-        model = importlib.import_module(args[0])
-        if len(args) == 2 and args[-1] == "help":
-            print(model.create.__doc__.replace("\n", "\n    "))
+    def su_gm_create(lattice_type, model_name, *args, **kwargs):
+        try:
+            abstract_lattice = get_imported_function(model_name, "abstract_lattice")
+        except AttributeError:
+            abstract_lattice = get_imported_function(model_name, "create")
+            print(" ##### DEPRECATE WARNING BEGIN #####")
+            print(
+                " `create` as function name to create lattice object is deprecated, replacing it with `abstract_lattice`, splitting it into two part: abstract_state and abstract_lattice is recommended."
+            )
+            print(" ###### DEPRECATE WARNING END ######")
+        if len(args) == 1 and args[0] == "help":
+            print(abstract_lattice.__doc__.replace("\n", "\n    "))
             return None
         else:
-            state = lattice_type(model.create(*args[1:], **kwargs))
+            state = lattice_type(abstract_lattice(*args, **kwargs))
 
         # pre normalize the tensor
         for l1 in range(state.L1):
@@ -528,6 +557,7 @@ else:
     su_to_ex = app.su_to_ex
     su_to_gm = app.su_to_gm
 
+    ex_create = app.ex_create
     ex_update = app.ex_update
     ex_energy = app.ex_energy
     ex_dump = app.ex_dump
