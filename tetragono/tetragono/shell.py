@@ -26,7 +26,33 @@ from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration
+from .multiple_product_state import MultipleProductState
 from .gradient import gradient_descent
+
+
+class FakeConfiguration:
+    """
+    Fake configuration object for mulitple product state.
+    """
+    __slots__ = ["_owner", "_configuration"]
+
+    def __init__(self, owner):
+        self._owner = owner
+        self._configuration = [[{orbit: None
+                                 for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+                                for l2 in range(self._owner.L2)]
+                               for l1 in range(self._owner.L1)]
+
+    def __setitem__(self, key, value):
+        l1, l2, orbit = key
+        self._configuration[l1][l2][orbit] = value
+
+    def __getitem__(self, key):
+        l1, l2, orbit = key
+        return self._configuration[l1][l2][orbit]
+
+    def __delitem__(self, key):
+        self.__setitem__(key, None)
 
 
 class Config():
@@ -79,6 +105,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex = None
         self.gm = None
         self.gm_conf = []
+        self.mp = None
+        self.mp_conf = []
 
     def precmd(self, line):
         line = line.split("#")[0].strip()
@@ -136,6 +164,16 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def seed(self, random_seed):
         TAT.random.seed(random_seed)
 
+    @staticmethod
+    def ex_mp_create(lattice_type, model_name, *args, **kwargs):
+        abstract_state = get_imported_function(model_name, "abstract_state")
+        if len(args) == 1 and args[0] == "help":
+            print(abstract_state.__doc__.replace("\n", "\n    "))
+            return None
+        else:
+            state = lattice_type(abstract_state(*args, **kwargs))
+        return state
+
     def do_ex_create(self, line):
         """
         Create a state used for exact update.
@@ -150,12 +188,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.ex_create(*config.args, **config.kwargs)
 
-    def ex_create(self, model_name, *args, **kwargs):
-        abstract_state = get_imported_function(model_name, "abstract_state")
-        if len(args) == 1 and args[0] == "help":
-            print(abstract_state.__doc__.replace("\n", "\n    "))
-        else:
-            self.ex = ExactState(abstract_state(*args, **kwargs))
+    def ex_create(self, *args, **kwargs):
+        state = self.ex_mp_create(ExactState, *args, **kwargs)
+        if state is not None:
+            self.ex = state
 
     @staticmethod
     def su_gm_create(lattice_type, model_name, *args, **kwargs):
@@ -494,6 +530,137 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def gm_to_ex(self):
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
+    def do_mp_create(self, line):
+        """
+        Create a multiple product state.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        config = Config(line)
+        self.mp_create(*config.args, **config.kwargs)
+
+    def mp_create(self, *args, **kwargs):
+        state = self.ex_mp_create(MultipleProductState, *args, **kwargs)
+        if state is not None:
+            self.mp = state
+            self.mp_conf = []
+
+    def do_mp_dump(self, line):
+        """
+        Dump the multiple product state into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.mp_dump(*config.args, **config.kwargs)
+
+    def mp_dump(self, name):
+        write_to_file(self.mp, name)
+
+    def do_mp_load(self, line):
+        """
+        Load the multiple product state from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.mp_load(*config.args, **config.kwargs)
+
+    def mp_load(self, name):
+        self.mp = read_from_file(name)
+        self.mp_conf = []
+
+    def do_mp_ansatz(self, line):
+        """
+        Add an ansatz for multiple product state.
+
+        Parameters
+        ----------
+        name : str
+            The subansatz name in this state.
+        ansatz : str
+            The ansatz names.
+        args, kwargs
+            Arguments passed to ansatz creater function.
+        """
+        config = Config(line)
+        self.mp_ansatz(*config.args, **config.kwargs)
+
+    def mp_ansatz(self, name, ansatz, *args, **kwargs):
+        create_ansatz = get_imported_function(ansatz, "ansatz")
+        self.mp.add_ansatz(create_ansatz(self.mp, *args, **kwargs), name)
+
+    def do_mp_run(self, line):
+        """
+        Do gradient descent on multiple product state. see multiple_product_state.py for details.
+        """
+        config = Config(line)
+        self.mp_run(*config.args, **config.kwargs)
+
+    def mp_run(self, *args, **kwargs):
+        from . import multiple_product_state
+
+        multiple_product_state.gradient(self.mp, *args, **kwargs, sampling_configurations=self.mp_conf)
+
+    def do_mp_conf_create(self, line):
+        """
+        Create configuration of multiple product state.
+
+        Parameters
+        ----------
+        module_name : str
+            The module name to create initial configuration of multiple product state.
+        """
+        config = Config(line)
+        self.mp_conf_create(*config.args, **config.kwargs)
+
+    def mp_conf_create(self, module_name):
+        with seed_differ:
+            configuration = FakeConfiguration(self.mp)
+            configuration = get_imported_function(module_name, "initial_configuration")(configuration)
+            self.mp_conf = mpi_comm.allgather(configuration._configuration)
+
+    def do_mp_conf_dump(self, line):
+        """
+        Dump the multiple product state configuration into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.mp_conf_dump(*config.args, **config.kwargs)
+
+    def mp_conf_dump(self, name):
+        write_to_file(self.mp_conf, name)
+
+    def do_mp_conf_load(self, line):
+        """
+        Load the multiple product state configuration from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = Config(line)
+        self.mp_conf_load(*config.args, **config.kwargs)
+
+    def mp_conf_load(self, name):
+        self.mp_conf = read_from_file(name)
+
 
 class TetragonoScriptApp(TetragonoCommandApp):
 
@@ -575,3 +742,12 @@ else:
     gm_conf_load = app.gm_conf_load
     gm_conf_create = app.gm_conf_create
     gm_data_load = app.gm_data_load
+
+    mp_create = app.mp_create
+    mp_dump = app.mp_dump
+    mp_load = app.mp_load
+    mp_ansatz = app.mp_ansatz
+    mp_run = app.mp_run
+    mp_conf_create = app.mp_conf_create
+    mp_conf_dump = app.mp_conf_dump
+    mp_conf_load = app.mp_conf_load

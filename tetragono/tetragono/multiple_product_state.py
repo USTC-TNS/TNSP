@@ -16,10 +16,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import signal
+from copyreg import _slotnames
 import numpy as np
 import TAT
 from .abstract_state import AbstractState
-from .common_toolkit import allreduce_buffer
+from .common_toolkit import (allreduce_buffer, SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln,
+                             write_to_file)
 from .sampling_tools.tensor_element import tensor_element
 from .multiple_product_ansatz import *
 
@@ -30,6 +33,28 @@ class MultipleProductState(AbstractState):
     """
 
     __slots__ = ["ansatzes"]
+
+    def __setstate__(self, state):
+        # before data_version mechanism, state is (None, state)
+        if isinstance(state, tuple):
+            state = state[1]
+        # before data_version mechanism, there is no data_version field
+        if "data_version" not in state:
+            state["data_version"] = 0
+        # version 0 to version 1
+        if state["data_version"] == 0:
+            state["data_version"] = 1
+        # version 1 to version 2
+        if state["data_version"] == 1:
+            state["data_version"] = 2
+        # setstate
+        for key, value in state.items():
+            setattr(self, key, value)
+
+    def __getstate__(self):
+        # getstate
+        state = {key: getattr(self, key) for key in _slotnames(self.__class__)}
+        return state
 
     def __init__(self, abstract):
         """
@@ -123,28 +148,93 @@ class Sampling:
         ----------
         owner : MultipleProductState
             The owner of this sampling object
-        configuration : dict[tuple[int, int, int], int]
+        configuration : list[list[dict[int, EdgePoint]]]
             The initial configuration.
         hopping_hamiltonian : None | dict[tuple[tuple[int, int, int], ...], Tensor]
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
         """
         self._owner = owner
-        self.configuration = configuration
+        self.configuration = [
+            [{orbit: None for orbit in owner.physics_edges[l1, l2]} for l2 in range(owner.L2)] for l1 in range(owner.L1)
+        ]
+        self.ws = None
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
             self._hopping_hamiltonians = self._owner._hamiltonians
         self._hopping_hamiltonians = list(self._hopping_hamiltonians.items())
+        if configuration is not None:
+            self.import_gm_configuration(configuration)
+
+    def import_gm_configuration(self, configuration):
+        """
+        Import configuration used by sampling lattice.
+
+        Parameters
+        ----------
+        configuration : list[list[dict[int, EdgePoint]]]
+            The configuration in format used by sampling lattice.
+        """
+        owner = self._owner
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit in owner.physics_edges[l1, l2]:
+                    self.configuration[l1][l2][orbit] = configuration[l1][l2][orbit]
         self.refresh()
+
+    def import_mp_configuration(self, configuration):
+        """
+        Import configuration used by multiple product state.
+
+        Parameters
+        ----------
+        configuration : dict[tuple[int, int, int], int]
+            The configuration in format used by multiple product state.
+        """
+        owner = self._owner
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit in owner.physics_edges[l1, l2]:
+                    self.configuration[l1][l2][orbit] = (TAT.No.Symmetry(), configuration[l1, l2, orbit])
+        self.refresh()
+
+    def export_gm_configuration(self):
+        """
+        Export configuration used by sampling lattice.
+
+        Returns
+        -------
+        configuration : list[list[dict[int, EdgePoint]]]
+            The configuration in format used by sampling lattice.
+        """
+        return self.configuration
+
+    def export_mp_configuration(self):
+        """
+        Export configuration used by multiple product state.
+
+        Returns
+        -------
+        configuration : dict[tuple[int, int, int], int]
+            The configuration in format used by multiple product state.
+        """
+        owner = self._owner
+        configuration = {}
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit in owner.physics_edges[l1, l2]:
+                    _, configuration[l1, l2, orbit] = self.configuration[l1][l2][orbit]
+        return configuration
 
     def __call__(self):
         """
         Get the next configuration.
         """
+        configuration = self.export_mp_configuration()
         hamiltonian_number = len(self._hopping_hamiltonians)
         positions, hamiltonian = self._hopping_hamiltonians[TAT.random.uniform_int(0, hamiltonian_number - 1)()]
         body = hamiltonian.rank // 2
-        current_configuration = tuple((TAT.No.Symmetry(), self.configuration[l1l2o]) for l1l2o in positions)
+        current_configuration = tuple((TAT.No.Symmetry(), configuration[l1l2o]) for l1l2o in positions)
         element_pool = tensor_element(hamiltonian)
         if current_configuration not in element_pool:
             return
@@ -154,20 +244,20 @@ class Sampling:
         hopping_number = len(possible_hopping)
         current_configuration_s, _ = list(possible_hopping.items())[TAT.random.uniform_int(0, hopping_number - 1)()]
         hopping_number_s = len(element_pool[current_configuration_s])
-        configuration_s = self.configuration.copy()
+        configuration_s = configuration.copy()
         for i in range(body):
             _, configuration_s[positions[i]] = current_configuration_s[i]
         [wss], _ = self._owner.weight_and_delta([configuration_s], set())
         p = (np.linalg.norm(wss)**2) / (np.linalg.norm(self.ws)**2) * hopping_number / hopping_number_s
         if TAT.random.uniform_real(0, 1)() < p:
-            self.configuration = configuration_s
+            self.import_mp_configuration(configuration_s)
             self.ws = wss
 
     def refresh(self):
         """
         Refresh ws, call it after state updated.
         """
-        [self.ws], _ = self._owner.weight_and_delta([self.configuration], set())
+        [self.ws], _ = self._owner.weight_and_delta([self.export_mp_configuration()], set())
 
 
 class Observer:
@@ -228,7 +318,7 @@ class Observer:
             for positions in reversed(observers):
                 self._result[name][positions] = buffer.pop()
 
-        for name in self._enable_gradient:
+        for name in sorted(self._enable_gradient):
             self._owner.ansatzes[name].allreduce_delta(self._Delta[name])
             self._owner.ansatzes[name].allreduce_delta(self._EDelta[name])
 
@@ -389,3 +479,76 @@ class Observer:
                         self._EDelta[ansatz_name] = Es * this_delta
                     else:
                         self._EDelta[ansatz_name] += Es * this_delta
+
+
+def gradient(
+        state: MultipleProductState,
+        sampling_total_step,
+        grad_total_step,
+        grad_step_size,
+        *,
+        # About sampling
+        # TODO use gm style format
+        sampling_configurations=[],
+        sweep_hopping_hamiltonians=None,
+        # TODO after conf format updated
+        restrict_subspace=None,
+        # About gradient
+        enable_gradient_ansatz=None,
+        use_fix_relative_step_size=False,
+        # About log and save state
+        log_file=None,
+        save_state_interval=None,
+        save_state_file=None,
+        # About Measurement
+        # TODO with error
+        measurement=None):
+    # Create observer
+    observer = Observer(state)
+    observer.add_energy()
+    if grad_step_size != 0:
+        if enable_gradient_ansatz is not None:
+            observer.enable_gradient(enable_gradient_ansatz.split(","))
+        else:
+            observer.enable_gradient()
+
+    # Gradient descent
+    with SignalHandler(signal.SIGINT) as sigint_handler:
+        for grad_step in range(grad_total_step):
+            with observer, seed_differ:
+                # Create sampling object
+                if sweep_hopping_hamiltonians is not None:
+                    hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians,
+                                                                 "hopping_hamiltonians")(state)
+                else:
+                    hopping_hamiltonians = None
+                if len(sampling_configurations) < mpi_size:
+                    choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
+                else:
+                    choose = mpi_rank
+                sampling = Sampling(state, configuration=None, hopping_hamiltonians=hopping_hamiltonians)
+                sampling.import_gm_configuration(sampling_configurations[choose])
+                # Sampling
+                for sampling_step in range(sampling_total_step):
+                    if sampling_step % mpi_size == mpi_rank:
+                        observer(sampling.export_mp_configuration())
+                        for _ in range(state.site_number):
+                            sampling()
+                        show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
+                # Save configurations
+                gathered_configurations = mpi_comm.allgather(sampling.export_gm_configuration())
+                sampling_configurations.clear()
+                sampling_configurations += gathered_configurations
+            showln(f"gradient {grad_step}/{grad_total_step}, energy={observer.energy}")
+            # Energy log
+            if log_file and mpi_rank == 0:
+                with open(log_file, "a", encoding="utf-8") as file:
+                    print(observer.energy, file=file)
+            # Update state
+            state.apply_gradient(observer.gradient, grad_step_size, relative=use_fix_relative_step_size)
+            # Save state
+            if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
+                write_to_file(state, save_state_file)
+
+            if sigint_handler():
+                break

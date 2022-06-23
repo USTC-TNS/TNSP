@@ -6,7 +6,7 @@
 + *tetragono*: Add compatibility support for python3.8.
 + *tetragono*: Add =ex_create= command for tetragono shell, which calls =abstract_state= to create an =exact_lattice=.
 + *tetragono*: Add the multiple product state, which is the supertype of the string bond state and the convolutional
-  neural network state.
+  neural network state, and add its high-level API in tetragono.shell.
 *** Changed
 + *tetragono*: The function name to create a lattice changes from =create= to =abstract_lattice=. And it is recommended
   to split it into two parts: =abstract_state= to create an abstract state and =abstract_lattice= to convert the

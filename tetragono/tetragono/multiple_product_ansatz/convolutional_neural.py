@@ -23,7 +23,7 @@ from .abstract_ansatz import AbstractAnsatz
 from ..common_toolkit import MPI, mpi_comm
 
 
-class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
+class ConvolutionalNeural(AbstractAnsatz):
 
     __slots__ = ["multiple_product_state", "network", "dtype"]
 
@@ -43,7 +43,7 @@ class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
         self.network = network
         self.dtype = next(self.network.parameters()).dtype
 
-    def forward(self, x):
+    def __call__(self, x):
         """
         Get the weight of configuration x.
 
@@ -87,9 +87,9 @@ class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
     def delta(self, configuration):
         x = torch.tensor([self.create_x(configuration)], dtype=self.dtype)
         weight = self(x)[0]
-        self.zero_grad()
+        self.network.zero_grad()
         weight.backward()
-        return np.array([np.array(i.grad) for i in self.parameters()], dtype=object)
+        return np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
 
     def weight_and_delta(self, configurations, calculate_delta):
         xs = torch.tensor([self.create_x(configuration) for configuration in configurations], dtype=self.dtype)
@@ -98,9 +98,9 @@ class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
             number = len(configurations)
             delta = []
             for i in range(number):
-                self.zero_grad()
+                self.network.zero_grad()
                 weight[i].backward()
-                this_delta = np.array([np.array(i.grad) for i in self.parameters()], dtype=object)
+                this_delta = np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
                 delta.append(this_delta)
         else:
             delta = None
@@ -116,8 +116,8 @@ class ConvolutionalNeural(AbstractAnsatz, torch.nn.Module):
     def apply_gradient(self, gradient, step_size, relative):
         with torch.no_grad():
             if relative:
-                norm = (max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.parameters()) /
+                norm = (max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters()) /
                         max(np.linalg.norm(i.reshape([-1]), np.inf) for i in gradient))
                 gradient = gradient * norm
-            for state, grad in zip(self.parameters(), gradient):
+            for state, grad in zip(self.network.parameters(), gradient):
                 state.data -= step_size * grad
