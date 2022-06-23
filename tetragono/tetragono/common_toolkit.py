@@ -70,6 +70,8 @@ def bcast_lattice_buffer(lattice, root=0):
 
 class SignalHandler():
 
+    __slots__ = ["signal", "sigint_recv", "saved_handler"]
+
     def __init__(self, handler_signal):
         self.signal = handler_signal
         self.sigint_recv = 0
@@ -101,6 +103,9 @@ class SignalHandler():
 
 
 class SeedDiffer:
+
+    __slots__ = []
+
     max_int = 2**31
     random_int = TAT.random.uniform_int(0, max_int - 1)
 

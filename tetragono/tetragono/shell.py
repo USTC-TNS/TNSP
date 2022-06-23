@@ -31,6 +31,8 @@ from .gradient import gradient_descent
 
 class Config():
 
+    __slots__ = ["args", "kwargs"]
+
     @staticmethod
     def _parse(i):
         if i == "True":
