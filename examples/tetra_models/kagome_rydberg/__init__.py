@@ -21,16 +21,14 @@ import tetragono as tet
 from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product
 
 
-def create(L1, L2, D, delta, omega, U):
+def abstract_state(L1, L2, delta, omega, U):
     """
-    Create kagome rydberg lattice.
+    Create kagome rydberg state.
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     delta, omega, U : float
         The rydberg atom array parameter.
     """
@@ -117,7 +115,23 @@ def create(L1, L2, D, delta, omega, U):
                 for j in range(i + 1, len(site_list)):
                     state.hamiltonians[site_list[i], site_list[j]] = Unn
 
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, delta, omega, U):
+    """
+    Create kagome rydberg lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    delta, omega, U : float
+        The rydberg atom array parameter.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, delta, omega, U))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

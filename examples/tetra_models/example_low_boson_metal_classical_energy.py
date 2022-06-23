@@ -18,7 +18,7 @@
 
 import TAT
 import tetragono as tet
-from boson_metal import create
+from boson_metal import abstract_lattice as create
 
 TAT.random.seed(2333)
 

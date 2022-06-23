@@ -18,7 +18,7 @@
 
 import TAT
 import tetragono as tet
-from boson_metal import create
+from boson_metal import abstract_lattice as create
 from boson_metal.hopping_hamiltonian import hopping_hamiltonians
 from boson_metal.restrict_Sz import restrict
 from boson_metal.initial_state import initial_configuration

@@ -20,17 +20,15 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, Jx, Jy, Jz):
+def abstract_state(L1, L2, Jx, Jy, Jz):
     """
-    Create kitaev model lattice.
+    Create kitaev model state.
     see https://arxiv.org/pdf/cond-mat/0506438
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     Jx, Jy, Jz : float
         Rydberg atom parameters.
     """
@@ -55,7 +53,24 @@ def create(L1, L2, D, Jx, Jy, Jz):
                 state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = Hy
             if l2 != 0:
                 state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = Hz
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, Jx, Jy, Jz):
+    """
+    Create kitaev model lattice.
+    see https://arxiv.org/pdf/cond-mat/0506438
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    Jx, Jy, Jz : float
+        Rydberg atom parameters.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, Jx, Jy, Jz))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

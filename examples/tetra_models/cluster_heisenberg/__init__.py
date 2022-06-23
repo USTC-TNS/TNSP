@@ -20,9 +20,9 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, l1, l2, D, J):
+def abstract_state(L1, L2, l1, l2, J):
     """
-    Create cluster heisenberg lattice.
+    Create cluster heisenberg state.
 
     Parameters
     ----------
@@ -30,8 +30,6 @@ def create(L1, L2, l1, l2, D, J):
         The lattice size.
     l1, l2 : int
         The cluster size.
-    D : int
-        The cut dimension.
     J : float
         The heisenberg parameter.
     """
@@ -54,7 +52,25 @@ def create(L1, L2, l1, l2, D, J):
                 state.hamiltonians[edge_map[I1 - 1, I2], edge_map[I1, I2]] = H
             if I2 != 0:
                 state.hamiltonians[edge_map[I1, I2 - 1], edge_map[I1, I2]] = H
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, l1, l2, D, J):
+    """
+    Create cluster heisenberg lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    l1, l2 : int
+        The cluster size.
+    D : int
+        The cut dimension.
+    J : float
+        The heisenberg parameter.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, l1, l2, J))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

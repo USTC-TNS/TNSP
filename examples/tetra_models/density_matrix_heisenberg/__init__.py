@@ -20,16 +20,14 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, J):
+def abstract_state(L1, L2, J):
     """
-    Create density matrix of a heisenberg lattice.
+    Create density matrix of a heisenberg state.
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     J : float
         The heisenberg parameter.
     """
@@ -46,7 +44,23 @@ def create(L1, L2, D, J):
                 state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = JSS
             if l2 != 0:
                 state.hamiltonians[(l1, l2 - 1, 0), (l1, l2, 0)] = JSS
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, J):
+    """
+    Create density matrix of a heisenberg lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    J : float
+        The heisenberg parameter.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, J))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

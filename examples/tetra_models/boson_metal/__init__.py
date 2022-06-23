@@ -20,16 +20,14 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, J, K, mu):
+def abstract_state(L1, L2, J, K, mu):
     """
-    Create boson metal lattice.
+    Create boson metal state.
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     J, K, mu : float
         boson metal parameters.
     """
@@ -62,7 +60,26 @@ def create(L1, L2, D, J, K, mu):
             if l1 != 0 and l2 != 0:
                 state.hamiltonians[(l1 - 1, l2 - 1, 0), (l1 - 1, l2, 0), (l1, l2, 0), (l1, l2 - 1, 0)] = p_term
 
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, J, K, mu):
+    """
+    Create boson metal lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    J, K, mu : float
+        boson metal parameters.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, J, K, mu))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state
+
+
+create = abstract_lattice

@@ -20,16 +20,14 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, T, t, U):
+def abstract_state(L1, L2, T, t, U):
     """
-    Create Hubbard model on honeycomb lattice.
+    Create Hubbard model on honeycomb state.
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     T : int
         The half particle number.
     t, U : float
@@ -60,7 +58,25 @@ def create(L1, L2, D, T, t, U):
             if l2 != 0:
                 state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = tCSCS
 
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, T, t, U):
+    """
+    Create Hubbard model on honeycomb lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    T : int
+        The half particle number.
+    t, U : float
+        Hubbard model parameters.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, T, t, U))
     tt = T / state.L1
     for l1 in range(state.L1 - 1):
         Q = int(T * (state.L1 - l1 - 1) / state.L1)

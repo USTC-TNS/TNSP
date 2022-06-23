@@ -24,7 +24,7 @@ import kitaev.Sz
 TAT.random.seed(2333)
 
 # Create abstrace lattice first and cast it to su lattice
-abstract_lattice = kitaev.create(L1=2, L2=2, D=4, Jx=1, Jy=1, Jz=1)
+abstract_lattice = kitaev.abstract_lattice(L1=2, L2=2, D=4, Jx=1, Jy=1, Jz=1)
 su_lattice = tet.SimpleUpdateLattice(abstract_lattice)
 
 # Use pythonic style, aka, piclle, to save data.

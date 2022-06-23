@@ -20,7 +20,27 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, T):
+def abstract_state(L1, L2, T):
+    """
+    Create free fermion(no spin) state.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    T : int
+        The total particle number.
+    """
+    state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
+    state.physics_edges[...] = tet.common_tensor.Fermi.EF
+    CC = tet.common_tensor.Fermi.CC.to(float)
+    state.hamiltonians["vertical_bond"] = CC
+    state.hamiltonians["horizontal_bond"] = CC
+    state.total_symmetry = T
+    return state
+
+
+def abstract_lattice(L1, L2, D, T):
     """
     Create free fermion(no spin) lattice.
 
@@ -33,15 +53,8 @@ def create(L1, L2, D, T):
     T : int
         The total particle number.
     """
-    state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
-    state.physics_edges[...] = tet.common_tensor.Fermi.EF
-    CC = tet.common_tensor.Fermi.CC.to(float)
-    state.hamiltonians["vertical_bond"] = CC
-    state.hamiltonians["horizontal_bond"] = CC
-    state.total_symmetry = T
+    state = tet.AbstractLattice(abstract_state(L1, L2, T))
     t = T / state.L1
-
-    state = tet.AbstractLattice(state)
     for l1 in range(state.L1 - 1):
         Q = int(T * (state.L1 - l1 - 1) / state.L1)
         state.virtual_bond[l1, 0, "D"] = [(Q - 1, D), (Q, D), (Q + 1, D)]

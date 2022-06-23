@@ -21,17 +21,15 @@ import tetragono as tet
 from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product
 
 
-def create(L1, L2, D, delta, omega, radius):
+def abstract_state(L1, L2, delta, omega, radius):
     """
-    Create square Rydberg lattice with PBC.
+    Create square Rydberg state with PBC.
     see https://arxiv.org/pdf/2112.10790.pdf
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     delta, omega, radius : float
         Rydberg atom parameters.
     """
@@ -61,7 +59,24 @@ def create(L1, L2, D, delta, omega, radius):
                     param = (radius / distance)**6
                     state.hamiltonians[(al1, al2, 0), (bl1, bl2, 0)] = omega * param * nn
 
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, delta, omega, radius):
+    """
+    Create square Rydberg lattice with PBC.
+    see https://arxiv.org/pdf/2112.10790.pdf
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    delta, omega, radius : float
+        Rydberg atom parameters.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, delta, omega, radius))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

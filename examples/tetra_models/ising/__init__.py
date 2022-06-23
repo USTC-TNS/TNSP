@@ -20,7 +20,28 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, J, g):
+def abstract_state(L1, L2, J, g):
+    """
+    Create Ising model state.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    J, g : float
+        The ising parameter.
+    """
+    state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
+    state.physics_edges[...] = 2
+    sigma_x = tet.common_tensor.No.pauli_x.to(float)
+    sigma_z_sigma_z = tet.common_tensor.No.pauli_z_pauli_z.to(float)
+    state.hamiltonians["vertical_bond"] = -J * sigma_z_sigma_z
+    state.hamiltonians["horizontal_bond"] = -J * sigma_z_sigma_z
+    state.hamiltonians["single_site"] = -J * g * sigma_x
+    return state
+
+
+def abstract_lattice(L1, L2, D, J, g):
     """
     Create Ising model lattice.
 
@@ -33,14 +54,7 @@ def create(L1, L2, D, J, g):
     J, g : float
         The ising parameter.
     """
-    state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
-    state.physics_edges[...] = 2
-    sigma_x = tet.common_tensor.No.pauli_x.to(float)
-    sigma_z_sigma_z = tet.common_tensor.No.pauli_z_pauli_z.to(float)
-    state.hamiltonians["vertical_bond"] = -J * sigma_z_sigma_z
-    state.hamiltonians["horizontal_bond"] = -J * sigma_z_sigma_z
-    state.hamiltonians["single_site"] = -J * g * sigma_x
-    state = tet.AbstractLattice(state)
+    state = tet.AbstractLattice(abstract_state(L1, L2, J, g))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

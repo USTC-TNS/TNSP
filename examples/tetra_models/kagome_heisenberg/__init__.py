@@ -20,16 +20,14 @@ import TAT
 import tetragono as tet
 
 
-def create(L1, L2, D, J):
+def abstract_state(L1, L2, J):
     """
-    Create kagome heisenberg lattice.
+    Create kagome heisenberg state.
 
     Parameters
     ----------
     L1, L2 : int
         The lattice size.
-    D : int
-        The cut dimension.
     J : float
         The heisenberg parameter.
     """
@@ -57,7 +55,23 @@ def create(L1, L2, D, J):
                 state.hamiltonians[(l1, l2, 2), (l1, l2 + 1, 0)] = H
             if l1 != L1 - 1 and l2 != L2 - 1:
                 state.hamiltonians[(l1 + 1, l2, 2), (l1, l2 + 1, 1)] = H
-    state = tet.AbstractLattice(state)
+    return state
+
+
+def abstract_lattice(L1, L2, D, J):
+    """
+    Create kagome heisenberg lattice.
+
+    Parameters
+    ----------
+    L1, L2 : int
+        The lattice size.
+    D : int
+        The cut dimension.
+    J : float
+        The heisenberg parameter.
+    """
+    state = tet.AbstractLattice(abstract_state(L1, L2, J))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state
