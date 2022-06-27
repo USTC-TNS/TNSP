@@ -87,6 +87,15 @@ class Config():
                 self.args.append(v)
 
 
+def sharedoc(func_with_doc):
+
+    def decorator(func_without_doc):
+        func_without_doc.__doc__ = func_with_doc.__doc__
+        return func_without_doc
+
+    return decorator
+
+
 class TetragonoCommandApp(cmd.Cmd):
 
     def __init__(self, *args, **kwargs):
@@ -161,6 +170,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.seed(*config.args, **config.kwargs)
 
+    @sharedoc(do_seed)
     def seed(self, random_seed):
         TAT.random.seed(random_seed)
 
@@ -188,6 +198,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.ex_create(*config.args, **config.kwargs)
 
+    @sharedoc(do_ex_create)
     def ex_create(self, *args, **kwargs):
         state = self.ex_mp_create(ExactState, *args, **kwargs)
         if state is not None:
@@ -230,6 +241,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_create(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_create)
     def su_create(self, *args, **kwargs):
         state = self.su_gm_create(SimpleUpdateLattice, *args, **kwargs)
         if state is not None:
@@ -247,6 +259,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_dump(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_dump)
     def su_dump(self, name):
         write_to_file(self.su, name)
 
@@ -262,6 +275,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_load(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_load)
     def su_load(self, name):
         self.su = read_from_file(name)
 
@@ -281,6 +295,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_update(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_update)
     def su_update(self, total_step, delta_tau, new_dimension):
         self.su.update(total_step, delta_tau, new_dimension)
 
@@ -296,6 +311,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_energy(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_energy)
     def su_energy(self, cut_dimension):
         self.su.initialize_auxiliaries(cut_dimension)
         showln("Simple update lattice energy is", self.su.observe_energy())
@@ -307,6 +323,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_to_ex(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_to_ex)
     def su_to_ex(self):
         self.ex = conversion.simple_update_lattice_to_exact_state(self.su)
 
@@ -317,6 +334,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.su_to_gm(*config.args, **config.kwargs)
 
+    @sharedoc(do_su_to_gm)
     def su_to_gm(self):
         self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
         self.gm_conf = []
@@ -335,6 +353,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.ex_update(*config.args, **config.kwargs)
 
+    @sharedoc(do_ex_update)
     def ex_update(self, total_step, approximate_energy):
         self.ex.update(total_step, approximate_energy)
 
@@ -345,6 +364,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.ex_energy(*config.args, **config.kwargs)
 
+    @sharedoc(do_ex_energy)
     def ex_energy(self):
         showln("Exact state energy is", self.ex.observe_energy())
 
@@ -360,6 +380,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.ex_dump(*config.args, **config.kwargs)
 
+    @sharedoc(do_ex_dump)
     def ex_dump(self, name):
         write_to_file(self.ex, name)
 
@@ -375,6 +396,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.ex_load(*config.args, **config.kwargs)
 
+    @sharedoc(do_ex_load)
     def ex_load(self, name):
         self.ex = read_from_file(name)
 
@@ -392,6 +414,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_create(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_create)
     def gm_create(self, *args, **kwargs):
         state = self.su_gm_create(SamplingLattice, *args, **kwargs)
         if state is not None:
@@ -405,6 +428,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_run(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_run)
     def gm_run(self, *args, **kwargs):
         gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
 
@@ -420,6 +444,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_dump(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_dump)
     def gm_dump(self, name):
         write_to_file(self.gm, name)
 
@@ -435,6 +460,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_conf_dump(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_conf_dump)
     def gm_conf_dump(self, name):
         write_to_file(self.gm_conf, name)
 
@@ -450,6 +476,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_load(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_load)
     def gm_load(self, name):
         self.gm = read_from_file(name)
         self.gm_conf = []
@@ -466,6 +493,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_conf_load(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_conf_load)
     def gm_conf_load(self, name):
         self.gm_conf = read_from_file(name)
 
@@ -481,6 +509,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_conf_create(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_conf_create)
     def gm_conf_create(self, module_name):
         with seed_differ:
             # This configuration should never be used, so cut dimension is -1
@@ -499,6 +528,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         config = Config(line)
 
+    @sharedoc(do_gm_data_load)
     def gm_data_load(self, name):
         data = read_from_file(name)
         self.gm._lattice = data._lattice
@@ -517,6 +547,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_expand(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_expand)
     def gm_expand(self, new_dimension, epsilon):
         self.gm.expand_dimension(new_dimension, epsilon)
 
@@ -527,6 +558,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.gm_to_ex(*config.args, **config.kwargs)
 
+    @sharedoc(do_gm_to_ex)
     def gm_to_ex(self):
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
@@ -544,6 +576,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_create(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_create)
     def mp_create(self, *args, **kwargs):
         state = self.ex_mp_create(MultipleProductState, *args, **kwargs)
         if state is not None:
@@ -562,6 +595,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_dump(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_dump)
     def mp_dump(self, name):
         write_to_file(self.mp, name)
 
@@ -577,6 +611,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_load(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_load)
     def mp_load(self, name):
         self.mp = read_from_file(name)
         self.mp_conf = []
@@ -597,6 +632,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_ansatz(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_ansatz)
     def mp_ansatz(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
         self.mp.add_ansatz(create_ansatz(self.mp, *args, **kwargs), name)
@@ -608,6 +644,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_run(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_run)
     def mp_run(self, *args, **kwargs):
         from . import multiple_product_state
 
@@ -625,6 +662,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_conf_create(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_conf_create)
     def mp_conf_create(self, module_name):
         with seed_differ:
             configuration = FakeConfiguration(self.mp)
@@ -643,6 +681,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_conf_dump(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_conf_dump)
     def mp_conf_dump(self, name):
         write_to_file(self.mp_conf, name)
 
@@ -658,6 +697,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         config = Config(line)
         self.mp_conf_load(*config.args, **config.kwargs)
 
+    @sharedoc(do_mp_conf_load)
     def mp_conf_load(self, name):
         self.mp_conf = read_from_file(name)
 
