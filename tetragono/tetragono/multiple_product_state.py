@@ -23,7 +23,7 @@ import numpy as np
 import TAT
 from .abstract_state import AbstractState
 from .common_toolkit import (allreduce_buffer, SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln,
-                             write_to_file)
+                             write_to_file, get_imported_function)
 from .sampling_tools.tensor_element import tensor_element
 from .multiple_product_ansatz import *
 
@@ -207,8 +207,8 @@ class Sampling:
 class Observer:
 
     __slots__ = [
-        "_owner", "_enable_gradient", "_observer", "_restrict_subspace", "_start", "_count", "_result", "_Delta",
-        "_EDelta"
+        "_owner", "_enable_gradient", "_observer", "_restrict_subspace", "_start", "_count", "_result",
+        "_result_square", "_total_energy", "_total_energy_square", "_Delta", "_EDelta"
     ]
 
     def __init__(self, owner):
@@ -230,6 +230,9 @@ class Observer:
 
         self._count = None
         self._result = None
+        self._result_square = None
+        self._total_energy = None
+        self._total_energy_square = None
         self._Delta = None
         self._EDelta = None
 
@@ -256,6 +259,12 @@ class Observer:
             name: {positions: 0.0 for positions, observer in observers.items()
                   } for name, observers in self._observer.items()
         }
+        self._result_square = {
+            name: {positions: 0.0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
+        self._total_energy = 0.0
+        self._total_energy_square = 0.0
         self._Delta = {name: None for name in self._enable_gradient}
         self._EDelta = {name: None for name in self._enable_gradient}
 
@@ -269,6 +278,9 @@ class Observer:
         for name, observers in self._observer.items():
             for positions in observers:
                 buffer.append(self._result[name][positions])
+                buffer.append(self._result_square[name][positions])
+        buffer.append(self._total_energy)
+        buffer.append(self._total_energy_square)
         buffer.append(self._count)
 
         buffer = np.array(buffer)
@@ -276,13 +288,52 @@ class Observer:
         buffer = buffer.tolist()
 
         self._count = buffer.pop()
+        self._total_energy_square = buffer.pop()
+        self._total_energy = buffer.pop()
         for name, observer in reversed(self._observer.items()):
             for positions in reversed(observers):
+                self._result_square[name][positions] = buffer.pop()
                 self._result[name][positions] = buffer.pop()
 
         for name in sorted(self._enable_gradient):
             self._owner.ansatzes[name].allreduce_delta(self._Delta[name])
             self._owner.ansatzes[name].allreduce_delta(self._EDelta[name])
+
+    def _expect_and_deviation(self, total, total_square):
+        """
+        Get the expect value and deviation.
+
+        Parameters
+        ----------
+        total : float
+            The summation of observed value.
+        total_square : float
+            The summation of observed value square.
+
+        Returns
+        -------
+        tuple[float, float]
+            The expect value and deviation.
+        """
+        if total == total_square == 0.0:
+            return 0.0, 0.0
+
+        N = self._count
+
+        Eb = total / N
+        E2b = total_square / N
+
+        EV = E2b - Eb * Eb
+
+        expect = Eb
+        variance = EV / N
+
+        if variance < 0.0:
+            deviation = 0.0
+        else:
+            deviation = variance**0.5
+
+        return expect, deviation
 
     @property
     def result(self):
@@ -291,12 +342,15 @@ class Observer:
 
         Returns
         -------
-        dict[str, dict[tuple[tuple[int, int, int], ...], float]]
+        dict[str, dict[tuple[tuple[int, int, int], ...], tuple[float, float]]]
             The observer result of each observer set name and each site positions list.
         """
         return {
-            name: {positions: self._result[name][positions] / self._count for positions, _ in data.items()
-                  } for name, data in self._observer.items()
+            name: {
+                positions: self._expect_and_deviation(self._result[name][positions],
+                                                      self._result_square[name][positions])
+                for positions, _ in data.items()
+            } for name, data in self._observer.items()
         }
 
     @property
@@ -306,10 +360,10 @@ class Observer:
 
         Returns
         -------
-        float
+        tuple[float, float]
             The total energy.
         """
-        return sum(self._result["energy"][positions] for positions, _ in self._observer["energy"].items()) / self._count
+        return self._expect_and_deviation(self._total_energy, self._total_energy_square)
 
     @property
     def energy(self):
@@ -318,10 +372,12 @@ class Observer:
 
         Returns
         -------
-        float
+        tuple[float, float]
             The energy per site.
         """
-        return self.total_energy / self._owner.site_number
+        expect, deviation = self.total_energy
+        site_number = self._owner.site_number
+        return expect / site_number, deviation / site_number
 
     @property
     def gradient(self):
@@ -333,7 +389,7 @@ class Observer:
         dict[str, Delta]
             The gradient for every subansatz.
         """
-        energy = self.total_energy
+        energy, _ = self.total_energy
         return {
             name: 2 * self._EDelta[name] / self._count - 2 * energy * self._Delta[name] / self._count
             for name in self._enable_gradient
@@ -430,9 +486,13 @@ class Observer:
                     total_value += complex(value)
                 to_save = total_value.real
                 self._result[name][positions] += to_save
+                self._result_square[name][positions] += to_save * to_save
                 if name == "energy":
                     Es += total_value
             if name == "energy":
+                to_save = Es.real
+                self._total_energy += to_save
+                self._total_energy_square += to_save * to_save
                 if self._owner.Tensor.is_real:
                     Es = Es.real
                 else:
@@ -467,7 +527,6 @@ def gradient(
         save_state_interval=None,
         save_state_file=None,
         # About Measurement
-        # TODO with error
         measurement=None):
 
     # Restrict subspace
@@ -497,6 +556,10 @@ def gradient(
             observer.enable_gradient(enable_gradient_ansatz.split(","))
         else:
             observer.enable_gradient()
+    if measurement:
+        measurement_names = measurement.split(",")
+        for measurement_name in measurement_names:
+            observer.add_observer(measurement_name, get_imported_function(measurement_name, "measurement")(state))
 
     # Gradient descent
     with SignalHandler(signal.SIGINT) as sigint_handler:
@@ -528,6 +591,11 @@ def gradient(
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"gradient {grad_step}/{grad_total_step}, energy={observer.energy}")
+            # Measure log
+            if measurement and mpi_rank == 0:
+                for measurement_name in measurement_names:
+                    measurement_result = observer.result[measurement_name]
+                    get_imported_function(measurement_name, "save_result")(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file, "a", encoding="utf-8") as file:
