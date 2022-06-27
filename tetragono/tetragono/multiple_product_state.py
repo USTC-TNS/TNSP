@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import inspect
 import signal
 from copyreg import _slotnames
 import numpy as np
@@ -89,8 +90,8 @@ class MultipleProductState(AbstractState):
 
         Parameters
         ----------
-        configuration : dict[tuple[int, int, int], int]
-            The given configuration to calculate weight and delta
+        configurations : list[list[list[dict[int, EdgePoint]]]]
+            The given configurations to calculate weight and delta.
         calculate_delta : set[str]
             The iterator of name of ansatz to calculate delta.
 
@@ -138,9 +139,9 @@ class Sampling:
     Metropois sampling object for multiple product state.
     """
 
-    __slots__ = ["_owner", "configuration", "_hopping_hamiltonians", "ws"]
+    __slots__ = ["_owner", "configuration", "_hopping_hamiltonians", "_restrict_subspace", "ws"]
 
-    def __init__(self, owner, configuration, hopping_hamiltonians):
+    def __init__(self, owner, configuration, hopping_hamiltonians, restrict_subspace):
         """
         Create sampling object.
 
@@ -152,89 +153,31 @@ class Sampling:
             The initial configuration.
         hopping_hamiltonian : None | dict[tuple[tuple[int, int, int], ...], Tensor]
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
+        restrict_subspace
+            A function return bool to restrict sampling subspace.
         """
         self._owner = owner
-        self.configuration = [
-            [{orbit: None for orbit in owner.physics_edges[l1, l2]} for l2 in range(owner.L2)] for l1 in range(owner.L1)
-        ]
-        self.ws = None
+        self.configuration = [[{orbit: configuration[l1][l2][orbit]
+                                for orbit in owner.physics_edges[l1, l2]}
+                               for l2 in range(owner.L2)]
+                              for l1 in range(owner.L1)]
+        [self.ws], _ = self._owner.weight_and_delta([self.configuration], set())
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
             self._hopping_hamiltonians = self._owner._hamiltonians
         self._hopping_hamiltonians = list(self._hopping_hamiltonians.items())
-        if configuration is not None:
-            self.import_gm_configuration(configuration)
-
-    def import_gm_configuration(self, configuration):
-        """
-        Import configuration used by sampling lattice.
-
-        Parameters
-        ----------
-        configuration : list[list[dict[int, EdgePoint]]]
-            The configuration in format used by sampling lattice.
-        """
-        owner = self._owner
-        for l1 in range(owner.L1):
-            for l2 in range(owner.L2):
-                for orbit in owner.physics_edges[l1, l2]:
-                    self.configuration[l1][l2][orbit] = configuration[l1][l2][orbit]
-        self.refresh()
-
-    def import_mp_configuration(self, configuration):
-        """
-        Import configuration used by multiple product state.
-
-        Parameters
-        ----------
-        configuration : dict[tuple[int, int, int], int]
-            The configuration in format used by multiple product state.
-        """
-        owner = self._owner
-        for l1 in range(owner.L1):
-            for l2 in range(owner.L2):
-                for orbit in owner.physics_edges[l1, l2]:
-                    self.configuration[l1][l2][orbit] = (TAT.No.Symmetry(), configuration[l1, l2, orbit])
-        self.refresh()
-
-    def export_gm_configuration(self):
-        """
-        Export configuration used by sampling lattice.
-
-        Returns
-        -------
-        configuration : list[list[dict[int, EdgePoint]]]
-            The configuration in format used by sampling lattice.
-        """
-        return self.configuration
-
-    def export_mp_configuration(self):
-        """
-        Export configuration used by multiple product state.
-
-        Returns
-        -------
-        configuration : dict[tuple[int, int, int], int]
-            The configuration in format used by multiple product state.
-        """
-        owner = self._owner
-        configuration = {}
-        for l1 in range(owner.L1):
-            for l2 in range(owner.L2):
-                for orbit in owner.physics_edges[l1, l2]:
-                    _, configuration[l1, l2, orbit] = self.configuration[l1][l2][orbit]
-        return configuration
+        self._restrict_subspace = restrict_subspace
 
     def __call__(self):
         """
         Get the next configuration.
         """
-        configuration = self.export_mp_configuration()
+        owner = self._owner
         hamiltonian_number = len(self._hopping_hamiltonians)
         positions, hamiltonian = self._hopping_hamiltonians[TAT.random.uniform_int(0, hamiltonian_number - 1)()]
         body = hamiltonian.rank // 2
-        current_configuration = tuple((TAT.No.Symmetry(), configuration[l1l2o]) for l1l2o in positions)
+        current_configuration = tuple(self.configuration[l1][l2][orbit] for [l1, l2, orbit] in positions)
         element_pool = tensor_element(hamiltonian)
         if current_configuration not in element_pool:
             return
@@ -244,25 +187,29 @@ class Sampling:
         hopping_number = len(possible_hopping)
         current_configuration_s, _ = list(possible_hopping.items())[TAT.random.uniform_int(0, hopping_number - 1)()]
         hopping_number_s = len(element_pool[current_configuration_s])
-        configuration_s = configuration.copy()
-        for i in range(body):
-            _, configuration_s[positions[i]] = current_configuration_s[i]
+        if self._restrict_subspace is not None:
+            replacement = {positions[i]: current_configurations_s[i] for i in range(body)}
+            if not self._restrict_subspace(self.configuration, replacement):
+                return
+        configuration_s = [[{orbit: self.configuration[l1][l2][orbit]
+                             for orbit in owner.physics_edges[l1, l2]}
+                            for l2 in range(owner.L2)]
+                           for l1 in range(owner.L1)]
+        for i, [l1, l2, orbit] in enumerate(positions):
+            configuration_s[l1][l2][orbit] = current_configuration_s[i]
         [wss], _ = self._owner.weight_and_delta([configuration_s], set())
         p = (np.linalg.norm(wss)**2) / (np.linalg.norm(self.ws)**2) * hopping_number / hopping_number_s
         if TAT.random.uniform_real(0, 1)() < p:
-            self.import_mp_configuration(configuration_s)
+            self.configuration = configuration_s
             self.ws = wss
-
-    def refresh(self):
-        """
-        Refresh ws, call it after state updated.
-        """
-        [self.ws], _ = self._owner.weight_and_delta([self.export_mp_configuration()], set())
 
 
 class Observer:
 
-    __slots__ = ["_owner", "_enable_gradient", "_observer", "_start", "_count", "_result", "_Delta", "_EDelta"]
+    __slots__ = [
+        "_owner", "_enable_gradient", "_observer", "_restrict_subspace", "_start", "_count", "_result", "_Delta",
+        "_EDelta"
+    ]
 
     def __init__(self, owner):
         """
@@ -277,12 +224,27 @@ class Observer:
 
         self._enable_gradient = set()
         self._observer = {}
+        self._restrict_subspace = None
 
         self._start = False
+
         self._count = None
         self._result = None
         self._Delta = None
         self._EDelta = None
+
+    def restrict_subspace(self, restrict_subspace):
+        """
+        Set restrict subspace for observers.
+
+        Parameters
+        ----------
+        restrict_subspace
+            A function return bool to restrict measure subspace.
+        """
+        if self._start:
+            raise RuntimeError("Cannot set restrict subspace after sampling start")
+        self._restrict_subspace = restrict_subspace
 
     def __enter__(self):
         """
@@ -424,7 +386,7 @@ class Observer:
 
         Parameters
         ----------
-        configuration : dict[tuple[int, int, int], int]
+        configuration : list[list[dict[int, EdgePoint]]]
             The current configuration.
         """
         owner = self._owner
@@ -438,14 +400,20 @@ class Observer:
             for positions, observer in observers.items():
                 configuration_map[name][positions] = {}
                 body = observer.rank // 2
-                current_configuration = tuple((TAT.No.Symmetry(), configuration[positions[i]]) for i in range(body))
+                current_configuration = tuple(configuration[l1][l2][orbit] for l1, l2, orbit in positions)
                 element_pool = tensor_element(observer)
                 if current_configuration not in element_pool:
                     continue
                 for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    new_configuration = configuration.copy()
-                    for i in range(body):
-                        _, new_configuration[positions[i]] = other_configuration[i]
+                    if self._restrict_subspace is not None:
+                        replacement = {positions[i]: other_configuration[i] for i in range(body)}
+                        if not self._restrict_subspace(configuration, replacement):
+                            continue
+                    new_configuration = [[{
+                        orbit: configuration[l1][l2][orbit] for orbit in owner.physics_edges[l1, l2]
+                    } for l2 in range(owner.L2)] for l1 in range(owner.L1)]
+                    for i, [l1, l2, orbit] in enumerate(positions):
+                        new_configuration[l1][l2][orbit] = other_configuration[i]
                     configuration_map[name][positions][other_configuration] = (len(configuration_list),
                                                                                observer_shrinked.storage[0])
                     configuration_list.append(new_configuration)
@@ -488,10 +456,8 @@ def gradient(
         grad_step_size,
         *,
         # About sampling
-        # TODO use gm style format
         sampling_configurations=[],
         sweep_hopping_hamiltonians=None,
-        # TODO after conf format updated
         restrict_subspace=None,
         # About gradient
         enable_gradient_ansatz=None,
@@ -503,8 +469,28 @@ def gradient(
         # About Measurement
         # TODO with error
         measurement=None):
+
+    # Restrict subspace
+    if restrict_subspace is not None:
+        origin_restrict = get_imported_function(restrict_subspace, "restrict")
+        if len(inspect.signature(origin_restrict).parameters) == 1:
+
+            def restrict(configuration, replacement=None):
+                if replacement is None:
+                    return origin_restrict(configuration)
+                else:
+                    configuration = configuration.copy()
+                    for [l1, l2, orbit], new_site_config in replacement.items():
+                        configuration[l1, l2, orbit] = new_site_config
+                    return origin_restrict(configuration)
+        else:
+            restrict = origin_restrict
+    else:
+        restrict = None
+
     # Create observer
     observer = Observer(state)
+    observer.restrict_subspace(restrict)
     observer.add_energy()
     if grad_step_size != 0:
         if enable_gradient_ansatz is not None:
@@ -526,17 +512,19 @@ def gradient(
                     choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
                 else:
                     choose = mpi_rank
-                sampling = Sampling(state, configuration=None, hopping_hamiltonians=hopping_hamiltonians)
-                sampling.import_gm_configuration(sampling_configurations[choose])
+                sampling = Sampling(state,
+                                    configuration=sampling_configurations[choose],
+                                    hopping_hamiltonians=hopping_hamiltonians,
+                                    restrict_subspace=restrict)
                 # Sampling
                 for sampling_step in range(sampling_total_step):
                     if sampling_step % mpi_size == mpi_rank:
-                        observer(sampling.export_mp_configuration())
+                        observer(sampling.configuration)
                         for _ in range(state.site_number):
                             sampling()
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configurations
-                gathered_configurations = mpi_comm.allgather(sampling.export_gm_configuration())
+                gathered_configurations = mpi_comm.allgather(sampling.configuration)
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"gradient {grad_step}/{grad_total_step}, energy={observer.energy}")

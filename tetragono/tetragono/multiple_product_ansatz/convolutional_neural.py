@@ -67,7 +67,7 @@ class ConvolutionalNeural(AbstractAnsatz):
 
         Parameters
         ----------
-        configuration : dict[tuple[int, int, int], int]
+        configuration : list[list[dict[int, EdgePoint]]]
             The configuration dict.
 
         Returns
@@ -75,7 +75,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         list[list[list[int]]]
             The configuration as input of network, where three dimensions are channel, width and height.
         """
-        return [[[-1 if configuration[l1, l2, 0] == 0 else 1
+        return [[[-1 if configuration[l1][l2][0][1] == 0 else 1
                   for l2 in range(self.multiple_product_state.L2)]
                  for l1 in range(self.multiple_product_state.L1)]]
 

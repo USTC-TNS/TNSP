@@ -27,7 +27,7 @@ class AbstractAnsatz:
 
         Parameters
         ----------
-        configuration : dict[tuple[int, int, int], int]
+        configuration : list[list[dict[int, EdgePoint]]]
             The given configuration to calculate weight.
 
         Returns
@@ -43,7 +43,7 @@ class AbstractAnsatz:
 
         Parameters
         ----------
-        configuration : dict[tuple[int, int, int], int]
+        configuration : list[list[dict[int, EdgePoint]]]
             The given configuration to calculate delta.
 
         Returns
@@ -59,7 +59,7 @@ class AbstractAnsatz:
 
         Parameters
         ----------
-        configuration : list[dict[tuple[int, int, int], int]]
+        configurations : list[list[list[dict[int, EdgePoint]]]]
             The given configuration list to calculate weight and delta.
         calculate_delta : bool
             Whether to calculate delta.
