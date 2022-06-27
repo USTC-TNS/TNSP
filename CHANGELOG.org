@@ -11,6 +11,7 @@
 + *tetragono*: The function name to create a lattice changes from =create= to =abstract_lattice=. And it is recommended
   to split it into two parts: =abstract_state= to create an abstract state and =abstract_lattice= to convert the
   abstract state into an abstract lattice.
++ *tetragono*: The epsilon to avoid the singularity of the metric in the natural gradient method is relative now.
 *** Deprecated
 + *tetragono*: The original function name =create= to create lattice is deprecated.
 *** Removed
