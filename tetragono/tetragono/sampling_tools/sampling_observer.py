@@ -201,6 +201,19 @@ class Observer():
             self.enable_natural_gradient()
         self.cache_natural_delta(cache_natural_delta)
         self.cache_configuration(cache_configuration)
+        self.restrict_subspace(restrict_subspace)
+
+    def restrict_subspace(self, restrict_subspace):
+        """
+        Set restrict subspace for observers.
+
+        Parameters
+        ----------
+        restrict_subspace
+            A function return bool to restrict measure subspace.
+        """
+        if self._start:
+            raise RuntimeError("Cannot set restrict subspace after sampling start")
         self._restrict_subspace = restrict_subspace
 
     def set_classical_energy(self, classical_energy=None):
