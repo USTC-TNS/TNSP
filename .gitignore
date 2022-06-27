@@ -1,6 +1,7 @@
 /.vs
 /.idea
 /.vscode
+/.cache
 /out
 /CMakeSettings.json
 /compile_commands.json

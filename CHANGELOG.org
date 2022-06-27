@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.17...dev][Unreleased]]
+** [[https://github.com/hzhangxyz/TAT/compare/v0.2.18...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/hzhangxyz/TAT/compare/v0.2.17...v0.2.18][v0.2.18]] - 2022-06-28
 
 *** Added
 + *tetragono*: Add compatibility support for python3.8.
@@ -14,8 +22,6 @@
 + *tetragono*: The epsilon to avoid the singularity of the metric in the natural gradient method is relative now.
 *** Deprecated
 + *tetragono*: The original function name =create= to create lattice is deprecated.
-*** Removed
-*** Fixed
 
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.13...v0.2.17][v0.2.17]] - 2022-06-12
 
