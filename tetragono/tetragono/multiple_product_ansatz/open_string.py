@@ -170,6 +170,28 @@ class OpenString(AbstractAnsatz):
             result.append(this_tensor)
         return np.array(result)
 
+    def get_norm_max(self, delta):
+        if delta is None:
+            delta = self.tensor_list
+        return max(i.norm_max() for i in delta)
+
+    def apply_gradient(self, gradient, step_size):
+        self.tensor_list -= step_size * gradient
+        self._refresh_auxiliaries()
+
+    @staticmethod
+    def delta_dot_sum(a, b):
+        result = 0.0
+        for ai, bi in zip(a, b):
+            dot = ai.conjugate(default_is_physics_edge=True).contract(bi, {(name, name) for name in ai.names})
+            result += complex(dot).real
+        return result
+
+    @staticmethod
+    def delta_update(a, b):
+        for ai, bi in zip(a, b):
+            ai += bi
+
     @staticmethod
     def allreduce_delta(delta):
         requests = []
@@ -177,8 +199,9 @@ class OpenString(AbstractAnsatz):
             requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
         MPI.Request.Waitall(requests)
 
-    def apply_gradient(self, gradient, step_size, relative):
-        if relative:
-            gradient = gradient * (max(i.norm_max() for i in self.tensor_list) / max(i.norm_max() for i in gradient))
-        self.tensor_list -= step_size * gradient
-        self._refresh_auxiliaries()
+    @staticmethod
+    def iallreduce_delta(delta):
+        requests = []
+        for tensor in delta:
+            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
+        return requests

@@ -21,7 +21,7 @@ import TAT
 import tetragono as tet
 
 
-def ansatz(state, m):
+def ansatz(state, m, k):
     """
     The code here was designed by Xiao Liang.
     See https://link.aps.org/doi/10.1103/PhysRevB.98.104426 for more information.
@@ -29,8 +29,16 @@ def ansatz(state, m):
     max_int = 2**31
     random_int = TAT.random.uniform_int(0, max_int - 1)
     torch.manual_seed(random_int())
+    if k % 2 != 1:
+        raise ValueError("kernel size of lx style CNN must be an odd number.")
+    padding = (k - 1) // 2
     network = torch.nn.Sequential(
-        torch.nn.Conv2d(in_channels=1, out_channels=m, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1)),
+        torch.nn.Conv2d(in_channels=1,
+                        out_channels=m,
+                        kernel_size=(k, k),
+                        stride=(1, 1),
+                        padding=(padding, padding),
+                        padding_mode="zeros"),
         torch.nn.MaxPool2d(kernel_size=(2, 2)),
         torch.nn.ConvTranspose2d(in_channels=m, out_channels=1, kernel_size=(2, 2), stride=(2, 2), padding=(0, 0)),
     ).double()

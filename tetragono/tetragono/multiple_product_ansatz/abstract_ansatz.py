@@ -75,6 +75,63 @@ class AbstractAnsatz:
             delta = None
         return weight, delta
 
+    def get_norm_max(self, delta):
+        """
+        Get the max norm of the delta or state.
+
+        Parameters
+        ----------
+        delta : None | Delta
+            The delta or state to calculate max norm.
+
+        Returns
+        -------
+            The max norm
+        """
+        raise NotImplementedError("get norm max not implemented")
+
+    def apply_gradient(self, gradient, step_size):
+        """
+        Apply the gradient to this subansatz.
+
+        Parameters
+        ----------
+        gradient : Delta
+            The gradient.
+        step_size : float
+            The step size.
+        """
+        raise NotImplementedError("apply gradient not implemented")
+
+    @staticmethod
+    def delta_dot_sum(a, b):
+        """
+        Calculate the dot of two delta.
+
+        Parameters
+        ----------
+        a, b : Delta
+            The two delta.
+
+        Returns
+        -------
+        float
+            The dot of a and b.
+        """
+        raise NotImplementedError("delta_dot_sum not implemented")
+
+    @staticmethod
+    def delta_update(a, b):
+        """
+        Add delta b into delta a.
+
+        Parameters
+        ----------
+        a, b : Delta
+            The two delta.
+        """
+        raise NotImplementedError("delta_update not implemented")
+
     @staticmethod
     def allreduce_delta(delta):
         """
@@ -87,17 +144,19 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("allreduce delta not implemented")
 
-    def apply_gradient(gradient, step_size, relative):
+    @staticmethod
+    def iallreduce_delta(delta):
         """
-        Apply the gradient to this subansatz.
+        Iallreduce the delta calculated by processes inplacely.
 
         Parameters
         ----------
-        gradient : Delta
-            The gradient.
-        step_size : float
-            The step size.
-        relative : bool
-            use relative step size or not.
+        delta : Delta
+            The delta calculated by this process.
+
+        Returns
+        -------
+        list[Request]
+            List of MPI request
         """
-        raise NotImplementedError("apply gradient not implemented")
+        raise NotImplementedError("iallreduce delta not implemented")

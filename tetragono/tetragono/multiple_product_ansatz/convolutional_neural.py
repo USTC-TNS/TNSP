@@ -106,6 +106,29 @@ class ConvolutionalNeural(AbstractAnsatz):
             delta = None
         return weight.tolist(), delta
 
+    def get_norm_max(self, delta):
+        if delta is None:
+            delta = self.network.parameters()
+        with torch.no_grad():
+            return max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters())
+
+    def apply_gradient(self, gradient, step_size, relative):
+        with torch.no_grad():
+            for state, grad in zip(self.network.parameters(), gradient):
+                state.data -= step_size * grad
+
+    @staticmethod
+    def delta_dot_sum(a, b):
+        result = 0.0
+        for ai, bi in zip(a, b):
+            result += float(np.dot(ai.reshape([-1]), bi.reshape([-1])))
+        return result
+
+    @staticmethod
+    def delta_update(a, b):
+        for ai, bi in zip(a, b):
+            ai += bi
+
     @staticmethod
     def allreduce_delta(delta):
         requests = []
@@ -113,11 +136,9 @@ class ConvolutionalNeural(AbstractAnsatz):
             requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
         MPI.Request.Waitall(requests)
 
-    def apply_gradient(self, gradient, step_size, relative):
-        with torch.no_grad():
-            if relative:
-                norm = (max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters()) /
-                        max(np.linalg.norm(i.reshape([-1]), np.inf) for i in gradient))
-                gradient = gradient * norm
-            for state, grad in zip(self.network.parameters(), gradient):
-                state.data -= step_size * grad
+    @staticmethod
+    def iallreduce_delta(delta):
+        requests = []
+        for tensor in delta:
+            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
+        return requests

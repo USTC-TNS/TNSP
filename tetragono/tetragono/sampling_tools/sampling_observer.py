@@ -232,6 +232,7 @@ class Observer():
         Set the cache folder to store deltas used in natural gradient.
 
         Parameters
+        ----------
         cache_natural_delta : str | None
             The folder to store deltas.
         """
