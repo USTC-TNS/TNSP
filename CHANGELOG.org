@@ -4,6 +4,7 @@
 
 *** Added
 *** Changed
++ *lazy*: Using a manual stack to run the recursion now, to avoid the recursion depth limit.
 *** Deprecated
 *** Removed
 *** Fixed

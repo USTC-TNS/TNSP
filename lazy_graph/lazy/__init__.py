@@ -197,24 +197,40 @@ class Node:
             The calculated value of this node.
         """
         if self._value is None:
-            # Do NOT use generator here for less stack depth
-
-            # args = [self._unwrap_node(i) for i in self._args]
-            args = []
-            for i in self._args:
-                if isinstance(i, Node):
-                    i = i()
-                args.append(i)
-
-            # kwargs = {i: self._unwrap_node(j) for i, j in self._kwargs.items()}
-            kwargs = {}
-            for i, j in self._kwargs.items():
-                if isinstance(j, Node):
-                    j = j()
-                kwargs[i] = j
-
-            self._value = self._func(*args, **kwargs)
+            stack = [(self, [*self._args], {**self._kwargs})]
+            self._recursion(stack)
         return self._value
+
+    @staticmethod
+    def _recursion(stack):
+        """
+        Run recursion on lazy graph.
+
+        Parameters
+        ----------
+        stack : list[tuple[Node, Args, Kwargs]]
+            The stack used to run recursion.
+        """
+        while len(stack) != 0:
+            node, args, kwargs = stack[-1]
+            for i, arg in enumerate(args):
+                if isinstance(arg, Node):
+                    if arg._value is not None:
+                        args[i] = arg._value
+                    else:
+                        stack.append((arg, [*arg._args], {**arg._kwargs}))
+                        break
+            else:
+                for key, arg in kwargs.items():
+                    if isinstance(arg, Node):
+                        if arg._value is not None:
+                            kwargs[key] = arg._value
+                        else:
+                            stack.append((arg, [*arg._args], {**arg._kwargs}))
+                            break
+                else:
+                    node._value = node._func(*args, **kwargs)
+                    stack.pop()
 
 
 def Root(value=None):
