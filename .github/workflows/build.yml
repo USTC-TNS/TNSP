@@ -232,9 +232,20 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: recovery tag information
+        run: git fetch --tags --force
+      - name: install emacs
+        run: sudo apt-get install -y emacs
+      - name: export to markdown
+        run: emacs CHANGELOG.org --batch -f org-md-export-to-markdown --kill
+      - name: generate release description
+        run: python .github/scripts/generate_release_description.py
       - name: download artifacts
         uses: actions/download-artifact@v2
       - name: release
         uses: softprops/action-gh-release@v1
         with:
           files: artifact/*.whl
+          body_path: release_description.md
