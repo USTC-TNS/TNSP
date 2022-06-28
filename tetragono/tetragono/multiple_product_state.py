@@ -599,7 +599,7 @@ def gradient(
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file, "a", encoding="utf-8") as file:
-                    print(observer.energy, file=file)
+                    print(*observer.energy, file=file)
             # Update state
             state.apply_gradient(observer.gradient, grad_step_size, relative=use_fix_relative_step_size)
             # Save state
