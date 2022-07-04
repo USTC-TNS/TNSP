@@ -20,6 +20,16 @@ import tetragono as tet
 
 
 def ansatz(state, direction, dimension):
+    """
+    Create an string bond state ansatz along a snake like string.
+
+    Parameters
+    ----------
+    direction : str
+        The direction of this snake like string.
+    dimension : int
+        The bond dimension of the string.
+    """
     if direction in ["H", "h"]:
         index_to_site = []
         for l1 in range(state.L1):

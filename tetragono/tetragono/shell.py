@@ -178,7 +178,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def ex_mp_create(lattice_type, model_name, *args, **kwargs):
         abstract_state = get_imported_function(model_name, "abstract_state")
         if len(args) == 1 and args[0] == "help":
-            print(abstract_state.__doc__.replace("\n", "\n    "))
+            showln(abstract_state.__doc__.replace("\n", "\n    "))
             return None
         else:
             state = lattice_type(abstract_state(*args, **kwargs))
@@ -210,13 +210,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             abstract_lattice = get_imported_function(model_name, "abstract_lattice")
         except AttributeError:
             abstract_lattice = get_imported_function(model_name, "create")
-            print(" ##### DEPRECATE WARNING BEGIN #####")
-            print(
+            showln(" ##### DEPRECATE WARNING BEGIN #####")
+            showln(
                 " `create` as function name to create lattice object is deprecated, replacing it with `abstract_lattice`, splitting it into two part: abstract_state and abstract_lattice is recommended."
             )
-            print(" ###### DEPRECATE WARNING END ######")
+            showln(" ###### DEPRECATE WARNING END ######")
         if len(args) == 1 and args[0] == "help":
-            print(abstract_lattice.__doc__.replace("\n", "\n    "))
+            showln(abstract_lattice.__doc__.replace("\n", "\n    "))
             return None
         else:
             state = lattice_type(abstract_lattice(*args, **kwargs))
@@ -635,7 +635,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @sharedoc(do_mp_ansatz)
     def mp_ansatz(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
-        self.mp.add_ansatz(create_ansatz(self.mp, *args, **kwargs), name)
+        if len(args) == 1 and args[0] == "help":
+            showln(create_ansatz.__doc__.replace("\n", "\n    "))
+        else:
+            self.mp.add_ansatz(create_ansatz(self.mp, *args, **kwargs), name)
 
     def do_mp_run(self, line):
         """

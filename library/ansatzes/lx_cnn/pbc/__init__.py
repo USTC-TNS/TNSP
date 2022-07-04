@@ -23,8 +23,17 @@ import tetragono as tet
 
 def ansatz(state, m, k):
     """
+    Create pbc version lx style cnn ansatz.
+
     The code here was designed by Xiao Liang.
     See https://link.aps.org/doi/10.1103/PhysRevB.98.104426 for more information.
+
+    Parameters
+    ----------
+    m : int
+        The channel count of the network.
+    k : int
+        The convolution kernel size.
     """
     max_int = 2**31
     random_int = TAT.random.uniform_int(0, max_int - 1)
