@@ -51,4 +51,4 @@ def ansatz(state, m, k):
         torch.nn.MaxPool2d(kernel_size=(2, 2)),
         torch.nn.ConvTranspose2d(in_channels=m, out_channels=1, kernel_size=(2, 2), stride=(2, 2), padding=(0, 0)),
     ).double()
-    return tet.multiple_product_state.ConvolutionalNeural(state, network)
+    return tet.multiple_product_ansatz.ConvolutionalNeural(state, network)

@@ -27,7 +27,8 @@ from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration
 from .multiple_product_state import MultipleProductState
-from .gradient import gradient_descent
+from .sampling_tools.gradient import gradient_descent
+from .multiple_product_state.gradient import gradient_descent as mp_gradient_descent
 
 
 class FakeConfiguration:
@@ -651,7 +652,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def mp_run(self, *args, **kwargs):
         from . import multiple_product_state
 
-        multiple_product_state.gradient(self.mp, *args, **kwargs, sampling_configurations=self.mp_conf)
+        mp_gradient_descent(self.mp, *args, **kwargs, sampling_configurations=self.mp_conf)
 
     def do_mp_conf_create(self, line):
         """

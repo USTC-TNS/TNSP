@@ -35,12 +35,12 @@ def ansatz(state, direction, dimension):
         for l1 in range(state.L1):
             for l2 in range(state.L2) if l1 % 2 == 0 else reversed(range(state.L2)):
                 index_to_site.append((l1, l2, 0))
-        return tet.multiple_product_state.OpenString(state, index_to_site, dimension)
+        return tet.multiple_product_ansatz.OpenString(state, index_to_site, dimension)
     elif direction in ["V", "v"]:
         index_to_site = []
         for l2 in range(state.L2):
             for l1 in range(state.L1) if l2 % 2 == 0 else reversed(range(state.L1)):
                 index_to_site.append((l1, l2, 0))
-        return tet.multiple_product_state.OpenString(state, index_to_site, dimension)
+        return tet.multiple_product_ansatz.OpenString(state, index_to_site, dimension)
     else:
         raise RuntimeError("Invalid direction when creating snake string ansatz")

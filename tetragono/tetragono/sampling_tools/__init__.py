@@ -17,5 +17,5 @@
 #
 
 from .tensor_element import tensor_element
-from .sampling_methods import Sampling, SweepSampling, ErgodicSampling, DirectSampling
-from .sampling_observer import Observer
+from .sampling import Sampling, SweepSampling, ErgodicSampling, DirectSampling
+from .observer import Observer
