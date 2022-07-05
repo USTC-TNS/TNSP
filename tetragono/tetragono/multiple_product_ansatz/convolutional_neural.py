@@ -112,7 +112,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         with torch.no_grad():
             return max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters())
 
-    def apply_gradient(self, gradient, step_size, relative):
+    def apply_gradient(self, gradient, step_size):
         with torch.no_grad():
             for state, grad in zip(self.network.parameters(), gradient):
                 state.data -= step_size * grad
