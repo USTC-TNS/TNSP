@@ -39,7 +39,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
 
     original_energy = observer.energy[0] * state.site_number
     delta = check_difference_delta
-    showln(f"difference delta is hard coded as {delta}")
+    showln(f"difference delta is set as {delta}")
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             showln(l1, l2)
