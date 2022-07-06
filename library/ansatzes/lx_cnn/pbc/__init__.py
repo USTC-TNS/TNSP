@@ -35,9 +35,7 @@ def ansatz(state, m, k):
     k : int
         The convolution kernel size.
     """
-    max_int = 2**31
-    random_int = TAT.random.uniform_int(0, max_int - 1)
-    torch.manual_seed(random_int())
+    torch.manual_seed(tet.seed_differ.random_int())
     if k % 2 != 1:
         raise ValueError("kernel size of lx style CNN must be an odd number.")
     padding = (k - 1) // 2

@@ -17,5 +17,14 @@
 #
 
 from .state import MultipleProductState
-from .sampling import Sampling
-from .observer import Observer
+from .sampling import Sampling, MetropolisSampling, ErgodicSampling
+try:
+    import pandas
+except ModuleNotFoundError:
+
+    class Observer:
+
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("pandas needed for Observer")
+else:
+    from .observer import Observer

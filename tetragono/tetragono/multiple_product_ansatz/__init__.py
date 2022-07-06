@@ -20,6 +20,10 @@ from .open_string import OpenString
 try:
     import torch
 except ModuleNotFoundError:
-    pass
+
+    class ConvolutionalNeural:
+
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("torch needed for ConvolutionalNeural")
 else:
     from .convolutional_neural import ConvolutionalNeural

@@ -175,8 +175,15 @@ class OpenString(AbstractAnsatz):
             delta = self.tensor_list
         return max(i.norm_max() for i in delta)
 
-    def apply_gradient(self, gradient, step_size):
-        self.tensor_list -= step_size * gradient
+    def export_data(self):
+        return self.tensor_list
+
+    def import_data(self, data):
+        for i in range(len(self.tensor_list)):
+            self.tensor_list[i] = data[i]
+        self._refresh_auxiliaries()
+
+    def refresh_auxiliaries(self):
         self._refresh_auxiliaries()
 
     @staticmethod
@@ -205,3 +212,7 @@ class OpenString(AbstractAnsatz):
         for tensor in delta:
             requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
         return requests
+
+    @staticmethod
+    def param_count(delta):
+        return sum(tensor.norm_num() for tensor in delta)

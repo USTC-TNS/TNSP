@@ -127,17 +127,17 @@ def gradient_descent(
         sweep_hopping_hamiltonians=None,
         # About subspace
         restrict_subspace=None,
-        # About natural gradient
-        use_natural_gradient=False,
-        conjugate_gradient_method_step=20,
-        metric_inverse_epsilon=0.01,
-        cache_natural_delta=None,
         # About gradient method
         use_check_difference=False,
         use_line_search=False,
         use_fix_relative_step_size=False,
         use_random_gradient=False,
         momentum_parameter=0.0,
+        # About natural gradient
+        use_natural_gradient=False,
+        conjugate_gradient_method_step=20,
+        metric_inverse_epsilon=0.01,
+        cache_natural_delta=None,
         # About gauge fixing
         fix_gauge=False,
         # About log and save state
@@ -212,7 +212,7 @@ def gradient_descent(
         energy_observer = Observer(
             state,
             enable_energy=True,
-            enable_gradient=True,
+            enable_gradient=use_line_search,
             cache_configuration=cache_configuration,
             restrict_subspace=restrict,
         )

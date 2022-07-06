@@ -112,10 +112,16 @@ class ConvolutionalNeural(AbstractAnsatz):
         with torch.no_grad():
             return max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters())
 
-    def apply_gradient(self, gradient, step_size):
+    def export_data(self):
+        return np.array([np.array(i.data) for i in self.network.parameters()], dtype=object)
+
+    def import_data(self, data):
         with torch.no_grad():
-            for state, grad in zip(self.network.parameters(), gradient):
-                state.data -= step_size * grad
+            for state, new_state in zip(self.network.parameters(), data):
+                state.data = torch.tensor(new_state)
+
+    def refresh_auxiliaries(self):
+        pass
 
     @staticmethod
     def delta_dot_sum(a, b):
@@ -142,3 +148,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         for tensor in delta:
             requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
         return requests
+
+    @staticmethod
+    def param_count(delta):
+        return sum(tensor.size for tensor in delta)

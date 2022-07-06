@@ -132,7 +132,24 @@ class MultipleProductState(AbstractState):
                 result += this
         return result
 
-    def apply_gradient(self, gradient, step_size, relative):
+    def fix_relative_to_state(self, gradient):
+        """
+        Get fixed relative to state for a state shape data.
+
+        Parameters
+        ----------
+        gradient : dict[str, Delta]
+            The state shape data.
+
+        Returns
+        -------
+        dict[str, Delta]
+            The result state shape data which have the same norm to the state itself.
+        """
+        param = self.get_norm_max(None) / self.get_norm_max(gradient)
+        return gradient * param
+
+    def apply_gradient(self, gradient, step_size):
         """
         Apply the gradient to the state.
 
@@ -142,10 +159,13 @@ class MultipleProductState(AbstractState):
             The gradient calculated by observer object.
         step_size : float
             The gradient step size.
-        relative : bool
-            Use relative step size or not.
         """
-        if relative:
-            step_size *= self.get_norm_max(None) / self.get_norm_max(gradient)
-        for name in gradient:
-            self.ansatzes[name].apply_gradient(gradient[name], step_size)
+        for name, _ in gradient.items():
+            self.ansatzes[name].import_data(self.ansatzes[name].export_data() - gradient[name] * step_size)
+
+    def refresh_auxiliaries(self):
+        """
+        Refresh auxiliaries after updating state.
+        """
+        for name in self.ansatzes:
+            self.ansatzes[name].refresh_auxiliaries()

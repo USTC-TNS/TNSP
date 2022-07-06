@@ -90,18 +90,33 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("get norm max not implemented")
 
-    def apply_gradient(self, gradient, step_size):
+    def export_data(self):
         """
-        Apply the gradient to this subansatz.
+        Export the state.
+
+        Returns
+        -------
+        Delta
+            The state.
+        """
+        raise NotImplementedError("export_data not implemented")
+
+    def import_data(self, data):
+        """
+        Import the state.
 
         Parameters
         ----------
-        gradient : Delta
-            The gradient.
-        step_size : float
-            The step size.
+        data : Delta
+            The state.
         """
-        raise NotImplementedError("apply gradient not implemented")
+        raise NotImplementedError("import_data not implemented")
+
+    def refresh_auxiliaries(self):
+        """
+        Refresh auxiliaries after updating state.
+        """
+        raise NotImplementedError("refresh auxiliaries not implemented")
 
     @staticmethod
     def delta_dot_sum(a, b):
@@ -160,3 +175,20 @@ class AbstractAnsatz:
             List of MPI request
         """
         raise NotImplementedError("iallreduce delta not implemented")
+
+    @staticmethod
+    def param_count(delta):
+        """
+        Count parameter number of a delta.
+
+        Parameters
+        ----------
+        delta : Delta
+            The delta calculated by this process.
+
+        Returns
+        -------
+        int
+            The parameter number.
+        """
+        raise NotImplementedError("param count not implemented")

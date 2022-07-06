@@ -19,16 +19,53 @@
 import numpy as np
 import TAT
 from ..sampling_tools.tensor_element import tensor_element
+from ..common_toolkit import mpi_rank, mpi_size
 
 
 class Sampling:
+    __slots__ = ["_owner", "_restrict_subspace"]
+
+    def __init__(self, owner, restrict_subspace):
+        """
+        Create sampling object for the given multiple product state.
+
+        Parameters
+        ----------
+        owner : SamplingLattice
+            The owner of this sampling object.
+        restrict_subspace
+            A function return bool to restrict sampling subspace.
+        """
+        self._owner = owner
+        self._restrict_subspace = restrict_subspace
+
+    def __call__(self):
+        """
+        Get the next sampling configuration
+
+        Returns
+        -------
+        tuple[float, list[list[dict[int, EdgePoint]]]]
+            The sampled weight in importance sampling, and the result configuration system.
+        """
+        raise NotImplementedError("Not implement in abstract sampling")
+
+    def copy_configuration(self, configuration):
+        owner = self._owner
+        return [[{orbit: configuration[l1][l2][orbit]
+                  for orbit in owner.physics_edges[l1, l2]}
+                 for l2 in range(owner.L2)]
+                for l1 in range(owner.L1)]
+
+
+class MetropolisSampling(Sampling):
     """
     Metropois sampling object for multiple product state.
     """
 
-    __slots__ = ["_owner", "configuration", "_hopping_hamiltonians", "_restrict_subspace", "ws"]
+    __slots__ = ["configuration", "ws", "_hopping_hamiltonians", "_interval"]
 
-    def __init__(self, owner, configuration, hopping_hamiltonians, restrict_subspace):
+    def __init__(self, owner, restrict_subspace, configuration, hopping_hamiltonians, interval=1):
         """
         Create sampling object.
 
@@ -36,30 +73,26 @@ class Sampling:
         ----------
         owner : MultipleProductState
             The owner of this sampling object
+        restrict_subspace
+            A function return bool to restrict sampling subspace.
         configuration : list[list[dict[int, EdgePoint]]]
             The initial configuration.
         hopping_hamiltonian : None | dict[tuple[tuple[int, int, int], ...], Tensor]
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
-        restrict_subspace
-            A function return bool to restrict sampling subspace.
+        interval : int
+            The interval of metropolis sampling.
         """
-        self._owner = owner
-        self.configuration = [[{orbit: configuration[l1][l2][orbit]
-                                for orbit in owner.physics_edges[l1, l2]}
-                               for l2 in range(owner.L2)]
-                              for l1 in range(owner.L1)]
+        super().__init__(owner, restrict_subspace)
+        self.configuration = self.copy_configuration(configuration)
         [self.ws], _ = self._owner.weight_and_delta([self.configuration], set())
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
             self._hopping_hamiltonians = self._owner._hamiltonians
         self._hopping_hamiltonians = list(self._hopping_hamiltonians.items())
-        self._restrict_subspace = restrict_subspace
+        self._interval = interval
 
-    def __call__(self):
-        """
-        Get the next configuration.
-        """
+    def _single_hopping(self):
         owner = self._owner
         hamiltonian_number = len(self._hopping_hamiltonians)
         positions, hamiltonian = self._hopping_hamiltonians[TAT.random.uniform_int(0, hamiltonian_number - 1)()]
@@ -78,10 +111,7 @@ class Sampling:
             replacement = {positions[i]: current_configurations_s[i] for i in range(body)}
             if not self._restrict_subspace(self.configuration, replacement):
                 return
-        configuration_s = [[{orbit: self.configuration[l1][l2][orbit]
-                             for orbit in owner.physics_edges[l1, l2]}
-                            for l2 in range(owner.L2)]
-                           for l1 in range(owner.L1)]
+        configuration_s = self.copy_configuration(self.configuration)
         for i, [l1, l2, orbit] in enumerate(positions):
             configuration_s[l1][l2][orbit] = current_configuration_s[i]
         [wss], _ = self._owner.weight_and_delta([configuration_s], set())
@@ -89,3 +119,77 @@ class Sampling:
         if TAT.random.uniform_real(0, 1)() < p:
             self.configuration = configuration_s
             self.ws = wss
+
+    def __call__(self):
+        for _ in range(self._interval):
+            self._single_hopping()
+        return self.ws**2, self.copy_configuration(self.configuration)
+
+
+class ErgodicSampling(Sampling):
+    """
+    Ergodic sampling.
+    """
+
+    __slots__ = ["total_step", "_edges", "configuration"]
+
+    def __init__(self, owner, restrict_subspace):
+        """
+        Create sampling object.
+
+        Parameters
+        ----------
+        owner : MultipleProductState
+            The owner of this sampling object
+        restrict_subspace
+            A function return bool to restrict sampling subspace.
+        """
+        super().__init__(owner, restrict_subspace)
+
+        self.configuration = [
+            [{orbit: None for orbit in owner.physics_edges[l1, l2]} for l2 in range(owner.L2)] for l1 in range(owner.L1)
+        ]
+
+        self._edges = [[{orbit: edge
+                         for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+                        for l2 in range(self._owner.L2)]
+                       for l1 in range(self._owner.L1)]
+
+        self.total_step = 1
+        for l1 in range(self._owner.L1):
+            for l2 in range(self._owner.L2):
+                for orbit, edge in self._edges[l1][l2].items():
+                    self.total_step *= edge.dimension
+
+        self._zero_configuration()
+        for t in range(mpi_rank):
+            self._next_configuration()
+
+    def _zero_configuration(self):
+        owner = self._owner
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit, edge in self._edges[l1][l2].items():
+                    self.configuration[l1][l2][orbit] = edge.get_point_from_index(0)
+
+    def _next_configuration(self):
+        owner = self._owner
+        for l1 in range(owner.L1):
+            for l2 in range(owner.L2):
+                for orbit, edge in self._edges[l1][l2].items():
+                    index = edge.get_index_from_point(self.configuration[l1][l2][orbit])
+                    index += 1
+                    if index == edge.dimension:
+                        self.configuration[l1][l2][orbit] = edge.get_point_from_index(0)
+                    else:
+                        self.configuration[l1][l2][orbit] = edge.get_point_from_index(index)
+                        return
+
+    def __call__(self):
+        for t in range(mpi_size):
+            self._next_configuration()
+        possibility = 1.
+        if self._restrict_subspace is not None:
+            if not self._restrict_subspace(self.configuration):
+                possibility = float("+inf")
+        return possibility, self.copy_configuration(self.configuration)
