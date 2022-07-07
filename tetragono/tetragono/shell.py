@@ -528,6 +528,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The file name.
         """
         config = Config(line)
+        self.gm_data_load(*config.args, **config.kwargs)
 
     @sharedoc(do_gm_data_load)
     def gm_data_load(self, name):
