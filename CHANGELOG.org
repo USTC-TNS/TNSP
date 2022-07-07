@@ -3,6 +3,7 @@
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.18...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add a new command =gm_hamiltonian= to replace the Hamiltonian of the existent sampling lattice.
 *** Changed
 + *lazy*: Using a manual stack to run the recursion now, to avoid the recursion depth limit.
 *** Deprecated

@@ -518,6 +518,25 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.gm_conf = mpi_comm.allgather(configuration._configuration)
 
+    def do_gm_hamiltonian(self, line):
+        """
+        Replace the hamiltonian of the sampling lattice with another one.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        config = Config(line)
+        self.gm_hamiltonian(*config.args, **config.kwargs)
+
+    @sharedoc(do_gm_hamiltonian)
+    def gm_hamiltonian(self, model, *args, **kwargs):
+        new_state = self.ex_mp_create(lambda x: x, model, *args, **kwargs)
+        self.gm._hamiltonians = new_state._hamiltonians
+
     def do_gm_data_load(self, line):
         """
         Load the lattice data from file, but preserve the current hamiltonians.
@@ -787,6 +806,7 @@ else:
     gm_conf_load = app.gm_conf_load
     gm_conf_create = app.gm_conf_create
     gm_data_load = app.gm_data_load
+    gm_hamiltonian = app.gm_hamiltonian
 
     mp_create = app.mp_create
     mp_dump = app.mp_dump
