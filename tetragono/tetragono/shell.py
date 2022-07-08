@@ -21,7 +21,7 @@ import sys
 import cmd
 import TAT
 from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
-                             get_imported_function)
+                             get_imported_function, seed_differ)
 from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
@@ -109,7 +109,7 @@ This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 """
         if mpi_rank == 0:
-            self.intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + self.license
+            self.intro = """Welcome to the Tetragono shell. Type help or ? to list commands.""" + self.license + f"\nRandom seed is set as {seed_differ.seed}"
 
         self.su = None
         self.ex = None
@@ -733,7 +733,7 @@ class TetragonoScriptApp(TetragonoCommandApp):
         self.use_rawinput = False
         self.prompt = ""
         if mpi_rank == 0:
-            self.intro = """Welcome to the tetragono shell.""" + self.license
+            self.intro = """Welcome to the tetragono shell.""" + self.license + f"\nRandom seed is set as {seed_differ.seed}"
 
     def precmd(self, line):
         line = line.strip()

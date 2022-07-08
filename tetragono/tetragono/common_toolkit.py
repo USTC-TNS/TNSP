@@ -104,18 +104,20 @@ class SignalHandler():
 
 class SeedDiffer:
 
-    __slots__ = []
+    __slots__ = ["seed"]
 
     max_int = 2**31
     random_int = TAT.random.uniform_int(0, max_int - 1)
 
     def make_seed_diff(self):
-        TAT.random.seed((self.random_int() + mpi_rank) % self.max_int)
+        self.seed = (self.random_int() + mpi_rank) % self.max_int
+        TAT.random.seed(self.seed)
         # c++ random engine will generate the same first uniform int if the seed is near.
         TAT.random.uniform_real(0, 1)()
 
     def make_seed_same(self):
-        TAT.random.seed(mpi_comm.allreduce(self.random_int() // mpi_size))
+        self.seed = mpi_comm.allreduce(self.random_int() // mpi_size)
+        TAT.random.seed(self.seed)
 
     def __enter__(self):
         self.make_seed_diff()
