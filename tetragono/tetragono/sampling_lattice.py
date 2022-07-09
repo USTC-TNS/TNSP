@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from .auxiliaries import SingleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_toolkit import lattice_dot_sum
+from .common_toolkit import lattice_dot_sum, lattice_conjugate
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -845,7 +845,8 @@ class SamplingLattice(AbstractLattice):
         list[list[Tensor]]
             The result lattice shape data which have the same norm to the lattice tensor.
         """
-        param = (lattice_dot_sum(self._lattice, self._lattice) / lattice_dot_sum(lattice, lattice))**0.5
+        param = (lattice_dot_sum(lattice_conjugate(self._lattice), self._lattice).real /
+                 lattice_dot_sum(lattice_conjugate(lattice), lattice).real)**0.5
         return param * lattice
 
     def orthogonalize_to_lattice(self, lattice):
@@ -863,5 +864,6 @@ class SamplingLattice(AbstractLattice):
             The result lattice shape data which is orthogonal to lattice tensors.
         """
         # lattice_dot always return a real number
-        param = lattice_dot_sum(lattice, state._lattice) / lattice_dot_sum(state._lattice, state._lattice)
+        param = (lattice_dot_sum(lattice_conjugate(lattice), state._lattice).real /
+                 lattice_dot_sum(lattice_conjugate(state._lattice), state._lattice).real)
         return lattice - state._lattice * param

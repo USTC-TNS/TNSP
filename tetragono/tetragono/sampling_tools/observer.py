@@ -517,14 +517,14 @@ class Observer():
             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
                 for reweight, _ in self._Deltas:
                     deltas = pickle.load(file)
-                    result += lattice_dot_sum(deltas, deltas) * reweight / self._total_weight
+                    result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
         else:
             for reweight, deltas in self._Deltas:
-                result += lattice_dot_sum(deltas, deltas) * reweight / self._total_weight
+                result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
-        delta = np.array(self._Delta) / self._total_weight
-        result -= lattice_dot_sum(delta, delta)
+        result -= lattice_dot_sum(lattice_conjugate(self._Delta),
+                                  self._Delta) / (self._total_weight * self._total_weight)
 
         return result
 
@@ -546,22 +546,21 @@ class Observer():
         """
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = np.array(
-            [[self._Delta[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)])
+            [[gradient[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)])
         if self._cache_natural_delta:
             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
                 for reweight, _ in self._Deltas:
                     deltas = pickle.load(file)
                     param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
-                    lattice_update(result_1, param * np.array(deltas))
+                    lattice_update(result_1, param * lattice_conjugate(deltas))
         else:
             for reweight, deltas in self._Deltas:
                 param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
-                lattice_update(result_1, param * np.array(deltas))
+                lattice_update(result_1, param * lattice_conjugate(deltas))
         allreduce_lattice_buffer(result_1)
 
-        delta = np.array(self._Delta) / self._total_weight
-        param = lattice_dot_sum(delta, gradient)
-        result_2 = delta * param
+        param = lattice_dot_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)
+        result_2 = lattice_conjugate(self._Delta) * param
         return result_1 - result_2 + epsilon * gradient
 
     def natural_gradient(self, step, epsilon):
@@ -580,9 +579,7 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        energy, _ = self.total_energy
-        b = 2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy * (np.array(self._Delta) /
-                                                                              self._total_weight)
+        b = self.gradient
         # A = metric
         # A x = b
 
@@ -598,18 +595,20 @@ class Observer():
         for t in range(step):
             show(f"conjugate gradient step={t}")
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = lattice_dot_sum(r, r) / lattice_dot_sum(p, self._metric_mv(p, relative_epsilon))
+            alpha = (lattice_dot_sum(lattice_conjugate(r), r).real /
+                     lattice_dot_sum(lattice_conjugate(r), self._metric_mv(p, relative_epsilon)).real)
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, relative_epsilon)
             # beta = (new_r @ new_r) / (r @ r)
-            beta = lattice_dot_sum(new_r, new_r) / lattice_dot_sum(r, r)
+            beta = (lattice_dot_sum(lattice_conjugate(new_r), new_r).real /
+                    lattice_dot_sum(lattice_conjugate(r), r).real)
             # r = new_r
             r = new_r
             # p = r + beta * p
             p = r + beta * p
-        return lattice_conjugate(x)
+        return x
 
     def normalize_lattice(self):
         mean_log_ws = self._total_log_ws / self._count

@@ -24,8 +24,8 @@ import TAT
 from ..sampling_lattice import SamplingLattice
 from ..sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_dot_sum, lattice_randomize, write_to_file, read_from_file,
-                              get_imported_function)
+                              seed_differ, lattice_dot_sum, lattice_conjugate, lattice_randomize, write_to_file,
+                              read_from_file, get_imported_function)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -76,12 +76,12 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
                     configuration.refresh_all()
                     energy_observer(possibility, configuration)
                     show(f"predicting eta={eta}, energy={energy_observer.energy}")
-            result = mpi_comm.bcast(lattice_dot_sum(grad, energy_observer.gradient))
+            result = mpi_comm.bcast(lattice_dot_sum(lattice_conjugate(grad), energy_observer.gradient).real)
             showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
         return grad_dot_pool[eta]
 
-    grad_dot_pool[0] = mpi_comm.bcast(lattice_dot_sum(grad, observer.gradient))
+    grad_dot_pool[0] = mpi_comm.bcast(lattice_dot_sum(lattice_conjugate(grad), observer.gradient).real)
     if grad_dot(0.0) > 0:
         begin = 0.0
         end = step_size * line_search_amplitude

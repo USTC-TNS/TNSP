@@ -209,4 +209,95 @@
 
 * Algorithm on Tensor Network
 
-  TODO
+TODO
+
+** Sampling based gradient descent
+
+*** Energy of state
+
+Consider a state $|\psi\rangle$.
+
+Energy is $E=\frac{\langle \psi | H | \psi \rangle}{\langle \psi | \psi \rangle}$.
+
+So $E=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle}$, where $s$ is the projector in Hilbert space.
+
+If sampling $s$ in some distribution $s \sim S$ with possibility $p(s)$. We get
+
+$E = \frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+*** General gradient method
+
+To minimize a function $E(x_i,x_i^*)$ locally, find $\min_{\delta x_i^* g^{ij} \delta x_j = r^2} \hat E(x_i + \delta x_i, x_i^* + \delta x_i^*)$.
+
+Where $\hat E(x_i+\delta x_i, x_i^* + \delta x_i^*)=E(x_i,x_i^*) + \frac{\partial E}{\partial x_i} \delta x_i + \frac{\partial E}{\partial x_i^*}\delta x_i^*$
+
+So $L(\delta x_i, \delta x_i^*, \lambda) = E(x_i) + \frac{\partial E}{\partial x_i} \delta x_i + \frac{\partial E}{\partial x_i^*} \delta x_i^* + \lambda (\delta x_i^* g^{ij} \delta x_j - r^2)$
+
+$0=\frac{\partial L}{\partial \delta x_i} = \frac{\partial E}{\partial x_i} + \lambda \delta x_j^* g^{ji}$,
+$0=\frac{\partial L}{\partial \delta x_i^*} = \frac{\partial E}{\partial x_i^*} + \lambda g^{ij} \delta x_j$
+
+So
+$\delta x_i = -\frac{1}{\lambda} g_{ij}\frac{E}{\partial x_j^*}$,
+$\delta x_i^* = - \frac{1}{\lambda} g_{ij}^* \frac{\partial E}{\partial x_j}$
+
+*** Metric conversion
+
+For two space $A$ and $B$
+
+$x^{A*}_i g^{Aij} y^A_j = x^{B*}_i g^{Bij} y^B_j$
+
+So
+
+$g^{Aij} = \frac{\partial x^{B*}_k}{\partial x^{A*}_i} g^{Bkl} \frac{\partial y^B_l}{\partial y^A_j}$
+
+*** Stochastic reconfiguration
+
+Consider trivial metric in Hibert space, $g^H_{ij}=\delta_{ij}$.
+
+$\psi_i^H = \frac{\psi_i^C}{\sqrt{\sum_k \psi_k^{C*} \psi_k^C}}$
+
+$\frac{\partial \psi^H_i}{\partial \psi^C_j} = \frac{1}{|\psi^C|} (\delta_{ij} - \frac{1}{2}\frac{\psi^C_i \psi^{C*}_j}{|\psi^C|^2})$
+
+$g^{Cij} = \frac{1}{|\psi^C|}(\delta_{ki} - \frac{\psi^{C*}_k \psi^C_i}{|\psi^C|^2}) \delta_{kl} \frac{1}{|\psi^C|}(\delta_{lj} - \frac{\psi^C_l \psi^{C*}_j}{|\psi^C|^2})$
+
+$g^{Cij} = \frac{1}{|\psi^C|^2}(\delta_{ki} - \frac{\psi^{C*}_k \psi^C_i}{|\psi^C|^2}) (\delta_{kj} - \frac{\psi^C_k \psi^{C*}_j}{|\psi^C|^2})$
+
+$g^{Cij} = \frac{1}{|\psi^C|^2}(\delta_{ij} - \frac{\psi^C_i \psi^{C*}_j}{|\psi^C|^2})$
+
+For a ansatz space $T$, metric is
+
+$g^{Tij} = \frac{\partial \psi_k^*}{\partial T_i^*} \frac{1}{|\psi|^2}(\delta_{kl} - \frac{\psi_k \psi_l^*}{|\psi|^2}) \frac{\partial \psi_l}{\partial T_j}$
+
+$g^{Tij} = \frac{1}{|\psi|^2}\frac{\partial \psi_k^*}{\partial T_i^*} (\delta_{kl} - \frac{\psi_k \psi_l^*}{|\psi|^2}) \frac{\partial \psi_l}{\partial T_j}$
+
+$g^{Tij} = \frac{1}{|\psi|^2} \left(\frac{\partial \psi_k^*}{\partial T_i^*} \frac{\partial \psi_k}{\partial T_j} - \frac{\partial \psi_k^*}{\partial T_i^*} \frac{\psi_k \psi_l^*}{|\psi|^2} \frac{\partial \psi_l}{\partial T_j}\right)$
+
+*** Gradient of state represented by tensor network
+
+Consider a state $|\psi\rangle$ represented by some tensor $T_i$, noted as $|\psi(T_i)\rangle$
+
+Rewrite metric in projector form
+
+$g^{Tij} = \frac{\sum_k\langle \partial_{T_i^*}\psi|k|\partial_{T_j}\psi\rangle}{\langle \psi | \psi \rangle} - \frac{\sum_k\langle \partial_{T_i^*}\psi|k|\psi\rangle}{\langle\psi|\psi\rangle} \frac{\sum_l\langle\psi|l|\partial_{T_j}\psi\rangle}{\langle\psi|\psi\rangle}$
+
+To calculate the gradient itself.
+
+$E=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle}$
+
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s,s'}\langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle\psi|\psi\rangle}$
+
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \partial_{T_i}\psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle\psi|s|\partial_{T_i}\psi\rangle}{\langle\psi|\psi\rangle}$
+
+Similar to $E = \frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+Now set $r(s)=\frac{\langle \psi|s|\psi\rangle}{p(s)}$
+
+$E = \frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}- E \frac{\sum_{s \sim S} r(s)\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \psi | s | H | s' | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{r(s)}-E\frac{\sum_{s \sim S} r(s)\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
