@@ -528,7 +528,7 @@ class Observer:
                     else:
                         self._EDelta[ansatz_name] += Es * this_delta
                     if self._enable_natural_gradient:
-                        deltas[ansatz_name] = this_delta
+                        deltas[ansatz_name] = delta[ansatz_name] / ws
                 if self._enable_natural_gradient:
                     if self._cache_natural_delta:
                         with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
