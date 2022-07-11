@@ -109,7 +109,7 @@ class MultipleProductState(AbstractState):
                 this_delta[name] *= this_weight
         return weight, delta
 
-    def get_norm_max(self, delta):
+    def get_norm_max(self, delta, names):
         """
         Get the max norm of the delta or state.
 
@@ -117,19 +117,22 @@ class MultipleProductState(AbstractState):
         ----------
         delta : None | dict[str, Delta]
             The delta or state to calculate.
+        names : None | list[str]
+            The ansatzes to calculate norm.
 
         Returns
         -------
             The max norm.
         """
         result = 0.0
-        for name, ansatz in self.ansatzes.items():
+        for name in names:
+            ansatz = self.ansatzes[name]
             if delta is None:
                 this = ansatz.get_norm_max(None)
             else:
                 this = ansatz.get_norm_max(delta[name])
             if this > result:
-                result += this
+                result = this
         return result
 
     def fix_relative_to_state(self, gradient):
@@ -146,7 +149,7 @@ class MultipleProductState(AbstractState):
         dict[str, Delta]
             The result state shape data which have the same norm to the state itself.
         """
-        param = self.get_norm_max(None) / self.get_norm_max(gradient)
+        param = self.get_norm_max(None, gradient.keys()) / self.get_norm_max(gradient, gradient.keys())
         return gradient * param
 
     def apply_gradient(self, gradient, step_size):

@@ -74,7 +74,8 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
     def grad_dot(eta):
         if eta not in grad_dot_pool:
             for name in state.ansatzes:
-                state.ansatzes[name].import_data(saved_state[name] - eta * grad[name])
+                if name in grad.index:
+                    state.ansatzes[name].import_data(saved_state[name] - eta * grad[name])
             with energy_observer:
                 for possibility, configuration in configuration_pool:
                     energy_observer(possibility, configuration)
