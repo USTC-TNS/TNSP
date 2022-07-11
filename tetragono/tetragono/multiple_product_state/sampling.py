@@ -58,14 +58,14 @@ class Sampling:
                 for l1 in range(owner.L1)]
 
 
-class MetropolisSampling(Sampling):
+class SweepSampling(Sampling):
     """
-    Metropois sampling object for multiple product state.
+    Sweep sampling object for multiple product state.
     """
 
-    __slots__ = ["configuration", "ws", "_hopping_hamiltonians", "_interval"]
+    __slots__ = ["configuration", "ws", "_hopping_hamiltonians", "_sweep_order"]
 
-    def __init__(self, owner, restrict_subspace, configuration, hopping_hamiltonians, interval=1):
+    def __init__(self, owner, restrict_subspace, configuration, hopping_hamiltonians):
         """
         Create sampling object.
 
@@ -79,8 +79,6 @@ class MetropolisSampling(Sampling):
             The initial configuration.
         hopping_hamiltonian : None | dict[tuple[tuple[int, int, int], ...], Tensor]
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
-        interval : int
-            The interval of metropolis sampling.
         """
         super().__init__(owner, restrict_subspace)
         self.configuration = self.copy_configuration(configuration)
@@ -89,13 +87,10 @@ class MetropolisSampling(Sampling):
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
             self._hopping_hamiltonians = self._owner._hamiltonians
-        self._hopping_hamiltonians = list(self._hopping_hamiltonians.items())
-        self._interval = interval
+        self._sweep_order = sorted(self._hopping_hamiltonians.keys())
 
-    def _single_hopping(self):
+    def _single_term(self, positions, hamiltonian):
         owner = self._owner
-        hamiltonian_number = len(self._hopping_hamiltonians)
-        positions, hamiltonian = self._hopping_hamiltonians[TAT.random.uniform_int(0, hamiltonian_number - 1)()]
         body = hamiltonian.rank // 2
         current_configuration = tuple(self.configuration[l1][l2][orbit] for [l1, l2, orbit] in positions)
         element_pool = tensor_element(hamiltonian)
@@ -121,8 +116,12 @@ class MetropolisSampling(Sampling):
             self.ws = wss
 
     def __call__(self):
-        for _ in range(self._interval):
-            self._single_hopping()
+        for positions in self._sweep_order:
+            hamiltonian = self._hopping_hamiltonians[positions]
+            self._single_term(positions, hamiltonian)
+        for positions in reversed(self._sweep_order):
+            hamiltonian = self._hopping_hamiltonians[positions]
+            self._single_term(positions, hamiltonian)
         return self.ws**2, self.copy_configuration(self.configuration)
 
 

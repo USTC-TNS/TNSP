@@ -17,7 +17,7 @@
 #
 
 from .state import MultipleProductState
-from .sampling import Sampling, MetropolisSampling, ErgodicSampling
+from .sampling import Sampling, SweepSampling, ErgodicSampling
 try:
     import pandas
 except ModuleNotFoundError:

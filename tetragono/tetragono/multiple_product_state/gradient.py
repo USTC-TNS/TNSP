@@ -19,7 +19,7 @@
 import signal
 import inspect
 import TAT
-from ..multiple_product_state import MultipleProductState, MetropolisSampling, ErgodicSampling, Observer
+from ..multiple_product_state import MultipleProductState, SweepSampling, ErgodicSampling, Observer
 from ..common_toolkit import SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln, write_to_file, get_imported_function
 
 
@@ -119,10 +119,9 @@ def gradient_descent(
         grad_step_size,
         *,
         # About sampling
-        sampling_method="metropolis",
+        sampling_method="sweep",
         sampling_configurations=[],
         sweep_hopping_hamiltonians=None,
-        metropolis_interval=1,
         # About subspace
         restrict_subspace=None,
         # About gradient method
@@ -215,7 +214,7 @@ def gradient_descent(
             # Sampling and observe
             with observer, seed_differ:
                 # Sampling method
-                if sampling_method == "metropolis":
+                if sampling_method == "sweep":
                     if sweep_hopping_hamiltonians is not None:
                         hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians,
                                                                      "hopping_hamiltonians")(state)
@@ -225,11 +224,10 @@ def gradient_descent(
                         choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
                     else:
                         choose = mpi_rank
-                    sampling = MetropolisSampling(state,
-                                                  restrict_subspace=restrict,
-                                                  configuration=sampling_configurations[choose],
-                                                  hopping_hamiltonians=hopping_hamiltonians,
-                                                  interval=metropolis_interval)
+                    sampling = SweepSampling(state,
+                                             restrict_subspace=restrict,
+                                             configuration=sampling_configurations[choose],
+                                             hopping_hamiltonians=hopping_hamiltonians)
                 elif sampling_method == "ergodic":
                     sampling = ErgodicSampling(state, restrict_subspace=restrict)
                     sampling_total_step = sampling.total_step
