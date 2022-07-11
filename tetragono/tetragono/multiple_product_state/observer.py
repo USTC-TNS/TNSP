@@ -273,7 +273,7 @@ class Observer:
 
     def allreduce_delta(self, a):
         requests = []
-        for name in self._enable_gradient:
+        for name in sorted(self._enable_gradient):
             requests += self._owner.ansatzes[name].iallreduce_delta(a[name])
         MPI.Request.Waitall(requests)
 
