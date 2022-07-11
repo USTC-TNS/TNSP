@@ -408,7 +408,7 @@ class Observer():
         tuple[float, float]
             The expect value and deviation.
         """
-        if total == total_square == total_reweight == 0.0:
+        if total == 0.0 or self._total_weight == 0.0:
             return 0.0, 0.0
 
         N = self._count
