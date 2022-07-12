@@ -18,10 +18,11 @@
 
 import os
 import pickle
+import itertools
 import numpy as np
 import pandas as pd
 from ..sampling_tools.tensor_element import tensor_element
-from ..common_toolkit import allreduce_buffer, mpi_rank, mpi_comm, show, showln, MPI
+from ..common_toolkit import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln
 
 
 class Observer:
@@ -145,9 +146,13 @@ class Observer:
                 self._result_square[name][positions] = buffer.pop()
                 self._result[name][positions] = buffer.pop()
 
-        for name in sorted(self._enable_gradient):
-            self._owner.ansatzes[name].allreduce_delta(self._Delta[name])
-            self._owner.ansatzes[name].allreduce_delta(self._EDelta[name])
+        allreduce_iterator_buffer(
+            itertools.chain(
+                *(self._owner.ansatzes[name].buffers_for_mpi(self._Delta[name])
+                  for name in sorted(self._enable_gradient)),
+                *(self._owner.ansatzes[name].buffers_for_mpi(self._EDelta[name])
+                  for name in sorted(self._enable_gradient)),
+            ))
 
     def _expect_and_deviation(self, total, total_square, total_reweight):
         """
@@ -272,10 +277,9 @@ class Observer:
             self._owner.ansatzes[name].delta_update(a[name], b[name])
 
     def allreduce_delta(self, a):
-        requests = []
-        for name in sorted(self._enable_gradient):
-            requests += self._owner.ansatzes[name].iallreduce_delta(a[name])
-        MPI.Request.Waitall(requests)
+        allreduce_iterator_buffer(
+            itertools.chain(
+                *(self._owner.ansatzes[name].buffers_for_mpi(a[name]) for name in sorted(self._enable_gradient))))
 
     def _trace_metric(self):
         """
@@ -303,7 +307,7 @@ class Observer:
 
         Returns
         -------
-        Iterator[tuple[float, dict[str, Delta]]]
+        iterator[tuple[float, dict[str, Delta]]]
             The weight and delta.
         """
         if self._cache_natural_delta:
@@ -370,7 +374,7 @@ class Observer:
         # A x = b
 
         tr = self._trace_metric()
-        n = sum(self._owner.ansatzes[name].param_count(delta) for name, delta in b.items())
+        n = sum(self._owner.ansatzes[name].element_count(delta) for name, delta in b.items())
         relative_epsilon = epsilon * tr / n
 
         x = b * 0

@@ -74,14 +74,7 @@ class OpenString(AbstractAnsatz):
 
         self.tensor_list = np.array([self._construct_tensor(index) for index in range(self.length)])
 
-        self._refresh_auxiliaries()
-
-    def _refresh_auxiliaries(self):
-        """
-        Refresh the auxiliaries tensors. it is needed to call it after tensor_list updated.
-        """
-        self._left_to_right = {}
-        self._right_to_left = {}
+        self.refresh_auxiliaries()
 
     def _go_from_left(self, configuration, *, try_only):
         """
@@ -175,16 +168,9 @@ class OpenString(AbstractAnsatz):
             delta = self.tensor_list
         return max(i.norm_max() for i in delta)
 
-    def export_data(self):
-        return self.tensor_list
-
-    def import_data(self, data):
-        for i in range(len(self.tensor_list)):
-            self.tensor_list[i] = data[i]
-        self._refresh_auxiliaries()
-
     def refresh_auxiliaries(self):
-        self._refresh_auxiliaries()
+        self._left_to_right = {}
+        self._right_to_left = {}
 
     @staticmethod
     def delta_dot_sum(a, b):
@@ -199,20 +185,33 @@ class OpenString(AbstractAnsatz):
         for ai, bi in zip(a, b):
             ai += bi
 
-    @staticmethod
-    def allreduce_delta(delta):
-        requests = []
-        for tensor in delta:
-            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
-        MPI.Request.Waitall(requests)
+    def buffers(self, delta):
+        if delta is None:
+            delta = self.tensor_list
+        length = len(delta)
+        for i in range(length):
+            recv = yield delta[i]
+            if recv is not None:
+                delta[i] = recv
 
-    @staticmethod
-    def iallreduce_delta(delta):
-        requests = []
-        for tensor in delta:
-            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
-        return requests
+    def elements(self, delta):
+        for index, tensor in enumerate(self.buffers(delta)):
+            storage = tensor.transpose(self.tensor_list[index].names).storage
+            length = len(storage)
+            for i in range(length):
+                recv = yield storage[i]
+                if recv is not None:
+                    storage[i] = recv
 
-    @staticmethod
-    def param_count(delta):
-        return sum(tensor.norm_num() for tensor in delta)
+    def buffer_count(self, delta):
+        if delta is None:
+            delta = self.tensor_list
+        length = len(delta)
+        return length
+
+    def element_count(self, delta):
+        return sum(tensor.norm_num() for tensor in self.buffers(delta))
+
+    def buffers_for_mpi(self, delta):
+        for tensor in self.buffers(delta):
+            yield tensor.storage

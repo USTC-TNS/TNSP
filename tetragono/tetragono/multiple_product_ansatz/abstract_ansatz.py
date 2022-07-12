@@ -49,7 +49,7 @@ class AbstractAnsatz:
         Returns
         -------
         Delta
-            The delta object, which will be called by allreduce_delta and apply_gradient.
+            The delta object, which will be called by allreduce and apply_gradient.
         """
         raise NotImplementedError("delta not implemented")
 
@@ -90,28 +90,6 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("get norm max not implemented")
 
-    def export_data(self):
-        """
-        Export the state.
-
-        Returns
-        -------
-        Delta
-            The state.
-        """
-        raise NotImplementedError("export_data not implemented")
-
-    def import_data(self, data):
-        """
-        Import the state.
-
-        Parameters
-        ----------
-        data : Delta
-            The state.
-        """
-        raise NotImplementedError("import_data not implemented")
-
     def refresh_auxiliaries(self):
         """
         Refresh auxiliaries after updating state.
@@ -147,48 +125,57 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("delta_update not implemented")
 
-    @staticmethod
-    def allreduce_delta(delta):
+    def buffers(self, delta):
         """
-        Allreduce the delta calculated by processes inplacely.
-
-        Parameters
-        ----------
-        delta : Delta
-            The delta calculated by this process.
-        """
-        raise NotImplementedError("allreduce delta not implemented")
-
-    @staticmethod
-    def iallreduce_delta(delta):
-        """
-        Iallreduce the delta calculated by processes inplacely.
-
-        Parameters
-        ----------
-        delta : Delta
-            The delta calculated by this process.
+        Get buffers of this ansatz.
 
         Returns
         -------
-        list[Request]
-            List of MPI request
+        iterator[buffer]
+            The buffers of this ansatz.
         """
-        raise NotImplementedError("iallreduce delta not implemented")
+        raise NotImplementedError("buffers not implemented")
 
-    @staticmethod
-    def param_count(delta):
+    def elements(self, delta):
         """
-        Count parameter number of a delta.
+        Get elements of this ansatz.
 
-        Parameters
-        ----------
-        delta : Delta
-            The delta calculated by this process.
+        Returns
+        -------
+        iterator[float | complex]
+            The elements of this ansatz.
+        """
+        raise NotImplementedError("elements not implemented")
+
+    def buffer_count(self, delta):
+        """
+        Get buffer count of this ansatz.
 
         Returns
         -------
         int
-            The parameter number.
+            The buffer count of this ansatz.
         """
-        raise NotImplementedError("param count not implemented")
+        raise NotImplementedError("buffer count not implemented")
+
+    def element_count(self, delta):
+        """
+        Get element count of this ansatz.
+
+        Returns
+        -------
+        int
+            The element count of this ansatz.
+        """
+        raise NotImplementedError("element count not implemented")
+
+    def buffers_for_mpi(self, delta):
+        """
+        Get buffers of this ansatz, which can be used in mpi.
+
+        Returns
+        -------
+        iterator[buffer]
+            The buffers of this ansatz.
+        """
+        raise NotImplementedError("buffers for mpi not implemented")

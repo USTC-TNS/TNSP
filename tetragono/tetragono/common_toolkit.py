@@ -56,6 +56,13 @@ def allreduce_lattice_buffer(lattice):
     MPI.Request.Waitall(requests)
 
 
+def allreduce_iterator_buffer(iterator):
+    requests = []
+    for tensor in iterator:
+        requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
+    MPI.Request.Waitall(requests)
+
+
 def bcast_buffer(buffer, root=0):
     mpi_comm.Bcast(buffer, root=root)
 
@@ -182,3 +189,10 @@ def get_imported_function(module_name_or_function, function_name):
         return getattr(importlib.import_module(module_name_or_function), function_name)
     else:
         return module_name_or_function
+
+
+def send(receiver, value):
+    try:
+        receiver.send(value)
+    except StopIteration:
+        pass

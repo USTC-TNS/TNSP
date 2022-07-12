@@ -528,7 +528,7 @@ class Observer():
 
         Returns
         -------
-        Iterator[tuple[float, list[list[Tensor]]]]
+        iterator[tuple[float, list[list[Tensor]]]]
             The weight and delta.
         """
         if self._cache_natural_delta:

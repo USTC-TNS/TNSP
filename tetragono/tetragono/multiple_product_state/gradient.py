@@ -18,9 +18,11 @@
 
 import signal
 import inspect
+import numpy as np
 import TAT
 from ..multiple_product_state import MultipleProductState, SweepSampling, ErgodicSampling, Observer
-from ..common_toolkit import SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln, write_to_file, get_imported_function
+from ..common_toolkit import (SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln, write_to_file,
+                              get_imported_function, send)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -37,45 +39,51 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
     showln(f"difference delta is set as {delta}")
     for name in state.ansatzes:
         showln(name)
-        data = state.ansatzes[name].export_data()
-        for i, tensor in enumerate(data):
-            showln(f" {i}")
-            if hasattr(tensor, "storage"):
-                s = tensor.storage
-                g = grad[name][i].transpose(tensor.names).storage
+
+        element_g = state.ansatzes[name].elements(None)
+        element_sr = state.ansatzes[name].elements(None)
+        element_si = state.ansatzes[name].elements(None)
+        element_r = state.ansatzes[name].elements(None)
+        element_grad = state.ansatzes[name].elements(grad[name])
+
+        element_sr.send(None)
+        element_si.send(None)
+        element_r.send(None)
+        for value, calculated_grad in zip(element_g, element_grad):
+            if np.iscomplex(value):
+                value = complex(value)
             else:
-                s = tensor.reshape([-1])
-                g = grad[name][i].reshape([-1])
-            for i in range(len(s)):
-                s[i] += delta
-                state.ansatzes[name].import_data(data)
+                value = float(value)
+            send(element_sr, value + delta)
+            now_energy = get_energy()
+            rgrad = (now_energy - original_energy) / delta
+            if np.iscomplex(value):
+                send(element_si, value + delta * 1j)
                 now_energy = get_energy()
-                rgrad = (now_energy - original_energy) / delta
-                s[i] -= delta
-                state.ansatzes[name].import_data(data)
-                if state.Tensor.is_complex:
-                    s[i] += delta * 1j
-                    state.ansatzes[name].import_data(data)
-                    now_energy = get_energy()
-                    igrad = (now_energy - original_energy) / delta
-                    s[i] -= delta * 1j
-                    state.ansatzes[name].import_data(data)
-                    cgrad = rgrad + igrad * 1j
-                else:
-                    cgrad = rgrad
-                showln(" ", g[i] / cgrad, cgrad, g[i])
+                igrad = (now_energy - original_energy) / delta
+                cgrad = rgrad + igrad * 1j
+            else:
+                cgrad = rgrad
+            send(element_r, value)
+            showln(" ", calculated_grad / cgrad, cgrad, calculated_grad)
 
 
 def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude,
                 line_search_error_threshold):
-    saved_state = {name: state.ansatzes[name].export_data().copy() for name in state.ansatzes}
+    saved_state = {name: list(state.ansatzes[name].buffers(None)) for name in state.ansatzes}
+
+    def restore_state():
+        for name in state.ansatzes:
+            setter = state.ansatzes[name].buffers(None)
+            setter.send(None)
+            for tensor in saved_state[name]:
+                send(setter, tensor)
+
     grad_dot_pool = {}
 
     def grad_dot(eta):
         if eta not in grad_dot_pool:
-            for name in state.ansatzes:
-                if name in grad.index:
-                    state.ansatzes[name].import_data(saved_state[name] - eta * grad[name])
+            state.apply_gradient(grad, eta)
             with energy_observer:
                 for possibility, configuration in configuration_pool:
                     energy_observer(possibility, configuration)
@@ -83,6 +91,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
             result = mpi_comm.bcast(observer.delta_dot_sum(grad, energy_observer.gradient))
             showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
+            restore_state()
         return grad_dot_pool[eta]
 
     grad_dot_pool[0] = mpi_comm.bcast(observer.delta_dot_sum(grad, observer.gradient))
@@ -108,8 +117,6 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         showln(f"step_size is chosen as {step_size}, since grad_dot(begin) < 0")
         step_size = step_size
 
-    for name in state.ansatzes:
-        state.ansatzes[name].import_data(saved_state[name])
     return mpi_comm.bcast(step_size)
 
 

@@ -18,6 +18,7 @@
 
 from copyreg import _slotnames
 from ..abstract_state import AbstractState
+from ..common_toolkit import send
 
 
 class MultipleProductState(AbstractState):
@@ -164,7 +165,11 @@ class MultipleProductState(AbstractState):
             The gradient step size.
         """
         for name, _ in gradient.items():
-            self.ansatzes[name].import_data(self.ansatzes[name].export_data() - gradient[name] * step_size)
+            setter = self.ansatzes[name].buffers(None)
+            setter.send(None)
+            for tensor, grad in zip(self.ansatzes[name].buffers(None), self.ansatzes[name].buffers(gradient[name])):
+                send(setter, tensor - grad * step_size)
+        self.refresh_auxiliaries()
 
     def refresh_auxiliaries(self):
         """

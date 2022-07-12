@@ -112,14 +112,6 @@ class ConvolutionalNeural(AbstractAnsatz):
         with torch.no_grad():
             return max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters())
 
-    def export_data(self):
-        return np.array([np.array(i.data) for i in self.network.parameters()], dtype=object)
-
-    def import_data(self, data):
-        with torch.no_grad():
-            for state, new_state in zip(self.network.parameters(), data):
-                state.data = torch.tensor(new_state)
-
     def refresh_auxiliaries(self):
         pass
 
@@ -135,20 +127,36 @@ class ConvolutionalNeural(AbstractAnsatz):
         for ai, bi in zip(a, b):
             ai += bi
 
-    @staticmethod
-    def allreduce_delta(delta):
-        requests = []
-        for tensor in delta:
-            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
-        MPI.Request.Waitall(requests)
+    def buffers(self, delta):
+        if delta is None:
+            for tensor in self.network.parameters():
+                recv = yield tensor.data
+                if recv is not None:
+                    tensor.data = recv
+        else:
+            length = len(delta)
+            for i in range(length):
+                recv = yield delta[i]
+                if recv is not None:
+                    delta[i] = recv
 
-    @staticmethod
-    def iallreduce_delta(delta):
-        requests = []
-        for tensor in delta:
-            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
-        return requests
+    def elements(self, delta):
+        for tensor in self.buffers(delta):
+            flatten = tensor.reshape([-1])
+            length = len(flatten)
+            for i in range(length):
+                recv = yield flatten[i]
+                if recv is not None:
+                    flatten[i] = recv
 
-    @staticmethod
-    def param_count(delta):
-        return sum(tensor.size for tensor in delta)
+    def buffer_count(self, delta):
+        if delta is None:
+            delta = self.parameters()
+        length = len(list(delta))
+        return length
+
+    def element_count(self, delta):
+        return sum(len(tensor.reshape([-1])) for tensor in self.buffers(delta))
+
+    def buffers_for_mpi(self, delta):
+        yield from self.buffers(delta)
