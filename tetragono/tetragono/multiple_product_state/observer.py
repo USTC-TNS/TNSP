@@ -403,7 +403,7 @@ class Observer:
             # p = r + beta * p
             p = r + beta * p
             t += 1
-        showln(f"calculate natural gradient done step={t+1} r^2/b^2={r_square/b_square}")
+        showln(f"calculate natural gradient done step={t} r^2/b^2={r_square/b_square}")
         return x
 
     def enable_gradient(self, ansatz_name=None):
