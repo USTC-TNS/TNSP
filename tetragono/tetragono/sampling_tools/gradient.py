@@ -136,6 +136,7 @@ def gradient_descent(
         # About natural gradient
         use_natural_gradient=False,
         conjugate_gradient_method_step=20,
+        conjugate_gradient_method_error=0.0,
         metric_inverse_epsilon=0.01,
         cache_natural_delta=None,
         # About gauge fixing
@@ -280,9 +281,8 @@ def gradient_descent(
 
                 # Get gradient
                 if use_natural_gradient:
-                    show("calculating natural gradient")
-                    grad = observer.natural_gradient(conjugate_gradient_method_step, metric_inverse_epsilon)
-                    showln("calculate natural gradient done")
+                    grad = observer.natural_gradient(conjugate_gradient_method_step, conjugate_gradient_method_error,
+                                                     metric_inverse_epsilon)
                 else:
                     grad = observer.gradient
 

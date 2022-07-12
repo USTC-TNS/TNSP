@@ -21,7 +21,7 @@ import pickle
 import numpy as np
 import pandas as pd
 from ..sampling_tools.tensor_element import tensor_element
-from ..common_toolkit import allreduce_buffer, mpi_rank, mpi_comm, show, MPI
+from ..common_toolkit import allreduce_buffer, mpi_rank, mpi_comm, show, showln, MPI
 
 
 class Observer:
@@ -343,7 +343,7 @@ class Observer:
         result_2 = delta * param
         return result_1 - result_2 + epsilon * gradient
 
-    def natural_gradient(self, step, epsilon):
+    def natural_gradient(self, step, error, epsilon):
         """
         Get the energy natural gradient for every ansatz.
 
@@ -351,6 +351,8 @@ class Observer:
         ----------
         step : int
             conjugate gradient method step count.
+        error : float
+            conjugate gradient method expected error.
         epsilon : float
             The epsilon to avoid singularity of metric.
 
@@ -359,9 +361,11 @@ class Observer:
         dict[str, Delta]
             The gradient for every subansatz.
         """
+        show("calculating natural gradient")
         energy, _ = self.total_energy
         b = 2 * (pd.Series(self._EDelta) / self._total_weight) - 2 * energy * (pd.Series(self._Delta) /
                                                                                self._total_weight)
+        b_square = self.delta_dot_sum(b, b)
         # A = metric
         # A x = b
 
@@ -372,22 +376,34 @@ class Observer:
         x = b * 0
         # r = b - A@x
         r = b - self._metric_mv(x, relative_epsilon)
+        r_square = self.delta_dot_sum(r, r)
         # p = r
         p = r
-        for t in range(step):
-            show(f"conjugate gradient step={t}")
+        # loop
+        t = 0
+        while True:
+            if t == step:
+                break
+            if error != 0.0:
+                if error**2 > r_square / b_square:
+                    break
+            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
             alpha = self.delta_dot_sum(r, r) / self.delta_dot_sum(p, self._metric_mv(p, relative_epsilon))
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, relative_epsilon)
+            new_r_square = self.delta_dot_sum(new_r, new_r)
             # beta = (new_r @ new_r) / (r @ r)
-            beta = self.delta_dot_sum(new_r, new_r) / self.delta_dot_sum(r, r)
+            beta = new_r_square / r_square
             # r = new_r
             r = new_r
+            r_square = new_r_square
             # p = r + beta * p
             p = r + beta * p
+            t += 1
+        showln(f"calculate natural gradient done step={t+1} r^2/b^2={r_square/b_square}")
         return x
 
     def enable_gradient(self, ansatz_name=None):

@@ -23,7 +23,7 @@ except:
     import pickle
 import numpy as np
 from ..sampling_lattice import ConfigurationPool
-from ..common_toolkit import (show, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
+from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
                               lattice_conjugate, mpi_rank, mpi_comm)
 from .tensor_element import tensor_element
 
@@ -568,7 +568,7 @@ class Observer():
         result_2 = lattice_conjugate(self._Delta) * param
         return result_1 - result_2 + epsilon * gradient
 
-    def natural_gradient(self, step, epsilon):
+    def natural_gradient(self, step, error, epsilon):
         """
         Get the energy natural gradient for every tensor.
 
@@ -576,6 +576,8 @@ class Observer():
         ----------
         step : int
             conjugate gradient method step count.
+        error : float
+            conjugate gradient method expected error.
         epsilon : float
             The epsilon to avoid singularity of metric.
 
@@ -584,7 +586,9 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
+        show("calculating natural gradient")
         b = self.gradient
+        b_square = lattice_dot_sum(lattice_conjugate(b), b).real
         # A = metric
         # A x = b
 
@@ -595,10 +599,18 @@ class Observer():
         x = np.array([[t.same_shape().zero() for t in row] for row in b])
         # r = b - A@x
         r = b - self._metric_mv(x, relative_epsilon)
+        r_square = lattice_dot_sum(lattice_conjugate(r), r).real
         # p = r
         p = r
-        for t in range(step):
-            show(f"conjugate gradient step={t}")
+        # loop
+        t = 0
+        while True:
+            if t == step:
+                break
+            if error != 0.0:
+                if error**2 > r_square / b_square:
+                    break
+            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
             alpha = (lattice_dot_sum(lattice_conjugate(r), r).real /
                      lattice_dot_sum(lattice_conjugate(r), self._metric_mv(p, relative_epsilon)).real)
@@ -606,13 +618,16 @@ class Observer():
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, relative_epsilon)
+            new_r_square = lattice_dot_sum(lattice_conjugate(new_r), new_r).real
             # beta = (new_r @ new_r) / (r @ r)
-            beta = (lattice_dot_sum(lattice_conjugate(new_r), new_r).real /
-                    lattice_dot_sum(lattice_conjugate(r), r).real)
+            beta = new_r_square / r_square
             # r = new_r
             r = new_r
+            r_square = new_r_square
             # p = r + beta * p
             p = r + beta * p
+            t += 1
+        showln(f"calculate natural gradient done step={t+1} r^2/b^2={r_square/b_square}")
         return x
 
     def normalize_lattice(self):
