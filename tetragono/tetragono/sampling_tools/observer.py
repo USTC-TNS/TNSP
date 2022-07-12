@@ -513,20 +513,32 @@ class Observer():
         """
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result = 0.0
-        if self._cache_natural_delta:
-            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
-                for reweight, _ in self._Deltas:
-                    deltas = pickle.load(file)
-                    result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
-        else:
-            for reweight, deltas in self._Deltas:
-                result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
+        for reweight, deltas in self._weights_and_deltas():
+            result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
         result -= lattice_dot_sum(lattice_conjugate(self._Delta),
                                   self._Delta) / (self._total_weight * self._total_weight)
 
         return result
+
+    def _weights_and_deltas(self):
+        """
+        Get the series of weights and deltas.
+
+        Returns
+        -------
+        Iterator[tuple[float, list[list[Tensor]]]]
+            The weight and delta.
+        """
+        if self._cache_natural_delta:
+            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
+                for reweight, _ in self._Deltas:
+                    deltas = pickle.load(file)
+                    yield reweight, deltas
+        else:
+            for reweight, deltas in self._Deltas:
+                yield reweight, deltas
 
     def _metric_mv(self, gradient, epsilon):
         """
@@ -547,16 +559,9 @@ class Observer():
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = np.array(
             [[gradient[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)])
-        if self._cache_natural_delta:
-            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
-                for reweight, _ in self._Deltas:
-                    deltas = pickle.load(file)
-                    param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
-                    lattice_update(result_1, param * lattice_conjugate(deltas))
-        else:
-            for reweight, deltas in self._Deltas:
-                param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
-                lattice_update(result_1, param * lattice_conjugate(deltas))
+        for reweight, deltas in self._weights_and_deltas():
+            param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
+            lattice_update(result_1, param * lattice_conjugate(deltas))
         allreduce_lattice_buffer(result_1)
 
         param = lattice_dot_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)

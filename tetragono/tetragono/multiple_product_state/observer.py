@@ -288,20 +288,32 @@ class Observer:
         """
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result = 0.0
-        if self._cache_natural_delta:
-            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
-                for reweight, _ in self._Deltas:
-                    deltas = pickle.load(file)
-                    result += self.delta_dot_sum(deltas, deltas) * reweight / self._total_weight
-        else:
-            for reweight, deltas in self._Deltas:
-                result += self.delta_dot_sum(deltas, deltas) * reweight / self._total_weight
+        for reweight, deltas in self._weights_and_deltas():
+            result += self.delta_dot_sum(deltas, deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
         delta = pd.Series(self._Delta) / self._total_weight
         result -= self.delta_dot_sum(delta, delta)
 
         return result
+
+    def _weights_and_deltas(self):
+        """
+        Get the series of weights and deltas.
+
+        Returns
+        -------
+        Iterator[tuple[float, dict[str, Delta]]]
+            The weight and delta.
+        """
+        if self._cache_natural_delta:
+            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
+                for reweight, _ in self._Deltas:
+                    deltas = pickle.load(file)
+                    yield reweight, deltas
+        else:
+            for reweight, deltas in self._Deltas:
+                yield reweight, deltas
 
     def _metric_mv(self, gradient, epsilon):
         """
@@ -321,16 +333,9 @@ class Observer:
         """
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = gradient * 0
-        if self._cache_natural_delta:
-            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
-                for reweight, _ in self._Deltas:
-                    deltas = pickle.load(file)
-                    param = self.delta_dot_sum(deltas, gradient) * reweight / self._total_weight
-                    self.delta_update(result_1, param * pd.Series(deltas))
-        else:
-            for reweight, deltas in self._Deltas:
-                param = self.delta_dot_sum(deltas, gradient) * reweight / self._total_weight
-                self.delta_update(result_1, param * pd.Series(deltas))
+        for reweight, deltas in self._weights_and_deltas():
+            param = self.delta_dot_sum(deltas, gradient) * reweight / self._total_weight
+            self.delta_update(result_1, param * pd.Series(deltas))
         self.allreduce_delta(result_1)
 
         delta = pd.Series(self._Delta) / self._total_weight
