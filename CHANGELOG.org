@@ -6,7 +6,7 @@
 + *tetragono*: Add a new command =gm_hamiltonian= to replace the Hamiltonian of the existent sampling lattice.
 + *tetragono*: Add =conjugate_gradient_method_error= option for =gm_run= and =mp_run= in teragono shell. The conjugate
   gradient will stop if =conjugate_gradient_method_step= reached OR =conjugate_gradient_method_error= reached. Set
-  =conjugate_gradient_method_error= to =0.0= to skip error checking or set =conjugate_gradient_method_step= to =0= to
+  =conjugate_gradient_method_error= to =0.0= to skip error checking or set =conjugate_gradient_method_step= to =-1= to
   skip step checking.
 *** Changed
 + *lazy*: Using a manual stack to run the recursion now, to avoid the recursion depth limit.
