@@ -17,6 +17,7 @@
 #
 
 import os
+import sys
 try:
     import cPickle as pickle
 except:
@@ -184,9 +185,42 @@ def lattice_randomize(tensor):
     return random_same_shape
 
 
+def import_from_tetpath(full_name):
+    names = full_name.split(".")
+    length = len(names)
+    if "TETPATH" in os.environ:
+        path = os.environ["TETPATH"].split(":")
+    else:
+        path = []
+    for i in range(length):
+        name = ".".join(names[:i + 1])
+        spec = importlib.machinery.PathFinder.find_spec(name, path)
+        if spec is None:
+            raise ModuleNotFoundError(f"No module named '{full_name}'")
+        path = spec.submodule_search_locations
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
+        spec.loader.exec_module(module)
+    return module
+
+
 def get_imported_function(module_name_or_function, function_name):
     if isinstance(module_name_or_function, str):
-        return getattr(importlib.import_module(module_name_or_function), function_name)
+        # 1. current folder
+        # 2. TETPATH
+        # 3. tetraku
+        # 4. normal import
+        try:
+            module = import_from_tetpath(module_name_or_function)
+        except ModuleNotFoundError:
+            try:
+                module = importlib.import_module("." + module_name_or_function, "tetraku.models")
+            except ModuleNotFoundError:
+                try:
+                    module = importlib.import_module("." + module_name_or_function, "tetraku.ansatzes")
+                except ModuleNotFoundError:
+                    module = importlib.import_module(module_name_or_function)
+        return getattr(module, function_name)
     else:
         return module_name_or_function
 

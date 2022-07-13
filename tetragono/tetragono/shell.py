@@ -717,11 +717,6 @@ class TetragonoScriptApp(TetragonoCommandApp):
         return line
 
 
-# Tetragono Path
-if "TETPATH" in os.environ:
-    pathes = os.environ["TETPATH"]
-    for path in pathes.split(":"):
-        sys.path.append(os.path.abspath(path))
 # Run
 if __name__ == "__main__":
     help_message = """usage:

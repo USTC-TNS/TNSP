@@ -3,6 +3,7 @@
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.19...dev][Unreleased]]
 
 *** Added
++ *tetraku*: Add models data and ansatzes data into an individual package named =tetraku=.
 *** Changed
 + *tetragono*: Rename multiple product state to ansatz product state, to avoid the ambiguous abbreivation. Rename all
   =mp_xxx= to =ap_xxx= in tetragono shell.

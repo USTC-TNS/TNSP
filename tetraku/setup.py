@@ -23,15 +23,15 @@ version = check_output(["git", "describe"]).decode("utf-8")
 version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
 setup(
-    name="tnsp_bridge",
+    name="tetraku",
     version=version,
-    description="bridge from TNSP to TAT",
+    description="data library used by tetragono",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/hzhangxyz/TAT",
     packages=find_packages(),
     install_requires=[
-        f"PyTAT=={version}",
+        f"tetragono=={version}",
     ],
     license="GPLv3",
     python_requires=">=3.7",

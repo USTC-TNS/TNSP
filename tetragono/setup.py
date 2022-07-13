@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from subprocess import check_output
 
 version = check_output(["git", "describe"]).decode("utf-8")
@@ -29,14 +29,7 @@ setup(
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/hzhangxyz/TAT",
-    packages=[
-        "tetragono",
-        "tetragono/common_tensor",
-        "tetragono/sampling_tools",
-        "tetragono/auxiliaries",
-        "tetragono/ansatz_product_state",
-        "tetragono/ansatz_product_state/ansatzes",
-    ],
+    packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",
         f"lazy_graph=={version}",
