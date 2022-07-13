@@ -37,14 +37,14 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
     original_energy = observer.energy[0] * state.site_number
     delta = check_difference_delta
     showln(f"difference delta is set as {delta}")
-    for name in state.ansatzes:
+    for ansatz_index, name in enumerate(observer._enable_gradient):
         showln(name)
 
         element_g = state.ansatzes[name].elements(None)
         element_sr = state.ansatzes[name].elements(None)
         element_si = state.ansatzes[name].elements(None)
         element_r = state.ansatzes[name].elements(None)
-        element_grad = state.ansatzes[name].elements(grad[name])
+        element_grad = state.ansatzes[name].elements(grad[ansatz_index])
 
         element_sr.send(None)
         element_si.send(None)
@@ -83,7 +83,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
 
     def grad_dot(eta):
         if eta not in grad_dot_pool:
-            state.apply_gradient(grad, eta)
+            state.apply_gradient(observer._enable_gradient, grad, eta)
             with energy_observer:
                 for possibility, configuration in configuration_pool:
                     energy_observer(possibility, configuration)
@@ -281,10 +281,10 @@ def gradient_descent(
 
                 elif use_line_search:
                     showln("line searching")
-                    grad = state.fix_relative_to_state(grad)
+                    grad = state.fix_relative_to_state(grad, observer._enable_gradient)
                     grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
                                                  grad_step_size, line_search_amplitude, line_search_error_threshold)
-                    state.apply_gradient(grad, grad_step_size)
+                    state.apply_gradient(observer._enable_gradient, grad, grad_step_size)
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
                         total_grad = grad
@@ -292,8 +292,8 @@ def gradient_descent(
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     this_grad = total_grad
                     if use_fix_relative_step_size:
-                        this_grad = state.fix_relative_to_state(this_grad)
-                    state.apply_gradient(grad, grad_step_size)
+                        this_grad = state.fix_relative_to_state(this_grad, observer._enable_gradient)
+                    state.apply_gradient(observer._enable_gradient, grad, grad_step_size)
                 showln(f"gradient {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Save state

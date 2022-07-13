@@ -115,29 +115,30 @@ class AnsatzProductState(AbstractState):
         ----------
         configurations : list[list[list[dict[int, EdgePoint]]]]
             The given configurations to calculate weight and delta.
-        calculate_delta : set[str]
-            The iterator of name of ansatz to calculate delta.
+        calculate_delta : list[str]
+            The list of name of ansatz to calculate delta.
 
         Returns
         -------
-        tuple[list[complex | float], list[dict[str, ansatz]]]
+        tuple[list[complex | float], list[list[Delta]]]
             The weight and the delta ansatz.
         """
         number = len(configurations)
         weight = [1. for _ in range(number)]
-        delta = [{} for _ in range(number)]
+        delta = [[None for _ in calculate_delta] for _ in range(number)]
         for name, ansatz in self.ansatzes.items():
             sub_weight, sub_delta = ansatz.weight_and_delta(configurations, name in calculate_delta)
             for i in range(number):
                 weight[i] *= sub_weight[i]
             if sub_delta is not None:
+                ansatz_index = calculate_delta.index(name)
                 for i in range(number):
-                    delta[i][name] = sub_delta[i] / sub_weight[i]
+                    delta[i][ansatz_index] = sub_delta[i] / sub_weight[i]
         for i in range(number):
             this_weight = weight[i]
             this_delta = delta[i]
-            for name in this_delta:
-                this_delta[name] *= this_weight
+            for j, _ in enumerate(this_delta):
+                this_delta[j] *= this_weight
         return weight, delta
 
     def get_norm_max(self, delta, names):
@@ -146,7 +147,7 @@ class AnsatzProductState(AbstractState):
 
         Parameters
         ----------
-        delta : None | dict[str, Delta]
+        delta : None | list[Delta]
             The delta or state to calculate.
         names : None | list[str]
             The ansatzes to calculate norm.
@@ -156,48 +157,52 @@ class AnsatzProductState(AbstractState):
             The max norm.
         """
         result = 0.0
-        for name in names:
+        for i, name in enumerate(names):
             ansatz = self.ansatzes[name]
             if delta is None:
                 this = ansatz.get_norm_max(None)
             else:
-                this = ansatz.get_norm_max(delta[name])
+                this = ansatz.get_norm_max(delta[i])
             if this > result:
                 result = this
         return result
 
-    def fix_relative_to_state(self, gradient):
+    def fix_relative_to_state(self, gradient, ansatz_list):
         """
         Get fixed relative to state for a state shape data.
 
         Parameters
         ----------
-        gradient : dict[str, Delta]
+        gradient : list[Delta]
             The state shape data.
+        ansatz_list : list[str]
+            The ansatzes to be updated
 
         Returns
         -------
-        dict[str, Delta]
+        list[Delta]
             The result state shape data which have the same norm to the state itself.
         """
-        param = self.get_norm_max(None, gradient.keys()) / self.get_norm_max(gradient, gradient.keys())
+        param = self.get_norm_max(None, ansatz_list) / self.get_norm_max(gradient, ansatz_list)
         return gradient * param
 
-    def apply_gradient(self, gradient, step_size):
+    def apply_gradient(self, ansatz_list, gradient, step_size):
         """
         Apply the gradient to the state.
 
         Parameters
         ----------
-        gradient : dict[str, Delta]
+        ansatz_list : list[str]
+            The ansatzes to be updated
+        gradient : lsit[Delta]
             The gradient calculated by observer object.
         step_size : float
             The gradient step size.
         """
-        for name, _ in gradient.items():
+        for i, name in enumerate(ansatz_list):
             setter = self.ansatzes[name].buffers(None)
             setter.send(None)
-            for tensor, grad in zip(self.ansatzes[name].buffers(None), self.ansatzes[name].buffers(gradient[name])):
+            for tensor, grad in zip(self.ansatzes[name].buffers(None), self.ansatzes[name].buffers(gradient[i])):
                 send(setter, tensor - grad * step_size)
         self.refresh_auxiliaries()
 

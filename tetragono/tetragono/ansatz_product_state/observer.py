@@ -20,7 +20,6 @@ import os
 import pickle
 import itertools
 import numpy as np
-import pandas as pd
 from ..sampling_tools.tensor_element import tensor_element
 from ..common_toolkit import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln
 from .state import Configuration
@@ -47,7 +46,7 @@ class Observer:
         self._owner = owner
 
         self._observer = {}
-        self._enable_gradient = set()
+        self._enable_gradient = []
         self._enable_natural_gradient = False
         self._cache_natural_delta = None
         self._restrict_subspace = None
@@ -104,8 +103,8 @@ class Observer:
         self._total_energy = 0.0
         self._total_energy_square = 0.0
         self._total_energy_reweight = 0.0
-        self._Delta = {name: None for name in self._enable_gradient}
-        self._EDelta = {name: None for name in self._enable_gradient}
+        self._Delta = [None for name in self._enable_gradient]
+        self._EDelta = [None for name in self._enable_gradient]
         self._Deltas = []
         if self._cache_natural_delta is not None:
             os.makedirs(self._cache_natural_delta, exist_ok=True)
@@ -149,10 +148,10 @@ class Observer:
 
         allreduce_iterator_buffer(
             itertools.chain(
-                *(self._owner.ansatzes[name].buffers_for_mpi(self._Delta[name])
-                  for name in sorted(self._enable_gradient)),
-                *(self._owner.ansatzes[name].buffers_for_mpi(self._EDelta[name])
-                  for name in sorted(self._enable_gradient)),
+                *(self._owner.ansatzes[name].buffers_for_mpi(self._Delta[i])
+                  for i, name in enumerate(self._enable_gradient)),
+                *(self._owner.ansatzes[name].buffers_for_mpi(self._EDelta[i])
+                  for i, name in enumerate(self._enable_gradient)),
             ))
 
     def _expect_and_deviation(self, total, total_square, total_reweight):
@@ -263,24 +262,24 @@ class Observer:
             The gradient for every subansatz.
         """
         energy, _ = self.total_energy
-        b = 2 * (pd.Series(self._EDelta) / self._total_weight) - 2 * energy * (pd.Series(self._Delta) /
-                                                                               self._total_weight)
+        b = (2 * (np.array(self._EDelta, dtype=object) / self._total_weight) - 2 * energy *
+             (np.array(self._Delta, dtype=object) / self._total_weight))
         return b
 
     def delta_dot_sum(self, a, b):
         result = 0.0
-        for name in self._enable_gradient:
-            result += self._owner.ansatzes[name].delta_dot_sum(a[name], b[name])
+        for i, name in enumerate(self._enable_gradient):
+            result += self._owner.ansatzes[name].delta_dot_sum(a[i], b[i])
         return result
 
     def delta_update(self, a, b):
-        for name in self._enable_gradient:
-            self._owner.ansatzes[name].delta_update(a[name], b[name])
+        for i, name in enumerate(self._enable_gradient):
+            self._owner.ansatzes[name].delta_update(a[i], b[i])
 
     def allreduce_delta(self, a):
         allreduce_iterator_buffer(
             itertools.chain(
-                *(self._owner.ansatzes[name].buffers_for_mpi(a[name]) for name in sorted(self._enable_gradient))))
+                *(self._owner.ansatzes[name].buffers_for_mpi(a[i]) for i, name in enumerate(self._enable_gradient))))
 
     def _trace_metric(self):
         """
@@ -297,7 +296,7 @@ class Observer:
             result += self.delta_dot_sum(deltas, deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
-        delta = pd.Series(self._Delta) / self._total_weight
+        delta = np.array(self._Delta, dtype=object) / self._total_weight
         result -= self.delta_dot_sum(delta, delta)
 
         return result
@@ -340,10 +339,10 @@ class Observer:
         result_1 = gradient * 0
         for reweight, deltas in self._weights_and_deltas():
             param = self.delta_dot_sum(deltas, gradient) * reweight / self._total_weight
-            self.delta_update(result_1, param * pd.Series(deltas))
+            self.delta_update(result_1, param * np.array(deltas, dtype=object))
         self.allreduce_delta(result_1)
 
-        delta = pd.Series(self._Delta) / self._total_weight
+        delta = np.array(self._Delta, dtype=object) / self._total_weight
         param = self.delta_dot_sum(delta, gradient)
         result_2 = delta * param
         return result_1 - result_2 + epsilon * gradient
@@ -367,15 +366,13 @@ class Observer:
             The gradient for every subansatz.
         """
         show("calculating natural gradient")
-        energy, _ = self.total_energy
-        b = 2 * (pd.Series(self._EDelta) / self._total_weight) - 2 * energy * (pd.Series(self._Delta) /
-                                                                               self._total_weight)
+        b = self.gradient
         b_square = self.delta_dot_sum(b, b)
         # A = metric
         # A x = b
 
         tr = self._trace_metric()
-        n = sum(self._owner.ansatzes[name].element_count(delta) for name, delta in b.items())
+        n = sum(self._owner.ansatzes[name].element_count(b[i]) for i, name in enumerate(self._enable_gradient))
         relative_epsilon = epsilon * tr / n
 
         x = b * 0
@@ -429,7 +426,7 @@ class Observer:
         if isinstance(ansatz_name, str):
             ansatz_name = [ansatz_name]
         for name in ansatz_name:
-            self._enable_gradient.add(name)
+            self._enable_gradient.append(name)
 
     def enable_natural_gradient(self):
         """
@@ -514,7 +511,7 @@ class Observer:
                     configuration_map[name][positions][other_configuration] = (len(configuration_list),
                                                                                observer_shrinked.storage[0])
                     configuration_list.append(new_configuration)
-        wss_list, _ = owner.weight_and_delta(configuration_list, set())
+        wss_list, _ = owner.weight_and_delta(configuration_list, [])
         # measure
         for name, configuration_map_name in configuration_map.items():
             if name == "energy":
@@ -540,19 +537,19 @@ class Observer:
                     Es = Es.real
                 else:
                     Es = Es.conjugate()
-                deltas = {}
-                for ansatz_name in self._enable_gradient:
-                    this_delta = reweight * delta[ansatz_name] / ws
-                    if self._Delta[ansatz_name] is None:
-                        self._Delta[ansatz_name] = this_delta
+                deltas = []
+                for i, ansatz_name in enumerate(self._enable_gradient):
+                    this_delta = reweight * delta[i] / ws
+                    if self._Delta[i] is None:
+                        self._Delta[i] = this_delta
                     else:
-                        self._Delta[ansatz_name] += this_delta
-                    if self._EDelta[ansatz_name] is None:
-                        self._EDelta[ansatz_name] = Es * this_delta
+                        self._Delta[i] += this_delta
+                    if self._EDelta[i] is None:
+                        self._EDelta[i] = Es * this_delta
                     else:
-                        self._EDelta[ansatz_name] += Es * this_delta
+                        self._EDelta[i] += Es * this_delta
                     if self._enable_natural_gradient:
-                        deltas[ansatz_name] = delta[ansatz_name] / ws
+                        deltas.append(delta[i] / ws)
                 if self._enable_natural_gradient:
                     if self._cache_natural_delta:
                         with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
