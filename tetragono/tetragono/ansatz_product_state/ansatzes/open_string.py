@@ -19,7 +19,6 @@
 import numpy as np
 from ...auxiliaries.safe_toolkit import safe_rename, safe_contract
 from .abstract_ansatz import AbstractAnsatz
-from ...common_toolkit import MPI, mpi_comm
 
 
 class OpenString(AbstractAnsatz):
@@ -138,7 +137,7 @@ class OpenString(AbstractAnsatz):
         return index, right
 
     def weight(self, site_configuration):
-        index_configuration = [site_configuration[l1][l2][orbit][1] for l1, l2, orbit in self.index_to_site]
+        index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
         index, left = self._go_from_left(index_configuration, try_only=True)
         if index == 0:
             index = None
@@ -148,7 +147,7 @@ class OpenString(AbstractAnsatz):
         return safe_contract(left, right, {("R", "L")})[{}]
 
     def delta(self, site_configuration):
-        index_configuration = [site_configuration[l1][l2][orbit][1] for l1, l2, orbit in self.index_to_site]
+        index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
         result = []
         _, _ = self._go_from_left(index_configuration[::1], try_only=False)
         _, _ = self._go_from_right(index_configuration[::-1], try_only=False)

@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 from ..sampling_tools.tensor_element import tensor_element
 from ..common_toolkit import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln
+from .state import Configuration
 
 
 class Observer:
@@ -498,7 +499,7 @@ class Observer:
             for positions, observer in observers.items():
                 configuration_map[name][positions] = {}
                 body = observer.rank // 2
-                current_configuration = tuple(configuration[l1][l2][orbit] for l1, l2, orbit in positions)
+                current_configuration = tuple(configuration[l1, l2, orbit] for l1, l2, orbit in positions)
                 element_pool = tensor_element(observer)
                 if current_configuration not in element_pool:
                     continue
@@ -507,11 +508,9 @@ class Observer:
                         replacement = {positions[i]: other_configuration[i] for i in range(body)}
                         if not self._restrict_subspace(configuration, replacement):
                             continue
-                    new_configuration = [[{
-                        orbit: configuration[l1][l2][orbit] for orbit in owner.physics_edges[l1, l2]
-                    } for l2 in range(owner.L2)] for l1 in range(owner.L1)]
+                    new_configuration = Configuration(self._owner, configuration._configuration)
                     for i, [l1, l2, orbit] in enumerate(positions):
-                        new_configuration[l1][l2][orbit] = other_configuration[i]
+                        new_configuration[l1, l2, orbit] = other_configuration[i]
                     configuration_map[name][positions][other_configuration] = (len(configuration_list),
                                                                                observer_shrinked.storage[0])
                     configuration_list.append(new_configuration)

@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .state import AnsatzProductState
+from .state import AnsatzProductState, Configuration
 from .sampling import Sampling, SweepSampling, ErgodicSampling
 try:
     import pandas

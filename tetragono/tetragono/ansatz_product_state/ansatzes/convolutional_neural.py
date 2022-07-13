@@ -20,7 +20,6 @@ import numpy as np
 import torch
 import TAT
 from .abstract_ansatz import AbstractAnsatz
-from ...common_toolkit import MPI, mpi_comm
 
 
 class ConvolutionalNeural(AbstractAnsatz):
@@ -75,7 +74,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         list[list[list[int]]]
             The configuration as input of network, where three dimensions are channel, width and height.
         """
-        return [[[-1 if configuration[l1][l2][0][1] == 0 else 1
+        return [[[-1 if configuration[l1, l2, 0][1] == 0 else 1
                   for l2 in range(self.ansatz_product_state.L2)]
                  for l1 in range(self.ansatz_product_state.L1)]]
 

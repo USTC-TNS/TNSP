@@ -21,6 +21,36 @@ from ..abstract_state import AbstractState
 from ..common_toolkit import send
 
 
+class Configuration:
+    """
+    The configuration object for ansatz product state.
+    """
+    __slots__ = ["_owner", "_configuration"]
+
+    def __init__(self, owner, configuration=None):
+        self._owner = owner
+        if configuration is not None:
+            self._configuration = [[{
+                orbit: configuration[l1][l2][orbit] for orbit, edge in self._owner.physics_edges[l1, l2].items()
+            } for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+        else:
+            self._configuration = [[{orbit: None
+                                     for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+                                    for l2 in range(self._owner.L2)]
+                                   for l1 in range(self._owner.L1)]
+
+    def __setitem__(self, key, value):
+        l1, l2, orbit = key
+        self._configuration[l1][l2][orbit] = value
+
+    def __getitem__(self, key):
+        l1, l2, orbit = key
+        return self._configuration[l1][l2][orbit]
+
+    def __delitem__(self, key):
+        self.__setitem__(key, None)
+
+
 class AnsatzProductState(AbstractState):
     """
     The ansatz product state, which is product of several subansatz.

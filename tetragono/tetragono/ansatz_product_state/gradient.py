@@ -20,7 +20,7 @@ import signal
 import inspect
 import numpy as np
 import TAT
-from ..ansatz_product_state import AnsatzProductState, SweepSampling, ErgodicSampling, Observer
+from ..ansatz_product_state import AnsatzProductState, Configuration, SweepSampling, ErgodicSampling, Observer
 from ..common_toolkit import (SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln, write_to_file,
                               get_imported_function, send)
 
@@ -251,7 +251,7 @@ def gradient_descent(
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configurations
-                gathered_configurations = mpi_comm.allgather(sampling.configuration)
+                gathered_configurations = mpi_comm.allgather(sampling.configuration._configuration)
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")

@@ -20,6 +20,7 @@ import numpy as np
 import TAT
 from ..sampling_tools.tensor_element import tensor_element
 from ..common_toolkit import mpi_rank, mpi_size
+from .state import Configuration
 
 
 class Sampling:
@@ -50,13 +51,6 @@ class Sampling:
         """
         raise NotImplementedError("Not implement in abstract sampling")
 
-    def copy_configuration(self, configuration):
-        owner = self._owner
-        return [[{orbit: configuration[l1][l2][orbit]
-                  for orbit in owner.physics_edges[l1, l2]}
-                 for l2 in range(owner.L2)]
-                for l1 in range(owner.L1)]
-
 
 class SweepSampling(Sampling):
     """
@@ -81,7 +75,7 @@ class SweepSampling(Sampling):
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
         """
         super().__init__(owner, restrict_subspace)
-        self.configuration = self.copy_configuration(configuration)
+        self.configuration = Configuration(owner, configuration)
         [self.ws], _ = self._owner.weight_and_delta([self.configuration], set())
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
@@ -92,7 +86,7 @@ class SweepSampling(Sampling):
     def _single_term(self, positions, hamiltonian):
         owner = self._owner
         body = hamiltonian.rank // 2
-        current_configuration = tuple(self.configuration[l1][l2][orbit] for [l1, l2, orbit] in positions)
+        current_configuration = tuple(self.configuration[l1, l2, orbit] for [l1, l2, orbit] in positions)
         element_pool = tensor_element(hamiltonian)
         if current_configuration not in element_pool:
             return
@@ -103,12 +97,12 @@ class SweepSampling(Sampling):
         current_configuration_s, _ = list(possible_hopping.items())[TAT.random.uniform_int(0, hopping_number - 1)()]
         hopping_number_s = len(element_pool[current_configuration_s])
         if self._restrict_subspace is not None:
-            replacement = {positions[i]: current_configurations_s[i] for i in range(body)}
+            replacement = {positions[i]: current_configuration_s[i] for i in range(body)}
             if not self._restrict_subspace(self.configuration, replacement):
                 return
-        configuration_s = self.copy_configuration(self.configuration)
+        configuration_s = Configuration(self._owner, self.configuration._configuration)
         for i, [l1, l2, orbit] in enumerate(positions):
-            configuration_s[l1][l2][orbit] = current_configuration_s[i]
+            configuration_s[l1, l2, orbit] = current_configuration_s[i]
         [wss], _ = self._owner.weight_and_delta([configuration_s], set())
         p = (np.linalg.norm(wss)**2) / (np.linalg.norm(self.ws)**2) * hopping_number / hopping_number_s
         if TAT.random.uniform_real(0, 1)() < p:
@@ -122,7 +116,7 @@ class SweepSampling(Sampling):
         for positions in reversed(self._sweep_order):
             hamiltonian = self._hopping_hamiltonians[positions]
             self._single_term(positions, hamiltonian)
-        return self.ws**2, self.copy_configuration(self.configuration)
+        return self.ws**2, Configuration(self._owner, self.configuration._configuration)
 
 
 class ErgodicSampling(Sampling):
@@ -145,9 +139,7 @@ class ErgodicSampling(Sampling):
         """
         super().__init__(owner, restrict_subspace)
 
-        self.configuration = [
-            [{orbit: None for orbit in owner.physics_edges[l1, l2]} for l2 in range(owner.L2)] for l1 in range(owner.L1)
-        ]
+        self.configuration = Configuration(self._owner)
 
         self._edges = [[{orbit: edge
                          for orbit, edge in self._owner.physics_edges[l1, l2].items()}
@@ -169,19 +161,19 @@ class ErgodicSampling(Sampling):
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
                 for orbit, edge in self._edges[l1][l2].items():
-                    self.configuration[l1][l2][orbit] = edge.get_point_from_index(0)
+                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
 
     def _next_configuration(self):
         owner = self._owner
         for l1 in range(owner.L1):
             for l2 in range(owner.L2):
                 for orbit, edge in self._edges[l1][l2].items():
-                    index = edge.get_index_from_point(self.configuration[l1][l2][orbit])
+                    index = edge.get_index_from_point(self.configuration[l1, l2, orbit])
                     index += 1
                     if index == edge.dimension:
-                        self.configuration[l1][l2][orbit] = edge.get_point_from_index(0)
+                        self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
                     else:
-                        self.configuration[l1][l2][orbit] = edge.get_point_from_index(index)
+                        self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
                         return
 
     def __call__(self):
@@ -191,4 +183,4 @@ class ErgodicSampling(Sampling):
         if self._restrict_subspace is not None:
             if not self._restrict_subspace(self.configuration):
                 possibility = float("+inf")
-        return possibility, self.copy_configuration(self.configuration)
+        return possibility, Configuration(self._owner, self.configuration._configuration)

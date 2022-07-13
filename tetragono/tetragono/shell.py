@@ -26,34 +26,9 @@ from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration
-from .ansatz_product_state import AnsatzProductState
+from .ansatz_product_state import AnsatzProductState, Configuration as ap_Configuration
 from .sampling_tools.gradient import gradient_descent
 from .ansatz_product_state.gradient import gradient_descent as ap_gradient_descent
-
-
-class FakeConfiguration:
-    """
-    Fake configuration object for mulitple product state.
-    """
-    __slots__ = ["_owner", "_configuration"]
-
-    def __init__(self, owner):
-        self._owner = owner
-        self._configuration = [[{orbit: None
-                                 for orbit, edge in self._owner.physics_edges[l1, l2].items()}
-                                for l2 in range(self._owner.L2)]
-                               for l1 in range(self._owner.L1)]
-
-    def __setitem__(self, key, value):
-        l1, l2, orbit = key
-        self._configuration[l1][l2][orbit] = value
-
-    def __getitem__(self, key):
-        l1, l2, orbit = key
-        return self._configuration[l1][l2][orbit]
-
-    def __delitem__(self, key):
-        self.__setitem__(key, None)
 
 
 class Config():
@@ -687,7 +662,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @sharedoc(do_ap_conf_create)
     def ap_conf_create(self, module_name):
         with seed_differ:
-            configuration = FakeConfiguration(self.ap)
+            configuration = ap_Configuration(self.ap)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.ap_conf = mpi_comm.allgather(configuration._configuration)
 
