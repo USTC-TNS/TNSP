@@ -30,6 +30,9 @@ setup(
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/hzhangxyz/TAT",
     packages=["bridge"],
+    install_requires=[
+        f"PyTAT=={version}",
+    ],
     license="GPLv3",
     python_requires=">=3.7",
 )

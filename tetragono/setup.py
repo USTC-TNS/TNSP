@@ -43,6 +43,9 @@ setup(
         "mpi4py",
         "numpy",
     ],
+    extras_require={
+        "APS": ["torch",],
+    },
     license="GPLv3",
     python_requires=">=3.8",
 )
