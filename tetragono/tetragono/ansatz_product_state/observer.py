@@ -36,11 +36,11 @@ class Observer:
 
     def __init__(self, owner):
         """
-        Create observer object for the given multiple product state.
+        Create observer object for the given ansatz product state.
 
         Parameters
         ----------
-        owner : MultipleProductState
+        owner : AnsatzProductState
             The owner of this obsever object.
         """
         self._owner = owner

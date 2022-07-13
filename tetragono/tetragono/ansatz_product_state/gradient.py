@@ -20,7 +20,7 @@ import signal
 import inspect
 import numpy as np
 import TAT
-from ..multiple_product_state import MultipleProductState, SweepSampling, ErgodicSampling, Observer
+from ..ansatz_product_state import AnsatzProductState, SweepSampling, ErgodicSampling, Observer
 from ..common_toolkit import (SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln, write_to_file,
                               get_imported_function, send)
 
@@ -121,7 +121,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
 
 
 def gradient_descent(
-        state: MultipleProductState,
+        state: AnsatzProductState,
         sampling_total_step,
         grad_total_step,
         grad_step_size,

@@ -4,6 +4,8 @@
 
 *** Added
 *** Changed
++ *tetragono*: Rename multiple product state to ansatz product state, to avoid the ambiguous abbreivation. Rename all
+  =mp_xxx= to =ap_xxx= in tetragono shell.
 *** Deprecated
 *** Removed
 *** Fixed

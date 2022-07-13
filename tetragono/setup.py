@@ -34,8 +34,8 @@ setup(
         "tetragono/common_tensor",
         "tetragono/sampling_tools",
         "tetragono/auxiliaries",
-        "tetragono/multiple_product_state",
-        "tetragono/multiple_product_ansatz",
+        "tetragono/ansatz_product_state",
+        "tetragono/ansatz_product_state/ansatzes",
     ],
     install_requires=[
         f"PyTAT=={version}",

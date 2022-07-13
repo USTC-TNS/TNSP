@@ -21,9 +21,9 @@ from ..abstract_state import AbstractState
 from ..common_toolkit import send
 
 
-class MultipleProductState(AbstractState):
+class AnsatzProductState(AbstractState):
     """
-    The multiple product state, which is product of several subansatz.
+    The ansatz product state, which is product of several subansatz.
     """
 
     __slots__ = ["ansatzes"]
@@ -52,12 +52,12 @@ class MultipleProductState(AbstractState):
 
     def __init__(self, abstract):
         """
-        Create multiple product state from a given abstract state.
+        Create ansatz product state from a given abstract state.
 
         Parameters
         ----------
         abstract : AbstractState
-            The abstract state used to create multiple product state.
+            The abstract state used to create ansatz product state.
         """
         super()._init_by_copy(abstract)
         self.ansatzes = {}

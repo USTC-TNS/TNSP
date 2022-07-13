@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .state import MultipleProductState
+from .state import AnsatzProductState
 from .sampling import Sampling, SweepSampling, ErgodicSampling
 try:
     import pandas
@@ -28,3 +28,5 @@ except ModuleNotFoundError:
             raise RuntimeError("pandas needed for Observer")
 else:
     from .observer import Observer
+
+from . import ansatzes

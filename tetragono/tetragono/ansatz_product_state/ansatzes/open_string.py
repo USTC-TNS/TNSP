@@ -17,15 +17,15 @@
 #
 
 import numpy as np
-from ..auxiliaries.safe_toolkit import safe_rename, safe_contract
+from ...auxiliaries.safe_toolkit import safe_rename, safe_contract
 from .abstract_ansatz import AbstractAnsatz
-from ..common_toolkit import MPI, mpi_comm
+from ...common_toolkit import MPI, mpi_comm
 
 
 class OpenString(AbstractAnsatz):
 
     __slots__ = [
-        "multiple_product_state", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list",
+        "ansatz_product_state", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list",
         "_left_to_right", "_right_to_left"
     ]
 
@@ -44,29 +44,29 @@ class OpenString(AbstractAnsatz):
             The result tensor.
         """
         names = ["P"]
-        edges = [self.multiple_product_state.physics_edges[self.index_to_site[index]]]
+        edges = [self.ansatz_product_state.physics_edges[self.index_to_site[index]]]
         if index != 0:
             names.append("L")
             edges.append(self.cut_dimension)
         if index != self.length - 1:
             names.append("R")
             edges.append(self.cut_dimension)
-        return self.multiple_product_state.Tensor(names, edges).randn()
+        return self.ansatz_product_state.Tensor(names, edges).randn()
 
-    def __init__(self, multiple_product_state, index_to_site, cut_dimension):
+    def __init__(self, ansatz_product_state, index_to_site, cut_dimension):
         """
         Create open string ansatz by given index_to_site map and cut_dimension.
 
         Parameters
         ----------
-        multiple_product_state : MultipleProductState
-            The multiple product state used to create open string.
+        ansatz_product_state : AnsatzProductState
+            The ansatz product state used to create open string.
         index_to_site : list[tuple[int, int, int]]
             The sites array to specify the string shape.
         cut_dimension : int
             The dimension cut of the string.
         """
-        self.multiple_product_state = multiple_product_state
+        self.ansatz_product_state = ansatz_product_state
         self.length = len(index_to_site)
         self.index_to_site = [site for site in index_to_site]
         self.site_to_index = {site: index for index, site in enumerate(index_to_site)}
@@ -93,7 +93,7 @@ class OpenString(AbstractAnsatz):
             The index calculated, if try_only=False, it equals to length of configuration, and the result tensor.
         """
         result = self._left_to_right
-        left = self.multiple_product_state.Tensor(1)
+        left = self.ansatz_product_state.Tensor(1)
         index = 0
         while index < len(configuration):
             config = configuration[index]
@@ -123,7 +123,7 @@ class OpenString(AbstractAnsatz):
             The index calculated, if try_only=False, it equals to length of configuration, and the result tensor.
         """
         result = self._right_to_left
-        right = self.multiple_product_state.Tensor(1)
+        right = self.ansatz_product_state.Tensor(1)
         index = 0
         while index < len(configuration):
             config = configuration[index]
@@ -158,7 +158,7 @@ class OpenString(AbstractAnsatz):
             this_tensor = safe_rename(left, {"R": "L"}).contract(safe_rename(right, {"L": "R"}), set())
             this_tensor = this_tensor.conjugate().expand({
                 "P": (index_configuration[index],
-                      self.multiple_product_state.physics_edges[self.index_to_site[index]].dimension)
+                      self.ansatz_product_state.physics_edges[self.index_to_site[index]].dimension)
             })
             result.append(this_tensor)
         return np.array(result)

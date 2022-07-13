@@ -30,6 +30,5 @@ from . import common_tensor
 from . import common_toolkit
 from .common_toolkit import *
 
-# Multiple product state
-from . import multiple_product_state
-from . import multiple_product_ansatz
+# Ansatz product state
+from . import ansatz_product_state

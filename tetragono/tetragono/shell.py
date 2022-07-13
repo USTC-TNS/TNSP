@@ -26,9 +26,9 @@ from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration
-from .multiple_product_state import MultipleProductState
+from .ansatz_product_state import AnsatzProductState
 from .sampling_tools.gradient import gradient_descent
-from .multiple_product_state.gradient import gradient_descent as mp_gradient_descent
+from .ansatz_product_state.gradient import gradient_descent as ap_gradient_descent
 
 
 class FakeConfiguration:
@@ -115,8 +115,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex = None
         self.gm = None
         self.gm_conf = []
-        self.mp = None
-        self.mp_conf = []
+        self.ap = None
+        self.ap_conf = []
 
     def precmd(self, line):
         line = line.split("#")[0].strip()
@@ -176,7 +176,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         TAT.random.seed(random_seed)
 
     @staticmethod
-    def ex_mp_create(lattice_type, model_name, *args, **kwargs):
+    def ex_ap_create(lattice_type, model_name, *args, **kwargs):
         abstract_state = get_imported_function(model_name, "abstract_state")
         if len(args) == 1 and args[0] == "help":
             showln(abstract_state.__doc__.replace("\n", "\n    "))
@@ -201,7 +201,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_ex_create)
     def ex_create(self, *args, **kwargs):
-        state = self.ex_mp_create(ExactState, *args, **kwargs)
+        state = self.ex_ap_create(ExactState, *args, **kwargs)
         if state is not None:
             self.ex = state
 
@@ -424,7 +424,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def do_gm_run(self, line):
         """
-        Do gradient descent. see gradient.py for details.
+        Do gradient descent. see sampling_tools/gradient.py for details.
         """
         config = Config(line)
         self.gm_run(*config.args, **config.kwargs)
@@ -534,7 +534,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_gm_hamiltonian)
     def gm_hamiltonian(self, model, *args, **kwargs):
-        new_state = self.ex_mp_create(lambda x: x, model, *args, **kwargs)
+        new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
         self.gm._hamiltonians = new_state._hamiltonians
 
     def do_gm_data_load(self, line):
@@ -583,9 +583,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def gm_to_ex(self):
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
-    def do_mp_create(self, line):
+    def do_ap_create(self, line):
         """
-        Create a multiple product state.
+        Create a ansatz product state.
 
         Parameters
         ----------
@@ -595,18 +595,18 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             Arguments passed to model creater function.
         """
         config = Config(line)
-        self.mp_create(*config.args, **config.kwargs)
+        self.ap_create(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_create)
-    def mp_create(self, *args, **kwargs):
-        state = self.ex_mp_create(MultipleProductState, *args, **kwargs)
+    @sharedoc(do_ap_create)
+    def ap_create(self, *args, **kwargs):
+        state = self.ex_ap_create(AnsatzProductState, *args, **kwargs)
         if state is not None:
-            self.mp = state
-            self.mp_conf = []
+            self.ap = state
+            self.ap_conf = []
 
-    def do_mp_dump(self, line):
+    def do_ap_dump(self, line):
         """
-        Dump the multiple product state into file.
+        Dump the ansatz product state into file.
 
         Parameters
         ----------
@@ -614,15 +614,15 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The file name.
         """
         config = Config(line)
-        self.mp_dump(*config.args, **config.kwargs)
+        self.ap_dump(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_dump)
-    def mp_dump(self, name):
-        write_to_file(self.mp, name)
+    @sharedoc(do_ap_dump)
+    def ap_dump(self, name):
+        write_to_file(self.ap, name)
 
-    def do_mp_load(self, line):
+    def do_ap_load(self, line):
         """
-        Load the multiple product state from file.
+        Load the ansatz product state from file.
 
         Parameters
         ----------
@@ -630,16 +630,16 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The file name.
         """
         config = Config(line)
-        self.mp_load(*config.args, **config.kwargs)
+        self.ap_load(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_load)
-    def mp_load(self, name):
-        self.mp = read_from_file(name)
-        self.mp_conf = []
+    @sharedoc(do_ap_load)
+    def ap_load(self, name):
+        self.ap = read_from_file(name)
+        self.ap_conf = []
 
-    def do_mp_ansatz(self, line):
+    def do_ap_ansatz(self, line):
         """
-        Add an ansatz for multiple product state.
+        Add an ansatz for ansatz product state.
 
         Parameters
         ----------
@@ -651,51 +651,49 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             Arguments passed to ansatz creater function.
         """
         config = Config(line)
-        self.mp_ansatz(*config.args, **config.kwargs)
+        self.ap_ansatz(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_ansatz)
-    def mp_ansatz(self, name, ansatz, *args, **kwargs):
+    @sharedoc(do_ap_ansatz)
+    def ap_ansatz(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
         if len(args) == 1 and args[0] == "help":
             showln(create_ansatz.__doc__.replace("\n", "\n    "))
         else:
-            self.mp.add_ansatz(create_ansatz(self.mp, *args, **kwargs), name)
+            self.ap.add_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
 
-    def do_mp_run(self, line):
+    def do_ap_run(self, line):
         """
-        Do gradient descent on multiple product state. see multiple_product_state.py for details.
+        Do gradient descent on ansatz product state. see ansatz_product_state/gradient.py for details.
         """
         config = Config(line)
-        self.mp_run(*config.args, **config.kwargs)
+        self.ap_run(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_run)
-    def mp_run(self, *args, **kwargs):
-        from . import multiple_product_state
+    @sharedoc(do_ap_run)
+    def ap_run(self, *args, **kwargs):
+        ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf)
 
-        mp_gradient_descent(self.mp, *args, **kwargs, sampling_configurations=self.mp_conf)
-
-    def do_mp_conf_create(self, line):
+    def do_ap_conf_create(self, line):
         """
-        Create configuration of multiple product state.
+        Create configuration of ansatz product state.
 
         Parameters
         ----------
         module_name : str
-            The module name to create initial configuration of multiple product state.
+            The module name to create initial configuration of ansatz product state.
         """
         config = Config(line)
-        self.mp_conf_create(*config.args, **config.kwargs)
+        self.ap_conf_create(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_conf_create)
-    def mp_conf_create(self, module_name):
+    @sharedoc(do_ap_conf_create)
+    def ap_conf_create(self, module_name):
         with seed_differ:
-            configuration = FakeConfiguration(self.mp)
+            configuration = FakeConfiguration(self.ap)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
-            self.mp_conf = mpi_comm.allgather(configuration._configuration)
+            self.ap_conf = mpi_comm.allgather(configuration._configuration)
 
-    def do_mp_conf_dump(self, line):
+    def do_ap_conf_dump(self, line):
         """
-        Dump the multiple product state configuration into file.
+        Dump the ansatz product state configuration into file.
 
         Parameters
         ----------
@@ -703,15 +701,15 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The file name.
         """
         config = Config(line)
-        self.mp_conf_dump(*config.args, **config.kwargs)
+        self.ap_conf_dump(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_conf_dump)
-    def mp_conf_dump(self, name):
-        write_to_file(self.mp_conf, name)
+    @sharedoc(do_ap_conf_dump)
+    def ap_conf_dump(self, name):
+        write_to_file(self.ap_conf, name)
 
-    def do_mp_conf_load(self, line):
+    def do_ap_conf_load(self, line):
         """
-        Load the multiple product state configuration from file.
+        Load the ansatz product state configuration from file.
 
         Parameters
         ----------
@@ -719,11 +717,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The file name.
         """
         config = Config(line)
-        self.mp_conf_load(*config.args, **config.kwargs)
+        self.ap_conf_load(*config.args, **config.kwargs)
 
-    @sharedoc(do_mp_conf_load)
-    def mp_conf_load(self, name):
-        self.mp_conf = read_from_file(name)
+    @sharedoc(do_ap_conf_load)
+    def ap_conf_load(self, name):
+        self.ap_conf = read_from_file(name)
 
 
 class TetragonoScriptApp(TetragonoCommandApp):
@@ -808,11 +806,11 @@ else:
     gm_data_load = app.gm_data_load
     gm_hamiltonian = app.gm_hamiltonian
 
-    mp_create = app.mp_create
-    mp_dump = app.mp_dump
-    mp_load = app.mp_load
-    mp_ansatz = app.mp_ansatz
-    mp_run = app.mp_run
-    mp_conf_create = app.mp_conf_create
-    mp_conf_dump = app.mp_conf_dump
-    mp_conf_load = app.mp_conf_load
+    ap_create = app.ap_create
+    ap_dump = app.ap_dump
+    ap_load = app.ap_load
+    ap_ansatz = app.ap_ansatz
+    ap_run = app.ap_run
+    ap_conf_create = app.ap_conf_create
+    ap_conf_dump = app.ap_conf_dump
+    ap_conf_load = app.ap_conf_load

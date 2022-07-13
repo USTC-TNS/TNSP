@@ -20,26 +20,26 @@ import numpy as np
 import torch
 import TAT
 from .abstract_ansatz import AbstractAnsatz
-from ..common_toolkit import MPI, mpi_comm
+from ...common_toolkit import MPI, mpi_comm
 
 
 class ConvolutionalNeural(AbstractAnsatz):
 
-    __slots__ = ["multiple_product_state", "network", "dtype"]
+    __slots__ = ["ansatz_product_state", "network", "dtype"]
 
-    def __init__(self, multiple_product_state, network):
+    def __init__(self, ansatz_product_state, network):
         """
-        Create convolution neural ansatz for a given multiple product state.
+        Create convolution neural ansatz for a given ansatz product state.
 
         Parameters
         ----------
-        multiple_product_state : MultipleProductState
-            The multiple product state used to create open string.
+        ansatz_product_state : AnsatzProductState
+            The ansatz product state used to create open string.
         network : torch.nn.Module
             The pytorch nerual network model object.
         """
         super().__init__()
-        self.multiple_product_state = multiple_product_state
+        self.ansatz_product_state = ansatz_product_state
         self.network = network
         self.dtype = next(self.network.parameters()).dtype
 
@@ -76,8 +76,8 @@ class ConvolutionalNeural(AbstractAnsatz):
             The configuration as input of network, where three dimensions are channel, width and height.
         """
         return [[[-1 if configuration[l1][l2][0][1] == 0 else 1
-                  for l2 in range(self.multiple_product_state.L2)]
-                 for l1 in range(self.multiple_product_state.L1)]]
+                  for l2 in range(self.ansatz_product_state.L2)]
+                 for l1 in range(self.ansatz_product_state.L1)]]
 
     def weight(self, configuration):
         x = torch.tensor([self.create_x(configuration)], dtype=self.dtype)

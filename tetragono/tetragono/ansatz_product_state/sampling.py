@@ -27,7 +27,7 @@ class Sampling:
 
     def __init__(self, owner, restrict_subspace):
         """
-        Create sampling object for the given multiple product state.
+        Create sampling object for the given ansatz product state.
 
         Parameters
         ----------
@@ -60,7 +60,7 @@ class Sampling:
 
 class SweepSampling(Sampling):
     """
-    Sweep sampling object for multiple product state.
+    Sweep sampling object for ansatz product state.
     """
 
     __slots__ = ["configuration", "ws", "_hopping_hamiltonians", "_sweep_order"]
@@ -71,7 +71,7 @@ class SweepSampling(Sampling):
 
         Parameters
         ----------
-        owner : MultipleProductState
+        owner : AnsatzProductState
             The owner of this sampling object
         restrict_subspace
             A function return bool to restrict sampling subspace.
@@ -138,7 +138,7 @@ class ErgodicSampling(Sampling):
 
         Parameters
         ----------
-        owner : MultipleProductState
+        owner : AnsatzProductState
             The owner of this sampling object
         restrict_subspace
             A function return bool to restrict sampling subspace.
