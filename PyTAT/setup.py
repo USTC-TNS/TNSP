@@ -50,7 +50,7 @@ class build_ext(build_ext_original):
             "-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=" + str(extension_dir.absolute()),
             "-DCMAKE_BUILD_TYPE=" + "Release",
             "-DTAT_USE_MPI=" + "OFF",
-            "-DTAT_FORCE_VERSION=" + version,
+            "-DCMAKE_CXX_FLAGS=" + "-DTAT_VERSION=" + "\\\"" + version + "\\\"",
             "-DPYTHON_EXECUTABLE=" + sys.executable,
         ]
         if "CMAKEFLAGS" in os.environ:

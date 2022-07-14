@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment version")
-project(TAT LANGUAGES CXX)
+project(TAT VERSION 0.2.19 LANGUAGES CXX)
 
 # Check if it is main project
 set(TAT_MAIN_PROJECT OFF)
@@ -12,6 +12,8 @@ endif()
 if(TAT_MAIN_PROJECT)
   set(CMAKE_CXX_EXTENSIONS OFF)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+  set(PROJECT_DESCRIPTION "TAT is a header-only c++ tensor library with support for Abelian symmetry tensor and fermi tensor.")
+  set(PROJECT_HOMEPAGE_URL "https://github.com/hzhangxyz/TAT")
 endif()
 
 # common used cmake variables:
@@ -35,6 +37,7 @@ if(TAT_MAIN_PROJECT)
   set(PKG_CONFIG_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/TAT.pc")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/TAT.pc.in" "${PKG_CONFIG_FILE_NAME}" @ONLY)
   install(FILES "${PKG_CONFIG_FILE_NAME}" DESTINATION share/pkgconfig)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.rst DESTINATION share/licenses/TAT)
 endif()
 
 # PyTAT
