@@ -1,0 +1,2 @@
+Now after using cmake to configure the project. `make install` will work. Not
+`cmake install` will work.
