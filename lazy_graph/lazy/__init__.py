@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from __future__ import annotations
 from weakref import ref
 from itertools import chain
 
@@ -24,6 +23,9 @@ from itertools import chain
 class Copy:
     """
     A helper class used to copy entire lazy node graph.
+
+    To copy a lazy node graph totolly, create a copy object first, `copier = Copy()`. Then copy node one by one in the
+    correct order with respect to the dependence relationship by `new_node = copier(old_node)`.
     """
 
     __slots__ = ["_map"]
@@ -38,6 +40,10 @@ class Copy:
         """
         Copy a lazy node into newly created graph and get result node.
 
+        This function will replace the old upstream node to the new upstream node correctly based on the data stored in
+        this copy object. So after copying, there should be no relation between old graph and new graph, only if the
+        entire graph is copied completely.
+
         Parameters
         ----------
         node : Node[T]
@@ -48,23 +54,36 @@ class Copy:
         Node[T]
             The newly created lazy node in the new graph.
         """
+        # If the object is copied before, return the result node directly from the database stored in this copy object.
         if node in self._map:
             return self._map[node]
 
+        # Get the args and kwargs, the only different between old one and new one is replacing old upstream to new
+        # upstream, where new upstream was created by call this copy object before, if not, the old node and new node
+        # will share the same upstream.
         args = tuple(self._map_node(i) for i in node._args)  # map all args of node
         kwargs = {i: self._map_node(j) for i, j in node._kwargs.items()}  # Map all kwargs of node
+
+        # Create new node
         result = Node(node._func, *args, **kwargs)
 
+        # Update cache of the newly created node, if all upstream did not change, the new node will use the old cache.
         cache_valid = True
+        # Check the difference one by one in all the upstream of this node.
         for new, old in chain(zip(result._args, node._args), zip(result._kwargs.values(), node._kwargs.values())):
+            # Only check if the args or kwargs is also a node.
             if isinstance(old, Node):
+                # If old upstream and new upstream own different cache, the cache is invalid.
                 if old._value != new._value:
                     cache_valid = False
                     break
+        # All upstream cache did not change, so the newly created node also keep the cache same to old node.
         if cache_valid:
-            result._value = node._value  # Set value
+            result._value = node._value
 
-        self._map[node] = result  # Record relation in map
+        # Record relation in the database stored in this copy object.
+        self._map[node] = result
+
         return result
 
     def _map_node(self, node):
@@ -82,9 +101,12 @@ class Copy:
             If the parameter `node` is really a lazy node and it is recorded in `self._map`, it will return newly
             created mapped by the input node. Otherwise it will return the input object directly without any change.
         """
+        # map old upstream node object to new upstream, it must be a lazy node if mapped, since only node object will be
+        # put into self._map. But it may be out of the map even if it is a lazy node, then old node and new node will
+        # share the same upstream.
+
+        # If it is in the map, just map it, if not, keep it unchanged.
         if node in self._map:
-            # node is definitly a lazy node. but if it is a lazy node, it may be not in self._map, it happens if only
-            # part of graph is copyied.
             return self._map[node]
         else:
             return node
@@ -99,43 +121,32 @@ class Node:
     __slots__ = ["_value", "_downstream", "_func", "_args", "_kwargs", "__weakref__"]
 
     def _clear_downstream_of_upstream(self):
-        for i in self._args:
+        """
+        Clear itself from the downstream list of all its upstreams. It is called when deleting this node.
+        """
+        # Loop over all its args and kwargs.
+        for i in chain(self._args, self._kwargs.values()):
+            # If it is a node, then it is an upstream.
             if isinstance(i, Node):
-                i._downstream.remove(ref(self))
-        for _, i in self._kwargs.items():
-            if isinstance(i, Node):
+                # So remove it.
                 i._downstream.remove(ref(self))
 
     def _add_downstream_of_upstream(self):
-        for i in self._args:
-            if isinstance(i, Node):
-                i._downstream.add(ref(self))
-        for _, i in self._kwargs.items():
-            if isinstance(i, Node):
-                i._downstream.add(ref(self))
-
-    def replace(self, node):
         """
-        Replace the current node with another node.
-
-        Parameters
-        ----------
-        node : Node[T]
-            The new node used to replace.
+        Add itself to the downstream list of all its upstreams. It is called when creating this node.
         """
+        # Loop over all its args and kwargs.
+        for i in chain(self._args, self._kwargs.values()):
+            # If it is a node, then it is an upstream.
+            if isinstance(i, Node):
+                # So add it.
+                i._downstream.add(ref(self))
 
+    def __del__(self):
+        """
+        The destructor of lazy node.
+        """
         self._clear_downstream_of_upstream()
-
-        self._value = node._value
-        # _downstream is not changed
-        self._func = node._func
-        self._args = node._args
-        self._kwargs = node._kwargs
-
-        self._add_downstream_of_upstream()
-
-    # def __del__(self):
-    #     self._clear_downstream_of_upstream()
 
     def __init__(self, func, *args, **kwargs):
         """
@@ -155,26 +166,28 @@ class Node:
         self._args = args
         self._kwargs = kwargs
 
+        # Add itsself to the downstream list of all its upstreams.
         self._add_downstream_of_upstream()
 
     def reset(self, value=None):
         """
-        Reset value of this node, it will refresh all its downstream.
+        Reset value of this node, it will refresh all its downstream. If the value is given, this node will be reset by
+        this value.
 
         Parameters
         ----------
         value : T | None, default=None
             Reset the cache of this node by the given value.
         """
+        # If the value does not change, it reset nothing, so do nothing.
         if self._value != value:
+            # Update the cache of this node.
             self._value = value
-            new_downstream = set()
+            # Reset all its downstream
             for i in self._downstream:
-                if i() is not None:
-                    i().reset()
-                    new_downstream.add(i)
-
-            self._downstream = new_downstream
+                # All its downstream should be valid, since when a downstream deleted, the downstream will remove itself
+                # from the downstream list of this node.
+                i().reset()
 
     def __bool__(self):
         """
@@ -187,6 +200,24 @@ class Node:
         """
         return self._value is not None
 
+    def _make_frame(self):
+        """
+        Make a frame for the calculation of this node to be pushed into the stack.
+
+        The data of a frame contains node, args, kwargs, keys and index.
+        The keys is keys list of kwargs, it is to ensure the order of the loop.
+        The index contains four part, current frame pointer, size of args, size of kwargs and size of args and kwargs.
+
+        Returns
+        -------
+        tuple[Node, args, kwargs, list[key], int]
+            The frame used for calculating the value of this node.
+        """
+        l_args = len(self._args)
+        l_kwargs = len(self._kwargs)
+        index = [0, l_args, l_kwargs, l_args + l_kwargs]
+        return (self, [*self._args], {**self._kwargs}, tuple(self._kwargs.keys()), index)
+
     def __call__(self):
         """
         Obtain the value of this node, it will calculate the value by self._func and cache it.
@@ -196,9 +227,12 @@ class Node:
         T
             The calculated value of this node.
         """
+        # If the cache is empty, calculate this node and update the cache.
         if self._value is None:
-            stack = [(self, [*self._args], {**self._kwargs})]
+            # Create an new stack and simulate recursion by it.
+            stack = [self._make_frame()]
             self._recursion(stack)
+        # Return its cache.
         return self._value
 
     @staticmethod
@@ -208,29 +242,40 @@ class Node:
 
         Parameters
         ----------
-        stack : list[tuple[Node, Args, Kwargs]]
+        stack : list[tuple[Node, args, kwargs, list[key], int]]
             The stack used to run recursion.
         """
+        # If the stack is empty, all works done, return
         while len(stack) != 0:
-            node, args, kwargs = stack[-1]
-            for i, arg in enumerate(args):
+            # Calculate the top of the stack
+            node, args, kwargs, keys, index = stack[-1]
+            # Loop over args and kwargs
+            for i in range(index[0], index[3]):
+                # Get the arg of this pointer
+                if i < index[1]:
+                    arg = args[i]
+                else:
+                    key = keys[i - index[1]]
+                    arg = kwargs[key]
+                # If it is node, it is needed to get its value
                 if isinstance(arg, Node):
                     if arg._value is not None:
-                        args[i] = arg._value
+                        # If the upstream own cache, just use it
+                        if i < index[1]:
+                            args[i] = arg._value
+                        else:
+                            kwargs[key] = arg._value
                     else:
-                        stack.append((arg, [*arg._args], {**arg._kwargs}))
+                        # Otherwise push it to the top of the stack and continue the outer loop
+                        stack.append(arg._make_frame())
+                        # Update current frame pointer to avoid useless checking when the flow come back into this frame
+                        index[0] = i
                         break
             else:
-                for key, arg in kwargs.items():
-                    if isinstance(arg, Node):
-                        if arg._value is not None:
-                            kwargs[key] = arg._value
-                        else:
-                            stack.append((arg, [*arg._args], {**arg._kwargs}))
-                            break
-                else:
-                    node._value = node._func(*args, **kwargs)
-                    stack.pop()
+                # All args and kwargs have been calculated, calculate its own value of this node
+                node._value = node._func(*args, **kwargs)
+                # And pop this node calulcation frame.
+                stack.pop()
 
 
 def Root(value=None):
@@ -247,6 +292,10 @@ def Root(value=None):
     Node[T]
         The result lazy node.
     """
+    # Change a node with an empty returned function.
     result = Node(lambda: None)
+    # And reset its value forcely, since getting value of a node will check cache first, it will skip calling that
+    # invalid empty returned function.
     result.reset(value)
+
     return result

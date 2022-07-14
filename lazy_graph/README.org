@@ -1,0 +1,168 @@
+#+OPTIONS: toc:nil
+
+* lazy_graph
+
+lazy_graph is python package for lazy evaluation, with enhancement for updating values of upstream and copying the
+entire lazy graph.
+
+** Install
+
+Copy or link this folder directly. Or use =pip= to obtain the distribution =pip install lazy_graph=.
+
+** Documents
+
+#+begin_src emacs-lisp :exports none :results silent
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+#+end_src
+
+*** Simple example
+
+#+begin_src python :results output :exports both
+  from lazy import Root, Node
+
+
+  def add(a, b):
+      print(f"calculating {a} + {b}")
+      return a + b
+
+
+  print("create nodes")
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print("get the value")
+  print(f"c is {c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2
+c is 3
+#+end_example
+
+*** Update upstream
+
+#+begin_src python :results output :exports both
+  from lazy import Root, Node
+
+
+  def add(a, b):
+      print(f"calculating {a} + {b}")
+      return a + b
+
+
+  print("create nodes")
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print("get the value")
+  print(f"c is {c()}")
+  print("get the value again")
+  print(f"c is {c()}")
+  print("update upstream")
+  a.reset(4)
+  print("get the new value")
+  print(f"c is {c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2
+c is 3
+get the value again
+c is 3
+update upstream
+get the new value
+calculating 4 + 2
+c is 6
+#+end_example
+
+*** Normal argument or keyword argument are also available
+
+#+begin_src python :results output :exports both
+  from lazy import Root, Node
+
+
+  def add(a, b, c, d):
+      print(f"calculating {a} + {b} + {c} + {d}")
+      return a + b + c + d
+
+
+  print("create nodes")
+  a = Root(1)
+  c = Root(3)
+  z = Node(add, a, 2, c=c, d=4)
+  print("get the value")
+  print(f"c is {z()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2 + 3 + 4
+c is 10
+#+end_example
+
+*** Copy the lazy graph
+
+#+begin_src python :results output :exports both
+  from lazy import Root, Node, Copy
+
+
+  def add(a, b):
+      print(f"calculating {a} + {b}")
+      return a + b
+
+
+  print("create nodes")
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print("get the value")
+  print(f"c is {c()}")
+
+  print("copy lazy graph")
+  copy = Copy()
+  new_a = copy(a)
+  new_b = copy(b)
+  new_c = copy(c)
+
+  print("get the new value")
+  print(f"new c is {new_c()}")
+
+  print("reset value")
+  a.reset(4)
+  new_a.reset(8)
+  print("get the old value and new value")
+  print(f"c is {c()}, new c is {new_c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2
+c is 3
+copy lazy graph
+get the new value
+new c is 3
+reset value
+get the old value and new value
+calculating 4 + 2
+calculating 8 + 2
+c is 6, new c is 10
+#+end_example
