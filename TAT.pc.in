@@ -1,0 +1,6 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+
+Name: TAT
+Description: TAT is a header-only c++ tensor library with support for Abelian symmetry tensor and fermi tensor.
+Version: 0.2.19
+Cflags: -I${prefix}/include
