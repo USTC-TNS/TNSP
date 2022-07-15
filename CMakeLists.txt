@@ -36,7 +36,8 @@ if(TAT_MAIN_PROJECT)
 
   set(PKG_CONFIG_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/TAT.pc")
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/TAT.pc.in" "${PKG_CONFIG_FILE_NAME}" @ONLY)
-  install(FILES "${PKG_CONFIG_FILE_NAME}" DESTINATION share/pkgconfig)
+  install(FILES "${PKG_CONFIG_FILE_NAME}" DESTINATION lib/pkgconfig)
+
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.rst DESTINATION share/licenses/TAT)
 endif()
 
