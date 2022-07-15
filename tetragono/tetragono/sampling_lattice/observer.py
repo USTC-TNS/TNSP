@@ -22,10 +22,10 @@ try:
 except:
     import pickle
 import numpy as np
-from ..sampling_lattice import ConfigurationPool
 from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
                               lattice_conjugate, mpi_rank, mpi_comm)
-from .tensor_element import tensor_element
+from ..tensor_element import tensor_element
+from .lattice import ConfigurationPool
 
 
 class Observer():

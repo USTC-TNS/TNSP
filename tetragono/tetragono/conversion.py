@@ -39,10 +39,10 @@ def simple_update_lattice_to_sampling_lattice(state):
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             this = state[l1, l2]
-            this = state._try_multiple(this, l1, l2, "L", True, True)
-            this = state._try_multiple(this, l1, l2, "U", True, True)
-            this = state._try_multiple(this, l1, l2, "R", True, True)
-            this = state._try_multiple(this, l1, l2, "D", True, True)
+            this = state._try_multiple(this, l1, l2, "L", division=True, square_root=True)
+            this = state._try_multiple(this, l1, l2, "U", division=True, square_root=True)
+            this = state._try_multiple(this, l1, l2, "R", division=True, square_root=True)
+            this = state._try_multiple(this, l1, l2, "D", division=True, square_root=True)
             result[l1, l2] = this
     return result
 
@@ -68,8 +68,8 @@ def simple_update_lattice_to_exact_state(state):
             if l1 != state.L1 - 1:
                 rename_map["D"] = f"D_{l2}"
             this = state[l1, l2].edge_rename(rename_map)
-            this = state._try_multiple(this, l1, l2, "L", True)
-            this = state._try_multiple(this, l1, l2, "U", True)
+            this = state._try_multiple(this, l1, l2, "L", division=True)
+            this = state._try_multiple(this, l1, l2, "U", division=True)
             if l1 == l2 == 0:
                 result.vector = this
             else:

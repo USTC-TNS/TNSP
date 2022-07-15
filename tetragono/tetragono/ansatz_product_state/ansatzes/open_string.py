@@ -17,7 +17,7 @@
 #
 
 import numpy as np
-from ...auxiliaries.safe_toolkit import safe_rename, safe_contract
+from ...common_toolkit import safe_rename, safe_contract
 from .abstract_ansatz import AbstractAnsatz
 
 

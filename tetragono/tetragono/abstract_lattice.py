@@ -24,7 +24,7 @@ class AbstractLatticeVirtualBond:
     Virtual bond handler for abstract lattice.
     """
 
-    __slots__ = ["_owner"]
+    __slots__ = ["owner"]
 
     def __init__(self, owner):
         """
@@ -32,27 +32,31 @@ class AbstractLatticeVirtualBond:
 
         Parameters
         ----------
-        owner : AbstractState
+        owner : AbstractLattice
             The owner of this handler.
         """
-        self._owner = owner
+        self.owner: AbstractLattice = owner
 
     def __getitem__(self, where):
         """
-        Get the virtual bond edge.
+        Get the virtual bond edge, or the virtual bond edges of a site.
 
         Parameters
         ----------
-        where : tuple[int, int, str]
+        where : tuple[int, int, str] | tuple[int, int]
             The coordinate and the direction to find the bond.
 
         Returns
         -------
-        Edge
+        Edge | dict[str, Edge]
             The virtual bond edge.
         """
-        l1, l2, direction = where
-        return self._owner._virtual_bond[l1, l2][direction]
+        if len(where) == 3:
+            l1, l2, direction = where
+            return self.owner._virtual_bond[l1][l2][direction]
+        elif len(where) == 2:
+            l1, l2 = where
+            return self.owner._virtual_bond[l1][l2]
 
     def __setitem__(self, where, value):
         """
@@ -68,12 +72,12 @@ class AbstractLatticeVirtualBond:
         """
         if isinstance(where, str):
             direction = where
-            for l1 in range(self._owner.L1):
-                for l2 in range(self._owner.L2):
-                    self._owner._set_virtual_bond((l1, l2, direction), value)
+            for l1 in range(self.owner.L1):
+                for l2 in range(self.owner.L2):
+                    self.owner._set_virtual_bond((l1, l2, direction), value)
         else:
             l1, l2, direction = where
-            self._owner._set_virtual_bond((l1, l2, direction), value)
+            self.owner._set_virtual_bond((l1, l2, direction), value)
 
 
 class AbstractLattice(AbstractState):
@@ -94,7 +98,8 @@ class AbstractLattice(AbstractState):
         """
         super()._init_by_copy(abstract)
 
-        self._virtual_bond = {(l1, l2): self._default_bonds(l1, l2) for l1 in range(self.L1) for l2 in range(self.L2)}
+        # Data storage for virtual bond shape, access it by state.virtual_bond instead
+        self._virtual_bond = [[self._default_bonds(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
 
     def _init_by_copy(self, other):
         """
@@ -107,9 +112,7 @@ class AbstractLattice(AbstractState):
         """
         super()._init_by_copy(other)
 
-        self._virtual_bond = {
-            l1l2: {direction: edge for direction, edge in m.items()} for l1l2, m in other._virtual_bond.items()
-        }
+        self._virtual_bond = [[other._virtual_bond[l1][l2].copy() for l2 in range(self.L2)] for l1 in range(self.L1)]
 
     def _construct_tensor(self, l1, l2):
         """
@@ -127,10 +130,12 @@ class AbstractLattice(AbstractState):
         Tensor
             The site tensor created by the edge recorded in abstract lattice.
         """
-        physics_edges = self.physics_edges[l1, l2]
-        names = [f"P{orbit}" for orbit, edge in physics_edges.items()]
-        edges = [edge for orbit, edge in physics_edges.items()]
-        for direction, edge in self._virtual_bond[l1, l2].items():
+        names = []
+        edges = []
+        for orbit, edge in self.physics_edges[l1, l2].items():
+            names.append(f"P{orbit}")
+            edges.append(edge)
+        for direction, edge in self.virtual_bond[l1, l2].items():
             if edge is not None:
                 names.append(direction)
                 edges.append(edge)
@@ -188,11 +193,11 @@ class AbstractLattice(AbstractState):
             The virtual bond edge.
         """
         l1, l2, direction = where
-        l1l2 = l1, l2
-        if l1l2 in self._virtual_bond:
-            site = self._virtual_bond[l1l2]
-            if direction in site:
-                site[direction] = edge
+        if 0 <= l1 < self.L1:
+            if 0 <= l2 < self.L2:
+                site = self._virtual_bond[l1][l2]
+                if direction in site:
+                    site[direction] = edge
 
     def _set_virtual_bond(self, where, edge):
         """

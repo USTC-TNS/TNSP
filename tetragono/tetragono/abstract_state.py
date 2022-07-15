@@ -16,8 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from __future__ import annotations
-
 
 class AbstractStatePhysicsEdge:
     """
@@ -378,9 +376,9 @@ class AbstractState:
         tensor : Tensor
              The hamiltonian tensor.
         """
+        body = len(points)
         if not isinstance(tensor, self.Tensor):
             raise TypeError("Wrong hamiltonian type")
-        body = len(points)
         if {f"{i}" for i in tensor.names} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
             raise ValueError("Wrong hamiltonian name")
         for i in range(body):
@@ -390,9 +388,9 @@ class AbstractState:
                 raise ValueError("Wrong hamiltonian edge")
             if edge_out.conjugated() != edge_in:
                 raise ValueError("Wrong hamiltonian edge")
-
         if points in self._hamiltonians:
             raise RuntimeError("This hamiltonian term is already set")
+
         if tensor.norm_max() != 0:
             self._hamiltonians[points] = tensor
 

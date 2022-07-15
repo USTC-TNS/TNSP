@@ -28,7 +28,7 @@ class SimpleUpdateLatticeEnvironment:
     Environment handler for simple update lattice.
     """
 
-    __slots__ = ["_owner"]
+    __slots__ = ["owner"]
 
     def __init__(self, owner):
         """
@@ -39,7 +39,7 @@ class SimpleUpdateLatticeEnvironment:
         owner : SimpleUpdateLattice
             The owner of this handler.
         """
-        self._owner = owner
+        self.owner: SimpleUpdateLattice = owner
 
     def __getitem__(self, where):
         """
@@ -55,22 +55,21 @@ class SimpleUpdateLatticeEnvironment:
         Tensor | None
             Returns the environment. If the environment is missing, or there is no environment here, it returns None.
         """
-        owner = self._owner
         l1, l2, direction = where
         if direction == "R":
-            if 0 <= l1 < owner.L1 and 0 <= l2 < owner.L2 - 1:
-                return owner._environment_h[l1][l2]
+            if 0 <= l1 < self.owner.L1 and 0 <= l2 < self.owner.L2 - 1:
+                return self.owner._environment_h[l1][l2]
         elif direction == "L":
             l2 -= 1
-            if 0 <= l1 < owner.L1 and 0 <= l2 < owner.L2 - 1:
-                return owner._environment_h[l1][l2]
+            if 0 <= l1 < self.owner.L1 and 0 <= l2 < self.owner.L2 - 1:
+                return self.owner._environment_h[l1][l2]
         elif direction == "D":
-            if 0 <= l1 < owner.L1 - 1 and 0 <= l2 < owner.L2:
-                return owner._environment_v[l1][l2]
+            if 0 <= l1 < self.owner.L1 - 1 and 0 <= l2 < self.owner.L2:
+                return self.owner._environment_v[l1][l2]
         elif direction == "U":
             l1 -= 1
-            if 0 <= l1 < owner.L1 - 1 and 0 <= l2 < owner.L2:
-                return owner._environment_v[l1][l2]
+            if 0 <= l1 < self.owner.L1 - 1 and 0 <= l2 < self.owner.L2:
+                return self.owner._environment_v[l1][l2]
         else:
             raise ValueError("Invalid direction")
         # out of lattice
@@ -87,25 +86,24 @@ class SimpleUpdateLatticeEnvironment:
         value : Tensor | None
             The environment tensor to set.
         """
-        owner = self._owner
         l1, l2, direction = where
         if direction == "R":
-            if 0 <= l1 < owner.L1 and 0 <= l2 < owner.L2 - 1:
-                owner._environment_h[l1][l2] = value
+            if 0 <= l1 < self.owner.L1 and 0 <= l2 < self.owner.L2 - 1:
+                self.owner._environment_h[l1][l2] = value
                 return
         elif direction == "L":
             l2 -= 1
-            if 0 <= l1 < owner.L1 and 0 <= l2 < owner.L2 - 1:
-                owner._environment_h[l1][l2] = value
+            if 0 <= l1 < self.owner.L1 and 0 <= l2 < self.owner.L2 - 1:
+                self.owner._environment_h[l1][l2] = value
                 return
         elif direction == "D":
-            if 0 <= l1 < owner.L1 - 1 and 0 <= l2 < owner.L2:
-                owner._environment_v[l1][l2] = value
+            if 0 <= l1 < self.owner.L1 - 1 and 0 <= l2 < self.owner.L2:
+                self.owner._environment_v[l1][l2] = value
                 return
         elif direction == "U":
             l1 -= 1
-            if 0 <= l1 < owner.L1 - 1 and 0 <= l2 < owner.L2:
-                owner._environment_v[l1][l2] = value
+            if 0 <= l1 < self.owner.L1 - 1 and 0 <= l2 < self.owner.L2:
+                self.owner._environment_v[l1][l2] = value
                 return
         else:
             raise ValueError("Invalid direction")
@@ -120,6 +118,15 @@ class SimpleUpdateLattice(AbstractLattice):
     __slots__ = ["_lattice", "_environment_v", "_environment_h", "_auxiliaries"]
 
     def _v1_to_v2_multiple(self):
+        """
+        Migrate data from version 1 to version 2.
+
+        In version 1, environment and site tensor is what is be like.
+        But in version 2, site tensor store the product of the original site tensor and the 4 environment tensors
+        surrounding it, for better performance.
+
+        So multiple the 4 environment tensors into the site tensor here.
+        """
         for l1 in range(self.L1):
             for l2 in range(self.L2):
                 this = self[l1, l2]
@@ -168,9 +175,12 @@ class SimpleUpdateLattice(AbstractLattice):
         """
         super()._init_by_copy(abstract)
 
+        # The data storage of site tensor, access it directly by lattice[l1, l2] instead
         self._lattice = [[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)]
+        # The data storage of environment tensor, access it by lattice.environment[l1, l2, direction] instead.
         self._environment_h = [[None for l2 in range(self.L2 - 1)] for l1 in range(self.L1)]
         self._environment_v = [[None for l2 in range(self.L2)] for l1 in range(self.L1 - 1)]
+        # The double layer auxiliaries, only used by internal method when observing.
         self._auxiliaries = None
 
     def __getitem__(self, l1l2):
@@ -229,9 +239,17 @@ class SimpleUpdateLattice(AbstractLattice):
         new_dimension : int | float
             The dimension cut used in svd of simple update, or the amplitude of dimension expandance.
         """
+
+        # Create updater first
+        # updater U_i = exp(- delta_tau H_i)
+        # At this step, get the coordinates of every hamiltonian term instead of original knowning specific orbit only.
         updaters = []
         for positions, hamiltonian_term in self._hamiltonians.items():
+            # coordinates is the site list of what this hamiltonian term effects on.
+            # it may be less than hamiltonian rank
             coordinates = []
+            # it store each rank of hamiltonian effect on which coordinates by recording its index in the coordinates
+            # list and its orbit.
             index_and_orbit = []
             for l1, l2, orbit in positions:
                 if (l1, l2) not in coordinates:
@@ -245,42 +263,59 @@ class SimpleUpdateLattice(AbstractLattice):
 
             updaters.append((coordinates, index_and_orbit, evolution_operator))
 
+        # Split updaters into bundles, to scatter jobs into every mpi process.
         updaters_bundles = []
+        # To get the max parallel size for simple update
         max_index = 0
         while len(updaters) != 0:
-            coordinates_pool = set()
-            coordinates_map = {}
-            this_bundle = []
-            remained_updaters = []
-            index = 0
+            this_bundle = []  # A bundle contains independent hamiltonian, which will be added into updaters_bundles.
+            coordinates_pool = set()  # The coordinates set of hamiltonians which have already insert into this_bundle.
+            coordinates_map = {}  # Record which mpi rank will modified the site tensor at some coordinate.
+            remained_updaters = []  # The remained updaters to be added into bundles at later iterations.
+            index = 0  # Record the mpi rank to run this updater in this bundle.
             for coordinates, index_and_orbit, evolution_operator in updaters:
                 if len([coordinate for coordinate in coordinates if coordinate in coordinates_pool]) == 0:
+                    # This hamiltonian term is independent to and term in this_bundle, insert it into this bundle.
                     this_bundle.append((index, coordinates, index_and_orbit, evolution_operator))
+                    # Add coordinate of this term into coordinates_pool
+                    # And associate this coordinates to specific mpi rank
                     for coordinate in coordinates:
                         coordinates_pool.add(coordinate)
                         coordinates_map[coordinate] = index
                     index += 1
                 else:
+                    # Cannot insert it into this bundle, add it into remained_updaters for later iterations.
                     remained_updaters.append((coordinates, index_and_orbit, evolution_operator))
+            # The max mpi rank is the max parallel size.
             if index > max_index:
                 max_index = index
+            # Update updaters list for the next iterations
             updaters = remained_updaters
+            # Append this bundle to updaters_bundles.
             updaters_bundles.append((this_bundle, coordinates_map))
         showln(f"Simple update max parallel size is {max_index}")
 
+        # Run simple update
         for step in range(total_step):
             show(f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}")
+            # Trotter expansion
+            # run updater bundle by bundle.
             for bundle, coordinates_map in updaters_bundles:
+                # In a single bundle, put each updater to its mpi rank process.
                 for index, coordinates, index_and_orbit, evolution_operator in bundle:
                     if index % mpi_size == mpi_rank:
                         self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+                # Bcast what modified
                 self._bcast_by_map(coordinates_map)
             for bundle, coordinates_map in reversed(updaters_bundles):
+                # In a single bundle, put each updater to its mpi rank process.
                 for index, coordinates, index_and_orbit, evolution_operator in bundle:
                     if index % mpi_size == mpi_rank:
                         self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+                # Bcast what modified
                 self._bcast_by_map(coordinates_map)
         showln(f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
+        # After simple update, virtual bond changed, so update it.
         self._update_virtual_bond()
 
     def _bcast_by_map(self, coordinates_map):
@@ -298,6 +333,7 @@ class SimpleUpdateLattice(AbstractLattice):
                 if (l1, l2) in coordinates_map:
                     owner_rank = coordinates_map[l1, l2] % mpi_size
                     self[l1, l2] = mpi_comm.bcast(self[l1, l2], root=owner_rank)
+                    # If the nearest site is also belong to this rank, then the environment between them is also belong to it.
                     if (l1 - 1, l2) in coordinates_map and coordinates_map[l1 - 1, l2] % mpi_size == owner_rank:
                         self.environment[l1, l2, "U"] = mpi_comm.bcast(self.environment[l1, l2, "U"], root=owner_rank)
                     if (l1, l2 - 1) in coordinates_map and coordinates_map[l1, l2 - 1] % mpi_size == owner_rank:
@@ -309,6 +345,7 @@ class SimpleUpdateLattice(AbstractLattice):
         """
         for l1 in range(self.L1):
             for l2 in range(self.L2):
+                # Update half of virtual bond, another part will be updated automatically.
                 if l1 != self.L1 - 1:
                     self.virtual_bond[l1, l2, "D"] = self[l1, l2].edges("D")
                 if l2 != self.L2 - 1:
@@ -399,7 +436,7 @@ class SimpleUpdateLattice(AbstractLattice):
         body = len(index_and_orbit)
         left = self[i, j]
         right = self[i, j + 1]
-        right = self._try_multiple(right, i, j + 1, "L", True)
+        right = self._try_multiple(right, i, j + 1, "L", division=True)
         original_dimension = left.edges("R").dimension
         if isinstance(new_dimension, float):
             new_dimension = round(original_dimension * new_dimension)
@@ -464,7 +501,7 @@ class SimpleUpdateLattice(AbstractLattice):
         body = len(index_and_orbit)
         up = self[i, j]
         down = self[i + 1, j]
-        down = self._try_multiple(down, i + 1, j, "U", True)
+        down = self._try_multiple(down, i + 1, j, "U", division=True)
         original_dimension = up.edges("D").dimension
         if isinstance(new_dimension, float):
             new_dimension = round(original_dimension * new_dimension)
@@ -496,7 +533,7 @@ class SimpleUpdateLattice(AbstractLattice):
             {f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit})
         self[i + 1, j] = v
 
-    def _try_multiple(self, tensor, i, j, direction, division=False, square_root=False):
+    def _try_multiple(self, tensor, i, j, direction, *, division=False, square_root=False):
         """
         Try to multiple environment to a given tensor.
 
@@ -523,12 +560,15 @@ class SimpleUpdateLattice(AbstractLattice):
             if division:
                 environment_tensor = environment_tensor.map(lambda x: 0 if x == 0 else 1. / x)
             if square_root:
-                environment_tensor = environment_tensor.copy()
+                # Cannot calculate sqrt trivially, prepare an identity matrix and get the square root of absolute value
+                # first. And then calculate time it or devide it with idenity
+                environment_tensor = environment_tensor.copy()  # copy it, since there is inplace operator later.
                 identity = environment_tensor.same_shape().identity({tuple(environment_tensor.names)})
                 delta = np.sqrt(np.abs(environment_tensor.storage))
                 delta[delta == 0] = 1
                 environment_tensor.storage /= delta
                 identity.storage *= delta
+                # Delivery former identity and former environment tensor to four direction.
                 if direction in ("D", "R"):
                     environment_tensor = identity
             if direction == "L":
@@ -554,8 +594,9 @@ class SimpleUpdateLattice(AbstractLattice):
         for l1 in range(self.L1):
             for l2 in range(self.L2):
                 this_site = self[l1, l2]
-                this_site = self._try_multiple(this_site, l1, l2, "L")
-                this_site = self._try_multiple(this_site, l1, l2, "U")
+                # Every site tensor also contains its environment, so divide half of its environment.
+                this_site = self._try_multiple(this_site, l1, l2, "L", division=True)
+                this_site = self._try_multiple(this_site, l1, l2, "U", division=True)
                 self._auxiliaries[l1, l2, "N"] = this_site
                 self._auxiliaries[l1, l2, "C"] = this_site.conjugate()
 
@@ -581,6 +622,8 @@ class SimpleUpdateLattice(AbstractLattice):
         if body == 0:
             return float(1)
         rho = self._auxiliaries.hole(positions)
+        # Cannot calculate psipsi together at last, because auxiliaries will normalize the tensor.
+        # That is why it is different to observe function for exact state.
         psipsi = rho.trace({(f"O{i}", f"I{i}") for i in range(body)})
         psiHpsi = rho.contract(observer,
                                {*((f"O{i}", f"I{i}") for i in range(body)), *((f"I{i}", f"O{i}") for i in range(body))})

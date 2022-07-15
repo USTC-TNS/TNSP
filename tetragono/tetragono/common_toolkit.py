@@ -230,3 +230,24 @@ def send(receiver, value):
         receiver.send(value)
     except StopIteration:
         pass
+
+
+def safe_contract(tensor_1, tensor_2, pair, *, contract_all_physics_edges=False):
+    new_pair = set()
+    if contract_all_physics_edges:
+        for name in tensor_1.names:
+            if str(name)[0] == "P" and name in tensor_2.names:
+                new_pair.add((name, name))
+    for name_1, name_2 in pair:
+        if name_1 in tensor_1.names and name_2 in tensor_2.names:
+            new_pair.add((name_1, name_2))
+
+    return tensor_1.contract(tensor_2, new_pair)
+
+
+def safe_rename(tensor, name_map):
+    new_name_map = {}
+    for key, value in name_map.items():
+        if key in tensor.names:
+            new_name_map[key] = value
+    return tensor.edge_rename(new_name_map)

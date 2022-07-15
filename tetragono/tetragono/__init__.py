@@ -21,11 +21,10 @@ from .abstract_state import AbstractState
 from .exact_state import ExactState
 from .abstract_lattice import AbstractLattice
 from .simple_update_lattice import SimpleUpdateLattice
-from .sampling_lattice import SamplingLattice, Configuration
+from .sampling_lattice import SamplingLattice, Configuration, Observer, SweepSampling, ErgodicSampling, DirectSampling
 
 # Miscellaneous
 from . import conversion
-from .sampling_tools import Observer, SweepSampling, ErgodicSampling, DirectSampling
 from . import common_tensor
 from . import common_toolkit
 from .common_toolkit import *

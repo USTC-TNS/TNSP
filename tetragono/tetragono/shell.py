@@ -25,9 +25,9 @@ from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_f
 from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
-from .sampling_lattice import SamplingLattice, Configuration
+from .sampling_lattice import SamplingLattice, Configuration as gm_Configuration
 from .ansatz_product_state import AnsatzProductState, Configuration as ap_Configuration
-from .sampling_tools.gradient import gradient_descent
+from .sampling_lattice.gradient import gradient_descent as gm_gradient_descent
 from .ansatz_product_state.gradient import gradient_descent as ap_gradient_descent
 
 
@@ -399,14 +399,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     def do_gm_run(self, line):
         """
-        Do gradient descent. see sampling_tools/gradient.py for details.
+        Do gradient descent. see sampling_lattice/gradient.py for details.
         """
         config = Config(line)
         self.gm_run(*config.args, **config.kwargs)
 
     @sharedoc(do_gm_run)
     def gm_run(self, *args, **kwargs):
-        gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
+        gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
 
     def do_gm_dump(self, line):
         """
@@ -489,7 +489,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def gm_conf_create(self, module_name):
         with seed_differ:
             # This configuration should never be used, so cut dimension is -1
-            configuration = Configuration(self.gm, -1)
+            configuration = gm_Configuration(self.gm, -1)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.gm_conf = mpi_comm.allgather(configuration._configuration)
 

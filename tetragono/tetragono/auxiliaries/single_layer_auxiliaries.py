@@ -17,7 +17,7 @@
 #
 
 import lazy
-from .safe_toolkit import safe_contract, safe_rename
+from ..common_toolkit import safe_contract, safe_rename
 
 
 class SingleLayerAuxiliaries:

@@ -18,9 +18,9 @@
 
 from copyreg import _slotnames
 import numpy as np
-from .auxiliaries import SingleLayerAuxiliaries
-from .abstract_lattice import AbstractLattice
-from .common_toolkit import lattice_dot_sum, lattice_conjugate
+from ..auxiliaries import SingleLayerAuxiliaries
+from ..abstract_lattice import AbstractLattice
+from ..common_toolkit import lattice_dot_sum, lattice_conjugate
 
 
 class Configuration(SingleLayerAuxiliaries):

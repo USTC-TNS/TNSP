@@ -17,6 +17,7 @@ __pycache__
 ltximg
 auto
 .ipynb_checkpoints
+.mypy_cache
 *.slo
 *.lo
 *.o

@@ -16,6 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .tensor_element import tensor_element
-from .sampling import Sampling, SweepSampling, ErgodicSampling, DirectSampling
+from .lattice import Configuration, SamplingLattice
+from .sampling import SweepSampling, ErgodicSampling, DirectSampling
 from .observer import Observer

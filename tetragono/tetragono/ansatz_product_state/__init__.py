@@ -17,7 +17,7 @@
 #
 
 from .state import AnsatzProductState, Configuration
-from .sampling import Sampling, SweepSampling, ErgodicSampling
+from .sampling import SweepSampling, ErgodicSampling
 from .observer import Observer
 
 from . import ansatzes
