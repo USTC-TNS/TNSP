@@ -37,8 +37,8 @@ def abstract_state(L1, L2, J):
     JSS = -J * SS
     for l1 in range(L1):
         for l2 in range(L2):
-            state.hamiltonians[(l1, l2, 0), ((l1 + 1) % L1, l2, 0)] = JSS
-            state.hamiltonians[(l1, l2, 0), (l1, (l2 + 1) % L2, 0)] = JSS
+            state.hamiltonians[(l1, l2), ((l1 + 1) % L1, l2)] = JSS
+            state.hamiltonians[(l1, l2), (l1, (l2 + 1) % L2)] = JSS
     return state
 
 
