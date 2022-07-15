@@ -129,9 +129,9 @@ class AbstractAnsatz:
         """
         Get buffers of this ansatz.
 
-        Returns
-        -------
-        iterator[buffer]
+        Yields
+        ------
+        buffer
             The buffers of this ansatz.
         """
         raise NotImplementedError("buffers not implemented")
@@ -140,9 +140,9 @@ class AbstractAnsatz:
         """
         Get elements of this ansatz.
 
-        Returns
-        -------
-        iterator[float | complex]
+        Yields
+        ------
+        float | complex
             The elements of this ansatz.
         """
         raise NotImplementedError("elements not implemented")
@@ -173,9 +173,9 @@ class AbstractAnsatz:
         """
         Get buffers of this ansatz, which can be used in mpi.
 
-        Returns
-        -------
-        iterator[buffer]
+        Yields
+        ------
+        buffer
             The buffers of this ansatz.
         """
         raise NotImplementedError("buffers for mpi not implemented")

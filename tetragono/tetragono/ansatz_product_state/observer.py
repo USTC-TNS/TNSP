@@ -305,9 +305,9 @@ class Observer:
         """
         Get the series of weights and deltas.
 
-        Returns
-        -------
-        iterator[tuple[float, dict[str, Delta]]]
+        Yields
+        ------
+        tuple[float, dict[str, Delta]]
             The weight and delta.
         """
         if self._cache_natural_delta:

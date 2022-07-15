@@ -526,9 +526,9 @@ class Observer():
         """
         Get the series of weights and deltas.
 
-        Returns
-        -------
-        iterator[tuple[float, list[list[Tensor]]]]
+        Yields
+        ------
+        tuple[float, list[list[Tensor]]]
             The weight and delta.
         """
         if self._cache_natural_delta:

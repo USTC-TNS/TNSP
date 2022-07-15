@@ -239,7 +239,7 @@ def gradient_descent(
                         choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
                     else:
                         choose = mpi_rank
-                    sampling.configuration.load_configuration(sampling_configurations[choose])
+                    sampling.configuration.import_configuration(sampling_configurations[choose])
                 elif sampling_method == "ergodic":
                     sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
                     sampling_total_step = sampling.total_step
@@ -292,7 +292,7 @@ def gradient_descent(
 
                 elif use_line_search:
                     showln("line searching")
-                    grad = state.fix_relative_to_lattice(grad)
+                    grad *= (state.lattice_dot() / state.lattice_dot(grad, grad))**0.5
                     grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
                                                  grad_step_size, line_search_amplitude, line_search_error_threshold)
                     state._lattice -= grad_step_size * grad
@@ -301,15 +301,14 @@ def gradient_descent(
                         total_grad = grad
                     else:
                         if orthogonalize_momentum:
-                            # lattice_dot always return a real number
-                            total_grad = state.orthogonalize_to_lattice(total_grad)
+                            total_grad -= state._lattice * (state.lattice_dot(total_grad) / state.lattice_dot())
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     if use_random_gradient:
                         this_grad = lattice_randomize(total_grad)
                     else:
                         this_grad = total_grad
                     if use_fix_relative_step_size:
-                        this_grad = state.fix_relative_to_lattice(this_grad)
+                        this_grad *= (state.lattice_dot() / state.lattice_dot(this_grad, this_grad))**0.5
                     state._lattice -= grad_step_size * this_grad
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 

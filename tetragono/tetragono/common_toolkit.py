@@ -49,19 +49,15 @@ def allreduce_buffer(buffer):
     mpi_comm.Allreduce(MPI.IN_PLACE, buffer)
 
 
-def allreduce_lattice_buffer(lattice):
-    requests = []
-    for row in lattice:
-        for tensor in row:
-            requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor.storage))
-    MPI.Request.Waitall(requests)
-
-
 def allreduce_iterator_buffer(iterator):
     requests = []
     for tensor in iterator:
         requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
     MPI.Request.Waitall(requests)
+
+
+def allreduce_lattice_buffer(lattice):
+    return allreduce_iterator_buffer(tensor.storage for row in lattice for tensor in row)
 
 
 def bcast_buffer(buffer, root=0):

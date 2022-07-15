@@ -4,10 +4,13 @@
 
 *** Added
 + *tetraku*: Add models data and ansatzes data into an individual package named =tetraku=.
++ *tetragono*: Configuration use =owner= to get the owner sampling lattice object of this configuration object, instead
+  of the previous =_owner=.
 *** Changed
 + *tetragono*: Rename multiple product state to ansatz product state, to avoid the ambiguous abbreivation. Rename all
   =mp_xxx= to =ap_xxx= in tetragono shell.
 *** Deprecated
++ *tetragono*: =_owner= of Configuration for sampling lattice is deprecated, use =owner= instead.
 *** Removed
 *** Fixed
 + *TAT.hpp*: Fix a bug in windows platform when copying an edge with fermi symmetry.

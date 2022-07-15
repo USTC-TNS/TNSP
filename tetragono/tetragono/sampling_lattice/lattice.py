@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
 from ..abstract_lattice import AbstractLattice
-from ..common_toolkit import lattice_dot_sum, lattice_conjugate
+from ..common_toolkit import lattice_dot_sum, lattice_conjugate, showln
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -28,7 +28,18 @@ class Configuration(SingleLayerAuxiliaries):
     Configuration system for square sampling lattice.
     """
 
-    __slots__ = ["_owner", "_configuration", "_holes"]
+    __slots__ = ["owner", "_configuration", "_holes"]
+
+    @property
+    def _owner(self, first=[True]):
+        if first[0]:
+            first[0] = False
+            showln(" ##### DEPRECATE WARNING BEGIN #####")
+            showln(" configuration._owner is deprecated, use configuration.owner instead.")
+            import traceback
+            showln("\n" + "".join(traceback.format_stack()))
+            showln(" ###### DEPRECATE WARNING END ######")
+        return self.owner
 
     def copy(self, cp=None):
         """
@@ -46,10 +57,9 @@ class Configuration(SingleLayerAuxiliaries):
         """
         result = super().copy(cp=cp)
 
-        result._owner = self._owner
-        result._configuration = [[{
-            orbit: self._configuration[l1][l2][orbit] for orbit, edge in self._owner.physics_edges[l1, l2].items()
-        } for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
+        result.owner = self.owner
+        result._configuration = self.export_configuration()
+        result._set_site_without_orbit()
         result._holes = self._holes
         return result
 
@@ -65,17 +75,28 @@ class Configuration(SingleLayerAuxiliaries):
             The cut dimension in single layer auxiliaries.
         """
         super().__init__(owner.L1, owner.L2, cut_dimension, False, owner.Tensor)
-        self._owner = owner
+        self.owner: SamplingLattice = owner
+
         # EdgePoint = tuple[self.Symmetry, int]
+        # The data storage for spin configuration, access it by configuration[l1, l2, orbit] instead.
         self._configuration = [[{orbit: None
-                                 for orbit, edge in self._owner.physics_edges[l1, l2].items()}
-                                for l2 in range(self._owner.L2)]
-                               for l1 in range(self._owner.L1)]
-        for l1 in range(owner.L1):
-            for l2 in range(owner.L2):
-                if len(self._owner.physics_edges[l1, l2]) == 0:
-                    super().__setitem__((l1, l2), self._owner[l1, l2])
+                                 for orbit in self.owner.physics_edges[l1, l2]}
+                                for l2 in range(self.owner.L2)]
+                               for l1 in range(self.owner.L1)]
+        self._set_site_without_orbit()
+        # The holes cache for this configuration, access it by configuration.holes()
         self._holes = None
+
+    def _set_site_without_orbit(self):
+        """
+        Set super() item for sites without orbit. It is needed to be called when initializing a configuration.
+
+        If some site has no orbit, it will never be set, so it is needed to set tensor of auxiliaries here.
+        """
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
+                if len(self.owner.physics_edges[l1, l2]) == 0:
+                    super().__setitem__((l1, l2), self.owner[l1, l2])
 
     def site_valid(self, l1, l2):
         """
@@ -91,7 +112,7 @@ class Configuration(SingleLayerAuxiliaries):
         bool
             The validity of this single site configuration.
         """
-        for orbit in self._owner.physics_edges[l1, l2]:
+        for orbit in self.owner.physics_edges[l1, l2]:
             if self._configuration[l1][l2][orbit] is None:
                 return False
         return True
@@ -105,8 +126,8 @@ class Configuration(SingleLayerAuxiliaries):
         bool
             The validity of this configuration system.
         """
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
                 if not self.site_valid(l1, l2):
                     return False
         return True
@@ -168,20 +189,30 @@ class Configuration(SingleLayerAuxiliaries):
         """
         self.__setitem__(l1l2o, None)
 
-    def load_configuration(self, config):
+    def import_configuration(self, config):
         """
-        Load the configuration of all the sites.
+        Import the configuration of all the sites.
 
         Parameters
         ----------
         config : list[list[dict[int, ?EdgePoint]]]
             The configuration data of all the sites
         """
-        owner = self._owner
-        for l1 in range(owner.L1):
-            for l2 in range(owner.L2):
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
                 for orbit, edge_point in config[l1][l2].items():
                     self[l1, l2, orbit] = edge_point
+
+    def export_configuration(self):
+        """
+        Export the configuration of all the sites.
+
+        Returns
+        -------
+        list[list[dict[int, EdgePoint]]]
+            The configuration data of all the sites
+        """
+        return [[self._configuration[l1][l2].copy() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
 
     def replace(self, replacement, *, hint=None):
         """
@@ -236,11 +267,11 @@ class Configuration(SingleLayerAuxiliaries):
             The result edge point object.
         """
         if not isinstance(value, tuple):
-            symmetry = self._owner.Symmetry()  # work for NoSymmetry
+            symmetry = self.owner.Symmetry()  # work for NoSymmetry
             index = value
         else:
             symmetry, index = value
-        symmetry = self._owner._construct_symmetry(symmetry)
+        symmetry = self.owner._construct_symmetry(symmetry)
         return (symmetry, index)
 
     def _get_shrinker(self, l1l2, configuration):
@@ -257,12 +288,14 @@ class Configuration(SingleLayerAuxiliaries):
         Yields
         ------
         tuple[int, Tensor]
-            The orbit index and shrinker tensor, shrinker tensor name is "P" and "Q", where edge "P" is wider one.
+            The orbit index and shrinker tensor, shrinker tensor name is "P" and "Q", where edge "P" is wider one, edge
+            "Q" is narrower one, and edge "Q" should connect directly to physics edge, edge "P" is the same to physics
+            edge.
         """
         l1, l2 = l1l2
-        for orbit, edge in self._owner.physics_edges[l1, l2].items():
+        for orbit, edge in self.owner.physics_edges[l1, l2].items():
             symmetry, index = configuration[orbit]
-            # P side is dimension - 1 edge
+            # P side is dimension one edge
             # Q side is connected to lattice
             shrinker = self.Tensor(["P", "Q"], [[(symmetry, 1)], edge.conjugated()]).zero()
             shrinker[{"Q": (-symmetry, index), "P": (symmetry, 0)}] = 1
@@ -285,7 +318,7 @@ class Configuration(SingleLayerAuxiliaries):
             The shrinked result tensor
         """
         l1, l2 = l1l2
-        tensor = self._owner[l1l2]
+        tensor = self.owner[l1l2]
         for orbit, shrinker in self._get_shrinker(l1l2, configuration):
             tensor = tensor.contract(shrinker.edge_rename({"P": f"P_{l1}_{l2}_{orbit}"}), {(f"P{orbit}", "Q")})
         return tensor
@@ -307,14 +340,15 @@ class Configuration(SingleLayerAuxiliaries):
         """
         Refresh the configuration of all sites, need to be called after lattice tensor changed.
         """
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
-                for orbit in self._owner.physics_edges[l1, l2]:
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
+                for orbit in self.owner.physics_edges[l1, l2]:
                     self.refresh_site((l1, l2, orbit))
 
     def holes(self):
         """
-        Get the lattice holes of this configuration.
+        Get the lattice holes of this configuration. so called holes is `<psi|s|partial_x psi> / <psi|s|psi>` where psi
+        is the state and s is configuration, x is each tensor.
 
         Returns
         -------
@@ -323,33 +357,39 @@ class Configuration(SingleLayerAuxiliaries):
         """
         if self._holes is None:
             # Prepare
-            ws = self.hole(())
-            inv_ws_conj = ws / (ws.norm_2()**2)
-            inv_ws = inv_ws_conj.conjugate()
-            all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
-                                       for l2 in range(self._owner.L2)
-                                       for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+            ws = self.hole(())  # |s|psi>
+            inv_ws_conj = ws / (ws.norm_2()**2)  # |s|psi> / <psi|s|psi>
+            inv_ws = inv_ws_conj.conjugate()  # <psi|s| / <psi|s|psi>
+            all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.owner.L1)
+                                       for l2 in range(self.owner.L2) for orbit in self.owner.physics_edges[l1, l2]}
 
             # Calculate
-            holes = [[None for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)]
-            # \frac{\partial\langle s|\psi\rangle}{\partial x_i} / \langle s|\psi\rangle
-            for l1 in range(self._owner.L1):
-                for l2 in range(self._owner.L2):
-                    hole = self.hole(((l1, l2),))
+            holes = [[None for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
+            # <psi|s|partial_x psi> / <psi|s|psi>
+            for l1 in range(self.owner.L1):
+                for l2 in range(self.owner.L2):
+                    hole = self.hole(((l1, l2),))  # |s|partial_x psi>
+                    # The right side is open in fact, because of partial_x, which is not Hilbert space, it is tensor space.
+                    # So keep it a ket. But do not forget it is open in right side.
                     contract_name = all_name.copy()
-                    for orbit in self._owner.physics_edges[l1, l2]:
+                    for orbit in self.owner.physics_edges[l1, l2]:
                         contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
                     if "T" not in hole.names:
                         contract_name.remove(("T", "T"))
+                    # Contract and get <psi|s|partial_x psi> / <psi|s|psi>
                     hole = hole.contract(inv_ws, contract_name)
+                    # Rename to the correct edge names.
                     hole = hole.edge_rename({
                         "L0": "R",
                         "R0": "L",
                         "U0": "D",
                         "D0": "U",
-                        **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self._owner.physics_edges[l1, l2]},
+                        **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]},
                     })
 
+                    # hole owns conjugated physics edge, because of partial_x. Expand it by connecting it with a physics
+                    # edge but one dimension, and a conjugated edge but full dimension tensor, which is just what
+                    # _get_shrinker returns.
                     for orbit, shrinker in self._get_shrinker((l1, l2), self._configuration[l1][l2]):
                         hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
 
@@ -359,14 +399,19 @@ class Configuration(SingleLayerAuxiliaries):
 
 
 class TailDictTree:
-    __slots__ = ["_pool"]
+    """
+    A dict tree from the tail of list key.
+    """
+    __slots__ = ["_data"]
 
     def __init__(self):
-        self._pool = {}
+        self._data = {}
 
     def __setitem__(self, key, value):
         key = list(key)
-        current = self._pool
+        current = self._data
+        # The process is different for the last element, which will set key and value directly, but other will create a
+        # dict first.
         while len(key) != 1:
             node = key.pop()
             if node not in current:
@@ -377,7 +422,7 @@ class TailDictTree:
 
     def __getitem__(self, key):
         key = list(key)
-        current = self._pool
+        current = self._data
         while len(key) != 0:
             node = key.pop()
             current = current[node]
@@ -385,18 +430,20 @@ class TailDictTree:
 
     def nearest(self, key):
         key = list(key)
-        current = self._pool
+        current = self._data
         while len(key) != 0:
             node = key.pop()
             if node in current:
                 current = current[node]
             else:
+                # If not found the same configuration in this site, find any config for this site. And then continue to
+                # find the following site configuration.
                 current = next(iter(current.values()))
         return current
 
     def __contains__(self, key):
         key = list(key)
-        current = self._pool
+        current = self._data
         while len(key) != 0:
             node = key.pop()
             if node not in current:
@@ -410,7 +457,77 @@ class ConfigurationPool:
     Configuration pool for one sampling lattice and multiple configuration.
     """
 
-    __slots__ = ["_owner", "_pool"]
+    __slots__ = ["owner", "tree"]
+
+    # There are two kind of config format in this class
+    # config list and config dict format
+    # config list is often called as `config`
+    # config dict or its container, aka, Configuration object, is often called as `configuration`
+
+    def _config_dict_to_list(self, configuration):
+        """
+        Convert config dict to config list.
+
+        Parameters
+        ----------
+        configuration : Configuration
+            the configuration object.
+
+        Returns
+        -------
+        tuple[EdgePoint, ...]
+            the config list.
+        """
+        return tuple(configuration[l1, l2, orbit] for l1 in range(self.owner.L1) for l2 in range(self.owner.L2)
+                     for orbit in self.owner.physics_edges[l1, l2])
+
+    def _config_list_replace(self, config, replacement):
+        """
+        Get the replaced config.
+
+        Parameters
+        ----------
+        config : tuple[EdgePoint, ...]
+            The input config tuple.
+        replacement : dict[tuple[int, int, int], ?EdgePoint]
+            Replacement plan to modify configuration.
+
+        Returns
+        -------
+        tuple[EdgePoint, ...]
+            The result config tuple.
+        """
+        config = list(config)
+        index = 0
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
+                for orbit, _ in self.owner.physics_edges[l1, l2].items():
+                    if (l1, l2, orbit) in replacement:
+                        config[index] = replacement[l1, l2, orbit]
+                    index += 1
+        return tuple(config)
+
+    def _diff_two_config_dict(self, configuration_old, configuration_new):
+        """
+        Get the difference of two configurations.
+
+        Parameters
+        ----------
+        configuration_old, configuration_new : Configuration
+            The given two configurations.
+
+        Returns
+        -------
+        dict[tuple[int, int, int], ?EdgePoint]
+            The result replacement
+        """
+        replacement = {}
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
+                for orbit in self.owner.physics_edges[l1, l2]:
+                    if configuration_old[l1, l2, orbit] != configuration_new[l1, l2, orbit]:
+                        replacement[l1, l2, orbit] = configuration_new[l1, l2, orbit]
+        return replacement
 
     def __init__(self, owner):
         """
@@ -421,8 +538,8 @@ class ConfigurationPool:
         owner : SamplingLattice
             The sampling lattice owning this configuration pool.
         """
-        self._owner = owner
-        self._pool = TailDictTree()
+        self.owner: SamplingLattice = owner
+        self.tree = TailDictTree()
 
     def wss(self, configuration, replacement):
         """
@@ -446,34 +563,61 @@ class ConfigurationPool:
             return wss
 
         # Try to find in the old config
-        base_config = self._get_config(configuration)
-        config = self._replace_config(base_config, replacement)
-        if config in self._pool:
-            return self._pool[config].hole(())
+        base_config = self._config_dict_to_list(configuration)
+        config = self._config_list_replace(base_config, replacement)
+        if config in self.tree:
+            return self.tree[config].hole(())
 
         # Try to replace the nearest config
-        nearest = self._nearest_configuration(config)
-        nearest_replacement = self._get_replacement(nearest, configuration)
+        nearest_configuration = self.tree.nearest(config)
+        # This is replacement from nearest to the base configuration
+        nearest_replacement = self._diff_two_config_dict(nearest_configuration, configuration)
+        # Then update it with the input replacement, get the replacement from nearest to the result configuration.
         nearest_replacement.update(replacement)
-        wss = nearest.replace(nearest_replacement)
+        wss = nearest_configuration.replace(nearest_replacement)
         if wss is not None:
             return wss
+
+        # Up till now, we may need to consider or create new configuration.
+        # But do not create the result configuration directly.
+        # Because usually, we measure only the correlation between to small region.
+        # We hope to split the replacement to two parts, each of which is only in a small region.
 
         # Try to remove 2x2 area in replacement to find new near config
         replacement_1, replacement_2 = self._split_replacement(replacement)
-        half_config = self._replace_config(base_config, replacement_1)
-        if half_config in self._pool:
-            return self._pool[half_config].replace(replacement_2)
+        half_config = self._config_list_replace(base_config, replacement_1)
+        # Ok, half replaced configuration has been found, try to find it in tree, otherwise create it.
+        if half_config in self.tree:
+            return self.tree[half_config].replace(replacement_2)
 
-        # Then create this new near config
-        half_nearest = self._nearest_configuration(half_config)
-        wss = self(half_config, hint=half_nearest).replace(replacement_2)
-        if wss is not None:
-            return wss
+        # Cannot find it, so create the half replaced configuration, find its nearest again.
+        half_nearest_configuration = self.tree.nearest(half_config)
+        self.tree[half_config] = self._create_configuration(half_config, half_nearest_configuration)
+        return self.tree[half_config].replace(replacement_2)
 
-        # Should never reach here
-        raise RuntimeError("Program should never reach here")
-        return self(config, hint=nearest).hole(())
+    def _create_configuration(self, config, base_configuration):
+        """
+        Calculate the configuration from the given config.
+
+        Parameters
+        ----------
+        config : tuple[EdgePoint, ...]
+            the config tuple.
+        base_configuration : Configuration
+            A similar configuration used to copy
+
+        Returns
+        -------
+            The result configuration of the given config tuple.
+        """
+        configuration = base_configuration.copy()
+        config = iter(config)
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
+                for orbit in self.owner.physics_edges[l1, l2]:
+                    # If they are the same, auxiliaries tensor in Configuration object will not be refreshed.:
+                    configuration[l1, l2, orbit] = next(config)
+        return configuration
 
     def _split_replacement(self, replacement):
         """
@@ -491,13 +635,13 @@ class ConfigurationPool:
         """
         replacement_1 = {}
         replacement_2 = {}
-        up = self._owner.L1
+        up = self.owner.L1
         down = -1
-        left = self._owner.L2
+        left = self.owner.L2
         right = -1
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
-                for orbit in self._owner.physics_edges[l1, l2]:
+        for l1 in range(self.owner.L1):
+            for l2 in range(self.owner.L2):
+                for orbit in self.owner.physics_edges[l1, l2]:
                     site = (l1, l2, orbit)
                     if site in replacement:
                         edge_point = replacement[site]
@@ -515,54 +659,6 @@ class ConfigurationPool:
                             replacement_1[site] = edge_point
         return replacement_1, replacement_2
 
-    def _get_replacement(self, configuration_old, configuration_new):
-        """
-        Get the difference of two configurations.
-
-        Parameters
-        ----------
-        configuration_old, configuration_new : Configuration
-            The given two configurations.
-
-        Returns
-        -------
-        dict[tuple[int, int, int], ?EdgePoint]
-            The result replacement
-        """
-        replacement = {}
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
-                for orbit in self._owner.physics_edges[l1, l2]:
-                    if configuration_old[l1, l2, orbit] != configuration_new[l1, l2, orbit]:
-                        replacement[l1, l2, orbit] = configuration_new[l1, l2, orbit]
-        return replacement
-
-    def _replace_config(self, config, replacement):
-        """
-        Get the replaced config.
-
-        Parameters
-        ----------
-        config : tuple[EdgePoint, ...]
-            The input config tuple.
-        replacement : dict[tuple[int, int, int], ?EdgePoint]
-            Replacement plan to modify configuration.
-
-        Returns
-        -------
-        tuple[EdgePoint, ...]
-            The result config tuple.
-        """
-        config = list(config)
-        index = 0
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
-                for orbit, _ in self._owner.physics_edges[l1, l2].items():
-                    if (l1, l2, orbit) in replacement:
-                        config[index] = replacement[l1, l2, orbit]
-                    index += 1
-        return tuple(config)
-
     def add(self, configuration):
         """
         Add the configuration into pool, the configuration is not copied, it is inserted into a dict directly.
@@ -578,94 +674,10 @@ class ConfigurationPool:
             If the configuration exists already, return the former configuration, otherwise return the input
         configuration.
         """
-        config = self._get_config(configuration)
-        if config not in self._pool:
-            self._pool[config] = configuration
-        return self._pool[config]
-
-    def _get_config(self, configuration):
-        """
-        Get the key used for hash from the given configuration.
-
-        Parameters
-        ----------
-        configuration : Configuration
-            the configuration object.
-
-        Returns
-        -------
-        tuple[EdgePoint, ...]
-            the config tuple.
-        """
-        config = []
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
-                for orbit, _ in self._owner.physics_edges[l1, l2].items():
-                    config.append(configuration[l1, l2, orbit])
-        return tuple(config)
-
-    def _nearest_configuration(self, config):
-        """
-        Get the nearest configuration to the given config.
-
-        Parameters
-        ----------
-        config : tuple[EdgePoint, ...]
-            the config tuple.
-
-        Returns
-        -------
-        Configuration
-            The configuration which is the nearest to the given config tuple.
-        """
-        return self._pool.nearest(config)
-
-    def _calculate_configuration(self, config, *, hint=None):
-        """
-        Calculate the configuration from the given config.
-
-        Parameters
-        ----------
-        config : tuple[EdgePoint, ...]
-            the config tuple.
-        hint : Configuration, optional
-            A similar configuration used to copy
-
-        Returns
-        -------
-            The result configuration of the given config tuple.
-        """
-        if hint is not None:
-            configuration = hint.copy()
-        else:
-            configuration = self._nearest_configuration(config).copy()
-        index = 0
-        for l1 in range(self._owner.L1):
-            for l2 in range(self._owner.L2):
-                for orbit, _ in self._owner.physics_edges[l1, l2].items():
-                    # If they are the same, auxiliaries tensor will not be refreshed
-                    configuration[l1, l2, orbit] = config[index]
-                    index += 1
-        return configuration
-
-    def __call__(self, config, *, hint=None):
-        """
-        Get the configuration from the given config tuple.
-
-        Parameters
-        ----------
-        config : tuple[EdgePoint, ...]
-            The config tuple.
-        hint : Configuration, optional
-            A similar configuration used to copy if the given config is not calculated yet.
-
-        Returns
-        -------
-            The result configuration.
-        """
-        if config not in self._pool:
-            self._pool[config] = self._calculate_configuration(config, hint=hint)
-        return self._pool[config]
+        config = self._config_dict_to_list(configuration)
+        if config not in self.tree:
+            self.tree[config] = configuration
+        return self.tree[config]
 
 
 class SamplingLattice(AbstractLattice):
@@ -711,6 +723,7 @@ class SamplingLattice(AbstractLattice):
         """
         super()._init_by_copy(abstract)
 
+        # The data storage of the lattice tensor, access it by state[l1, l2] instead.
         self._lattice = np.array([[self._construct_tensor(l1, l2) for l2 in range(self.L2)] for l1 in range(self.L1)])
 
     def __getitem__(self, l1l2):
@@ -747,7 +760,7 @@ class SamplingLattice(AbstractLattice):
     def expand_dimension(self, new_dimension, epsilon):
         """
         Expand dimension of sampling lattice. If new_dimension equals to the origin dimension and epsilon is zero, this
-        function will fix the lattice gauge.
+        function will only fix the lattice gauge.
 
         Parameters
         ----------
@@ -831,39 +844,17 @@ class SamplingLattice(AbstractLattice):
         self[l1, l2] = up.edge_rename({u_name: u_name[2:] for u_name in up.names if u_name.startswith("U_")})
         self[l1 + 1, l2] = down.edge_rename({d_name: d_name[2:] for d_name in down.names if d_name.startswith("D_")})
 
-    def fix_relative_to_lattice(self, lattice):
+    def lattice_dot(self, a=None, b=None):
         """
-        Get fixed relative to lattice tensors for a lattice shape data.
+        Calculate the dot of two lattice shape data. If None is given, its own lattice data will be used.
 
         Parameters
         ----------
-        lattice : list[list[Tensor]]
+        a, b : list[list[Tensor]] | None
             The lattice shape data.
-
-        Returns
-        -------
-        list[list[Tensor]]
-            The result lattice shape data which have the same norm to the lattice tensor.
         """
-        param = (lattice_dot_sum(lattice_conjugate(self._lattice), self._lattice).real /
-                 lattice_dot_sum(lattice_conjugate(lattice), lattice).real)**0.5
-        return param * lattice
-
-    def orthogonalize_to_lattice(self, lattice):
-        """
-        Get orthogonalized data to lattice tensors for a lattice shape data.
-
-        Parameters
-        ----------
-        lattice : list[list[Tensor]]
-            The lattice shape data.
-
-        Returns
-        -------
-        list[list[Tensor]]
-            The result lattice shape data which is orthogonal to lattice tensors.
-        """
-        # lattice_dot always return a real number
-        param = (lattice_dot_sum(lattice_conjugate(lattice), state._lattice).real /
-                 lattice_dot_sum(lattice_conjugate(state._lattice), state._lattice).real)
-        return lattice - state._lattice * param
+        if a is None:
+            a = self._lattice
+        if b is None:
+            b = self._lattice
+        return lattice_dot_sum(lattice_conjugate(a), b).real
