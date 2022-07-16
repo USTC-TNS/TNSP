@@ -284,7 +284,10 @@ namespace TAT {
       Edge& operator=(Edge&&) = default;
       ~Edge() = default;
 
-      template<typename Arg, typename = std::enable_if_t<std::is_constructible_v<base_segment_t, Arg&&>>>
+      template<
+            typename Arg,
+            typename = std::enable_if_t<
+                  std::is_constructible_v<base_segment_t, Arg&&> && !std::is_same_v<remove_cvref_t<Arg>, Edge<Symmetry, is_pointer>>>>
       Edge(Arg&& arg, Arrow arrow = false) noexcept : base_segment_t(std::forward<Arg>(arg)), base_arrow_t(arrow) {}
       Edge(std::initializer_list<std::pair<Symmetry, Size>> segment, Arrow arrow = false) noexcept :
             base_segment_t(typename base_segment_t::segment_t(segment)),
