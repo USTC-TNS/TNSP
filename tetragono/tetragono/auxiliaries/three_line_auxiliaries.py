@@ -114,15 +114,15 @@ class ThreeLineAuxiliaries:
             return lazy.Node(self._two_line_to_one_line, "RL", self._right_to_left[l2 + 1], self._zip_column[l2],
                              self.cut_dimension)
 
-    def hole(self, l2, orbit):
+    def hole(self, l2):
         n0 = self._lattice_0n[l2]()
         c0 = self._lattice_0c[l2]()
         n1 = self._lattice_1n[l2]()
         c1 = self._lattice_1c[l2]()
         t2 = self._lattice_2[l2]()
 
-        n1 = safe_rename(n1, {f"P{orbit}": "O0"})
-        c1 = safe_rename(c1, {f"P{orbit}": "I0"})
+        n1 = safe_rename(n1, {name: "O" + name[1:] for name in n1.names if name.startswith("P")})
+        c1 = safe_rename(c1, {name: "I" + name[1:] for name in c1.names if name.startswith("P")})
 
         line = [n0, n1, t2, c1, c0]
 
@@ -141,9 +141,7 @@ class ThreeLineAuxiliaries:
         result = safe_contract(result, safe_rename(right[2], {"UC": "U3"}), {("D3", "UN"), ("R", "L")})
 
         result = safe_contract(result, safe_rename(left[3], {"U": "U1"}), {("U1", "D")})
-        result = safe_contract(result,
-                               safe_rename(line[3], {"U": "U2"}), {("U2", "D"), ("R", "L"), ("T", "T")},
-                               contract_all_physics_edges=True)
+        result = safe_contract(result, safe_rename(line[3], {"U": "U2"}), {("U2", "D"), ("R", "L"), ("T", "T")})
         result = safe_contract(result, safe_rename(right[3], {"U": "U3"}), {("U3", "D"), ("R", "L")})
 
         result = safe_contract(result, safe_rename(left[4], {"U": "U1"}), {("U1", "D")})

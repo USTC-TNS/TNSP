@@ -288,12 +288,14 @@ class Configuration(SingleLayerAuxiliaries):
         Yields
         ------
         tuple[int, Tensor]
-            The orbit index and shrinker tensor, shrinker tensor name is "P" and "Q", where edge "P" is wider one, edge
-            "Q" is narrower one, and edge "Q" should connect directly to physics edge, edge "P" is the same to physics
+            The orbit index and shrinker tensor, shrinker tensor name is "P" and "Q", where edge "P" is narrower one,
+            edge "Q" is wider one, and edge "Q" should connect directly to physics edge, edge "P" is the same to physics
             edge.
         """
         l1, l2 = l1l2
-        for orbit, edge in self.owner.physics_edges[l1, l2].items():
+        # An certain order is required.
+        for orbit in sorted(self.owner.physics_edges[l1, l2]):
+            edge = self.owner.physics_edges[l1, l2, orbit]
             symmetry, index = configuration[orbit]
             # P side is dimension one edge
             # Q side is connected to lattice

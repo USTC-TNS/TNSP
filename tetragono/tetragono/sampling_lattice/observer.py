@@ -34,7 +34,7 @@ class Observer():
     """
 
     __slots__ = [
-        "_owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
+        "owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
         "_restrict_subspace", "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight",
         "_total_weight_square", "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
         "_Delta", "_EDelta", "_Deltas", "_pool", "_classical_energy"
@@ -65,12 +65,12 @@ class Observer():
         self._total_energy_square = 0.0
         self._total_energy_reweight = 0.0
         if self._enable_gradient:
-            self._Delta = [[self._owner[l1, l2].same_shape().conjugate().zero()
-                            for l2 in range(self._owner.L2)]
-                           for l1 in range(self._owner.L1)]
-            self._EDelta = [[self._owner[l1, l2].same_shape().conjugate().zero()
-                             for l2 in range(self._owner.L2)]
-                            for l1 in range(self._owner.L1)]
+            self._Delta = [[self.owner[l1, l2].same_shape().conjugate().zero()
+                            for l2 in range(self.owner.L2)]
+                           for l1 in range(self.owner.L1)]
+            self._EDelta = [[self.owner[l1, l2].same_shape().conjugate().zero()
+                             for l2 in range(self.owner.L2)]
+                            for l1 in range(self.owner.L1)]
             if self._enable_natural:
                 self._Deltas = []
         if self._cache_natural_delta is not None:
@@ -84,7 +84,7 @@ class Observer():
         """
         Create or refresh configuration cache pool.
         """
-        self._pool = ConfigurationPool(self._owner)
+        self._pool = ConfigurationPool(self.owner)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -161,7 +161,7 @@ class Observer():
         restrict_subspace, optional
             A function return bool to restrict sampling subspace.
         """
-        self._owner = owner
+        self.owner = owner
         self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
         self._enable_gradient = False
         self._enable_natural = False
@@ -267,7 +267,7 @@ class Observer():
         if self._start:
             raise RuntimeError("Cannot enable hole after sampling start")
         for positions, observer in observers.items():
-            if not isinstance(observer, self._owner.Tensor):
+            if not isinstance(observer, self.owner.Tensor):
                 raise TypeError("Wrong observer type")
         self._observer[name] = observers
 
@@ -275,7 +275,7 @@ class Observer():
         """
         Add energy as an observer.
         """
-        self.add_observer("energy", self._owner._hamiltonians)
+        self.add_observer("energy", self.owner._hamiltonians)
 
     def enable_gradient(self):
         """
@@ -323,9 +323,9 @@ class Observer():
         self._total_log_ws += np.log(np.abs(complex(ws)))
         inv_ws_conj = ws / (ws.norm_2()**2)
         inv_ws = inv_ws_conj.conjugate()
-        all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self._owner.L1)
-                                   for l2 in range(self._owner.L2)
-                                   for orbit, edge in self._owner.physics_edges[l1, l2].items()}
+        all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.owner.L1)
+                                   for l2 in range(self.owner.L2)
+                                   for orbit, edge in self.owner.physics_edges[l1, l2].items()}
         for name, observers in self._observer.items():
             if name == "energy":
                 Es = 0.0
@@ -373,12 +373,12 @@ class Observer():
                 self._total_energy_reweight += to_save * reweight
             if calculating_gradient:
                 holes = configuration.holes()
-                if self._owner.Tensor.is_real:
+                if self.owner.Tensor.is_real:
                     Es = Es.real
                 else:
                     Es = Es.conjugate()
-                for l1 in range(self._owner.L1):
-                    for l2 in range(self._owner.L2):
+                for l1 in range(self.owner.L1):
+                    for l2 in range(self.owner.L2):
                         hole = holes[l1][l2] * reweight
                         self._Delta[l1][l2] += hole
                         self._EDelta[l1][l2] += Es * hole
@@ -484,7 +484,7 @@ class Observer():
             The energy per site.
         """
         expect, deviation = self.total_energy
-        site_number = self._owner.site_number
+        site_number = self.owner.site_number
         return expect / site_number, deviation / site_number
 
     @property
@@ -558,7 +558,7 @@ class Observer():
         """
         # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = np.array(
-            [[gradient[l1][l2].same_shape().zero() for l2 in range(self._owner.L2)] for l1 in range(self._owner.L1)])
+            [[gradient[l1][l2].same_shape().zero() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
         for reweight, deltas in self._weights_and_deltas():
             param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
             lattice_update(result_1, param * lattice_conjugate(deltas))
@@ -633,5 +633,5 @@ class Observer():
     def normalize_lattice(self):
         mean_log_ws = self._total_log_ws / self._count
         # Here it should use tensor number, not site number
-        param = np.exp(mean_log_ws / (self._owner.L1 * self._owner.L2))
-        self._owner._lattice /= param
+        param = np.exp(mean_log_ws / (self.owner.L1 * self.owner.L2))
+        self.owner._lattice /= param
