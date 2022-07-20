@@ -41,6 +41,10 @@ class ExactState(AbstractState):
         # version 1 to version 2
         if state["data_version"] == 1:
             state["data_version"] = 2
+        # version 2 to version 3
+        if state["data_version"] == 2:
+            self._v2_to_v3_rename(state)
+            state["data_version"] = 3
         # setstate
         for key, value in state.items():
             setattr(self, key, value)

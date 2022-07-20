@@ -198,6 +198,19 @@ class AbstractState:
         """
         return self.Tensor.model.Symmetry
 
+    def _v2_to_v3_rename(self, state):
+        """
+        Update the data from version 2 to version 3.
+
+        From version 2 to version 3, several member renamed.
+        """
+        state["L1"] = state["_L1"]
+        state["L2"] = state["_L2"]
+        state["Tensor"] = state["_Tensor"]
+        del state["_L1"]
+        del state["_L2"]
+        del state["_Tensor"]
+
     def __init__(self, Tensor, L1, L2):
         """
         Create an abstract state.
@@ -227,7 +240,7 @@ class AbstractState:
         # The total site number of the whole state, access it by state.site_number
         self._site_number = None
 
-        self.data_version = 2
+        self.data_version = 3
 
     def _init_by_copy(self, other):
         """

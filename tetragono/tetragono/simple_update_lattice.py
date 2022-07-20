@@ -151,6 +151,10 @@ class SimpleUpdateLattice(AbstractLattice):
         if state["data_version"] == 1:
             state["data_version"] = 2
             call_at_last.append(self._v1_to_v2_multiple)
+        # version 2 to version 3
+        if state["data_version"] == 2:
+            self._v2_to_v3_rename(state)
+            state["data_version"] = 3
         # setstate
         state["_auxiliaries"] = None
         for key, value in state.items():
