@@ -19,7 +19,7 @@
 
 def restrict(configuration, replacement=None):
     if replacement is None:
-        owner = configuration._owner
+        owner = configuration.owner
         n_up = 0
         n_down = 0
         for l1 in range(owner.L1):

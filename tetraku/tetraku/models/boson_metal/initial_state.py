@@ -21,7 +21,7 @@ import tetragono as tet
 
 
 def initial_configuration(conf):
-    state = conf._owner
+    state = conf.owner
     particle = 0
     for L1 in range(state.L1):
         for L2 in range(state.L2):

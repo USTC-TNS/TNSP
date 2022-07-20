@@ -20,9 +20,8 @@ import TAT
 
 
 def initial_configuration(conf):
-    state = conf._owner
-    for l1 in range(state.L1):
-        for l2 in range(state.L2):
+    for l1 in range(conf.owner.L1):
+        for l2 in range(conf.owner.L2):
             if (l1 + l2) % 2 == 0:
                 conf[l1, l2, 0] = TAT.No.Symmetry(), 0
             else:
