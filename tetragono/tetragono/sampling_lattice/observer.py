@@ -17,13 +17,9 @@
 #
 
 import os
-try:
-    import cPickle as pickle
-except:
-    import pickle
 import numpy as np
 from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
-                              lattice_conjugate, mpi_rank, mpi_comm)
+                              lattice_conjugate, mpi_rank, mpi_comm, pickle)
 from ..tensor_element import tensor_element
 from .lattice import ConfigurationPool
 
@@ -35,9 +31,9 @@ class Observer():
 
     __slots__ = [
         "owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
-        "_restrict_subspace", "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight",
-        "_total_weight_square", "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
-        "_Delta", "_EDelta", "_Deltas", "_pool", "_classical_energy"
+        "_restrict_subspace", "_classical_energy", "_start", "_result", "_result_square", "_result_reweight", "_count",
+        "_total_weight", "_total_weight_square", "_total_log_ws", "_total_energy", "_total_energy_square",
+        "_total_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_pool"
     ]
 
     def __enter__(self):
@@ -77,14 +73,6 @@ class Observer():
             os.makedirs(self._cache_natural_delta, exist_ok=True)
             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "wb") as file:
                 pass
-        if self._cache_configuration:
-            self._create_cache_configuration()
-
-    def _create_cache_configuration(self):
-        """
-        Create or refresh configuration cache pool.
-        """
-        self._pool = ConfigurationPool(self.owner)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -138,6 +126,7 @@ class Observer():
         cache_natural_delta=None,
         cache_configuration=False,
         restrict_subspace=None,
+        classical_energy=None,
     ):
         """
         Create observer object for the given sampling lattice.
@@ -156,21 +145,28 @@ class Observer():
             Enable calculating the natural gradient.
         cache_natural_delta : str, optional
             The folder name to cache deltas used in natural gradient.
-        cache_configuration : bool, optional
-            Enable cache the configuration during observing.
-        restrict_subspace, optional
+        cache_configuration : bool | str, optional
+            Enable cache the configuration during observing, if it is a string, it will describe the cache strategy for
+            the configuration, currently only "drop" is allowed.
+        restrict_subspace : optional
             A function return bool to restrict sampling subspace.
+        classical_energy : optional
+            A function for the classical term of energy.
         """
         self.owner = owner
-        self._observer = {}  # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
+        # The observables need to measure.
+        # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
+        self._observer = {}
         self._enable_gradient = False
         self._enable_natural = False
         self._cache_natural_delta = None
         self._cache_configuration = False
         self._restrict_subspace = None
+        self._classical_energy = None
 
         self._start = False
 
+        # Values collected during observing
         self._result = None  # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
         self._result_square = None
         self._result_reweight = None
@@ -182,17 +178,15 @@ class Observer():
         self._total_energy_square = None
         self._total_energy_reweight = None
 
+        # Values about gradient collected during observing
         self._Delta = None  # list[list[Tensor]]
         self._EDelta = None  # list[list[Tensor]]
         self._Deltas = None
 
         self._pool = None
 
-        self._classical_energy = None
-
         if observer_set is not None:
             self._observer = observer_set
-
         if enable_energy:
             self.add_energy()
         if enable_gradient:
@@ -202,6 +196,18 @@ class Observer():
         self.cache_natural_delta(cache_natural_delta)
         self.cache_configuration(cache_configuration)
         self.restrict_subspace(restrict_subspace)
+        self.set_classical_energy(classical_energy)
+
+    def set_classical_energy(self, classical_energy=None):
+        """
+        Set another classical energy term to total energy.
+
+        Parameters
+        ----------
+        classical_energy
+            A function return energy with Configuration as input.
+        """
+        self._classical_energy = classical_energy
 
     def restrict_subspace(self, restrict_subspace):
         """
@@ -216,16 +222,18 @@ class Observer():
             raise RuntimeError("Cannot set restrict subspace after sampling start")
         self._restrict_subspace = restrict_subspace
 
-    def set_classical_energy(self, classical_energy=None):
+    def cache_configuration(self, cache_configuration):
         """
-        Set another classical energy term to total energy.
+        Enable caching the configurations into one pool.
 
         Parameters
         ----------
-        classical_energy
-            A function return energy with Configuration as input.
+        cache_configuration : bool | str
+            The cache clean strategy of configuration cache.
         """
-        self._classical_energy = classical_energy
+        if self._start:
+            raise RuntimeError("Cannot enable caching after sampling start")
+        self._cache_configuration = cache_configuration
 
     def cache_natural_delta(self, cache_natural_delta):
         """
@@ -239,19 +247,6 @@ class Observer():
         if self._start:
             raise RuntimeError("Cannot set natural delta cache folder after sampling start")
         self._cache_natural_delta = cache_natural_delta
-
-    def cache_configuration(self, cache_configuration):
-        """
-        Enable caching the configurations into one pool.
-
-        Parameters
-        ----------
-        cache_configuration : bool | str
-            The cache clean strategy of configuration cache.
-        """
-        if self._start:
-            raise RuntimeError("Cannot enable caching after sampling start")
-        self._cache_configuration = cache_configuration
 
     def add_observer(self, name, observers):
         """
@@ -297,6 +292,12 @@ class Observer():
             self.enable_gradient()
         self._enable_natural = True
 
+    def _create_cache_configuration(self):
+        """
+        Create or refresh configuration cache pool.
+        """
+        self._pool = ConfigurationPool(self.owner)
+
     def __call__(self, possibility, configuration):
         """
         Collect observer value from current configuration, the sampling should have distribution based on
@@ -309,39 +310,43 @@ class Observer():
         configuration : Configuration
             The configuration system of the lattice.
         """
+        # Update the cache configuration pool
         if self._cache_configuration:
+            if self._count == 0:
+                self._create_cache_configuration()
             if self._cache_configuration == "drop":
                 self._create_cache_configuration()
             configuration = self._pool.add(configuration)
         self._count += 1
-        ws = configuration.hole(())  # ws is a tensor
+        ws = configuration.hole(())  # |s|psi>
         if ws.norm_num() == 0:
+            # block mismatch, so ws is 0, return directly, only count is updated, weight will not change.
             return
-        reweight = ws.norm_2()**2 / possibility
+        reweight = ws.norm_2()**2 / possibility  # <psi|s|psi> / p(s)
         self._total_weight += reweight
         self._total_weight_square += reweight * reweight
         self._total_log_ws += np.log(np.abs(complex(ws)))
-        inv_ws_conj = ws / (ws.norm_2()**2)
-        inv_ws = inv_ws_conj.conjugate()
+        inv_ws_conj = ws / (ws.norm_2()**2)  # |s|psi> / <psi|s|psi>
         all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.owner.L1)
-                                   for l2 in range(self.owner.L2)
-                                   for orbit, edge in self.owner.physics_edges[l1, l2].items()}
+                                   for l2 in range(self.owner.L2) for orbit in self.owner.physics_edges[l1, l2]}
         for name, observers in self._observer.items():
             if name == "energy":
                 Es = 0.0
-            calculating_gradient = name == "energy" and self._enable_gradient
             for positions, observer in observers.items():
-                body = observer.rank // 2
-                current_configuration = tuple(configuration[positions[i]] for i in range(body))
+                body = len(positions)
+                positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
                 element_pool = tensor_element(observer)
-                if current_configuration not in element_pool:
+                if positions_configuration not in element_pool:
                     continue
                 total_value = 0
-                physics_names = [f"P_{positions[i][0]}_{positions[i][1]}_{positions[i][2]}" for i in range(body)]
-                for other_configuration, observer_shrinked in element_pool[current_configuration].items():
-                    replacement = {positions[i]: other_configuration[i] for i in range(body)}
+                physics_names = [f"P_{l1}_{l2}_{orbit}" for l1, l2, orbit in positions]
+                for positions_configuration_s, observer_shrinked in element_pool[positions_configuration].items():
+                    # observer_shrinked is |s'|H|s|
+                    replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
+                    # Calculate wss: |s'|psi>
                     if self._restrict_subspace is not None:
                         if not self._restrict_subspace(configuration, replacement):
+                            # wss should be zero, this term is zero, continue to next wss
                             continue
                     if self._cache_configuration:
                         wss = self._pool.wss(configuration, replacement)
@@ -350,14 +355,16 @@ class Observer():
                         if wss is None:
                             raise NotImplementedError(
                                 "not implemented replace style, set cache_configuration to True to calculate it")
-
                     if wss.norm_num() == 0:
                         continue
-                    value = inv_ws.contract(observer_shrinked.conjugate(),
-                                            {(physics_names[i], f"I{i}") for i in range(body)}).edge_rename({
-                                                f"O{i}": physics_names[i] for i in range(body)
-                                            }).contract(wss, all_name)
+                    # <psi|s'|H|s|psi> / <psi|s|psi>
+                    value = (
+                        inv_ws_conj  #
+                        .contract(observer_shrinked, {(physics_names[i], f"I{i}") for i in range(body)})  #
+                        .edge_rename({f"O{i}": physics_names[i] for i in range(body)})  #
+                        .contract(wss.conjugate(), all_name))
                     total_value += complex(value)
+                # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
                 to_save = total_value.real
                 self._result[name][positions] += to_save
                 self._result_square[name][positions] += to_save * to_save
@@ -371,24 +378,23 @@ class Observer():
                 self._total_energy += to_save
                 self._total_energy_square += to_save * to_save
                 self._total_energy_reweight += to_save * reweight
-            if calculating_gradient:
-                holes = configuration.holes()
-                if self.owner.Tensor.is_real:
-                    Es = Es.real
-                else:
-                    Es = Es.conjugate()
-                for l1 in range(self.owner.L1):
-                    for l2 in range(self.owner.L2):
-                        hole = holes[l1][l2] * reweight
-                        self._Delta[l1][l2] += hole
-                        self._EDelta[l1][l2] += Es * hole
-                if self._enable_natural:
-                    if self._cache_natural_delta:
-                        with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
-                            pickle.dump(holes, file)
-                        self._Deltas.append((reweight, None))
-                    else:
-                        self._Deltas.append((reweight, holes))
+                # Es should be complex here when calculating gradient
+                if self._enable_gradient:
+                    holes = configuration.holes()  # <psi|s|partial_x psi> / <psi|s|psi>
+                    if self.owner.Tensor.is_real:
+                        Es = Es.real
+                    for l1 in range(self.owner.L1):
+                        for l2 in range(self.owner.L2):
+                            hole = holes[l1][l2] * reweight
+                            self._Delta[l1][l2] += hole
+                            self._EDelta[l1][l2] += Es * hole
+                    if self._enable_natural:
+                        if self._cache_natural_delta:
+                            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
+                                pickle.dump(holes, file)
+                            self._Deltas.append((reweight, None))
+                        else:
+                            self._Deltas.append((reweight, holes))
 
     def _expect_and_deviation(self, total, total_square, total_reweight):
         """
@@ -457,7 +463,7 @@ class Observer():
             name: {
                 positions:
                 self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions],
-                                           self._result_reweight[name][positions]) for positions, _ in data.items()
+                                           self._result_reweight[name][positions]) for positions in data
             } for name, data in self._observer.items()
         }
 
@@ -511,7 +517,6 @@ class Observer():
         float
             The trace of metric.
         """
-        # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result = 0.0
         for reweight, deltas in self._weights_and_deltas():
             result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
@@ -524,7 +529,8 @@ class Observer():
 
     def _weights_and_deltas(self):
         """
-        Get the series of weights and deltas.
+        Get the series of weights and deltas, where the weight is <psi|s|psi> / p(s) and deltas is
+        <psi|s|partial_x psi> / <psi|s|psi>.
 
         Yields
         ------
@@ -556,7 +562,6 @@ class Observer():
         list[list[Tensor]]
             The product result.
         """
-        # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = np.array(
             [[gradient[l1][l2].same_shape().zero() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
         for reweight, deltas in self._weights_and_deltas():
@@ -631,7 +636,14 @@ class Observer():
         return x
 
     def normalize_lattice(self):
+        """
+        Normalize the owner sampling lattice by the total ws measured during observing.
+        """
+        # total_log_ws is sum log |ws|, here we do not want to normalize by <psi|psi>
+        # We just want to let ws be a proper number, not to large, not to small.
+        # Then, the mean log ws here represents the scaling of log|ws|
         mean_log_ws = self._total_log_ws / self._count
         # Here it should use tensor number, not site number
+        # param represents scaling of |ws|^(1/L1L2)
         param = np.exp(mean_log_ws / (self.owner.L1 * self.owner.L2))
         self.owner._lattice /= param

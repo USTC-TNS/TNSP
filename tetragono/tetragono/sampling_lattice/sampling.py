@@ -290,12 +290,15 @@ class DirectSampling(Sampling):
                     # Trace all unsampled orbits.
                     # The transpose ensure elements are all positive.
                     unsampled_orbits.remove(orbit)
-                    hole = site_hole.trace({
-                        (f"I{unsampled_orbit}", f"O{unsampled_orbit}") for unsampled_orbit in unsampled_orbits
-                    }).edge_rename({
-                        f"I{orbit}": "I",
-                        f"O{orbit}": "O"
-                    }).transpose(["I", "O"])
+                    hole = (
+                        site_hole  #
+                        .trace({(f"I{unsampled_orbit}", f"O{unsampled_orbit}") for unsampled_orbit in unsampled_orbits}
+                              )  #
+                        .edge_rename({
+                            f"I{orbit}": "I",
+                            f"O{orbit}": "O"
+                        })  #
+                        .transpose(["I", "O"]))
                     hole_edge = hole.edges("O")
                     # Calculate rho for all the segments of the physics edge of this orbit
                     rho = []
@@ -316,12 +319,14 @@ class DirectSampling(Sampling):
                     # config updated for this orbit, now calculating the next item of iterator becomes valid.
                     _, shrinker = next(shrinkers)
                     # shrink the tensor and sampled orbit, and update the three line auxiliaries.
-                    shrinked_site_tensor = shrinked_site_tensor.contract(shrinker.edge_rename({"P": f"P{orbit}"}),
-                                                                         {(f"P{orbit}", "Q")})
-                    site_hole = site_hole.contract(shrinker.edge_rename({"P": f"O{orbit}"}),
-                                                   {(f"O{orbit}", "Q")}).contract(
-                                                       shrinker.conjugate().edge_rename({"P": f"I{orbit}"}),
-                                                       {(f"I{orbit}", "Q")}).trace({(f"I{orbit}", f"O{orbit}")})
+                    shrinked_site_tensor = (
+                        shrinked_site_tensor  #
+                        .contract(shrinker.edge_rename({"P": f"P{orbit}"}), {(f"P{orbit}", "Q")}))
+                    site_hole = (
+                        site_hole  #
+                        .contract(shrinker.edge_rename({"P": f"O{orbit}"}), {(f"O{orbit}", "Q")})  #
+                        .contract(shrinker.conjugate().edge_rename({"P": f"I{orbit}"}), {(f"I{orbit}", "Q")})  #
+                        .trace({(f"I{orbit}", f"O{orbit}")}))
                     three_line_auxiliaries[1, l2, "n"] = shrinked_site_tensor
                     three_line_auxiliaries[1, l2, "c"] = shrinked_site_tensor.conjugate()
 

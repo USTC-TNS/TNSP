@@ -286,18 +286,26 @@ $E=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \p
 
 $\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s,s'}\langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle\psi|\psi\rangle}$
 
-$\frac{\partial E}{\partial T_i}=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \partial_{T_i}\psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle\psi|s|\partial_{T_i}\psi\rangle}{\langle\psi|\psi\rangle}$
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s,s'}\langle \psi | s' | H | s | \partial_{T_i}\psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle\psi|s|\partial_{T_i}\psi\rangle}{\langle\psi|\psi\rangle}$
 
 Similar to $E = \frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
 
 $\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
 
-$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s' | H | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
 
-Now set $r(s)=\frac{\langle \psi|s|\psi\rangle}{p(s)}$
+While $\langle a | s | b \rangle = \frac{\langle a | s | \psi \rangle \langle \psi | s | b \rangle}{\langle \psi | s | \psi \rangle}$, and set $r(s)=\frac{\langle \psi|s|\psi\rangle}{p(s)}$
 
 $E = \frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
 
-$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}- E \frac{\sum_{s \sim S} r(s)\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} r(s)\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle} \frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle \psi | s | \psi \rangle} }{\sum_{s \sim S} r(s)}- E \frac{\sum_{s \sim S} r(s)\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
 
-$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \psi | s | H | s' | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{r(s)}-E\frac{\sum_{s \sim S} r(s)\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} r(s)\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle \psi | s | \psi \rangle}\frac{\sum_{s'} \langle \psi | s' | H | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{r(s)}-E\frac{\sum_{s \sim S} r(s)\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+
+Rewrite metric in sampling form
+
+$g^{Tij} = \frac{\sum_{s \sim S} r(s) \frac{\langle\partial_{T_i^*}\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi|s|\psi \rangle}}{\sum_{s \sim S} r(s)} - \frac{\sum_{s \sim S} r(s) \frac{\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)} \frac{\sum_{s \sim S} r(s) \frac{\langle\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)}$
+
+Then
+
+$g^{Tij} = \frac{\sum_{s \sim S} r(s) \frac{\langle\partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi|s|\psi \rangle}\frac{\langle \psi|s|\partial_{T_j}\psi\rangle}{\langle \psi|s|\psi \rangle}}{\sum_{s \sim S} r(s)} - \frac{\sum_{s \sim S} r(s) \frac{\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)} \frac{\sum_{s \sim S} r(s) \frac{\langle\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)}$

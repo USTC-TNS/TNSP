@@ -57,7 +57,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
                     cgrad = rgrad + igrad * 1j
                 else:
                     cgrad = rgrad
-                showln(" ", cgrad, g[i])
+                showln(" ", g[i] / cgrad, cgrad, g[i])
 
 
 def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude,

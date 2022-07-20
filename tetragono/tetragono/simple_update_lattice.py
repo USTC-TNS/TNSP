@@ -399,9 +399,11 @@ class SimpleUpdateLattice(AbstractLattice):
         """
         coordinate = coordinates[0]
         orbits = [orbit for index, orbit in index_and_orbit]
-        self[coordinate] = self[coordinate].contract(evolution_operator, {
-            (f"P{orbit}", f"I{body_index}") for body_index, orbit in enumerate(orbits)
-        }).edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in enumerate(orbits)})
+        self[coordinate] = (
+            self[coordinate]  #
+            .contract(evolution_operator,
+                      {(f"P{orbit}", f"I{body_index}") for body_index, orbit in enumerate(orbits)})  #
+            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in enumerate(orbits)}))
 
     def _single_term_simple_update_double_site_nearest_horizontal(self, coordinates, index_and_orbit,
                                                                   evolution_operator, new_dimension):
@@ -442,30 +444,28 @@ class SimpleUpdateLattice(AbstractLattice):
             new_dimension = round(original_dimension * new_dimension)
         left_q, left_r = left.qr("r", {*(f"P{orbit}" for body_index, orbit in left_index_and_orbit), "R"}, "R", "L")
         right_q, right_r = right.qr("r", {*(f"P{orbit}" for body_index, orbit in right_index_and_orbit), "L"}, "L", "R")
-        u, s, v = left_r.edge_rename(
-            {f"P{orbit}": f"P{body_index}" for body_index, orbit in left_index_and_orbit}).contract(
+        u, s, v = (
+            left_r  #
+            .edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in left_index_and_orbit})  #
+            .contract(
                 right_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in right_index_and_orbit}),
-                {("R", "L")},
-            ).contract(
-                evolution_operator,
-                {(f"P{body_index}", f"I{body_index}") for body_index in range(body)},
-            ).svd(
-                {*(f"O{body_index}" for body_index, orbit in left_index_and_orbit), "L"},
-                "R",
-                "L",
-                "L",
-                "R",
-                new_dimension,
-            )
+                {("R", "L")})  #
+            .contract(evolution_operator, {(f"P{body_index}", f"I{body_index}") for body_index in range(body)})  #
+            .svd({*(f"O{body_index}" for body_index, orbit in left_index_and_orbit), "L"}, "R", "L", "L", "R",
+                 new_dimension))
         s /= s.norm_2()
         self.environment[i, j, "R"] = s
         u = self._try_multiple(u, i, j, "R")
-        u = u.contract(left_q, {("L", "R")}).edge_rename(
-            {f"O{body_index}": f"P{orbit}" for body_index, orbit in left_index_and_orbit})
+        u = (
+            u  #
+            .contract(left_q, {("L", "R")})  #
+            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in left_index_and_orbit}))
         self[i, j] = u
         v = self._try_multiple(v, i, j + 1, "L")
-        v = v.contract(right_q, {("R", "L")}).edge_rename(
-            {f"O{body_index}": f"P{orbit}" for body_index, orbit in right_index_and_orbit})
+        v = (
+            v  #
+            .contract(right_q, {("R", "L")})  #
+            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in right_index_and_orbit}))
         self[i, j + 1] = v
 
     def _single_term_simple_update_double_site_nearest_vertical(self, coordinates, index_and_orbit, evolution_operator,
@@ -507,30 +507,27 @@ class SimpleUpdateLattice(AbstractLattice):
             new_dimension = round(original_dimension * new_dimension)
         up_q, up_r = up.qr("r", {*(f"P{orbit}" for body_index, orbit in up_index_and_orbit), "D"}, "D", "U")
         down_q, down_r = down.qr("r", {*(f"P{orbit}" for body_index, orbit in down_index_and_orbit), "U"}, "U", "D")
-        u, s, v = up_r.edge_rename(
-            {f"P{orbit}": f"P{body_index}" for body_index, orbit in up_index_and_orbit}).contract(
-                down_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in down_index_and_orbit}),
-                {("D", "U")},
-            ).contract(
-                evolution_operator,
-                {(f"P{body_index}", f"I{body_index}") for body_index in range(body)},
-            ).svd(
-                {*(f"O{body_index}" for body_index, orbit in up_index_and_orbit), "U"},
-                "D",
-                "U",
-                "U",
-                "D",
-                new_dimension,
-            )
+        u, s, v = (
+            up_r  #
+            .edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in up_index_and_orbit})  #
+            .contract(down_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in down_index_and_orbit}),
+                      {("D", "U")})  #
+            .contract(evolution_operator, {(f"P{body_index}", f"I{body_index}") for body_index in range(body)})  #
+            .svd({*(f"O{body_index}" for body_index, orbit in up_index_and_orbit), "U"}, "D", "U", "U", "D",
+                 new_dimension))
         s /= s.norm_2()
         self.environment[i, j, "D"] = s
         u = self._try_multiple(u, i, j, "D")
-        u = u.contract(up_q, {("U", "D")}).edge_rename(
-            {f"O{body_index}": f"P{orbit}" for body_index, orbit in up_index_and_orbit})
+        u = (
+            u  #
+            .contract(up_q, {("U", "D")})  #
+            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in up_index_and_orbit}))
         self[i, j] = u
         v = self._try_multiple(v, i + 1, j, "U")
-        v = v.contract(down_q, {("D", "U")}).edge_rename(
-            {f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit})
+        v = (
+            v  #
+            .contract(down_q, {("D", "U")})  #
+            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit}))
         self[i + 1, j] = v
 
     def _try_multiple(self, tensor, i, j, direction, *, division=False, square_root=False):
@@ -625,8 +622,10 @@ class SimpleUpdateLattice(AbstractLattice):
         # Cannot calculate psipsi together at last, because auxiliaries will normalize the tensor.
         # That is why it is different to observe function for exact state.
         psipsi = rho.trace({(f"O{i}", f"I{i}") for i in range(body)})
-        psiHpsi = rho.contract(observer,
-                               {*((f"O{i}", f"I{i}") for i in range(body)), *((f"I{i}", f"O{i}") for i in range(body))})
+        psiHpsi = (
+            rho  #
+            .contract(observer,
+                      {*((f"O{i}", f"I{i}") for i in range(body)), *((f"I{i}", f"O{i}") for i in range(body))}))
         return float(psiHpsi) / float(psipsi)
 
     def observe_energy(self):

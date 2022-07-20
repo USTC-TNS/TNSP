@@ -17,11 +17,10 @@
 #
 
 import os
-import pickle
 import itertools
 import numpy as np
 from ..tensor_element import tensor_element
-from ..common_toolkit import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln
+from ..common_toolkit import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln, pickle
 from .state import Configuration
 
 
