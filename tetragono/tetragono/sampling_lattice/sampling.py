@@ -21,7 +21,7 @@ import TAT
 from ..auxiliaries import DoubleLayerAuxiliaries, ThreeLineAuxiliaries
 from ..common_toolkit import mpi_rank, mpi_size
 from ..tensor_element import tensor_element
-from .lattice import Configuration
+from .lattice import Configuration, SamplingLattice
 
 
 class Sampling:
@@ -44,7 +44,7 @@ class Sampling:
         restrict_subspace
             A function return bool to restrict sampling subspace.
         """
-        self.owner = owner
+        self.owner: SamplingLattice = owner
 
         # This is cut dimension used by Configuration object, since for PEPS ansatz, approximation is needed when
         # calculate w(s), which is controled by a cut dimension parameter, which is often called Dc.
@@ -100,8 +100,7 @@ class SweepSampling(Sampling):
         possible_hopping = element_pool[positions_configuration]
         if possible_hopping:
             hopping_number = len(possible_hopping)
-            positions_configuration_s, element = list(possible_hopping.items())[TAT.random.uniform_int(
-                0, hopping_number - 1)()]
+            positions_configuration_s = list(possible_hopping)[TAT.random.uniform_int(0, hopping_number - 1)()]
             hopping_number_s = len(element_pool[positions_configuration_s])
             replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
             if self._restrict_subspace is not None:

@@ -64,12 +64,15 @@ def bcast_buffer(buffer, root=0):
     mpi_comm.Bcast(buffer, root=root)
 
 
-def bcast_lattice_buffer(lattice, root=0):
+def bcast_iterator_buffer(iterator, root=0):
     requests = []
-    for row in lattice:
-        for tensor in row:
-            requests.append(mpi_comm.Ibcast(tensor.storage, root=root))
+    for tensor in iterator:
+        requests.append(mpi_comm.Ibcast(tensor, root=root))
     MPI.Request.Waitall(requests)
+
+
+def bcast_lattice_buffer(lattice, root=0):
+    return bcast_iterator_buffer((tensor.storage for row in lattice for tensor in row), root=root)
 
 
 class SignalHandler():
