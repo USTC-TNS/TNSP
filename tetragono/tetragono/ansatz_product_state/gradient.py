@@ -16,44 +16,51 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import signal
 import inspect
+import signal
+import itertools
+from datetime import datetime
 import numpy as np
 import TAT
 from ..ansatz_product_state import AnsatzProductState, Configuration, SweepSampling, ErgodicSampling, Observer
 from ..common_toolkit import (SignalHandler, seed_differ, mpi_comm, mpi_size, mpi_rank, show, showln, write_to_file,
-                              get_imported_function, send)
+                              get_imported_function, send, bcast_iterator_buffer)
 
 
-def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
+def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta,
+                     gradient_ansatz):
 
     def get_energy():
         state.refresh_auxiliaries()
         with energy_observer:
             for possibility, configuration in configuration_pool:
                 energy_observer(possibility, configuration)
-        return energy_observer.energy[0] * state.site_number
+        energy, _ = energy_observer.total_energy
+        return energy
 
-    original_energy = observer.energy[0] * state.site_number
+    original_energy, _ = observer.total_energy
     delta = check_difference_delta
     showln(f"difference delta is set as {delta}")
-    for ansatz_index, name in enumerate(observer._enable_gradient):
+    for ansatz_index, name in enumerate(gradient_ansatz):
         showln(name)
 
-        element_g = state.ansatzes[name].elements(None)
-        element_sr = state.ansatzes[name].elements(None)
-        element_si = state.ansatzes[name].elements(None)
-        element_r = state.ansatzes[name].elements(None)
-        element_grad = state.ansatzes[name].elements(grad[ansatz_index])
+        element_g = state.ansatzes[name].elements(None)  # Get
+        element_sr = state.ansatzes[name].elements(None)  # Set real part
+        element_si = state.ansatzes[name].elements(None)  # Set imag part
+        element_r = state.ansatzes[name].elements(None)  # Reset
+        element_grad = state.ansatzes[name].elements(grad[ansatz_index])  # Get gradient
 
         element_sr.send(None)
         element_si.send(None)
         element_r.send(None)
         for value, calculated_grad in zip(element_g, element_grad):
+            # value is a torch tensor which maybe updated layer, so need to copy it by convert it to normal python
+            # number.
             if np.iscomplex(value):
                 value = complex(value)
             else:
                 value = float(value)
+                calculated_grad = calculated_grad.real
             send(element_sr, value + delta)
             now_energy = get_energy()
             rgrad = (now_energy - original_energy) / delta
@@ -65,11 +72,11 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
             else:
                 cgrad = rgrad
             send(element_r, value)
-            showln(" ", calculated_grad / cgrad, cgrad, calculated_grad)
+            showln(" ", abs(calculated_grad - cgrad) / abs(cgrad), cgrad, calculated_grad)
 
 
 def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude,
-                line_search_error_threshold):
+                line_search_error_threshold, gradient_ansatz):
     saved_state = {name: list(state.ansatzes[name].buffers(None)) for name in state.ansatzes}
 
     def restore_state():
@@ -83,18 +90,18 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
 
     def grad_dot(eta):
         if eta not in grad_dot_pool:
-            state.apply_gradient(observer._enable_gradient, grad, eta)
+            state.apply_gradient(grad, eta, part=gradient_ansatz)
             with energy_observer:
                 for possibility, configuration in configuration_pool:
                     energy_observer(possibility, configuration)
                     show(f"predicting eta={eta}, energy={energy_observer.energy}")
-            result = mpi_comm.bcast(observer.delta_dot_sum(grad, energy_observer.gradient))
+            result = mpi_comm.bcast(state.state_dot(grad, energy_observer.gradient, part=gradient_ansatz))
             showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
             restore_state()
         return grad_dot_pool[eta]
 
-    grad_dot_pool[0] = mpi_comm.bcast(observer.delta_dot_sum(grad, observer.gradient))
+    grad_dot_pool[0] = mpi_comm.bcast(state.state_dot(grad, observer.gradient, part=gradient_ansatz))
     if grad_dot(0.0) > 0:
         begin = 0.0
         end = step_size * line_search_amplitude
@@ -122,9 +129,9 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
 
 def gradient_descent(
         state: AnsatzProductState,
-        sampling_total_step,
-        grad_total_step,
-        grad_step_size,
+        sampling_total_step=0,
+        grad_total_step=1,
+        grad_step_size=0,
         *,
         # About sampling
         sampling_method="sweep",
@@ -133,10 +140,10 @@ def gradient_descent(
         # About subspace
         restrict_subspace=None,
         # About gradient method
-        enable_gradient_ansatz=None,
         use_check_difference=False,
         use_line_search=False,
         use_fix_relative_step_size=False,
+        enable_gradient_ansatz=None,
         momentum_parameter=0.0,
         # About natural gradient
         use_natural_gradient=False,
@@ -151,10 +158,14 @@ def gradient_descent(
         # About line search
         line_search_amplitude=1.25,
         line_search_error_threshold=0.1,
+        # About momentum
+        orthogonalize_momentum=False,
         # About check difference
         check_difference_delta=1e-8,
         # About Measurement
         measurement=None):
+
+    time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
     # Gradient step
     use_gradient = grad_step_size != 0 or use_check_difference
@@ -186,17 +197,20 @@ def gradient_descent(
         restrict = None
 
     # Create observer
+    if use_gradient:
+        if enable_gradient_ansatz is not None:
+            gradient_ansatz = enable_gradient_ansatz.split(",")
+        else:
+            gradient_ansatz = list(state.ansatzes)
+    else:
+        gradient_ansatz = []
     observer = Observer(state)
     observer.restrict_subspace(restrict)
     observer.add_energy()
-    if use_gradient:
-        if enable_gradient_ansatz is not None:
-            observer.enable_gradient(enable_gradient_ansatz.split(","))
-        else:
-            observer.enable_gradient()
-        if use_natural_gradient:
-            observer.enable_natural_gradient()
-            observer.cache_natural_delta(cache_natural_delta)
+    observer.enable_gradient(gradient_ansatz)
+    if use_natural_gradient:
+        observer.enable_natural_gradient()
+        observer.cache_natural_delta(cache_natural_delta)
     if measurement:
         measurement_names = measurement.split(",")
         for measurement_name in measurement_names:
@@ -210,10 +224,7 @@ def gradient_descent(
         energy_observer.restrict_subspace(restrict)
         energy_observer.add_energy()
         if use_line_search:
-            if enable_gradient_ansatz is not None:
-                energy_observer.enable_gradient(enable_gradient_ansatz.split(","))
-            else:
-                energy_observer.enable_gradient()
+            energy_observer.enable_gradient(gradient_ansatz)
 
     # Main loop
     with SignalHandler(signal.SIGINT) as sigint_handler:
@@ -221,7 +232,7 @@ def gradient_descent(
             if need_energy_observer:
                 configuration_pool = []
             # Sampling and observe
-            with observer, seed_differ:
+            with seed_differ, observer:
                 # Sampling method
                 if sampling_method == "sweep":
                     if sweep_hopping_hamiltonians is not None:
@@ -229,16 +240,16 @@ def gradient_descent(
                                                                      "hopping_hamiltonians")(state)
                     else:
                         hopping_hamiltonians = None
+                    sampling = SweepSampling(state, restrict, hopping_hamiltonians)
+                    sampling_total_step = sampling_total_step
+                    # Initial sweep configuration
                     if len(sampling_configurations) < mpi_size:
                         choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
                     else:
                         choose = mpi_rank
-                    sampling = SweepSampling(state,
-                                             restrict_subspace=restrict,
-                                             configuration=sampling_configurations[choose],
-                                             hopping_hamiltonians=hopping_hamiltonians)
+                    sampling.configuration.import_configuration(sampling_configurations[choose])
                 elif sampling_method == "ergodic":
-                    sampling = ErgodicSampling(state, restrict_subspace=restrict)
+                    sampling = ErgodicSampling(state, restrict)
                     sampling_total_step = sampling.total_step
                 else:
                     raise ValueError("Invalid sampling method")
@@ -250,8 +261,8 @@ def gradient_descent(
                         if need_energy_observer:
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
-                # Save configurations
-                gathered_configurations = mpi_comm.allgather(sampling.configuration._configuration)
+                # Save configuration
+                gathered_configurations = mpi_comm.allgather(configuration.export_configuration())
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
@@ -263,10 +274,11 @@ def gradient_descent(
                     get_imported_function(measurement_name, "save_result")(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
-                with open(log_file, "a", encoding="utf-8") as file:
+                with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
                     print(*observer.energy, file=file)
 
             if use_gradient:
+
                 # Get gradient
                 if use_natural_gradient:
                     grad = observer.natural_gradient(conjugate_gradient_method_step, conjugate_gradient_method_error,
@@ -277,28 +289,40 @@ def gradient_descent(
                 # Change state
                 if use_check_difference:
                     showln("checking difference")
-                    check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta)
+                    check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta,
+                                     gradient_ansatz)
 
                 elif use_line_search:
                     showln("line searching")
-                    grad = state.fix_relative_to_state(grad, observer._enable_gradient)
+                    grad *= (state.state_dot(part=gradient_ansatz) /
+                             state.state_dot(grad, grad, part=gradient_ansatz))**0.5
                     grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
-                                                 grad_step_size, line_search_amplitude, line_search_error_threshold)
-                    state.apply_gradient(observer._enable_gradient, grad, grad_step_size)
+                                                 grad_step_size, line_search_amplitude, line_search_error_threshold,
+                                                 gradient_ansatz)
+                    state.apply_gradient(grad, grad_step_size, part=gradient_ansatz)
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
                         total_grad = grad
                     else:
+                        if orthogonalize_momentum:
+                            for index, ansatz_name in enumerate(gradient_ansatz):
+                                ansatz = state.ansatzes[ansatz_name]
+                                param = (ansatz.ansatz_dot(total_grad) / state.ansatz_dot())
+                                for index, tensor in enumerate(ansatz.buffers(None)):
+                                    total_grad[index] -= tensor * param
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     this_grad = total_grad
                     if use_fix_relative_step_size:
-                        this_grad = state.fix_relative_to_state(this_grad, observer._enable_gradient)
-                    state.apply_gradient(observer._enable_gradient, grad, grad_step_size)
+                        this_grad *= (state.state_dot(part=gradient_ansatz) /
+                                      state.state_dot(this_grad, this_grad, part=gradient_ansatz))**0.5
+                    state.apply_gradient(grad, grad_step_size, part=gradient_ansatz)
                 showln(f"gradient {grad_step}/{grad_total_step}, step_size={grad_step_size}")
+
+                # Bcast state
+                state.bcast_state(part=gradient_ansatz)
 
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
                     write_to_file(state, save_state_file)
-
             if sigint_handler():
                 break

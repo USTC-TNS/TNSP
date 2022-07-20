@@ -27,7 +27,7 @@ from .state import Configuration
 class Observer:
 
     __slots__ = [
-        "_owner", "_observer", "_enable_gradient", "_enable_natural_gradient", "_cache_natural_delta",
+        "owner", "_observer", "_enable_gradient", "_enable_natural_gradient", "_cache_natural_delta",
         "_restrict_subspace", "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight",
         "_total_weight_square", "_total_energy", "_total_energy_square", "_total_energy_reweight", "_Delta", "_EDelta",
         "_Deltas"
@@ -42,7 +42,7 @@ class Observer:
         owner : AnsatzProductState
             The owner of this obsever object.
         """
-        self._owner = owner
+        self.owner = owner
 
         self._observer = {}
         self._enable_gradient = []
@@ -147,9 +147,9 @@ class Observer:
 
         allreduce_iterator_buffer(
             itertools.chain(
-                *(self._owner.ansatzes[name].buffers_for_mpi(self._Delta[i])
+                *(self.owner.ansatzes[name].buffers_for_mpi(self._Delta[i])
                   for i, name in enumerate(self._enable_gradient)),
-                *(self._owner.ansatzes[name].buffers_for_mpi(self._EDelta[i])
+                *(self.owner.ansatzes[name].buffers_for_mpi(self._EDelta[i])
                   for i, name in enumerate(self._enable_gradient)),
             ))
 
@@ -220,7 +220,7 @@ class Observer:
             name: {
                 positions:
                 self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions],
-                                           self._result_reweight[name][pisitions]) for positions, _ in data.items()
+                                           self._result_reweight[name][pisitions]) for positions in data
             } for name, data in self._observer.items()
         }
 
@@ -247,7 +247,7 @@ class Observer:
             The energy per site.
         """
         expect, deviation = self.total_energy
-        site_number = self._owner.site_number
+        site_number = self.owner.site_number
         return expect / site_number, deviation / site_number
 
     @property
@@ -263,22 +263,16 @@ class Observer:
         energy, _ = self.total_energy
         b = (2 * (np.array(self._EDelta, dtype=object) / self._total_weight) - 2 * energy *
              (np.array(self._Delta, dtype=object) / self._total_weight))
-        return b
+        return self.state_conjugate(b)
 
-    def delta_dot_sum(self, a, b):
-        result = 0.0
-        for i, name in enumerate(self._enable_gradient):
-            result += self._owner.ansatzes[name].delta_dot_sum(a[i], b[i])
-        return result
+    def state_dot_sum(self, a=None, b=None):
+        return self.owner.state_dot_sum(a, b, part=self._enable_gradient)
 
-    def delta_update(self, a, b):
-        for i, name in enumerate(self._enable_gradient):
-            self._owner.ansatzes[name].delta_update(a[i], b[i])
+    def state_conjugate(self, a=None):
+        return self.owner.state_conjugate(a, part=self._enable_gradient)
 
-    def allreduce_delta(self, a):
-        allreduce_iterator_buffer(
-            itertools.chain(
-                *(self._owner.ansatzes[name].buffers_for_mpi(a[i]) for i, name in enumerate(self._enable_gradient))))
+    def state_dot(self, a=None, b=None):
+        return self.owner.state_dot(a, b, part=self._enable_gradient)
 
     def _trace_metric(self):
         """
@@ -289,14 +283,13 @@ class Observer:
         float
             The trace of metric.
         """
-        # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result = 0.0
         for reweight, deltas in self._weights_and_deltas():
-            result += self.delta_dot_sum(deltas, deltas) * reweight / self._total_weight
+            result += self.state_dot_sum(self.state_conjugate(deltas), deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
-        delta = np.array(self._Delta, dtype=object) / self._total_weight
-        result -= self.delta_dot_sum(delta, delta)
+        result -= self.state_dot_sum(self.state_conjugate(self._Delta),
+                                     self._Delta) / (self._total_weight * self._total_weight)
 
         return result
 
@@ -334,16 +327,14 @@ class Observer:
         dict[str, Delta]
             The product result.
         """
-        # Metric = |Deltas[s]> <Deltas[s]| reweight[s] / total_weight - |Delta> / total_weight <Delta| / total_weight
         result_1 = gradient * 0
         for reweight, deltas in self._weights_and_deltas():
-            param = self.delta_dot_sum(deltas, gradient) * reweight / self._total_weight
-            self.delta_update(result_1, param * np.array(deltas, dtype=object))
-        self.allreduce_delta(result_1)
+            param = self.state_dot_sum(deltas, gradient) * reweight / self._total_weight
+            result_1 += param * self.state_conjugate(deltas)
+        self.owner.allreduce_state(result_1, part=self._enable_gradient)
 
-        delta = np.array(self._Delta, dtype=object) / self._total_weight
-        param = self.delta_dot_sum(delta, gradient)
-        result_2 = delta * param
+        param = self.state_dot_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)
+        result_2 = self.state_conjugate(self._Delta) * param
         return result_1 - result_2 + epsilon * gradient
 
     def natural_gradient(self, step, error, epsilon):
@@ -366,18 +357,18 @@ class Observer:
         """
         show("calculating natural gradient")
         b = self.gradient
-        b_square = self.delta_dot_sum(b, b)
+        b_square = self.state_dot_sum(self.state_conjugate(b), b).real
         # A = metric
         # A x = b
 
         tr = self._trace_metric()
-        n = sum(self._owner.ansatzes[name].element_count(b[i]) for i, name in enumerate(self._enable_gradient))
+        n = sum(self.owner.ansatzes[name].element_count(b[i]) for i, name in enumerate(self._enable_gradient))
         relative_epsilon = epsilon * tr / n
 
         x = b * 0
         # r = b - A@x
         r = b - self._metric_mv(x, relative_epsilon)
-        r_square = self.delta_dot_sum(r, r)
+        r_square = self.state_dot_sum(self.state_conjugate(r), r).real
         # p = r
         p = r
         # loop
@@ -390,12 +381,13 @@ class Observer:
                     break
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = self.delta_dot_sum(r, r) / self.delta_dot_sum(p, self._metric_mv(p, relative_epsilon))
+            alpha = (self.state_dot_sum(self.state_conjugate(r), r).real /
+                     self.state_dot_sum(self.state_conjugate(p), self._metric_mv(p, relative_epsilon)).real)
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, relative_epsilon)
-            new_r_square = self.delta_dot_sum(new_r, new_r)
+            new_r_square = self.state_dot_sum(self.state_conjugate(new_r), new_r).real
             # beta = (new_r @ new_r) / (r @ r)
             beta = new_r_square / r_square
             # r = new_r
@@ -421,7 +413,7 @@ class Observer:
         if "energy" not in self._observer:
             self.add_energy()
         if ansatz_name is None:
-            ansatz_name = self._owner.ansatzes.keys()
+            ansatz_name = self.owner.ansatzes.keys()
         if isinstance(ansatz_name, str):
             ansatz_name = [ansatz_name]
         for name in ansatz_name:
@@ -468,7 +460,7 @@ class Observer:
         """
         Add energy as an observer.
         """
-        self.add_observer("energy", self._owner._hamiltonians)
+        self.add_observer("energy", self.owner._hamiltonians)
 
     def __call__(self, possibility, configuration):
         """
@@ -481,36 +473,38 @@ class Observer:
         configuration : list[list[dict[int, EdgePoint]]]
             The current configuration.
         """
-        owner = self._owner
         self._count += 1
-        [ws], [delta] = owner.weight_and_delta([configuration], self._enable_gradient)
-        reweight = ws**2 / possibility
+        # ws is |s|psi>
+        # delta is |s|partial_x psi>
+        [ws], [delta] = self.owner.weight_and_delta([configuration], self._enable_gradient)
+        reweight = np.linalg.norm(ws)**2 / possibility  # <psi|s|psi> / p(s)
         self._total_weight += reweight
         self._total_weight_square += reweight * reweight
-        # find wss
-        configuration_list = []
-        configuration_map = {}
+        # find all wss
+        configuration_list = []  # list[Configuration]
+        configuration_map = {}  # str -> positions(s) -> positions(s') -> (index in configuration_list, H_{s,s'})
         for name, observers in self._observer.items():
             configuration_map[name] = {}
             for positions, observer in observers.items():
                 configuration_map[name][positions] = {}
-                body = observer.rank // 2
-                current_configuration = tuple(configuration[l1, l2, orbit] for l1, l2, orbit in positions)
+                body = len(positions)
+                positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
                 element_pool = tensor_element(observer)
-                if current_configuration not in element_pool:
+                if positions_configuration not in element_pool:
                     continue
-                for other_configuration, observer_shrinked in element_pool[current_configuration].items():
+                for positions_configuration_s, observer_shrinked in element_pool[positions_configuration].items():
+                    # observer_shrinked is |s'|H|s|
                     if self._restrict_subspace is not None:
-                        replacement = {positions[i]: other_configuration[i] for i in range(body)}
+                        replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
                         if not self._restrict_subspace(configuration, replacement):
                             continue
-                    new_configuration = Configuration(self._owner, configuration._configuration)
+                    new_configuration = Configuration(self.owner, configuration.export_configuration())
                     for i, [l1, l2, orbit] in enumerate(positions):
-                        new_configuration[l1, l2, orbit] = other_configuration[i]
-                    configuration_map[name][positions][other_configuration] = (len(configuration_list),
-                                                                               observer_shrinked.storage[0])
+                        new_configuration[l1, l2, orbit] = positions_configuration_s[i]
+                    configuration_map[name][positions][positions_configuration_s] = (len(configuration_list),
+                                                                                     observer_shrinked.storage[0])
                     configuration_list.append(new_configuration)
-        wss_list, _ = owner.weight_and_delta(configuration_list, [])
+        wss_list, _ = self.owner.weight_and_delta(configuration_list, [])
         # measure
         for name, configuration_map_name in configuration_map.items():
             if name == "energy":
@@ -518,9 +512,12 @@ class Observer:
             for positions, configuration_map_name_positions in configuration_map_name.items():
                 total_value = 0
                 for _, [index, hamiltonian_term] in configuration_map_name_positions.items():
+                    # |s'|psi>
                     wss = wss_list[index]
-                    value = (wss / ws) * hamiltonian_term
+                    # <psi|s'|H|s|psi> / <psi|s|psi>
+                    value = (ws * hamiltonian_term * wss.conjugate()) / (ws.conjugate() * ws)
                     total_value += complex(value)
+                # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
                 to_save = total_value.real
                 self._result[name][positions] += to_save
                 self._result_square[name][positions] += to_save * to_save
@@ -532,23 +529,32 @@ class Observer:
                 self._total_energy += to_save
                 self._total_energy_square += to_save * to_save
                 self._total_energy_reweight += to_save * reweight
-                if self._owner.Tensor.is_real:
+                if self.owner.Tensor.is_real:
                     Es = Es.real
-                else:
-                    Es = Es.conjugate()
                 deltas = []
                 for i, ansatz_name in enumerate(self._enable_gradient):
-                    this_delta = reweight * delta[i] / ws
+                    ansatz = self.owner.ansatzes[ansatz_name]
+                    # delta[i] is |s|partial_x psi>
+                    # holes is <psi|s|partial_x psi> / <psi|s|psi>
+                    holes = (ws.conjugate() * delta[i]) / (ws.conjugate() * ws)
+                    # this_delta is r(s) <psi|s|partial_x psi> / <psi|s|psi>
+                    this_delta = reweight * holes
+                    this_edelta = Es * this_delta
+                    if ansatz.recovery_real():
+                        this_delta = ansatz.recovery_real(this_delta)
+                        this_edelta = ansatz.recovery_real(this_edelta)
                     if self._Delta[i] is None:
                         self._Delta[i] = this_delta
                     else:
                         self._Delta[i] += this_delta
                     if self._EDelta[i] is None:
-                        self._EDelta[i] = Es * this_delta
+                        self._EDelta[i] = this_edelta
                     else:
-                        self._EDelta[i] += Es * this_delta
+                        self._EDelta[i] += this_edelta
                     if self._enable_natural_gradient:
-                        deltas.append(delta[i] / ws)
+                        if ansatz.recovery_real():
+                            holes = ansatz.recovery_real(holes)
+                        deltas.append(holes)
                 if self._enable_natural_gradient:
                     if self._cache_natural_delta:
                         with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:

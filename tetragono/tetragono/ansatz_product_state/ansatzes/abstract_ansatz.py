@@ -21,13 +21,13 @@ class AbstractAnsatz:
 
     __slots__ = []
 
-    def weight(self, configuration):
+    def _weight(self, configuration):
         """
         Calculate the weight of the given configuration.
 
         Parameters
         ----------
-        configuration : list[list[dict[int, EdgePoint]]]
+        configuration : Configuration
             The given configuration to calculate weight.
 
         Returns
@@ -37,13 +37,13 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("weight not implemented")
 
-    def delta(self, configuration):
+    def _delta(self, configuration):
         """
         Calculate the delta of the given configuration.
 
         Parameters
         ----------
-        configuration : list[list[dict[int, EdgePoint]]]
+        configuration : Configuration
             The given configuration to calculate delta.
 
         Returns
@@ -59,7 +59,7 @@ class AbstractAnsatz:
 
         Parameters
         ----------
-        configurations : list[list[list[dict[int, EdgePoint]]]]
+        configurations : list[configuration]
             The given configuration list to calculate weight and delta.
         calculate_delta : bool
             Whether to calculate delta.
@@ -68,27 +68,12 @@ class AbstractAnsatz:
         -------
         tuple[list[float | complex], None | list[Delta]]
         """
-        weight = [self.weight(configuration) for configuration in configurations]
+        weight = [self._weight(configuration) for configuration in configurations]
         if calculate_delta:
-            delta = [self.delta(configuration) for configuration in configurations]
+            delta = [self._delta(configuration) for configuration in configurations]
         else:
             delta = None
         return weight, delta
-
-    def get_norm_max(self, delta):
-        """
-        Get the max norm of the delta or state.
-
-        Parameters
-        ----------
-        delta : None | Delta
-            The delta or state to calculate max norm.
-
-        Returns
-        -------
-            The max norm
-        """
-        raise NotImplementedError("get norm max not implemented")
 
     def refresh_auxiliaries(self):
         """
@@ -96,34 +81,54 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("refresh auxiliaries not implemented")
 
-    @staticmethod
-    def delta_dot_sum(a, b):
+    def ansatz_dot_sum(self, a, b):
         """
-        Calculate the dot of two delta.
+        Calculate the summary of product of two ansatz like data. If None is given, the data ansatz itself stored will
+        be used.
 
         Parameters
         ----------
         a, b : Delta
-            The two delta.
+            The two ansatz like data.
 
         Returns
         -------
         float
             The dot of a and b.
         """
-        raise NotImplementedError("delta_dot_sum not implemented")
+        raise NotImplementedError("ansatz_dot_sum not implemented")
 
-    @staticmethod
-    def delta_update(a, b):
+    def ansatz_conjugate(self, a):
         """
-        Add delta b into delta a.
+        Calculate the conjugate of a ansatz like data, If None is given, the data ansatz itself stored will be used.
+
+        Parameters
+        ----------
+        a : Delta
+            The ansatz like data.
+
+        Returns
+        -------
+        Delta
+            The conjugate
+        """
+        raise NotImplementedError("ansatz_conjugate not implemented")
+
+    def ansatz_dot(self, a, b):
+        """
+        Calculate the dot of two ansatz like data. If None is given, the data ansatz itself stored will be used.
 
         Parameters
         ----------
         a, b : Delta
-            The two delta.
+            The two ansatz like data.
+
+        Returns
+        -------
+        float
+            The dot of a and b.
         """
-        raise NotImplementedError("delta_update not implemented")
+        return self.ansatz_dot_sum(self.ansatz_conjugate(a), b).real
 
     def buffers(self, delta):
         """
@@ -179,3 +184,11 @@ class AbstractAnsatz:
             The buffers of this ansatz.
         """
         raise NotImplementedError("buffers for mpi not implemented")
+
+    def recovery_real(self, delta=None):
+        """
+        Recovery the input to real. If None is given, return True if and only if it is needed to reocovery to real data.
+        """
+        if delta is None:
+            return False
+        raise RuntimeError("Program should never reach here")

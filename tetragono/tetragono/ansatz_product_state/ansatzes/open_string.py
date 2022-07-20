@@ -18,14 +18,15 @@
 
 import numpy as np
 from ...common_toolkit import safe_rename, safe_contract
+from ..state import AnsatzProductState
 from .abstract_ansatz import AbstractAnsatz
 
 
 class OpenString(AbstractAnsatz):
 
     __slots__ = [
-        "ansatz_product_state", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list",
-        "_left_to_right", "_right_to_left"
+        "owner", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list", "_left_to_right",
+        "_right_to_left"
     ]
 
     def _construct_tensor(self, index):
@@ -43,29 +44,29 @@ class OpenString(AbstractAnsatz):
             The result tensor.
         """
         names = ["P"]
-        edges = [self.ansatz_product_state.physics_edges[self.index_to_site[index]]]
+        edges = [self.owner.physics_edges[self.index_to_site[index]]]
         if index != 0:
             names.append("L")
             edges.append(self.cut_dimension)
         if index != self.length - 1:
             names.append("R")
             edges.append(self.cut_dimension)
-        return self.ansatz_product_state.Tensor(names, edges).randn()
+        return self.owner.Tensor(names, edges).randn()
 
-    def __init__(self, ansatz_product_state, index_to_site, cut_dimension):
+    def __init__(self, owner, index_to_site, cut_dimension):
         """
         Create open string ansatz by given index_to_site map and cut_dimension.
 
         Parameters
         ----------
-        ansatz_product_state : AnsatzProductState
+        owner : AnsatzProductState
             The ansatz product state used to create open string.
         index_to_site : list[tuple[int, int, int]]
             The sites array to specify the string shape.
         cut_dimension : int
             The dimension cut of the string.
         """
-        self.ansatz_product_state = ansatz_product_state
+        self.owner: AnsatzProductState = owner
         self.length = len(index_to_site)
         self.index_to_site = [site for site in index_to_site]
         self.site_to_index = {site: index for index, site in enumerate(index_to_site)}
@@ -92,7 +93,7 @@ class OpenString(AbstractAnsatz):
             The index calculated, if try_only=False, it equals to length of configuration, and the result tensor.
         """
         result = self._left_to_right
-        left = self.ansatz_product_state.Tensor(1)
+        left = self.owner.Tensor(1)
         index = 0
         while index < len(configuration):
             config = configuration[index]
@@ -122,7 +123,7 @@ class OpenString(AbstractAnsatz):
             The index calculated, if try_only=False, it equals to length of configuration, and the result tensor.
         """
         result = self._right_to_left
-        right = self.ansatz_product_state.Tensor(1)
+        right = self.owner.Tensor(1)
         index = 0
         while index < len(configuration):
             config = configuration[index]
@@ -136,7 +137,7 @@ class OpenString(AbstractAnsatz):
             index += 1
         return index, right
 
-    def weight(self, site_configuration):
+    def _weight(self, site_configuration):
         index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
         index, left = self._go_from_left(index_configuration, try_only=True)
         if index == 0:
@@ -146,7 +147,7 @@ class OpenString(AbstractAnsatz):
         _, right = self._go_from_right(index_configuration[:index:-1], try_only=False)
         return safe_contract(left, right, {("R", "L")})[{}]
 
-    def delta(self, site_configuration):
+    def _delta(self, site_configuration):
         index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
         result = []
         _, _ = self._go_from_left(index_configuration[::1], try_only=False)
@@ -155,42 +156,36 @@ class OpenString(AbstractAnsatz):
             _, left = self._go_from_left(index_configuration[0:index:1], try_only=False)
             _, right = self._go_from_right(index_configuration[-1:index:-1], try_only=False)
             this_tensor = safe_rename(left, {"R": "L"}).contract(safe_rename(right, {"L": "R"}), set())
-            this_tensor = this_tensor.conjugate().expand({
-                "P": (index_configuration[index],
-                      self.ansatz_product_state.physics_edges[self.index_to_site[index]].dimension)
-            })
+            this_tensor = this_tensor.expand(
+                {"P": (index_configuration[index], self.owner.physics_edges[self.index_to_site[index]].dimension)})
             result.append(this_tensor)
         return np.array(result)
-
-    def get_norm_max(self, delta):
-        if delta is None:
-            delta = self.tensor_list
-        return max(i.norm_max() for i in delta)
 
     def refresh_auxiliaries(self):
         self._left_to_right = {}
         self._right_to_left = {}
 
-    @staticmethod
-    def delta_dot_sum(a, b):
+    def ansatz_dot_sum(self, a, b):
         result = 0.0
-        for ai, bi in zip(a, b):
-            dot = ai.conjugate(default_is_physics_edge=True).contract(bi, {(name, name) for name in ai.names})
-            result += complex(dot).real
+        for ai, bi in zip(self.buffers(a), self.buffers(b)):
+            dot = ai.contract(bi, {(name, name) for name in ai.names})
+            if dot.is_complex:
+                dot = complex(dot)
+            else:
+                dot = float(dot)
+            result += dot
         return result
 
-    @staticmethod
-    def delta_update(a, b):
-        for ai, bi in zip(a, b):
-            ai += bi
+    def ansatz_conjugate(self, a):
+        return np.array([i.conjugate(default_is_physics_edge=True) for i in self.buffers(a)])
 
     def buffers(self, delta):
         if delta is None:
             delta = self.tensor_list
-        length = len(delta)
-        for i in range(length):
-            recv = yield delta[i]
+        for i, value in enumerate(delta):
+            recv = yield value
             if recv is not None:
+                # When not setting value, input delta could be an iterator
                 delta[i] = recv
 
     def elements(self, delta):
@@ -200,11 +195,14 @@ class OpenString(AbstractAnsatz):
             for i in range(length):
                 recv = yield storage[i]
                 if recv is not None:
+                    if tensor.names != self.tensor_list[index].names:
+                        raise RuntimeError("Trying to set tensor element which mismatches the edge names.")
                     storage[i] = recv
 
     def buffer_count(self, delta):
         if delta is None:
             delta = self.tensor_list
+        delta = list(delta)  # in case of delta is an iterator
         length = len(delta)
         return length
 
@@ -212,5 +210,5 @@ class OpenString(AbstractAnsatz):
         return sum(tensor.norm_num() for tensor in self.buffers(delta))
 
     def buffers_for_mpi(self, delta):
-        for tensor in self.buffers(delta):
+        for index, tensor in enumerate(self.buffers(delta)):
             yield tensor.storage

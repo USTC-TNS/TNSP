@@ -20,25 +20,25 @@ import numpy as np
 import torch
 import TAT
 from .abstract_ansatz import AbstractAnsatz
+from ..state import AnsatzProductState
 
 
 class ConvolutionalNeural(AbstractAnsatz):
 
-    __slots__ = ["ansatz_product_state", "network", "dtype"]
+    __slots__ = ["owner", "network", "dtype"]
 
-    def __init__(self, ansatz_product_state, network):
+    def __init__(self, owner, network):
         """
         Create convolution neural ansatz for a given ansatz product state.
 
         Parameters
         ----------
-        ansatz_product_state : AnsatzProductState
+        owner : AnsatzProductState
             The ansatz product state used to create open string.
         network : torch.nn.Module
             The pytorch nerual network model object.
         """
-        super().__init__()
-        self.ansatz_product_state = ansatz_product_state
+        self.owner: AnsatzProductState = owner
         self.network = network
         self.dtype = next(self.network.parameters()).dtype
 
@@ -75,20 +75,8 @@ class ConvolutionalNeural(AbstractAnsatz):
             The configuration as input of network, where three dimensions are channel, width and height.
         """
         return [[[-1 if configuration[l1, l2, 0][1] == 0 else 1
-                  for l2 in range(self.ansatz_product_state.L2)]
-                 for l1 in range(self.ansatz_product_state.L1)]]
-
-    def weight(self, configuration):
-        x = torch.tensor([self.create_x(configuration)], dtype=self.dtype)
-        weight = self(x)[0]
-        return float(weight)
-
-    def delta(self, configuration):
-        x = torch.tensor([self.create_x(configuration)], dtype=self.dtype)
-        weight = self(x)[0]
-        self.network.zero_grad()
-        weight.backward()
-        return np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
+                  for l2 in range(self.owner.L2)]
+                 for l1 in range(self.owner.L1)]]
 
     def weight_and_delta(self, configurations, calculate_delta):
         xs = torch.tensor([self.create_x(configuration) for configuration in configurations], dtype=self.dtype)
@@ -105,57 +93,62 @@ class ConvolutionalNeural(AbstractAnsatz):
             delta = None
         return weight.tolist(), delta
 
-    def get_norm_max(self, delta):
-        if delta is None:
-            delta = self.network.parameters()
-        with torch.no_grad():
-            return max(float(torch.linalg.norm(i.reshape([-1]), np.inf)) for i in self.network.parameters())
-
     def refresh_auxiliaries(self):
         pass
 
-    @staticmethod
-    def delta_dot_sum(a, b):
+    def ansatz_dot_sum(self, a, b):
         result = 0.0
-        for ai, bi in zip(a, b):
+        for ai, bi in zip(self.buffers(a), self.buffers(b)):
             result += float(np.dot(ai.reshape([-1]), bi.reshape([-1])))
         return result
 
-    @staticmethod
-    def delta_update(a, b):
-        for ai, bi in zip(a, b):
-            ai += bi
+    def ansatz_conjugate(self, a):
+        # CNN network is always real without imaginary part
+        return np.array([i for i in self.buffers(a)], dtype=object)
 
     def buffers(self, delta):
         if delta is None:
             for tensor in self.network.parameters():
                 recv = yield tensor.data
                 if recv is not None:
-                    tensor.data = recv
+                    tensor.data = torch.tensor(np.array(recv).real.copy())
+                    # convert to numpy and get real part then convert it back to torch tensor
+                    # because of https://github.com/pytorch/pytorch/issues/82610
         else:
-            length = len(delta)
-            for i in range(length):
-                recv = yield delta[i]
+            for i, value in enumerate(delta):
+                recv = yield value
                 if recv is not None:
-                    delta[i] = recv
+                    # When not setting value, input delta could be an iterator
+                    delta[i] = recv.real.copy()
+                    # copy it to ensure the stride is contiguous
 
     def elements(self, delta):
         for tensor in self.buffers(delta):
+            # Should be tensor.view for pytorch
+            # But there is no equivalent function for numpy array.
+            # So use reshape here.
             flatten = tensor.reshape([-1])
             length = len(flatten)
             for i in range(length):
                 recv = yield flatten[i]
                 if recv is not None:
-                    flatten[i] = recv
+                    flatten[i] = recv.real
 
     def buffer_count(self, delta):
         if delta is None:
-            delta = self.parameters()
-        length = len(list(delta))
+            delta = self.network.parameters()
+        delta = list(delta)  # in case of delta is an iterator
+        length = len(delta)
         return length
 
     def element_count(self, delta):
+        # Should use tensor.view here for pytorch
         return sum(len(tensor.reshape([-1])) for tensor in self.buffers(delta))
 
     def buffers_for_mpi(self, delta):
         yield from self.buffers(delta)
+
+    def recovery_real(self, delta=None):
+        if delta is None:
+            return True
+        return np.array([i.real for i in delta], dtype=object)
