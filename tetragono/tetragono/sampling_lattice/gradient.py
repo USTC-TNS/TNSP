@@ -23,8 +23,7 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_dot_sum, lattice_conjugate, lattice_randomize, write_to_file,
-                              read_from_file, get_imported_function)
+                              seed_differ, lattice_randomize, write_to_file, read_from_file, get_imported_function)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -34,53 +33,61 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
             for possibility, configuration in configuration_pool:
                 configuration.refresh_all()
                 energy_observer(possibility, configuration)
-        return energy_observer.energy[0] * state.site_number
+        energy, _ = energy_observer.total_energy
+        return energy
 
-    original_energy = observer.energy[0] * state.site_number
+    original_energy, _ = observer.total_energy
     delta = check_difference_delta
     showln(f"difference delta is set as {delta}")
     for l1 in range(state.L1):
         for l2 in range(state.L2):
             showln(l1, l2)
             s = state[l1, l2].storage
-            g = grad[l1][l2].storage
+            g = grad[l1][l2].transpose(state[l1, l2].names).storage
             for i in range(len(s)):
-                s[i] += delta
+                value = s[i]
+                s[i] = value + delta
                 now_energy = get_energy()
                 rgrad = (now_energy - original_energy) / delta
-                s[i] -= delta
                 if state.Tensor.is_complex:
-                    s[i] += delta * 1j
+                    s[i] = value + delta * 1j
                     now_energy = get_energy()
                     igrad = (now_energy - original_energy) / delta
-                    s[i] -= delta * 1j
                     cgrad = rgrad + igrad * 1j
                 else:
                     cgrad = rgrad
-                showln(" ", g[i] / cgrad, cgrad, g[i])
+                s[i] = value
+                showln(" ", abs(g[i] - cgrad) / abs(cgrad), cgrad, g[i])
 
 
 def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude,
                 line_search_error_threshold):
     saved_state = [[state[l1, l2] for l2 in range(state.L2)] for l1 in range(state.L1)]
+
+    def restore_state():
+        for l1 in range(state.L1):
+            for l2 in range(state.L2):
+                state[l1, l2] = saved_state[l1][l2]
+
     grad_dot_pool = {}
 
     def grad_dot(eta):
         if eta not in grad_dot_pool:
             for l1 in range(state.L1):
                 for l2 in range(state.L2):
-                    state[l1, l2] = saved_state[l1][l2] - eta * grad[l1][l2]
+                    state[l1, l2] = state[l1, l2] - eta * grad[l1][l2]
             with energy_observer:
                 for possibility, configuration in configuration_pool:
                     configuration.refresh_all()
                     energy_observer(possibility, configuration)
                     show(f"predicting eta={eta}, energy={energy_observer.energy}")
-            result = mpi_comm.bcast(lattice_dot_sum(lattice_conjugate(grad), energy_observer.gradient).real)
+            result = mpi_comm.bcast(state.lattice_dot(grad, energy_observer.gradient))
             showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
+            restore_state()
         return grad_dot_pool[eta]
 
-    grad_dot_pool[0] = mpi_comm.bcast(lattice_dot_sum(lattice_conjugate(grad), observer.gradient).real)
+    grad_dot_pool[0] = mpi_comm.bcast(state.lattice_dot(grad, observer.gradient))
     if grad_dot(0.0) > 0:
         begin = 0.0
         end = step_size * line_search_amplitude
@@ -103,9 +110,6 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         showln(f"step_size is chosen as {step_size}, since grad_dot(begin) < 0")
         step_size = step_size
 
-    for l1 in range(state.L1):
-        for l2 in range(state.L2):
-            state[l1, l2] = saved_state[l1][l2]
     return mpi_comm.bcast(step_size)
 
 
@@ -198,12 +202,12 @@ def gradient_descent(
         cache_natural_delta=cache_natural_delta,
         cache_configuration=cache_configuration,
         restrict_subspace=restrict,
+        classical_energy=classical_energy,
     )
     if measurement:
         measurement_names = measurement.split(",")
         for measurement_name in measurement_names:
             observer.add_observer(measurement_name, get_imported_function(measurement_name, "measurement")(state))
-    observer.set_classical_energy(classical_energy)
     if use_gradient:
         need_energy_observer = use_line_search or use_check_difference
     else:
@@ -215,8 +219,8 @@ def gradient_descent(
             enable_gradient=use_line_search,
             cache_configuration=cache_configuration,
             restrict_subspace=restrict,
+            classical_energy=classical_energy,
         )
-        energy_observer.set_classical_energy(classical_energy)
 
     # Main loop
     with SignalHandler(signal.SIGINT) as sigint_handler:
@@ -256,11 +260,9 @@ def gradient_descent(
                         observer(possibility, configuration)
                         if need_energy_observer:
                             configuration_pool.append((possibility, configuration))
-                        show(
-                            f"sampling, total_step={sampling_total_step}, energy={observer.energy}, step={sampling_step}"
-                        )
-                # Save sweep configuration
-                gathered_configurations = mpi_comm.allgather(configuration._configuration)
+                        show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
+                # Save configuration
+                gathered_configurations = mpi_comm.allgather(configuration.export_configuration())
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
@@ -272,8 +274,7 @@ def gradient_descent(
                     get_imported_function(measurement_name, "save_result")(state, measurement_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
-                with open(log_file.replace("%s", str(grad_step)).replace("%t", time_str), "a",
-                          encoding="utf-8") as file:
+                with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
                     print(*observer.energy, file=file)
 
             if use_gradient:
