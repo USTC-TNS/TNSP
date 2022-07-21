@@ -319,8 +319,9 @@ class Observer():
             configuration = self._pool.add(configuration)
         self._count += 1
         ws = configuration.hole(())  # |s|psi>
-        if ws.norm_num() == 0:
-            # block mismatch, so ws is 0, return directly, only count is updated, weight will not change.
+        if ws.norm_max() == 0:
+            # maybe block mismatch, so ws is 0, return directly, only count is updated, weight will not change.
+            # maybe ws is just 0, also return directly
             return
         reweight = ws.norm_2()**2 / possibility  # <psi|s|psi> / p(s)
         self._total_weight += reweight
@@ -355,7 +356,7 @@ class Observer():
                         if wss is None:
                             raise NotImplementedError(
                                 "not implemented replace style, set cache_configuration to True to calculate it")
-                    if wss.norm_num() == 0:
+                    if wss.norm_max() == 0:
                         continue
                     # <psi|s'|H|s|psi> / <psi|s|psi>
                     value = (
