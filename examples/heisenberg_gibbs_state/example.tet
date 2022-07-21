@@ -1,8 +1,8 @@
 seed 2333
 su_create density_matrix_heisenberg L1=4 L2=4 D=4 J=-1
-su_dump data.su
-!python infinite_temperature_single_orbit.py data.su 0 2333
-su_load data.su
+su_dump su.dat
+!python infinite_temperature_single_orbit.py su.dat 0 2333
+su_load su.dat
 su_update 100 0.01 5
 su_to_gm
 gm_run 1000 10 0.01 configuration_cut_dimension=8 use_natural_gradient=True
