@@ -104,7 +104,13 @@ class ConvolutionalNeural(AbstractAnsatz):
 
     def ansatz_conjugate(self, a):
         # CNN network is always real without imaginary part
-        return np.array([i for i in self.buffers(a)], dtype=object)
+        a = [i for i in self.buffers(a)]
+        length = len(a)
+        # Create an empty np array to avoid numpy FutureWarning
+        result = np.empty(length, dtype=object)
+        for i in range(length):
+            result[i] = a[i]
+        return result
 
     def buffers(self, delta):
         if delta is None:
