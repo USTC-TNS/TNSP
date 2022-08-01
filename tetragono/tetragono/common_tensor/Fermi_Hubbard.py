@@ -57,6 +57,18 @@ NN = NN.merge_edge({
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
 
+N0 = kronecker_product(rename_io(N, {0: 0}), rename_io(I, {0: 1}))
+N0 = N0.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+}, put_sign_in_H, {"O0"})
+
+N1 = kronecker_product(rename_io(I, {0: 0}), rename_io(N, {0: 1}))
+N1 = N1.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+}, put_sign_in_H, {"O0"})
+
 CUCD = C0C1.merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],

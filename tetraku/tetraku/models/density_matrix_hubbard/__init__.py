@@ -20,7 +20,7 @@ import TAT
 import tetragono as tet
 
 
-def abstract_state(L1, L2, t, U):
+def abstract_state(L1, L2, t, U, mu):
     """
     Create density matrix of Hubbard model state.
 
@@ -30,6 +30,8 @@ def abstract_state(L1, L2, t, U):
         The lattice size.
     t, U : float
         Hubbard model parameters.
+    mu : float
+        The chemical potential.
     """
     state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
     state.total_symmetry = 0
@@ -38,12 +40,14 @@ def abstract_state(L1, L2, t, U):
             state.physics_edges[(l1, l2, 0)] = [(0, 1), (+1, 2), (+2, 1)]
             state.physics_edges[(l1, l2, 1)] = [(0, 1), (-1, 2), (-2, 1)]
     NN = tet.common_tensor.Fermi_Hubbard.NN.to(float)
+    N0 = tet.common_tensor.Fermi_Hubbard.N0.to(float)
+    N1 = tet.common_tensor.Fermi_Hubbard.N1.to(float)
     CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
-    UNN = U * NN
+    single_site = U * NN - mu * (N0 + N1)
     tCC = -t * CSCS
     for l1 in range(L1):
         for l2 in range(L2):
-            state.hamiltonians[(l1, l2, 0),] = UNN
+            state.hamiltonians[(l1, l2, 0),] = single_site
             if l1 != 0:
                 state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = tCC
             if l2 != 0:
@@ -51,7 +55,7 @@ def abstract_state(L1, L2, t, U):
     return state
 
 
-def abstract_lattice(L1, L2, t, U):
+def abstract_lattice(L1, L2, t, U, mu):
     """
     Create density matrix of Hubbard model lattice.
 
@@ -61,7 +65,9 @@ def abstract_lattice(L1, L2, t, U):
         The lattice size.
     t, U : float
         Hubbard model parameters.
+    mu : float
+        The chemical potential.
     """
-    state = tet.AbstractLattice(abstract_state(L1, L2, t, U))
+    state = tet.AbstractLattice(abstract_state(L1, L2, t, U, mu))
     state.virtual_bond["R"] = state.virtual_bond["D"] = [(0, 1)]
     return state
