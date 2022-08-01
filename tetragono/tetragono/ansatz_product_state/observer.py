@@ -265,8 +265,8 @@ class Observer:
              (np.array(self._Delta, dtype=object) / self._total_weight))
         return self.state_conjugate(b)
 
-    def state_dot_sum(self, a=None, b=None):
-        return self.owner.state_dot_sum(a, b, part=self._enable_gradient)
+    def state_prod_sum(self, a=None, b=None):
+        return self.owner.state_prod_sum(a, b, part=self._enable_gradient)
 
     def state_conjugate(self, a=None):
         return self.owner.state_conjugate(a, part=self._enable_gradient)
@@ -285,11 +285,11 @@ class Observer:
         """
         result = 0.0
         for reweight, deltas in self._weights_and_deltas():
-            result += self.state_dot_sum(self.state_conjugate(deltas), deltas) * reweight / self._total_weight
+            result += self.state_prod_sum(self.state_conjugate(deltas), deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
-        result -= self.state_dot_sum(self.state_conjugate(self._Delta),
-                                     self._Delta) / (self._total_weight * self._total_weight)
+        result -= self.state_prod_sum(self.state_conjugate(self._Delta),
+                                      self._Delta) / (self._total_weight * self._total_weight)
 
         return result
 
@@ -329,11 +329,11 @@ class Observer:
         """
         result_1 = gradient * 0
         for reweight, deltas in self._weights_and_deltas():
-            param = self.state_dot_sum(deltas, gradient) * reweight / self._total_weight
+            param = self.state_prod_sum(deltas, gradient) * reweight / self._total_weight
             result_1 += param * self.state_conjugate(deltas)
         self.owner.allreduce_state(result_1, part=self._enable_gradient)
 
-        param = self.state_dot_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)
+        param = self.state_prod_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)
         result_2 = self.state_conjugate(self._Delta) * param
         return result_1 - result_2 + epsilon * gradient
 
@@ -357,7 +357,7 @@ class Observer:
         """
         show("calculating natural gradient")
         b = self.gradient
-        b_square = self.state_dot_sum(self.state_conjugate(b), b).real
+        b_square = self.state_prod_sum(self.state_conjugate(b), b).real
         # A = metric
         # A x = b
 
@@ -368,7 +368,7 @@ class Observer:
         x = b * 0
         # r = b - A@x
         r = b - self._metric_mv(x, relative_epsilon)
-        r_square = self.state_dot_sum(self.state_conjugate(r), r).real
+        r_square = self.state_prod_sum(self.state_conjugate(r), r).real
         # p = r
         p = r
         # loop
@@ -381,13 +381,13 @@ class Observer:
                     break
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = (self.state_dot_sum(self.state_conjugate(r), r).real /
-                     self.state_dot_sum(self.state_conjugate(p), self._metric_mv(p, relative_epsilon)).real)
+            alpha = (self.state_prod_sum(self.state_conjugate(r), r).real /
+                     self.state_prod_sum(self.state_conjugate(p), self._metric_mv(p, relative_epsilon)).real)
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, relative_epsilon)
-            new_r_square = self.state_dot_sum(self.state_conjugate(new_r), new_r).real
+            new_r_square = self.state_prod_sum(self.state_conjugate(new_r), new_r).real
             # beta = (new_r @ new_r) / (r @ r)
             beta = new_r_square / r_square
             # r = new_r

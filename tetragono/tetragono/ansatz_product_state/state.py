@@ -241,7 +241,7 @@ class AnsatzProductState(AbstractState):
                 send(setter, tensor - grad * step_size)
         self.refresh_auxiliaries()
 
-    def state_dot_sum(self, a=None, b=None, *, part):
+    def state_prod_sum(self, a=None, b=None, *, part):
         """
         Calculate the summary of product of two state like data, only calculate the dot of some ansatz based on part
         variable.
@@ -259,7 +259,7 @@ class AnsatzProductState(AbstractState):
             b = [None for name in part]
         result = 0.0
         for i, name in enumerate(part):
-            result += self.ansatzes[name].ansatz_dot_sum(a[i], b[i])
+            result += self.ansatzes[name].ansatz_prod_sum(a[i], b[i])
         return result
 
     def state_conjugate(self, a=None, *, part):

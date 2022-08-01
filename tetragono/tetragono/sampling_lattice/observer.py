@@ -18,8 +18,8 @@
 
 import os
 import numpy as np
-from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update, lattice_dot_sum,
-                              lattice_conjugate, mpi_rank, mpi_comm, pickle)
+from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update,
+                              lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_comm, pickle)
 from ..tensor_element import tensor_element
 from .lattice import ConfigurationPool
 
@@ -520,11 +520,11 @@ class Observer():
         """
         result = 0.0
         for reweight, deltas in self._weights_and_deltas():
-            result += lattice_dot_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
+            result += lattice_prod_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
-        result -= lattice_dot_sum(lattice_conjugate(self._Delta),
-                                  self._Delta) / (self._total_weight * self._total_weight)
+        result -= lattice_prod_sum(lattice_conjugate(self._Delta),
+                                   self._Delta) / (self._total_weight * self._total_weight)
 
         return result
 
@@ -566,11 +566,11 @@ class Observer():
         result_1 = np.array(
             [[gradient[l1][l2].same_shape().zero() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
         for reweight, deltas in self._weights_and_deltas():
-            param = lattice_dot_sum(deltas, gradient) * reweight / self._total_weight
+            param = lattice_prod_sum(deltas, gradient) * reweight / self._total_weight
             lattice_update(result_1, param * lattice_conjugate(deltas))
         allreduce_lattice_buffer(result_1)
 
-        param = lattice_dot_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)
+        param = lattice_prod_sum(self._Delta, gradient) / (self._total_weight * self._total_weight)
         result_2 = lattice_conjugate(self._Delta) * param
         return result_1 - result_2 + epsilon * gradient
 
@@ -594,7 +594,7 @@ class Observer():
         """
         show("calculating natural gradient")
         b = self.gradient
-        b_square = lattice_dot_sum(lattice_conjugate(b), b).real
+        b_square = lattice_prod_sum(lattice_conjugate(b), b).real
         # A = metric
         # A x = b
 
@@ -605,7 +605,7 @@ class Observer():
         x = np.array([[t.same_shape().zero() for t in row] for row in b])
         # r = b - A@x
         r = b - self._metric_mv(x, relative_epsilon)
-        r_square = lattice_dot_sum(lattice_conjugate(r), r).real
+        r_square = lattice_prod_sum(lattice_conjugate(r), r).real
         # p = r
         p = r
         # loop
@@ -618,13 +618,13 @@ class Observer():
                     break
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = (lattice_dot_sum(lattice_conjugate(r), r).real /
-                     lattice_dot_sum(lattice_conjugate(r), self._metric_mv(p, relative_epsilon)).real)
+            alpha = (lattice_prod_sum(lattice_conjugate(r), r).real /
+                     lattice_prod_sum(lattice_conjugate(r), self._metric_mv(p, relative_epsilon)).real)
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
             new_r = r - alpha * self._metric_mv(p, relative_epsilon)
-            new_r_square = lattice_dot_sum(lattice_conjugate(new_r), new_r).real
+            new_r_square = lattice_prod_sum(lattice_conjugate(new_r), new_r).real
             # beta = (new_r @ new_r) / (r @ r)
             beta = new_r_square / r_square
             # r = new_r

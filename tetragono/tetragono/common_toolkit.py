@@ -165,7 +165,7 @@ def lattice_dot(tensor_1, tensor_2):
     return tensor_1.contract(tensor_2, {(name, name) for name in tensor_1.names}).storage[0]
 
 
-def lattice_dot_sum(tensors_1, tensors_2):
+def lattice_prod_sum(tensors_1, tensors_2):
     dot = lattice_dot(tensors_1, tensors_2)
     return np.sum(dot)
 

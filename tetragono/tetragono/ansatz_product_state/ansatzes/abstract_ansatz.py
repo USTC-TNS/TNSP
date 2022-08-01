@@ -81,7 +81,7 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("refresh auxiliaries not implemented")
 
-    def ansatz_dot_sum(self, a, b):
+    def ansatz_prod_sum(self, a, b):
         """
         Calculate the summary of product of two ansatz like data. If None is given, the data ansatz itself stored will
         be used.
@@ -96,7 +96,7 @@ class AbstractAnsatz:
         float
             The dot of a and b.
         """
-        raise NotImplementedError("ansatz_dot_sum not implemented")
+        raise NotImplementedError("ansatz_prod_sum not implemented")
 
     def ansatz_conjugate(self, a):
         """
@@ -128,7 +128,7 @@ class AbstractAnsatz:
         float
             The dot of a and b.
         """
-        return self.ansatz_dot_sum(self.ansatz_conjugate(a), b).real
+        return self.ansatz_prod_sum(self.ansatz_conjugate(a), b).real
 
     def buffers(self, delta):
         """

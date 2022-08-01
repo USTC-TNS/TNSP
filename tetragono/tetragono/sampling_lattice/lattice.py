@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
 from ..abstract_lattice import AbstractLattice
-from ..common_toolkit import lattice_dot_sum, lattice_conjugate, showln
+from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -863,4 +863,4 @@ class SamplingLattice(AbstractLattice):
             a = self._lattice
         if b is None:
             b = self._lattice
-        return lattice_dot_sum(lattice_conjugate(a), b).real
+        return lattice_prod_sum(lattice_conjugate(a), b).real

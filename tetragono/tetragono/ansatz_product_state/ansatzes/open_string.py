@@ -165,7 +165,7 @@ class OpenString(AbstractAnsatz):
         self._left_to_right = {}
         self._right_to_left = {}
 
-    def ansatz_dot_sum(self, a, b):
+    def ansatz_prod_sum(self, a, b):
         result = 0.0
         for ai, bi in zip(self.buffers(a), self.buffers(b)):
             dot = ai.contract(bi, {(name, name) for name in ai.names})

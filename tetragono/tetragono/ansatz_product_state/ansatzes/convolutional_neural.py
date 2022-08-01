@@ -96,7 +96,7 @@ class ConvolutionalNeural(AbstractAnsatz):
     def refresh_auxiliaries(self):
         pass
 
-    def ansatz_dot_sum(self, a, b):
+    def ansatz_prod_sum(self, a, b):
         result = 0.0
         for ai, bi in zip(self.buffers(a), self.buffers(b)):
             result += float(np.dot(ai.reshape([-1]), bi.reshape([-1])))
