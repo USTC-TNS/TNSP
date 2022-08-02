@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.19...dev][Unreleased]]
+** [[https://github.com/hzhangxyz/TAT/compare/v0.2.20...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/hzhangxyz/TAT/compare/v0.2.19...v0.2.20][v0.2.20]] - 2022-08-02
 
 *** Added
 + *tetraku*: Add models data and ansatzes data into an individual package named =tetraku=.
@@ -15,7 +23,6 @@
   internal name usage, two new default internal names are added: =Default_3= and =Default_5=.
 *** Deprecated
 + *tetragono*: =_owner= of Configuration for sampling lattice is deprecated, use =owner= instead.
-*** Removed
 *** Fixed
 + *TAT.hpp*: Fix a bug in windows platform when copying an edge with fermi symmetry.
 
