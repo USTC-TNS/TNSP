@@ -6,9 +6,13 @@
 + *tetraku*: Add models data and ansatzes data into an individual package named =tetraku=.
 + *tetragono*: Configuration use =owner= to get the owner sampling lattice object of this configuration object, instead
   of the previous =_owner=.
++ *TAT.hpp*: Add fusing edges support when =trace= a tensor, to keep the consistency with function =contract=.
++ *TAT.py*: Add fusing edges argument binding for function =trace= of the tensor.
 *** Changed
 + *tetragono*: Rename multiple product state to ansatz product state, to avoid the ambiguous abbreivation. Rename all
   =mp_xxx= to =ap_xxx= in tetragono shell.
++ *TAT.hpp*: Two new internal names used by user customed name type are added: =Trace_4= and =Trace_5=. For the simple
+  internal name usage, two new default internal names are added: =Default_3= and =Default_5=.
 *** Deprecated
 + *tetragono*: =_owner= of Configuration for sampling lattice is deprecated, use =owner= instead.
 *** Removed

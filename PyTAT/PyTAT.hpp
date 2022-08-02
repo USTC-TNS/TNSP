@@ -515,7 +515,7 @@ namespace TAT {
                     py::arg("default_is_physics_edge") = false,
                     py::arg("exclude_names_set") = py::set(),
                     "Get the conjugate Tensor")
-               .def("trace", &T::trace)
+               .def("trace", &T::trace, py::arg("trace_names"), py::arg("fuse_names") = py::dict(), "Calculate trace or partial trace of a tensor")
                .def(
                      "svd",
                      [](const T& tensor,

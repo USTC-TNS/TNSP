@@ -825,9 +825,12 @@ namespace TAT {
 
       /**
        * Get trace of tensor
-       * \param pairs pair set describing how to trace the tensor
+       * \param trace_names pair set describing how to trace the tensor
+       * \param fuse_names the edges need to be fused
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> trace(const std::unordered_set<std::pair<Name, Name>>& trace_names) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
+      trace(const std::unordered_set<std::pair<Name, Name>>& trace_names,
+            const std::unordered_map<Name, std::pair<Name, Name>>& fuse_names = {}) const;
 
       /**
        * SVD result type

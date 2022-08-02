@@ -119,6 +119,8 @@ namespace TAT {
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_0)
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_1)
       TAT_DEFINE_ALL_INTERNAL_NAME(Default_2)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Default_3)
+      TAT_DEFINE_ALL_INTERNAL_NAME(Default_4)
 #undef TAT_DEFINE_ALL_INTERNAL_NAME
 #define TAT_DEFINE_ALL_INTERNAL_NAME(x) static const Name& x;
       TAT_DEFINE_ALL_INTERNAL_NAME(Contract_0)  // Used in contract temporary tensor
@@ -131,6 +133,8 @@ namespace TAT {
       TAT_DEFINE_ALL_INTERNAL_NAME(Trace_1)     // used in trace temporary tensor
       TAT_DEFINE_ALL_INTERNAL_NAME(Trace_2)     // used in trace temporary tensor
       TAT_DEFINE_ALL_INTERNAL_NAME(Trace_3)     // used in trace temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_4)     // used in trace temporary tensor
+      TAT_DEFINE_ALL_INTERNAL_NAME(Trace_5)     // used in trace temporary tensor
       TAT_DEFINE_ALL_INTERNAL_NAME(No_Old_Name) // used in expand configuration
       TAT_DEFINE_ALL_INTERNAL_NAME(No_New_Name) // used in shrink configuration
       TAT_DEFINE_ALL_INTERNAL_NAME(Exp_1)       // used in exponential temporary tensor
@@ -150,6 +154,8 @@ namespace TAT {
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_1, 0)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_2, 1)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_3, 2)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_4, 3)
+   TAT_DEFINE_DEFAULT_INTERNAL_NAME(Trace_5, 4)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(No_Old_Name, 0)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(No_New_Name, 0)
    TAT_DEFINE_DEFAULT_INTERNAL_NAME(Exp_1, 1)
@@ -172,6 +178,8 @@ namespace TAT {
    TAT_DEFINE_INTERNAL_NAME(Trace_1)
    TAT_DEFINE_INTERNAL_NAME(Trace_2)
    TAT_DEFINE_INTERNAL_NAME(Trace_3)
+   TAT_DEFINE_INTERNAL_NAME(Trace_4)
+   TAT_DEFINE_INTERNAL_NAME(Trace_5)
    TAT_DEFINE_INTERNAL_NAME(No_Old_Name)
    TAT_DEFINE_INTERNAL_NAME(No_New_Name)
    TAT_DEFINE_INTERNAL_NAME(Exp_1)
