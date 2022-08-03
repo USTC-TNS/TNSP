@@ -25,8 +25,8 @@ gm_create("boson_metal", L1=10, L2=10, D=4, J=-1, K=3, mu=-1.6)
 
 def classical_energy(configuration):
     n_up = 0
-    for l1 in range(configuration._owner.L1):
-        for l2 in range(configuration._owner.L2):
+    for l1 in range(configuration.owner.L1):
+        for l2 in range(configuration.owner.L2):
             if configuration[l1, l2, 0][1] == 0:
                 n_up += 1
     return (n_up - 37)**2
