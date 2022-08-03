@@ -155,6 +155,7 @@ def gradient_descent(
         log_file=None,
         save_state_interval=None,
         save_state_file=None,
+        save_configuration_file=None,
         # About line search
         line_search_amplitude=1.25,
         line_search_error_threshold=0.1,
@@ -164,6 +165,13 @@ def gradient_descent(
         check_difference_delta=1e-8,
         # About Measurement
         measurement=None):
+
+    if save_state_interval is not None:
+        showln(" ##### DEPRECATE WARNING BEGIN #####")
+        showln(" save_state_interval is deprecated, state will be saved for every step in future")
+        showln(" ###### DEPRECATE WARNING END ######")
+    else:
+        save_state_interval = 1
 
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
@@ -324,5 +332,7 @@ def gradient_descent(
                 # Save state
                 if save_state_interval and (grad_step + 1) % save_state_interval == 0 and save_state_file:
                     write_to_file(state, save_state_file)
+                if save_configuration_file:
+                    write_to_file(sampling_configurations, save_configuration_file)
             if sigint_handler():
                 break

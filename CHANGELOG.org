@@ -3,8 +3,12 @@
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.20...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add =save_configuration_file= option for =gm_run= and =ap_run= in tetragono shell, which saves sampling
+  configurations during gradient descent.
 *** Changed
 *** Deprecated
++ *tetragono*: =save_state_interval= option for =gm_run= and =ap_run= is deprecated. The state will be saved for every
+  step if =save_state_file= was set in the future.
 *** Removed
 *** Fixed
 
