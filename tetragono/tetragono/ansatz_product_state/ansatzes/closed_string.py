@@ -17,50 +17,25 @@
 #
 
 import numpy as np
-from ...common_toolkit import safe_rename
 from ..state import AnsatzProductState
 from .abstract_ansatz import AbstractAnsatz
 
 
-class OpenString(AbstractAnsatz):
+class ClosedString(AbstractAnsatz):
 
     __slots__ = [
         "owner", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list", "_left_to_right",
         "_right_to_left"
     ]
 
-    def _construct_tensor(self, index):
-        """
-        Construct tensor at specified index, with all element initialized by random number.
-
-        Parameters
-        ----------
-        index : int
-            The index of the tensor.
-
-        Returns
-        -------
-        Tensor
-            The result tensor.
-        """
-        names = ["P"]
-        edges = [self.owner.physics_edges[self.index_to_site[index]]]
-        if index != 0:
-            names.append("L")
-            edges.append(self.cut_dimension)
-        if index != self.length - 1:
-            names.append("R")
-            edges.append(self.cut_dimension)
-        return self.owner.Tensor(names, edges).randn()
-
     def __init__(self, owner, index_to_site, cut_dimension):
         """
-        Create open string ansatz by given index_to_site map and cut_dimension.
+        Create closed string ansatz by given index_to_site map and cut_dimension.
 
         Parameters
         ----------
         owner : AnsatzProductState
-            The ansatz product state used to create open string.
+            The ansatz product state used to create closed string.
         index_to_site : list[tuple[int, int, int]]
             The sites array to specify the string shape.
         cut_dimension : int
@@ -72,7 +47,12 @@ class OpenString(AbstractAnsatz):
         self.site_to_index = {site: index for index, site in enumerate(index_to_site)}
         self.cut_dimension = cut_dimension
 
-        self.tensor_list = np.array([self._construct_tensor(index) for index in range(self.length)])
+        self.tensor_list = np.array([
+            self.owner.Tensor(
+                ["P", "L", "R"],
+                [self.owner.physics_edges[self.index_to_site[index]], self.cut_dimension, self.cut_dimension]).randn()
+            for index in range(self.length)
+        ])
 
         self.refresh_auxiliaries()
 
@@ -151,11 +131,11 @@ class OpenString(AbstractAnsatz):
             index -= 1
         _, right = self._go_from_right(index_configuration[:index:-1], try_only=False)
         if left is None:
-            return right[{}]
+            return right.trace({("L", "R")})[{}]
         elif right is None:
-            return left[{}]
+            return left.trace({("L", "R")})[{}]
         else:
-            return left.contract(right, {("R", "L")})[{}]
+            return left.contract(right, {("R", "L"), ("L", "R")})[{}]
 
     def _delta(self, site_configuration):
         index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
@@ -170,8 +150,8 @@ class OpenString(AbstractAnsatz):
             elif right is None:
                 this_tensor = left
             else:
-                this_tensor = left.contract(right, set())
-            this_tensor = safe_rename(this_tensor, {"R": "L", "L": "R"})
+                this_tensor = left.contract(right, {("L", "R")})
+            this_tensor = this_tensor.edge_rename({"R": "L", "L": "R"})
             this_tensor = this_tensor.expand(
                 {"P": (index_configuration[index], self.owner.physics_edges[self.index_to_site[index]].dimension)})
             result.append(this_tensor)

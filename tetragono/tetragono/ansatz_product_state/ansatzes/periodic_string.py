@@ -80,11 +80,7 @@ class PeriodicString(AbstractAnsatz):
         return weights, deltas
 
     def _closed_product(self, config):
-        result = self._open_product(config).trace({("L", "R")})
-        if result.is_complex:
-            return complex(result)
-        else:
-            return float(result)
+        return self._open_product(config).trace({("L", "R")})[{}]
 
     def _open_product(self, config, left_to_right=True):
         if len(config) == 0:
@@ -114,11 +110,7 @@ class PeriodicString(AbstractAnsatz):
     def ansatz_prod_sum(self, a, b):
         result = 0.0
         for ai, bi in zip(self.buffers(a), self.buffers(b)):
-            dot = ai.contract(bi, {(name, name) for name in ai.names})
-            if dot.is_complex:
-                dot = complex(dot)
-            else:
-                dot = float(dot)
+            dot = ai.contract(bi, {(name, name) for name in ai.names})[{}]
             result += dot
         return result
 

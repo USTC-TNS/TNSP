@@ -17,6 +17,7 @@
 #
 
 from .open_string import OpenString
+from .closed_string import ClosedString
 from .periodic_string import PeriodicString
 try:
     import torch
