@@ -80,6 +80,3 @@ def abstract_lattice(L1, L2, D, J, K, mu):
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state
-
-
-create = abstract_lattice

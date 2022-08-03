@@ -182,15 +182,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @staticmethod
     def su_gm_create(lattice_type, model_name, *args, **kwargs):
-        try:
-            abstract_lattice = get_imported_function(model_name, "abstract_lattice")
-        except AttributeError:
-            abstract_lattice = get_imported_function(model_name, "create")
-            showln(" ##### DEPRECATE WARNING BEGIN #####")
-            showln(
-                " `create` as function name to create lattice object is deprecated, replacing it with `abstract_lattice`, splitting it into two part: abstract_state and abstract_lattice is recommended."
-            )
-            showln(" ###### DEPRECATE WARNING END ######")
+        abstract_lattice = get_imported_function(model_name, "abstract_lattice")
         if len(args) == 1 and args[0] == "help":
             showln(abstract_lattice.__doc__.replace("\n", "\n    "))
             return None

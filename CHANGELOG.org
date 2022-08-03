@@ -10,6 +10,8 @@
 + *tetragono*: =save_state_interval= option for =gm_run= and =ap_run= is deprecated. The state will be saved for every
   step if =save_state_file= was set in the future.
 *** Removed
++ *tetragono*: The original function name =create= to create lattice is removed, which was deprecated in v0.2.18. The
+  new function name to create lattice is =abstract_lattice=.
 *** Fixed
 
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.19...v0.2.20][v0.2.20]] - 2022-08-02
