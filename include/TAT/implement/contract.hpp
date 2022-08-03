@@ -26,7 +26,7 @@
 #include "../utility/timer.hpp"
 
 extern "C" {
-   void sgemm_(
+   int sgemm_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -40,7 +40,7 @@ extern "C" {
          const float* beta,
          float* c,
          const int* ldc);
-   void dgemm_(
+   int dgemm_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -54,7 +54,7 @@ extern "C" {
          const double* beta,
          double* c,
          const int* ldc);
-   void cgemm_(
+   int cgemm_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -68,7 +68,7 @@ extern "C" {
          const std::complex<float>* beta,
          std::complex<float>* c,
          const int* ldc);
-   void zgemm_(
+   int zgemm_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -84,7 +84,7 @@ extern "C" {
          const int* ldc);
 
 #ifdef TAT_USE_MKL_GEMM_BATCH
-   void sgemm_batch_(
+   int sgemm_batch_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -100,7 +100,7 @@ extern "C" {
          const int* ldc,
          const int* group_count,
          const int* group_size);
-   void dgemm_batch_(
+   int dgemm_batch_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -116,7 +116,7 @@ extern "C" {
          const int* ldc,
          const int* group_count,
          const int* group_size);
-   void cgemm_batch_(
+   int cgemm_batch_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -132,7 +132,7 @@ extern "C" {
          const int* ldc,
          const int* group_count,
          const int* group_size);
-   void zgemm_batch_(
+   int zgemm_batch_(
          const char* transpose_a,
          const char* transpose_b,
          const int* m,
@@ -154,7 +154,7 @@ extern "C" {
 namespace TAT {
    namespace detail {
       template<typename ScalarType>
-      constexpr void (*gemm)(
+      constexpr int (*gemm)(
             const char* transpose_a,
             const char* transpose_b,
             const int* m,
@@ -179,7 +179,7 @@ namespace TAT {
       inline auto gemm<std::complex<double>> = zgemm_;
 
       template<typename ScalarType>
-      constexpr void (*mkl_gemm_batch)(
+      constexpr int (*mkl_gemm_batch)(
             const char* transpose_a,
             const char* transpose_b,
             const int* m,

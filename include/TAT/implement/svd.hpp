@@ -29,7 +29,7 @@
 #include "transpose.hpp"
 
 extern "C" {
-   void sgesvd_(
+   int sgesvd_(
          const char* job_u,
          const char* job_vt,
          const int* m,
@@ -44,7 +44,7 @@ extern "C" {
          float* work,
          const int* lwork,
          int* info);
-   void dgesvd_(
+   int dgesvd_(
          const char* job_u,
          const char* job_vt,
          const int* m,
@@ -59,7 +59,7 @@ extern "C" {
          double* work,
          const int* lwork,
          int* info);
-   void cgesvd_(
+   int cgesvd_(
          const char* job_u,
          const char* job_vt,
          const int* m,
@@ -75,7 +75,7 @@ extern "C" {
          const int* lwork,
          float* rwork,
          int* info);
-   void zgesvd_(
+   int zgesvd_(
          const char* job_u,
          const char* job_vt,
          const int* m,

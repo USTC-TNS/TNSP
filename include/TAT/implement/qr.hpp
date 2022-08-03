@@ -26,9 +26,9 @@
 #include "transpose.hpp"
 
 extern "C" {
-   void sgeqrf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
-   void dgeqrf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
-   void cgeqrf_(
+   int sgeqrf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
+   int dgeqrf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
+   int cgeqrf_(
          const int* m,
          const int* n,
          std::complex<float>* A,
@@ -37,7 +37,7 @@ extern "C" {
          std::complex<float>* work,
          const int* lwork,
          int* info);
-   void zgeqrf_(
+   int zgeqrf_(
          const int* m,
          const int* n,
          std::complex<double>* A,
@@ -46,9 +46,9 @@ extern "C" {
          std::complex<double>* work,
          const int* lwork,
          int* info);
-   void sgelqf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
-   void dgelqf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
-   void cgelqf_(
+   int sgelqf_(const int* m, const int* n, float* A, const int* lda, float* tau, float* work, const int* lwork, int* info);
+   int dgelqf_(const int* m, const int* n, double* A, const int* lda, double* tau, double* work, const int* lwork, int* info);
+   int cgelqf_(
          const int* m,
          const int* n,
          std::complex<float>* A,
@@ -57,7 +57,7 @@ extern "C" {
          std::complex<float>* work,
          const int* lwork,
          int* info);
-   void zgelqf_(
+   int zgelqf_(
          const int* m,
          const int* n,
          std::complex<double>* A,
@@ -66,9 +66,9 @@ extern "C" {
          std::complex<double>* work,
          const int* lwork,
          int* info);
-   void sorgqr_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
-   void dorgqr_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
-   void cungqr_(
+   int sorgqr_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
+   int dorgqr_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
+   int cungqr_(
          const int* m,
          const int* n,
          const int* k,
@@ -78,7 +78,7 @@ extern "C" {
          std::complex<float>* work,
          const int* lwork,
          int* info);
-   void zungqr_(
+   int zungqr_(
          const int* m,
          const int* n,
          const int* k,
@@ -88,9 +88,9 @@ extern "C" {
          std::complex<double>* work,
          const int* lwork,
          int* info);
-   void sorglq_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
-   void dorglq_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
-   void cunglq_(
+   int sorglq_(const int* m, const int* n, const int* k, float* A, const int* lda, float const* tau, float* work, const int* lwork, int* info);
+   int dorglq_(const int* m, const int* n, const int* k, double* A, const int* lda, double const* tau, double* work, const int* lwork, int* info);
+   int cunglq_(
          const int* m,
          const int* n,
          const int* k,
@@ -100,7 +100,7 @@ extern "C" {
          std::complex<float>* work,
          const int* lwork,
          int* info);
-   void zunglq_(
+   int zunglq_(
          const int* m,
          const int* n,
          const int* k,
@@ -118,7 +118,7 @@ namespace TAT {
 
    namespace detail {
       template<typename ScalarType>
-      constexpr void (
+      constexpr int (
             *geqrf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) =
             nullptr;
       template<>
@@ -130,7 +130,7 @@ namespace TAT {
       template<>
       inline auto geqrf<std::complex<double>> = zgeqrf_;
       template<typename ScalarType>
-      constexpr void (
+      constexpr int (
             *gelqf)(const int* m, const int* n, ScalarType* A, const int* lda, ScalarType* tau, ScalarType* work, const int* lwork, int* info) =
             nullptr;
       template<>
@@ -142,7 +142,7 @@ namespace TAT {
       template<>
       inline auto gelqf<std::complex<double>> = zgelqf_;
       template<typename ScalarType>
-      constexpr void (*orgqr)(
+      constexpr int (*orgqr)(
             const int* m,
             const int* n,
             const int* k,
@@ -161,7 +161,7 @@ namespace TAT {
       template<>
       inline auto orgqr<std::complex<double>> = zungqr_;
       template<typename ScalarType>
-      constexpr void (*orglq)(
+      constexpr int (*orglq)(
             const int* m,
             const int* n,
             const int* k,
