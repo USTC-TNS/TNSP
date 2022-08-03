@@ -19,6 +19,7 @@
 from .open_string import OpenString
 from .closed_string import ClosedString
 from .periodic_string import PeriodicString
+from .product_ansatz import ProductAnsatz
 try:
     import torch
 except ModuleNotFoundError:

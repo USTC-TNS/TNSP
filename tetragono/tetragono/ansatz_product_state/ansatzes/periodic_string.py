@@ -123,7 +123,7 @@ class PeriodicString(AbstractAnsatz):
             if recv is not None:
                 self.tensor = recv
         else:
-            recv = yield delta[0]
+            recv = yield next(iter(delta))
             if recv is not None:
                 delta[0] = recv
 

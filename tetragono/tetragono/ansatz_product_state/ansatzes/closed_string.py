@@ -174,7 +174,7 @@ class ClosedString(AbstractAnsatz):
     def buffers(self, delta):
         if delta is None:
             delta = self.tensor_list
-        for i, value in enumerate(delta):
+        for i, [_, value] in enumerate(zip(self.tensor_list, delta)):
             recv = yield value
             if recv is not None:
                 # When not setting value, input delta could be an iterator
@@ -192,11 +192,7 @@ class ClosedString(AbstractAnsatz):
                     storage[i] = recv
 
     def buffer_count(self, delta):
-        if delta is None:
-            delta = self.tensor_list
-        delta = list(delta)  # in case of delta is an iterator
-        length = len(delta)
-        return length
+        return self.length
 
     def element_count(self, delta):
         return sum(tensor.norm_num() for tensor in self.buffers(delta))

@@ -121,7 +121,7 @@ class ConvolutionalNeural(AbstractAnsatz):
                     # convert to numpy and get real part then convert it back to torch tensor
                     # because of https://github.com/pytorch/pytorch/issues/82610
         else:
-            for i, value in enumerate(delta):
+            for i, [_, value] in enumerate(zip(self.network.parameters(), delta)):
                 recv = yield value
                 if recv is not None:
                     # When not setting value, input delta could be an iterator
@@ -141,9 +141,8 @@ class ConvolutionalNeural(AbstractAnsatz):
                     flatten[i] = recv.real
 
     def buffer_count(self, delta):
-        if delta is None:
-            delta = self.network.parameters()
-        delta = list(delta)  # in case of delta is an iterator
+        delta = self.network.parameters()
+        delta = list(delta)
         length = len(delta)
         return length
 
