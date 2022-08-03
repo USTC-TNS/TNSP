@@ -16,15 +16,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .open_string import OpenString
-from .periodic_string import PeriodicString
-try:
-    import torch
-except ModuleNotFoundError:
+import tetragono as tet
 
-    class ConvolutionalNeural:
 
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError("torch needed for ConvolutionalNeural")
-else:
-    from .convolutional_neural import ConvolutionalNeural
+def ansatz(state, direction, dimension):
+    """
+    Create an periodic string bond state ansatz.
+
+    Parameters
+    ----------
+    direction : str
+        The direction of this periodic string.
+    dimension : int
+        The bond dimension of the string.
+    """
+    return tet.ansatz_product_state.ansatzes.PeriodicString(state, direction, dimension)
