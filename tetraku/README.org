@@ -1,0 +1,5 @@
+#+OPTIONS: toc:nil
+
+* tetraku
+
+tetraku is a collection of commonly used models and ansatzes data used by tetragono.

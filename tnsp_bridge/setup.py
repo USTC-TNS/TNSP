@@ -22,17 +22,25 @@ from subprocess import check_output
 version = check_output(["git", "describe"]).decode("utf-8")
 version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
+try:
+    with open("README.md", "rt", encoding="utf-8") as file:
+        long_description = file.read()
+except FileNotFoundError:
+    long_description = "empty description"
+
 setup(
     name="tnsp_bridge",
     version=version,
     description="bridge from TNSP to TAT",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT",
+    url="https://github.com/hzhangxyz/TAT/tree/TAT/tnsp_bridge",
     packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",
     ],
     license="GPLv3",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     python_requires=">=3.7",
 )

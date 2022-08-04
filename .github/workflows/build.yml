@@ -9,18 +9,18 @@ jobs:
     if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
 
     steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: install mpi and openblas
-      run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev
-    - name: make build directory
-      run: mkdir ${{runner.workspace}}/build
-    - name: configure
-      working-directory: ${{runner.workspace}}/build
-      run: cmake ${{github.workspace}}
-    - name: ctest
-      working-directory: ${{runner.workspace}}/build
-      run: ctest -E ^test_\(svd\|qr\)$ -j 2
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: install mpi and openblas
+        run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev
+      - name: make build directory
+        run: mkdir ${{runner.workspace}}/build
+      - name: configure
+        working-directory: ${{runner.workspace}}/build
+        run: cmake ${{github.workspace}}
+      - name: ctest
+        working-directory: ${{runner.workspace}}/build
+        run: ctest -E ^test_\(svd\|qr\)$ -j 2
 
   build_wheels_trigger:
     name: trigger for building wheels
@@ -31,27 +31,38 @@ jobs:
       - name: nothing
         run: echo this is an empty job
 
-  generate_pytat_markdown_readme:
-    name: generate README.md for PyTAT
+  generate_python_markdown_readme:
+    name: generate README.md for python package
     runs-on: ubuntu-latest
     needs: build_wheels_trigger
 
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: tnsp_bridge
+          - package: lazy_graph
+          - package: tetragono
+          - package: tetraku
+          - package: PyTAT
+
     steps:
-    - name: checkout
-      uses: actions/checkout@v2
-    - name: install emacs
-      run: sudo apt-get install -y emacs
-    - name: export to markdown
-      run: emacs PyTAT/README.org --batch -f org-md-export-to-markdown --kill
-    - name: upload to artifact
-      uses: actions/upload-artifact@v2
-      with:
-        path: PyTAT/README.md
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: install emacs
+        run: sudo apt-get install -y emacs
+      - name: export to markdown
+        run: emacs ${{matrix.package}}/README.org --batch -f org-md-export-to-markdown --kill
+      - name: upload to artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: README-of-${{matrix.package}}
+          path: ${{matrix.package}}/README.md
 
   build_pytat_wheels:
     name: build PyTAT wheels
     runs-on: ${{ matrix.os }}
-    needs: [build_wheels_trigger, generate_pytat_markdown_readme]
+    needs: [build_wheels_trigger, generate_python_markdown_readme]
 
     strategy:
       fail-fast: false
@@ -147,8 +158,9 @@ jobs:
         run: python -m pip install cibuildwheel
       - name: download artifacts
         uses: actions/download-artifact@v2
-      - name: put readme to correct folder
-        run: python -c "import os; os.rename('artifact/README.md', 'PyTAT/README.md')"
+        with:
+          name: README-of-PyTAT
+          path: PyTAT
       - name: build wheel
         env:
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
@@ -174,7 +186,7 @@ jobs:
   build_bridge_lazy_tetragono_tetraku_wheels:
     name: build tnsp_bridge, lazy_graph, tetragono, tetraku wheels
     runs-on: ubuntu-latest
-    needs: build_wheels_trigger
+    needs: [build_wheels_trigger, generate_python_markdown_readme]
 
     strategy:
       fail-fast: false
@@ -196,6 +208,11 @@ jobs:
         uses: actions/setup-python@v2
       - name: install wheel
         run: python -m pip install wheel
+      - name: download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: README-of-${{matrix.package}}
+          path: ${{matrix.package}}
       - name: build wheel
         working-directory: ${{github.workspace}}/${{matrix.package}}
         run: python setup.py bdist_wheel

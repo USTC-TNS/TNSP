@@ -67,8 +67,11 @@ class build_ext(build_ext_original):
         os.chdir(str(cwd))
 
 
-with open("README.md", "rt", encoding="utf-8") as file:
-    long_description = file.read()
+try:
+    with open("README.md", "rt", encoding="utf-8") as file:
+        long_description = file.read()
+except FileNotFoundError:
+    long_description = "empty description"
 
 setup(
     name="PyTAT",
@@ -76,7 +79,7 @@ setup(
     description="python binding for TAT(TAT is A Tensor library)",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT",
+    url="https://github.com/hzhangxyz/TAT/tree/TAT/PyTAT",
     ext_modules=[CMakeExtension("PyTAT")],
     cmdclass={
         'build_ext': build_ext,

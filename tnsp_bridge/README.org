@@ -1,0 +1,5 @@
+#+OPTIONS: toc:nil
+
+* tnsp-bridge
+
+tnsp-bridge is a small tool to convert tensor data from [[https://www.sciencedirect.com/science/article/pii/S001046551830078X][tnsp]] format to TAT format.

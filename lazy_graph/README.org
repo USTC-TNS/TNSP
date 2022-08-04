@@ -1,8 +1,8 @@
 #+OPTIONS: toc:nil
 
-* lazy_graph
+* lazy-graph
 
-lazy_graph is python package for lazy evaluation, with enhancement for updating values of upstream and copying the
+lazy-graph is python package for lazy evaluation, with enhancement for updating values of upstream and copying the
 entire lazy graph.
 
 ** Install

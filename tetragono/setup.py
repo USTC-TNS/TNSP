@@ -22,13 +22,19 @@ from subprocess import check_output
 version = check_output(["git", "describe"]).decode("utf-8")
 version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
 
+try:
+    with open("README.md", "rt", encoding="utf-8") as file:
+        long_description = file.read()
+except FileNotFoundError:
+    long_description = "empty description"
+
 setup(
     name="tetragono",
     version=version,
     description="OBC square tensor network state(PEPS) library",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT",
+    url="https://github.com/hzhangxyz/TAT/tree/TAT/tetragono",
     packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",
@@ -40,5 +46,7 @@ setup(
         "APS": ["torch",],
     },
     license="GPLv3",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     python_requires=">=3.8",
 )
