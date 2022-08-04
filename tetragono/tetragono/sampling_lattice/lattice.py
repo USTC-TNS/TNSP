@@ -30,17 +30,6 @@ class Configuration(SingleLayerAuxiliaries):
 
     __slots__ = ["owner", "_configuration", "_holes"]
 
-    @property
-    def _owner(self, first=[True]):
-        if first[0]:
-            first[0] = False
-            showln(" ##### DEPRECATE WARNING BEGIN #####")
-            showln(" configuration._owner is deprecated, use configuration.owner instead.")
-            import traceback
-            showln("\n" + "".join(traceback.format_stack()))
-            showln(" ###### DEPRECATE WARNING END ######")
-        return self.owner
-
     def copy(self, cp=None):
         """
         Copy the configuration system.

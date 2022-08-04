@@ -30,17 +30,6 @@ class Configuration:
 
     __slots__ = ["owner", "_configuration"]
 
-    @property
-    def _owner(self, first=[True]):
-        if first[0]:
-            first[0] = False
-            showln(" ##### DEPRECATE WARNING BEGIN #####")
-            showln(" configuration._owner is deprecated, use configuration.owner instead.")
-            import traceback
-            showln("\n" + "".join(traceback.format_stack()))
-            showln(" ###### DEPRECATE WARNING END ######")
-        return self.owner
-
     def __init__(self, owner, config=None):
         """
         Create configuration for the given ansatz product state.
