@@ -40,11 +40,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - package: PyTAT
           - package: tnsp_bridge
           - package: lazy_graph
           - package: tetragono
           - package: tetraku
-          - package: PyTAT
+          - package: wrapper_TAT
 
     steps:
       - name: checkout
@@ -183,8 +184,8 @@ jobs:
         with:
           path: dist/*.whl
 
-  build_bridge_lazy_tetragono_tetraku_wheels:
-    name: build tnsp_bridge, lazy_graph, tetragono, tetraku wheels
+  build_pure_python_wheels:
+    name: build pure python wheels
     runs-on: ubuntu-latest
     needs: [build_wheels_trigger, generate_python_markdown_readme]
 
@@ -196,6 +197,7 @@ jobs:
           - package: lazy_graph
           - package: tetragono
           - package: tetraku
+          - package: wrapper_TAT
 
     steps:
       - name: checkout
@@ -224,7 +226,7 @@ jobs:
   upload_pypi:
     name: upload wheels to pypi
     runs-on: ubuntu-latest
-    needs: [build_wheels_trigger, build_pytat_wheels, build_bridge_lazy_tetragono_tetraku_wheels]
+    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
     if: startsWith(github.ref, 'refs/tags')
 
     steps:
@@ -242,7 +244,7 @@ jobs:
   create_release:
     name: create github release
     runs-on: ubuntu-latest
-    needs: [build_wheels_trigger, build_pytat_wheels, build_bridge_lazy_tetragono_tetraku_wheels]
+    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
     if: startsWith(github.ref, 'refs/tags')
 
     steps:

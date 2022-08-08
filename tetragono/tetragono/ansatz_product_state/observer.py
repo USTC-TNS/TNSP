@@ -300,7 +300,7 @@ class Observer:
                             new_configuration[l1, l2, orbit] = positions_configuration_s[i]
 
                         configuration_data_name_positions[positions_configuration_s] = (len(configuration_list),
-                                                                                        observer_shrinked.storage[0])
+                                                                                        observer_shrinked)
                         configuration_list.append(new_configuration)
         # measure
         wss_list, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
