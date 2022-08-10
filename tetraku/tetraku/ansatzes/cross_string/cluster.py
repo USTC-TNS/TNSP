@@ -19,24 +19,34 @@
 import tetragono as tet
 
 
-def ansatz(state, dimension):
+def ansatz(state, l1, l2, dimension):
     """
     Create an cross like string bond state ansatz
 
     Parameters
     ----------
+    l1, l2 : int
+        The cluster size.
     dimension : int
         The bond dimension of the string.
     """
+    edge_pool = [[[] for i2 in range(l2)] for i1 in range(l1)]  # tensor index -> site index list
+    for I1 in range(state.L1):
+        for I2 in range(state.L2):
+            edge_pool[l1 * I1 // state.L1][l2 * I2 // state.L2].append((I1, I2))
     ansatzes = []
-    for l1 in range(state.L1):
+    for i1 in range(l1):
         index_to_site = []
-        for l2 in range(state.L2):
-            index_to_site.append([(l1, l2, orbit) for orbit in state.physics_edges[l1, l2]])
-        ansatzes.append(tet.ansatz_product_state.ansatzes.ClosedString(state, index_to_site, dimension))
-    for l2 in range(state.L2):
+        for i2 in range(l2):
+            index_to_site.append([
+                (I1, I2, orbit) for I1, I2 in edge_pool[i1][i2] for orbit in state.physics_edges[I1, I2]
+            ])
+        ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
+    for i2 in range(l2):
         index_to_site = []
-        for l1 in range(state.L1):
-            index_to_site.append([(l1, l2, orbit) for orbit in state.physics_edges[l1, l2]])
-        ansatzes.append(tet.ansatz_product_state.ansatzes.ClosedString(state, index_to_site, dimension))
+        for i1 in range(l1):
+            index_to_site.append([
+                (I1, I2, orbit) for I1, I2 in edge_pool[i1][i2] for orbit in state.physics_edges[I1, I2]
+            ])
+        ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
     return tet.ansatz_product_state.ansatzes.ProductAnsatz(state, ansatzes)

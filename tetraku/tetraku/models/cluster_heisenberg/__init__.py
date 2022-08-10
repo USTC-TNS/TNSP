@@ -33,7 +33,7 @@ def abstract_state(L1, L2, l1, l2, J):
     J : float
         The heisenberg parameter.
     """
-    edge_pool = [[[] for i2 in range(l2)] for i1 in range(l1)]
+    edge_pool = [[[] for i2 in range(l2)] for i1 in range(l1)]  # tensor index -> site index list
     for I1 in range(L1):
         for I2 in range(L2):
             edge_pool[l1 * I1 // L1][l2 * I2 // L2].append((I1, I2))

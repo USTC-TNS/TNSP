@@ -25,8 +25,6 @@ def ansatz(state, dimension):
 
     Parameters
     ----------
-    direction : str
-        The direction of this cross like string.
     dimension : int
         The bond dimension of the string.
     """
