@@ -5,6 +5,8 @@
 *** Added
 + *tetragono*: Add =save_configuration_file= option for =gm_run= and =ap_run= in tetragono shell, which saves sampling
   configurations during gradient descent.
++ *tetragono*: Add list as interface for =rename_io= in =tetragono.common_tensor.tensor_toolkit=. Original argument such
+  as ={0: a, 1: b, 2: c}= can be written as =[a, b, c]=.
 *** Changed
 *** Deprecated
 + *tetragono*: =save_state_interval= option for =gm_run= and =ap_run= is deprecated. The state will be saved for every

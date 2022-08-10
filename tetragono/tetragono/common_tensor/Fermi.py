@@ -26,10 +26,10 @@ ET = Tedge[0, -1]
 
 CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[-1,]]).range(1, 0)
 CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[+1,]]).range(1, 0)
-C0C1 = rename_io(CP, {0: 0}).contract(rename_io(CM, {0: 1}), {("T", "T")})
-C1C0 = rename_io(CP, {0: 1}).contract(rename_io(CM, {0: 0}), {("T", "T")})
+C0C1 = rename_io(CP, [0]).contract(rename_io(CM, [1]), {("T", "T")})
+C1C0 = rename_io(CP, [1]).contract(rename_io(CM, [0]), {("T", "T")})
 CC = C0C1 + C1C0
 
 I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
 
-N = rename_io(CP, {0: 0}).contract(rename_io(CM, {0: 0}), {("T", "T"), ("I0", "O0")})
+N = rename_io(CP, [0]).contract(rename_io(CM, [0]), {("T", "T"), ("I0", "O0")})

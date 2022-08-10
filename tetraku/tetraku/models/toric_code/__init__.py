@@ -37,16 +37,16 @@ def abstract_state(L1, L2, Jx, Jz):
     sigma_x = tet.common_tensor.No.pauli_x.to(float)
     sigma_z = tet.common_tensor.No.pauli_z.to(float)
     sigma_xxxx = kronecker_product(
-        rename_io(sigma_x, {0: 0}),
-        rename_io(sigma_x, {0: 1}),
-        rename_io(sigma_x, {0: 2}),
-        rename_io(sigma_x, {0: 3}),
+        rename_io(sigma_x, [0]),
+        rename_io(sigma_x, [1]),
+        rename_io(sigma_x, [2]),
+        rename_io(sigma_x, [3]),
     )
     sigma_zzzz = kronecker_product(
-        rename_io(sigma_z, {0: 0}),
-        rename_io(sigma_z, {0: 1}),
-        rename_io(sigma_z, {0: 2}),
-        rename_io(sigma_z, {0: 3}),
+        rename_io(sigma_z, [0]),
+        rename_io(sigma_z, [1]),
+        rename_io(sigma_z, [2]),
+        rename_io(sigma_z, [3]),
     )
     Jsigma_xxxx = -Jx * sigma_xxxx
     Jsigma_zzzz = -Jz * sigma_zzzz

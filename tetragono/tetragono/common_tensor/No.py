@@ -37,16 +37,16 @@ pauli_z.blocks[pauli_z.names] = [[1, 0], [0, -1]]
 Sz = pauli_z / 2
 
 pauli_x_pauli_x = kronecker_product(
-    rename_io(pauli_x, {0: 0}),
-    rename_io(pauli_x, {0: 1}),
+    rename_io(pauli_x, [0]),
+    rename_io(pauli_x, [1]),
 )
 pauli_y_pauli_y = kronecker_product(
-    rename_io(pauli_y, {0: 0}),
-    rename_io(pauli_y, {0: 1}),
+    rename_io(pauli_y, [0]),
+    rename_io(pauli_y, [1]),
 )
 pauli_z_pauli_z = kronecker_product(
-    rename_io(pauli_z, {0: 0}),
-    rename_io(pauli_z, {0: 1}),
+    rename_io(pauli_z, [0]),
+    rename_io(pauli_z, [1]),
 )
 SxSx = pauli_x_pauli_x / 4
 SySy = pauli_y_pauli_y / 4

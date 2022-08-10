@@ -25,15 +25,15 @@ Tensor = TAT.FermiU1.Z.Tensor
 EF = Fedge[(0, 0), (+1, -1), (+1, +1)]
 ET = Tedge[(0, 0), (-1, +1), (-1, -1)]
 
-CPU = Tensor(["O", "I", "T"], [EF, ET, Fedge[(-1, -1),]]).range(1, 0)
-CPD = Tensor(["O", "I", "T"], [EF, ET, Fedge[(-1, +1),]]).range(1, 0)
-CMU = Tensor(["O", "I", "T"], [EF, ET, Tedge[(+1, +1),]]).range(1, 0)
-CMD = Tensor(["O", "I", "T"], [EF, ET, Tedge[(+1, -1),]]).range(1, 0)
+CPU = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[(-1, -1),]]).range(1, 0)
+CPD = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[(-1, +1),]]).range(1, 0)
+CMU = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[(+1, +1),]]).range(1, 0)
+CMD = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[(+1, -1),]]).range(1, 0)
 
-C0UC1U = rename_io(CPU, {"": 0}).contract(rename_io(CMU, {"": 1}), {("T", "T")})
-C0DC1D = rename_io(CPD, {"": 0}).contract(rename_io(CMD, {"": 1}), {("T", "T")})
-C1UC0U = rename_io(CPU, {"": 1}).contract(rename_io(CMU, {"": 0}), {("T", "T")})
-C1DC0D = rename_io(CPD, {"": 1}).contract(rename_io(CMD, {"": 0}), {("T", "T")})
+C0UC1U = rename_io(CPU, [0]).contract(rename_io(CMU, [1]), {("T", "T")})
+C0DC1D = rename_io(CPD, [0]).contract(rename_io(CMD, [1]), {("T", "T")})
+C1UC0U = rename_io(CPU, [1]).contract(rename_io(CMU, [0]), {("T", "T")})
+C1DC0D = rename_io(CPD, [1]).contract(rename_io(CMD, [0]), {("T", "T")})
 CC = C0UC1U + C0DC1D + C1UC0U + C1DC0D
 
 # 2 Si = CP pauli_i CM
@@ -50,8 +50,8 @@ CC = C0UC1U + C0DC1D + C1UC0U + C1DC0D
 #                 = - CPD0 CMD1 CPU1 CMU0 - CPU0 CMU1 CPD1 CMD0
 #                 = - C0DC1D C1UC0U - C0UC1U C1DC0D
 
-Sz2 = CPU.contract(CMU, {("I", "O"), ("T", "T")}) - CPD.contract(CMD, {("I", "O"), ("T", "T")})
-SzSz4 = rename_io(Sz2, {"": 0}).contract(rename_io(Sz2, {"": 1}), set())
+Sz2 = CPU.contract(CMU, {("I0", "O0"), ("T", "T")}) - CPD.contract(CMD, {("I0", "O0"), ("T", "T")})
+SzSz4 = rename_io(Sz2, [0]).contract(rename_io(Sz2, [1]), set())
 SxSxSySy2 = -1 * (C0DC1D.contract(C1UC0U, {
     ("I0", "O0"),
     ("O1", "I1"),
@@ -62,6 +62,5 @@ SxSxSySy2 = -1 * (C0DC1D.contract(C1UC0U, {
 
 SS = SzSz4 / 4 + SxSxSySy2 / 2
 
-n = CPU.contract(CMU, {("I", "O"), ("T", "T")}) + CPD.contract(CMD, {("I", "O"), ("T", "T")})
-n = rename_io(n, {"": 0})
-nn = rename_io(n, {0: 0}).contract(rename_io(n, {0: 1}), set())
+n = CPU.contract(CMU, {("I0", "O0"), ("T", "T")}) + CPD.contract(CMD, {("I0", "O0"), ("T", "T")})
+nn = rename_io(n, [0]).contract(rename_io(n, [1]), set())

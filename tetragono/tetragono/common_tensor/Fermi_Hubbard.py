@@ -29,19 +29,13 @@ put_sign_in_H = True
 # site2 down: 3
 # CSCS = CC(0,1)I(2)I(3) + I(0)I(1)CC(2,3)
 CSCS = kronecker_product(
-    rename_io(CC, {
-        0: 0,
-        1: 1
-    }),
-    rename_io(I, {0: 2}),
-    rename_io(I, {0: 3}),
+    rename_io(CC, [0, 1]),
+    rename_io(I, [2]),
+    rename_io(I, [3]),
 ) + kronecker_product(
-    rename_io(CC, {
-        0: 2,
-        1: 3
-    }),
-    rename_io(I, {0: 0}),
-    rename_io(I, {0: 1}),
+    rename_io(CC, [2, 3]),
+    rename_io(I, [0]),
+    rename_io(I, [1]),
 )
 # Merge order: Up, Down
 CSCS = CSCS.merge_edge({
@@ -51,19 +45,19 @@ CSCS = CSCS.merge_edge({
     "O1": ["O1", "O3"],
 }, put_sign_in_H, {"O0", "O1"})
 
-NN = kronecker_product(rename_io(N, {0: 0}), rename_io(N, {0: 1}))
+NN = kronecker_product(rename_io(N, [0]), rename_io(N, [1]))
 NN = NN.merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
 
-N0 = kronecker_product(rename_io(N, {0: 0}), rename_io(I, {0: 1}))
+N0 = kronecker_product(rename_io(N, [0]), rename_io(I, [1]))
 N0 = N0.merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
 
-N1 = kronecker_product(rename_io(I, {0: 0}), rename_io(N, {0: 1}))
+N1 = kronecker_product(rename_io(I, [0]), rename_io(N, [1]))
 N1 = N1.merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
@@ -78,15 +72,15 @@ CDCU = C1C0.merge_edge({
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
 CUCU = kronecker_product(
-    rename_io(N, {0: 0}),
-    rename_io(I, {0: 1}),
+    rename_io(N, [0]),
+    rename_io(I, [1]),
 ).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],
 }, put_sign_in_H, {"O0"})
 CDCD = kronecker_product(
-    rename_io(I, {0: 0}),
-    rename_io(N, {0: 1}),
+    rename_io(I, [0]),
+    rename_io(N, [1]),
 ).merge_edge({
     "I0": ["I0", "I1"],
     "O0": ["O0", "O1"],

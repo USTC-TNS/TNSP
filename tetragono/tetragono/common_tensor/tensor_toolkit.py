@@ -32,6 +32,8 @@ Tedge = FakeEdge(True)
 
 
 def rename_io(t, m):
+    if not isinstance(m, dict):
+        m = {i: j for i, j in enumerate(m)}
     res = {}
     for i, j in m.items():
         res[f"I{i}"] = f"I{j}"
