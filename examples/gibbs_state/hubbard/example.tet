@@ -1,0 +1,8 @@
+seed 2333
+su_create density_matrix_hubbard 4 4 t=1 U=8 mu=1
+su_dump su.dat
+!python infinite_temperature_hubbard_model.py su.dat
+su_load su.dat
+su_update 100 0.01 8
+su_to_gm
+gm_run 1000 10 0.01 configuration_cut_dimension=8 use_natural_gradient=True

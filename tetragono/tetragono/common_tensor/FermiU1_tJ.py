@@ -63,4 +63,5 @@ SxSxSySy2 = -1 * (C0DC1D.contract(C1UC0U, {
 SS = SzSz4 / 4 + SxSxSySy2 / 2
 
 n = CPU.contract(CMU, {("I", "O"), ("T", "T")}) + CPD.contract(CMD, {("I", "O"), ("T", "T")})
-nn = rename_io(n, {"": 0}).contract(rename_io(n, {"": 1}), set())
+n = rename_io(n, {"": 0})
+nn = rename_io(n, {0: 0}).contract(rename_io(n, {0: 1}), set())

@@ -1,7 +1,7 @@
 seed 2333
-su_create density_matrix_hubbard 4 4 t=1 U=8
+su_create density_matrix_tJ 4 4 t=1 J=1 mu=1
 su_dump su.dat
-!python infinite_temperature_hubbard_model.py su.dat
+!python infinite_temperature_tJ_model.py su.dat
 su_load su.dat
 su_update 100 0.01 8
 su_to_gm
