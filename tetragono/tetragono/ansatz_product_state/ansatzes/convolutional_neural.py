@@ -31,6 +31,8 @@ class ConvolutionalNeural(AbstractAnsatz):
         """
         Create convolution neural ansatz for a given ansatz product state.
 
+        The state should have only single orbit for every site.
+
         Parameters
         ----------
         owner : AnsatzProductState

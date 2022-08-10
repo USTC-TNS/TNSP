@@ -29,6 +29,8 @@ class PeriodicString(AbstractAnsatz):
         """
         Create an perodic string ansatz.
 
+        The state should have only single orbit for every site.
+
         Parameters
         ----------
         owner : AnsatzProductState

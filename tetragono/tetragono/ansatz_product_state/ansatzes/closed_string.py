@@ -23,10 +23,29 @@ from .abstract_ansatz import AbstractAnsatz
 
 class ClosedString(AbstractAnsatz):
 
-    __slots__ = [
-        "owner", "length", "index_to_site", "site_to_index", "cut_dimension", "tensor_list", "_left_to_right",
-        "_right_to_left"
-    ]
+    __slots__ = ["owner", "length", "index_to_site", "cut_dimension", "tensor_list", "_left_to_right", "_right_to_left"]
+
+    def _construct_tensor(self, index):
+        """
+        Construct tensor at specified index, with all element initialized by random number.
+
+        Parameters
+        ----------
+        index : int
+            The index of the tensor.
+
+        Returns
+        -------
+        Tensor
+            The result tensor.
+        """
+        names = [f"P{i}" for i, _ in enumerate(self.index_to_site[index])]
+        edges = [self.owner.physics_edges[site] for site in self.index_to_site[index]]
+        names.append("L")
+        edges.append(self.cut_dimension)
+        names.append("R")
+        edges.append(self.cut_dimension)
+        return self.owner.Tensor(names, edges).randn()
 
     def __init__(self, owner, index_to_site, cut_dimension):
         """
@@ -36,7 +55,7 @@ class ClosedString(AbstractAnsatz):
         ----------
         owner : AnsatzProductState
             The ansatz product state used to create closed string.
-        index_to_site : list[tuple[int, int, int]]
+        index_to_site : list[list[tuple[int, int, int]]]
             The sites array to specify the string shape.
         cut_dimension : int
             The dimension cut of the string.
@@ -44,15 +63,9 @@ class ClosedString(AbstractAnsatz):
         self.owner: AnsatzProductState = owner
         self.length = len(index_to_site)
         self.index_to_site = [site for site in index_to_site]
-        self.site_to_index = {site: index for index, site in enumerate(index_to_site)}
         self.cut_dimension = cut_dimension
 
-        self.tensor_list = np.array([
-            self.owner.Tensor(
-                ["P", "L", "R"],
-                [self.owner.physics_edges[self.index_to_site[index]], self.cut_dimension, self.cut_dimension]).randn()
-            for index in range(self.length)
-        ])
+        self.tensor_list = np.array([self._construct_tensor(index) for index in range(self.length)])
 
         self.refresh_auxiliaries()
 
@@ -62,7 +75,7 @@ class ClosedString(AbstractAnsatz):
 
         Parameters
         ----------
-        configuration : list[int]
+        configuration : list[list[int]]
             The configuration to calculate.
         try_only : bool
             Whether to avoid to calculate tensor, go as far as possible only.
@@ -81,7 +94,7 @@ class ClosedString(AbstractAnsatz):
                 if try_only:
                     break
                 else:
-                    next_left = self.tensor_list[index].shrink({"P": config})
+                    next_left = self.tensor_list[index].shrink({f"P{orbit}": conf for orbit, conf in enumerate(config)})
                     if left is not None:
                         next_left = left.contract(next_left, {("R", "L")})
                     result[config] = {}, next_left
@@ -95,7 +108,7 @@ class ClosedString(AbstractAnsatz):
 
         Parameters
         ----------
-        configuration : list[int]
+        configuration : list[list[int]]
             The configuration to calculate.
         try_only : bool
             Whether to avoid to calculate tensor, go as far as possible only.
@@ -114,7 +127,8 @@ class ClosedString(AbstractAnsatz):
                 if try_only:
                     break
                 else:
-                    next_right = self.tensor_list[self.length - 1 - index].shrink({"P": config})
+                    next_right = self.tensor_list[self.length - 1 - index].shrink(
+                        {f"P{orbit}": conf for orbit, conf in enumerate(config)})
                     if right is not None:
                         next_right = right.contract(next_right, {("L", "R")})
                     result[config] = {}, next_right
@@ -122,8 +136,11 @@ class ClosedString(AbstractAnsatz):
             index += 1
         return index, right
 
+    def _get_index_configuration(self, site_configuration):
+        return [tuple(site_configuration[l1, l2, orbit][1] for l1, l2, orbit in sites) for sites in self.index_to_site]
+
     def _weight(self, site_configuration):
-        index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
+        index_configuration = self._get_index_configuration(site_configuration)
         index, left = self._go_from_left(index_configuration, try_only=True)
         if index == 0:
             index = None
@@ -138,7 +155,7 @@ class ClosedString(AbstractAnsatz):
             return left.contract(right, {("R", "L"), ("L", "R")})[{}]
 
     def _delta(self, site_configuration):
-        index_configuration = [site_configuration[l1, l2, orbit][1] for l1, l2, orbit in self.index_to_site]
+        index_configuration = self._get_index_configuration(site_configuration)
         result = []
         _, _ = self._go_from_left(index_configuration[::1], try_only=False)
         _, _ = self._go_from_right(index_configuration[::-1], try_only=False)
@@ -152,8 +169,10 @@ class ClosedString(AbstractAnsatz):
             else:
                 this_tensor = left.contract(right, {("L", "R")})
             this_tensor = this_tensor.edge_rename({"R": "L", "L": "R"})
-            this_tensor = this_tensor.expand(
-                {"P": (index_configuration[index], self.owner.physics_edges[self.index_to_site[index]].dimension)})
+            this_tensor = this_tensor.expand({
+                f"P{orbit}": (conf, self.owner.physics_edges[self.index_to_site[index][orbit]].dimension)
+                for orbit, conf in enumerate(index_configuration[index])
+            })
             result.append(this_tensor)
         return np.array(result)
 

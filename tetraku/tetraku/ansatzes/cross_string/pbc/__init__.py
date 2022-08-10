@@ -34,11 +34,11 @@ def ansatz(state, dimension):
     for l1 in range(state.L1):
         index_to_site = []
         for l2 in range(state.L2):
-            index_to_site.append((l1, l2, 0))
+            index_to_site.append([(l1, l2, orbit) for orbit in state.physics_edges[l1, l2]])
         ansatzes.append(tet.ansatz_product_state.ansatzes.ClosedString(state, index_to_site, dimension))
     for l2 in range(state.L2):
         index_to_site = []
         for l1 in range(state.L1):
-            index_to_site.append((l1, l2, 0))
+            index_to_site.append([(l1, l2, orbit) for orbit in state.physics_edges[l1, l2]])
         ansatzes.append(tet.ansatz_product_state.ansatzes.ClosedString(state, index_to_site, dimension))
     return tet.ansatz_product_state.ansatzes.ProductAnsatz(state, ansatzes)

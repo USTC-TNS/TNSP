@@ -23,6 +23,8 @@ def ansatz(state, direction, dimension, base_l1=0, base_l2=0):
     """
     Create an string bond state ansatz along a snake like string.
 
+    This is used for single orbit system.
+
     Parameters
     ----------
     direction : str
@@ -36,13 +38,13 @@ def ansatz(state, direction, dimension, base_l1=0, base_l2=0):
         index_to_site = []
         for l1 in range(state.L1):
             for l2 in range(state.L2) if l1 % 2 == 0 else reversed(range(state.L2)):
-                index_to_site.append(((l1 + base_l1) % state.L1, (l2 + base_l2) % state.L2, 0))
+                index_to_site.append([((l1 + base_l1) % state.L1, (l2 + base_l2) % state.L2, 0)])
         return tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension)
     elif direction in ["V", "v"]:
         index_to_site = []
         for l2 in range(state.L2):
             for l1 in range(state.L1) if l2 % 2 == 0 else reversed(range(state.L1)):
-                index_to_site.append(((l1 + base_l1) % state.L1, (l2 + base_l2) % state.L2, 0))
+                index_to_site.append([((l1 + base_l1) % state.L1, (l2 + base_l2) % state.L2, 0)])
         return tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension)
     else:
         raise RuntimeError("Invalid direction when creating snake string ansatz")
