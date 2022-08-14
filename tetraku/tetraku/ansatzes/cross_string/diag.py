@@ -39,7 +39,8 @@ def ansatz(state, dimension):
             index_to_site.append([(i1, i2, orbit) for orbit in state.physics_edges[i1, i2]])
             i1 += 1
             i2 += 1
-        ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
+        if len(index_to_site) > 1:
+            ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
     for l1, l2 in up_and_right:
         i1 = l1
         i2 = l2
@@ -48,5 +49,6 @@ def ansatz(state, dimension):
             index_to_site.append([(i1, i2, orbit) for orbit in state.physics_edges[i1, i2]])
             i1 += 1
             i2 -= 1
-        ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
+        if len(index_to_site) > 1:
+            ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
     return tet.ansatz_product_state.ansatzes.ProductAnsatz(state, ansatzes)

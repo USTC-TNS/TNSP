@@ -40,8 +40,8 @@ def ansatz(state, dimension):
             selected_site.add((i1, i2))
             i1 = (i1 + 1) % state.L1
             i2 = (i2 + 1) % state.L2
-        if len(index_to_site) != 0:
-            ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
+        if len(index_to_site) > 1:
+            ansatzes.append(tet.ansatz_product_state.ansatzes.ClosedString(state, index_to_site, dimension))
 
     selected_site = set()
     for l2 in range(state.L2):
@@ -53,6 +53,6 @@ def ansatz(state, dimension):
             selected_site.add((i1, i2))
             i1 = (i1 + 1) % state.L1
             i2 = (i2 + state.L2 - 1) % state.L2
-        if len(index_to_site) != 0:
-            ansatzes.append(tet.ansatz_product_state.ansatzes.OpenString(state, index_to_site, dimension))
+        if len(index_to_site) > 1:
+            ansatzes.append(tet.ansatz_product_state.ansatzes.ClosedString(state, index_to_site, dimension))
     return tet.ansatz_product_state.ansatzes.ProductAnsatz(state, ansatzes)
