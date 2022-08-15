@@ -638,7 +638,7 @@ namespace TAT {
          if (split_map.size() != 0) {
             // result.zero();
             auto& result_storage = result.storage();
-            std::fill(result_storage.begin(), result_storage.end(), 0);
+            cudaMemset(result_storage.data(), 0, sizeof(ScalarType) * result_storage.size());
          }
       }
 
