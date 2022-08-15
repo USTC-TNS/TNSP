@@ -42,6 +42,9 @@ namespace TAT {
          const LineSizeType line_size = 0) {
       auto timer_guard = transpose_kernel_core_guard();
 
+      cuda::vector<const ScalarType*> source_lines;
+      cuda::vector<ScalarType*> destination_lines;
+
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
       pmr::vector<Size> index_list(rank, 0);
@@ -51,14 +54,11 @@ namespace TAT {
          if constexpr (loop_last) {
             // come into this branch iff the last dimension is the same and its leading is 1.
             index_list[active_position] = dimension[active_position];
+            source_lines.push_back(current_source);
+            destination_lines.push_back(current_destination);
             const Size line_size_value = line_size.value();
-            for (Size i = 0; i < line_size_value; i++) {
-               if constexpr (parity) {
-                  *current_destination++ = -*current_source++;
-               } else {
-                  *current_destination++ = *current_source++;
-               }
-            }
+            current_source += line_size_value;
+            current_destination += line_size_value;
          } else {
             if constexpr (parity) {
                *current_destination = -*current_source;
@@ -77,6 +77,21 @@ namespace TAT {
             current_destination -= dimension[active_position] * leading_destination[active_position];
 
             if (active_position == 0) {
+               if constexpr (loop_last) {
+                  const Size line_number = source_lines.size();
+                  const Size line_size_value = line_size.value();
+                  for (Size line = 0; line < line_number; line++) {
+                     const ScalarType* __restrict source = source_lines[line];
+                     ScalarType* __restrict destination = destination_lines[line];
+                     for (Size i = 0; i < line_size_value; i++) {
+                        if constexpr (parity) {
+                           destination[i] = -source[i];
+                        } else {
+                           destination[i] = source[i];
+                        }
+                     }
+                  }
+               }
                return;
             }
             active_position--;
