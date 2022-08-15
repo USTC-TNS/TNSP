@@ -42,6 +42,18 @@ void line_copy_interface(
       line_copy_kernel_parity_true<<<block_number, 32, 0, stream>>>(source_lines, destination_lines, line_number, line_size_value);
    else
       line_copy_kernel_parity_true<<<block_number, 32, 0, stream>>>(source_lines, destination_lines, line_number, line_size_value);
+   void** userData = new void*[2];
+   userData[0] = source_lines;
+   userData[1] = destination_lines;
+   cudaStreamAddCallback(
+         stream,
+         [](cudaStream_t stream, cudaError_t status, void* userData_) {
+            void** userData = reinterpret_cast<void**>(userData_);
+            cudaFree(userData[0]);
+            cudaFree(userData[1]);
+            delete[] userData;
+         },
+         userData,
+         0);
    cudaStreamDestroy(stream);
-   cudaDeviceSynchronize();
 }

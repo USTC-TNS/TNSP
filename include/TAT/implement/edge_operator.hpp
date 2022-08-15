@@ -462,6 +462,17 @@ namespace TAT {
       // put res_edge into res
       result.core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(result_edge));
       result.core->clear_unused_symmetry();
+      // it maybe create no source block
+      if constexpr (Symmetry::length != 0) {
+         if (split_map.size() != 0) {
+            // result.zero();
+            auto& result_storage = result.storage();
+            cudaStream_t stream;
+            cudaStreamCreate(&stream);
+            cudaMemsetAsync(result_storage.data(), 0, sizeof(ScalarType) * result_storage.size(), stream);
+            cudaStreamDestroy(stream);
+         }
+      }
       if constexpr (debug_mode) {
          result.check_valid_name();
       }
@@ -633,15 +644,8 @@ namespace TAT {
             }
          }
       }
-      // it maybe create no source block
-      if constexpr (Symmetry::length != 0) {
-         if (split_map.size() != 0) {
-            // result.zero();
-            auto& result_storage = result.storage();
-            cudaMemset(result_storage.data(), 0, sizeof(ScalarType) * result_storage.size());
-         }
-      }
 
+      cudaDeviceSynchronize();
       // Main copy loop
       for (const auto& [symmetries_after_transpose, destination_symmetries_destination_offsets] : data_after_transpose_to_destination) {
          const auto& [destination_symmetries, destination_offsets] = destination_symmetries_destination_offsets;
@@ -770,6 +774,7 @@ namespace TAT {
                total_size,
                parity);
       }
+      cudaDeviceSynchronize();
 
       return result;
    }

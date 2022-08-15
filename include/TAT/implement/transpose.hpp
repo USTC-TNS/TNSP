@@ -46,12 +46,20 @@ namespace TAT {
          const Size* const __restrict dimension,
          const Size* const __restrict leading_source,
          const Size* const __restrict leading_destination, // leading_destination is the proper order
+         const Size total_size,
          const Rank rank,
          const LineSizeType line_size = 0) {
       auto timer_guard = transpose_kernel_core_guard();
 
-      cuda::vector<const ScalarType*> source_lines;
-      cuda::vector<ScalarType*> destination_lines;
+      Size line_number = 0;
+      if constexpr (loop_last) {
+         line_number = total_size / line_size.value();
+      }
+      const ScalarType** source_lines;
+      cudaMallocManaged(&source_lines, line_number * sizeof(const ScalarType*));
+      ScalarType** destination_lines;
+      cudaMallocManaged(&destination_lines, line_number * sizeof(ScalarType*));
+      Size line_index = 0;
 
       const ScalarType* current_source = data_source;
       ScalarType* current_destination = data_destination;
@@ -62,8 +70,9 @@ namespace TAT {
          if constexpr (loop_last) {
             // come into this branch iff the last dimension is the same and its leading is 1.
             index_list[active_position] = dimension[active_position];
-            source_lines.push_back(current_source);
-            destination_lines.push_back(current_destination);
+            source_lines[line_index] = current_source;
+            destination_lines[line_index] = current_destination;
+            line_index++;
             const Size line_size_value = line_size.value();
             current_source += line_size_value;
             current_destination += line_size_value;
@@ -86,11 +95,10 @@ namespace TAT {
 
             if (active_position == 0) {
                if constexpr (loop_last) {
-                  const Size line_number = source_lines.size();
                   const Size line_size_value = line_size.value();
                   if constexpr (std::is_same_v<ScalarType, std::complex<double>>) {
                      auto timer_guard = transpose_cuda_guard();
-                     line_copy_interface(line_number, source_lines.data(), destination_lines.data(), line_size_value, parity);
+                     line_copy_interface(line_number, source_lines, destination_lines, line_size_value, parity);
                   } else {
                      for (Size line = 0; line < line_number; line++) {
                         const ScalarType* __restrict source = source_lines[line];
@@ -126,6 +134,7 @@ namespace TAT {
          const pmr::vector<Size>& dimensions_destination,
          const pmr::vector<Size>& leadings_source,
          const pmr::vector<Size>& leadings_destination,
+         const Size total_size,
          const Rank rank) {
       auto leadings_source_by_destination = pmr::vector<Size>();
       leadings_source_by_destination.reserve(rank);
@@ -183,6 +192,7 @@ namespace TAT {
                         result_dimensions.data(),
                         result_leadings_source.data(),
                         result_leadings_destination.data(),
+                        total_size,
                         result_rank,
                         const_line_size);
                },
@@ -194,6 +204,7 @@ namespace TAT {
                result_dimensions.data(),
                result_leadings_source.data(),
                result_leadings_destination.data(),
+               total_size,
                result_rank);
       }
    }
@@ -238,6 +249,7 @@ namespace TAT {
                dimensions_destination,
                leadings_source,
                leadings_destination,
+               total_size,
                rank);
       } else {
          simple_transpose<ScalarType, false>(
@@ -249,6 +261,7 @@ namespace TAT {
                dimensions_destination,
                leadings_source,
                leadings_destination,
+               total_size,
                rank);
       }
    }
@@ -262,6 +275,7 @@ namespace TAT {
       auto leading_source = pmr::vector<Size>{1, n};
       auto leading_destination = pmr::vector<Size>{m, 1};
       tensor_transpose_kernel<ScalarType, false>(source, destination, dimension.data(), leading_source.data(), leading_destination.data(), 2);
+      cudaDeviceSynchronize();
    }
 } // namespace TAT
 #endif
