@@ -131,7 +131,7 @@ namespace TAT {
       inline auto cuda_gemm<std::complex<double>> = cublasZgemm;
 
       template<typename ScalarType>
-      int
+      std::pair<cudaStream_t, cublasHandle_t>
       gemm(const char* transpose_a,
            const char* transpose_b,
            const int* m,
@@ -165,9 +165,7 @@ namespace TAT {
                cuda_complex_wrap_value(beta),
                cuda_complex_wrap_value(c),
                *ldc);
-         cublasDestroy(handle);
-         cudaStreamDestroy(stream);
-         return 0;
+         return {stream, handle};
       }
    } // namespace detail
 
@@ -191,16 +189,17 @@ namespace TAT {
             const int* ldc,
             const int& batch_size) {
          auto kernel_guard = contract_kernel_guard();
+         pmr::vector<std::pair<cudaStream_t, cublasHandle_t>> handles;
          if (batch_size == 1) {
-            gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
+            handles.push_back(gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc));
          } else {
             if constexpr (same_shape) {
                for (auto i = 0; i < batch_size; i++) {
-                  gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
+                  handles.push_back(gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc));
                }
             } else {
                for (auto i = 0; i < batch_size; i++) {
-                  gemm<ScalarType>(
+                  handles.push_back(gemm<ScalarType>(
                         &transpose_a[i],
                         &transpose_b[i],
                         &m[i],
@@ -213,11 +212,15 @@ namespace TAT {
                         &ldb[i],
                         &beta[i],
                         c[i],
-                        &ldc[i]);
+                        &ldc[i]));
                }
             }
          }
          cudaDeviceSynchronize();
+         for (auto& [stream, handle] : handles) {
+            cublasDestroy(handle);
+            cudaStreamDestroy(stream);
+         }
       }
 
       template<typename Name, typename SetNameName>
