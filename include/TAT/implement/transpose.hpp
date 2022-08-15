@@ -26,6 +26,13 @@
 #include "../utility/const_integral.hpp"
 #include "../utility/timer.hpp"
 
+void line_copy_interface(
+      std::uint64_t line_number,
+      const std::complex<double>** source_lines,
+      std::complex<double>** destination_lines,
+      std::uint64_t line_size_value,
+      bool parity);
+
 namespace TAT {
 
    inline timer transpose_kernel_core_guard("transpose_kernel_core");
@@ -80,14 +87,18 @@ namespace TAT {
                if constexpr (loop_last) {
                   const Size line_number = source_lines.size();
                   const Size line_size_value = line_size.value();
-                  for (Size line = 0; line < line_number; line++) {
-                     const ScalarType* __restrict source = source_lines[line];
-                     ScalarType* __restrict destination = destination_lines[line];
-                     for (Size i = 0; i < line_size_value; i++) {
-                        if constexpr (parity) {
-                           destination[i] = -source[i];
-                        } else {
-                           destination[i] = source[i];
+                  if constexpr (std::is_same_v<ScalarType, std::complex<double>>) {
+                     line_copy_interface(line_number, source_lines.data(), destination_lines.data(), line_size_value, parity);
+                  } else {
+                     for (Size line = 0; line < line_number; line++) {
+                        const ScalarType* __restrict source = source_lines[line];
+                        ScalarType* __restrict destination = destination_lines[line];
+                        for (Size i = 0; i < line_size_value; i++) {
+                           if constexpr (parity) {
+                              destination[i] = -source[i];
+                           } else {
+                              destination[i] = source[i];
+                           }
                         }
                      }
                   }
