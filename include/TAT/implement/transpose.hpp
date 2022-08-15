@@ -36,6 +36,7 @@ void line_copy_interface(
 namespace TAT {
 
    inline timer transpose_kernel_core_guard("transpose_kernel_core");
+   inline timer transpose_cuda_guard("transpose_cuda");
 
    // It is the same to numpy, random read/linear write is better than linear read/random write.
    template<typename ScalarType, bool parity, bool loop_last = false, typename LineSizeType = int>
@@ -88,6 +89,7 @@ namespace TAT {
                   const Size line_number = source_lines.size();
                   const Size line_size_value = line_size.value();
                   if constexpr (std::is_same_v<ScalarType, std::complex<double>>) {
+                     auto timer_guard = transpose_cuda_guard();
                      line_copy_interface(line_number, source_lines.data(), destination_lines.data(), line_size_value, parity);
                   } else {
                      for (Size line = 0; line < line_number; line++) {
