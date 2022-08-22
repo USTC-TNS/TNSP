@@ -309,3 +309,10 @@ class AnsatzProductState(AbstractState):
         """
         for name in self.ansatzes:
             self.ansatzes[name].refresh_auxiliaries()
+
+    def normalize_state(self):
+        """
+        Normalize the state
+        """
+        for name in self.ansatzes:
+            self.ansatzes[name].normalize_ansatz()

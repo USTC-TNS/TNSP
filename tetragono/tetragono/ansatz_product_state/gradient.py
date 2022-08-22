@@ -326,6 +326,8 @@ def gradient_descent(
                     state.apply_gradient(grad, grad_step_size, part=gradient_ansatz)
                 showln(f"gradient {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
+                # Normalize state
+                state.normalize_state()
                 # Bcast state
                 state.bcast_state(part=gradient_ansatz)
 

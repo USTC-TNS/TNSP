@@ -222,3 +222,7 @@ class OpenString(AbstractAnsatz):
     def buffers_for_mpi(self, delta):
         for index, tensor in enumerate(self.buffers(delta)):
             yield tensor.storage
+
+    def normalize_ansatz(self):
+        for tensor in self.tensor_list:
+            tensor /= tensor.norm_max()

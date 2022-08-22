@@ -149,3 +149,6 @@ class PeriodicString(AbstractAnsatz):
     def buffers_for_mpi(self, delta):
         for tensor in self.buffers(delta):
             yield tensor.storage
+
+    def normalize_ansatz(self):
+        self.tensor /= self.tensor.norm_max()

@@ -192,3 +192,9 @@ class AbstractAnsatz:
         if delta is None:
             return False
         raise RuntimeError("Program should never reach here")
+
+    def normalize_ansatz(self):
+        """
+        Normalize this ansatz.
+        """
+        pass

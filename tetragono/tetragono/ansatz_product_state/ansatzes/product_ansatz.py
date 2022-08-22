@@ -131,3 +131,7 @@ class ProductAnsatz(AbstractAnsatz):
             delta = iter(delta)
         for ansatz in self.ansatzes:
             yield from ansatz.buffers_for_mpi(delta)
+
+    def normalize_ansatz(self):
+        for ansatz in self.ansatzes:
+            ansatz.normalize_ansatz()
