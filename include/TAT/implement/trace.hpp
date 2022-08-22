@@ -214,7 +214,8 @@ namespace TAT {
       const auto const_free_size_variant = to_const_integral<Size, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(free_size);
 
       std::visit(
-            [&](const auto& const_free_size) {
+            // If these variables are not captured explicitly, old compiler such as gcc7 will fail to compile
+            [&trace_size, &fuse_size, &destination_block, &source_block](const auto& const_free_size) {
                const Size free_size = const_free_size.value();
                for (auto k = 0; k < trace_size; k++) {
                   for (auto j = 0; j < fuse_size; j++) {

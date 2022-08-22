@@ -16,6 +16,7 @@
   new function name to create lattice is =abstract_lattice=.
 + *tetragono*: =_owner= of Configuration for sampling lattice and ansatz product state is removed, use =owner= instead.
 *** Fixed
++ *TAT.hpp*: Fix an internal compiler error for some old compiler, caused by the feature: fusing edges during tracing.
 
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.19...v0.2.20][v0.2.20]] - 2022-08-02
 
