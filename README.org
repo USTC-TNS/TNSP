@@ -625,6 +625,17 @@
     {names:[i,j,k],edges:[2,3,4],blocks:[1.72434,0.0751923,-0.791637,-1.56929,-0.228975,-0.478804,1.47415,2.59481,-0.711104,0.661706,-0.0662977,-0.612105,3.10683,0.663374,-1.9786,-1.49405,0.308697,1.2056,-0.336922,0.631169,0.146169,-0.982161,0.585852,-2.37218]}
     #+end_example
 
+** Alternatives
+
++ [[https://github.com/romeric/Fastor][Fastor]]
++ [[https://github.com/ITensor/ITensor][ITensor]]
++ [[https://github.com/jcmgray/quimb][QUIMB]]
++ [[https://syten.eu/docs/index.html][SyTen]]
++ [[https://github.com/issp-center-dev/TeNeS][TeNeS]]
++ [[https://github.com/tenpy/tenpy][TeNPy]]
++ [[https://github.com/Jutho/TensorOperations.jl][TensorOperations.jl]]
++ [[https://gitlab.com/uni10/uni10/][Uni10]]
+
 ** FAQ
 
 *** Can I use it in windows?
