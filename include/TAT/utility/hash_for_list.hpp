@@ -26,13 +26,18 @@
 
 namespace TAT {
    namespace detail {
+      inline std::size_t& hash_absorb(std::size_t& seed, std::size_t value) {
+         // copy from boost
+         return seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+      }
+
       struct hash_for_list {
          template<typename List>
          std::size_t operator()(const List& list) const {
             std::hash<typename List::value_type> hash_for_item;
             std::size_t seed = list.size();
             for (const auto& item : list) {
-               seed ^= hash_for_item(item) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+               hash_absorb(seed, hash_for_item(item));
             }
             return seed;
          }

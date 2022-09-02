@@ -27,6 +27,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+// Do not use fast name here, because it would need frequent conversion between python str to FastName,
+// which is much more expensive than the benifit of FastName with the original std::string
 #define TAT_ERROR_BITS 1
 #include <TAT/TAT.hpp>
 

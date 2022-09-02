@@ -26,6 +26,7 @@
 
 #include "../utility/allocator.hpp"
 #include "../utility/common_variable.hpp"
+#include "../utility/hash_for_list.hpp"
 
 namespace TAT {
    // A symmetry is a tuple of several int or bool, which may be fermi or bose
@@ -197,7 +198,7 @@ namespace TAT {
          detail::map_on_tuple(
                [&seed](const auto& a, const auto&) {
                   using A = remove_cvref_t<decltype(a)>;
-                  seed ^= std::hash<A>()(a) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+                  detail::hash_absorb(seed, std::hash<A>{}(a));
                },
                static_cast<const base_tuple_t&>(*this));
          return seed;

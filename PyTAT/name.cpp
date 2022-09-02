@@ -27,22 +27,11 @@ namespace TAT {
             .def(py::self >= py::self)
             .def(py::self == py::self)
             .def(py::self != py::self)
-            .def(py::init<DefaultName::hash_t>(), py::arg("hash"), "Name with specified hash directly")
             .def_readonly("hash", &DefaultName::hash)
             .def("__hash__",
                  [](const DefaultName& name) {
                     return name.hash;
                  })
-            .def_static(
-                  "load",
-                  [](const py::bytes& bytes) {
-                     return load_fastname_dataset(std::string(bytes));
-                  })
-            .def_static(
-                  "dump",
-                  []() {
-                     return py::bytes(dump_fastname_dataset());
-                  })
             .def_property_readonly(
                   "name",
                   [](const DefaultName& name) {

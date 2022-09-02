@@ -171,9 +171,9 @@ namespace TAT {
          return default_resource;
       }
       inline memory_resource* set_default_resource(memory_resource* input) {
-         auto result = default_resource;
+         auto output = default_resource;
          default_resource = input;
-         return result;
+         return output;
       }
 
       // Similar to std::pmr::polymorphic_allocator

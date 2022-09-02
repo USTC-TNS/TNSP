@@ -112,16 +112,6 @@ namespace TAT {
 
    // name type io
 
-   inline std::ostream& operator<<(std::ostream& out, const FastName& name) {
-      auto found = FastName::dataset().hash_to_name.find(name.hash);
-      if (found == FastName::dataset().hash_to_name.end()) {
-         out << FastName::unknown_prefix << name.hash;
-      } else {
-         out << found->second;
-      }
-      return out;
-   }
-
    namespace detail {
       inline bool valid_name_character(char c) {
          if (!std::isprint(c)) {
@@ -143,7 +133,14 @@ namespace TAT {
       }
    } // namespace detail
 
-   // inline std::istream& operator>>(std::istream& in, std::string& name) {
+   inline std::ostream& print_string_for_name(std::ostream& out, const std::string& name) {
+      return out << name;
+   }
+   inline std::ostream& print_fastname_for_name(std::ostream& out, const FastName& name) {
+      out << static_cast<const std::string&>(name);
+      return out;
+   }
+
    inline std::istream& scan_string_for_name(std::istream& in, std::string& name) {
       char buffer[256]; // max name length = 256
       Size length = 0;
@@ -162,13 +159,13 @@ namespace TAT {
       return in;
    }
 
-   inline std::ostream& operator<(std::ostream& out, const std::string& string) {
+   inline std::ostream& write_string_for_name(std::ostream& out, const std::string& string) {
       Size count = string.size();
       out < count;
       out.write(string.data(), sizeof(char) * count);
       return out;
    }
-   inline std::istream& operator>(std::istream& in, std::string& string) {
+   inline std::istream& read_string_for_name(std::istream& in, std::string& string) {
       Size count;
       in > count;
       string.resize(count);
@@ -176,34 +173,29 @@ namespace TAT {
       return in;
    }
 
-   inline std::ostream& write_fastname(std::ostream& out, const FastName& name) {
-      return out < static_cast<std::string>(name);
+   inline std::ostream& write_fastname_for_name(std::ostream& out, const FastName& name) {
+      return write_string_for_name(out, static_cast<const std::string&>(name));
    }
 
-   inline std::istream& read_fastname(std::istream& in, FastName& name) {
+   inline std::istream& read_fastname_for_name(std::istream& in, FastName& name) {
       std::string name_string;
-      in > name_string;
+      read_string_for_name(in, name_string);
       name = FastName(name_string);
       return in;
-   }
-
-   // MSVC cannot use std::operator<< directly in nametrait so wrap it by another function here.
-   inline std::ostream& print_string_for_name(std::ostream& out, const std::string& name) {
-      return out << name;
    }
 
    template<>
    struct NameTraits<FastName> {
       // Although FastName is trivial type, but write string explicitly for good compatibility.
-      static constexpr name_out_operator_t<FastName> write = write_fastname;
-      static constexpr name_in_operator_t<FastName> read = read_fastname;
-      static constexpr name_out_operator_t<FastName> print = operator<<;
+      static constexpr name_out_operator_t<FastName> write = write_fastname_for_name;
+      static constexpr name_in_operator_t<FastName> read = read_fastname_for_name;
+      static constexpr name_out_operator_t<FastName> print = print_fastname_for_name;
       static constexpr name_in_operator_t<FastName> scan = scan_fastname_for_name;
    };
    template<>
    struct NameTraits<std::string> {
-      static constexpr name_out_operator_t<std::string> write = operator<;
-      static constexpr name_in_operator_t<std::string> read = operator>;
+      static constexpr name_out_operator_t<std::string> write = write_string_for_name;
+      static constexpr name_in_operator_t<std::string> read = read_string_for_name;
       static constexpr name_out_operator_t<std::string> print = print_string_for_name;
       static constexpr name_in_operator_t<std::string> scan = scan_string_for_name;
    };
@@ -252,29 +244,6 @@ namespace TAT {
             auto& item = list.emplace_back();
             in > item;
          }
-      }
-      return in;
-   }
-
-   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry<Key> || is_symmetry_vector_v<Key>>>
-   std::ostream& operator<(std::ostream& out, const std::map<Key, Value>& map) {
-      Size size = map.size();
-      out < size;
-      for (const auto& [key, value] : map) {
-         out < key < value;
-      }
-      return out;
-   }
-
-   template<typename Key, typename Value, typename = std::enable_if_t<is_symmetry<Key> || is_symmetry_vector_v<Key>>>
-   std::istream& operator>(std::istream& in, std::map<Key, Value>& map) {
-      map.clear();
-      Size size;
-      in > size;
-      for (Size i = 0; i < size; i++) {
-         Key key;
-         in > key;
-         in > map[std::move(key)];
       }
       return in;
    }
@@ -633,37 +602,6 @@ namespace TAT {
       std::istringstream in(input);
       in > *this;
       return *this;
-   }
-
-   // fast name dataset
-
-   inline std::ostream& operator<(std::ostream& out, const FastName::dataset_t& dataset) {
-      Size size = dataset.hash_to_name.size();
-      out < size;
-      for (const auto& [hash, name] : dataset.hash_to_name) {
-         out < name;
-      }
-      return out;
-   }
-   inline std::istream& operator>(std::istream& in, FastName::dataset_t& dataset) {
-      Size size;
-      in > size;
-      for (auto i = 0; i < size; i++) {
-         std::string name;
-         in > name;
-         auto hash = dataset.hash_function(name);
-         dataset.hash_to_name[hash] = std::move(name);
-      }
-      return in;
-   }
-   inline void load_fastname_dataset(const std::string& input) {
-      std::istringstream in(input);
-      in > FastName::dataset();
-   }
-   inline std::string dump_fastname_dataset() {
-      std::ostringstream out;
-      out < FastName::dataset();
-      return out.str();
    }
 
    // binary io move

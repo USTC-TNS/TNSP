@@ -18,11 +18,11 @@
  */
 
 #pragma once
-#include <type_traits>
 #ifndef TAT_CONST_HASH_MAP_HPP
 #define TAT_CONST_HASH_MAP_HPP
 
 #include <functional>
+#include <type_traits>
 
 namespace TAT {
    namespace detail {

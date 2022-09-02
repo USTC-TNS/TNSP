@@ -23,7 +23,6 @@
 
 // Macros options
 // - TAT_USE_MPI: define to enable mpi support, cmake can configure it
-// - TAT_USE_MKL_TRANSPOSE: define to use mkl for matrix transpose, cmake can configure it
 // - TAT_USE_MKL_GEMM_BATCH: define to use mkl ?gemm_batch, cmake can configure it
 
 // - TAT_USE_FAST_NAME: define to use TAT::FastName as default name instead of std::string
@@ -227,8 +226,6 @@ namespace TAT {
    };
    template<typename T>
    using type_identity_t = typename type_identity<T>::type;
-
-   constexpr std::size_t unordered_parameter = 4;
 } // namespace TAT
 
 #include <array>
@@ -241,6 +238,8 @@ namespace TAT {
          return this->end();
       }
    };
+
+   constexpr std::size_t unordered_parameter = 4;
 } // namespace TAT
 
 #endif

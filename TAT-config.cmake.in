@@ -56,7 +56,6 @@ else()
     # check whether using mkl
     if(BLAS_LIBRARIES MATCHES mkl)
       message(STATUS "Using mkl")
-      target_compile_definitions(TAT INTERFACE TAT_USE_MKL_TRANSPOSE)
       target_compile_definitions(TAT INTERFACE TAT_USE_MKL_GEMM_BATCH)
     else()
       message(STATUS "Not using mkl")

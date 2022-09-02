@@ -33,6 +33,7 @@
 #include <vector>
 
 #include "../utility/common_variable.hpp"
+#include "../utility/hash_for_list.hpp"
 
 namespace TAT {
    /**
@@ -56,14 +57,10 @@ namespace TAT {
       static auto& dataset() {
          return dataset_t::instance();
       }
-      inline static const auto unknown_prefix = "UnknownName";
 
       hash_t hash;
 
-      FastName() noexcept : hash(0) {} // A Temporary name
-
-      // Specify name by its hash directly
-      explicit FastName(const hash_t hash) noexcept : hash(hash) {}
+      FastName() noexcept : FastName("") {}
 
       template<
             typename String,
@@ -75,13 +72,9 @@ namespace TAT {
          }
       }
 
-      operator std::string() const {
+      operator const std::string&() const {
          auto found = dataset().hash_to_name.find(hash);
-         if (found == dataset().hash_to_name.end()) {
-            return unknown_prefix + std::to_string(hash);
-         } else {
-            return found->second;
-         }
+         return found->second;
       }
 
 #define TAT_DEFINE_FASTNAME_COMPARE(OP, EVAL) \
@@ -239,7 +232,7 @@ namespace std {
          auto hash_2 = hash<TAT::FastName>()(name_2);
          auto seed = hash_1;
          auto v = hash_2;
-         seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+         TAT::detail::hash_absorb(seed, v);
          return seed;
       }
    };
@@ -252,7 +245,7 @@ namespace std {
          auto hash_2 = hash<string>()(name_2);
          auto seed = hash_1;
          auto v = hash_2;
-         seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+         TAT::detail::hash_absorb(seed, v);
          return seed;
       }
    };
