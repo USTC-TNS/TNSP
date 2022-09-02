@@ -230,8 +230,6 @@ jobs:
     steps:
       - name: download artifacts
         uses: actions/download-artifact@v2
-      - name: remove README.md
-        run: rm artifact/README.md
       - name: setup python
         uses: actions/setup-python@v2
       - name: upload
