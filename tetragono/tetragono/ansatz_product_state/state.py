@@ -173,6 +173,8 @@ class AnsatzProductState(AbstractState):
         """
         if name is None:
             name = str(len(self.ansatzes))
+        if name in self.ansatzes:
+            raise ValueError("The name of ansatz to be added is duplicated")
         self.ansatzes[name] = ansatz
 
     def weight_and_delta(self, configurations, calculate_delta):
