@@ -104,7 +104,7 @@ class SweepSampling(Sampling):
                 configuration_s[l1l2o] = positions_configuration_s[i]
             # Then calculate the wss
             [wss], _ = self.owner.weight_and_delta([configuration_s], [])
-            p = (np.linalg.norm(wss)**2) / (np.linalg.norm(ws)**2) * hopping_number / hopping_number_s
+            p = np.linalg.norm(wss / ws)**2 * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update configuration and ws
                 ws = wss

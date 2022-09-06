@@ -108,7 +108,7 @@ class SweepSampling(Sampling):
                     # Then wss is zero forcely, hopping possibility is zero definitely, so hopping failed.
                     return ws
             wss = self.configuration.replace(replacement)  # which return a tensor, we only need its norm
-            p = (wss.norm_2()**2) / (ws.norm_2()**2) * hopping_number / hopping_number_s
+            p = (wss / ws).norm_2()**2 * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update ws and configuration
                 ws = wss
