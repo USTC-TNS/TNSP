@@ -888,12 +888,20 @@ namespace TAT {
       // index, dim
 
       /**
-       * expand a dimension-1 edge of a tensor to several wider edge
+       * Expand a one dimensional edge of a tensor to several wider edge
+       * \param configure The way to expand edge. It is a map from the name of the new edge to a tuple containing new index and total
+       * dimension for no symmetry tensor, to a tuple containing new symmetry, new index and new total dimension for other bosonic tensor,
+       * to a tuple containing fermionic arrow, new symmetry, new index and new total dimension for fermionic tensor.
+       * \param old_name the original edge to be expanded, it should be a one dimensional edge.
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       expand(const std::unordered_map<Name, EdgePointExpand>& configure, const Name& old_name = InternalName<Name>::No_Old_Name) const;
       /**
-       * shrink several edge of a tensor to a dimension-1 edge
+       * Shrink several edge of a tensor to a one dimensional edge.
+       * \param configure The way to shrink edges. It is a map from the name of the old edge to the kept index for no symmetry tensor, to
+       * a tuple containing the kept symmetry and index for other tensor.
+       * \param new_name The name of the new edge created by shrinking.
+       * \param arrow The fermionic arrow of the new edge for fermionic tensor.
        */
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name> shrink(
             const std::unordered_map<Name, EdgePointShrink>& configure,
