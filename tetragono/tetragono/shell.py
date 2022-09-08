@@ -518,6 +518,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_gm_data_load)
     def gm_data_load(self, name):
+        showln(" ##### DEPRECATE WARNING BEGIN #####")
+        showln(" gm_data_load is deprecated, use gm_hamiltonian instead to replace hamiltonian")
+        showln(" ###### DEPRECATE WARNING END ######")
         data = read_from_file(name)
         self.gm._lattice = data._lattice
 
