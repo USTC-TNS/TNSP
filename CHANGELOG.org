@@ -3,6 +3,7 @@
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.22...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add =ap_hamiltonian= to replace the hamiltonian of the ansatz product state in tetragono shell.
 *** Changed
 *** Deprecated
 + *tetragono*: =gm_data_load= is deprecated, it will be removed in the future, please use =gm_hamiltonian= to replace

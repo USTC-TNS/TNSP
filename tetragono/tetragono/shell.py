@@ -693,6 +693,25 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def ap_conf_load(self, name):
         self.ap_conf = read_from_file(name)
 
+    def do_ap_hamiltonian(self, line):
+        """
+        Replace the hamiltonian of the ansatz product state with another one.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        config = Config(line)
+        self.ap_hamiltonian(*config.args, **config.kwargs)
+
+    @sharedoc(do_ap_hamiltonian)
+    def ap_hamiltonian(self, model, *args, **kwargs):
+        new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
+        self.ap._hamiltonians = new_state._hamiltonians
+
 
 class TetragonoScriptApp(TetragonoCommandApp):
 
@@ -779,3 +798,4 @@ else:
     ap_conf_create = app.ap_conf_create
     ap_conf_dump = app.ap_conf_dump
     ap_conf_load = app.ap_conf_load
+    ap_hamiltonian = app.ap_hamiltonian
