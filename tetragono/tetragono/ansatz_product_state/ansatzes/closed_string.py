@@ -23,7 +23,10 @@ from .abstract_ansatz import AbstractAnsatz
 
 class ClosedString(AbstractAnsatz):
 
-    __slots__ = ["owner", "length", "index_to_site", "cut_dimension", "tensor_list", "_left_to_right", "_right_to_left"]
+    __slots__ = [
+        "owner", "length", "index_to_site", "cut_dimension", "tensor_list", "_left_to_right", "_right_to_left",
+        "_weight_pool", "_delta_pool"
+    ]
 
     def _construct_tensor(self, index):
         """
@@ -141,44 +144,52 @@ class ClosedString(AbstractAnsatz):
 
     def _weight(self, site_configuration):
         index_configuration = self._get_index_configuration(site_configuration)
-        index, left = self._go_from_left(index_configuration, try_only=True)
-        if index == 0:
-            index = None
-        else:
-            index -= 1
-        _, right = self._go_from_right(index_configuration[:index:-1], try_only=False)
-        if left is None:
-            return right.trace({("L", "R")})[{}]
-        elif right is None:
-            return left.trace({("L", "R")})[{}]
-        else:
-            return left.contract(right, {("R", "L"), ("L", "R")})[{}]
+        key = tuple(index_configuration)
+        if key not in self._weight_pool:
+            index, left = self._go_from_left(index_configuration, try_only=True)
+            if index == 0:
+                index = None
+            else:
+                index -= 1
+            _, right = self._go_from_right(index_configuration[:index:-1], try_only=False)
+            if left is None:
+                self._weight_pool[key] = right.trace({("L", "R")})[{}]
+            elif right is None:
+                self._weight_pool[key] = left.trace({("L", "R")})[{}]
+            else:
+                self._weight_pool[key] = left.contract(right, {("R", "L"), ("L", "R")})[{}]
+        return self._weight_pool[key]
 
     def _delta(self, site_configuration):
         index_configuration = self._get_index_configuration(site_configuration)
-        result = []
-        _, _ = self._go_from_left(index_configuration[::1], try_only=False)
-        _, _ = self._go_from_right(index_configuration[::-1], try_only=False)
-        for index in range(self.length):
-            _, left = self._go_from_left(index_configuration[0:index:1], try_only=False)
-            _, right = self._go_from_right(index_configuration[-1:index:-1], try_only=False)
-            if left is None:
-                this_tensor = right
-            elif right is None:
-                this_tensor = left
-            else:
-                this_tensor = left.contract(right, {("L", "R")})
-            this_tensor = this_tensor.edge_rename({"R": "L", "L": "R"})
-            this_tensor = this_tensor.expand({
-                f"P{orbit}": (conf, self.owner.physics_edges[self.index_to_site[index][orbit]].dimension)
-                for orbit, conf in enumerate(index_configuration[index])
-            })
-            result.append(this_tensor)
-        return np.array(result)
+        key = tuple(index_configuration)
+        if key not in self._delta_pool:
+            result = []
+            _, _ = self._go_from_left(index_configuration[::1], try_only=False)
+            _, _ = self._go_from_right(index_configuration[::-1], try_only=False)
+            for index in range(self.length):
+                _, left = self._go_from_left(index_configuration[0:index:1], try_only=False)
+                _, right = self._go_from_right(index_configuration[-1:index:-1], try_only=False)
+                if left is None:
+                    this_tensor = right
+                elif right is None:
+                    this_tensor = left
+                else:
+                    this_tensor = left.contract(right, {("L", "R")})
+                this_tensor = this_tensor.edge_rename({"R": "L", "L": "R"})
+                this_tensor = this_tensor.expand({
+                    f"P{orbit}": (conf, self.owner.physics_edges[self.index_to_site[index][orbit]].dimension)
+                    for orbit, conf in enumerate(index_configuration[index])
+                })
+                result.append(this_tensor)
+            self._delta_pool[key] = np.array(result)
+        return self._delta_pool[key]
 
     def refresh_auxiliaries(self):
         self._left_to_right = {}
         self._right_to_left = {}
+        self._weight_pool = {}
+        self._delta_pool = {}
 
     def ansatz_prod_sum(self, a, b):
         result = 0.0
