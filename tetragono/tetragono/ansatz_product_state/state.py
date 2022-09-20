@@ -230,7 +230,7 @@ class AnsatzProductState(AbstractState):
             setter.send(None)
             for tensor, grad in zip(self.ansatzes[name].buffers(None), self.ansatzes[name].buffers(gradient[i])):
                 send(setter, tensor - grad * step_size)
-        self.refresh_auxiliaries()
+        self.refresh_auxiliaries(part=part)
 
     def state_prod_sum(self, a=None, b=None, *, part):
         """
@@ -305,11 +305,11 @@ class AnsatzProductState(AbstractState):
         bcast_iterator_buffer(
             itertools.chain(*(self.ansatzes[name].buffers_for_mpi(a[i]) for i, name in enumerate(part))), root=root)
 
-    def refresh_auxiliaries(self):
+    def refresh_auxiliaries(self, *, part):
         """
         Refresh auxiliaries after updating state.
         """
-        for name in self.ansatzes:
+        for name in part:
             self.ansatzes[name].refresh_auxiliaries()
 
     def normalize_state(self):

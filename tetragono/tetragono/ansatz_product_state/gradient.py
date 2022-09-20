@@ -31,7 +31,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
                      gradient_ansatz):
 
     def get_energy():
-        state.refresh_auxiliaries()
+        state.refresh_auxiliaries(part=gradient_ansatz)
         with energy_observer:
             for possibility, configuration in configuration_pool:
                 energy_observer(possibility, configuration)
