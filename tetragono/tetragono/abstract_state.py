@@ -240,7 +240,7 @@ class AbstractState:
         # The total site number of the whole state, access it by state.site_number
         self._site_number = None
 
-        self.data_version = 3
+        self.data_version = 4
 
     def _init_by_copy(self, other):
         """

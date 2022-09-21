@@ -185,6 +185,14 @@ class ClosedString(AbstractAnsatz):
             self._delta_pool[key] = np.array(result)
         return self._delta_pool[key]
 
+    def weight_and_delta(self, configurations, calculate_delta):
+        weight = [self._weight(configuration) for configuration in configurations]
+        if calculate_delta:
+            delta = [self._delta(configuration) for configuration in configurations]
+        else:
+            delta = None
+        return weight, delta
+
     def refresh_auxiliaries(self):
         self._left_to_right = {}
         self._right_to_left = {}
@@ -193,15 +201,15 @@ class ClosedString(AbstractAnsatz):
 
     def ansatz_prod_sum(self, a, b):
         result = 0.0
-        for ai, bi in zip(self.buffers(a), self.buffers(b)):
+        for ai, bi in zip(self.tensors(a), self.tensors(b)):
             dot = ai.contract(bi, {(name, name) for name in ai.names})[{}]
             result += dot
         return result
 
     def ansatz_conjugate(self, a):
-        return np.array([i.conjugate(default_is_physics_edge=True) for i in self.buffers(a)])
+        return np.array([i.conjugate(default_is_physics_edge=True) for i in self.tensors(a)])
 
-    def buffers(self, delta):
+    def tensors(self, delta):
         if delta is None:
             delta = self.tensor_list
         for i, [_, value] in enumerate(zip(self.tensor_list, delta)):
@@ -211,7 +219,7 @@ class ClosedString(AbstractAnsatz):
                 delta[i] = recv
 
     def elements(self, delta):
-        for index, tensor in enumerate(self.buffers(delta)):
+        for index, tensor in enumerate(self.tensors(delta)):
             storage = tensor.transpose(self.tensor_list[index].names).storage
             length = len(storage)
             for i in range(length):
@@ -221,16 +229,21 @@ class ClosedString(AbstractAnsatz):
                         raise RuntimeError("Trying to set tensor element which mismatches the edge names.")
                     storage[i] = recv
 
-    def buffer_count(self, delta):
+    def tensor_count(self, delta):
+        for _ in self.tensors(delta):
+            pass
         return self.length
 
     def element_count(self, delta):
-        return sum(tensor.norm_num() for tensor in self.buffers(delta))
+        return sum(tensor.norm_num() for tensor in self.tensors(delta))
 
-    def buffers_for_mpi(self, delta):
-        for index, tensor in enumerate(self.buffers(delta)):
+    def buffers(self, delta):
+        for index, tensor in enumerate(self.tensors(delta)):
             yield tensor.storage
 
-    def normalize_ansatz(self):
+    def normalize_ansatz(self, log_ws=None):
+        if log_ws is None:
+            return self.length
+        param = np.exp(log_ws / self.length)
         for tensor in self.tensor_list:
-            tensor /= tensor.norm_max()
+            tensor /= param

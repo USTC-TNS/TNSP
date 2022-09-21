@@ -44,13 +44,13 @@ class ConvolutionalNeural(AbstractAnsatz):
         self.network = network
         self.dtype = next(self.network.parameters()).dtype
 
-    def __call__(self, x):
+    def get_weights(self, xs):
         """
         Get the weight of configuration x.
 
         Parameters
         ----------
-        x : list[list[int]]
+        xs : list[list[list[list[int]]]]
             The configuration matrix.
 
         Returns
@@ -58,8 +58,8 @@ class ConvolutionalNeural(AbstractAnsatz):
         float
             The weight of the given configuration
         """
-        h = self.network(x)
-        s = torch.prod(h.reshape([h.shape[0], -1]), -1)
+        result = self.network(xs)
+        s = torch.prod(result.reshape([result.shape[0], -1]), -1)
         return s
 
     def create_x(self, configuration):
@@ -68,7 +68,7 @@ class ConvolutionalNeural(AbstractAnsatz):
 
         Parameters
         ----------
-        configuration : list[list[dict[int, EdgePoint]]]
+        configuration : Configuration
             The configuration dict.
 
         Returns
@@ -82,7 +82,7 @@ class ConvolutionalNeural(AbstractAnsatz):
 
     def weight_and_delta(self, configurations, calculate_delta):
         xs = torch.tensor([self.create_x(configuration) for configuration in configurations], dtype=self.dtype)
-        weight = self(xs)
+        weight = self.get_weights(xs)
         if calculate_delta:
             number = len(configurations)
             delta = []
@@ -100,13 +100,13 @@ class ConvolutionalNeural(AbstractAnsatz):
 
     def ansatz_prod_sum(self, a, b):
         result = 0.0
-        for ai, bi in zip(self.buffers(a), self.buffers(b)):
+        for ai, bi in zip(self.tensors(a), self.tensors(b)):
             result += float(np.dot(ai.reshape([-1]), bi.reshape([-1])))
         return result
 
     def ansatz_conjugate(self, a):
         # CNN network is always real without imaginary part
-        a = [i for i in self.buffers(a)]
+        a = [i for i in self.tensors(a)]
         length = len(a)
         # Create an empty np array to avoid numpy FutureWarning
         result = np.empty(length, dtype=object)
@@ -114,7 +114,7 @@ class ConvolutionalNeural(AbstractAnsatz):
             result[i] = a[i]
         return result
 
-    def buffers(self, delta):
+    def tensors(self, delta):
         if delta is None:
             for tensor in self.network.parameters():
                 recv = yield tensor.data
@@ -131,7 +131,7 @@ class ConvolutionalNeural(AbstractAnsatz):
                     # copy it to ensure the stride is contiguous
 
     def elements(self, delta):
-        for tensor in self.buffers(delta):
+        for tensor in self.tensors(delta):
             # Should be tensor.view for pytorch
             # But there is no equivalent function for numpy array.
             # So use reshape here.
@@ -142,20 +142,15 @@ class ConvolutionalNeural(AbstractAnsatz):
                 if recv is not None:
                     flatten[i] = recv.real
 
-    def buffer_count(self, delta):
-        delta = self.network.parameters()
-        delta = list(delta)
-        length = len(delta)
-        return length
+    def tensor_count(self, delta):
+        return len([None for _ in self.tensors(delta)])
 
     def element_count(self, delta):
         # Should use tensor.view here for pytorch
-        return sum(len(tensor.reshape([-1])) for tensor in self.buffers(delta))
+        return sum(len(tensor.reshape([-1])) for tensor in self.tensors(delta))
 
-    def buffers_for_mpi(self, delta):
-        yield from self.buffers(delta)
+    def buffers(self, delta):
+        yield from self.tensors(delta)
 
     def recovery_real(self, delta=None):
-        if delta is None:
-            return True
         return np.array([i.real for i in delta], dtype=object)

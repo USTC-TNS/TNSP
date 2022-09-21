@@ -18,12 +18,16 @@
 
 import numpy as np
 import TAT
-from ..tensor_element import tensor_element
 from ..common_toolkit import mpi_rank, mpi_size
+from ..tensor_element import tensor_element
 from .state import Configuration, AnsatzProductState
 
 
 class Sampling:
+    """
+    Helper type for run sampling for ansatz product state.
+    """
+
     __slots__ = ["owner", "_restrict_subspace"]
 
     def __init__(self, owner, restrict_subspace):
@@ -46,7 +50,7 @@ class Sampling:
 
         Returns
         -------
-        tuple[float, list[list[dict[int, EdgePoint]]]]
+        tuple[float, Configuration]
             The sampled weight in importance sampling, and the result configuration system.
         """
         raise NotImplementedError("Not implement in abstract sampling")
@@ -103,7 +107,7 @@ class SweepSampling(Sampling):
             for i, l1l2o in enumerate(positions):
                 configuration_s[l1l2o] = positions_configuration_s[i]
             # Then calculate the wss
-            [wss], _ = self.owner.weight_and_delta([configuration_s], [])
+            [wss], _ = self.owner.ansatz.weight_and_delta([configuration_s], False)
             p = np.linalg.norm(wss / ws)**2 * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update configuration and ws
@@ -112,7 +116,7 @@ class SweepSampling(Sampling):
         return ws
 
     def __call__(self):
-        [ws], _ = self.owner.weight_and_delta([self.configuration], [])
+        [ws], _ = self.owner.ansatz.weight_and_delta([self.configuration], False)
         # Hopping twice from different direction to keep detailed balance.
         for positions in self._sweep_order:
             hamiltonian = self._hopping_hamiltonians[positions]

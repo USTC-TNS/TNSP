@@ -23,7 +23,7 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
-                              write_to_file, read_from_file, get_imported_function)
+                              write_to_file, get_imported_function)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -302,7 +302,8 @@ def gradient_descent(
                         total_grad = grad
                     else:
                         if orthogonalize_momentum:
-                            total_grad -= state._lattice * (state.lattice_dot(total_grad) / state.lattice_dot())
+                            param = state.lattice_dot(total_grad) / state.lattice_dot()
+                            total_grad -= state._lattice * param
                         total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
                     if use_random_gradient:
                         this_grad = lattice_randomize(total_grad)

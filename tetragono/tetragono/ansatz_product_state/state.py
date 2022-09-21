@@ -16,11 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import itertools
 from copyreg import _slotnames
-import numpy as np
 from ..abstract_state import AbstractState
-from ..common_toolkit import send, showln, allreduce_iterator_buffer, bcast_iterator_buffer
+from ..common_toolkit import send, allreduce_iterator_buffer, bcast_iterator_buffer
 
 
 class Configuration:
@@ -115,10 +113,10 @@ class Configuration:
 
 class AnsatzProductState(AbstractState):
     """
-    The ansatz product state, which is product of several subansatz.
+    The ansatz product state, which is an expression of several subansatz.
     """
 
-    __slots__ = ["ansatzes"]
+    __slots__ = ["ansatz"]
 
     def __setstate__(self, state):
         # before data_version mechanism, state is (None, state)
@@ -137,6 +135,11 @@ class AnsatzProductState(AbstractState):
         if state["data_version"] == 2:
             self._v2_to_v3_rename(state)
             state["data_version"] = 3
+        # version 3 to version 4
+        if state["data_version"] == 3:
+            from .ansatzes.product_ansatz import ProductAnsatz
+            state["ansatz"] = ProductAnsatz(self, state.pop("ansatzes"))
+            state["data_version"] = 4
         # setstate
         for key, value in state.items():
             setattr(self, key, value)
@@ -146,7 +149,7 @@ class AnsatzProductState(AbstractState):
         state = {key: getattr(self, key) for key in _slotnames(self.__class__)}
         return state
 
-    def __init__(self, abstract):
+    def __init__(self, abstract, ansatz=None):
         """
         Create ansatz product state from a given abstract state.
 
@@ -154,167 +157,41 @@ class AnsatzProductState(AbstractState):
         ----------
         abstract : AbstractState
             The abstract state used to create ansatz product state.
+        ansatz : Ansatz, optional
+            The ansatz that this ansatz product state using.
         """
         super()._init_by_copy(abstract)
 
-        # A dict from ansatz name to ansatz object
-        self.ansatzes = {}
+        self.ansatz = ansatz
 
-    def add_ansatz(self, ansatz, name=None):
-        """
-        Add an ansatz.
-
-        Parameters
-        ----------
-        ansatz : Ansatz
-            The ansatz to be made.
-        name : str, optional
-            The name of the new ansatz.
-        """
-        if name is None:
-            name = str(len(self.ansatzes))
-        if name in self.ansatzes:
-            raise ValueError("The name of ansatz to be added is duplicated")
-        self.ansatzes[name] = ansatz
-
-    def weight_and_delta(self, configurations, calculate_delta):
-        """
-        Calculate weight and delta of all ansatz.
-
-        Parameters
-        ----------
-        configurations : list[Configuration]
-            The given configurations to calculate weight and delta.
-        calculate_delta : list[str]
-            The list of name of ansatz to calculate delta.
-
-        Returns
-        -------
-        tuple[list[complex | float], list[list[Delta]]]
-            The weight and the delta ansatz, where The weight part is weight[config_index], and the delta part is
-            delta[config_index][ansatz_index].
-        """
-        number = len(configurations)
-        weight = [1. for _ in range(number)]
-        delta = [[None for _ in calculate_delta] for _ in range(number)]
-        for name, ansatz in self.ansatzes.items():
-            sub_weight, sub_delta = ansatz.weight_and_delta(configurations, name in calculate_delta)
-            for i in range(number):
-                weight[i] *= sub_weight[i]
-            if sub_delta is not None:
-                ansatz_index = calculate_delta.index(name)
-                for i in range(number):
-                    delta[i][ansatz_index] = sub_delta[i] / sub_weight[i]
-        for i in range(number):
-            this_weight = weight[i]
-            this_delta = delta[i]
-            for j, _ in enumerate(this_delta):
-                this_delta[j] *= this_weight
-        return weight, delta
-
-    def apply_gradient(self, gradient, step_size, *, part):
+    def apply_gradient(self, gradient, step_size):
         """
         Apply the gradient to the state.
 
         Parameters
         ----------
-        gradient : list[Delta]
+        gradient : Tensors
             The gradient calculated by observer object.
         step_size : float
             The gradient step size.
-        part : list[str]
-            The ansatzes to be updated
         """
-        for i, name in enumerate(part):
-            setter = self.ansatzes[name].buffers(None)
-            setter.send(None)
-            for tensor, grad in zip(self.ansatzes[name].buffers(None), self.ansatzes[name].buffers(gradient[i])):
-                send(setter, tensor - grad * step_size)
-        self.refresh_auxiliaries(part=part)
+        setter = self.ansatz.tensors(None)
+        setter.send(None)
+        for tensor, grad in zip(self.ansatz.tensors(None), self.ansatz.tensors(gradient)):
+            send(setter, tensor - grad * step_size)
+        self.ansatz.refresh_auxiliaries()
 
-    def state_prod_sum(self, a=None, b=None, *, part):
-        """
-        Calculate the summary of product of two state like data, only calculate the dot of some ansatz based on part
-        variable.
+    def state_conjugate(self, a=None):
+        return self.ansatz.ansatz_conjugate(a)
 
-        Parameters
-        ----------
-        a, b : list[Delta], optional
-            The two state like data, if not given, the data the state itself stored will be used.
-        part : list[str]
-            The ansatzes to calculate.
-        """
-        if a is None:
-            a = [None for name in part]
-        if b is None:
-            b = [None for name in part]
-        result = 0.0
-        for i, name in enumerate(part):
-            result += self.ansatzes[name].ansatz_prod_sum(a[i], b[i])
-        return result
+    def state_prod_sum(self, a=None, b=None):
+        return self.ansatz.ansatz_prod_sum(a, b)
 
-    def state_conjugate(self, a=None, *, part):
-        """
-        Calculate the conjugate of the given state like data, only calculate the ansatz set in part variable.
+    def state_dot(self, a=None, b=None):
+        return self.ansatz.ansatz_dot(a, b)
 
-        Parameters
-        ----------
-        a : list[Delta], optional
-            The state like data, if not given, the data the state itself stored will be used.
-        part : list[str]
-            The ansatzes to calculate.
+    def allreduce_state(self, a=None):
+        allreduce_iterator_buffer(self.ansatz.buffers(a))
 
-        Returns
-        -------
-        list[Delta]
-            The conjugate result.
-        """
-        if a is None:
-            a = [None for name in part]
-        return np.array([self.ansatzes[name].ansatz_conjugate(a[i]) for i, name in enumerate(part)], dtype=object)
-
-    def state_dot(self, a=None, b=None, *, part):
-        """
-        Calculate the dot product of two state like data, only calculate the dot of some ansatz based on part variable.
-
-        Parameters
-        ----------
-        a, b : list[Delta], optional
-            The two state like data, if not given, the data the state itself stored will be used.
-        part : list[str]
-            The ansatzes to calculate.
-        """
-        if a is None:
-            a = [None for name in part]
-        if b is None:
-            b = [None for name in part]
-        result = 0.0
-        for i, name in enumerate(part):
-            result += self.ansatzes[name].ansatz_dot(a[i], b[i])
-        return result
-
-    def allreduce_state(self, a=None, *, part):
-        if a is None:
-            a = [None for name in part]
-        allreduce_iterator_buffer(
-            itertools.chain(*(self.ansatzes[name].buffers_for_mpi(a[i]) for i, name in enumerate(part))))
-
-    def bcast_state(self, a=None, root=0, *, part):
-        if a is None:
-            a = [None for name in part]
-        bcast_iterator_buffer(
-            itertools.chain(*(self.ansatzes[name].buffers_for_mpi(a[i]) for i, name in enumerate(part))), root=root)
-
-    def refresh_auxiliaries(self, *, part):
-        """
-        Refresh auxiliaries after updating state.
-        """
-        for name in part:
-            self.ansatzes[name].refresh_auxiliaries()
-
-    def normalize_state(self):
-        """
-        Normalize the state
-        """
-        for name in self.ansatzes:
-            self.ansatzes[name].normalize_ansatz()
+    def bcast_state(self, a=None, root=0):
+        bcast_iterator_buffer(self.ansatz.buffers(a), root=root)

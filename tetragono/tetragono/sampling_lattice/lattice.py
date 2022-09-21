@@ -698,6 +698,9 @@ class SamplingLattice(AbstractLattice):
         if state["data_version"] == 2:
             self._v2_to_v3_rename(state)
             state["data_version"] = 3
+        # version 3 to version 4
+        if state["data_version"] == 3:
+            state["data_version"] = 4
         # setstate
         for key, value in state.items():
             setattr(self, key, value)

@@ -21,13 +21,13 @@ from ..state import AnsatzProductState
 from .abstract_ansatz import AbstractAnsatz
 
 
-class ProductAnsatz(AbstractAnsatz):
+class SumAnsatz(AbstractAnsatz):
 
     __slots__ = ["owner", "ansatzes", "names", "delta_part"]
 
     def __init__(self, owner, ansatzes):
         """
-        An auxiliaries ansatz for the product of several other ansatzes.
+        An auxiliaries ansatz for the sum of several other ansatzes.
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ class ProductAnsatz(AbstractAnsatz):
 
     def weight_and_delta(self, configurations, calculate_delta):
         number = len(configurations)
-        weights = [1.0 for _ in range(number)]
+        weights = [0.0 for _ in range(number)]
         if calculate_delta:
             deltas = [[] for _ in range(number)]
         else:
@@ -70,14 +70,14 @@ class ProductAnsatz(AbstractAnsatz):
         for ansatz in self.ansatzes:
             sub_weights, sub_deltas = ansatz.weight_and_delta(configurations, calculate_delta)
             for i in range(number):
-                weights[i] *= sub_weights[i]
+                weights[i] += sub_weights[i]
             if calculate_delta:
                 for i in range(number):
-                    deltas[i].append(sub_deltas[i] / sub_weights[i])
+                    deltas[i].append(sub_deltas[i])
 
         if calculate_delta:
             for i in range(number):
-                deltas[i] = np.concatenate(deltas[i]) * weights[i]
+                deltas[i] = np.concatenate(deltas[i])
         return weights, deltas
 
     def refresh_auxiliaries(self):

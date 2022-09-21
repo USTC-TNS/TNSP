@@ -21,59 +21,24 @@ class AbstractAnsatz:
 
     __slots__ = []
 
-    def _weight(self, configuration):
-        """
-        Calculate the weight of the given configuration.
-
-        Parameters
-        ----------
-        configuration : Configuration
-            The given configuration to calculate weight.
-
-        Returns
-        -------
-        complex | float
-            The result weight.
-        """
-        raise NotImplementedError("weight not implemented")
-
-    def _delta(self, configuration):
-        """
-        Calculate the delta of the given configuration.
-
-        Parameters
-        ----------
-        configuration : Configuration
-            The given configuration to calculate delta.
-
-        Returns
-        -------
-        Delta
-            The delta object, which will be called by allreduce and apply_gradient.
-        """
-        raise NotImplementedError("delta not implemented")
-
     def weight_and_delta(self, configurations, calculate_delta):
         """
         Calculate the weight and delta of the given configurations.
 
+        The delta share the same structure and shape with the data stored in ansatz, which is usually a list of tensor.
+
         Parameters
         ----------
-        configurations : list[configuration]
+        configurations : list[Configuration]
             The given configuration list to calculate weight and delta.
         calculate_delta : bool
             Whether to calculate delta.
 
         Returns
         -------
-        tuple[list[float | complex], None | list[Delta]]
+        tuple[list[float | complex], None | list[Tensors]]
         """
-        weight = [self._weight(configuration) for configuration in configurations]
-        if calculate_delta:
-            delta = [self._delta(configuration) for configuration in configurations]
-        else:
-            delta = None
-        return weight, delta
+        raise NotImplementedError("weight and delta not implemented")
 
     def refresh_auxiliaries(self):
         """
@@ -83,67 +48,75 @@ class AbstractAnsatz:
 
     def ansatz_prod_sum(self, a, b):
         """
-        Calculate the summary of product of two ansatz like data. If None is given, the data ansatz itself stored will
+        Calculate the summary of product of two tensors data. If None is given, the data ansatz itself stored will
         be used.
 
         Parameters
         ----------
-        a, b : Delta
-            The two ansatz like data.
+        a, b : Tensors
+            The two tensors data.
 
         Returns
         -------
-        float
+        float | complex
             The dot of a and b.
         """
         raise NotImplementedError("ansatz_prod_sum not implemented")
 
     def ansatz_conjugate(self, a):
         """
-        Calculate the conjugate of a ansatz like data, If None is given, the data ansatz itself stored will be used.
+        Calculate the conjugate of a tensors data, If None is given, the data ansatz itself stored will be used.
 
         Parameters
         ----------
-        a : Delta
-            The ansatz like data.
+        a : Tensors
+            a tensors data.
 
         Returns
         -------
-        Delta
-            The conjugate
+        Tensors
+            The conjugate of the input.
         """
         raise NotImplementedError("ansatz_conjugate not implemented")
 
     def ansatz_dot(self, a, b):
         """
-        Calculate the dot of two ansatz like data. If None is given, the data ansatz itself stored will be used.
+        Calculate the dot of two tensors data. If None is given, the data ansatz itself stored will be used.
 
         Parameters
         ----------
-        a, b : Delta
-            The two ansatz like data.
+        a, b : Tensors
+            The two tensors data.
 
         Returns
         -------
-        float
+        float | complex
             The dot of a and b.
         """
         return self.ansatz_prod_sum(self.ansatz_conjugate(a), b).real
 
-    def buffers(self, delta):
+    def tensors(self, delta):
         """
-        Get buffers of this ansatz.
+        Get tensors of this ansatz.
+
+        Parameters
+        ----------
+        delta : Iterator | Tensors
 
         Yields
         ------
-        buffer
-            The buffers of this ansatz.
+        Tensor
+            The tensors of this ansatz.
         """
-        raise NotImplementedError("buffers not implemented")
+        raise NotImplementedError("tensors not implemented")
 
     def elements(self, delta):
         """
         Get elements of this ansatz.
+
+        Parameters
+        ----------
+        delta : Iterator | Tensors
 
         Yields
         ------
@@ -152,20 +125,28 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("elements not implemented")
 
-    def buffer_count(self, delta):
+    def tensor_count(self, delta):
         """
-        Get buffer count of this ansatz.
+        Get tensor count of this ansatz.
+
+        Parameters
+        ----------
+        delta : Iterator | Tensors
 
         Returns
         -------
         int
-            The buffer count of this ansatz.
+            The tensor count of this ansatz.
         """
-        raise NotImplementedError("buffer count not implemented")
+        raise NotImplementedError("tensor count not implemented")
 
     def element_count(self, delta):
         """
         Get element count of this ansatz.
+
+        Parameters
+        ----------
+        delta : Iterator | Tensors
 
         Returns
         -------
@@ -174,27 +155,37 @@ class AbstractAnsatz:
         """
         raise NotImplementedError("element count not implemented")
 
-    def buffers_for_mpi(self, delta):
+    def buffers(self, delta):
         """
         Get buffers of this ansatz, which can be used in mpi.
 
+        Parameters
+        ----------
+        delta : Iterator | Tensors
+
         Yields
         ------
-        buffer
+        Buffer
             The buffers of this ansatz.
         """
-        raise NotImplementedError("buffers for mpi not implemented")
+        raise NotImplementedError("buffers not implemented")
 
-    def recovery_real(self, delta=None):
+    def recovery_real(self, delta):
         """
         Recovery the input to real. If None is given, return True if and only if it is needed to reocovery to real data.
-        """
-        if delta is None:
-            return False
-        raise RuntimeError("Program should never reach here")
 
-    def normalize_ansatz(self):
+        This is used for real ansatz and complex state, the gradient calculated will be complex but real number is
+        needed to be applied to the ansatz.
+
+        Parameters
+        ----------
+        delta : Tensors
         """
-        Normalize this ansatz.
+        return delta
+
+    def normalize_ansatz(self, log_ws=None):
         """
-        pass
+        Normalize this ansatz. If None is given, return the normalizable weight.
+        """
+        if log_ws is None:
+            return 0

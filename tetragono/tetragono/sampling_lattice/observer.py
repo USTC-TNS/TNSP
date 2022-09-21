@@ -317,16 +317,19 @@ class Observer():
             if self._cache_configuration == "drop":
                 self._create_cache_configuration()
             configuration = self._pool.add(configuration)
+
         self._count += 1
         ws = configuration.hole(())  # |s|psi>
         if ws.norm_max() == 0:
             # maybe block mismatch, so ws is 0, return directly, only count is updated, weight will not change.
             # maybe ws is just 0, also return directly
             return
+
         reweight = ws.norm_2()**2 / possibility  # <psi|s|psi> / p(s)
         self._total_weight += reweight
         self._total_weight_square += reweight * reweight
         self._total_log_ws += np.log(np.abs(complex(ws)))
+
         inv_ws_conj = ws / (ws.norm_2()**2)  # |s|psi> / <psi|s|psi>
         all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.owner.L1)
                                    for l2 in range(self.owner.L2) for orbit in self.owner.physics_edges[l1, l2]}
@@ -380,6 +383,7 @@ class Observer():
                 self._total_energy_square += to_save * to_save
                 self._total_energy_reweight += to_save * reweight
                 # Es should be complex here when calculating gradient
+
                 if self._enable_gradient:
                     holes = configuration.holes()  # <psi|s|partial_x psi> / <psi|s|psi>
                     if self.owner.Tensor.is_real:
