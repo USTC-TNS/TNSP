@@ -271,17 +271,17 @@ class Observer:
         # list[Configuration]
         configuration_list = []
         # chain -> name -> positions -> s' -> (index in configuration_list, H_{s,s'})
-        configuration_map = [{} for _ in sampling_result]
+        configuration_data = [{} for _ in sampling_result]
         for chain, [possibility, configuration] in enumerate(sampling_result):
             self._total_weight += reweights[chain]
             self._total_weight_square += reweights[chain] * reweights[chain]
             self._total_log_ws += np.log(np.abs(complex(ws[chain])))
 
             for name, observers in self._observer.items():
-                configuration_map_name = configuration_map[chain][name] = {}
+                configuration_data_name = configuration_data[chain][name] = {}
 
                 for positions, observer in observers.items():
-                    configuration_map_name_positions = configuration_map_name[positions] = {}
+                    configuration_data_name_positions = configuration_data_name[positions] = {}
 
                     body = len(positions)
                     positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
@@ -299,18 +299,18 @@ class Observer:
                         for i, [l1, l2, orbit] in enumerate(positions):
                             new_configuration[l1, l2, orbit] = positions_configuration_s[i]
 
-                        configuration_map_name_positions[positions_configuration_s] = (len(configuration_list),
-                                                                                       observer_shrinked.storage[0])
+                        configuration_data_name_positions[positions_configuration_s] = (len(configuration_list),
+                                                                                        observer_shrinked.storage[0])
                         configuration_list.append(new_configuration)
         # measure
         wss_list, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
         for chain, reweight in enumerate(reweights):
-            for name, configuration_map_name in configuration_map[chain].items():
+            for name, configuration_data_name in configuration_data[chain].items():
                 if name == "energy":
                     Es = 0.0
-                for positions, configuration_map_name_positions in configuration_map_name.items():
+                for positions, configuration_data_name_positions in configuration_data_name.items():
                     total_value = 0
-                    for _, [index, hamiltonian_term] in configuration_map_name_positions.items():
+                    for _, [index, hamiltonian_term] in configuration_data_name_positions.items():
                         # |s'|psi>
                         wss = wss_list[index]
                         # <psi|s'|H|s|psi> / <psi|s|psi>
