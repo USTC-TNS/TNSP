@@ -17,7 +17,6 @@
 #
 
 import numpy as np
-from ..state import AnsatzProductState
 from .abstract_ansatz import AbstractAnsatz
 
 
@@ -36,7 +35,7 @@ class ProductAnsatz(AbstractAnsatz):
         ansatzes : list[AbstractAnsatz]
             The list of other ansatzes
         """
-        self.owner: AnsatzProductState = owner
+        super().__init__(owner)
         if isinstance(ansatzes, dict):
             self.ansatzes = []
             self.names = []
@@ -117,6 +116,8 @@ class ProductAnsatz(AbstractAnsatz):
                 recv = None
                 while True:
                     recv = yield iterator.send(recv)
+                    if self.fixed:
+                        recv = None
             except StopIteration:
                 pass
 
@@ -129,6 +130,8 @@ class ProductAnsatz(AbstractAnsatz):
                 recv = None
                 while True:
                     recv = yield iterator.send(recv)
+                    if self.fixed:
+                        recv = None
             except StopIteration:
                 pass
 
@@ -174,3 +177,29 @@ class ProductAnsatz(AbstractAnsatz):
                 name = ansatz_name
             result += "\n\t" + name + " : " + ansatz.show().replace("\n", "\n\t")
         return result
+
+    def lock(self, path=""):
+        if path == "":
+            self.fixed = True
+            for ansatz in self.ansatzes:
+                ansatz.lock()
+        else:
+            path_split = path.split(".")
+            head = path_split[0]
+            tail = ".".join(path_split[1:])
+            if head.isdigit():
+                head = int(head)
+            self[head].lock(tail)
+
+    def unlock(self, path=""):
+        if path == "":
+            self.fixed = False
+            for ansatz in self.ansatzes:
+                ansatz.unlock()
+        else:
+            path_split = path.split(".")
+            head = path_split[0]
+            tail = ".".join(path_split[1:])
+            if head.isdigit():
+                head = int(head)
+            self[head].unlock(tail)

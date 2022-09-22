@@ -17,6 +17,7 @@
 #
 
 from copyreg import _slotnames
+from ..state import AnsatzProductState
 
 
 class AbstractAnsatzMeta(type):
@@ -32,6 +33,8 @@ class AbstractAnsatzMeta(type):
 
         if isinstance(state, tuple):
             state = state[1]
+        if "fixed" not in state:
+            state["fixed"] = False
         if type_name in ["ProductAnsatz", "SumAnsatz"]:
             if "names" not in state:
                 state["names"] = [None for _ in state["ansatzes"]]
@@ -51,7 +54,11 @@ class AbstractAnsatzMeta(type):
 
 class AbstractAnsatz(metaclass=AbstractAnsatzMeta):
 
-    __slots__ = []
+    __slots__ = ["owner", "fixed"]
+
+    def __init__(self, owner):
+        self.owner: AnsatzProductState = owner
+        self.fixed = False
 
     def weight_and_delta(self, configurations, calculate_delta):
         """
@@ -224,3 +231,9 @@ class AbstractAnsatz(metaclass=AbstractAnsatzMeta):
 
     def show(self):
         raise NotImplementedError("show not implemented")
+
+    def lock(self, path=""):
+        self.fixed = True
+
+    def unlock(self, path=""):
+        self.fixed = False

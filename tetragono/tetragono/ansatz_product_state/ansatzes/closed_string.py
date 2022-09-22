@@ -17,7 +17,6 @@
 #
 
 import numpy as np
-from ..state import AnsatzProductState
 from .abstract_ansatz import AbstractAnsatz
 
 
@@ -63,7 +62,7 @@ class ClosedString(AbstractAnsatz):
         cut_dimension : int
             The dimension cut of the string.
         """
-        self.owner: AnsatzProductState = owner
+        super().__init__(owner)
         self.length = len(index_to_site)
         self.index_to_site = [site for site in index_to_site]
         self.cut_dimension = cut_dimension
@@ -161,6 +160,8 @@ class ClosedString(AbstractAnsatz):
         return self._weight_pool[key]
 
     def _delta(self, site_configuration):
+        if self.fixed:
+            return np.array([tensor.same_shape().zero() for tensor in self.tensor_list])
         index_configuration = self._get_index_configuration(site_configuration)
         key = tuple(index_configuration)
         if key not in self._delta_pool:
@@ -214,6 +215,8 @@ class ClosedString(AbstractAnsatz):
             delta = self.tensor_list
         for i, [_, value] in enumerate(zip(self.tensor_list, delta)):
             recv = yield value
+            if self.fixed:
+                recv = None
             if recv is not None:
                 # When not setting value, input delta could be an iterator
                 delta[i] = recv
@@ -224,6 +227,8 @@ class ClosedString(AbstractAnsatz):
             length = len(storage)
             for i in range(length):
                 recv = yield storage[i]
+                if self.fixed:
+                    recv = None
                 if recv is not None:
                     if tensor.names != self.tensor_list[index].names:
                         raise RuntimeError("Trying to set tensor element which mismatches the edge names.")

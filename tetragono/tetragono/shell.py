@@ -690,6 +690,38 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     def ap_ansatz_show(self):
         self.ap.show_ansatz()
 
+    def do_ap_ansatz_lock(self, line):
+        """
+        Lock the ansatz for ansatz product state.
+
+        Parameters
+        ----------
+        path : str, default=""
+            The path of ansatz to lock.
+        """
+        config = Config(line)
+        self.ap_ansatz_lock(*config.args, **config.kwargs)
+
+    @sharedoc(do_ap_ansatz_lock)
+    def ap_ansatz_lock(self, path=""):
+        self.ap.ansatz.lock(path)
+
+    def do_ap_ansatz_unlock(self, line):
+        """
+        Unlock the ansatz for ansatz product state.
+
+        Parameters
+        ----------
+        path : str, default=""
+            The path of ansatz to unlock.
+        """
+        config = Config(line)
+        self.ap_ansatz_unlock(*config.args, **config.kwargs)
+
+    @sharedoc(do_ap_ansatz_unlock)
+    def ap_ansatz_unlock(self, path=""):
+        self.ap.ansatz.unlock(path)
+
     def do_ap_run(self, line):
         """
         Do gradient descent on ansatz product state. see ansatz_product_state/gradient.py for details.
@@ -856,6 +888,8 @@ else:
     ap_ansatz_add = app.ap_ansatz_add
     ap_ansatz_mul = app.ap_ansatz_mul
     ap_ansatz_show = app.ap_ansatz_show
+    ap_ansatz_lock = app.ap_ansatz_lock
+    ap_ansatz_unlock = app.ap_ansatz_unlock
     ap_run = app.ap_run
     ap_conf_create = app.ap_conf_create
     ap_conf_dump = app.ap_conf_dump

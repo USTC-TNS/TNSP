@@ -20,7 +20,6 @@ import numpy as np
 import torch
 import TAT
 from .abstract_ansatz import AbstractAnsatz
-from ..state import AnsatzProductState
 
 
 class ConvolutionalNeural(AbstractAnsatz):
@@ -40,7 +39,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         network : torch.nn.Module
             The pytorch nerual network model object.
         """
-        self.owner: AnsatzProductState = owner
+        super().__init__(owner)
         self.network = network
         self.dtype = next(self.network.parameters()).dtype
 
@@ -87,10 +86,14 @@ class ConvolutionalNeural(AbstractAnsatz):
             number = len(configurations)
             delta = []
             for i in range(number):
-                self.network.zero_grad()
-                weight[i].backward()
-                this_delta = np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
-                delta.append(this_delta)
+                if self.fixed:
+                    this_delta = np.array([np.zeros_like(i) for i in self.network.parameters()], dtype=object)
+                    delta.append(this_delta)
+                else:
+                    self.network.zero_grad()
+                    weight[i].backward()
+                    this_delta = np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
+                    delta.append(this_delta)
         else:
             delta = None
         return weight.tolist(), delta
@@ -118,6 +121,8 @@ class ConvolutionalNeural(AbstractAnsatz):
         if delta is None:
             for tensor in self.network.parameters():
                 recv = yield tensor.data
+                if self.fixed:
+                    recv = None
                 if recv is not None:
                     tensor.data = torch.tensor(np.array(recv).real.copy())
                     # convert to numpy and get real part then convert it back to torch tensor
@@ -125,6 +130,8 @@ class ConvolutionalNeural(AbstractAnsatz):
         else:
             for i, [_, value] in enumerate(zip(self.network.parameters(), delta)):
                 recv = yield value
+                if self.fixed:
+                    recv = None
                 if recv is not None:
                     # When not setting value, input delta could be an iterator
                     delta[i] = recv.real.copy()
@@ -139,6 +146,8 @@ class ConvolutionalNeural(AbstractAnsatz):
             length = len(flatten)
             for i in range(length):
                 recv = yield flatten[i]
+                if self.fixed:
+                    recv = None
                 if recv is not None:
                     flatten[i] = recv.real
 
