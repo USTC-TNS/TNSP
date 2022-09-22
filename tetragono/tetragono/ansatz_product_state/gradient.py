@@ -31,8 +31,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
     def get_energy():
         state.refresh_auxiliaries()
         with energy_observer:
-            for possibility, configuration in configuration_pool:
-                energy_observer(possibility, configuration)
+            energy_observer(configuration_pool)
         energy, _ = energy_observer.total_energy
         return energy
 
@@ -87,9 +86,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         if eta not in grad_dot_pool:
             state.apply_gradient(grad, eta)
             with energy_observer:
-                for possibility, configuration in configuration_pool:
-                    energy_observer(possibility, configuration)
-                    show(f"predicting eta={eta}, energy={energy_observer.energy}")
+                energy_observer(configuration_pool)
             result = mpi_comm.bcast(state.state_dot(grad, energy_observer.gradient))
             showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
             grad_dot_pool[eta] = result
@@ -129,6 +126,7 @@ def gradient_descent(
         grad_step_size=0,
         *,
         # About sampling
+        multichain_number=1,
         sampling_method="sweep",
         sampling_configurations=[],
         sweep_hopping_hamiltonians=None,
@@ -229,29 +227,34 @@ def gradient_descent(
                                                                      "hopping_hamiltonians")(state)
                     else:
                         hopping_hamiltonians = None
-                    sampling = SweepSampling(state, restrict, hopping_hamiltonians)
+                    sampling = SweepSampling(state, multichain_number, restrict, hopping_hamiltonians)
                     sampling_total_step = sampling_total_step
                     # Initial sweep configuration
-                    if len(sampling_configurations) < mpi_size:
-                        choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
+                    if len(sampling_configurations) < mpi_size * multichain_number:
+                        choose_generator = TAT.random.uniform_int(0, len(sampling_configurations) - 1)
+                        choose = [choose_generator() for _ in range(multichain_number)]
                     else:
-                        choose = mpi_rank
-                    sampling.configuration.import_configuration(sampling_configurations[choose])
+                        choose = [mpi_rank * multichain_number + i for i in range(multichain_number)]
+                    for configuration_i, choose_i in zip(sampling.configuration, choose):
+                        configuration_i.import_configuration(sampling_configurations[choose_i])
                 elif sampling_method == "ergodic":
-                    sampling = ErgodicSampling(state, restrict)
+                    sampling = ErgodicSampling(state, multichain_number, restrict)
                     sampling_total_step = sampling.total_step
                 else:
                     raise ValueError("Invalid sampling method")
                 # Sampling run
+                # total_sampling_pool[sampling step][process rank][chain index]
                 for sampling_step in range(sampling_total_step):
-                    if sampling_step % mpi_size == mpi_rank:
-                        possibility, configuration = sampling()
-                        observer(possibility, configuration)
+                    if sampling_step % (mpi_size * multichain_number) == mpi_rank * multichain_number:
+                        bound = sampling_total_step - sampling_step
+                        sampling_result = sampling()[:bound]
+                        observer(sampling_result)
                         if need_energy_observer:
-                            configuration_pool.append((possibility, configuration))
+                            configuration_pool += sampling_result
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configuration
-                gathered_configurations = mpi_comm.allgather(configuration.export_configuration())
+                gathered_configurations = mpi_comm.allreduce(
+                    [configuration.export_configuration() for _, configuration in sampling_result])
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")

@@ -247,101 +247,113 @@ class Observer:
             self.enable_gradient()
         self._enable_natural = True
 
-    def __call__(self, possibility, configuration):
+    def __call__(self, sampling_result):
         """
-        Collect observer value from current configuration.
+        Collect observer value from sampling result.
 
         Parameters
         ----------
-        possibility : float
-            the sampled weight used in importance sampling.
-        configuration : list[list[dict[int, EdgePoint]]]
-            The current configuration.
+        sampling_result : list[tuple[float, Configuration]]
+            The sampling results, it contains the sampled weight used in importance sampling and the configuration.
         """
-        self._count += 1
+        self._count += len(sampling_result)
         # ws is |s|psi>
         # delta is |s|partial_x psi>
-        [ws], [delta] = self.owner.ansatz.weight_and_delta([configuration], self._enable_gradient)
-
-        reweight = np.linalg.norm(ws)**2 / possibility  # <psi|s|psi> / p(s)
-        self._total_weight += reweight
-        self._total_weight_square += reweight * reweight
-        self._total_log_ws += np.log(np.abs(complex(ws)))
+        ws, delta = self.owner.ansatz.weight_and_delta(
+            [configuration for _, configuration in sampling_result],
+            self._enable_gradient,
+        )
+        reweights = [
+            np.linalg.norm(ws[chain])**2 / possibility for chain, [possibility, _] in enumerate(sampling_result)
+        ]  # <psi|s|psi> / p(s)
 
         # find all wss
-        configuration_list = []  # list[Configuration]
-        configuration_map = {}  # str -> positions(s) -> positions(s') -> (index in configuration_list, H_{s,s'})
-        for name, observers in self._observer.items():
-            configuration_map[name] = {}
-            for positions, observer in observers.items():
-                configuration_map[name][positions] = {}
-                body = len(positions)
-                positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
-                element_pool = tensor_element(observer)
-                if positions_configuration not in element_pool:
-                    continue
-                for positions_configuration_s, observer_shrinked in element_pool[positions_configuration].items():
-                    # observer_shrinked is |s'|H|s|
-                    if self._restrict_subspace is not None:
-                        replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
-                        if not self._restrict_subspace(configuration, replacement):
-                            continue
-                    new_configuration = Configuration(self.owner, configuration.export_configuration())
-                    for i, [l1, l2, orbit] in enumerate(positions):
-                        new_configuration[l1, l2, orbit] = positions_configuration_s[i]
-                    configuration_map[name][positions][positions_configuration_s] = (len(configuration_list),
-                                                                                     observer_shrinked.storage[0])
-                    configuration_list.append(new_configuration)
-        wss_list, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
-        # measure
-        for name, configuration_map_name in configuration_map.items():
-            if name == "energy":
-                Es = 0.0
-            for positions, configuration_map_name_positions in configuration_map_name.items():
-                total_value = 0
-                for _, [index, hamiltonian_term] in configuration_map_name_positions.items():
-                    # |s'|psi>
-                    wss = wss_list[index]
-                    # <psi|s'|H|s|psi> / <psi|s|psi>
-                    value = (ws * hamiltonian_term * wss.conjugate()) / (ws.conjugate() * ws)
-                    total_value += complex(value)
-                # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
-                to_save = total_value.real
-                self._result[name][positions] += to_save
-                self._result_square[name][positions] += to_save * to_save
-                self._result_reweight[name][positions] += to_save * reweight
-                if name == "energy":
-                    Es += total_value
-            if name == "energy":
-                to_save = Es.real
-                self._total_energy += to_save
-                self._total_energy_square += to_save * to_save
-                self._total_energy_reweight += to_save * reweight
+        # list[Configuration]
+        configuration_list = []
+        # chain -> name -> positions -> s' -> (index in configuration_list, H_{s,s'})
+        configuration_map = [{} for _ in sampling_result]
+        for chain, [possibility, configuration] in enumerate(sampling_result):
+            self._total_weight += reweights[chain]
+            self._total_weight_square += reweights[chain] * reweights[chain]
+            self._total_log_ws += np.log(np.abs(complex(ws[chain])))
 
-                if self._enable_gradient:
-                    # delta is |s|partial_x psi>
-                    # holes is <psi|s|partial_x psi> / <psi|s|psi>
-                    holes = self.owner.ansatz.recovery_real((ws.conjugate() * delta) / (ws.conjugate() * ws))
-                    if self.owner.Tensor.is_real:
-                        Es = Es.real
-                    # this_delta is r(s) <psi|s|partial_x psi> / <psi|s|psi>
-                    this_delta = reweight * holes
-                    this_edelta = Es * this_delta
-                    if self._Delta is None:
-                        self._Delta = this_delta
-                    else:
-                        self._Delta += this_delta
-                    if self._EDelta is None:
-                        self._EDelta = this_edelta
-                    else:
-                        self._EDelta += this_edelta
-                    if self._enable_natural:
-                        if self._cache_natural_delta:
-                            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
-                                pickle.dump(holes, file)
-                            self._Deltas.append((reweight, None))
+            for name, observers in self._observer.items():
+                configuration_map_name = configuration_map[chain][name] = {}
+
+                for positions, observer in observers.items():
+                    configuration_map_name_positions = configuration_map_name[positions] = {}
+
+                    body = len(positions)
+                    positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
+                    element_pool = tensor_element(observer)
+                    if positions_configuration not in element_pool:
+                        continue
+
+                    for positions_configuration_s, observer_shrinked in element_pool[positions_configuration].items():
+                        # observer_shrinked is |s'|H|s|
+                        if self._restrict_subspace is not None:
+                            replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
+                            if not self._restrict_subspace(configuration, replacement):
+                                continue
+                        new_configuration = Configuration(self.owner, configuration.export_configuration())
+                        for i, [l1, l2, orbit] in enumerate(positions):
+                            new_configuration[l1, l2, orbit] = positions_configuration_s[i]
+
+                        configuration_map_name_positions[positions_configuration_s] = (len(configuration_list),
+                                                                                       observer_shrinked.storage[0])
+                        configuration_list.append(new_configuration)
+        # measure
+        wss_list, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
+        for chain, reweight in enumerate(reweights):
+            for name, configuration_map_name in configuration_map[chain].items():
+                if name == "energy":
+                    Es = 0.0
+                for positions, configuration_map_name_positions in configuration_map_name.items():
+                    total_value = 0
+                    for _, [index, hamiltonian_term] in configuration_map_name_positions.items():
+                        # |s'|psi>
+                        wss = wss_list[index]
+                        # <psi|s'|H|s|psi> / <psi|s|psi>
+                        value = (ws[chain] * hamiltonian_term * wss.conjugate()) / (ws[chain].conjugate() * ws[chain])
+                        total_value += complex(value)
+                    # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
+                    to_save = total_value.real
+                    self._result[name][positions] += to_save
+                    self._result_square[name][positions] += to_save * to_save
+                    self._result_reweight[name][positions] += to_save * reweight
+                    if name == "energy":
+                        Es += total_value
+                if name == "energy":
+                    to_save = Es.real
+                    self._total_energy += to_save
+                    self._total_energy_square += to_save * to_save
+                    self._total_energy_reweight += to_save * reweight
+
+                    if self._enable_gradient:
+                        # delta is |s|partial_x psi>
+                        # holes is <psi|s|partial_x psi> / <psi|s|psi>
+                        holes = self.owner.ansatz.recovery_real(
+                            (ws[chain].conjugate() * delta[chain]) / (ws[chain].conjugate() * ws[chain]))
+                        if self.owner.Tensor.is_real:
+                            Es = Es.real
+                        # this_delta is r(s) <psi|s|partial_x psi> / <psi|s|psi>
+                        this_delta = reweight * holes
+                        this_edelta = Es * this_delta
+                        if self._Delta is None:
+                            self._Delta = this_delta
                         else:
-                            self._Deltas.append((reweight, holes))
+                            self._Delta += this_delta
+                        if self._EDelta is None:
+                            self._EDelta = this_edelta
+                        else:
+                            self._EDelta += this_edelta
+                        if self._enable_natural:
+                            if self._cache_natural_delta:
+                                with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
+                                    pickle.dump(holes, file)
+                                self._Deltas.append((reweight, None))
+                            else:
+                                self._Deltas.append((reweight, holes))
 
     def _expect_and_deviation(self, total, total_square, total_reweight):
         """

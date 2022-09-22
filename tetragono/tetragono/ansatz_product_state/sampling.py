@@ -28,9 +28,9 @@ class Sampling:
     Helper type for run sampling for ansatz product state.
     """
 
-    __slots__ = ["owner", "_restrict_subspace"]
+    __slots__ = ["owner", "multichain_number", "_restrict_subspace"]
 
-    def __init__(self, owner, restrict_subspace):
+    def __init__(self, owner, multichain_number, restrict_subspace):
         """
         Create sampling object for the given ansatz product state.
 
@@ -38,10 +38,13 @@ class Sampling:
         ----------
         owner : SamplingLattice
             The owner of this sampling object.
+        multichain_number : int
+            The multichain number.
         restrict_subspace
             A function return bool to restrict sampling subspace.
         """
         self.owner: AnsatzProductState = owner
+        self.multichain_number = multichain_number
         self._restrict_subspace = restrict_subspace
 
     def __call__(self):
@@ -50,7 +53,7 @@ class Sampling:
 
         Returns
         -------
-        tuple[float, Configuration]
+        list[tuple[float, Configuration]]
             The sampled weight in importance sampling, and the result configuration system.
         """
         raise NotImplementedError("Not implement in abstract sampling")
@@ -61,9 +64,9 @@ class SweepSampling(Sampling):
     Sweep sampling object for ansatz product state.
     """
 
-    __slots__ = ["configuration", "_hopping_hamiltonians", "_sweep_order"]
+    __slots__ = ["_sweep_order", "configuration", "_hopping_hamiltonians"]
 
-    def __init__(self, owner, restrict_subspace, hopping_hamiltonians):
+    def __init__(self, owner, multichain_number, restrict_subspace, hopping_hamiltonians):
         """
         Create sampling object.
 
@@ -71,13 +74,15 @@ class SweepSampling(Sampling):
         ----------
         owner : AnsatzProductState
             The owner of this sampling object
+        multichain_number : int
+            The multichain number.
         restrict_subspace
             A function return bool to restrict sampling subspace.
         hopping_hamiltonian : None | dict[tuple[tuple[int, int, int], ...], Tensor]
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
         """
-        super().__init__(owner, restrict_subspace)
-        self.configuration = Configuration(self.owner)
+        super().__init__(owner, multichain_number, restrict_subspace)
+        self.configuration = [Configuration(self.owner) for _ in range(multichain_number)]
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
@@ -88,35 +93,52 @@ class SweepSampling(Sampling):
     def _single_term(self, positions, hamiltonian, ws):
         body = len(positions)
         # tuple[EdgePoint, ...]
-        positions_configuration = tuple(self.configuration[l1l2o] for l1l2o in positions)
         element_pool = tensor_element(hamiltonian)
-        if positions_configuration not in element_pool:
-            return ws
-        possible_hopping = element_pool[positions_configuration]
-        if possible_hopping:
+
+        # [Configuration]
+        configuration_list = []
+        # [None | (index in configuration_list, hopping_number, hopping_number_s)] with the same length to chain
+        configuration_data = []
+        for chain in range(self.multichain_number):
+            positions_configuration = tuple(self.configuration[chain][l1l2o] for l1l2o in positions)
+            if positions_configuration not in element_pool:
+                configuration_data.append(None)
+                continue
+            possible_hopping = element_pool[positions_configuration]
+            if not possible_hopping:
+                configuration_data.append(None)
+                continue
             hopping_number = len(possible_hopping)
             positions_configuration_s = list(possible_hopping)[TAT.random.uniform_int(0, hopping_number - 1)()]
             hopping_number_s = len(element_pool[positions_configuration_s])
             if self._restrict_subspace is not None:
                 replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
-                if not self._restrict_subspace(self.configuration, replacement):
+                if not self._restrict_subspace(self.configuration[chain], replacement):
                     # Then wss is zero, hopping failed
-                    return ws
+                    configuration_data.append(None)
+                    continue
             # Copy the original configuration and update the selected site and oribt
-            configuration_s = Configuration(self.owner, self.configuration.export_configuration())
+            configuration_s = Configuration(self.owner, self.configuration[chain].export_configuration())
             for i, l1l2o in enumerate(positions):
                 configuration_s[l1l2o] = positions_configuration_s[i]
-            # Then calculate the wss
-            [wss], _ = self.owner.ansatz.weight_and_delta([configuration_s], False)
-            p = np.linalg.norm(wss / ws)**2 * hopping_number / hopping_number_s
+            configuration_data.append((len(configuration_list), hopping_number, hopping_number_s))
+            configuration_list.append(configuration_s)
+        # Then calculate the wss
+        wss, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
+        for chain in range(self.multichain_number):
+            configuration_package = configuration_data[chain]
+            if configuration_package is None:
+                continue
+            index, hopping_number, hopping_number_s = configuration_package
+            p = np.linalg.norm(wss[index] / ws[chain])**2 * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update configuration and ws
-                ws = wss
-                self.configuration = configuration_s
+                ws[chain] = wss[index]
+                self.configuration[chain].import_configuration(configuration_list[index].export_configuration())
         return ws
 
     def __call__(self):
-        [ws], _ = self.owner.ansatz.weight_and_delta([self.configuration], False)
+        ws, _ = self.owner.ansatz.weight_and_delta(self.configuration, False)
         # Hopping twice from different direction to keep detailed balance.
         for positions in self._sweep_order:
             hamiltonian = self._hopping_hamiltonians[positions]
@@ -124,7 +146,8 @@ class SweepSampling(Sampling):
         for positions in reversed(self._sweep_order):
             hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
-        return np.linalg.norm(ws)**2, Configuration(self.owner, self.configuration.export_configuration())
+        return [(np.linalg.norm(ws_i)**2, Configuration(self.owner, configuration_i.export_configuration()))
+                for ws_i, configuration_i in zip(ws, self.configuration)]
 
 
 class ErgodicSampling(Sampling):
@@ -134,8 +157,8 @@ class ErgodicSampling(Sampling):
 
     __slots__ = ["total_step", "configuration"]
 
-    def __init__(self, owner, restrict_subspace):
-        super().__init__(owner, restrict_subspace)
+    def __init__(self, owner, multichain_number, restrict_subspace):
+        super().__init__(owner, multichain_number, restrict_subspace)
 
         # The current configuration.
         self.configuration = Configuration(self.owner)
@@ -150,7 +173,7 @@ class ErgodicSampling(Sampling):
         # Initialize the current configuration
         self._zero_configuration()
         # And apply the offset because of mpi parallel
-        for t in range(mpi_rank):
+        for t in range(mpi_rank * self.multichain_number):
             self._next_configuration()
 
     def _zero_configuration(self):
@@ -171,9 +194,7 @@ class ErgodicSampling(Sampling):
                         self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
                         return
 
-    def __call__(self):
-        for t in range(mpi_size):
-            self._next_configuration()
+    def _current_sampling(self):
         possibility = 1.
         if self._restrict_subspace is not None:
             if not self._restrict_subspace(self.configuration):
@@ -181,3 +202,12 @@ class ErgodicSampling(Sampling):
                 # result when reweigting.
                 possibility = np.inf
         return possibility, Configuration(self.owner, self.configuration.export_configuration())
+
+    def __call__(self):
+        result = []
+        for _ in range(self.multichain_number):
+            result.append(self._current_sampling())
+            self._next_configuration()
+        for t in range(self.multichain_number * (mpi_size - 1)):
+            self._next_configuration()
+        return result
