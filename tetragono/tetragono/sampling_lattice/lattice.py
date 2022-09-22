@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
 from ..abstract_lattice import AbstractLattice
-from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln
+from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -853,3 +853,22 @@ class SamplingLattice(AbstractLattice):
         if b is None:
             b = self._lattice
         return lattice_prod_sum(lattice_conjugate(a), b).real
+
+    def apply_gradient(self, gradient, step_size):
+        """
+        Apply the gradient to the lattice.
+
+        Parameters
+        ----------
+        gradient : list[list[Tensor]]
+            The gradient calculated by observer object.
+        step_size : float
+            The gradient step size.
+        """
+        self._lattice -= step_size * gradient
+
+    def bcast_lattice(self, root=0):
+        """
+        Bcast the lattice, to ensure the data keep the same across different process.
+        """
+        bcast_lattice_buffer(self._lattice, root=root)

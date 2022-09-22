@@ -75,10 +75,10 @@ for grad_step in range(10):
     # Randomize gradient
     this_grad = tet.lattice_randomize(total_grad)
     # Apply gradient
-    gm_lattice._lattice -= 0.01 * gm_lattice.fix_relative_to_lattice(this_grad)
+    gm_lattice.apply_gradient(gm_lattice.fix_relative_to_lattice(this_grad), 0.01)
     # Fix gauge
     gm_lattice.expand_dimension(1.0, 0)
     # Bcast buffer to avoid numeric error
-    tet.bcast_lattice_buffer(gm_lattice._lattice)
+    gm_lattice.bcast_lattice()
     # Maybe you want to save file
     tet.write_to_file(gm_lattice, "/dev/null")

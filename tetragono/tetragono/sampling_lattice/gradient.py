@@ -22,8 +22,8 @@ from datetime import datetime
 import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, bcast_lattice_buffer, SignalHandler,
-                              seed_differ, lattice_randomize, write_to_file, read_from_file, get_imported_function)
+from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
+                              write_to_file, read_from_file, get_imported_function)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -296,7 +296,7 @@ def gradient_descent(
                     grad *= (state.lattice_dot() / state.lattice_dot(grad, grad))**0.5
                     grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
                                                  grad_step_size, line_search_amplitude, line_search_error_threshold)
-                    state._lattice -= grad_step_size * grad
+                    state.apply_gradient(grad, grad_step_size)
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
                         total_grad = grad
@@ -310,7 +310,7 @@ def gradient_descent(
                         this_grad = total_grad
                     if use_fix_relative_step_size:
                         this_grad *= (state.lattice_dot() / state.lattice_dot(this_grad, this_grad))**0.5
-                    state._lattice -= grad_step_size * this_grad
+                    state.apply_gradient(this_grad, grad_step_size)
                 showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
                 # Fix gauge
@@ -319,7 +319,7 @@ def gradient_descent(
                 # Normalize state
                 observer.normalize_lattice()
                 # Bcast state
-                bcast_lattice_buffer(state._lattice)
+                state.bcast_lattice()
                 # sampling is not needed to refresh since every gradient step will use a new sampling object.
 
                 # Save state
