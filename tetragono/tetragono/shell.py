@@ -607,9 +607,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ap = read_from_file(name)
         self.ap_conf = []
 
-    def do_ap_ansatz(self, line):
+    def do_ap_ansatz_set(self, line):
         """
-        Add an ansatz for ansatz product state.
+        Set the ansatz for ansatz product state.
 
         Parameters
         ----------
@@ -621,15 +621,74 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             Arguments passed to ansatz creater function.
         """
         config = Config(line)
-        self.ap_ansatz(*config.args, **config.kwargs)
+        self.ap_ansatz_set(*config.args, **config.kwargs)
 
-    @sharedoc(do_ap_ansatz)
-    def ap_ansatz(self, name, ansatz, *args, **kwargs):
+    @sharedoc(do_ap_ansatz_set)
+    def ap_ansatz_set(self, name, ansatz, *args, **kwargs):
+        create_ansatz = get_imported_function(ansatz, "ansatz")
+        if len(args) == 1 and args[0] == "help":
+            showln(create_ansatz.__doc__.replace("\n", "\n    "))
+        else:
+            self.ap.set_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
+
+    def do_ap_ansatz_add(self, line):
+        """
+        Add the ansatz for ansatz product state.
+
+        Parameters
+        ----------
+        name : str
+            The subansatz name in this state.
+        ansatz : str
+            The ansatz names.
+        args, kwargs
+            Arguments passed to ansatz creater function.
+        """
+        config = Config(line)
+        self.ap_ansatz_add(*config.args, **config.kwargs)
+
+    @sharedoc(do_ap_ansatz_add)
+    def ap_ansatz_add(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
         if len(args) == 1 and args[0] == "help":
             showln(create_ansatz.__doc__.replace("\n", "\n    "))
         else:
             self.ap.add_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
+
+    def do_ap_ansatz_mul(self, line):
+        """
+        Mul the ansatz for ansatz product state.
+
+        Parameters
+        ----------
+        name : str
+            The subansatz name in this state.
+        ansatz : str
+            The ansatz names.
+        args, kwargs
+            Arguments passed to ansatz creater function.
+        """
+        config = Config(line)
+        self.ap_ansatz_mul(*config.args, **config.kwargs)
+
+    @sharedoc(do_ap_ansatz_mul)
+    def ap_ansatz_mul(self, name, ansatz, *args, **kwargs):
+        create_ansatz = get_imported_function(ansatz, "ansatz")
+        if len(args) == 1 and args[0] == "help":
+            showln(create_ansatz.__doc__.replace("\n", "\n    "))
+        else:
+            self.ap.mul_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
+
+    def do_ap_ansatz_show(self, line):
+        """
+        Show the ansatz for ansatz product state.
+        """
+        config = Config(line)
+        self.ap_ansatz_show(*config.args, **config.kwargs)
+
+    @sharedoc(do_ap_ansatz_show)
+    def ap_ansatz_show(self):
+        self.ap.show_ansatz()
 
     def do_ap_run(self, line):
         """
@@ -793,7 +852,10 @@ else:
     ap_create = app.ap_create
     ap_dump = app.ap_dump
     ap_load = app.ap_load
-    ap_ansatz = app.ap_ansatz
+    ap_ansatz_set = app.ap_ansatz_set
+    ap_ansatz_add = app.ap_ansatz_add
+    ap_ansatz_mul = app.ap_ansatz_mul
+    ap_ansatz_show = app.ap_ansatz_show
     ap_run = app.ap_run
     ap_conf_create = app.ap_conf_create
     ap_conf_dump = app.ap_conf_dump

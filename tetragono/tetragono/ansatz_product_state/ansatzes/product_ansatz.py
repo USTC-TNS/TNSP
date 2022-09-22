@@ -45,7 +45,7 @@ class ProductAnsatz(AbstractAnsatz):
                 self.ansatzes.append(ansatz)
         else:
             self.ansatzes = ansatzes
-            self.names = None
+            self.names = [None for _ in self.ansatzes]
 
         self.delta_part = []
         index = 0
@@ -164,3 +164,13 @@ class ProductAnsatz(AbstractAnsatz):
             return
         for weight, ansatz in zip(weights, self.ansatzes):
             ansatz.normalize_ansatz(log_ws * weight / weight_sum)
+
+    def show(self):
+        result = self.__class__.__name__
+        for ansatz_name, ansatz in zip(self.names, self.ansatzes):
+            if ansatz_name is None:
+                name = "?"
+            else:
+                name = ansatz_name
+            result += "\n\t" + name + " : " + ansatz.show().replace("\n", "\n\t")
+        return result

@@ -16,8 +16,40 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from copyreg import _slotnames
 
-class AbstractAnsatz:
+
+class AbstractAnsatzMeta(type):
+
+    @staticmethod
+    def getstate(self):
+        state = {key: getattr(self, key) for key in _slotnames(self.__class__)}
+        return state
+
+    @staticmethod
+    def setstate(self, state):
+        type_name = self.__class__.__name__
+
+        if isinstance(state, tuple):
+            state = state[1]
+        if type_name in ["ProductAnsatz", "SumAnsatz"]:
+            if "names" not in state:
+                state["names"] = [None for _ in state["ansatzes"]]
+        if type_name in ["OpenString", "ClosedString"]:
+            if "_weight_pool" not in state:
+                state["_weight_pool"] = {}
+            if "_delta_pool" not in state:
+                state["_delta_pool"] = {}
+        for key, value in state.items():
+            setattr(self, key, value)
+
+    def __new__(cls, name, bases, attrs):
+        attrs["__setstate__"] = cls.setstate
+        attrs["__getstate__"] = cls.getstate
+        return type.__new__(cls, name, bases, attrs)
+
+
+class AbstractAnsatz(metaclass=AbstractAnsatzMeta):
 
     __slots__ = []
 
@@ -189,3 +221,6 @@ class AbstractAnsatz:
         """
         if log_ws is None:
             return 0
+
+    def show(self):
+        raise NotImplementedError("show not implemented")

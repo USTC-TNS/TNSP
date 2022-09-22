@@ -19,6 +19,7 @@
 from .open_string import OpenString
 from .closed_string import ClosedString
 from .product_ansatz import ProductAnsatz
+from .sum_ansatz import SumAnsatz
 try:
     import torch
 except ModuleNotFoundError:

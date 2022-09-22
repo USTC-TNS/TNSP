@@ -18,7 +18,7 @@
 
 from copyreg import _slotnames
 from ..abstract_state import AbstractState
-from ..common_toolkit import send, allreduce_iterator_buffer, bcast_iterator_buffer
+from ..common_toolkit import send, allreduce_iterator_buffer, bcast_iterator_buffer, showln
 
 
 class Configuration:
@@ -148,6 +148,39 @@ class AnsatzProductState(AbstractState):
         # getstate
         state = {key: getattr(self, key) for key in _slotnames(self.__class__)}
         return state
+
+    def set_ansatz(self, ansatz, name):
+        from .ansatzes.product_ansatz import ProductAnsatz
+        self.ansatz = ProductAnsatz(self, {name: ansatz})
+
+    def add_ansatz(self, ansatz, name):
+        from .ansatzes.sum_ansatz import SumAnsatz
+        from .ansatzes.product_ansatz import ProductAnsatz
+        if isinstance(self.ansatz, SumAnsatz) or (isinstance(self.ansatz, ProductAnsatz) and
+                                                  len(self.ansatz.ansatzes) == 1):
+            ansatzes = {}
+            for key, value in zip(self.ansatz.names, self.ansatz.ansatzes):
+                ansatzes[key] = value
+            ansatzes[name] = ansatz
+        else:
+            ansatzes = {name: ansatz, "base": self.ansatz}
+        self.ansatz = SumAnsatz(self, ansatzes)
+
+    def mul_ansatz(self, ansatz, name):
+        from .ansatzes.sum_ansatz import SumAnsatz
+        from .ansatzes.product_ansatz import ProductAnsatz
+        if isinstance(self.ansatz, ProductAnsatz) or (isinstance(self.ansatz, SumAnsatz) and
+                                                      len(self.ansatz.ansatzes) == 1):
+            ansatzes = {}
+            for key, value in zip(self.ansatz.names, self.ansatz.ansatzes):
+                ansatzes[key] = value
+            ansatzes[name] = ansatz
+        else:
+            ansatzes = {name: ansatz, "base": self.ansatz}
+        self.ansatz = ProductAnsatz(self, ansatzes)
+
+    def show_ansatz(self):
+        showln(self.ansatz.show())
 
     def __init__(self, abstract, ansatz=None):
         """

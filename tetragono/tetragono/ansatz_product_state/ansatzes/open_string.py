@@ -250,3 +250,7 @@ class OpenString(AbstractAnsatz):
         param = np.exp(log_ws / self.length)
         for tensor in self.tensor_list:
             tensor /= param
+
+    def show(self):
+        result = self.__class__.__name__ + f" with length={self.length} dimension={self.cut_dimension}"
+        return result

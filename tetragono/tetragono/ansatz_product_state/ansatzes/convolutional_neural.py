@@ -154,3 +154,7 @@ class ConvolutionalNeural(AbstractAnsatz):
 
     def recovery_real(self, delta=None):
         return np.array([i.real for i in delta], dtype=object)
+
+    def show(self):
+        result = self.__class__.__name__
+        return result
