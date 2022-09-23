@@ -24,9 +24,9 @@ class ClosedString(AbstractAnsatz):
 
     __slots__ = ["owner", "length", "index_to_site", "cut_dimension", "tensor_list"]
 
-    def _construct_hat(self, index, number):
-        names = ["C", *(f"P{i}" for i, _ in enumerate(self.index_to_site[index]))]
-        edges = [number, *(self.owner.physics_edges[site].conjugated() for site in self.index_to_site[index])]
+    def _construct_hat(self, sites, number):
+        names = ["C", *(f"P{i}" for i, _ in enumerate(sites))]
+        edges = [number, *(self.owner.physics_edges[site].conjugated() for site in sites)]
         return self.owner.Tensor(names, edges).zero()
 
     def _construct_tensor(self, index):
@@ -73,16 +73,18 @@ class ClosedString(AbstractAnsatz):
 
     def weight_and_delta(self, configurations, calculate_delta):
         number = len(configurations)
-        hat_list = [self._construct_hat(index, number) for index in range(self.length)]
+        hat_list = []
         fat_list = []
         for index in range(self.length):
             sites = self.index_to_site[index]
             orbits = [orbit for l1, l2, orbit in sites]
             edges = [f"P{orbit}" for orbit in orbits]
+            hat = self._construct_hat(sites, number)
+            storage = hat.blocks[hat.names]
             for c_index, configuration in enumerate(configurations):
-                location = {edge: configuration[site][1] for edge, site in zip(edges, sites)}
-                location["C"] = c_index
-                hat_list[index][location] = 1
+                location = tuple((c_index, *(configuration[site][1] for site in sites)))
+                storage[location] = 1
+            hat_list.append(hat)
             fat_list.append(hat_list[index].contract(self.tensor_list[index], {(edge, edge) for edge in edges}))
 
         left = [None for index in range(self.length)]
