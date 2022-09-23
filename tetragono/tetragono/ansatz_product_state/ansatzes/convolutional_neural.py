@@ -75,12 +75,12 @@ class ConvolutionalNeural(AbstractAnsatz):
                     delta.append(this_delta)
                 else:
                     self.network.zero_grad()
-                    weight[i].backward()
+                    weight[i].backward(retain_graph=True)
                     this_delta = np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
                     delta.append(this_delta)
         else:
             delta = None
-        return weight.tolist(), delta
+        return np.array(weight.detach(), copy=False), delta
 
     def refresh_auxiliaries(self):
         pass

@@ -82,7 +82,8 @@ class SweepSampling(Sampling):
             The hamiltonian used in hopping, using the state hamiltonian if this is None.
         """
         super().__init__(owner, multichain_number, restrict_subspace)
-        self.configuration = [Configuration(self.owner) for _ in range(multichain_number)]
+        config_template = Configuration(self.owner)
+        self.configuration = [config_template.copy() for _ in range(multichain_number)]
         if hopping_hamiltonians is not None:
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
@@ -121,7 +122,7 @@ class SweepSampling(Sampling):
             configuration_s = self.configuration[chain].copy()
             for i, l1l2o in enumerate(positions):
                 configuration_s[l1l2o] = positions_configuration_s[i]
-            configuration_data.append((len(configuration_list), hopping_number, hopping_number_s))
+            configuration_data.append((len(configuration_list), hopping_number / hopping_number_s))
             configuration_list.append(configuration_s)
         # Then calculate the wss
         wss, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
@@ -129,8 +130,9 @@ class SweepSampling(Sampling):
             configuration_package = configuration_data[chain]
             if configuration_package is None:
                 continue
-            index, hopping_number, hopping_number_s = configuration_package
-            p = np.linalg.norm(wss[index] / ws[chain])**2 * hopping_number / hopping_number_s
+            index, hopping_number_over_hopping_number_s = configuration_package
+            wss_over_ws = wss[index] / ws[chain]
+            p = abs(wss_over_ws)**2 * hopping_number_over_hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update configuration and ws
                 ws[chain] = wss[index]
