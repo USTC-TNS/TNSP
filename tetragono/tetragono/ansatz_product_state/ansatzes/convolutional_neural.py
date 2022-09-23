@@ -61,26 +61,10 @@ class ConvolutionalNeural(AbstractAnsatz):
         s = torch.prod(result.reshape([result.shape[0], -1]), -1)
         return s
 
-    def create_x(self, configuration):
-        """
-        Get the configuration x as input of network from dict configuration.
-
-        Parameters
-        ----------
-        configuration : Configuration
-            The configuration dict.
-
-        Returns
-        -------
-        list[list[list[int]]]
-            The configuration as input of network, where three dimensions are channel, width and height.
-        """
-        return [[[-1 if configuration[l1, l2, 0][1] == 0 else 1
-                  for l2 in range(self.owner.L2)]
-                 for l1 in range(self.owner.L1)]]
-
     def weight_and_delta(self, configurations, calculate_delta):
-        xs = torch.tensor([self.create_x(configuration) for configuration in configurations], dtype=self.dtype)
+        xs = torch.tensor(np.concatenate([configuration.export_orbit0() for configuration in configurations]).reshape(
+            [-1, 1, self.owner.L1, self.owner.L2]),
+                          dtype=self.dtype) * 2 - 1
         weight = self.get_weights(xs)
         if calculate_delta:
             number = len(configurations)

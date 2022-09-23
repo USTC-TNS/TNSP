@@ -28,6 +28,12 @@ class Configuration:
 
     __slots__ = ["owner", "_configuration"]
 
+    def export_orbit0(self):
+        return self._configuration.export_orbit0()
+
+    def copy(self):
+        return Configuration(self.owner, self._configuration)
+
     def __init__(self, owner, config=None):
         """
         Create configuration for the given ansatz product state.
@@ -36,51 +42,22 @@ class Configuration:
         ----------
         owner : AnsatzProductState
             The ansatz product state owning this configuration.
-        config : list[list[dict[int, ?EdgePoint]]], optional
+        config : ConfigData, optional
             The preset configuration.
         """
         self.owner: AnsatzProductState = owner
 
         # Data storage of configuration, access it by configuration[l1, l2, orbit] instead
-        self._configuration = [[{orbit: None
-                                 for orbit in self.owner.physics_edges[l1, l2]}
-                                for l2 in range(self.owner.L2)]
-                               for l1 in range(self.owner.L1)]
-
-        if config is not None:
-            self.import_configuration(config)
-
-    def _construct_edge_point(self, value):
-        """
-        Construct edge point from something that can be used to construct an edge point.
-
-        Parameters
-        ----------
-        value : ?EdgePoint
-            Edge point or something that can be used to construct a edge point.
-
-        Returns
-        -------
-        EdgePoint
-            The result edge point object.
-        """
-        if not isinstance(value, tuple):
-            symmetry = self.owner.Symmetry()  # work for NoSymmetry
-            index = value
+        if config is None:
+            self._configuration = owner.Tensor.model.Configuration(owner)
         else:
-            symmetry, index = value
-        symmetry = self.owner._construct_symmetry(symmetry)
-        return (symmetry, index)
+            self._configuration = config.copy()
 
     def __setitem__(self, key, value):
-        l1, l2, orbit = key
-        value = self._construct_edge_point(value)
-        if self._configuration[l1][l2][orbit] != value:
-            self._configuration[l1][l2][orbit] = value
+        self._configuration[key] = value
 
     def __getitem__(self, key):
-        l1, l2, orbit = key
-        return self._configuration[l1][l2][orbit]
+        return self._configuration[key]
 
     def __delitem__(self, key):
         self.__setitem__(key, None)
@@ -94,7 +71,10 @@ class Configuration:
         list[list[dict[int, EdgePoint]]]
             The configuration data of all the sites
         """
-        return [[self._configuration[l1][l2].copy() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
+        return [[{orbit: self._configuration[l1, l2, orbit]
+                  for orbit in self.owner.physics_edges[l1, l2]}
+                 for l2 in range(self.owner.L2)]
+                for l1 in range(self.owner.L1)]
 
     def import_configuration(self, config):
         """
@@ -108,7 +88,7 @@ class Configuration:
         for l1 in range(self.owner.L1):
             for l2 in range(self.owner.L2):
                 for orbit, edge_point in config[l1][l2].items():
-                    self[l1, l2, orbit] = edge_point
+                    self._configuration[l1, l2, orbit] = edge_point
 
 
 class AnsatzProductState(AbstractState):

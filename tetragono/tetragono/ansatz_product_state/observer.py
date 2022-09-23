@@ -295,7 +295,7 @@ class Observer:
                             replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
                             if not self._restrict_subspace(configuration, replacement):
                                 continue
-                        new_configuration = Configuration(self.owner, configuration.export_configuration())
+                        new_configuration = configuration.copy()
                         for i, [l1, l2, orbit] in enumerate(positions):
                             new_configuration[l1, l2, orbit] = positions_configuration_s[i]
 

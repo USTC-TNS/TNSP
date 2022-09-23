@@ -118,7 +118,7 @@ class SweepSampling(Sampling):
                     configuration_data.append(None)
                     continue
             # Copy the original configuration and update the selected site and oribt
-            configuration_s = Configuration(self.owner, self.configuration[chain].export_configuration())
+            configuration_s = self.configuration[chain].copy()
             for i, l1l2o in enumerate(positions):
                 configuration_s[l1l2o] = positions_configuration_s[i]
             configuration_data.append((len(configuration_list), hopping_number, hopping_number_s))
@@ -134,7 +134,7 @@ class SweepSampling(Sampling):
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update configuration and ws
                 ws[chain] = wss[index]
-                self.configuration[chain].import_configuration(configuration_list[index].export_configuration())
+                self.configuration[chain] = configuration_list[index]
         return ws
 
     def __call__(self):
@@ -146,8 +146,9 @@ class SweepSampling(Sampling):
         for positions in reversed(self._sweep_order):
             hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
-        return [(np.linalg.norm(ws_i)**2, Configuration(self.owner, configuration_i.export_configuration()))
-                for ws_i, configuration_i in zip(ws, self.configuration)]
+        return [
+            (np.linalg.norm(ws_i)**2, configuration_i.copy()) for ws_i, configuration_i in zip(ws, self.configuration)
+        ]
 
 
 class ErgodicSampling(Sampling):
@@ -201,7 +202,7 @@ class ErgodicSampling(Sampling):
                 # This configuration should be impossible, so set possibility to infinity, then it will get the correct
                 # result when reweigting.
                 possibility = np.inf
-        return possibility, Configuration(self.owner, self.configuration.export_configuration())
+        return possibility, self.configuration.copy()
 
     def __call__(self):
         result = []

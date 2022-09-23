@@ -483,7 +483,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             # This configuration should never be used, so cut dimension is -1
             configuration = gm_Configuration(self.gm, -1)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
-            self.gm_conf = mpi_comm.allgather(configuration._configuration)
+            self.gm_conf = mpi_comm.allgather(configuration.export_configuration())
 
     def do_gm_hamiltonian(self, line):
         """
@@ -750,7 +750,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         with seed_differ:
             configuration = ap_Configuration(self.ap)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
-            self.ap_conf = mpi_comm.allgather(configuration._configuration)
+            self.ap_conf = mpi_comm.allgather(configuration.export_configuration())
 
     def do_ap_conf_dump(self, line):
         """
