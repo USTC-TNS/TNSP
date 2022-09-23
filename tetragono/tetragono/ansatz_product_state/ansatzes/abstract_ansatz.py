@@ -33,16 +33,21 @@ class AbstractAnsatzMeta(type):
 
         if isinstance(state, tuple):
             state = state[1]
+
+        # Add fix ansatz support
         if "fixed" not in state:
             state["fixed"] = False
+
+        # Add names for each subansatz for product ansatz and sum ansatz
         if type_name in ["ProductAnsatz", "SumAnsatz"]:
             if "names" not in state:
                 state["names"] = [None for _ in state["ansatzes"]]
+
+        # Delete auxiliaries
         if type_name in ["OpenString", "ClosedString"]:
-            if "_weight_pool" not in state:
-                state["_weight_pool"] = {}
-            if "_delta_pool" not in state:
-                state["_delta_pool"] = {}
+            for field in ["_left_to_right", "_right_to_left", "_weight_pool", "_delta_pool"]:
+                if field in state:
+                    del state[field]
         for key, value in state.items():
             setattr(self, key, value)
 

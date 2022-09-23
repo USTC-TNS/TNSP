@@ -22,10 +22,12 @@ from .abstract_ansatz import AbstractAnsatz
 
 class ClosedString(AbstractAnsatz):
 
-    __slots__ = [
-        "owner", "length", "index_to_site", "cut_dimension", "tensor_list", "_left_to_right", "_right_to_left",
-        "_weight_pool", "_delta_pool"
-    ]
+    __slots__ = ["owner", "length", "index_to_site", "cut_dimension", "tensor_list"]
+
+    def _construct_hat(self, index, number):
+        names = ["C", *(f"P{i}" for i, _ in enumerate(self.index_to_site[index]))]
+        edges = [number, *(self.owner.physics_edges[site].conjugated() for site in self.index_to_site[index])]
+        return self.owner.Tensor(names, edges).zero()
 
     def _construct_tensor(self, index):
         """
@@ -69,136 +71,65 @@ class ClosedString(AbstractAnsatz):
 
         self.tensor_list = np.array([self._construct_tensor(index) for index in range(self.length)])
 
-        self.refresh_auxiliaries()
-
-    def _go_from_left(self, configuration, *, try_only):
-        """
-        Go along the auxiliaries chain from left to right.
-
-        Parameters
-        ----------
-        configuration : list[list[int]]
-            The configuration to calculate.
-        try_only : bool
-            Whether to avoid to calculate tensor, go as far as possible only.
-
-        Returns
-        -------
-        int, Tensor
-            The index calculated, if try_only=False, it equals to length of configuration, and the result tensor.
-        """
-        result = self._left_to_right
-        left = None
-        index = 0
-        while index < len(configuration):
-            config = configuration[index]
-            if config not in result:
-                if try_only:
-                    break
-                else:
-                    next_left = self.tensor_list[index].shrink({f"P{orbit}": conf for orbit, conf in enumerate(config)})
-                    if left is not None:
-                        next_left = left.contract(next_left, {("R", "L")})
-                    result[config] = {}, next_left
-            result, left = result[config]
-            index += 1
-        return index, left
-
-    def _go_from_right(self, configuration, *, try_only):
-        """
-        Go along the auxiliaries chain from right to left.
-
-        Parameters
-        ----------
-        configuration : list[list[int]]
-            The configuration to calculate.
-        try_only : bool
-            Whether to avoid to calculate tensor, go as far as possible only.
-
-        Returns
-        -------
-        int, Tensor
-            The index calculated, if try_only=False, it equals to length of configuration, and the result tensor.
-        """
-        result = self._right_to_left
-        right = None
-        index = 0
-        while index < len(configuration):
-            config = configuration[index]
-            if config not in result:
-                if try_only:
-                    break
-                else:
-                    next_right = self.tensor_list[self.length - 1 - index].shrink(
-                        {f"P{orbit}": conf for orbit, conf in enumerate(config)})
-                    if right is not None:
-                        next_right = right.contract(next_right, {("L", "R")})
-                    result[config] = {}, next_right
-            result, right = result[config]
-            index += 1
-        return index, right
-
-    def _get_index_configuration(self, site_configuration):
-        return [tuple(site_configuration[l1, l2, orbit][1] for l1, l2, orbit in sites) for sites in self.index_to_site]
-
-    def _weight(self, site_configuration):
-        index_configuration = self._get_index_configuration(site_configuration)
-        key = tuple(index_configuration)
-        if key not in self._weight_pool:
-            index, left = self._go_from_left(index_configuration, try_only=True)
-            if index == 0:
-                index = None
-            else:
-                index -= 1
-            _, right = self._go_from_right(index_configuration[:index:-1], try_only=False)
-            if left is None:
-                self._weight_pool[key] = right.trace({("L", "R")})[{}]
-            elif right is None:
-                self._weight_pool[key] = left.trace({("L", "R")})[{}]
-            else:
-                self._weight_pool[key] = left.contract(right, {("R", "L"), ("L", "R")})[{}]
-        return self._weight_pool[key]
-
-    def _delta(self, site_configuration):
-        if self.fixed:
-            return np.array([tensor.same_shape().zero() for tensor in self.tensor_list])
-        index_configuration = self._get_index_configuration(site_configuration)
-        key = tuple(index_configuration)
-        if key not in self._delta_pool:
-            result = []
-            _, _ = self._go_from_left(index_configuration[::1], try_only=False)
-            _, _ = self._go_from_right(index_configuration[::-1], try_only=False)
-            for index in range(self.length):
-                _, left = self._go_from_left(index_configuration[0:index:1], try_only=False)
-                _, right = self._go_from_right(index_configuration[-1:index:-1], try_only=False)
-                if left is None:
-                    this_tensor = right
-                elif right is None:
-                    this_tensor = left
-                else:
-                    this_tensor = left.contract(right, {("L", "R")})
-                this_tensor = this_tensor.edge_rename({"R": "L", "L": "R"})
-                this_tensor = this_tensor.expand({
-                    f"P{orbit}": (conf, self.owner.physics_edges[self.index_to_site[index][orbit]].dimension)
-                    for orbit, conf in enumerate(index_configuration[index])
-                })
-                result.append(this_tensor)
-            self._delta_pool[key] = np.array(result)
-        return self._delta_pool[key]
-
     def weight_and_delta(self, configurations, calculate_delta):
-        weight = [self._weight(configuration) for configuration in configurations]
-        if calculate_delta:
-            delta = [self._delta(configuration) for configuration in configurations]
-        else:
-            delta = None
-        return weight, delta
+        number = len(configurations)
+        hat_list = [self._construct_hat(index, number) for index in range(self.length)]
+        fat_list = []
+        for index in range(self.length):
+            sites = self.index_to_site[index]
+            orbits = [orbit for l1, l2, orbit in sites]
+            edges = [f"P{orbit}" for orbit in orbits]
+            for c_index, configuration in enumerate(configurations):
+                location = {edge: configuration[site][1] for edge, site in zip(edges, sites)}
+                location["C"] = c_index
+                hat_list[index][location] = 1
+            fat_list.append(hat_list[index].contract(self.tensor_list[index], {(edge, edge) for edge in edges}))
+
+        left = [None for index in range(self.length)]
+        for index in range(self.length):
+            if index == 0:
+                left[index] = fat_list[index]
+            else:
+                left[index] = left[index - 1].contract(fat_list[index], {("R", "L")}, {"C"})
+
+        last_left = left[self.length - 1].trace({("L", "R")})
+        weights = [last_left[{"C": c_index}] for c_index in range(number)]
+        if not calculate_delta:
+            return weights, None
+
+        right = [None for index in range(self.length)]
+        for index in reversed(range(self.length)):
+            if index == self.length - 1:
+                right[index] = fat_list[index]
+            else:
+                right[index] = right[index + 1].contract(fat_list[index], {("L", "R")}, {"C"})
+
+        holes = [None for index in range(self.length)]
+        for index in range(self.length):
+            if index == 0:
+                holes[index] = right[index + 1].contract(hat_list[index], set(), {"C"}).edge_rename({
+                    "L": "R",
+                    "R": "L"
+                })
+            elif index == self.length - 1:
+                holes[index] = left[index - 1].contract(hat_list[index], set(), {"C"}).edge_rename({"L": "R", "R": "L"})
+            else:
+                holes[index] = (
+                    left[index - 1]  #
+                    .contract(right[index + 1], {("L", "R")}, {"C"})  #
+                    .contract(hat_list[index], set(), {"C"})  #
+                    .edge_rename({
+                        "L": "R",
+                        "R": "L"
+                    }))
+
+        deltas = [
+            np.array([holes[index].shrink({"C": c_index}) for index in range(self.length)]) for c_index in range(number)
+        ]
+        return weights, deltas
 
     def refresh_auxiliaries(self):
-        self._left_to_right = {}
-        self._right_to_left = {}
-        self._weight_pool = {}
-        self._delta_pool = {}
+        pass
 
     def ansatz_prod_sum(self, a, b):
         result = 0.0
