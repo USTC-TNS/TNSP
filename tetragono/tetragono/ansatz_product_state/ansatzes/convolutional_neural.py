@@ -26,6 +26,14 @@ class ConvolutionalNeural(AbstractAnsatz):
 
     __slots__ = ["owner", "network", "dtype"]
 
+    def numpy_array(self, array):
+        # Create an empty np array to avoid numpy FutureWarning
+        length = len(array)
+        result = np.empty(length, dtype=object)
+        for i in range(length):
+            result[i] = array[i]
+        return result
+
     def __init__(self, owner, network):
         """
         Create convolution neural ansatz for a given ansatz product state.
@@ -57,7 +65,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         float
             The weight of the given configuration
         """
-        result = self.network(xs)
+        result = self.network(xs.to(device=next(self.network.parameters()).device))
         s = torch.prod(result.reshape([result.shape[0], -1]), -1)
         return s
 
@@ -71,16 +79,16 @@ class ConvolutionalNeural(AbstractAnsatz):
             delta = []
             for i in range(number):
                 if self.fixed:
-                    this_delta = np.array([np.zeros_like(i) for i in self.network.parameters()], dtype=object)
+                    this_delta = self.numpy_array([torch.zeros_like(i) for i in self.network.parameters()])
                     delta.append(this_delta)
                 else:
                     self.network.zero_grad()
                     weight[i].backward(retain_graph=True)
-                    this_delta = np.array([np.array(i.grad) for i in self.network.parameters()], dtype=object)
+                    this_delta = self.numpy_array([i.grad.detach() for i in self.network.parameters()])
                     delta.append(this_delta)
         else:
             delta = None
-        return np.array(weight.detach(), copy=False), delta
+        return np.array(weight.detach().cpu(), copy=False), delta
 
     def refresh_auxiliaries(self):
         pass
@@ -88,18 +96,13 @@ class ConvolutionalNeural(AbstractAnsatz):
     def ansatz_prod_sum(self, a, b):
         result = 0.0
         for ai, bi in zip(self.tensors(a), self.tensors(b)):
-            result += float(np.dot(ai.reshape([-1]), bi.reshape([-1])))
+            result += float(torch.dot(ai.reshape([-1]), bi.reshape([-1])).cpu())
         return result
 
     def ansatz_conjugate(self, a):
         # CNN network is always real without imaginary part
         a = [i for i in self.tensors(a)]
-        length = len(a)
-        # Create an empty np array to avoid numpy FutureWarning
-        result = np.empty(length, dtype=object)
-        for i in range(length):
-            result[i] = a[i]
-        return result
+        return self.numpy_array(a)
 
     def tensors(self, delta):
         if delta is None:
@@ -108,9 +111,7 @@ class ConvolutionalNeural(AbstractAnsatz):
                 if self.fixed:
                     recv = None
                 if recv is not None:
-                    tensor.data = torch.tensor(np.array(recv).real.copy())
-                    # convert to numpy and get real part then convert it back to torch tensor
-                    # because of https://github.com/pytorch/pytorch/issues/82610
+                    tensor.data = recv.real.detach()
         else:
             for i, [_, value] in enumerate(zip(self.network.parameters(), delta)):
                 recv = yield value
@@ -146,7 +147,7 @@ class ConvolutionalNeural(AbstractAnsatz):
         yield from self.tensors(delta)
 
     def recovery_real(self, delta=None):
-        return np.array([i.real for i in delta], dtype=object)
+        return self.numpy_array([i.real for i in delta])
 
     def show(self):
         result = self.__class__.__name__
