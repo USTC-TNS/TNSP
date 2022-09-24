@@ -84,11 +84,11 @@ class ConvolutionalNeural(AbstractAnsatz):
                 else:
                     self.network.zero_grad()
                     weight[i].backward(retain_graph=True)
-                    this_delta = self.numpy_array([i.grad.detach() for i in self.network.parameters()])
+                    this_delta = self.numpy_array([i.grad.detach().clone() for i in self.network.parameters()])
                     delta.append(this_delta)
         else:
             delta = None
-        return np.array(weight.detach().cpu(), copy=False), delta
+        return np.array(weight.detach().clone().cpu(), copy=False), delta
 
     def refresh_auxiliaries(self):
         pass
@@ -111,7 +111,7 @@ class ConvolutionalNeural(AbstractAnsatz):
                 if self.fixed:
                     recv = None
                 if recv is not None:
-                    tensor.data = recv.real.detach()
+                    tensor.data = recv.real.detach().clone()
         else:
             for i, [_, value] in enumerate(zip(self.network.parameters(), delta)):
                 recv = yield value

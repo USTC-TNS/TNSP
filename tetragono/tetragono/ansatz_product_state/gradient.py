@@ -29,7 +29,7 @@ from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, Signal
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
 
     def get_energy():
-        state.refresh_auxiliaries()
+        state.ansatz.refresh_auxiliaries()
         with energy_observer:
             energy_observer(configuration_pool)
         energy, _ = energy_observer.total_energy

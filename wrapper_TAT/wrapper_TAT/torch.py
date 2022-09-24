@@ -19,7 +19,6 @@
 from __future__ import annotations
 import operator
 from multimethod import multimethod
-import numpy as np
 import torch
 import TAT
 
@@ -50,7 +49,7 @@ class TensorMeta(type):
                 data = op(self.data, value.transpose(self.names).data)
             else:
                 data = op(self.data, value)
-            return self.__class__(self.names, data)
+            return self.__class__(self.names.copy(), data)
 
         return op_func
 
@@ -59,7 +58,7 @@ class TensorMeta(type):
 
         def rop_func(self, value):
             data = op(value, self.data)
-            return self.__class__(self.names, data)
+            return self.__class__(self.names.copy(), data)
 
         return rop_func
 
@@ -101,8 +100,9 @@ class TensorBlock:
             else:
                 name = single_edge_location
             eq.append(chr(einsum_map[name]))
-        array = self.owner.data.numpy()
-        return np.einsum("".join(eq), array)
+        # Return torch tensor directly.
+        array = self.owner.data
+        return torch.einsum("".join(eq), array)
 
     def __setitem__(self, key, value):
         raise NotImplementedError()
@@ -132,6 +132,7 @@ class Tensor(metaclass=TensorMeta):
 
     @property
     def storage(self):
+        self.data = self.data.contiguous()
         return self.data.view([-1])
 
     def __float__(self):
@@ -183,7 +184,7 @@ class Tensor(metaclass=TensorMeta):
         return self.copy()
 
     def same_shape(self):
-        return self.__class__(self.names, torch.zeros_like(self.data))
+        return self.__class__(self.names.copy(), torch.zeros_like(self.data))
 
     def map(self, *args, **kwargs):
         raise NotImplementedError()
@@ -214,7 +215,7 @@ class Tensor(metaclass=TensorMeta):
         self.data[indices] = value
 
     def norm_max(self):
-        return torch.norm(self.data.view([-1]), p=torch.inf)
+        return torch.norm(self.data.view([-1]), p=torch.inf).cpu()
 
     def norm_num(self):
         return len(self.data.view([-1]))
@@ -223,13 +224,15 @@ class Tensor(metaclass=TensorMeta):
         return sum(abs(self.data.view([-1])))
 
     def norm_2(self):
-        return torch.norm(self.data.view([-1]), p=2)
+        return torch.norm(self.data.view([-1]), p=2).cpu()
 
     def edge_rename(self, name_dictionary: dict[str, str]):
         names = [name_dictionary[name] if name in name_dictionary else name for name in self.names]
         return self.__class__(names, self.data)
 
     def transpose(self, new_names):
+        if new_names == self.names:
+            return self.__class__(self.names.copy(), self.data)
         einsum_map = IndexMap()
         eq = []
         for name in self.names:
@@ -238,12 +241,9 @@ class Tensor(metaclass=TensorMeta):
         for name in new_names:
             eq.append(chr(einsum_map[name]))
         data = torch.einsum("".join(eq), self.data)
-        return self.__class__(new_names, data)
+        return self.__class__(new_names.copy(), data)
 
-    def contract(self,
-                 another_tensor: self.__class__,
-                 contract_names: set[tuple[str, str]],
-                 fuse_names: set[str] = None):
+    def contract(self, another_tensor, contract_names: set[tuple[str, str]], fuse_names: set[str] = None):
         if fuse_names is None:
             fuse_names = set()
         einsum_map = IndexMap()
@@ -292,7 +292,7 @@ class Tensor(metaclass=TensorMeta):
         raise NotImplementedError()
 
     def conjugate(self, default_is_physics_edge=False, exclude_names_set=None):
-        return self.__class__(self.names, self.data.conj())
+        return self.__class__(self.names.copy(), self.data.conj())
 
     def trace(self, trace_names: set[tuple[str, str]]):
         einsum_map = IndexMap()
