@@ -24,13 +24,28 @@ namespace TAT {
    template<typename Symmetry>
    struct Configuration {
       int L1, L2;
-      detail::monotonic_buffer_resource resource;
-      std::vector<pmr::map<int, std::optional<std::pair<Symmetry, int>>>> data;
+      std::vector<std::optional<std::pair<Symmetry, int>>> data;
 
-      Configuration(int L1, int L2) : L1(L1), L2(L2), resource(nullptr, 0) {
-         data.reserve(L1 * L2);
-         for (auto i = 0; i < L1 * L2; i++) {
-            data.emplace_back(&resource);
+      Configuration(int L1, int L2) : L1(L1), L2(L2) {
+         data.resize(L1 * L2);
+      }
+
+      void setitem(const std::tuple<int, int, int>& key, const std::optional<std::pair<Symmetry, int>>& value) {
+         const auto& [l1, l2, orbit] = key;
+         auto offset = (orbit * L1 + l1) * L2 + l2;
+         while (offset >= data.size()) {
+            data.resize(data.size() * 2);
+         }
+         data[offset] = value;
+      }
+
+      std::optional<std::pair<Symmetry, int>> getitem(const std::tuple<int, int, int>& key) const {
+         const auto& [l1, l2, orbit] = key;
+         auto offset = (orbit * L1 + l1) * L2 + l2;
+         if (offset >= data.size()) {
+            return {};
+         } else {
+            return data[offset];
          }
       }
    };
@@ -42,43 +57,26 @@ namespace TAT {
             .def(py::init([](const py::object& state) {
                     int L1 = state.attr("L1").cast<int>();
                     int L2 = state.attr("L2").cast<int>();
-                    auto physics_edges = state.attr("physics_edges");
-                    auto result = std::make_unique<C>(L1, L2);
-                    for (auto l1 = 0; l1 < L1; l1++) {
-                       for (auto l2 = 0; l2 < L2; l2++) {
-                          auto this_physics_edges = physics_edges.attr("__getitem__")(std::make_pair(l1, l2));
-                          for (const auto& orbit : this_physics_edges) {
-                             result->data[l1 * L2 + l2][orbit.cast<int>()];
-                          }
-                       }
-                    }
-                    return result;
+                    return C(L1, L2);
                  }),
                  "Create an empty configuration from an abstract state.")
             .def("__getitem__",
                  [](const C& self, const std::tuple<int, int, int>& key) {
-                    const auto& [l1, l2, orbit] = key;
-                    return self.data[l1 * self.L2 + l2].at(orbit);
+                    return self.getitem(key);
                  })
             .def("__setitem__",
                  [](C& self, const std::tuple<int, int, int>& key, const int& value) {
-                    const auto& [l1, l2, orbit] = key;
-                    self.data[l1 * self.L2 + l2].at(orbit) = std::make_pair(Symmetry(), value);
+                    self.setitem(key, std::make_pair(Symmetry(), value));
                  })
             .def("__setitem__",
                  [](C& self, const std::tuple<int, int, int>& key, const std::optional<std::pair<Symmetry, int>>& value) {
-                    const auto& [l1, l2, orbit] = key;
-                    self.data[l1 * self.L2 + l2].at(orbit) = value;
+                    self.setitem(key, value);
                  })
             .def(
                   "copy",
                   [](const C& self) {
-                     int L1 = self.L1;
-                     int L2 = self.L2;
-                     auto result = std::make_unique<C>(L1, L2);
-                     for (auto i = 0; i < L1 * L2; i++) {
-                        result->data[i] = self.data[i];
-                     }
+                     auto result = C(self.L1, self.L2);
+                     result.data = self.data;
                      return result;
                   },
                   "Copy the configuration")
@@ -89,11 +87,35 @@ namespace TAT {
                      auto pointer = static_cast<int*>(result.request().ptr);
                      auto size = self.L1 * self.L2;
                      for (auto i = 0; i < size; i++) {
-                        pointer[i] = self.data[i].at(0)->second;
+                        pointer[i] = self.data[i]->second;
                      }
                      return result;
                   },
-                  "Export configuration of orbit 0 as an array");
+                  "Export configuration of orbit 0 as an array")
+            .def_static(
+                  "get_hat",
+                  [](const std::vector<const C*>& configurations,
+                     const std::vector<std::tuple<int, int, int>>& sites,
+                     const std::vector<int>& physics_dims) {
+                     auto configuration_number = configurations.size();
+                     auto physics_edge_number = sites.size();
+                     auto total_physics_dim = 1;
+                     for (auto d : physics_dims) {
+                        total_physics_dim *= d;
+                     }
+                     auto hat = py::array_t<int>({Py_ssize_t(configuration_number), Py_ssize_t(total_physics_dim)});
+                     auto pointer = static_cast<int*>(hat.request().ptr);
+                     std::fill(pointer, pointer + configuration_number * total_physics_dim, 0);
+                     for (auto c = 0; c < configuration_number; c++) {
+                        auto p = 0;
+                        for (auto i = 0; i < physics_edge_number; i++) {
+                           p *= physics_dims[i];
+                           p += configurations[c]->getitem(sites[i])->second;
+                        }
+                        pointer[c * total_physics_dim + p] = 1;
+                     }
+                     return hat;
+                  });
    }
 
    // declare some function defined in other file

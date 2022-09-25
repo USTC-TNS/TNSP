@@ -17,6 +17,8 @@
 #
 
 import numpy as np
+import torch
+from ...common_toolkit import seed_differ
 from .abstract_ansatz import AbstractAnsatz
 
 
@@ -24,10 +26,13 @@ class ClosedString(AbstractAnsatz):
 
     __slots__ = ["owner", "length", "index_to_site", "cut_dimension", "tensor_list"]
 
-    def _construct_hat(self, sites, number):
-        names = ["C", *(f"P{i}" for i, _ in enumerate(sites))]
-        edges = [number, *(self.owner.physics_edges[site].conjugated() for site in sites)]
-        return self.owner.Tensor(names, edges).zero()
+    def numpy_array(self, array):
+        # Create an empty np array to avoid numpy FutureWarning
+        length = len(array)
+        result = np.empty(length, dtype=object)
+        for i in range(length):
+            result[i] = array[i]
+        return result
 
     def _construct_tensor(self, index):
         """
@@ -43,13 +48,12 @@ class ClosedString(AbstractAnsatz):
         Tensor
             The result tensor.
         """
-        names = [f"P{i}" for i, _ in enumerate(self.index_to_site[index])]
-        edges = [self.owner.physics_edges[site] for site in self.index_to_site[index]]
-        names.append("L")
-        edges.append(self.cut_dimension)
-        names.append("R")
-        edges.append(self.cut_dimension)
-        return self.owner.Tensor(names, edges).randn()
+        # order: P, L, R
+        return torch.randn([
+            np.prod([self.owner.physics_edges[site].dimension for site in self.index_to_site[index]]),
+            self.cut_dimension, self.cut_dimension
+        ],
+                           dtype=torch.float64)
 
     def __init__(self, owner, index_to_site, cut_dimension):
         """
@@ -69,64 +73,72 @@ class ClosedString(AbstractAnsatz):
         self.index_to_site = [site for site in index_to_site]
         self.cut_dimension = cut_dimension
 
-        self.tensor_list = np.array([self._construct_tensor(index) for index in range(self.length)])
+        torch.manual_seed(seed_differ.random_int())
+        self.tensor_list = self.numpy_array([self._construct_tensor(index) for index in range(self.length)])
 
-    def weight_and_delta(self, configurations, calculate_delta):
-        number = len(configurations)
+    def _construct_hat(self, index, configs):
+        number = len(configs)
+        sites = self.index_to_site[index]
+        physics_dims = [self.owner.physics_edges[site].dimension for site in sites]
+        hat_array = configs[0].get_hat(configs, sites, physics_dims)
+        # order: C, P
+        return torch.tensor(hat_array, dtype=torch.float64)
+
+    def _get_hat_fat(self, configurations):
         hat_list = []
         fat_list = []
+        configs = [config._configuration for config in configurations]
         for index in range(self.length):
-            sites = self.index_to_site[index]
-            orbits = [orbit for l1, l2, orbit in sites]
-            edges = [f"P{orbit}" for orbit in orbits]
-            hat = self._construct_hat(sites, number)
-            storage = hat.blocks[hat.names]
-            for c_index, configuration in enumerate(configurations):
-                location = tuple((c_index, *(configuration[site][1] for site in sites)))
-                storage[location] = 1
+            hat = self._construct_hat(index, configs)
             hat_list.append(hat)
-            fat_list.append(hat_list[index].contract(self.tensor_list[index], {(edge, edge) for edge in edges}))
+            fat_list.append(torch.einsum("cp,plr->clr", hat_list[index], self.tensor_list[index]))
+        return hat_list, fat_list
 
+    def _get_left(self, fat_list):
         left = [None for index in range(self.length)]
         for index in range(self.length):
             if index == 0:
                 left[index] = fat_list[index]
             else:
-                left[index] = left[index - 1].contract(fat_list[index], {("R", "L")}, {"C"})
+                left[index] = torch.einsum("clm,cmr->clr", left[index - 1], fat_list[index])
+        return left
 
-        last_left = left[self.length - 1].trace({("L", "R")})
-        weights = [last_left[{"C": c_index}] for c_index in range(number)]
-        if not calculate_delta:
-            return weights, None
-
+    def _get_right(self, fat_list):
         right = [None for index in range(self.length)]
         for index in reversed(range(self.length)):
             if index == self.length - 1:
                 right[index] = fat_list[index]
             else:
-                right[index] = right[index + 1].contract(fat_list[index], {("L", "R")}, {"C"})
+                right[index] = torch.einsum("cmr,clm->clr", right[index + 1], fat_list[index])
+        return right
+
+    def weight_and_delta(self, configurations, calculate_delta):
+        number = len(configurations)
+
+        hat_list, fat_list = self._get_hat_fat(configurations)
+
+        left = self._get_left(fat_list)
+
+        last_left = torch.einsum("cmm->c", left[self.length - 1]).cpu()
+        weights = last_left.tolist()
+        if not calculate_delta:
+            return weights, None
+
+        right = self._get_right(fat_list)
 
         holes = [None for index in range(self.length)]
         for index in range(self.length):
             if index == 0:
-                holes[index] = right[index + 1].contract(hat_list[index], set(), {"C"}).edge_rename({
-                    "L": "R",
-                    "R": "L"
-                })
+                holes[index] = torch.einsum("clr,cp->cprl", right[index + 1], hat_list[index])
             elif index == self.length - 1:
-                holes[index] = left[index - 1].contract(hat_list[index], set(), {"C"}).edge_rename({"L": "R", "R": "L"})
+                holes[index] = torch.einsum("clr,cp->cprl", left[index - 1], hat_list[index])
             else:
-                holes[index] = (
-                    left[index - 1]  #
-                    .contract(right[index + 1], {("L", "R")}, {"C"})  #
-                    .contract(hat_list[index], set(), {"C"})  #
-                    .edge_rename({
-                        "L": "R",
-                        "R": "L"
-                    }))
+                holes[index] = torch.einsum("cmr,clm,cp->cprl", left[index - 1], right[index + 1], hat_list[index])
 
         deltas = [
-            np.array([holes[index].shrink({"C": c_index}) for index in range(self.length)]) for c_index in range(number)
+            self.numpy_array([holes[index][c_index].contiguous()
+                              for index in range(self.length)])
+            for c_index in range(number)
         ]
         return weights, deltas
 
@@ -136,48 +148,52 @@ class ClosedString(AbstractAnsatz):
     def ansatz_prod_sum(self, a, b):
         result = 0.0
         for ai, bi in zip(self.tensors(a), self.tensors(b)):
-            dot = ai.contract(bi, {(name, name) for name in ai.names})[{}]
-            result += dot
+            result += torch.dot(ai.reshape([-1]), bi.reshape([-1])).cpu().item()
         return result
 
     def ansatz_conjugate(self, a):
-        return np.array([i.conjugate(default_is_physics_edge=True) for i in self.tensors(a)])
+        a = [i.conj() for i in self.tensors(a)]
+        return self.numpy_array(a)
 
     def tensors(self, delta):
         if delta is None:
-            delta = self.tensor_list
-        for i, [_, value] in enumerate(zip(self.tensor_list, delta)):
-            recv = yield value
-            if self.fixed:
-                recv = None
-            if recv is not None:
-                # When not setting value, input delta could be an iterator
-                delta[i] = recv
-
-    def elements(self, delta):
-        for index, tensor in enumerate(self.tensors(delta)):
-            storage = tensor.transpose(self.tensor_list[index].names).storage
-            length = len(storage)
-            for i in range(length):
-                recv = yield storage[i]
+            for i, tensor in enumerate(self.tensor_list):
+                recv = yield tensor
                 if self.fixed:
                     recv = None
                 if recv is not None:
-                    if tensor.names != self.tensor_list[index].names:
-                        raise RuntimeError("Trying to set tensor element which mismatches the edge names.")
-                    storage[i] = recv
+                    self.tensor_list[i] = recv.detach().clone()
+        else:
+            for i, [_, value] in enumerate(zip(self.tensor_list, delta)):
+                recv = yield value
+                if self.fixed:
+                    recv = None
+                if recv is not None:
+                    delta[i] = recv.clone()
+
+    def elements(self, delta):
+        for tensor in self.tensors(delta):
+            # Should be tensor.view for pytorch
+            # But there is no equivalent function for numpy array.
+            # So use reshape here.
+            flatten = tensor.view([-1])
+            length = len(flatten)
+            for i in range(length):
+                recv = yield flatten[i]
+                if self.fixed:
+                    recv = None
+                if recv is not None:
+                    flatten[i] = recv
 
     def tensor_count(self, delta):
-        for _ in self.tensors(delta):
-            pass
-        return self.length
+        return len([None for _ in self.tensors(delta)])
 
     def element_count(self, delta):
-        return sum(tensor.norm_num() for tensor in self.tensors(delta))
+        # Should use tensor.view here for pytorch
+        return sum(len(tensor.reshape([-1])) for tensor in self.tensors(delta))
 
     def buffers(self, delta):
-        for index, tensor in enumerate(self.tensors(delta)):
-            yield tensor.storage
+        yield from self.tensors(delta)
 
     def normalize_ansatz(self, log_ws=None):
         if log_ws is None:
