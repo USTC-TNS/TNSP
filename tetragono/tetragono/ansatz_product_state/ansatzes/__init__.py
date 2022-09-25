@@ -16,6 +16,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from mpi4py import MPI
+import torch
+
+hostname = MPI.Get_processor_name()
+hostname_list = MPI.COMM_WORLD.allgather(hostname)
+comm_local = MPI.COMM_WORLD.Split(hostname_list.index(hostname))
+torch.cuda.set_device(comm_local.Get_rank())
+
 from .marshall import Marshall
 from .open_string import OpenString
 from .closed_string import ClosedString

@@ -53,7 +53,8 @@ class ClosedString(AbstractAnsatz):
             np.prod([self.owner.physics_edges[site].dimension for site in self.index_to_site[index]]),
             self.cut_dimension, self.cut_dimension
         ],
-                           dtype=torch.float64)
+                           dtype=torch.float64,
+                           device=torch.cuda.current_device())
 
     def __init__(self, owner, index_to_site, cut_dimension):
         """
@@ -85,7 +86,8 @@ class ClosedString(AbstractAnsatz):
             # order: C, P
             hat = torch.tensor(configs[0].get_hat(configs, sites,
                                                   [self.owner.physics_edges[site].dimension for site in sites]),
-                               dtype=torch.float64)
+                               dtype=torch.float64,
+                               device=torch.cuda.current_device())
             hat_list.append(hat)
             fat_list.append(torch.einsum("cp,plr->clr", hat_list[index], self.tensor_list[index]))
         return hat_list, fat_list
@@ -204,3 +206,7 @@ class ClosedString(AbstractAnsatz):
     def show(self):
         result = self.__class__.__name__ + f" with length={self.length} dimension={self.cut_dimension}"
         return result
+
+    def device(self, dev):
+        for index in range(self.length):
+            self.tensor_list[index] = self.tensor_list[index].to(device=dev)

@@ -47,7 +47,7 @@ class ConvolutionalNeural(AbstractAnsatz):
             The pytorch nerual network model object.
         """
         super().__init__(owner)
-        self.network = network
+        self.network = network.cuda()
         self.dtype = next(self.network.parameters()).dtype
 
     def get_weights(self, xs):
@@ -149,3 +149,6 @@ class ConvolutionalNeural(AbstractAnsatz):
     def show(self):
         result = self.__class__.__name__
         return result
+
+    def device(self, dev):
+        self.network.cuda(device=dev)

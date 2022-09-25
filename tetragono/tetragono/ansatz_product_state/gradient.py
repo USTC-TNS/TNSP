@@ -51,7 +51,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
     for value, calculated_grad in zip(element_g, element_grad):
         # value is a torch tensor which maybe updated layer, so need to copy it by convert it to normal python
         # number.
-        if np.iscomplex(value):
+        if False and np.iscomplex(value):
             value = complex(value)
         else:
             value = float(value)
@@ -59,7 +59,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
         send(element_sr, value + delta)
         now_energy = get_energy()
         rgrad = (now_energy - original_energy) / delta
-        if np.iscomplex(value):
+        if False and np.iscomplex(value):
             send(element_si, value + delta * 1j)
             now_energy = get_energy()
             igrad = (now_energy - original_energy) / delta

@@ -198,3 +198,7 @@ class SumAnsatz(AbstractAnsatz):
             if head.isdigit():
                 head = int(head)
             self[head].unlock(tail)
+
+    def device(self, dev):
+        for ansatz in self.ansatzes:
+            ansatz.device(dev)

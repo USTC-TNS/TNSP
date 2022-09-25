@@ -204,3 +204,7 @@ class OpenString(AbstractAnsatz):
     def show(self):
         result = self.__class__.__name__ + f" with length={self.length} dimension={self.cut_dimension}"
         return result
+
+    def device(self, dev):
+        for index in range(self.length):
+            self.tensor_list[index] = self.tensor_list[index].cuda(device=dev)

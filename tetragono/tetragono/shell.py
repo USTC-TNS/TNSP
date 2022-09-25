@@ -586,6 +586,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ap = read_from_file(name)
         self.ap_conf = []
 
+        import torch
+        self.ap.ansatz.device(torch.cuda.current_device())
+
     def do_ap_ansatz_set(self, line):
         """
         Set the ansatz for ansatz product state.

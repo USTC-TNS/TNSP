@@ -54,8 +54,7 @@ def allreduce_buffer(buffer):
 def allreduce_iterator_buffer(iterator):
     requests = []
     for tensor in iterator:
-        requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
-    MPI.Request.Waitall(requests)
+        requests.append(mpi_comm.Allreduce(MPI.IN_PLACE, tensor))
 
 
 def allreduce_lattice_buffer(lattice):
