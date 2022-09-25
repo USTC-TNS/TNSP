@@ -76,20 +76,16 @@ class ClosedString(AbstractAnsatz):
         torch.manual_seed(seed_differ.random_int())
         self.tensor_list = self.numpy_array([self._construct_tensor(index) for index in range(self.length)])
 
-    def _construct_hat(self, index, configs):
-        number = len(configs)
-        sites = self.index_to_site[index]
-        physics_dims = [self.owner.physics_edges[site].dimension for site in sites]
-        hat_array = configs[0].get_hat(configs, sites, physics_dims)
-        # order: C, P
-        return torch.tensor(hat_array, dtype=torch.float64)
-
     def _get_hat_fat(self, configurations):
         hat_list = []
         fat_list = []
         configs = [config._configuration for config in configurations]
         for index in range(self.length):
-            hat = self._construct_hat(index, configs)
+            sites = self.index_to_site[index]
+            # order: C, P
+            hat = torch.tensor(configs[0].get_hat(configs, sites,
+                                                  [self.owner.physics_edges[site].dimension for site in sites]),
+                               dtype=torch.float64)
             hat_list.append(hat)
             fat_list.append(torch.einsum("cp,plr->clr", hat_list[index], self.tensor_list[index]))
         return hat_list, fat_list
@@ -123,6 +119,9 @@ class ClosedString(AbstractAnsatz):
         weights = last_left.tolist()
         if not calculate_delta:
             return weights, None
+        elif self.fixed:
+            this_delta = self.numpy_array([torch.zeros_like(i) for i in self.tensor_list])
+            return weights, [this_delta for _ in configurations]
 
         right = self._get_right(fat_list)
 
