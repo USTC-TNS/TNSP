@@ -116,8 +116,6 @@ class SumAnsatz(AbstractAnsatz):
                 recv = None
                 while True:
                     recv = yield iterator.send(recv)
-                    if self.fixed:
-                        recv = None
             except StopIteration:
                 pass
 
@@ -130,8 +128,6 @@ class SumAnsatz(AbstractAnsatz):
                 recv = None
                 while True:
                     recv = yield iterator.send(recv)
-                    if self.fixed:
-                        recv = None
             except StopIteration:
                 pass
 
@@ -180,7 +176,6 @@ class SumAnsatz(AbstractAnsatz):
 
     def lock(self, path=""):
         if path == "":
-            self.fixed = True
             for ansatz in self.ansatzes:
                 ansatz.lock()
         else:
