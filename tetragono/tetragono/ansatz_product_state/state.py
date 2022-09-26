@@ -49,7 +49,7 @@ class Configuration:
 
         # Data storage of configuration, access it by configuration[l1, l2, orbit] instead
         if config is None:
-            self._configuration = owner.Tensor.model.Configuration(owner)
+            self._configuration = owner.Tensor.model.Configuration(owner.L1, owner.L2)
         else:
             self._configuration = config.copy()
 

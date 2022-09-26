@@ -54,9 +54,7 @@ namespace TAT {
    auto declare_configuration(py::module_& symmetry_m, const char* name) {
       using C = Configuration<Symmetry>;
       return py::class_<C>(symmetry_m, "Configuration", (std::string(name) + "SymmetryConfiguration").c_str())
-            .def(py::init([](const py::object& state) {
-                    int L1 = state.attr("L1").cast<int>();
-                    int L2 = state.attr("L2").cast<int>();
+            .def(py::init([](const int& L1, const int& L2) {
                     return C(L1, L2);
                  }),
                  "Create an empty configuration from an abstract state.")
