@@ -80,14 +80,19 @@ namespace TAT {
                      return result;
                   },
                   "Copy the configuration")
-            .def(
+            .def_static(
                   "export_orbit0",
-                  [](const C& self) {
-                     auto result = py::array_t<int>({self.L1, self.L2});
+                  [](const std::vector<const C*>& configurations) {
+                     auto configuration_number = configurations.size();
+                     const auto& config0 = *configurations[0];
+                     auto size = config0.L1 * config0.L2;
+                     auto result =
+                           py::array_t<int>({Py_ssize_t(configuration_number), Py_ssize_t(1), Py_ssize_t(config0.L1), Py_ssize_t(config0.L2)});
                      auto pointer = static_cast<int*>(result.request().ptr);
-                     auto size = self.L1 * self.L2;
-                     for (auto i = 0; i < size; i++) {
-                        pointer[i] = self.data[i]->second;
+                     for (auto c = 0; c < configuration_number; c++) {
+                        for (auto i = 0; i < size; i++) {
+                           pointer[c * size + i] = configurations[c]->data[i]->second;
+                        }
                      }
                      return result;
                   },

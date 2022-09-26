@@ -69,9 +69,8 @@ class ConvolutionalNeural(AbstractAnsatz):
         return s
 
     def weight_and_delta(self, configurations, calculate_delta):
-        xs = torch.tensor(np.concatenate([configuration.export_orbit0() for configuration in configurations]).reshape(
-            [-1, 1, self.owner.L1, self.owner.L2]),
-                          dtype=self.dtype) * 2 - 1
+        configs = [config._configuration for config in configurations]
+        xs = torch.tensor(configs[0].export_orbit0(configs), dtype=self.dtype) * 2 - 1
         weight = self.get_weights(xs)
         if calculate_delta:
             number = len(configurations)
