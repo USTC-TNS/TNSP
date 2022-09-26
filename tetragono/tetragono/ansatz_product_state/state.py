@@ -134,10 +134,13 @@ class AnsatzProductState(AbstractState):
         self.ansatz = ProductAnsatz(self, {name: ansatz})
 
     def add_ansatz(self, ansatz, name):
+        if self.ansatz is None:
+            self.set_ansatz(ansatz, name)
+            return
         from .ansatzes.sum_ansatz import SumAnsatz
         from .ansatzes.product_ansatz import ProductAnsatz
-        if (isinstance(self.ansatz, ProductAnsatz) or
-            (isinstance(self.ansatz, SumAnsatz) and len(self.ansatz.ansatzes) == 1)) and ("base" in self.ansatz.names):
+        if isinstance(self.ansatz, ProductAnsatz) or (isinstance(self.ansatz, SumAnsatz) and
+                                                      len(self.ansatz.ansatzes) == 1):
             ansatzes = {}
             for key, value in zip(self.ansatz.names, self.ansatz.ansatzes):
                 ansatzes[key] = value
@@ -147,10 +150,13 @@ class AnsatzProductState(AbstractState):
         self.ansatz = SumAnsatz(self, ansatzes)
 
     def mul_ansatz(self, ansatz, name):
+        if self.ansatz is None:
+            self.set_ansatz(ansatz, name)
+            return
         from .ansatzes.sum_ansatz import SumAnsatz
         from .ansatzes.product_ansatz import ProductAnsatz
-        if (isinstance(self.ansatz, ProductAnsatz) or
-            (isinstance(self.ansatz, SumAnsatz) and len(self.ansatz.ansatzes) == 1)) and ("base" in self.ansatz.names):
+        if isinstance(self.ansatz, ProductAnsatz) or (isinstance(self.ansatz, SumAnsatz) and
+                                                      len(self.ansatz.ansatzes) == 1):
             ansatzes = {}
             for key, value in zip(self.ansatz.names, self.ansatz.ansatzes):
                 ansatzes[key] = value
