@@ -48,6 +48,28 @@ class AbstractAnsatzMeta(type):
             for field in ["_left_to_right", "_right_to_left", "_weight_pool", "_delta_pool"]:
                 if field in state:
                     del state[field]
+
+        # String ansatz use pytorch
+        if type_name in ["OpenString", "ClosedString"]:
+            import torch
+            tensor_list = state["tensor_list"]
+            for index, tensor in enumerate(tensor_list):
+                if not isinstance(tensor, torch.Tensor):
+                    names = tensor.names
+                    physics_edges = []
+                    orbit = 0
+                    while f"P{orbit}" in names:
+                        physics_edges.append(f"P{orbit}")
+                        orbit += 1
+                    tensor = tensor.merge_edge({"P": physics_edges})
+                    if type_name == "OpenString":
+                        if index == 0:
+                            tensor.expand({"L": (0, 1)})
+                        if index == state["length"] - 1:
+                            tensor.expand({"R": (0, 1)})
+                    tensor = torch.tensor(tensor.blocks[["P", "L", "R"]], dtype=torch.float64)
+                    tensor_list[index] = tensor
+            state["tensor_list"] = tensor_list
         for key, value in state.items():
             setattr(self, key, value)
 
