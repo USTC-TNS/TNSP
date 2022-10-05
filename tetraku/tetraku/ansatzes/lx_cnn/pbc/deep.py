@@ -58,11 +58,11 @@ def ansatz(state):
     L1 = state.L1
     L2 = state.L2
     network = torch.nn.Sequential(
-        single_layer(5, 1, 16, 8, L1, L2),
-        single_layer(5, 8, 6, 6, L1, L2),
-        single_layer(3, 6, 6, 6, L1, L2),
-        single_layer(3, 6, 6, 6, L1, L2),
-        single_layer(3, 6, 6, 6, L1, L2),
-        single_layer(3, 6, 6, 1, L1, L2),
+        single_layer(5, 1, 64, 64, L1, L2),
+        single_layer(5, 64, 32, 32, L1, L2),
+        single_layer(3, 32, 32, 32, L1, L2),
+        single_layer(3, 32, 32, 32, L1, L2),
+        single_layer(3, 32, 32, 32, L1, L2),
+        single_layer(3, 32, 32, 1, L1, L2),
     ).double()
     return tet.ansatz_product_state.ansatzes.ConvolutionalNeural(state, network)
