@@ -64,9 +64,12 @@ class ConvolutionalNeural(AbstractAnsatz):
         float
             The weight of the given configuration
         """
-        result = self.network(xs.to(device=next(self.network.parameters()).device))
-        s = torch.prod(result.reshape([result.shape[0], -1]), -1)
-        return s
+        xs = xs.to(device=next(self.network.parameters()).device)
+        xs = torch.cat([xs.rot90(i, [-1, -2]) for i in range(4)])
+        xs = torch.cat([xs, xs.flip(-1)])
+        result = self.network(xs)
+        s = torch.prod(result.reshape([result.shape[0], -1]), -1).reshape([8, -1])
+        return s.sum(axis=0)
 
     def weight_and_delta(self, configurations, calculate_delta):
         configs = [config._configuration for config in configurations]
