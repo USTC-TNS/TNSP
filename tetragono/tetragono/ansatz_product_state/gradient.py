@@ -253,10 +253,11 @@ def gradient_descent(
                             configuration_pool += sampling_result
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configuration
-                gathered_configurations = mpi_comm.allreduce(
+                gathered_configurations = mpi_comm.allgather(
                     [configuration.export_configuration() for _, configuration in sampling_result])
                 sampling_configurations.clear()
-                sampling_configurations += gathered_configurations
+                for config in gathered_configurations:
+                    sampling_configurations += config
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
 
             # Measure log
