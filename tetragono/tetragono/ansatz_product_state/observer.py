@@ -32,7 +32,7 @@ class Observer:
         "owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_restrict_subspace",
         "_start", "_result", "_result_square", "_result_reweight", "_count", "_total_weight", "_total_weight_square",
         "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight", "_Delta", "_EDelta",
-        "_Deltas"
+        "_Deltas", "_max_batch_size"
     ]
 
     def __enter__(self):
@@ -120,6 +120,7 @@ class Observer:
         enable_natural_gradient=False,
         cache_natural_delta=None,
         restrict_subspace=None,
+        max_batch_size=None,
     ):
         """
         Create observer object for the given ansatz product state.
@@ -140,6 +141,8 @@ class Observer:
             The folder name to cache deltas used in natural gradient.
         restrict_subspace : optional
             A function return bool to restrict sampling subspace.
+        max_batch_size : int, optional
+            The max batch size when calculating wss
         """
         self.owner = owner
 
@@ -166,6 +169,8 @@ class Observer:
         self._EDelta = None
         self._Deltas = None
 
+        self._max_batch_size = None
+
         if observer_set is not None:
             self._observer = observer_set
         if enable_energy:
@@ -176,6 +181,18 @@ class Observer:
             self.enable_natural_gradient()
         self.cache_natural_delta(cache_natural_delta)
         self.restrict_subspace(restrict_subspace)
+        self.set_max_batch_size(max_batch_size)
+
+    def set_max_batch_size(self, max_batch_size):
+        """
+        Set the max batch size when calculating wss.
+
+        Parameters
+        ----------
+        max_batch_size : int, optional
+            The max batch size when calculating wss.
+        """
+        self._max_batch_size = max_batch_size
 
     def restrict_subspace(self, restrict_subspace):
         """
@@ -303,7 +320,14 @@ class Observer:
                                                                                         observer_shrinked)
                         configuration_list.append(new_configuration)
         # measure
-        wss_list, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
+        if self._max_batch_size is None:
+            wss_list, _ = self.owner.ansatz.weight_and_delta(configuration_list, False)
+        else:
+            wss_list = []
+            for i in range((len(configuration_list) - 1) // self._max_batch_size + 1):
+                wss_list_this, _ = self.owner.ansatz.weight_and_delta(
+                    configuration_list[i * self._max_batch_size:(i + 1) * self._max_batch_size], False)
+                wss_list += wss_list_this
         for chain, reweight in enumerate(reweights):
             for name, configuration_data_name in configuration_data[chain].items():
                 if name == "energy":

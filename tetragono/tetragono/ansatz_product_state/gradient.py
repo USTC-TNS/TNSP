@@ -132,6 +132,8 @@ def gradient_descent(
         sweep_hopping_hamiltonians=None,
         # About subspace
         restrict_subspace=None,
+        # About observe
+        observe_max_batch_size=None,
         # About gradient method
         use_check_difference=False,
         use_line_search=False,
@@ -196,6 +198,7 @@ def gradient_descent(
         enable_natural_gradient=use_natural_gradient,
         cache_natural_delta=cache_natural_delta,
         restrict_subspace=restrict,
+        max_batch_size=observe_max_batch_size,
     )
     if measurement:
         measurement_names = measurement.split(",")
@@ -211,6 +214,7 @@ def gradient_descent(
             enable_energy=True,
             enable_gradient=use_line_search,
             restrict_subspace=restrict,
+            max_batch_size=observe_max_batch_size,
         )
 
     # Main loop
