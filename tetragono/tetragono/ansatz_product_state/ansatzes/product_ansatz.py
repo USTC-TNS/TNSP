@@ -22,7 +22,7 @@ from .abstract_ansatz import AbstractAnsatz
 
 class ProductAnsatz(AbstractAnsatz):
 
-    __slots__ = ["owner", "ansatzes", "names", "delta_part"]
+    __slots__ = ["ansatzes", "names", "delta_part"]
 
     def __init__(self, owner, ansatzes):
         """

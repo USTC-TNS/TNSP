@@ -16,18 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from .marshall import Marshall
-from .open_string import OpenString
-from .closed_string import ClosedString
-from .product_ansatz import ProductAnsatz
-from .sum_ansatz import SumAnsatz
-try:
-    import torch
-except ModuleNotFoundError:
+import tetragono as tet
 
-    class ConvolutionalNeural:
 
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError("torch needed for ConvolutionalNeural")
-else:
-    from .convolutional_neural import ConvolutionalNeural
+def ansatz(state):
+    """
+    Create Marshall sign rule as an ansatz.
+    """
+    return tet.ansatz_product_state.ansatzes.Marshall(state)

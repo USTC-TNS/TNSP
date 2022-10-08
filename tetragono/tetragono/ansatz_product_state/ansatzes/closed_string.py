@@ -24,7 +24,7 @@ from .abstract_ansatz import AbstractAnsatz
 
 class ClosedString(AbstractAnsatz):
 
-    __slots__ = ["owner", "length", "index_to_site", "cut_dimension", "tensor_list"]
+    __slots__ = ["length", "index_to_site", "cut_dimension", "tensor_list"]
 
     def numpy_array(self, array):
         # Create an empty np array to avoid numpy FutureWarning

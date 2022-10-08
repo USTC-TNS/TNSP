@@ -23,7 +23,7 @@ from .abstract_ansatz import AbstractAnsatz
 
 class ConvolutionalNeural(AbstractAnsatz):
 
-    __slots__ = ["owner", "network", "dtype"]
+    __slots__ = ["network", "dtype"]
 
     def numpy_array(self, array):
         # Create an empty np array to avoid numpy FutureWarning
