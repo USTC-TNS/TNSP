@@ -23,6 +23,8 @@ try:
 except:
     import pickle
 import signal
+from traceback import format_stack
+from datetime import datetime
 import importlib
 from mpi4py import MPI
 import numpy as np
@@ -250,3 +252,12 @@ def safe_rename(tensor, name_map):
         if key in tensor.names:
             new_name_map[key] = value
     return tensor.edge_rename(new_name_map)
+
+
+def sigusr1_handler(signum, frame):
+    with open("tetragono.backtrace", "a", encoding="utf-8") as file:
+        file.write(
+            str(mpi_rank) + " " + datetime.now().strftime("%Y-%m-%d-%H:%M:%S") + "\n" + "".join(format_stack()) + "\n")
+
+
+signal.signal(signal.SIGUSR1, sigusr1_handler)

@@ -3,6 +3,7 @@
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.22...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Tetragono will print backtrace of the current process when receiving SIGUSR1.
 *** Changed
 *** Deprecated
 *** Removed
