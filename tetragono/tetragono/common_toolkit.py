@@ -269,8 +269,8 @@ def safe_rename(tensor, name_map):
 
 def sigusr1_handler(signum, frame):
     with open("tetragono.backtrace", "a", encoding="utf-8") as file:
-        file.write(
-            str(mpi_rank) + " " + datetime.now().strftime("%Y-%m-%d-%H:%M:%S") + "\n" + "".join(format_stack()) + "\n")
+        file.write((str(mpi_rank) + " " + datetime.now().strftime("%Y-%m-%d-%H:%M:%S") + "\n" +
+                    "".join(format_stack()[:-1]) + "\n"))
 
 
 signal.signal(signal.SIGUSR1, sigusr1_handler)
