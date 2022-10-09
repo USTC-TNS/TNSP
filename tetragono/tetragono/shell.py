@@ -504,26 +504,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
         self.gm._hamiltonians = new_state._hamiltonians
 
-    def do_gm_data_load(self, line):
-        """
-        Load the lattice data from file, but preserve the current hamiltonians.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        config = Config(line)
-        self.gm_data_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_data_load)
-    def gm_data_load(self, name):
-        showln(" ##### DEPRECATE WARNING BEGIN #####")
-        showln(" gm_data_load is deprecated, use gm_hamiltonian instead to replace hamiltonian")
-        showln(" ###### DEPRECATE WARNING END ######")
-        data = read_from_file(name)
-        self.gm._lattice = data._lattice
-
     def do_gm_expand(self, line):
         """
         Expand dimension of sampling lattice.
@@ -878,7 +858,6 @@ else:
     gm_conf_dump = app.gm_conf_dump
     gm_conf_load = app.gm_conf_load
     gm_conf_create = app.gm_conf_create
-    gm_data_load = app.gm_data_load
     gm_hamiltonian = app.gm_hamiltonian
 
     ap_create = app.ap_create
