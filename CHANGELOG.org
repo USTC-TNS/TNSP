@@ -9,6 +9,7 @@
 *** Removed
 + *tetragono*: =gm_data_load= is removed, please use =gm_hamiltonian= to replace the hamiltonian instead.
 *** Fixed
++ *tetragono*: Fix the wrong error message when trying to import module used by =ex_create=, =ap_ansatz_mul= and so on.
 
 ** [[https://github.com/hzhangxyz/TAT/compare/v0.2.22...v0.2.23][v0.2.23]] - 2022-10-09
 

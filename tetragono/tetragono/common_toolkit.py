@@ -206,24 +206,37 @@ def import_from_tetpath(full_name):
 
 
 def get_imported_function(module_name_or_function, function_name):
-    if isinstance(module_name_or_function, str):
-        # 1. current folder
-        # 2. TETPATH
-        # 3. tetraku
-        # 4. normal import
-        try:
-            module = import_from_tetpath(module_name_or_function)
-        except ModuleNotFoundError:
-            try:
-                module = importlib.import_module("." + module_name_or_function, "tetraku.models")
-            except ModuleNotFoundError:
-                try:
-                    module = importlib.import_module("." + module_name_or_function, "tetraku.ansatzes")
-                except ModuleNotFoundError:
-                    module = importlib.import_module(module_name_or_function)
-        return getattr(module, function_name)
-    else:
+    if not isinstance(module_name_or_function, str):
         return module_name_or_function
+    # 1. current folder
+    # 2. TETPATH
+    try:
+        module = import_from_tetpath(module_name_or_function)
+        return getattr(module, function_name)
+    except ModuleNotFoundError as e:
+        if str(e) != f"No module named '{module_name_or_function}'":
+            raise
+    # 3. tetraku
+    try:
+        module = importlib.import_module("." + module_name_or_function, "tetraku.models")
+        return getattr(module, function_name)
+    except ModuleNotFoundError as e:
+        if str(e) != f"No module named 'tetraku.models.{module_name_or_function}'":
+            raise
+    try:
+        module = importlib.import_module("." + module_name_or_function, "tetraku.ansatzes")
+        return getattr(module, function_name)
+    except ModuleNotFoundError as e:
+        if str(e) != f"No module named 'tetraku.ansatzes.{module_name_or_function}'":
+            raise
+    # 4. normal import
+    try:
+        module = importlib.import_module(module_name_or_function)
+        return getattr(module, function_name)
+    except ModuleNotFoundError as e:
+        if str(e) != f"No module named '{module_name_or_function}'":
+            raise
+    raise ValueError("Invalid module name")
 
 
 def send(receiver, value):
