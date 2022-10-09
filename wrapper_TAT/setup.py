@@ -34,7 +34,7 @@ setup(
     description="wrapper for other tensor library to TAT interface",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT/tree/TAT/wrapper-TAT",
+    url="https://github.com/hzhangxyz/TAT/tree/TAT/wrapper_TAT",
     packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",
