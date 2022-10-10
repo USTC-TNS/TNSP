@@ -94,7 +94,7 @@ class ConvolutionalNeural(AbstractAnsatz):
     def ansatz_prod_sum(self, a, b):
         result = 0.0
         for ai, bi in zip(self.tensors(a), self.tensors(b)):
-            result = result + torch.dot(ai.reshape([-1]), bi.reshape([-1]))
+            result = result + (ai * bi).sum()
         return result.cpu().item()
 
     def ansatz_conjugate(self, a):
