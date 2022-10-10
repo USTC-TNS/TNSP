@@ -70,8 +70,7 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
         showln(" ", abs(calculated_grad - cgrad) / abs(cgrad), cgrad, calculated_grad)
 
 
-def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude,
-                line_search_error_threshold):
+def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude):
     saved_state = list(state.ansatz.tensors(None))
 
     def restore_state():
@@ -80,41 +79,24 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         for tensor in saved_state:
             send(setter, tensor)
 
-    grad_dot_pool = {}
+    grad_dot_begin = mpi_comm.bcast(state.state_dot(grad, observer.gradient))
+    if grad_dot_begin > 0:
+        state.apply_gradient(grad, step_size)
+        with energy_observer:
+            energy_observer(configuration_pool)
+        grad_dot_end = mpi_comm.bcast(state.state_dot(grad, energy_observer.gradient))
+        showln(f"predict eta={step_size}, energy={energy_observer.energy}, gradient dot={grad_dot_end}")
+        restore_state()
 
-    def grad_dot(eta):
-        if eta not in grad_dot_pool:
-            state.apply_gradient(grad, eta)
-            with energy_observer:
-                energy_observer(configuration_pool)
-            result = mpi_comm.bcast(state.state_dot(grad, energy_observer.gradient))
-            showln(f"predict eta={eta}, energy={energy_observer.energy}, gradient dot={result}")
-            grad_dot_pool[eta] = result
-            restore_state()
-        return grad_dot_pool[eta]
-
-    grad_dot_pool[0] = mpi_comm.bcast(state.state_dot(grad, observer.gradient))
-    if grad_dot(0.0) > 0:
-        begin = 0.0
-        end = step_size * line_search_amplitude
-
-        if grad_dot(end) > 0:
-            step_size = end
+        if grad_dot_end > 0:
+            step_size *= line_search_amplitude
             showln(f"step_size is chosen as {step_size}, since grad_dot(begin) > 0, grad_dot(end) > 0")
         else:
-            while True:
-                x = (begin + end) / 2
-                if grad_dot(x) > 0:
-                    begin = x
-                else:
-                    end = x
-                if (end - begin) / end < line_search_error_threshold:
-                    step_size = begin
-                    showln(f"step_size is chosen as {step_size}, since step size error < {line_search_error_threshold}")
-                    break
+            step_size /= line_search_amplitude
+            showln(f"step_size is chosen as {step_size}, since grad_dot(begin) > 0, grad_dot(end) <= 0")
     else:
-        showln(f"step_size is chosen as {step_size}, since grad_dot(begin) < 0")
         step_size = step_size
+        showln(f"step_size is chosen as {step_size}, since grad_dot(begin) < 0")
 
     return mpi_comm.bcast(step_size)
 
@@ -150,8 +132,8 @@ def gradient_descent(
         save_state_file=None,
         save_configuration_file=None,
         # About line search
-        line_search_amplitude=1.25,
-        line_search_error_threshold=0.1,
+        line_search_amplitude=1.2,
+        line_search_parameter=0.6,
         # About momentum
         orthogonalize_momentum=False,
         # About check difference
@@ -292,8 +274,8 @@ def gradient_descent(
                     showln("line searching")
                     grad *= (state.state_dot() / state.state_dot(grad, grad))**0.5
                     grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
-                                                 grad_step_size, line_search_amplitude, line_search_error_threshold)
-                    state.apply_gradient(grad, grad_step_size)
+                                                 grad_step_size, line_search_amplitude)
+                    state.apply_gradient(grad, grad_step_size * line_search_parameter)
                 else:
                     if grad_step == 0 or momentum_parameter == 0.0:
                         total_grad = grad

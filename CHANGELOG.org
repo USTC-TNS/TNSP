@@ -5,6 +5,9 @@
 *** Added
 + *tetragono*: Tetragono will print backtrace of the current process when receiving SIGUSR1.
 *** Changed
++ *tetragono*: Update line search strategy, remove =line_search_error_threshold=, add =line_search_parameter= in
+  =ap_run= and =gm_run=. =line_search_parameter= multiplied =step_size= obtained by line search will be the real step
+  size used to update the state.
 *** Deprecated
 *** Removed
 + *tetragono*: =gm_data_load= is removed, please use =gm_hamiltonian= to replace the hamiltonian instead.
