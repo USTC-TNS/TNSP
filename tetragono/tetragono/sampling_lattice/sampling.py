@@ -120,11 +120,7 @@ class SweepSampling(Sampling):
         if not self.configuration.valid():
             raise RuntimeError("Configuration not initialized")
         ws = self.configuration.hole(())
-        # Hopping twice from different direction to keep detailed balance.
         for positions in self._sweep_order:
-            hamiltonian = self._hopping_hamiltonians[positions]
-            ws = self._single_term(positions, hamiltonian, ws)
-        for positions in reversed(self._sweep_order):
             hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
         return ws.norm_2()**2, self.configuration.copy()
