@@ -17,6 +17,7 @@
 #
 
 from copyreg import _slotnames
+import itertools
 import numpy as np
 from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
@@ -233,6 +234,98 @@ class SimpleUpdateLattice(AbstractLattice):
         """
         return SimpleUpdateLatticeEnvironment(self)
 
+    def _get_merge_hamiltonian_plan(self):
+        """
+        Get the hamiltonian merging plan for simple update.
+
+        Returns
+        -------
+        list[set[tuple[tuple[int, int, int], ...]]]
+            The hamiltonian positions list to be merged.
+        """
+        # The unmerged positions, set[tuple[tuple[int, int, int], ...]].
+        # When this term is merged, it will be deleted from this set.
+        # every site should be merged, if not, that means it is unsupported hamiltonian style.
+        unmerged_positions = set(self._hamiltonians.keys())
+        # Merge single site, since maybe it will be merged into two site terms, put it into an individual map here.
+        single_site = {}
+        for l1, l2 in itertools.product(range(self.L1), range(self.L2)):
+            # only (l1, l2)
+            merge_list = {
+                positions for positions in unmerged_positions
+                if all(position[0:2] in [(l1, l2)] for position in positions)
+            }
+            unmerged_positions -= merge_list
+            if merge_list:
+                single_site[l1, l2] = merge_list
+        # The result, list of set of hamiltonian term
+        result = []
+        for l1, l2 in itertools.product(range(self.L1), range(self.L2 - 1)):
+            # (l1, l2) and (l1, l2 + 1)
+            merge_list = {
+                positions for positions in unmerged_positions
+                if all(position[0:2] in [(l1, l2), (l1, l2 + 1)] for position in positions)
+            }
+            unmerged_positions -= merge_list
+            if merge_list:
+                merge_list |= single_site.pop((l1, l2), set())
+                merge_list |= single_site.pop((l1, l2 + 1), set())
+                result.append(merge_list)
+        for l1, l2 in itertools.product(range(self.L1 - 1), range(self.L2)):
+            # (l1, l2) and (l1 + 1, l2)
+            merge_list = {
+                positions for positions in unmerged_positions
+                if all(position[0:2] in [(l1, l2), (l1 + 1, l2)] for position in positions)
+            }
+            unmerged_positions -= merge_list
+            if merge_list:
+                merge_list |= single_site.pop((l1, l2), set())
+                merge_list |= single_site.pop((l1 + 1, l2), set())
+                result.append(merge_list)
+        # Maybe single site list was not merged into double site list, add then directly into result.
+        result += sorted(single_site.values())
+        if unmerged_positions:
+            raise NotImplementedError("Unsupported simple update style")
+        return result
+
+    def _get_merge_hamiltonian(self, positions_list):
+        """
+        Merge several hamiltonian term into one term.
+
+        Parameters
+        ----------
+        positions_list : set[tuple[tuple[int, int, int], ...]]
+            The hamiltonian positions list to be merged.
+
+        Returns
+        -------
+        tuple[tuple[int, int, int], ...], Tensor
+            The merged result positions and tensor.
+        """
+        result_positions = tuple(sorted(set.union(*(set(positions) for positions in positions_list))))
+        result_tensor = None
+        for positions in positions_list:
+            rename = {index: result_positions.index(position) for index, position in enumerate(positions)}
+            tensor = self._hamiltonians[positions].edge_rename({f"I{i}": f"I{j}" for i, j in rename.items()} |
+                                                               {f"O{i}": f"O{j}" for i, j in rename.items()})
+
+            empty = [(index, position) for index, position in enumerate(result_positions) if position not in positions]
+            if len(empty) != 0:
+                empty_out_name = [f"O{index}" for index, position in empty]
+                empty_in_name = [f"I{index}" for index, position in empty]
+                empty_out_edge = [self.physics_edges[position] for index, position in empty]
+                empty_in_edge = [self.physics_edges[position].conjugated() for index, position in empty]
+                identity = self.Tensor(empty_out_name + empty_in_name, empty_out_edge + empty_in_edge).identity({
+                    (o, i) for o, i in zip(empty_out_name, empty_in_name)
+                })
+                tensor = tensor.contract(identity, set())
+
+            if result_tensor is None:
+                result_tensor = tensor
+            else:
+                result_tensor = result_tensor + tensor
+        return result_positions, result_tensor
+
     def update(self, total_step, delta_tau, new_dimension):
         """
         Do simple update on the lattice.
@@ -251,7 +344,7 @@ class SimpleUpdateLattice(AbstractLattice):
         # updater U_i = exp(- delta_tau H_i)
         # At this step, get the coordinates of every hamiltonian term instead of original knowning specific orbit only.
         updaters = []
-        for positions, hamiltonian_term in self._hamiltonians.items():
+        for positions, hamiltonian_term in map(self._get_merge_hamiltonian, self._get_merge_hamiltonian_plan()):
             # coordinates is the site list of what this hamiltonian term effects on.
             # it may be less than hamiltonian rank
             coordinates = []
