@@ -17,7 +17,6 @@
 #
 
 from copyreg import _slotnames
-import itertools
 import numpy as np
 from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
@@ -128,14 +127,13 @@ class SimpleUpdateLattice(AbstractLattice):
 
         So multiple the 4 environment tensors into the site tensor here.
         """
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                this = self[l1, l2]
-                this = self._try_multiple(this, l1, l2, "L")
-                this = self._try_multiple(this, l1, l2, "R")
-                this = self._try_multiple(this, l1, l2, "U")
-                this = self._try_multiple(this, l1, l2, "D")
-                self[l1, l2] = this
+        for l1, l2 in self.sites():
+            this = self[l1, l2]
+            this = self._try_multiple(this, l1, l2, "L")
+            this = self._try_multiple(this, l1, l2, "R")
+            this = self._try_multiple(this, l1, l2, "U")
+            this = self._try_multiple(this, l1, l2, "D")
+            self[l1, l2] = this
 
     def __setstate__(self, state):
         call_at_last = []
@@ -249,7 +247,7 @@ class SimpleUpdateLattice(AbstractLattice):
         unmerged_positions = set(self._hamiltonians.keys())
         # Merge single site, since maybe it will be merged into two site terms, put it into an individual map here.
         single_site = {}
-        for l1, l2 in itertools.product(range(self.L1), range(self.L2)):
+        for l1, l2 in self.sites():
             # only (l1, l2)
             merge_list = {
                 positions for positions in unmerged_positions
@@ -260,7 +258,9 @@ class SimpleUpdateLattice(AbstractLattice):
                 single_site[l1, l2] = merge_list
         # The result, list of set of hamiltonian term
         result = []
-        for l1, l2 in itertools.product(range(self.L1), range(self.L2 - 1)):
+        for l1, l2 in self.sites():
+            if l2 == self.L2 - 1:
+                continue
             # (l1, l2) and (l1, l2 + 1)
             merge_list = {
                 positions for positions in unmerged_positions
@@ -271,7 +271,9 @@ class SimpleUpdateLattice(AbstractLattice):
                 merge_list |= single_site.pop((l1, l2), set())
                 merge_list |= single_site.pop((l1, l2 + 1), set())
                 result.append(merge_list)
-        for l1, l2 in itertools.product(range(self.L1 - 1), range(self.L2)):
+        for l1, l2 in self.sites():
+            if l1 == self.L1 - 1:
+                continue
             # (l1, l2) and (l1 + 1, l2)
             merge_list = {
                 positions for positions in unmerged_positions
@@ -428,28 +430,26 @@ class SimpleUpdateLattice(AbstractLattice):
         coordinates_map : dict[tuple[int, int], int]
             A map recording which rank changed which tensor.
         """
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                if (l1, l2) in coordinates_map:
-                    owner_rank = coordinates_map[l1, l2] % mpi_size
-                    self[l1, l2] = mpi_comm.bcast(self[l1, l2], root=owner_rank)
-                    # If the nearest site is also belong to this rank, then the environment between them is also belong to it.
-                    if (l1 - 1, l2) in coordinates_map and coordinates_map[l1 - 1, l2] % mpi_size == owner_rank:
-                        self.environment[l1, l2, "U"] = mpi_comm.bcast(self.environment[l1, l2, "U"], root=owner_rank)
-                    if (l1, l2 - 1) in coordinates_map and coordinates_map[l1, l2 - 1] % mpi_size == owner_rank:
-                        self.environment[l1, l2, "L"] = mpi_comm.bcast(self.environment[l1, l2, "L"], root=owner_rank)
+        for l1, l2 in self.sites():
+            if (l1, l2) in coordinates_map:
+                owner_rank = coordinates_map[l1, l2] % mpi_size
+                self[l1, l2] = mpi_comm.bcast(self[l1, l2], root=owner_rank)
+                # If the nearest site is also belong to this rank, then the environment between them is also belong to it.
+                if (l1 - 1, l2) in coordinates_map and coordinates_map[l1 - 1, l2] % mpi_size == owner_rank:
+                    self.environment[l1, l2, "U"] = mpi_comm.bcast(self.environment[l1, l2, "U"], root=owner_rank)
+                if (l1, l2 - 1) in coordinates_map and coordinates_map[l1, l2 - 1] % mpi_size == owner_rank:
+                    self.environment[l1, l2, "L"] = mpi_comm.bcast(self.environment[l1, l2, "L"], root=owner_rank)
 
     def _update_virtual_bond(self):
         """
         Update virtual bond after simple update is applied.
         """
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                # Update half of virtual bond, another part will be updated automatically.
-                if l1 != self.L1 - 1:
-                    self.virtual_bond[l1, l2, "D"] = self[l1, l2].edges("D")
-                if l2 != self.L2 - 1:
-                    self.virtual_bond[l1, l2, "R"] = self[l1, l2].edges("R")
+        for l1, l2 in self.sites():
+            # Update half of virtual bond, another part will be updated automatically.
+            if l1 != self.L1 - 1:
+                self.virtual_bond[l1, l2, "D"] = self[l1, l2].edges("D")
+            if l2 != self.L2 - 1:
+                self.virtual_bond[l1, l2, "R"] = self[l1, l2].edges("R")
 
     def _single_term_simple_update(self, coordinates, index_and_orbit, evolution_operator, new_dimension):
         """
@@ -688,14 +688,13 @@ class SimpleUpdateLattice(AbstractLattice):
             The cut dimension when calculating auxiliary tensors.
         """
         self._auxiliaries = DoubleLayerAuxiliaries(self.L1, self.L2, cut_dimension, True, self.Tensor)
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                this_site = self[l1, l2]
-                # Every site tensor also contains its environment, so divide half of its environment.
-                this_site = self._try_multiple(this_site, l1, l2, "L", division=True)
-                this_site = self._try_multiple(this_site, l1, l2, "U", division=True)
-                self._auxiliaries[l1, l2, "N"] = this_site
-                self._auxiliaries[l1, l2, "C"] = this_site.conjugate()
+        for l1, l2 in self.sites():
+            this_site = self[l1, l2]
+            # Every site tensor also contains its environment, so divide half of its environment.
+            this_site = self._try_multiple(this_site, l1, l2, "L", division=True)
+            this_site = self._try_multiple(this_site, l1, l2, "U", division=True)
+            self._auxiliaries[l1, l2, "N"] = this_site
+            self._auxiliaries[l1, l2, "C"] = this_site.conjugate()
 
     def observe(self, positions, observer):
         """

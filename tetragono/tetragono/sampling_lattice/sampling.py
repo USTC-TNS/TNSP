@@ -180,10 +180,9 @@ class ErgodicSampling(Sampling):
 
         # Calculate total step count for outside usage.
         self.total_step = 1
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit, edge in self.owner.physics_edges[l1, l2].items():
-                    self.total_step *= edge.dimension
+        for l1, l2 in self.owner.sites():
+            for orbit, edge in self.owner.physics_edges[l1, l2].items():
+                self.total_step *= edge.dimension
 
         # Initialize the current configuration
         self._zero_configuration()
@@ -192,22 +191,20 @@ class ErgodicSampling(Sampling):
             self._next_configuration()
 
     def _zero_configuration(self):
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit, edge in self.owner.physics_edges[l1, l2].items():
-                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
+        for l1, l2 in self.owner.sites():
+            for orbit, edge in self.owner.physics_edges[l1, l2].items():
+                self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
 
     def _next_configuration(self):
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit, edge in self.owner.physics_edges[l1, l2].items():
-                    index = edge.get_index_from_point(self.configuration[l1, l2, orbit])
-                    index += 1
-                    if index == edge.dimension:
-                        self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
-                    else:
-                        self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
-                        return
+        for l1, l2 in self.owner.sites():
+            for orbit, edge in self.owner.physics_edges[l1, l2].items():
+                index = edge.get_index_from_point(self.configuration[l1, l2, orbit])
+                index += 1
+                if index == edge.dimension:
+                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
+                else:
+                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
+                    return
 
     def refresh_all(self):
         self.configuration.refresh_all()
@@ -243,11 +240,10 @@ class DirectSampling(Sampling):
         self._double_layer_auxiliaries = DoubleLayerAuxiliaries(self.owner.L1, self.owner.L2,
                                                                 self._double_layer_cut_dimension, True,
                                                                 self.owner.Tensor)
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                this = self.owner[l1, l2].copy()
-                self._double_layer_auxiliaries[l1, l2, "n"] = this
-                self._double_layer_auxiliaries[l1, l2, "c"] = this.conjugate()
+        for l1, l2 in self.owner.sites():
+            this = self.owner[l1, l2].copy()
+            self._double_layer_auxiliaries[l1, l2, "n"] = this
+            self._double_layer_auxiliaries[l1, l2, "c"] = this.conjugate()
 
     def __call__(self):
         configuration = Configuration(self.owner, self._cut_dimension)

@@ -190,9 +190,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             state = lattice_type(abstract_lattice(*args, **kwargs))
 
         # pre normalize the tensor
-        for l1 in range(state.L1):
-            for l2 in range(state.L2):
-                state[l1, l2] /= state[l1, l2].norm_max()
+        for l1, l2 in state.sites():
+            state[l1, l2] /= state[l1, l2].norm_max()
         return state
 
     def do_su_create(self, line):

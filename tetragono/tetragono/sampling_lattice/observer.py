@@ -388,11 +388,10 @@ class Observer():
                     holes = configuration.holes()  # <psi|s|partial_x psi> / <psi|s|psi>
                     if self.owner.Tensor.is_real:
                         Es = Es.real
-                    for l1 in range(self.owner.L1):
-                        for l2 in range(self.owner.L2):
-                            hole = holes[l1][l2] * reweight
-                            self._Delta[l1][l2] += hole
-                            self._EDelta[l1][l2] += Es * hole
+                    for l1, l2 in self.owner.sites():
+                        hole = holes[l1][l2] * reweight
+                        self._Delta[l1][l2] += hole
+                        self._EDelta[l1][l2] += Es * hole
                     if self._enable_natural:
                         if self._cache_natural_delta:
                             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:

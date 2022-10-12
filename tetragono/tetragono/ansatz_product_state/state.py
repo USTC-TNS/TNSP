@@ -85,10 +85,9 @@ class Configuration:
         config : list[list[dict[int, ?EdgePoint]]]
             The configuration data of all the sites
         """
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit, edge_point in config[l1][l2].items():
-                    self._configuration[l1, l2, orbit] = edge_point
+        for l1, l2 in self.owner.sites():
+            for orbit, edge_point in config[l1][l2].items():
+                self._configuration[l1, l2, orbit] = edge_point
 
 
 class AnsatzProductState(AbstractState):

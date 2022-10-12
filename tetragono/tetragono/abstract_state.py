@@ -145,19 +145,20 @@ class AbstractStateHamiltonian:
         if isinstance(arg, str):
             if arg == "single_site":
                 # Set hamiltonian to all first orbit of every site
-                for l1 in range(self.owner.L1):
-                    for l2 in range(self.owner.L2):
-                        self.owner._set_hamiltonian(((l1, l2, 0),), tensor)
+                for l1, l2 in self.owner.sites():
+                    self.owner._set_hamiltonian(((l1, l2, 0),), tensor)
             elif arg == "vertical_bond":
                 # Set hamiltonian to all vertical bond connecting first orbits
-                for l1 in range(self.owner.L1 - 1):
-                    for l2 in range(self.owner.L2):
-                        self.owner._set_hamiltonian(((l1, l2, 0), (l1 + 1, l2, 0)), tensor)
+                for l1, l2 in self.owner.sites():
+                    if l1 == self.owner.L1 - 1:
+                        continue
+                    self.owner._set_hamiltonian(((l1, l2, 0), (l1 + 1, l2, 0)), tensor)
             elif arg == "horizontal_bond":
                 # Set hamiltonian to all horinzontal bond connecting first orbits
-                for l1 in range(self.owner.L1):
-                    for l2 in range(self.owner.L2 - 1):
-                        self.owner._set_hamiltonian(((l1, l2, 0), (l1, l2 + 1, 0)), tensor)
+                for l1, l2 in self.owner.sites():
+                    if l2 == self.owner.L2 - 1:
+                        continue
+                    self.owner._set_hamiltonian(((l1, l2, 0), (l1, l2 + 1, 0)), tensor)
             else:
                 raise ValueError("Unknown kind of hamiltonian")
         else:
@@ -173,6 +174,19 @@ class AbstractState:
     __slots__ = [
         "Tensor", "L1", "L2", "_physics_edges", "_hamiltonians", "_total_symmetry", "_site_number", "data_version"
     ]
+
+    def sites(self):
+        """
+        Iterate on site.
+
+        Yields
+        ------
+        int, int
+            The site of the system.
+        """
+        for l1 in range(self.L1):
+            for l2 in range(self.L2):
+                yield l1, l2
 
     @property
     def Edge(self):
@@ -419,7 +433,6 @@ class AbstractState:
         """
         if self._site_number is None:
             self._site_number = 0
-            for l1 in range(self.L1):
-                for l2 in range(self.L2):
-                    self._site_number += len(self.physics_edges[l1, l2])
+            for l1, l2 in self.sites():
+                self._site_number += len(self.physics_edges[l1, l2])
         return self._site_number

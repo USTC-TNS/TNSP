@@ -39,40 +39,37 @@ def check_difference(state, observer, grad, energy_observer, configuration_pool,
     original_energy, _ = observer.total_energy
     delta = check_difference_delta
     showln(f"difference delta is set as {delta}")
-    for l1 in range(state.L1):
-        for l2 in range(state.L2):
-            showln(l1, l2)
-            s = state[l1, l2].storage
-            g = grad[l1][l2].transpose(state[l1, l2].names).storage
-            for i in range(len(s)):
-                value = s[i]
-                s[i] = value + delta
+    for l1, l2 in state.sites():
+        showln(l1, l2)
+        s = state[l1, l2].storage
+        g = grad[l1][l2].transpose(state[l1, l2].names).storage
+        for i in range(len(s)):
+            value = s[i]
+            s[i] = value + delta
+            now_energy = get_energy()
+            rgrad = (now_energy - original_energy) / delta
+            if state.Tensor.is_complex:
+                s[i] = value + delta * 1j
                 now_energy = get_energy()
-                rgrad = (now_energy - original_energy) / delta
-                if state.Tensor.is_complex:
-                    s[i] = value + delta * 1j
-                    now_energy = get_energy()
-                    igrad = (now_energy - original_energy) / delta
-                    cgrad = rgrad + igrad * 1j
-                else:
-                    cgrad = rgrad
-                s[i] = value
-                showln(" ", abs(g[i] - cgrad) / abs(cgrad), cgrad, g[i])
+                igrad = (now_energy - original_energy) / delta
+                cgrad = rgrad + igrad * 1j
+            else:
+                cgrad = rgrad
+            s[i] = value
+            showln(" ", abs(g[i] - cgrad) / abs(cgrad), cgrad, g[i])
 
 
 def line_search(state, observer, grad, energy_observer, configuration_pool, step_size, line_search_amplitude):
     saved_state = [[state[l1, l2] for l2 in range(state.L2)] for l1 in range(state.L1)]
 
     def restore_state():
-        for l1 in range(state.L1):
-            for l2 in range(state.L2):
-                state[l1, l2] = saved_state[l1][l2]
+        for l1, l2 in state.sites():
+            state[l1, l2] = saved_state[l1][l2]
 
     grad_dot_begin = mpi_comm.bcast(state.lattice_dot(grad, observer.gradient))
     if grad_dot_begin > 0:
-        for l1 in range(state.L1):
-            for l2 in range(state.L2):
-                state[l1, l2] = state[l1, l2] - step_size * grad[l1][l2]
+        for l1, l2 in state.sites():
+            state[l1, l2] = state[l1, l2] - step_size * grad[l1][l2]
         with energy_observer:
             for possibility, configuration in configuration_pool:
                 configuration.refresh_all()

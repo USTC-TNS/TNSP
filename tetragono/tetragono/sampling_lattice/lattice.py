@@ -82,10 +82,9 @@ class Configuration(SingleLayerAuxiliaries):
 
         If some site has no orbit, it will never be set, so it is needed to set tensor of auxiliaries here.
         """
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                if len(self.owner.physics_edges[l1, l2]) == 0:
-                    super().__setitem__((l1, l2), self.owner[l1, l2])
+        for l1, l2 in self.owner.sites():
+            if len(self.owner.physics_edges[l1, l2]) == 0:
+                super().__setitem__((l1, l2), self.owner[l1, l2])
 
     def site_valid(self, l1, l2):
         """
@@ -115,10 +114,9 @@ class Configuration(SingleLayerAuxiliaries):
         bool
             The validity of this configuration system.
         """
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                if not self.site_valid(l1, l2):
-                    return False
+        for l1, l2 in self.owner.sites():
+            if not self.site_valid(l1, l2):
+                return False
         return True
 
     def __getitem__(self, l1l2o):
@@ -187,10 +185,9 @@ class Configuration(SingleLayerAuxiliaries):
         config : list[list[dict[int, ?EdgePoint]]]
             The configuration data of all the sites
         """
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit, edge_point in config[l1][l2].items():
-                    self[l1, l2, orbit] = edge_point
+        for l1, l2 in self.owner.sites():
+            for orbit, edge_point in config[l1][l2].items():
+                self[l1, l2, orbit] = edge_point
 
     def export_configuration(self):
         """
@@ -331,10 +328,9 @@ class Configuration(SingleLayerAuxiliaries):
         """
         Refresh the configuration of all sites, need to be called after lattice tensor changed.
         """
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit in self.owner.physics_edges[l1, l2]:
-                    self.refresh_site((l1, l2, orbit))
+        for l1, l2 in self.owner.sites():
+            for orbit in self.owner.physics_edges[l1, l2]:
+                self.refresh_site((l1, l2, orbit))
 
     def holes(self):
         """
@@ -357,34 +353,33 @@ class Configuration(SingleLayerAuxiliaries):
             # Calculate
             holes = [[None for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
             # <psi|s|partial_x psi> / <psi|s|psi>
-            for l1 in range(self.owner.L1):
-                for l2 in range(self.owner.L2):
-                    hole = self.hole(((l1, l2),))  # |s|partial_x psi>
-                    # The right side is open in fact, because of partial_x, which is not Hilbert space, it is tensor space.
-                    # So keep it a ket. But do not forget it is open in right side.
-                    contract_name = all_name.copy()
-                    for orbit in self.owner.physics_edges[l1, l2]:
-                        contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
-                    if "T" not in hole.names:
-                        contract_name.remove(("T", "T"))
-                    # Contract and get <psi|s|partial_x psi> / <psi|s|psi>
-                    hole = hole.contract(inv_ws, contract_name)
-                    # Rename to the correct edge names.
-                    hole = hole.edge_rename({
-                        "L0": "R",
-                        "R0": "L",
-                        "U0": "D",
-                        "D0": "U",
-                        **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]},
-                    })
+            for l1, l2 in self.owner.sites():
+                hole = self.hole(((l1, l2),))  # |s|partial_x psi>
+                # The right side is open in fact, because of partial_x, which is not Hilbert space, it is tensor space.
+                # So keep it a ket. But do not forget it is open in right side.
+                contract_name = all_name.copy()
+                for orbit in self.owner.physics_edges[l1, l2]:
+                    contract_name.remove((f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}"))
+                if "T" not in hole.names:
+                    contract_name.remove(("T", "T"))
+                # Contract and get <psi|s|partial_x psi> / <psi|s|psi>
+                hole = hole.contract(inv_ws, contract_name)
+                # Rename to the correct edge names.
+                hole = hole.edge_rename({
+                    "L0": "R",
+                    "R0": "L",
+                    "U0": "D",
+                    "D0": "U",
+                    **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]},
+                })
 
-                    # hole owns conjugated physics edge, because of partial_x. Expand it by connecting it with a physics
-                    # edge but one dimension, and a conjugated edge but full dimension tensor, which is just what
-                    # _get_shrinker returns.
-                    for orbit, shrinker in self._get_shrinker((l1, l2), self._configuration[l1][l2]):
-                        hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
+                # hole owns conjugated physics edge, because of partial_x. Expand it by connecting it with a physics
+                # edge but one dimension, and a conjugated edge but full dimension tensor, which is just what
+                # _get_shrinker returns.
+                for orbit, shrinker in self._get_shrinker((l1, l2), self._configuration[l1][l2]):
+                    hole = hole.contract(shrinker, {(f"P{orbit}", "P")}).edge_rename({"Q": f"P{orbit}"})
 
-                    holes[l1][l2] = hole
+                holes[l1][l2] = hole
             self._holes = holes
         return self._holes
 
@@ -490,12 +485,11 @@ class ConfigurationPool:
         """
         config = list(config)
         index = 0
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit, _ in self.owner.physics_edges[l1, l2].items():
-                    if (l1, l2, orbit) in replacement:
-                        config[index] = replacement[l1, l2, orbit]
-                    index += 1
+        for l1, l2 in self.owner.sites():
+            for orbit, _ in self.owner.physics_edges[l1, l2].items():
+                if (l1, l2, orbit) in replacement:
+                    config[index] = replacement[l1, l2, orbit]
+                index += 1
         return tuple(config)
 
     def _diff_two_config_dict(self, configuration_old, configuration_new):
@@ -513,11 +507,10 @@ class ConfigurationPool:
             The result replacement
         """
         replacement = {}
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit in self.owner.physics_edges[l1, l2]:
-                    if configuration_old[l1, l2, orbit] != configuration_new[l1, l2, orbit]:
-                        replacement[l1, l2, orbit] = configuration_new[l1, l2, orbit]
+        for l1, l2 in self.owner.sites():
+            for orbit in self.owner.physics_edges[l1, l2]:
+                if configuration_old[l1, l2, orbit] != configuration_new[l1, l2, orbit]:
+                    replacement[l1, l2, orbit] = configuration_new[l1, l2, orbit]
         return replacement
 
     def __init__(self, owner):
@@ -603,11 +596,10 @@ class ConfigurationPool:
         """
         configuration = base_configuration.copy()
         config = iter(config)
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit in self.owner.physics_edges[l1, l2]:
-                    # If they are the same, auxiliaries tensor in Configuration object will not be refreshed.:
-                    configuration[l1, l2, orbit] = next(config)
+        for l1, l2 in self.owner.sites():
+            for orbit in self.owner.physics_edges[l1, l2]:
+                # If they are the same, auxiliaries tensor in Configuration object will not be refreshed.:
+                configuration[l1, l2, orbit] = next(config)
         return configuration
 
     def _split_replacement(self, replacement):
@@ -630,24 +622,23 @@ class ConfigurationPool:
         down = -1
         left = self.owner.L2
         right = -1
-        for l1 in range(self.owner.L1):
-            for l2 in range(self.owner.L2):
-                for orbit in self.owner.physics_edges[l1, l2]:
-                    site = (l1, l2, orbit)
-                    if site in replacement:
-                        edge_point = replacement[site]
-                        if l1 > down - 2 and l1 < up + 2 and l2 > right - 2 and l2 < left + 2:
-                            replacement_2[site] = edge_point
-                            if l1 < up:
-                                up = l1
-                            if l1 > down:
-                                down = l1
-                            if l2 < left:
-                                left = l2
-                            if l2 > right:
-                                right = l2
-                        else:
-                            replacement_1[site] = edge_point
+        for l1, l2 in self.owner.sites():
+            for orbit in self.owner.physics_edges[l1, l2]:
+                site = (l1, l2, orbit)
+                if site in replacement:
+                    edge_point = replacement[site]
+                    if l1 > down - 2 and l1 < up + 2 and l2 > right - 2 and l2 < left + 2:
+                        replacement_2[site] = edge_point
+                        if l1 < up:
+                            up = l1
+                        if l1 > down:
+                            down = l1
+                        if l2 < left:
+                            left = l2
+                        if l2 > right:
+                            right = l2
+                    else:
+                        replacement_1[site] = edge_point
         return replacement_1, replacement_2
 
     def add(self, configuration):
@@ -767,22 +758,18 @@ class SamplingLattice(AbstractLattice):
         epsilon : float
             The relative error added into tensor.
         """
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                if l1 != 0 and l1 % 2 == 0:
-                    self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                if l1 != 0 and l1 % 2 == 1:
-                    self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                if l2 != 0 and l2 % 2 == 0:
-                    self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
-        for l1 in range(self.L1):
-            for l2 in range(self.L2):
-                if l2 != 0 and l2 % 2 == 1:
-                    self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
+        for l1, l2 in self.sites():
+            if l1 != 0 and l1 % 2 == 0:
+                self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
+        for l1, l2 in self.sites():
+            if l1 != 0 and l1 % 2 == 1:
+                self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
+        for l1, l2 in self.sites():
+            if l2 != 0 and l2 % 2 == 0:
+                self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
+        for l1, l2 in self.sites():
+            if l2 != 0 and l2 % 2 == 1:
+                self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
 
     def _expand_horizontal(self, l1, l2, new_dimension, epsilon):
         left = self[l1, l2]
