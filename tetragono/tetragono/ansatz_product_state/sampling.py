@@ -88,8 +88,8 @@ class SweepSampling(Sampling):
             self._hopping_hamiltonians = hopping_hamiltonians
         else:
             self._hopping_hamiltonians = self.owner._hamiltonians
-        # The order for ansatz product state is not important
-        self._sweep_order = sorted(self._hopping_hamiltonians.keys())
+        # The order for ansatz product state is not important, but it is better for equilibrium.
+        self._sweep_order = self._get_proper_position_order()
 
     def _single_term(self, positions, hamiltonian, ws):
         body = len(positions)
@@ -147,6 +147,42 @@ class SweepSampling(Sampling):
         return [
             (np.linalg.norm(ws_i)**2, configuration_i.copy()) for ws_i, configuration_i in zip(ws, self.configuration)
         ]
+
+    def _get_proper_position_order(self):
+        L1 = self.owner.L1
+        L2 = self.owner.L2
+        positions = set(self._hopping_hamiltonians.keys())
+        result = []
+        # Single site auxiliary use horizontal style contract by default
+        for l1 in range(L1):
+            for l2 in range(L2):
+                # Single site first, if not, one useless right auxiliary tensor will be calculated.
+                remained_positions = set()
+                for ps in positions:
+                    if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2))]) == 0:
+                        result.append(ps)
+                    else:
+                        remained_positions.add(ps)
+                positions = remained_positions
+                remained_positions = set()
+                for ps in positions:
+                    if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2), (l1, l2 + 1))]) == 0:
+                        result.append(ps)
+                    else:
+                        remained_positions.add(ps)
+                positions = remained_positions
+        for l2 in range(L2):
+            for l1 in range(L1):
+                remained_positions = set()
+                for ps in positions:
+                    if len([p for p in (p[:2] for p in ps) if p not in ((l1, l2), (l1 + 1, l2))]) == 0:
+                        result.append(ps)
+                    else:
+                        remained_positions.add(ps)
+                positions = remained_positions
+        if len(positions) != 0:
+            raise NotImplementedError("Not implemented hamiltonian")
+        return result
 
 
 class ErgodicSampling(Sampling):
