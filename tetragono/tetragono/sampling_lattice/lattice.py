@@ -692,6 +692,10 @@ class SamplingLattice(AbstractLattice):
         # version 3 to version 4
         if state["data_version"] == 3:
             state["data_version"] = 4
+        # version 4 to version 5
+        if state["data_version"] == 4:
+            self._v4_to_v5_virtual_bond(state)
+            state["data_version"] = 5
         # setstate
         for key, value in state.items():
             setattr(self, key, value)

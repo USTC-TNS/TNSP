@@ -119,6 +119,9 @@ class AnsatzProductState(AbstractState):
             from .ansatzes.product_ansatz import ProductAnsatz
             state["ansatz"] = ProductAnsatz(self, state.pop("ansatzes"))
             state["data_version"] = 4
+        # version 4 to version 5
+        if state["data_version"] == 4:
+            state["data_version"] = 5
         # setstate
         for key, value in state.items():
             setattr(self, key, value)

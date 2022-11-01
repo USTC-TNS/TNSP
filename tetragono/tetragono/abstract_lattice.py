@@ -113,6 +113,18 @@ class AbstractLattice(AbstractState):
 
         self._virtual_bond = [[other._virtual_bond[l1][l2].copy() for l2 in range(self.L2)] for l1 in range(self.L1)]
 
+    def _v4_to_v5_virtual_bond(self, state):
+        """
+        Update the data from version 4 to version 5.
+
+        From version 4 to version 5, virtual_bond changed from (int,int)->direction->bond to [[direction->bond]].
+        """
+        L1 = state["L1"]
+        L2 = state["L2"]
+        virtual_bond_old = state["_virtual_bond"]
+        virtual_bond_new = [[virtual_bond_old[l1, l2] for l2 in range(L2)] for l1 in range(L1)]
+        state["_virtual_bond"] = virtual_bond_new
+
     def _construct_tensor(self, l1, l2):
         """
         Construct tensor for this abstract lattice, only called for derived type of abstract lattice.
