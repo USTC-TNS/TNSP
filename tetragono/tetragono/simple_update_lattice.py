@@ -741,6 +741,6 @@ class SimpleUpdateLattice(AbstractLattice):
             The energy per site calculated by observing.
         """
         energy = 0
-        for positions, observer in self._hamiltonians.items():
+        for positions, observer in self.hamiltonians:
             energy += self.observe(positions, observer)
         return energy / self.site_number

@@ -129,6 +129,12 @@ class AbstractStateHamiltonian:
         points = tuple(point if len(point) == 3 else (point[0], point[1], 0) for point in arg)
         return self.owner._hamiltonians[points]
 
+    def __iter__(self):
+        """
+        Iterate on the hamiltonians
+        """
+        return iter(self.owner._hamiltonians.items())
+
     def __setitem__(self, arg, tensor):
         """
         Set a hamiltonian for several points.

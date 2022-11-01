@@ -125,7 +125,7 @@ class ExactState(AbstractState):
             # v <- a v - H v = (a - H) v => E = a - |v'|/|v|
             # temporary_vector: H v
             temporary_vector = self.vector.same_shape().zero()
-            for positions, value in self._hamiltonians.items():
+            for positions, value in self.hamiltonians:
                 # H v = sum_i H_i v
                 temporary_vector += (
                     value  #
@@ -197,6 +197,6 @@ class ExactState(AbstractState):
             The energy per site calculated by observing.
         """
         energy = 0
-        for positions, observer in self._hamiltonians.items():
+        for positions, observer in self.hamiltonians:
             energy += self.observe(positions, observer)
         return energy / self.observe(tuple(), None) / self.site_number
