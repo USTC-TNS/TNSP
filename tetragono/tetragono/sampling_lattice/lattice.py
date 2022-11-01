@@ -748,7 +748,14 @@ class SamplingLattice(AbstractLattice):
             The tensor used to set.
         """
         l1, l2 = l1l2
-        self._lattice[l1][l2] = value
+        if any(value.edges(f"P{orbit}") != edge for orbit, edge in self.physics_edges[l1, l2].items()):
+            old = value
+            value = self.Tensor(old.names, [
+                self.physics_edges[l1, l2, int(name[1:])] if name.startswith("P") else old.edges(name)
+                for name in old.names
+            ]).zero()
+            value += old
+        self._lattice[l1, l2] = value
 
     def expand_dimension(self, new_dimension, epsilon):
         """
@@ -859,7 +866,8 @@ class SamplingLattice(AbstractLattice):
         step_size : float
             The gradient step size.
         """
-        self._lattice -= step_size * gradient
+        for l1, l2 in self.sites():
+            self._lattice[l1, l2] -= step_size * gradient[l1, l2]
 
     def bcast_lattice(self, root=0):
         """
