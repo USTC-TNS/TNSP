@@ -121,9 +121,10 @@ class AbstractLattice(AbstractState):
         """
         L1 = state["L1"]
         L2 = state["L2"]
-        virtual_bond_old = state["_virtual_bond"]
-        virtual_bond_new = [[virtual_bond_old[l1, l2] for l2 in range(L2)] for l1 in range(L1)]
-        state["_virtual_bond"] = virtual_bond_new
+        virtual_bond = state["_virtual_bond"]
+        if isinstance(virtual_bond, dict):
+            virtual_bond = [[virtual_bond[l1, l2] for l2 in range(L2)] for l1 in range(L1)]
+        state["_virtual_bond"] = virtual_bond
 
     def _construct_tensor(self, l1, l2):
         """
