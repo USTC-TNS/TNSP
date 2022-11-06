@@ -25,9 +25,9 @@
 #include <cmath>
 
 #include "../structure/tensor.hpp"
+#include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
 #include "contract.hpp"
-#include "transpose.hpp"
 
 extern "C" {
    int sgesv_(const int* n, const int* nrhs, float* A, const int* lda, int* ipiv, float* B, const int* ldb, int* info);
@@ -55,17 +55,17 @@ namespace TAT {
          // AX=B
          // A: n*n
          // B: n*nrhs
-         no_initialize::pmr::vector<ScalarType> AT(n * n);
-         matrix_transpose(n, n, A, AT.data());
-         no_initialize::pmr::vector<ScalarType> BT(n * nrhs);
-         matrix_transpose(n, nrhs, B, BT.data());
-         no_initialize::pmr::vector<int> ipiv(n);
+         pmr::vector<ScalarType> AT(n * n);
+         matrix_transpose<pmr::vector<Size>>(n, n, A, AT.data());
+         pmr::vector<ScalarType> BT(n * nrhs);
+         matrix_transpose<pmr::vector<Size>>(n, nrhs, B, BT.data());
+         pmr::vector<int> ipiv(n);
          int result;
          gesv<ScalarType>(&n, &nrhs, AT.data(), &n, ipiv.data(), BT.data(), &n, &result);
          if (result != 0) {
             detail::what_if_lapack_error("error in GESV");
          }
-         matrix_transpose(nrhs, n, BT.data(), X);
+         matrix_transpose<pmr::vector<Size>>(nrhs, n, BT.data(), X);
       }
 
       template<typename ScalarType>
@@ -100,13 +100,13 @@ namespace TAT {
             A[i] *= parameter;
          }
          // D=I, N=I, X=I, c=1
-         no_initialize::pmr::vector<ScalarType> D(n * n);
+         pmr::vector<ScalarType> D(n * n);
          initialize_identity_matrix(D.data(), n);
-         no_initialize::pmr::vector<ScalarType> N(n * n);
+         pmr::vector<ScalarType> N(n * n);
          initialize_identity_matrix(N.data(), n);
-         no_initialize::pmr::vector<ScalarType> X1(n * n);
+         pmr::vector<ScalarType> X1(n * n);
          initialize_identity_matrix(X1.data(), n);
-         no_initialize::pmr::vector<ScalarType> X2(n * n);
+         pmr::vector<ScalarType> X2(n * n);
          ScalarType c = 1;
          // for k=1:q
          const ScalarType alpha = 1;
@@ -128,8 +128,8 @@ namespace TAT {
             }
          }
          // solve D@F=N for F
-         no_initialize::pmr::vector<ScalarType> F1(n * n);
-         no_initialize::pmr::vector<ScalarType> F2(n * n);
+         pmr::vector<ScalarType> F1(n * n);
+         pmr::vector<ScalarType> F2(n * n);
          auto* R = j == 0 ? F : F1.data();
          // D@R=N
          linear_solve<ScalarType>(n, D.data(), n, N.data(), R);
@@ -153,113 +153,122 @@ namespace TAT {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = exponential_guard();
 
-      Rank rank = get_rank();
-      Rank half_rank = rank / 2;
+      Rank half_rank = rank() / 2;
       // reverse -> merge -> exp -> split -> reverse
 
       // split map and merge map
       auto merge_map = pmr::unordered_map<Name, pmr::vector<Name>>(unordered_parameter * 2);
       auto& merge_1 = merge_map[InternalName<Name>::Exp_1];
-      merge_1.resize(half_rank);
+      merge_1.reserve(half_rank);
       auto& merge_2 = merge_map[InternalName<Name>::Exp_2];
-      merge_2.resize(half_rank);
-      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::tuple<Name, edge_segment_t<Symmetry>>>>(unordered_parameter * 2);
+      merge_2.reserve(half_rank);
+      auto split_map_result = pmr::unordered_map<Name, pmr::vector<std::pair<Name, edge_segments_t<Symmetry>>>>(unordered_parameter * 2);
       auto& split_1 = split_map_result[InternalName<Name>::Exp_1];
-      split_1.resize(half_rank);
+      split_1.reserve(half_rank);
       auto& split_2 = split_map_result[InternalName<Name>::Exp_2];
-      split_2.resize(half_rank);
+      split_2.reserve(half_rank);
 
-      // merge and split result name
-      auto merged_names = std::vector<Name>{InternalName<Name>::Exp_1, InternalName<Name>::Exp_2};
+      // split result name
       auto result_names = std::vector<Name>();
-      result_names.reserve(rank);
+      result_names.reserve(rank());
 
       // apply merge/split flag
       // apply reverse flag
       // reverse set
-      auto apply_merge_split_parity_set = pmr::set<Name>{InternalName<Name>::Exp_2};
-      auto apply_reverse_parity_set = pmr::unordered_set<Name>(unordered_parameter * rank);
-      auto reverse_set = pmr::unordered_set<Name>(unordered_parameter * rank);
+      auto apply_reverse_parity_names = pmr::unordered_set<Name>(unordered_parameter * rank());
+      auto reverse_names = pmr::unordered_set<Name>(unordered_parameter * rank());
       // merged edge arrow is (false true)
 
-      auto valid_index = pmr::vector<bool>(rank, true);
-      Rank current_index = half_rank;
-      auto set_edge = [&](const auto& a, const auto& b, const Rank ia, const Rank ib) {
-         // edge order 1 2
-         current_index--;
-         merge_1[current_index] = a;
-         merge_2[current_index] = b;
-         split_1[current_index] = {a, edges(ia).segment};
-         split_2[current_index] = {b, edges(ib).segment};
-         if constexpr (Symmetry::is_fermi_symmetry) {
-            // reverse flag and reverse set
-            if (edges(ia).arrow != false) {
-               reverse_set.insert(a);
-            }
-            if (edges(ib).arrow != true) {
-               reverse_set.insert(b);
-               apply_reverse_parity_set.insert(b); // only apply to edge 2
-            }
-         }
-      };
-      for (Rank i = rank; i-- > 0;) {
-         if (valid_index[i]) {
-            const auto& name_to_found = names[i];
-            for (const auto& [a, b] : pairs) {
-               if (a == name_to_found) {
-                  auto ia = get_rank_from_name(a);
-                  auto ib = get_rank_from_name(b);
-                  valid_index[ib] = false;
-                  // a is later edge
-                  set_edge(b, a, ib, ia);
+      auto valid_indices = pmr::vector<bool>(rank(), true);
+      for (Rank i = rank(); i-- > 0;) {
+         if (valid_indices[i]) {
+            const auto& name_to_found = names(i);
+            const Name* name_correspond = nullptr;
+            bool this_former = false;
+            for (const auto& [name_1, name_2] : pairs) {
+               if (name_1 == name_to_found) {
+                  name_correspond = &name_2;
+                  this_former = true;
                   break;
                }
-               if (b == name_to_found) {
-                  auto ia = get_rank_from_name(a);
-                  auto ib = get_rank_from_name(b);
-                  valid_index[ia] = false;
-                  // b is later edge
-                  set_edge(a, b, ia, ib);
+               if (name_2 == name_to_found) {
+                  name_correspond = &name_1;
+                  this_former = false;
                   break;
+               }
+            }
+            auto index_correspond = rank_by_name(*name_correspond);
+            valid_indices[index_correspond] = false;
+
+            const auto& name_1 = this_former ? name_to_found : *name_correspond;
+            const auto& index_1 = this_former ? i : index_correspond;
+            const auto& name_2 = this_former ? *name_correspond : name_to_found;
+            const auto& index_2 = this_former ? index_correspond : i;
+
+            merge_1.push_back(name_1);
+            merge_2.push_back(name_2);
+            split_1.push_back({name_1, {edges(index_1).segments()}});
+            split_2.push_back({name_2, {edges(index_2).segments()}});
+            if constexpr (debug_mode) {
+               if (edges(index_1).conjugated() != edges(index_2)) {
+                  detail::error("Incompatible edges in exponential");
+               }
+            }
+            if constexpr (Symmetry::is_fermi_symmetry) {
+               // reverse flag and reverse set
+               if (edges(index_1).arrow() != false) {
+                  reverse_names.insert(name_1);
+                  reverse_names.insert(name_2);
+                  apply_reverse_parity_names.insert(name_2); // only apply to edge 2
                }
             }
          }
       }
-      for (const auto& i : merge_1) {
-         result_names.push_back(i);
+      std::reverse(merge_1.begin(), merge_1.end());
+      std::reverse(merge_2.begin(), merge_2.end());
+      std::reverse(split_1.begin(), split_1.end());
+      std::reverse(split_2.begin(), split_2.end());
+
+      for (const auto& name : merge_1) {
+         result_names.push_back(name);
       }
-      for (const auto& i : merge_2) {
-         result_names.push_back(i);
+      for (const auto& name : merge_2) {
+         result_names.push_back(name);
       }
 
       auto tensor_merged = edge_operator_implement(
-            empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
-            reverse_set,
+            {},
+            reverse_names,
             merge_map,
-            std::move(merged_names),
+            std::vector<Name>{InternalName<Name>::Exp_1, InternalName<Name>::Exp_2},
             false,
-            empty_list<Name>(),
-            apply_reverse_parity_set,
-            empty_list<Name>(),
-            apply_merge_split_parity_set,
-            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
+            {},
+            apply_reverse_parity_names,
+            {},
+            pmr::unordered_set<Name>{InternalName<Name>::Exp_2},
+            {});
       auto result = tensor_merged.same_shape();
-      for (auto& [symmetries, data_source] : tensor_merged.core->blocks) {
-         auto& data_destination = result.blocks(symmetries);
-         auto n = tensor_merged.edges(0).get_dimension_from_symmetry(symmetries[0]);
+
+      for (auto i = 0; i < tensor_merged.blocks().size(); i++) {
+         if (!tensor_merged.blocks().data()[i].has_value()) {
+            continue;
+         }
+         auto& data_source = tensor_merged.blocks().data()[i].value();
+         auto& data_destination = result.blocks().data()[i].value();
+         auto n = data_destination.dimensions(0);
          detail::matrix_exponential(n, data_source.data(), data_destination.data(), step);
       }
       return result.edge_operator_implement(
             split_map_result,
-            reverse_set,
-            empty_list<std::pair<Name, empty_list<Name>>>(),
+            reverse_names,
+            {},
             std::move(result_names),
             false,
-            apply_merge_split_parity_set,
-            apply_reverse_parity_set,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
+            pmr::unordered_set<Name>{InternalName<Name>::Exp_2},
+            apply_reverse_parity_names,
+            {},
+            {},
+            {});
    }
 } // namespace TAT
 #endif

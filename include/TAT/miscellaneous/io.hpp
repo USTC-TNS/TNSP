@@ -118,10 +118,6 @@ namespace TAT {
          return std::move(out);
       }
 
-      inline void ignore_until(std::istream& in, char end) {
-         in.ignore(std::numeric_limits<std::streamsize>::max(), end);
-      }
-
       template<typename ScalarType>
       std::istream& scan_complex(std::istream& in, std::complex<ScalarType>& value) {
          ScalarType part;
@@ -153,6 +149,35 @@ namespace TAT {
       std::istream&& scan_complex(std::istream&& in, std::complex<ScalarType>& value) {
          detail::scan_complex(in, value);
          return std::move(in);
+      }
+
+      inline void ignore_until(std::istream& in, char end) {
+         in.ignore(std::numeric_limits<std::streamsize>::max(), end);
+      }
+
+      template<typename Func>
+      std::ostream& print_list(std::ostream& out, Func&& print, char left, char right) {
+         out << left;
+         while (!print(out)) {
+            out << ',';
+         }
+         out << right;
+         return out;
+      }
+
+      template<typename Func>
+      std::istream& scan_list(std::istream& in, Func&& scan, char left, char right) {
+         detail::ignore_until(in, left);
+         if (in.peek() == right) {
+            // empty list
+            in.get(); // get ']'
+         } else {
+            // not empty
+            do {
+               scan(in);
+            } while (in.get() == ',');
+         }
+         return in;
       }
    } // namespace detail
 
@@ -246,30 +271,23 @@ namespace TAT {
    template<>
    struct NameTraits<FastName> {
       // Although FastName is trivial type, but write string explicitly for good compatibility.
-      static constexpr name_out_operator_t<FastName> write = write_fastname_for_name;
-      static constexpr name_in_operator_t<FastName> read = read_fastname_for_name;
-      static constexpr name_out_operator_t<FastName> print = print_fastname_for_name;
-      static constexpr name_in_operator_t<FastName> scan = scan_fastname_for_name;
+      static constexpr out_operator_t<FastName> write = write_fastname_for_name;
+      static constexpr in_operator_t<FastName> read = read_fastname_for_name;
+      static constexpr out_operator_t<FastName> print = print_fastname_for_name;
+      static constexpr in_operator_t<FastName> scan = scan_fastname_for_name;
    };
    template<>
    struct NameTraits<std::string> {
-      static constexpr name_out_operator_t<std::string> write = write_string_for_name;
-      static constexpr name_in_operator_t<std::string> read = read_string_for_name;
-      static constexpr name_out_operator_t<std::string> print = print_string_for_name;
-      static constexpr name_in_operator_t<std::string> scan = scan_string_for_name;
+      static constexpr out_operator_t<std::string> write = write_string_for_name;
+      static constexpr in_operator_t<std::string> read = read_string_for_name;
+      static constexpr out_operator_t<std::string> print = print_string_for_name;
+      static constexpr in_operator_t<std::string> scan = scan_string_for_name;
    };
 
-   template<typename T>
-   struct is_symmetry_vector : std::false_type {};
-   template<typename T>
-   struct is_symmetry_vector<std::vector<T>> : std::bool_constant<is_symmetry<T>> {};
-   template<typename T>
-   constexpr bool is_symmetry_vector_v = is_symmetry_vector<T>::value;
+   // vector io, bin and text
 
-   // map and vector io, bin and text, map text is not needed
-
-   template<typename T, typename A>
-   std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
+   template<typename T>
+   std::ostream& operator<(std::ostream& out, const std::vector<T>& list) {
       Size count = list.size();
       out < count;
       if constexpr (is_name<T>) {
@@ -285,8 +303,8 @@ namespace TAT {
       }
       return out;
    }
-   template<typename T, typename A>
-   std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
+   template<typename T>
+   std::istream& operator>(std::istream& in, std::vector<T>& list) {
       list.clear();
       Size count;
       in > count;
@@ -307,52 +325,46 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
-   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
-      out << '[';
-      auto not_first = false;
-      for (const auto& i : list) {
-         if (not_first) {
-            out << ',';
-         }
-         not_first = true;
-         if constexpr (is_name<T>) {
-            NameTraits<T>::print(out, i);
-         } else if constexpr (std::is_same_v<T, std::complex<real_scalar<T>>>) {
-            detail::print_complex(out, i);
-         } else {
-            out << i;
-         }
-      }
-      out << ']';
+   template<typename T, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
+   std::ostream& operator<<(std::ostream& out, const std::vector<T>& list) {
+      detail::print_list(
+            out,
+            [offset = 0, l = list.data(), count = list.size()](std::ostream& out) mutable {
+               if (offset == count) {
+                  return true;
+               }
+               if constexpr (is_name<T>) {
+                  NameTraits<T>::print(out, l[offset]);
+               } else if constexpr (is_complex<T>) {
+                  detail::print_complex(out, l[offset]);
+               } else {
+                  out << l[offset];
+               }
+               ++offset;
+               return offset == count;
+            },
+            '[',
+            ']');
       return out;
    }
 
-   template<typename T, typename A, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
-   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
+   template<typename T, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
+   std::istream& operator>>(std::istream& in, std::vector<T>& list) {
       list.clear();
-      detail::ignore_until(in, '[');
-      if (in.peek() == ']') {
-         // empty list
-         in.get(); // get ']'
-      } else {
-         // not empty
-         while (true) {
-            // no space here
-            auto& i = list.emplace_back();
-            if constexpr (is_name<T>) {
-               NameTraits<T>::scan(in, i);
-            } else if constexpr (std::is_same_v<T, std::complex<real_scalar<T>>>) {
-               detail::scan_complex(in, i);
-            } else {
-               in >> i;
-            }
-            char next = in.get();
-            if (next == ']') {
-               break;
-            }
-         }
-      }
+      detail::scan_list(
+            in,
+            [&l = list](std::istream& in) mutable {
+               T& i = l.emplace_back();
+               if constexpr (is_name<T>) {
+                  NameTraits<T>::scan(in, i);
+               } else if constexpr (is_complex<T>) {
+                  detail::scan_complex(in, i);
+               } else {
+                  in >> i;
+               }
+            },
+            '[',
+            ']');
       return in;
    }
 
@@ -361,25 +373,28 @@ namespace TAT {
    template<typename Symmetry>
    std::ostream& operator<<(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (Symmetry::length == 0) {
-         out << edge.segment.front().second;
+         out << edge.segments().front().second;
       } else {
          if constexpr (Symmetry::is_fermi_symmetry) {
             out << '{';
             out << "arrow" << ':';
-            out << edge.arrow;
+            out << edge.arrow();
             out << ',';
             out << "segment" << ':';
          }
-         out << '{';
-         auto not_first = false;
-         for (const auto& [symmetry, dimension] : edge.segment) {
-            if (not_first) {
-               out << ',';
-            }
-            not_first = true;
-            out << symmetry << ':' << dimension;
-         }
-         out << '}';
+         detail::print_list(
+               out,
+               [offset = 0, l = edge.segments().data(), count = edge.segments().size()](std::ostream& out) mutable {
+                  if (offset == count) {
+                     return true;
+                  }
+                  const auto& [symmetry, dimension] = l[offset];
+                  out << symmetry << ':' << dimension;
+                  ++offset;
+                  return offset == count;
+               },
+               '{',
+               '}');
          if constexpr (Symmetry::is_fermi_symmetry) {
             out << '}';
          }
@@ -389,28 +404,29 @@ namespace TAT {
    template<typename Symmetry>
    std::istream& operator>>(std::istream& in, Edge<Symmetry>& edge) {
       if constexpr (Symmetry::length == 0) {
-         edge.segment.clear();
-         in >> edge.segment.emplace_back(Symmetry(), 0).second;
+         Size dimension;
+         in >> dimension;
+         edge = Edge<Symmetry>(dimension);
       } else {
+         bool arrow = false;
          if constexpr (Symmetry::is_fermi_symmetry) {
             detail::ignore_until(in, ':');
-            in >> edge.arrow;
+            in >> arrow;
          }
-         edge.segment.clear();
-         detail::ignore_until(in, '{');
-         if (in.peek() != '}') {
-            // not empty
-            do {
-               Symmetry symmetry;
-               in >> symmetry;
-               detail::ignore_until(in, ':');
-               Size dimension;
-               in >> dimension;
-               edge.segment.emplace_back(symmetry, dimension);
-            } while (in.get() == ','); // read last '}' of segment
-         } else {
-            in.get(); // read last '}' of segment
-         }
+         std::vector<std::pair<Symmetry, Size>> segments;
+         detail::scan_list(
+               in,
+               [&l = segments](std::istream& in) mutable {
+                  Symmetry symmetry;
+                  in >> symmetry;
+                  detail::ignore_until(in, ':');
+                  Size dimension;
+                  in >> dimension;
+                  l.emplace_back(symmetry, dimension);
+               },
+               '{',
+               '}');
+         edge = {std::move(segments), arrow};
          if constexpr (Symmetry::is_fermi_symmetry) {
             detail::ignore_until(in, '}');
          }
@@ -421,17 +437,20 @@ namespace TAT {
    template<typename Symmetry>
    std::ostream& operator<(std::ostream& out, const Edge<Symmetry>& edge) {
       if constexpr (Symmetry::is_fermi_symmetry) {
-         out < edge.arrow;
+         out < edge.arrow();
       }
-      out < edge.segment;
+      out < edge.segments();
       return out;
    }
    template<typename Symmetry>
    std::istream& operator>(std::istream& in, Edge<Symmetry>& edge) {
+      bool arrow = false;
       if constexpr (Symmetry::is_fermi_symmetry) {
-         in > edge.arrow;
+         in > arrow;
       }
-      in > edge.segment;
+      std::vector<std::pair<Symmetry, Size>> segments;
+      in > segments;
+      edge = {std::move(segments), arrow};
       return in;
    }
 
@@ -441,6 +460,11 @@ namespace TAT {
       template<typename Symmetry, std::size_t... Is>
       void print_symmetry_sequence(std::ostream& out, const Symmetry& symmetry, std::index_sequence<Is...>) {
          (((Is == 0 ? out : out << ',') << std::get<Is>(symmetry)), ...);
+      }
+
+      template<typename Symmetry, std::size_t... Is>
+      void scan_symmetry_sequence(std::istream& in, Symmetry& symmetry, std::index_sequence<Is...>) {
+         (((Is == 0 ? in : (detail::ignore_until(in, ','), in)) >> std::get<Is>(symmetry)), ...);
       }
    } // namespace detail
    template<typename... T>
@@ -457,12 +481,6 @@ namespace TAT {
       }
       return out;
    }
-   namespace detail {
-      template<typename Symmetry, std::size_t... Is>
-      void scan_symmetry_sequence(std::istream& in, Symmetry& symmetry, std::index_sequence<Is...>) {
-         (((Is == 0 ? in : (detail::ignore_until(in, ','), in)) >> std::get<Is>(symmetry)), ...);
-      }
-   } // namespace detail
    template<typename... T>
    std::istream& operator>>(std::istream& in, Symmetry<T...>& symmetry) {
       using Symmetry = Symmetry<T...>;
@@ -483,7 +501,7 @@ namespace TAT {
     */
    struct UnixColorCode {
       std::string color_code;
-      UnixColorCode(const char* code) noexcept : color_code(code) {}
+      UnixColorCode(const char* code) : color_code(code) {}
    };
    inline const UnixColorCode console_red = "\x1B[31m";
    inline const UnixColorCode console_green = "\x1B[32m";
@@ -505,9 +523,9 @@ namespace TAT {
    std::ostream& operator<<(std::ostream& out, const TensorShape<ScalarType, Symmetry, Name>& shape) {
       const auto& tensor = *shape.owner;
       out << '{' << console_green << "names" << console_origin << ':';
-      out << tensor.names << ',';
+      out << tensor.names() << ',';
       out << console_green << "edges" << console_origin << ':';
-      out << tensor.core->edges << '}';
+      out << tensor.edges() << '}';
       return out;
    }
 
@@ -520,23 +538,75 @@ namespace TAT {
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::ostream& operator<<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       out << '{' << console_green << "names" << console_origin << ':';
-      out << tensor.names << ',';
+      out << tensor.names() << ',';
       out << console_green << "edges" << console_origin << ':';
-      out << tensor.core->edges << ',';
+      out << tensor.edges() << ',';
       out << console_green << "blocks" << console_origin << ':';
       if constexpr (Symmetry::length == 0) {
          out << tensor.storage();
       } else {
-         out << '{';
-         auto not_first = false;
-         for (const auto& [symmetries, block] : tensor.core->blocks) {
-            if (not_first) {
-               out << ',';
-            }
-            not_first = true;
-            out << console_yellow << symmetries << console_origin << ':' << block;
-         }
-         out << '}';
+         detail::print_list(
+               out,
+#if 1
+               [&tensor, i = tensor._order().begin(), end = tensor._order().end()](std::ostream& out) mutable {
+                  if (i == end) {
+                     return true;
+                  }
+                  const auto& symmetries = *i;
+                  out << console_yellow << symmetries << console_origin << ':';
+                  const auto& block = tensor.blocks(symmetries);
+                  detail::print_list(
+                        out,
+                        [offset = 0, l = block.data(), count = block.size()](std::ostream& out) mutable {
+                           if (offset == count) {
+                              return true;
+                           }
+                           if constexpr (is_complex<ScalarType>) {
+                              detail::print_complex(out, l[offset]);
+                           } else {
+                              out << l[offset];
+                           }
+                           ++offset;
+                           return offset == count;
+                        },
+                        '[',
+                        ']');
+                  ++i;
+                  return i == end;
+               },
+#else
+               [&tensor, i = tensor.blocks().begin()](std::ostream& out) mutable {
+                  if (!i.valid) {
+                     return true;
+                  }
+                  std::vector<Symmetry> symmetries;
+                  symmetries.reserve(tensor.rank());
+                  for (auto j = 0; j < tensor.rank(); j++) {
+                     symmetries.push_back(tensor.edges(j).segment(i.index[j]).first);
+                  }
+                  out << console_yellow << symmetries << console_origin << ':';
+                  detail::print_list(
+                        out,
+                        [offset = 0, l = i->value().data, count = i->value().size](std::ostream& out) mutable {
+                           if (offset == count) {
+                              return true;
+                           }
+                           if constexpr (is_complex<ScalarType>) {
+                              detail::print_complex(out, l[offset]);
+                           } else {
+                              out << l[offset];
+                           }
+                           ++offset;
+                           return offset == count;
+                        },
+                        '[',
+                        ']');
+                  ++i;
+                  return !i.valid;
+               },
+#endif
+               '{',
+               '}');
       }
       out << '}';
       return out;
@@ -549,33 +619,48 @@ namespace TAT {
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::istream& operator>>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       detail::ignore_until(in, ':');
-      in >> tensor.names;
+      std::vector<Name> names;
+      in >> names;
       detail::ignore_until(in, ':');
       std::vector<Edge<Symmetry>> edges;
       in >> edges;
-      tensor.core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(edges));
-      if constexpr (debug_mode) {
-         tensor.check_valid_name();
-      }
+      tensor = Tensor<ScalarType, Symmetry, Name>(std::move(names), std::move(edges));
       detail::ignore_until(in, ':');
       if constexpr (Symmetry::length == 0) {
-         auto& block = tensor.storage();
-         block.clear(); // resize block, but memory not released
-         in >> block;
+         auto storage = tensor.storage().data();
+         detail::scan_list(
+               in,
+               [offset = 0, l = storage](std::istream& in) mutable {
+                  if constexpr (is_complex<ScalarType>) {
+                     detail::scan_complex(in, l[offset++]);
+                  } else {
+                     in >> l[offset++];
+                  }
+               },
+               '[',
+               ']');
       } else {
-         detail::ignore_until(in, '{');
-         if (in.peek() != '}') {
-            do {
-               std::vector<Symmetry> symmetries;
-               in >> symmetries;
-               detail::ignore_until(in, ':');
-               auto& block = tensor.blocks(symmetries);
-               block.clear();
-               in >> block;
-            } while (in.get() == ','); // read last '}' of map
-         } else {
-            in.get(); // read last '}' of map
-         }
+         detail::scan_list(
+               in,
+               [&tensor](std::istream& in) {
+                  std::vector<Symmetry> symmetries;
+                  in >> symmetries;
+                  detail::ignore_until(in, ':');
+                  auto block = tensor.blocks(symmetries).data();
+                  detail::scan_list(
+                        in,
+                        [offset = 0, l = block](std::istream& in) mutable {
+                           if constexpr (is_complex<ScalarType>) {
+                              detail::scan_complex(in, l[offset++]);
+                           } else {
+                              in >> l[offset++];
+                           }
+                        },
+                        '[',
+                        ']');
+               },
+               '{',
+               '}');
       }
       detail::ignore_until(in, '}');
       return in;
@@ -592,8 +677,8 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_put(std::ostream& out) const {
-      out < names;
-      out < core->edges;
+      out < names();
+      out < edges();
       return *this;
    }
 
@@ -627,10 +712,11 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
-      in > names;
+      in > m_names;
       std::vector<Edge<Symmetry>> edges;
       in > edges;
-      core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(edges));
+      m_core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(edges));
+      check_valid_name();
       return *this;
    }
 
@@ -650,9 +736,6 @@ namespace TAT {
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       auto timer_guard = tensor_load_guard();
       tensor.meta_get(in).data_get(in);
-      if constexpr (debug_mode) {
-         tensor.check_valid_name();
-      }
       return in;
    }
 

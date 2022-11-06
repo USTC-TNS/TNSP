@@ -24,5 +24,5 @@ void run_test() {
    auto t2 = t1.edge_rename({{"Left", "Up"}});
    t1.range();
    std::cout << t1 << "\n";
-   // std::cout << t2 << "\n";
+   std::cout << t2 << "\n";
 }

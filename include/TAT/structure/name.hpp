@@ -21,19 +21,14 @@
 #ifndef TAT_NAME_HPP
 #define TAT_NAME_HPP
 
-#include <cstdint>
-#include <iostream>
-#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 
 #include "../utility/common_variable.hpp"
-#include "../utility/hash_for_list.hpp"
 
 namespace TAT {
    /**
@@ -41,13 +36,19 @@ namespace TAT {
     *
     * Use hash to represent a string via dataset map
     */
-   struct FastName {
+   class FastName {
+    private:
       using hash_t = std::size_t;
 
+      hash_t hash;
+
+      friend std::hash<FastName>;
+
+    private:
       // Singleton
       struct dataset_t {
-         std::unordered_map<hash_t, std::string> hash_to_name;
-         std::hash<std::string_view> hash_function;
+         std::unordered_map<hash_t, std::string> hash_to_name = {};
+         const std::hash<std::string_view> hash_function = {};
 
          static dataset_t& instance() {
             static const auto pointer = std::make_unique<dataset_t>();
@@ -58,27 +59,28 @@ namespace TAT {
          return dataset_t::instance();
       }
 
-      hash_t hash;
-
-      FastName() noexcept : FastName("") {}
+    public:
+      FastName() : FastName("") {}
 
       template<
             typename String,
             typename = std::enable_if_t<std::is_convertible_v<String, std::string_view> && !std::is_same_v<remove_cvref_t<String>, FastName>>>
-      FastName(String&& name) noexcept : hash(dataset().hash_function(name)) {
-         auto found = dataset().hash_to_name.find(hash);
-         if (found == dataset().hash_to_name.end()) {
+      FastName(String&& name) : hash(dataset().hash_function(name)) {
+         if (auto found = dataset().hash_to_name.find(hash); found == dataset().hash_to_name.end()) {
             dataset().hash_to_name[hash] = name;
          }
       }
 
+    public:
       operator const std::string&() const {
+         // hash must be in dataset, which has been added into dataset when construct FastName.
          auto found = dataset().hash_to_name.find(hash);
          return found->second;
       }
 
+      // This is not needed by TAT, but maybe needed by user for put it in map or set.
 #define TAT_DEFINE_FASTNAME_COMPARE(OP, EVAL) \
-   inline bool OP(const FastName& other) const noexcept { \
+   inline bool OP(const FastName& other) const { \
       const auto& a = hash; \
       const auto& b = other.hash; \
       return EVAL; \
@@ -89,8 +91,8 @@ namespace TAT {
       TAT_DEFINE_FASTNAME_COMPARE(operator>, a > b)
       TAT_DEFINE_FASTNAME_COMPARE(operator<=, a <= b)
       TAT_DEFINE_FASTNAME_COMPARE(operator>=, a >= b)
-   };
 #undef TAT_DEFINE_FASTNAME_COMPARE
+   };
 
    using DefaultName =
 #ifdef TAT_USE_FAST_NAME
@@ -180,40 +182,39 @@ namespace TAT {
 #undef TAT_DEFINE_INTERNAL_NAME
 
    template<typename Name>
-   using name_out_operator_t = std::ostream& (*)(std::ostream&, const Name&);
+   using out_operator_t = std::ostream& (*)(std::ostream&, const Name&);
    template<typename Name>
-   using name_in_operator_t = std::istream& (*)(std::istream&, Name&);
+   using in_operator_t = std::istream& (*)(std::istream&, Name&);
 
    /**
     * Name type also need input and output method
     *
     * Specialize NameTraits to define write, read, print, scan
-    * Their type are name_out_operator_t<Name> and name_in_operator_t<Name>
+    * Their type are out_operator_t<Name> and in_operator_t<Name>
     */
    template<typename Name>
    struct NameTraits {};
 
    namespace detail {
-      // It is hard implement in c++17
       template<typename T>
-      using name_trait_write_checker = decltype(&NameTraits<T>::write);
+      using name_write_checker = decltype(NameTraits<T>::write(std::declval<std::ostream&>(), std::declval<const T&>()));
       template<typename T>
-      using name_trait_read_checker = decltype(&NameTraits<T>::read);
+      using name_read_checker = decltype(NameTraits<T>::read(std::declval<std::istream&>(), std::declval<T&>()));
       template<typename T>
-      using name_trait_print_checker = decltype(&NameTraits<T>::print);
+      using name_print_checker = decltype(NameTraits<T>::print(std::declval<std::ostream&>(), std::declval<const T&>()));
       template<typename T>
-      using name_trait_scan_checker = decltype(&NameTraits<T>::scan);
+      using name_scan_checker = decltype(NameTraits<T>::scan(std::declval<std::istream&>(), std::declval<T&>()));
    } // namespace detail
 
    /**
     * Check whether a type is a Name type
     *
     * If any one of those four function is defined, it is a Name type.
-    * Because it is considered that user want to use it as Name for some operator
+    * Because it is considered that user want to use it as Name for only some operator.
     */
    template<typename Name>
-   constexpr bool is_name = is_detected_v<detail::name_trait_write_checker, Name> || is_detected_v<detail::name_trait_read_checker, Name> ||
-                            is_detected_v<detail::name_trait_print_checker, Name> || is_detected_v<detail::name_trait_scan_checker, Name>;
+   constexpr bool is_name = is_detected_v<detail::name_write_checker, Name> || is_detected_v<detail::name_read_checker, Name> ||
+                            is_detected_v<detail::name_print_checker, Name> || is_detected_v<detail::name_scan_checker, Name>;
 } // namespace TAT
 
 namespace std {
@@ -224,28 +225,15 @@ namespace std {
       }
    };
 
-   template<>
-   struct hash<pair<TAT::FastName, TAT::FastName>> {
-      size_t operator()(const pair<TAT::FastName, TAT::FastName>& names) const {
+   template<typename Name>
+   struct hash<pair<Name, Name>> {
+      size_t operator()(const pair<Name, Name>& names) const {
          const auto& [name_1, name_2] = names;
-         auto hash_1 = hash<TAT::FastName>()(name_1);
-         auto hash_2 = hash<TAT::FastName>()(name_2);
+         auto hash_1 = hash<Name>()(name_1);
+         auto hash_2 = hash<Name>()(name_2);
          auto seed = hash_1;
          auto v = hash_2;
-         TAT::detail::hash_absorb(seed, v);
-         return seed;
-      }
-   };
-
-   template<>
-   struct hash<pair<string, string>> {
-      size_t operator()(const pair<string, string>& names) const {
-         const auto& [name_1, name_2] = names;
-         auto hash_1 = hash<string>()(name_1);
-         auto hash_2 = hash<string>()(name_2);
-         auto seed = hash_1;
-         auto v = hash_2;
-         TAT::detail::hash_absorb(seed, v);
+         TAT::hash_absorb(seed, v);
          return seed;
       }
    };

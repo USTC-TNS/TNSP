@@ -21,98 +21,15 @@
 #ifndef TAT_CORE_HPP
 #define TAT_CORE_HPP
 
+#include <memory>
 #include <numeric>
+#include <optional>
 #include <vector>
 
-#include "../utility/allocator.hpp"
+#include "../utility/multidimension_span.hpp"
 #include "edge.hpp"
 
 namespace TAT {
-   template<typename Symmetry>
-   struct core_edges_t {
-      static_assert(is_symmetry<Symmetry>);
-
-      using symmetry_t = Symmetry;
-      using edge_t = Edge<symmetry_t>;
-      using edge_vector_t = std::vector<edge_t>;
-
-      /**
-       * The shape of tensor, is edge list, which length is tensor rank, each edge is a list of pair of symmetry and size
-       * \see Edge
-       */
-      edge_vector_t edges = {};
-
-      core_edges_t(std::vector<Edge<Symmetry>> initial_edge) noexcept : edges(std::move(initial_edge)) {}
-
-      core_edges_t() = default;
-      core_edges_t(const core_edges_t& other) = default;
-      core_edges_t(core_edges_t&& other) = default;
-      core_edges_t& operator=(const core_edges_t&) = default;
-      core_edges_t& operator=(core_edges_t&&) = default;
-      ~core_edges_t() = default;
-   };
-
-   template<typename ScalarType, typename Symmetry>
-   struct core_blocks_t {
-      static_assert(is_scalar<ScalarType> && is_symmetry<Symmetry>);
-
-      using symmetry_vector_t = std::vector<Symmetry>;
-      using content_vector_t = no_initialize::pmr::vector<ScalarType>;
-
-      using block_map_t = std::vector<std::pair<symmetry_vector_t, content_vector_t>>;
-
-      no_initialize::vector<ScalarType> storage;
-      detail::monotonic_buffer_resource resource;
-
-      /**
-       * tensor data itself, is a map from symmetries list to data, every term is a block of tensor
-       */
-      block_map_t blocks;
-
-      core_blocks_t(std::vector<std::pair<std::vector<Symmetry>, Size>>&& symmetries_list) noexcept :
-            storage(std::accumulate(
-                  symmetries_list.begin(),
-                  symmetries_list.end(),
-                  0,
-                  [&](const Size total_size, const auto& p) {
-                     return total_size + p.second;
-                  })),
-            resource(storage.data(), storage.size() * sizeof(ScalarType)),
-            blocks() {
-         std::sort(symmetries_list.begin(), symmetries_list.end(), [&](const auto& a, const auto& b) {
-            return a.first < b.first;
-         });
-         // symmetries_list : vector<Symmetry> -> Size
-         blocks.reserve(symmetries_list.size());
-         for (auto&& [symmetries, size] : symmetries_list) {
-            // symmetries list is rvalue, it can be moved
-            blocks.push_back({std::move(symmetries), content_vector_t(size, &resource)});
-         }
-      }
-
-      core_blocks_t(const core_blocks_t& other) noexcept :
-            storage(other.storage),
-            resource(storage.data(), storage.size() * sizeof(ScalarType)),
-            blocks() {
-         blocks.reserve(other.blocks.size());
-         for (const auto& [symmetries, block] : other.blocks) {
-            blocks.push_back({symmetries, content_vector_t(block.size(), &resource)});
-         }
-      }
-      core_blocks_t(core_blocks_t&& other) noexcept :
-            storage(std::move(other.storage)),
-            resource(storage.data(), storage.size() * sizeof(ScalarType)),
-            blocks() {
-         blocks.reserve(other.blocks.size());
-         for (auto&& [symmetries, block] : other.blocks) {
-            blocks.push_back({std::move(symmetries), content_vector_t(block.size(), &resource)});
-         }
-      }
-
-      core_blocks_t() = delete;
-      core_blocks_t& operator=(const core_blocks_t&) = delete;
-      core_blocks_t& operator=(core_blocks_t&&) = delete;
-   };
 
    /**
     * Contains nearly all tensor data except edge name, include edge shape and tensor content
@@ -122,50 +39,192 @@ namespace TAT {
     * \note Core used to erase data copy when rename edge name of tensor, which is a common operation
     */
    template<typename ScalarType, typename Symmetry>
-   struct Core : core_edges_t<Symmetry>, core_blocks_t<ScalarType, Symmetry> {
+   class Core {
       static_assert(is_scalar<ScalarType> && is_symmetry<Symmetry>);
 
-      using base_edges = core_edges_t<Symmetry>;
-      using base_blocks = core_blocks_t<ScalarType, Symmetry>;
+    public:
+      using scalar_t = ScalarType;
+      using symmetry_t = Symmetry;
+      using edge_t = Edge<symmetry_t>;
 
-      using base_blocks::blocks;
-      using base_blocks::storage;
-      using base_edges::edges;
+    private:
+      const std::vector<edge_t> m_edges;
+      mdspan<std::optional<mdspan<scalar_t>>> m_blocks;
 
-      // this is the only constructor, from constructor of tensor
-      Core(std::vector<Edge<Symmetry>> initial_edge) noexcept :
-            base_edges(std::move(initial_edge)),
-            base_blocks(initialize_block_symmetries_with_check(edges.data(), edges.size())) {}
+      std::vector<std::optional<mdspan<scalar_t>>> m_pool;
+      std::vector<scalar_t> m_storage;
 
-      void clear_unused_symmetry() {
-         // delete symmetry not used in block from edge data
-         const Rank rank = edges.size();
-         auto edge_mark = std::vector<std::vector<bool>>(rank);
-         for (Rank i = 0; i < rank; i++) {
-            edge_mark[i] = std::vector<bool>(edges[i].segment.size(), false);
-         }
-         for (const auto& [symmetries, _] : blocks) {
-            for (Rank i = 0; i < rank; i++) {
-               auto symmetry_position = edges[i].get_position_from_symmetry(symmetries[i]);
-               edge_mark[i][symmetry_position] = true;
+    public:
+      const std::vector<scalar_t>& storage() const {
+         return m_storage;
+      }
+      std::vector<scalar_t>& storage() {
+         return m_storage;
+      }
+      const std::vector<edge_t>& edges() const {
+         return m_edges;
+      }
+      const edge_t& edges(Rank i) const {
+         return m_edges[i];
+      }
+      const mdspan<std::optional<mdspan<scalar_t>>>& blocks() const {
+         return m_blocks;
+      }
+      mdspan<std::optional<mdspan<scalar_t>>>& blocks() {
+         return m_blocks;
+      }
+      template<typename T, typename A>
+      const mdspan<scalar_t>& blocks(const std::vector<T, A>& arg) const {
+         if constexpr (std::is_same_v<T, symmetry_t>) {
+            const auto& symmetries = arg;
+            std::vector<Size, typename std::allocator_traits<A>::template rebind_alloc<Size>> positions;
+            positions.reserve(blocks().rank());
+            for (auto i = 0; i < blocks().rank(); i++) {
+               positions.push_back(edges(i).position_by_symmetry(symmetries[i]));
             }
+            return blocks(positions);
+         } else {
+            const auto& positions = arg;
+            return m_blocks.at(positions).value();
          }
-         for (Rank i = 0; i < rank; i++) {
-            auto& edge = edges[i];
-            const auto& this_mark = edge_mark[i];
-            const Nums number = edge.segment.size();
-            Nums k = 0;
-            for (Nums j = 0; j < number; j++) {
-               if (this_mark[j]) {
-                  edge.segment[k++] = std::move(edge.segment[j]);
-               }
+      }
+      // non const version for all parameter
+      template<typename Arg>
+      auto& blocks(const Arg& arg) {
+         return const_cast<mdspan<scalar_t>&>(const_cast<const Core<scalar_t, symmetry_t>*>(this)->blocks(arg));
+      }
+      template<typename T, typename A>
+      const scalar_t& at(const std::vector<T, A>& arg) const {
+         std::vector<Size, typename std::allocator_traits<A>::template rebind_alloc<Size>> positions, offsets;
+         positions.reserve(blocks().rank());
+         offsets.reserve(blocks().rank());
+         for (auto i = 0; i < blocks().rank(); i++) {
+            auto [position, offset] = overloaded{
+                  [](const edge_t& edge, const typename edge_t::coord_t& coord) {
+                     return coord;
+                  },
+                  [](const edge_t& edge, const typename edge_t::index_t& index) {
+                     return edge.coord_by_index(index);
+                  },
+                  [](const edge_t& edge, const typename edge_t::point_t& point) {
+                     return edge.coord_by_point(point);
+                  }}(edges(i), arg[i]);
+            positions.push_back(position);
+            offsets.push_back(offset);
+         }
+         return blocks(positions).at(offsets);
+      }
+      // non const version for all parameter
+      template<typename Arg>
+      auto& at(const Arg& arg) {
+         return const_cast<scalar_t&>(const_cast<const Core<scalar_t, symmetry_t>*>(this)->at(arg));
+      }
+
+    private:
+      static std::vector<Size> blocks_dimensions(const std::vector<edge_t>& edges) {
+         std::vector<Size> result;
+         result.reserve(edges.size());
+         for (const auto& edge : edges) {
+            result.emplace_back(edge.segments_size());
+         }
+         return result;
+      }
+
+      std::vector<Size> single_block_dimensions(const std::vector<Size>& positions) const {
+         std::vector<Size> result;
+         result.reserve(blocks().rank());
+         for (auto i = 0; i < blocks().rank(); i++) {
+            result.push_back(edges(i).segments(positions[i]).second);
+         }
+         return result;
+      }
+
+      void refresh_storage_pointer_in_pool() {
+         auto storage_pointer = m_storage.data();
+
+#if 1
+         for (const auto& index : _order) {
+            auto& block = blocks(index);
+            block.set_data(storage_pointer);
+            storage_pointer += block.size();
+         }
+         return;
+#endif
+         for (auto& block : m_pool) {
+            if (block.has_value()) {
+               block.value().set_data(storage_pointer);
+               storage_pointer += block.value().size();
             }
-            edge.segment.resize(k);
          }
       }
 
+    public:
+// TODO use new order storage
+#if 1
+      std::vector<std::vector<symmetry_t>> _order;
+#endif
+
+      // this is the only constructor, from constructor of tensor
+      Core(std::vector<edge_t> input_edges) :
+            m_edges(std::move(input_edges)),
+            m_blocks(nullptr, blocks_dimensions(m_edges)),
+            m_pool(m_blocks.size()) {
+         m_blocks.set_data(m_pool.data());
+
+         if (blocks().size() == 0) {
+            return;
+         }
+
+         auto total_symmetry_pool = std::vector<symmetry_t>(blocks().size());
+         auto total_symmetry = mdspan<symmetry_t>(total_symmetry_pool.data(), blocks().dimensions());
+         for (auto i = 0; i < blocks().rank(); ++i) {
+            Size self_size = edges(i).segments_size();
+            Size in_size = blocks().leadings(i);
+            Size out_size = blocks().size() / (self_size * in_size);
+            for (Size x = 0; x < out_size; x++) {
+               auto offset_for_x = x;
+               for (Size y = 0; y < self_size; y++) {
+                  symmetry_t here = edges(i).segments(y).first;
+                  auto offset_for_y = offset_for_x * self_size + y;
+                  for (Size z = 0; z < in_size; z++) {
+                     auto offset_for_z = offset_for_y * in_size + z;
+                     total_symmetry_pool[offset_for_z] += here;
+                  }
+               }
+            }
+         }
+
+         Size storage_size = 0;
+         for (auto it = blocks().begin(); it.valid; ++it) {
+            if (total_symmetry_pool[it.offset] == symmetry_t()) {
+               it->emplace(nullptr, single_block_dimensions(it.indices));
+#if 1
+               std::vector<symmetry_t> result;
+               result.reserve(blocks().rank());
+               for (auto i = 0; i < blocks().rank(); i++) {
+                  result.push_back(edges(i).segments(it.indices[i]).first);
+               }
+               _order.push_back(result);
+#endif
+               storage_size += it->value().size();
+            }
+         }
+#if 1
+         std::sort(_order.begin(), _order.end());
+#endif
+
+         m_storage.resize(storage_size);
+         refresh_storage_pointer_in_pool();
+      }
+
       Core() = delete;
-      Core(const Core& other) = default;
+      Core(const Core& other) : m_edges(other.m_edges), m_blocks(other.m_blocks), m_pool(other.m_pool), m_storage(other.m_storage) {
+         m_blocks.set_data(m_pool.data());
+#if 1
+         _order = other._order;
+#endif
+         refresh_storage_pointer_in_pool();
+      };
       Core(Core&& other) = default;
       Core& operator=(const Core&) = delete;
       Core& operator=(Core&&) = delete;

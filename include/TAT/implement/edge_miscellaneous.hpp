@@ -29,16 +29,15 @@ namespace TAT {
    auto Tensor<ScalarType, Symmetry, Name>::edge_rename(const std::unordered_map<Name, ResultName>& dictionary) const {
       if constexpr (debug_mode) {
          for (const auto& [name, new_name] : dictionary) {
-            auto found = std::find(names.begin(), names.end(), name);
-            if (found == names.end()) {
+            if (auto found = find_by_name(name); found == names().end()) {
                detail::error("Name missing in edge_rename");
             }
          }
       }
-      auto result = Tensor<ScalarType, Symmetry, ResultName>{};
-      result.core = core;
-      result.names.reserve(get_rank());
-      std::transform(names.begin(), names.end(), std::back_inserter(result.names), [&dictionary](const Name& name) {
+      auto result = Tensor<ScalarType, Symmetry, ResultName>();
+      result.m_core = m_core; // shallow copy
+      result.m_names.reserve(rank());
+      std::transform(names().begin(), names().end(), std::back_inserter(result.m_names), [&dictionary](const Name& name) {
          if (auto position = dictionary.find(name); position == dictionary.end()) {
             if constexpr (std::is_same_v<ResultName, Name>) {
                return name;
@@ -53,34 +52,62 @@ namespace TAT {
    }
 
    template<typename ScalarType, typename Symmetry, typename Name>
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::split_edge(
+         const std::unordered_map<Name, std::vector<std::pair<Name, edge_segments_t<Symmetry>>>>& split,
+         bool apply_parity,
+         const std::unordered_set<Name>& parity_exclude_names_split) const {
+      auto pmr_guard = scope_resource(default_buffer_size);
+      if constexpr (debug_mode) {
+         for (const auto& [old_name, new_names_edges] : split) {
+            if (auto found = find_by_name(old_name); found == names().end()) {
+               detail ::error("No such edge in split map");
+            }
+         }
+      }
+      // generate target_name
+      std::vector<Name> target_name;
+      target_name.reserve(rank()); // not enough but it is ok to reduce realloc time
+      for (const auto& name : names()) {
+         if (auto found = split.find(name); found != split.end()) {
+            for (const auto& [new_name, segments] : found->second) {
+               target_name.push_back(new_name);
+            }
+         } else {
+            target_name.push_back(name);
+         }
+      }
+      return edge_operator_implement(split, {}, {}, std::move(target_name), apply_parity, parity_exclude_names_split, {}, {}, {}, {});
+   }
+
+   template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::merge_edge(
          const std::unordered_map<Name, std::vector<Name>>& merge,
          bool apply_parity,
-         const std::unordered_set<Name>&& parity_exclude_name_merge,
-         const std::unordered_set<Name>& parity_exclude_name_reverse) const {
+         const std::unordered_set<Name>& parity_exclude_names_merge,
+         const std::unordered_set<Name>& parity_exclude_names_reverse) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (debug_mode) {
          // check if the edge not exist in merge map
-         for (const auto& [new_edge, old_edges] : merge) {
-            for (const auto& old_edge : old_edges) {
-               auto found = find_rank_from_name(old_edge);
-               if (found == names.end()) {
+         for (const auto& [new_name, old_names] : merge) {
+            for (const auto& old_name : old_names) {
+               if (auto found = find_by_name(old_name); found == names().end()) {
                   detail ::error("No such edge in merge map");
                }
             }
          }
       }
       std::vector<Name> target_name;
-      target_name.reserve(get_rank());
-      for (auto iterator = names.rbegin(); iterator != names.rend(); ++iterator) {
+      target_name.reserve(rank());
+      for (auto index = rank(); index-- > 0;) {
+         const auto& name = names(index);
          // find and it is last -> add new merge list
          // find but not last -> do nothing
          // not found -> add this single edge
          auto found_in_merge = false;
          for (const auto& [name_after_merge, names_before_merge] : merge) {
-            if (auto position_in_group = std::find(names_before_merge.begin(), names_before_merge.end(), *iterator);
+            if (auto position_in_group = std::find(names_before_merge.begin(), names_before_merge.end(), name);
                 position_in_group != names_before_merge.end()) {
-               if (*iterator == names_before_merge.back()) {
+               if (name == names_before_merge.back()) {
                   target_name.push_back(name_after_merge);
                }
                found_in_merge = true;
@@ -88,7 +115,7 @@ namespace TAT {
             }
          }
          if (!found_in_merge) {
-            target_name.push_back(*iterator);
+            target_name.push_back(name);
          }
       }
       // and empty merge edge
@@ -100,55 +127,16 @@ namespace TAT {
       // reverse target name
       std::reverse(target_name.begin(), target_name.end());
       return edge_operator_implement(
-            empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
-            empty_list<Name>(),
+            {},
+            {},
             merge,
             std::move(target_name),
             apply_parity,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            parity_exclude_name_reverse,
-            parity_exclude_name_merge,
-            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::split_edge(
-         const std::unordered_map<Name, std::vector<std::pair<Name, edge_segment_t<Symmetry>>>>& split,
-         bool apply_parity,
-         const std::unordered_set<Name>& parity_exclude_name_split) const {
-      auto pmr_guard = scope_resource(default_buffer_size);
-      if constexpr (debug_mode) {
-         for (const auto& [old_edge, new_edges] : split) {
-            auto found = find_rank_from_name(old_edge);
-            if (found == names.end()) {
-               detail ::error("No such edge in split map");
-            }
-         }
-      }
-      // generate target_name
-      std::vector<Name> target_name;
-      target_name.reserve(get_rank()); // not enough but it is ok to reduce realloc time
-      for (const auto& n : names) {
-         if (auto found = split.find(n); found != split.end()) {
-            for (const auto& edge_after_split : found->second) {
-               target_name.push_back(edge_after_split.first);
-            }
-         } else {
-            target_name.push_back(n);
-         }
-      }
-      return edge_operator_implement(
-            split,
-            empty_list<Name>(),
-            empty_list<std::pair<Name, empty_list<Name>>>(),
-            std::move(target_name),
-            apply_parity,
-            parity_exclude_name_split,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
+            {},
+            {},
+            parity_exclude_names_reverse,
+            parity_exclude_names_merge,
+            {});
    }
 } // namespace TAT
 #endif

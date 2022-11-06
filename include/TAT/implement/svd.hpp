@@ -26,7 +26,6 @@
 #include "../structure/tensor.hpp"
 #include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
-#include "transpose.hpp"
 
 extern "C" {
    int sgesvd_(
@@ -98,90 +97,18 @@ namespace TAT {
    inline timer svd_kernel_guard("svd_kernel");
 
    namespace detail {
-      template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      singular_to_tensor(const SingularValue& singular, const Name& singular_name_u, const Name& singular_name_v, const bool need_transpose) {
-         // singular : [(sym, vector<Scalar>)]
-         // (... U sym true) (-sym false S sym true) (-sym false V ...)
-         auto symmetries = std::vector<Edge<Symmetry>>(2);
-         for (const auto& [symmetry, values] : singular) {
-            auto dimension = values.size();
-            symmetries[0].segment.emplace_back(-symmetry, dimension);
-            symmetries[1].segment.emplace_back(symmetry, dimension);
-         }
-         if constexpr (Symmetry::is_fermi_symmetry) {
-            symmetries[0].arrow = false;
-            symmetries[1].arrow = true;
-         }
-         auto result = Tensor<ScalarType, Symmetry, Name>({singular_name_u, singular_name_v}, std::move(symmetries));
-         for (const auto& [symmetry, data_source] : singular) {
-            auto& data_destination = result.blocks(std::array<Symmetry, 2>{-symmetry, symmetry});
-            auto dimension = data_source.size();
-            auto dimension_plus_one = dimension + 1;
-            std::fill(data_destination.begin(), data_destination.end(), 0);
-            bool parity = false;
-            if constexpr (Symmetry::is_fermi_symmetry) {
-               if (need_transpose) {
-                  parity = symmetry.get_parity();
-               }
-            }
-            if (parity) {
-               for (Size i = 0; i < data_source.size(); i++) {
-                  data_destination[i * dimension_plus_one] = -data_source[i];
-               }
-            } else {
-               for (Size i = 0; i < data_source.size(); i++) {
-                  data_destination[i * dimension_plus_one] = data_source[i];
-               }
-            }
-         }
-         return result;
-      }
-
       template<typename ScalarType>
       void calculate_svd_kernel(
             const int& m,
             const int& n,
             const int& min,
-            const int& max,
             const ScalarType* a,
             ScalarType* u,
             real_scalar<ScalarType>* s,
             ScalarType* vt);
 
-      template<typename ScalarType>
-      void calculate_svd(
-            const int& m,
-            const int& n,
-            const int& min,
-            const int& max,
-            const ScalarType* a,
-            ScalarType* u,
-            real_scalar<ScalarType>* s,
-            ScalarType* vt) {
-         auto kernel_guard = svd_kernel_guard();
-         // after testing: m>n is better than m<n and false, true is obviously worse
-         if (m > n) {
-            auto new_a = no_initialize::pmr::vector<ScalarType>(n * m);
-            auto old_u = no_initialize::pmr::vector<ScalarType>(n * min);
-            auto old_vt = no_initialize::pmr::vector<ScalarType>(min * m);
-            // new_a = a^T
-            // u s vt = a
-            // vt^T s u^T = a^T
-            // old_u = vt^T
-            // old_vt = u^T
-            matrix_transpose(m, n, a, new_a.data()); // m*n -> n*m
-            calculate_svd_kernel(n, m, min, max, new_a.data(), old_u.data(), s, old_vt.data());
-            matrix_transpose(n, min, old_u.data(), vt); // n*min -> min*n
-            matrix_transpose(min, m, old_vt.data(), u); // min*m -> m*min
-         } else {
-            calculate_svd_kernel(m, n, min, max, a, u, s, vt);
-         }
-      }
-
       template<>
-      inline void
-      calculate_svd_kernel<float>(const int& m, const int& n, const int& min, const int& max, const float* a, float* u, float* s, float* vt) {
+      inline void calculate_svd_kernel<float>(const int& m, const int& n, const int& min, const float* a, float* u, float* s, float* vt) {
          int result;
          const int lwork_query = -1;
          float float_lwork;
@@ -190,15 +117,14 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork);
-         auto work = no_initialize::pmr::vector<float>(lwork);
+         auto work = pmr::vector<float>(lwork);
          sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
          }
       }
       template<>
-      inline void
-      calculate_svd_kernel<double>(const int& m, const int& n, const int& min, const int& max, const double* a, double* u, double* s, double* vt) {
+      inline void calculate_svd_kernel<double>(const int& m, const int& n, const int& min, const double* a, double* u, double* s, double* vt) {
          int result;
          const int lwork_query = -1;
          double float_lwork;
@@ -207,7 +133,7 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork);
-         auto work = no_initialize::pmr::vector<double>(lwork);
+         auto work = pmr::vector<double>(lwork);
          dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
@@ -218,13 +144,12 @@ namespace TAT {
             const int& m,
             const int& n,
             const int& min,
-            const int& max,
             const std::complex<float>* a,
             std::complex<float>* u,
             float* s,
             std::complex<float>* vt) {
          int result;
-         auto rwork = no_initialize::pmr::vector<float>(5 * min);
+         auto rwork = pmr::vector<float>(5 * min);
          const int lwork_query = -1;
          std::complex<float> float_lwork;
          cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
@@ -232,7 +157,7 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork.real());
-         auto work = no_initialize::pmr::vector<std::complex<float>>(lwork);
+         auto work = pmr::vector<std::complex<float>>(lwork);
          cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
@@ -243,13 +168,12 @@ namespace TAT {
             const int& m,
             const int& n,
             const int& min,
-            const int& max,
             const std::complex<double>* a,
             std::complex<double>* u,
             double* s,
             std::complex<double>* vt) {
          int result;
-         auto rwork = no_initialize::pmr::vector<double>(5 * min);
+         auto rwork = pmr::vector<double>(5 * min);
          const int lwork_query = -1;
          std::complex<double> float_lwork;
          zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
@@ -257,11 +181,74 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork.real());
-         auto work = no_initialize::pmr::vector<std::complex<double>>(lwork);
+         auto work = pmr::vector<std::complex<double>>(lwork);
          zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
          }
+      }
+
+      template<typename ScalarType>
+      void calculate_svd(const int& m, const int& n, const int& min, const ScalarType* a, ScalarType* u, real_scalar<ScalarType>* s, ScalarType* vt) {
+         auto kernel_guard = svd_kernel_guard();
+         // after testing: m>n is better than m<n and false, true is obviously worse
+         if (m > n) {
+            auto new_a = pmr::vector<ScalarType>(n * m);
+            auto old_u = pmr::vector<ScalarType>(n * min);
+            auto old_vt = pmr::vector<ScalarType>(min * m);
+            // new_a = a^T
+            // u s vt = a
+            // vt^T s u^T = a^T
+            // old_u = vt^T
+            // old_vt = u^T
+            matrix_transpose<pmr::vector<Size>>(m, n, a, new_a.data()); // m*n -> n*m
+            calculate_svd_kernel(n, m, min, new_a.data(), old_u.data(), s, old_vt.data());
+            matrix_transpose<pmr::vector<Size>>(n, min, old_u.data(), vt); // n*min -> min*n
+            matrix_transpose<pmr::vector<Size>>(min, m, old_vt.data(), u); // min*m -> m*min
+         } else {
+            calculate_svd_kernel(m, n, min, a, u, s, vt);
+         }
+      }
+
+      template<typename ScalarType, typename Symmetry, typename Name, typename SingularValue>
+      Tensor<ScalarType, Symmetry, Name>
+      singular_to_tensor(const SingularValue& singular, const Name& singular_name_u, const Name& singular_name_v, const bool put_v_right) {
+         // singular : [(sym, vector<Scalar>)]
+         // (... U sym true) (-sym false S sym true) (-sym false V ...)
+         auto segments_u = std::vector<std::pair<Symmetry, Size>>();
+         auto segments_v = std::vector<std::pair<Symmetry, Size>>();
+         segments_u.reserve(singular.size());
+         segments_v.reserve(singular.size());
+         for (const auto& [symmetry, values] : singular) {
+            auto dimension = values.size();
+            segments_u.emplace_back(-symmetry, dimension);
+            segments_v.emplace_back(symmetry, dimension);
+         }
+         auto result = Tensor<ScalarType, Symmetry, Name>(
+               {singular_name_u, singular_name_v},
+               {{std::move(segments_u), false}, {std::move(segments_v), true}});
+         for (const auto& [symmetry, values] : singular) {
+            const auto* data_source = values.data();
+            auto* data_destination = result.blocks(pmr::vector<Symmetry>{-symmetry, symmetry}).data();
+            auto dimension = values.size();
+            auto dimension_plus_one = dimension + 1;
+            bool parity = false;
+            if constexpr (Symmetry::is_fermi_symmetry) {
+               if (!put_v_right) {
+                  parity = symmetry.parity();
+               }
+            }
+            if (parity) {
+               for (Size i = 0; i < dimension; i++) {
+                  data_destination[i * dimension_plus_one] = -data_source[i];
+               }
+            } else {
+               for (Size i = 0; i < dimension; i++) {
+                  data_destination[i * dimension_plus_one] = data_source[i];
+               }
+            }
+         }
+         return result;
       }
    } // namespace detail
 
@@ -269,7 +256,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    typename Tensor<ScalarType, Symmetry, Name>::svd_result Tensor<ScalarType, Symmetry, Name>::svd(
-         const std::unordered_set<Name>& free_name_set_u,
+         const std::unordered_set<Name>& free_names_u,
          const Name& common_name_u,
          const Name& common_name_v,
          const Name& singular_name_u,
@@ -279,12 +266,11 @@ namespace TAT {
       auto timer_guard = svd_guard();
 
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
-      const auto rank = get_rank();
 
       if constexpr (debug_mode) {
          // check free_name_set_u is valid
-         for (const auto& name : free_name_set_u) {
-            if (auto found = find_rank_from_name(name); found == names.end()) {
+         for (const auto& name : free_names_u) {
+            if (auto found = find_by_name(name); found == names().end()) {
                detail::error("Missing name in svd");
             }
          }
@@ -292,118 +278,148 @@ namespace TAT {
       // now check done
 
       // merge to matrix
-      // svd generate middle bond
+      // svd it with generating middle bond
       // split original edge
 
-      // merge_plan -> free_name_u and free_name_v
+      // merge_plan -> all edge into free_name_u and free_name_v
       // and collect reversed edges
-      // result name is also needed
 
-      // svd need to pay attension to new generated edge symmetries
-
-      // split just apply reversed edges, and use the free_name_x of merge
+      // split and apply reversed edges, and use the free_name_x of merge
       // result name is also needed
 
       // merge
-      auto free_name_u = pmr::vector<Name>();                                          // merge plan
-      auto free_name_v = pmr::vector<Name>();                                          // merge plan
-      auto reversed_set_origin = pmr::unordered_set<Name>(unordered_parameter * rank); // merge plan
+      auto free_name_list_u = pmr::vector<Name>();                                        // merge plan
+      auto free_name_list_v = pmr::vector<Name>();                                        // merge plan
+      auto reversed_names_input = pmr::unordered_set<Name>(unordered_parameter * rank()); // merge plan
 
-      auto reversed_set_u = pmr::unordered_set<Name>(unordered_parameter * rank);                   // split plan
-      auto reversed_set_v = pmr::unordered_set<Name>(unordered_parameter * rank);                   // split plan
-      auto result_name_u = std::vector<Name>();                                                     // split plan
-      auto result_name_v = std::vector<Name>();                                                     // split plan
-      auto free_names_and_edges_u = pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>(); // split plan
-      auto free_names_and_edges_v = pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>(); // split plan
+      auto reversed_names_u = pmr::unordered_set<Name>(unordered_parameter * rank());                // split plan
+      auto reversed_names_v = pmr::unordered_set<Name>(unordered_parameter * rank());                // split plan
+      auto result_names_u = std::vector<Name>();                                                     // split plan
+      auto result_names_v = std::vector<Name>();                                                     // split plan
+      auto free_names_and_edges_u = pmr::vector<std::pair<Name, edge_segments_t<Symmetry, true>>>(); // split plan
+      auto free_names_and_edges_v = pmr::vector<std::pair<Name, edge_segments_t<Symmetry, true>>>(); // split plan
 
-      free_name_u.reserve(rank);
-      free_name_v.reserve(rank);
-      result_name_u.reserve(rank + 1);
-      result_name_v.reserve(rank + 1);
-      free_names_and_edges_u.reserve(rank);
-      free_names_and_edges_v.reserve(rank);
+      free_name_list_u.reserve(rank());
+      free_name_list_v.reserve(rank());
+      result_names_u.reserve(rank() + 1);
+      result_names_v.reserve(rank() + 1);
+      free_names_and_edges_u.reserve(rank());
+      free_names_and_edges_v.reserve(rank());
 
-      result_name_v.push_back(common_name_v);
-      for (Rank i = 0; i < get_rank(); i++) {
-         const auto& n = names[i];
-         if (free_name_set_u.find(n) != free_name_set_u.end()) {
+      const bool put_v_right = names().empty() || free_names_u.find(names().back()) == free_names_u.end();
+      // The last names not in free_names_u -> last names in free_names_v -> put v right
+
+      if (put_v_right) {
+         result_names_v.push_back(common_name_v);
+      } else {
+         result_names_u.push_back(common_name_u);
+      }
+      for (Rank i = 0; i < rank(); i++) {
+         const auto& n = names(i);
+         if (free_names_u.find(n) != free_names_u.end()) {
             // U side
-            free_name_u.push_back(n);
-            result_name_u.push_back(n);
-            free_names_and_edges_u.push_back({n, {edges(i).segment}});
+            free_name_list_u.push_back(n);
+            result_names_u.push_back(n);
+            free_names_and_edges_u.push_back({n, {edges(i).segments()}});
             if constexpr (is_fermi) {
-               if (edges(i).arrow) {
-                  reversed_set_u.insert(n);
-                  reversed_set_origin.insert(n);
+               if (edges(i).arrow()) {
+                  reversed_names_u.insert(n);
+                  reversed_names_input.insert(n);
                }
             }
          } else {
             // V side
-            free_name_v.push_back(n);
-            result_name_v.push_back(n);
-            free_names_and_edges_v.push_back({n, {edges(i).segment}});
+            free_name_list_v.push_back(n);
+            result_names_v.push_back(n);
+            free_names_and_edges_v.push_back({n, {edges(i).segments()}});
             if constexpr (is_fermi) {
-               if (edges(i).arrow) {
-                  reversed_set_v.insert(n);
-                  reversed_set_origin.insert(n);
+               if (edges(i).arrow()) {
+                  reversed_names_v.insert(n);
+                  reversed_names_input.insert(n);
                }
             }
          }
       }
-      result_name_u.push_back(common_name_u);
+      if (put_v_right) {
+         result_names_u.push_back(common_name_u);
+      } else {
+         result_names_v.push_back(common_name_v);
+      }
 
-      const bool put_v_right = free_name_v.empty() || free_name_v.back() == names.back();
       auto tensor_merged = edge_operator_implement(
-            empty_list<std::pair<Name, empty_list<std::pair<Name, edge_segment_t<Symmetry>>>>>(),
-            reversed_set_origin,
+            {},
+            reversed_names_input,
             pmr::map<Name, pmr::vector<Name>>{
-                  {InternalName<Name>::SVD_U, std::move(free_name_u)},
-                  {InternalName<Name>::SVD_V, std::move(free_name_v)}},
+                  {InternalName<Name>::SVD_U, std::move(free_name_list_u)},
+                  {InternalName<Name>::SVD_V, std::move(free_name_list_v)}},
             put_v_right ? std::vector<Name>{InternalName<Name>::SVD_U, InternalName<Name>::SVD_V} :
                           std::vector<Name>{InternalName<Name>::SVD_V, InternalName<Name>::SVD_U},
             false,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>());
+            {},
+            {},
+            {},
+            {},
+            {});
 
-      // tensor -> SVD_U -O- SVD_V
+      // tensor -> SVD_U -O- SVD_V    when put_v_right = true
+      //        or SVD_V -O- SVD_U    when put_v_right = false
+      // put_v_right = true
+      //     SVD_U -O- common_1 . common_2 -O- SVD_V
+      // put_v_right = false
+      //     SVD_V -O- common_1 . common_1 -O- SVD_U
 
+      const auto& edge_0_input = tensor_merged.edges(0);
+      const auto& edge_1_input = tensor_merged.edges(1);
       // prepare result tensor
-      auto common_edge_1 = Edge<Symmetry>();
-      auto common_edge_2 = Edge<Symmetry>();
+      auto common_edge_segments_1 = std::vector<std::pair<Symmetry, Size>>();
+      auto common_edge_segments_2 = std::vector<std::pair<Symmetry, Size>>();
+      common_edge_segments_1.reserve(edge_0_input.segments_size());
+      common_edge_segments_2.reserve(edge_0_input.segments_size());
       // arrow all false currently, arrow check is processed at the last
-      for (const auto& [syms, block] : tensor_merged.core->blocks) {
-         auto m = tensor_merged.edges(0).get_dimension_from_symmetry(syms[0]);
-         auto n = tensor_merged.edges(1).get_dimension_from_symmetry(syms[1]);
-         auto k = m > n ? n : m;
-         common_edge_1.segment.emplace_back(syms[1], k);
-         common_edge_2.segment.emplace_back(syms[0], k);
+      for (const auto& [symmetry_0, dimension_0] : edge_0_input.segments()) {
+         auto symmetry_1 = -symmetry_0;
+         if (auto found = edge_1_input.find_by_symmetry(symmetry_1); found != edge_1_input.segments().end()) {
+            // This block does exist
+            auto m = dimension_0;
+            auto n = found->second;
+            auto k = m > n ? n : m;
+            common_edge_segments_1.emplace_back(symmetry_1, k);
+            common_edge_segments_2.emplace_back(symmetry_0, k);
+         }
       }
       auto tensor_1 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{InternalName<Name>::SVD_U, common_name_u} : std::vector<Name>{InternalName<Name>::SVD_V, common_name_v},
-            {std::move(tensor_merged.edges(0)), std::move(common_edge_1)}};
+            {tensor_merged.edges(0), std::move(common_edge_segments_1)}};
       auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : std::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
-            {std::move(common_edge_2), std::move(tensor_merged.edges(1))}};
-      auto result_s = pmr::list<std::pair<Symmetry, pmr::vector<real_scalar<ScalarType>>>>();
+            {std::move(common_edge_segments_2), tensor_merged.edges(1)}};
+      auto result_s = pmr::list<std::pair<Symmetry, pmr::vector<real_scalar<ScalarType>>>>(); // use list for easy delete
+      // const auto& edge_common_1 = tensor_1.edges(1);
+      const auto& edge_common_2 = tensor_2.edges(0);
 
       // call lapack
-      for (const auto& [symmetries, block] : tensor_merged.core->blocks) {
-         auto* data_u = tensor_1.blocks(symmetries).data();
-         auto* data_v = tensor_2.blocks(symmetries).data();
-         const auto* data = block.data();
-         const int m = tensor_1.edges(0).get_dimension_from_symmetry(symmetries[0]);
-         const int n = tensor_2.edges(1).get_dimension_from_symmetry(symmetries[1]);
-         const int k = m > n ? n : m;
-         const int max = m > n ? m : n;
-         auto s = pmr::vector<real_scalar<ScalarType>>(k);
-         auto* s_data = s.data();
-         if (m * n != 0) {
-            detail::calculate_svd<ScalarType>(m, n, k, max, data, data_u, s_data, data_v);
+      for (const auto& [symmetry, _] : edge_0_input.segments()) {
+         Size position_0_input = edge_0_input.find_by_symmetry(symmetry) - edge_0_input.segments().begin();
+         Size position_1_input = edge_1_input.find_by_symmetry(-symmetry) - edge_1_input.segments().begin();
+         if (position_1_input == edge_1_input.segments_size()) {
+            continue;
          }
-         result_s.emplace_back(symmetries[put_v_right ? 1 : 0], std::move(s)); // sym is always the same to common edge of tensor U
+         Size position_common = edge_common_2.find_by_symmetry(symmetry) - edge_common_2.segments().begin();
+         const int m = edge_0_input.segments(position_0_input).second;
+         const int n = edge_1_input.segments(position_1_input).second;
+         const int k = edge_common_2.segments(position_common).second;
+
+         auto* data_1 = tensor_1.blocks(pmr::vector<Size>{position_0_input, position_common}).data();
+         auto* data_2 = tensor_2.blocks(pmr::vector<Size>{position_common, position_1_input}).data();
+         const auto* data = tensor_merged.blocks(pmr::vector<Size>{position_0_input, position_1_input}).data();
+
+         auto s = pmr::vector<real_scalar<ScalarType>>(k);
+         auto* data_s = s.data();
+
+         if (m * n != 0) {
+            detail::calculate_svd<ScalarType>(m, n, k, data, data_1, data_s, data_2);
+         }
+         result_s.emplace_back(put_v_right ? -symmetry : symmetry, std::move(s)); // symmetry of s is always the same to common edge of tensor U
       }
 
       // analyze how to cut
@@ -421,21 +437,20 @@ namespace TAT {
                remain_dimension_v[-symmetry] = 0;
             }
             for (Size i = 0; i < cut_i; i++) {
-               Symmetry maximum_position;
+               Symmetry maximum_symmetry;
                real_scalar<ScalarType> maximum_singular = 0;
                for (const auto& [symmetry, vector_s] : result_s) {
                   if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
                      if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
                         maximum_singular = this_singular;
-                        maximum_position = symmetry;
+                        maximum_symmetry = symmetry;
                      }
                   }
                }
                if (maximum_singular != 0) {
                   // sometimes non zero singular number is less than cut_i
-                  // this if check the validity of maximum_position
-                  remain_dimension_u.at(maximum_position) += 1;
-                  remain_dimension_v.at(-maximum_position) += 1;
+                  remain_dimension_u.at(maximum_symmetry) += 1;
+                  remain_dimension_v.at(-maximum_symmetry) += 1;
                }
             }
 
@@ -494,57 +509,51 @@ namespace TAT {
       // tensor 2 common edge should be false
       // S tensor 1 side should be false
       // S tensor 2 side should be true
-      // so we need to reverse tensor_1 common edge without applying sign
 
-      // aims:
-      // tensor_1 == tensor_u -> u not_apply_reverse
-      // tensor_1 == tensor_v -> v not_apply_reverse
-
-      // what did for S
-      // while sym of S is always the same to common edge of tensor U
-      // tensor_1 == tensor_u -> sym of S correct -> nothing
-      // tensor_1 == tensor_v -> sym of S incorrect -> need to reverse two EPR pair -> need to do more u apply_reverse & v apply_reverse
-
-      // summary
-      // tensor_1 == tensor_u -> u not_apply_reverse
-      // tensor_1 == tensor_v -> u not_apply_reverse
-
-      // however, tensor S transpose generate a sign, this should be pay attension to, when tensor_1 == tensor_v, namely put_v_right == false
-
+      // if put_v_right, it should be
+      // (... U sym true) (-sym false S sym true) (-sym false V ...)
+      // if !put_v_right, it should be
+      // (... V -sym true) (sym false S -sym true) (sym false U ...)
+      // which is same to
+      // (... V -sym false) (sym true S -sym false) (sym true U ...)
+      // aka (sym true U ...) (sym true v_S_u -sym false) (... V -sym false)
+      // so always put reverse tensor_u common name
+      // if put_v_right: (-sym false u_S_v sym true)
+      // if !put_v_right: (sym true v_S_u -sym false) -> (-sym false u_S_v sym true) with a transpose sign
+      // -> always set v_edge in s to sym true
       if constexpr (is_fermi) {
-         reversed_set_u.insert(common_name_u);
+         reversed_names_u.insert(common_name_u);
       }
       // cut happened here
       auto u = tensor_u.edge_operator_implement(
-            pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
+            pmr::map<Name, pmr::vector<std::pair<Name, edge_segments_t<Symmetry, true>>>>{
                   {InternalName<Name>::SVD_U, std::move(free_names_and_edges_u)}},
-            reversed_set_u,
-            empty_list<std::pair<Name, empty_list<Name>>>(),
-            std::move(result_name_u),
+            reversed_names_u,
+            {},
+            std::move(result_names_u),
             false,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
+            {},
+            {},
+            {},
+            {},
             pmr::map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_u, std::move(remain_dimension_u)}});
       auto v = tensor_v.edge_operator_implement(
-            pmr::map<Name, pmr::vector<std::pair<Name, edge_segment_t<Symmetry, true>>>>{
+            pmr::map<Name, pmr::vector<std::pair<Name, edge_segments_t<Symmetry, true>>>>{
                   {InternalName<Name>::SVD_V, std::move(free_names_and_edges_v)}},
-            reversed_set_v,
-            empty_list<std::pair<Name, empty_list<Name>>>(),
-            std::move(result_name_v),
+            reversed_names_v,
+            {},
+            std::move(result_names_v),
             false,
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
-            empty_list<Name>(),
+            {},
+            {},
+            {},
+            {},
             pmr::map<Name, pmr::unordered_map<Symmetry, Size>>{{common_name_v, std::move(remain_dimension_v)}});
-      // (... U sym true) (-sym false S sym true) (-sym false V ...)
       return {
             std::move(u),
             // it should be noticed that, singular value content of fermi tensor is not always positive,
             // since it is not even valid to talk about sign of tensor content for fermi tensor
-            detail::singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v, put_v_right == false),
+            detail::singular_to_tensor<ScalarType, Symmetry, Name>(result_s, singular_name_u, singular_name_v, put_v_right),
             std::move(v)};
    }
 } // namespace TAT

@@ -37,7 +37,7 @@ namespace TAT {
          using value_type = DynamicType;
          value_type m_value;
          const_integral_t() = delete;
-         const_integral_t(value_type v) noexcept : m_value(v) {}
+         const_integral_t(value_type v) : m_value(v) {}
          value_type value() const {
             return m_value;
          }
@@ -82,6 +82,11 @@ namespace TAT {
    auto to_const_integral(T value) {
       using result_type = std::variant<detail::const_integral_t<0, T>, detail::const_integral_t<possible_value>...>;
       return detail::to_const_integral_helper<result_type, T, possible_value...>(value);
+   }
+
+   template<typename T>
+   auto to_const_integral_0_to_16(T value) {
+      return to_const_integral<T, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16>(value);
    }
 } // namespace TAT
 

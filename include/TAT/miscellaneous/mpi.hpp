@@ -25,7 +25,6 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
 #include "io.hpp"
 
@@ -49,10 +48,10 @@ namespace TAT {
       std::ostream& out;
       bool valid;
       std::ostringstream string;
-      ~mpi_one_output_stream() noexcept {
+      ~mpi_one_output_stream() {
          out << string.str() << std::flush;
       }
-      mpi_one_output_stream(std::ostream& out, bool valid) noexcept : out(out), valid(valid) {}
+      mpi_one_output_stream(std::ostream& out, bool valid) : out(out), valid(valid) {}
 
       template<typename Type>
       mpi_one_output_stream& operator<<(const Type& value) & {
@@ -77,10 +76,10 @@ namespace TAT {
    struct mpi_rank_output_stream {
       std::ostream& out;
       std::ostringstream string;
-      ~mpi_rank_output_stream() noexcept {
+      ~mpi_rank_output_stream() {
          out << string.str() << std::flush;
       }
-      mpi_rank_output_stream(std::ostream& out, int rank) noexcept : out(out) {
+      mpi_rank_output_stream(std::ostream& out, int rank) : out(out) {
          if (rank != -1) {
             string << "[rank " << rank << "] ";
          }
@@ -139,14 +138,14 @@ namespace TAT {
          MPI_Finalized(&result);
          return result;
       }
-      mpi_t() noexcept {
+      mpi_t() {
          if (!initialized()) {
             MPI_Init(nullptr, nullptr);
          }
          MPI_Comm_size(MPI_COMM_WORLD, &size);
          MPI_Comm_rank(MPI_COMM_WORLD, &rank);
       }
-      ~mpi_t() noexcept {
+      ~mpi_t() {
          if (!finalized()) {
             MPI_Finalize();
          }
@@ -174,7 +173,7 @@ namespace TAT {
          MPI_Probe(source, mpi_tag, MPI_COMM_WORLD, &status);
          int length;
          MPI_Get_count(&status, MPI_BYTE, &length);
-         auto data = no_initialize::string();
+         auto data = std::string();
          data.resize(length);
          MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
          detail::basic_instringstream<char> stream(data);
@@ -288,7 +287,7 @@ namespace TAT {
    };
    inline mpi_t mpi;
 
-   inline detail::evil_t::evil_t() noexcept {
+   inline detail::evil_t::evil_t() {
 #ifdef _WIN32
       HANDLE output_handle = GetStdHandle(STD_OUTPUT_HANDLE);
       DWORD output_mode = 0;
@@ -300,12 +299,7 @@ namespace TAT {
       SetConsoleMode(error_handle, error_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 #endif
    }
-   inline detail::evil_t::~evil_t() noexcept {
-      if constexpr (debug_mode) {
-         mpi.log_one() << console_blue << "\n\nPremature optimization is the root of all evil!\n"
-                       << console_origin << "                                       --- Donald Knuth\n\n\n";
-      }
-   }
+   inline detail::evil_t::~evil_t() {}
 
    inline void detail::log(const char* message) {
       mpi.log_rank() << console_yellow << message << console_origin << '\n';

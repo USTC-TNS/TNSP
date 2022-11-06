@@ -27,16 +27,12 @@
 namespace TAT {
    inline timer expand_guard("expand");
 
-   // TODO these can be optimize, avoid to use contract
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::expand(const std::unordered_map<Name, EdgePointExpand>& configure, const Name& old_name) const {
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::expand(
+         const std::unordered_map<Name, std::pair<Size, Edge<Symmetry>>>& configure,
+         const Name& old_name) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = expand_guard();
-      // using EdgePointExpand = std::conditional_t<
-      //       Symmetry::length == 0,
-      //       std::tuple<Size, Size>,
-      //       std::conditional_t<Symmetry::is_fermi_symmetry, std::tuple<Arrow, Symmetry, Size, Size>, std::tuple<Symmetry, Size, Size>>>;
       constexpr bool is_no_symmetry = Symmetry::length == 0;
       constexpr bool is_fermi = Symmetry::is_fermi_symmetry;
       if constexpr (is_fermi) {
@@ -44,59 +40,38 @@ namespace TAT {
       }
 
       // generator helper tensor names and edges
-      // and an offset, the helper tensor have only one block
       auto new_names = std::vector<Name>();
       auto new_edges = std::vector<Edge<Symmetry>>();
       auto reserve_size = configure.size() + 1;
       new_names.reserve(reserve_size);
       new_edges.reserve(reserve_size);
-      auto total_symmetry = Symmetry();
-      Size total_offset = 0;
-      for (const auto& [name, information] : configure) {
-         new_names.push_back(name);
-         if constexpr (is_no_symmetry) {
-            const auto& [index, dimension] = information;
-            total_offset *= dimension;
-            total_offset += index;
-            new_edges.push_back({{{Symmetry(), dimension}}});
-         } else if constexpr (is_fermi) {
-            const auto& [arrow, symmetry, index, dimension] = information;
-            total_offset *= dimension;
-            total_offset += index;
-            new_edges.push_back({{{symmetry, dimension}}, arrow});
-         } else {
-            const auto& [symmetry, index, dimension] = information;
-            total_offset *= dimension;
-            total_offset += index;
-            new_edges.push_back({{{symmetry, dimension}}});
-         }
-      }
-      auto contract_names = std::unordered_set<std::pair<Name, Name>>();
-      if (old_name != InternalName<Name>::No_Old_Name) {
-         contract_names.insert({old_name, InternalName<Name>::No_Old_Name});
-         new_names.push_back(InternalName<Name>::No_Old_Name);
 
-         // add the last edge
+      auto points = pmr::unordered_map<Name, std::pair<Symmetry, Size>>(unordered_parameter * configure.size());
+      auto total_symmetry = Symmetry();
+      auto contract_pairs = std::unordered_set<std::pair<Name, Name>>(unordered_parameter * configure.size());
+
+      for (const auto& [name, information] : configure) {
+         const auto& [index, edge] = information;
+         const auto& point = edge.point_by_index(index);
+         auto symmetry = point.first;
+
+         new_names.push_back(name);
+         new_edges.push_back(edge);
+         points[name] = point;
+         total_symmetry += symmetry;
+      }
+      if (old_name != InternalName<Name>::No_Old_Name) {
          const auto& old_edge = edges(old_name);
          if constexpr (debug_mode) {
-            if (old_edge.segment.size() != 1 || old_edge.segment.front().second != 1) {
+            if (old_edge.total_dimension() != 1) {
                detail::error("Cannot Expand a Edge which dimension is not one");
             }
          }
-         if constexpr (is_no_symmetry) {
-            new_edges.push_back({{{Symmetry(), 1}}});
-         } else {
-            if constexpr (is_fermi) {
-               new_edges.push_back({{{-total_symmetry, 1}}, !old_edge.arrow});
-            } else {
-               new_edges.push_back({{{-total_symmetry, 1}}});
-            }
-            if constexpr (debug_mode) {
-               if (old_edge.segment.front().first != total_symmetry) {
-                  detail::error("Cannot Expand to such Edges whose total Symmetry is not Compatible with origin Edge");
-               }
-            }
-         }
+
+         new_names.push_back(InternalName<Name>::No_Old_Name);
+         new_edges.push_back({{{-total_symmetry, 1}}, !old_edge.arrow()});
+         points[InternalName<Name>::No_Old_Name] = std::pair<Symmetry, Size>{-total_symmetry, 0};
+         contract_pairs.insert({old_name, InternalName<Name>::No_Old_Name});
       } else {
          if constexpr (debug_mode) {
             if constexpr (!is_no_symmetry) {
@@ -107,16 +82,15 @@ namespace TAT {
          }
       }
       auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
-      helper.zero();
-      helper.storage()[total_offset] = 1;
-      return contract(helper, contract_names);
+      helper.at(points) = 1;
+      return contract(helper, contract_pairs);
    }
 
    inline timer shrink_guard("shrink");
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>
-   Tensor<ScalarType, Symmetry, Name>::shrink(const std::unordered_map<Name, EdgePointShrink>& configure, const Name& new_name, Arrow arrow) const {
+   Tensor<ScalarType, Symmetry, Name>::shrink(const std::unordered_map<Name, Size>& configure, const Name& new_name, Arrow arrow) const {
       auto pmr_guard = scope_resource(default_buffer_size);
       auto timer_guard = shrink_guard();
       constexpr bool is_no_symmetry = Symmetry::length == 0;
@@ -130,42 +104,31 @@ namespace TAT {
       auto reserve_size = configure.size() + 1;
       new_names.reserve(reserve_size);
       new_edges.reserve(reserve_size);
+
+      auto points = pmr::unordered_map<Name, std::pair<Symmetry, Size>>(unordered_parameter * configure.size());
       auto total_symmetry = Symmetry();
-      Size total_offset = 0;
-      auto contract_names = std::unordered_set<std::pair<Name, Name>>();
-      for (const auto& name : names) {
-         if (auto found_position = configure.find(name); found_position != configure.end()) {
+      auto contract_pairs = std::unordered_set<std::pair<Name, Name>>(unordered_parameter * configure.size());
+
+      for (auto i = 0; i < rank(); i++) {
+         const auto& name = names(i);
+         if (auto found = configure.find(name); found != configure.end()) {
             // shrinking
-            const auto& position = found_position->second;
-            Symmetry symmetry;
-            Size index;
-            if constexpr (is_no_symmetry) {
-               index = position;
-            } else {
-               symmetry = std::get<0>(position);
-               index = std::get<1>(position);
-               total_symmetry += symmetry;
-            }
-            const auto& this_edge = edges(name);
-            Size dimension = this_edge.get_dimension_from_symmetry(symmetry);
-            total_offset *= dimension;
-            total_offset += index;
+            const auto& edge = edges(i);
+            const auto& index = found->second;
+            auto point = edge.point_by_index(index);
+            auto symmetry = point.first;
+
             new_names.push_back(name);
-            contract_names.insert({name, name});
-            if constexpr (is_fermi) {
-               new_edges.push_back({{{-symmetry, dimension}}, !this_edge.arrow});
-            } else {
-               new_edges.push_back({{{-symmetry, dimension}}});
-            }
+            new_edges.push_back(edge.conjugated());
+            points[name] = point;
+            total_symmetry += symmetry;
+            contract_pairs.insert({name, name});
          }
       }
       if (new_name != InternalName<Name>::No_New_Name) {
          new_names.push_back(new_name);
-         if constexpr (is_fermi) {
-            new_edges.push_back({{{total_symmetry, 1}}, arrow});
-         } else {
-            new_edges.push_back({{{total_symmetry, 1}}});
-         }
+         new_edges.push_back({{{total_symmetry, 1}}, arrow});
+         points[new_name] = std::pair<Symmetry, Size>{total_symmetry, 0};
       } else {
          if constexpr (debug_mode) {
             if constexpr (!is_no_symmetry) {
@@ -176,9 +139,8 @@ namespace TAT {
          }
       }
       auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
-      helper.zero();
-      helper.storage()[total_offset] = 1;
-      return contract(helper, contract_names);
+      helper.at(points) = 1;
+      return contract(helper, contract_pairs);
    }
 } // namespace TAT
 #endif

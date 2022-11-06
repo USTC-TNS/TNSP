@@ -35,19 +35,6 @@ namespace std {
          return string_hash(std::get<0>(name)) ^ !string_hash(std::get<1>(name));
       }
    };
-
-   template<>
-   struct hash<pair<net::pss, net::pss>> {
-      size_t operator()(const pair<net::pss, net::pss>& names) const {
-         const auto& [name_1, name_2] = names;
-         auto hash_1 = hash<net::pss>()(name_1);
-         auto hash_2 = hash<net::pss>()(name_2);
-         auto seed = hash_1;
-         auto v = hash_2;
-         seed ^= v + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-         return seed;
-      }
-   };
 } // namespace std
 
 namespace TAT {
@@ -62,7 +49,7 @@ namespace TAT {
 
    template<>
    struct NameTraits<pss> {
-      static constexpr name_out_operator_t<pss> print = net::operator<<;
+      static constexpr out_operator_t<pss> print = net::operator<<;
    };
 } // namespace TAT
 

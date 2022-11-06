@@ -35,16 +35,16 @@
 #include "miscellaneous/mpi.hpp"
 #include "miscellaneous/scalar.hpp"
 
+#include "implement/clear_symmetry.hpp"
+#include "implement/conjugate.hpp"
 #include "implement/contract.hpp"
 #include "implement/edge_miscellaneous.hpp"
 #include "implement/edge_operator.hpp"
 #include "implement/exponential.hpp"
-#include "implement/get_item_and_clear_symmetry.hpp"
-#include "implement/identity_and_conjugate.hpp"
+#include "implement/identity.hpp"
 #include "implement/qr.hpp"
 #include "implement/shrink_and_expand.hpp"
 #include "implement/svd.hpp"
 #include "implement/trace.hpp"
-#include "implement/transpose.hpp"
 
 #endif

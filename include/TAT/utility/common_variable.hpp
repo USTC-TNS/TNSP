@@ -27,6 +27,7 @@
 
 // - TAT_USE_FAST_NAME: define to use TAT::FastName as default name instead of std::string
 // - TAT_USE_TIMER: define to add timers for some common operator
+
 // - TAT_ERROR_BITS: throw exception for different situations, rather than print warning
 // - TAT_NOTHING_BITS: keep silent for different situations, rather than print warning
 
@@ -35,7 +36,7 @@
  */
 namespace TAT {
 #ifndef TAT_VERSION
-#define TAT_VERSION "0.2.23"
+#define TAT_VERSION "0.3.0"
 #endif
 
    /**
@@ -73,11 +74,11 @@ namespace TAT {
    // evil
    namespace detail {
       /**
-       * Singleton, print a tips when program exits in debug mode, and control color ansi in windows
+       * Singleton, control color ansi in windows
        */
       struct evil_t {
-         evil_t() noexcept;
-         ~evil_t() noexcept;
+         evil_t();
+         ~evil_t();
       };
       inline const evil_t evil;
    } // namespace detail
@@ -239,7 +240,19 @@ namespace TAT {
       }
    };
 
+   template<typename... Fs>
+   struct overloaded : Fs... {
+      using Fs::operator()...;
+   };
+   template<typename... Fs>
+   overloaded(Fs...) -> overloaded<Fs...>;
+
    constexpr std::size_t unordered_parameter = 4;
+
+   inline std::size_t& hash_absorb(std::size_t& seed, std::size_t value) {
+      // copy from boost
+      return seed ^= value + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+   }
 } // namespace TAT
 
 #endif

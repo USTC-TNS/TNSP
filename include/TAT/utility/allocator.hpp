@@ -30,7 +30,7 @@
 namespace TAT {
    namespace detail {
       struct memory_resource {
-         virtual ~memory_resource() noexcept {}
+         virtual ~memory_resource() {}
 
          void* allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t)) {
             return do_allocate(bytes, alignment);
@@ -48,10 +48,10 @@ namespace TAT {
          virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) = 0;
          virtual bool do_is_equal(const memory_resource& other) const = 0;
       };
-      inline bool operator==(const memory_resource& a, const memory_resource& b) noexcept {
+      inline bool operator==(const memory_resource& a, const memory_resource& b) {
          return &a == &b || a.is_equal(b);
       }
-      inline bool operator!=(const memory_resource& a, const memory_resource& b) noexcept {
+      inline bool operator!=(const memory_resource& a, const memory_resource& b) {
          return !(a == b);
       }
 
@@ -88,9 +88,8 @@ namespace TAT {
 
          static const std::size_t default_next_buffer_size = 32u * sizeof(void*);
 
-         monotonic_buffer_resource(void* buffer, std::size_t buffer_size) noexcept :
-               monotonic_buffer_resource(buffer, buffer_size, get_default_resource()) {}
-         monotonic_buffer_resource(void* buffer, std::size_t buffer_size, memory_resource* upstream) noexcept :
+         monotonic_buffer_resource(void* buffer, std::size_t buffer_size) : monotonic_buffer_resource(buffer, buffer_size, get_default_resource()) {}
+         monotonic_buffer_resource(void* buffer, std::size_t buffer_size, memory_resource* upstream) :
                m_buffer_list(),
                m_upstream(upstream),
                m_current_buffer(buffer),
@@ -115,7 +114,7 @@ namespace TAT {
             return m_upstream;
          }
 
-         ~monotonic_buffer_resource() noexcept override {
+         ~monotonic_buffer_resource() override {
             release();
          }
 
@@ -183,11 +182,11 @@ namespace TAT {
          memory_resource* m_resource;
 
          using value_type = T;
-         polymorphic_allocator() noexcept : polymorphic_allocator(get_default_resource()) {}
+         polymorphic_allocator() : polymorphic_allocator(get_default_resource()) {}
          polymorphic_allocator(const polymorphic_allocator& other) = default;
          template<typename U>
-         polymorphic_allocator(const polymorphic_allocator<U>& other) noexcept : polymorphic_allocator(other.resource()) {}
-         polymorphic_allocator(memory_resource* r) noexcept : m_resource(r) {}
+         polymorphic_allocator(const polymorphic_allocator<U>& other) : polymorphic_allocator(other.resource()) {}
+         polymorphic_allocator(memory_resource* r) : m_resource(r) {}
 
          polymorphic_allocator<T>& operator=(const polymorphic_allocator<T>&) = delete;
 
@@ -219,41 +218,11 @@ namespace TAT {
       };
 
       template<typename T1, typename T2>
-      bool operator==(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
+      bool operator==(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) {
          return *lhs.resource() == *rhs.resource();
       }
       template<typename T1, typename T2>
-      bool operator!=(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) noexcept {
-         return !(lhs == rhs);
-      }
-
-      template<typename T>
-      struct no_initialize_polymorphic_allocator : polymorphic_allocator<T> {
-         using polymorphic_allocator<T>::polymorphic_allocator;
-
-         no_initialize_polymorphic_allocator(const no_initialize_polymorphic_allocator& other) = default;
-         template<typename U>
-         no_initialize_polymorphic_allocator(const no_initialize_polymorphic_allocator<U>& other) noexcept :
-               no_initialize_polymorphic_allocator(other.resource()) {}
-
-         no_initialize_polymorphic_allocator<T> select_on_container_copy_construction() const {
-            return no_initialize_polymorphic_allocator<T>();
-         }
-
-         template<typename U, typename... Args>
-         void construct([[maybe_unused]] U* p, Args&&... args) {
-            if constexpr (!((sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
-               new (p) U(std::forward<Args>(args)...);
-            }
-         }
-      };
-
-      template<typename T1, typename T2>
-      bool operator==(const no_initialize_polymorphic_allocator<T1>& lhs, const no_initialize_polymorphic_allocator<T2>& rhs) noexcept {
-         return *lhs.resource() == *rhs.resource();
-      }
-      template<typename T1, typename T2>
-      bool operator!=(const no_initialize_polymorphic_allocator<T1>& lhs, const no_initialize_polymorphic_allocator<T2>& rhs) noexcept {
+      bool operator!=(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) {
          return !(lhs == rhs);
       }
    } // namespace detail
@@ -265,77 +234,25 @@ namespace TAT {
       std::byte* buffer;
       detail::monotonic_buffer_resource resource;
       detail::memory_resource* upstream;
-      scope_resource(std::size_t size = default_buffer_size) noexcept :
+      scope_resource(std::size_t size = default_buffer_size) :
             buffer(new std::byte[size]),
             resource(buffer, size * sizeof(std::byte)),
             upstream(set_default_resource(&resource)) {}
-      ~scope_resource() noexcept {
+      ~scope_resource() {
          set_default_resource(upstream);
          delete[] buffer;
       }
    };
-
-   namespace detail {
-      /**
-       * Allocator without initialize the element if no parameter given
-       *
-       * Inherit from std::allocator
-       */
-      template<typename T>
-      struct no_initialize_allocator : std::allocator<T> {
-         using std::allocator<T>::allocator;
-
-         no_initialize_allocator(const no_initialize_allocator& other) = default;
-         template<typename U>
-         no_initialize_allocator(const no_initialize_allocator<U>& other) noexcept : no_initialize_allocator() {}
-
-         no_initialize_allocator<T> select_on_container_copy_construction() const {
-            return no_initialize_allocator<T>();
-         }
-
-         // It is useless, but base class has it so derived class must have it.
-         template<typename U>
-         struct rebind {
-            using other = no_initialize_allocator<U>;
-         };
-
-         template<typename U, typename... Args>
-         void construct([[maybe_unused]] U* p, Args&&... args) {
-            if constexpr (!((sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
-               new (p) U(std::forward<Args>(args)...);
-            }
-         }
-      };
-   } // namespace detail
 } // namespace TAT
 
 #include <list>
 #include <map>
 #include <set>
-#include <sstream>
-#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace TAT {
-   namespace no_initialize {
-      template<typename T>
-      using vector = std::vector<T, detail::no_initialize_allocator<T>>;
-
-      using string = std::basic_string<char, std::char_traits<char>, detail::no_initialize_allocator<char>>;
-      using istringstream = std::basic_istringstream<char, std::char_traits<char>, detail::no_initialize_allocator<char>>;
-
-      namespace pmr {
-         /**
-          * No initialize version of pmr vector used in tensor content
-          */
-         template<typename T>
-         using vector = std::vector<T, detail::no_initialize_polymorphic_allocator<T>>;
-      } // namespace pmr
-
-   } // namespace no_initialize
-
    namespace pmr {
       // The only difference betwen the below and std::pmr is default resource getter is thread unsafe
       template<typename T>
