@@ -17,17 +17,35 @@
 #
 
 from .marshall import Marshall
-from .open_string import OpenString
-from .closed_string import ClosedString
 from .product_ansatz import ProductAnsatz
 from .sum_ansatz import SumAnsatz
 try:
     import torch
 except ModuleNotFoundError:
 
-    class ConvolutionalNeural:
+    class MissingTorchMeta(type):
 
-        def __init__(self, *args, **kwargs):
-            raise RuntimeError("torch needed for ConvolutionalNeural")
+        def __new__(cls, name, bases, attrs):
+            attrs["__init__"] = cls._generate_init_(name)
+            return type.__new__(cls, name, bases, attrs)
+
+        @staticmethod
+        def _generate_init_(name):
+
+            def __init__(self, *args, **kwargs):
+                raise RuntimeError("torch needed for " + name)
+
+            return __init__
+
+    class ConvolutionalNeural(metaclass=MissingTorchMeta):
+        pass
+
+    class OpenString(metaclass=MissingTorchMeta):
+        pass
+
+    class ClosedString(metaclass=MissingTorchMeta):
+        pass
 else:
     from .convolutional_neural import ConvolutionalNeural
+    from .open_string import OpenString
+    from .closed_string import ClosedString
