@@ -1,5 +1,0 @@
-#+OPTIONS: toc:nil
-
-* wrapper-TAT
-
-wrapper TAT is a library to wrap other tensor library to TAT interface.

@@ -45,7 +45,6 @@ jobs:
           - package: lazy_graph
           - package: tetragono
           - package: tetraku
-          - package: wrapper_TAT
 
     steps:
       - name: checkout
@@ -204,7 +203,6 @@ jobs:
           - package: lazy_graph
           - package: tetragono
           - package: tetraku
-          - package: wrapper_TAT
 
     steps:
       - name: checkout

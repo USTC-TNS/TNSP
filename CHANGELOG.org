@@ -12,6 +12,7 @@
 *** Deprecated
 *** Removed
 + *tetragono*: =gm_data_load= is removed, please use =gm_hamiltonian= to replace the hamiltonian instead.
++ *wrapper*: =wrapper_TAT= is removed.
 *** Fixed
 + *tetragono*: Fix the wrong error message when trying to import module used by =ex_create=, =ap_ansatz_mul= and so on.
 

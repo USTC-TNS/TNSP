@@ -10,7 +10,6 @@
 !/tetraku
 !/tnsp_bridge
 !/vcpkg
-!/wrapper_TAT
 !/.clang-format
 !/.gitignore
 !/.style.yapf
