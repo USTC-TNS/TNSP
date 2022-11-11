@@ -196,11 +196,11 @@ namespace TAT {
                   position_map[name] = symmetry;
                }
                auto& block = tensor.blocks(position_map);
-               const Rank rank = tensor.get_rank();
+               const Rank rank = tensor.rank();
                auto dimensions = std::vector<Size>(rank);
                auto leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  dimensions[i] = tensor.edges(i).get_dimension_from_symmetry(position_map[tensor.names[i]]);
+                  dimensions[i] = tensor.edges(i).dimension_by_symmetry(position_map[tensor.names(i)]);
                }
                for (auto i = rank; i-- > 0;) {
                   if (i == rank - 1) {
@@ -213,7 +213,7 @@ namespace TAT {
                auto real_dimensions = std::vector<Size>(rank);
                auto real_leadings = std::vector<Size>(rank);
                for (auto i = 0; i < rank; i++) {
-                  auto j = tensor.get_rank_from_name(b.position[i].first);
+                  auto j = tensor.rank_by_name(b.position[i].first);
                   real_dimensions[i] = dimensions[j];
                   real_leadings[i] = leadings[j];
                }
@@ -239,17 +239,27 @@ namespace TAT {
       tensor_t.attr("model") = symmetry_m;
 
       return [=]() mutable {
-         tensor_t.def_readonly("names", &T::names, "Names of all edge of the tensor")
-               .def_property_readonly("rank", &T::get_rank)
+         tensor_t
+               .def_property_readonly(
+                     "names",
+                     [](const T& tensor) {
+                        return tensor.names();
+                     },
+                     "Names of all edge of the tensor")
+               .def_property_readonly(
+                     "rank",
+                     [](const T& tensor) {
+                        return tensor.rank();
+                     })
                .def(
                      "edges",
-                     [](T& tensor, Rank r) -> E& {
+                     [](T& tensor, Rank r) -> const E& {
                         return tensor.edges(r);
                      },
                      py::return_value_policy::reference_internal)
                .def(
                      "edges",
-                     [](T& tensor, DefaultName r) -> E& {
+                     [](T& tensor, DefaultName r) -> const E& {
                         return tensor.edges(r);
                      },
                      py::return_value_policy::reference_internal)
@@ -678,19 +688,23 @@ namespace TAT {
                           real_edge ? "Edge" : "EdgeSegment",
                           ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
                           .def(implicit_init<EdgeType<Symmetry>, Size>(), py::arg("dimension"), "Edge with only one trivial segment")
-                          .def_readonly("segment", &EdgeType<Symmetry>::segment)
+                          .def_property_readonly(
+                                "segment",
+                                [](const EdgeType<Symmetry>& edge) {
+                                   return edge.segments();
+                                })
                           .def_property_readonly("dimension", &EdgeType<Symmetry>::total_dimension)
-                          .def("conjugated", &EdgeType<Symmetry>::conjugated_edge, "Get conjugated edge of this edge")
-                          .def("get_point_from_index", &EdgeType<Symmetry>::get_point_from_index, "Get edge point from index")
-                          .def("get_index_from_point", &EdgeType<Symmetry>::get_index_from_point, "Get index from edge point")
+                          .def("conjugated", &EdgeType<Symmetry>::conjugated, "Get conjugated edge of this edge")
+                          .def("get_point_from_index", &EdgeType<Symmetry>::point_by_index, "Get edge point from index")
+                          .def("get_index_from_point", &EdgeType<Symmetry>::index_by_point, "Get index from edge point")
                           .def(py::self == py::self)
                           .def(py::self != py::self);
 
       if constexpr (real_edge) {
          if constexpr (need_arrow) {
-            result.def_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
+            result.def_property_readonly("arrow", &EdgeType<Symmetry>::arrow, "Fermi Arrow of the edge");
          } else {
-            result.def_readonly_static("arrow", &EdgeType<Symmetry>::arrow, "Boson Arrow of the edge, always False");
+            result.def_property_readonly_static("arrow", &EdgeType<Symmetry>::arrow, "Boson Arrow of the edge, always False");
          }
       }
 

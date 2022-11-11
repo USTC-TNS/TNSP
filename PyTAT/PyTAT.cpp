@@ -146,7 +146,7 @@ namespace TAT {
       auto No_m = tat_m.def_submodule("No");
       declare_symmetry<NoSymmetry>(No_m, "No").def(py::init<>());
       declare_edge<NoSymmetry, void, false>(No_m, "No");
-      declare_edge<NoSymmetry, void, false, edge_segment_t>(No_m, "No");
+      declare_edge<NoSymmetry, void, false, edge_segments_t>(No_m, "No");
       declare_configuration<NoSymmetry>(No_m, "No");
 
       auto Z2_m = tat_m.def_submodule("Z2");
@@ -157,7 +157,7 @@ namespace TAT {
                return std::get<0>(symmetry);
             });
       declare_edge<Z2Symmetry, Z2, false>(Z2_m, "Z2");
-      declare_edge<Z2Symmetry, Z2, false, edge_segment_t>(Z2_m, "Z2");
+      declare_edge<Z2Symmetry, Z2, false, edge_segments_t>(Z2_m, "Z2");
       declare_configuration<Z2Symmetry>(Z2_m, "Z2");
 
       auto U1_m = tat_m.def_submodule("U1");
@@ -168,7 +168,7 @@ namespace TAT {
                return std::get<0>(symmetry);
             });
       declare_edge<U1Symmetry, U1, false>(U1_m, "U1");
-      declare_edge<U1Symmetry, U1, false, edge_segment_t>(U1_m, "U1");
+      declare_edge<U1Symmetry, U1, false, edge_segments_t>(U1_m, "U1");
       declare_configuration<U1Symmetry>(U1_m, "U1");
 
       auto Fermi_m = tat_m.def_submodule("Fermi");
@@ -179,7 +179,7 @@ namespace TAT {
                return std::get<0>(symmetry);
             });
       declare_edge<FermiSymmetry, U1, false>(Fermi_m, "Fermi");
-      declare_edge<FermiSymmetry, U1, false, edge_segment_t>(Fermi_m, "Fermi");
+      declare_edge<FermiSymmetry, U1, false, edge_segments_t>(Fermi_m, "Fermi");
       declare_configuration<FermiSymmetry>(Fermi_m, "Fermi");
 
       auto FermiZ2_m = tat_m.def_submodule("FermiZ2");
@@ -199,7 +199,7 @@ namespace TAT {
                return std::get<1>(symmetry);
             });
       declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true>(FermiZ2_m, "FermiZ2");
-      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true, edge_segment_t>(FermiZ2_m, "FermiZ2");
+      declare_edge<FermiZ2Symmetry, std::tuple<U1, Z2>, true, edge_segments_t>(FermiZ2_m, "FermiZ2");
       declare_configuration<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2");
 
       auto FermiU1_m = tat_m.def_submodule("FermiU1");
@@ -219,7 +219,7 @@ namespace TAT {
                return std::get<1>(symmetry);
             });
       declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true>(FermiU1_m, "FermiU1");
-      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_segment_t>(FermiU1_m, "FermiU1");
+      declare_edge<FermiU1Symmetry, std::tuple<U1, U1>, true, edge_segments_t>(FermiU1_m, "FermiU1");
       declare_configuration<FermiU1Symmetry>(FermiU1_m, "FermiU1");
 
       auto Parity_m = tat_m.def_submodule("Parity");
@@ -230,7 +230,7 @@ namespace TAT {
                return std::get<0>(symmetry);
             });
       declare_edge<ParitySymmetry, Z2, false>(Parity_m, "Parity");
-      declare_edge<ParitySymmetry, Z2, false, edge_segment_t>(Parity_m, "Parity");
+      declare_edge<ParitySymmetry, Z2, false, edge_segments_t>(Parity_m, "Parity");
       declare_configuration<ParitySymmetry>(Parity_m, "Parity");
 
       // tensor
