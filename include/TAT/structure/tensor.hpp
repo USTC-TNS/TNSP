@@ -105,11 +105,6 @@ namespace TAT {
       using edge_t = Edge<symmetry_t>;
       using core_t = Core<scalar_t, symmetry_t>;
 
-#if 1
-      const auto& _order() const {
-         return m_core->_order;
-      }
-#endif
       // tensor data
     private:
       /**

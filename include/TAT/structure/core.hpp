@@ -143,7 +143,21 @@ namespace TAT {
          auto storage_pointer = m_storage.data();
 
 #if 1
-         for (const auto& index : _order) {
+         // TODO use new order storage
+         std::vector<std::vector<symmetry_t>> old_order;
+         Size storage_size = 0;
+         for (auto it = blocks().begin(); it.valid; ++it) {
+            if (it->has_value()) {
+               std::vector<symmetry_t> result;
+               result.reserve(blocks().rank());
+               for (auto i = 0; i < blocks().rank(); i++) {
+                  result.push_back(edges(i).segments(it.indices[i]).first);
+               }
+               old_order.push_back(std::move(result));
+            }
+         }
+         std::sort(old_order.begin(), old_order.end());
+         for (const auto& index : old_order) {
             auto& block = blocks(index);
             block.set_data(storage_pointer);
             storage_pointer += block.size();
@@ -159,11 +173,6 @@ namespace TAT {
       }
 
     public:
-// TODO use new order storage
-#if 1
-      std::vector<std::vector<symmetry_t>> _order;
-#endif
-
       // this is the only constructor, from constructor of tensor
       Core(std::vector<edge_t> input_edges) :
             m_edges(std::move(input_edges)),
@@ -198,20 +207,9 @@ namespace TAT {
          for (auto it = blocks().begin(); it.valid; ++it) {
             if (total_symmetry_pool[it.offset] == symmetry_t()) {
                it->emplace(nullptr, single_block_dimensions(it.indices));
-#if 1
-               std::vector<symmetry_t> result;
-               result.reserve(blocks().rank());
-               for (auto i = 0; i < blocks().rank(); i++) {
-                  result.push_back(edges(i).segments(it.indices[i]).first);
-               }
-               _order.push_back(result);
-#endif
                storage_size += it->value().size();
             }
          }
-#if 1
-         std::sort(_order.begin(), _order.end());
-#endif
 
          m_storage.resize(storage_size);
          refresh_storage_pointer_in_pool();
@@ -220,9 +218,6 @@ namespace TAT {
       Core() = delete;
       Core(const Core& other) : m_edges(other.m_edges), m_blocks(other.m_blocks), m_pool(other.m_pool), m_storage(other.m_storage) {
          m_blocks.set_data(m_pool.data());
-#if 1
-         _order = other._order;
-#endif
          refresh_storage_pointer_in_pool();
       };
       Core(Core&& other) = default;

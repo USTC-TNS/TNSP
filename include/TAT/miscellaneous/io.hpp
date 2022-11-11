@@ -547,47 +547,27 @@ namespace TAT {
       } else {
          detail::print_list(
                out,
-#if 1
-               [&tensor, i = tensor._order().begin(), end = tensor._order().end()](std::ostream& out) mutable {
-                  if (i == end) {
-                     return true;
-                  }
-                  const auto& symmetries = *i;
-                  out << console_yellow << symmetries << console_origin << ':';
-                  const auto& block = tensor.blocks(symmetries);
-                  detail::print_list(
-                        out,
-                        [offset = 0, l = block.data(), count = block.size()](std::ostream& out) mutable {
-                           if (offset == count) {
-                              return true;
-                           }
-                           if constexpr (is_complex<ScalarType>) {
-                              detail::print_complex(out, l[offset]);
-                           } else {
-                              out << l[offset];
-                           }
-                           ++offset;
-                           return offset == count;
-                        },
-                        '[',
-                        ']');
-                  ++i;
-                  return i == end;
-               },
-#else
-               [&tensor, i = tensor.blocks().begin()](std::ostream& out) mutable {
-                  if (!i.valid) {
-                     return true;
+               [&tensor, it = tensor.blocks().begin()](std::ostream& out) mutable {
+                  if (it.offset == 0) {
+                     while (true) {
+                        if (!it.valid) {
+                           return true;
+                        }
+                        if (it->has_value()) {
+                           break;
+                        }
+                        ++it;
+                     }
                   }
                   std::vector<Symmetry> symmetries;
                   symmetries.reserve(tensor.rank());
                   for (auto j = 0; j < tensor.rank(); j++) {
-                     symmetries.push_back(tensor.edges(j).segment(i.index[j]).first);
+                     symmetries.push_back(tensor.edges(j).segments(it.indices[j]).first);
                   }
                   out << console_yellow << symmetries << console_origin << ':';
                   detail::print_list(
                         out,
-                        [offset = 0, l = i->value().data, count = i->value().size](std::ostream& out) mutable {
+                        [offset = 0, l = it->value().data(), count = it->value().size()](std::ostream& out) mutable {
                            if (offset == count) {
                               return true;
                            }
@@ -601,10 +581,16 @@ namespace TAT {
                         },
                         '[',
                         ']');
-                  ++i;
-                  return !i.valid;
+                  while (true) {
+                     ++it;
+                     if (!it.valid) {
+                        return true;
+                     }
+                     if (it->has_value()) {
+                        return false;
+                     }
+                  }
                },
-#endif
                '{',
                '}');
       }
