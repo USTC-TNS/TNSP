@@ -660,20 +660,6 @@ namespace TAT {
    }
 
    // tensor bin out
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_put(std::ostream& out) const {
-      out < names();
-      out < edges();
-      return *this;
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   const Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_put(std::ostream& out) const {
-      out < storage();
-      return *this;
-   }
-
    inline timer tensor_dump_guard("tensor_dump");
 
    template<
@@ -683,7 +669,12 @@ namespace TAT {
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       auto timer_guard = tensor_dump_guard();
-      tensor.meta_put(out).data_put(out);
+      out << 'T';
+      Rank version = 1;
+      out < version;
+      out < tensor.names();
+      out < tensor.edges();
+      out < tensor.storage();
       return out;
    }
 
@@ -695,23 +686,6 @@ namespace TAT {
    }
 
    // tensor bin in
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::meta_get(std::istream& in) {
-      in > m_names;
-      std::vector<Edge<Symmetry>> edges;
-      in > edges;
-      m_core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(std::move(edges));
-      check_valid_name();
-      return *this;
-   }
-
-   template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::data_get(std::istream& in) {
-      in > storage();
-      return *this;
-   }
-
    inline timer tensor_load_guard("tensor_load");
 
    template<
@@ -721,7 +695,27 @@ namespace TAT {
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       auto timer_guard = tensor_load_guard();
-      tensor.meta_get(in).data_get(in);
+      Rank version = 0;
+      if (in.peek() == 'T') {
+         in.get();
+         in > version;
+      }
+      if (version == 0) {
+         std::vector<Name> names;
+         in > names;
+         std::vector<Edge<Symmetry>> edges;
+         in > edges;
+         tensor = Tensor<ScalarType, Symmetry, Name>(std::move(names), std::move(edges));
+         in > tensor.storage();
+         tensor._block_order_v0_to_v1();
+      } else if (version == 1) {
+         std::vector<Name> names;
+         in > names;
+         std::vector<Edge<Symmetry>> edges;
+         in > edges;
+         tensor = Tensor<ScalarType, Symmetry, Name>(std::move(names), std::move(edges));
+         in > tensor.storage();
+      }
       return in;
    }
 

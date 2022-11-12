@@ -869,17 +869,16 @@ namespace TAT {
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
       shrink(const std::unordered_map<Name, Size>& configure, const Name& new_name = InternalName<Name>::No_New_Name, Arrow arrow = false) const;
 
-      const Tensor<ScalarType, Symmetry, Name>& meta_put(std::ostream&) const;
-      const Tensor<ScalarType, Symmetry, Name>& data_put(std::ostream&) const;
-      Tensor<ScalarType, Symmetry, Name>& meta_get(std::istream&);
-      Tensor<ScalarType, Symmetry, Name>& data_get(std::istream&);
-
       [[nodiscard]] std::string show() const;
       [[nodiscard]] std::string dump() const;
       Tensor<ScalarType, Symmetry, Name>& load(const std::string&) &;
       [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& load(const std::string& string) && {
          return std::move(load(string));
       };
+
+      void _block_order_v0_to_v1() {
+         m_core->_block_order_v0_to_v1();
+      }
    };
 
    namespace detail {

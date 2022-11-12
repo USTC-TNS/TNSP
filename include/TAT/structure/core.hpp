@@ -21,6 +21,8 @@
 #ifndef TAT_CORE_HPP
 #define TAT_CORE_HPP
 
+#include <algorithm>
+#include <map>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -142,28 +144,6 @@ namespace TAT {
       void refresh_storage_pointer_in_pool() {
          auto storage_pointer = m_storage.data();
 
-#if 1
-         // TODO use new order storage
-         std::vector<std::vector<symmetry_t>> old_order;
-         Size storage_size = 0;
-         for (auto it = blocks().begin(); it.valid; ++it) {
-            if (it->has_value()) {
-               std::vector<symmetry_t> result;
-               result.reserve(blocks().rank());
-               for (auto i = 0; i < blocks().rank(); i++) {
-                  result.push_back(edges(i).segments(it.indices[i]).first);
-               }
-               old_order.push_back(std::move(result));
-            }
-         }
-         std::sort(old_order.begin(), old_order.end());
-         for (const auto& index : old_order) {
-            auto& block = blocks(index);
-            block.set_data(storage_pointer);
-            storage_pointer += block.size();
-         }
-         return;
-#endif
          for (auto& block : m_pool) {
             if (block.has_value()) {
                block.value().set_data(storage_pointer);
@@ -223,6 +203,48 @@ namespace TAT {
       Core(Core&& other) = default;
       Core& operator=(const Core&) = delete;
       Core& operator=(Core&&) = delete;
+
+      void _block_order_v0_to_v1() {
+         auto new_storage = std::vector<scalar_t>(m_storage.size());
+
+         std::vector<std::vector<symmetry_t>> old_order;
+         for (auto it = blocks().begin(); it.valid; ++it) {
+            if (it->has_value()) {
+               std::vector<symmetry_t> result;
+               result.reserve(blocks().rank());
+               for (auto i = 0; i < blocks().rank(); i++) {
+                  result.push_back(edges(i).segments(it.indices[i]).first);
+               }
+               old_order.push_back(std::move(result));
+            }
+         }
+
+         std::map<std::vector<symmetry_t>, std::tuple<Size, Size, Size>> symmetries_to_offsets; // old offset, new offset, size
+         Size total_new_offset = 0;
+         for (const auto& symmetries : old_order) {
+            auto& [old_offset, new_offset, size] = symmetries_to_offsets[symmetries];
+            size = blocks(symmetries).size();
+            new_offset = total_new_offset;
+            total_new_offset += size;
+         }
+
+         std::sort(old_order.begin(), old_order.end());
+
+         Size total_old_offset = 0;
+         for (const auto& symmetries : old_order) {
+            auto& [old_offset, new_offset, size] = symmetries_to_offsets[symmetries];
+            old_offset = total_old_offset;
+            total_old_offset += size;
+         }
+
+         for (const auto& [key, value] : symmetries_to_offsets) {
+            const auto& [old_offset, new_offset, size] = value;
+            std::copy(&m_storage[old_offset], &m_storage[old_offset + size], &new_storage[new_offset]);
+         }
+
+         m_storage = std::move(new_storage);
+         refresh_storage_pointer_in_pool();
+      }
    };
 } // namespace TAT
 #endif
