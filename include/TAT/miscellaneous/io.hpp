@@ -29,8 +29,67 @@
 #include "../utility/timer.hpp"
 
 namespace TAT {
-   // complex text io, complex bin io can be done directly
    namespace detail {
+      template<typename char_type>
+      class basic_instringstream :
+            private std::basic_streambuf<char_type, std::char_traits<char_type>>,
+            public std::basic_istream<char_type, std::char_traits<char_type>> {
+         using traits_type = std::char_traits<char_type>;
+         using base_buf_type = std::basic_streambuf<char_type, traits_type>;
+         using base_stream_type = std::basic_istream<char_type, traits_type>;
+         using int_type = typename base_buf_type::int_type;
+
+         std::basic_string_view<char_type> m_str;
+
+       public:
+         explicit basic_instringstream(std::basic_string_view<char_type> str) : base_stream_type(this), m_str(str) {
+            this->setg(const_cast<char_type*>(&*m_str.begin()), const_cast<char_type*>(&*m_str.begin()), const_cast<char_type*>(&*m_str.end()));
+         }
+      };
+
+      template<typename char_type>
+      class basic_outstringstream :
+            private std::basic_streambuf<char_type, std::char_traits<char_type>>,
+            public std::basic_ostream<char_type, std::char_traits<char_type>> {
+         using traits_type = std::char_traits<char_type>;
+         using base_buf_type = std::basic_streambuf<char_type, traits_type>;
+         using base_stream_type = std::basic_ostream<char_type, traits_type>;
+         using int_type = typename base_buf_type::int_type;
+
+         std::basic_string<char_type> m_str;
+
+         int_type overflow(int_type ch) override {
+            // pbase, pptr, epptr
+            if (traits_type::eq_int_type(ch, traits_type::eof())) {
+               return ch;
+            }
+
+            m_str.resize(m_str.size() * 2);
+
+            const std::ptrdiff_t diff = this->pptr() - this->pbase();
+            this->setp(&*m_str.begin(), &*m_str.end());
+            this->pbump(diff);
+
+            *this->pptr() = traits_type::to_char_type(ch);
+            this->pbump(1);
+
+            return ch; // return any value except eof
+         }
+
+       public:
+         explicit basic_outstringstream(std::size_t size = 8) : base_stream_type(this) {
+            m_str.resize(size);
+            this->setp(&*m_str.begin(), &*m_str.end());
+         }
+
+         std::basic_string<char_type> str() && {
+            const std::ptrdiff_t diff = this->pptr() - this->pbase();
+            m_str.resize(diff);
+            return std::move(m_str);
+         }
+      };
+
+      // complex text io, complex bin io can be done directly
       template<typename ScalarType>
       std::ostream& print_complex(std::ostream& out, const std::complex<ScalarType>& value) {
          if (value.real() != 0) {
@@ -524,9 +583,9 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    std::string Tensor<ScalarType, Symmetry, Name>::show() const {
-      std::ostringstream out;
+      detail::basic_outstringstream<char> out;
       out << *this;
-      return out.str();
+      return std::move(out).str();
    }
 
    // tensor bin out
@@ -559,9 +618,9 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    std::string Tensor<ScalarType, Symmetry, Name>::dump() const {
-      std::ostringstream out;
+      detail::basic_outstringstream<char> out;
       out < *this;
-      return out.str();
+      return std::move(out).str();
    }
 
    // tensor bin in
@@ -599,7 +658,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::load(const std::string& input) & {
-      std::istringstream in(input);
+      detail::basic_instringstream<char> in(input);
       in > *this;
       return *this;
    }

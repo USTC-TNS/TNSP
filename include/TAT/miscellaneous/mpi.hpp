@@ -161,9 +161,9 @@ namespace TAT {
       template<typename Type, typename = std::enable_if_t<serializable<Type>>>
       static void send(const Type& value, const int destination) {
          auto timer_guard = mpi_send_guard();
-         std::ostringstream stream;
+         detail::basic_outstringstream<char> stream;
          stream < value;
-         auto data = stream.str(); // maybe it does not need copy, but it is hard to implement in the mpi framework
+         auto data = std::move(stream).str();
          MPI_Send(data.data(), data.length(), MPI_BYTE, destination, mpi_tag, MPI_COMM_WORLD);
       }
 
@@ -177,7 +177,7 @@ namespace TAT {
          auto data = no_initialize::string();
          data.resize(length);
          MPI_Recv(data.data(), length, MPI_BYTE, source, mpi_tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-         no_initialize::istringstream stream(data);
+         detail::basic_instringstream<char> stream(data);
          auto result = Type();
          stream > result;
          return result;
