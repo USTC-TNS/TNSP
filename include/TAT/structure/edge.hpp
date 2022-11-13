@@ -203,6 +203,31 @@ namespace TAT {
          }
          return total;
       }
+
+      [[deprecated("Use point_by_index instead")]] point_t get_point_from_index(const index_t& index) const {
+         return point_by_index(index);
+      }
+      [[deprecated("Use index_by_point instead")]] index_t get_index_from_point(const point_t& point) const {
+         return index_by_point(point);
+      }
+      [[deprecated("Use dimension_by_symmetry instead")]] Size get_dimension_from_symmetry(const symmetry_t& symmetry) const {
+         return dimension_by_symmetry(symmetry);
+      }
+      [[deprecated("Use segments(position).second instead")]] Size get_dimension_from_position(const position_t& position) const {
+         return segments(position).second;
+      }
+      [[deprecated("Use segments(position).first instead")]] symmetry_t get_symmetry_from_position(const position_t& position) const {
+         return segments(position).first;
+      }
+      [[deprecated("Use position_by_symmetry instead")]] position_t get_position_from_symmetry(const symmetry_t& symmetry) const {
+         return position_by_symmetry(symmetry);
+      }
+      [[deprecated("Use conjugate instead")]] void conjugate_edge() {
+         conjugate();
+      }
+      [[deprecated("Use conjugated instead")]] auto conjugated_edge() const {
+         return conjugated();
+      }
    };
 
    struct edge_bose_arrow_t {
@@ -277,6 +302,12 @@ namespace TAT {
       }
       Edge<Symmetry> conjugated() const {
          return Edge<Symmetry>(std::move(base_segments_t::conjugated()), !base_arrow_t::arrow());
+      }
+      [[deprecated("Use conjugate instead")]] void conjugate_edge() {
+         conjugate();
+      }
+      [[deprecated("Use conjugated instead")]] auto conjugated_edge() const {
+         return conjugated();
       }
    };
 

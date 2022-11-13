@@ -879,6 +879,16 @@ namespace TAT {
       void _block_order_v0_to_v1() {
          m_core->_block_order_v0_to_v1();
       }
+
+      [[deprecated("use rank() instead")]] Rank get_rank() const {
+         return rank();
+      }
+      [[deprecated("use find_by_name(name) instead")]] auto find_rank_from_name(const Name& name) const {
+         return find_by_name(name);
+      }
+      [[deprecated("use rank_by_name(name) instead")]] Rank get_rank_from_name(const Name& name) const {
+         return rank_by_name(name);
+      }
    };
 
    namespace detail {
