@@ -7,7 +7,30 @@
 + *tetragono*: Add squash support for sampling lattice.
 *** Changed
 + *TAT*: Use the multidimension span to record blocks in tensor, instead of the previous map data structure, some
-  related APIi s also updated.
+  related API is also updated. Detail update is followed:
+  + About data
+    + Tensor blocks is stored in a new order other than old version, the previous use a map from symmetry list to data
+      block, which follows the lexicographical order of symmetry list. The new order follows the lexicographical order
+      of the symmetry position list for a data block. Inside the data structure, the blocks are stored in a simple and
+      raw tensor like structure called =multidimension_span=.
+    + Because of the block order update, use random number to fill a tensor will return a different one other than the
+      previous version even with the same random seed.
+    + The edge is now assumed *stable*, That is to say the edge will not lose any segment during operations. In the
+      previous version, the edge segment will be erased if no block in the tensor using that segment.
+  + About edge API
+    + The type =edge_segment_t= is renamed to =edge_segments_t= because it is really several segments, not only one
+      segment.
+    + Some old function was renamed, such as =get_point_from_index= to =point_by_index=. The old name is deprecated and
+      will be removed later.
+    + Drop the support for reorder segments.
+    + Use =edge.segment()= to obtain the real segment for an edge, instead of the original way to access member
+      =edge.segment= directly.
+  + About tensor API
+    + Some old function was renamed, such as =get_rank_from_name= to =rank_by_name=. The old name is deprecated and will
+      be removed later.
+    + Use =tensor.names()= to obtain the tensor edge names, instead of the original way to access member =tensor.names=
+      directly.
+    + Because the edge is stable now, scalar operations on two tensor with segment and block mising is not allowed now.
 + *tetragono*: Update line search strategy, remove =line_search_error_threshold=, add =line_search_parameter= in
   =ap_run= and =gm_run=. =line_search_parameter= multiplied =step_size= obtained by line search will be the real step
   size used to update the state.
