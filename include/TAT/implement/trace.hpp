@@ -171,8 +171,9 @@ namespace TAT {
             {});
 
       auto traced_tensor = Tensor<ScalarType, Symmetry, Name>(
-            {InternalName<Name>::Trace_4, InternalName<Name>::Trace_5},
-            {merged_tensor.edges(3), merged_tensor.edges(4)});
+                                 {InternalName<Name>::Trace_4, InternalName<Name>::Trace_5},
+                                 {merged_tensor.edges(3), merged_tensor.edges(4)})
+                                 .zero();
 
       // move data
       const Size trace_size = merged_tensor.edges(0).total_dimension();
@@ -322,7 +323,7 @@ namespace TAT {
             {});
       // trace 1 is connected to trace_2, so one of then is applied sign, another is not
       // trace 3 will be reversed/splitted later, nothing changed
-      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.edges(2)});
+      auto traced_tensor = Tensor<ScalarType, Symmetry, Name>({InternalName<Name>::Trace_3}, {merged_tensor.edges(2)}).zero();
       auto& destination_block = traced_tensor.storage();
       // only one block here
       const Size line_size = destination_block.size();

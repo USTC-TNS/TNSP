@@ -547,6 +547,9 @@ namespace TAT {
          const int n = edge_1_result.segments(position_1_result).second;
          Size position_common = edge_common_2.find_by_symmetry(symmetry) - edge_common_2.segments().begin();
          if (position_common == edge_common_2.segments_size()) {
+            const auto positions_result = pmr::vector<Size>{position_0_result, position_1_result};
+            auto& data = product_result.blocks(positions_result);
+            std::fill(data.data(), data.data() + data.size(), 0);
             continue;
          }
          const int k = edge_common_2.segments(position_common).second;
@@ -588,6 +591,8 @@ namespace TAT {
             c_list[batch_size] = data.data();
             ldc_list[batch_size] = n;
             batch_size++;
+         } else if (m && n) {
+            std::fill(data.data(), data.data() + data.size(), 0);
          }
       }
       detail::gemm_batch<ScalarType, false>(
@@ -822,6 +827,8 @@ namespace TAT {
                c_list.data(),
                &n,
                l);
+      } else if (m && n) {
+         std::fill(result.storage().begin(), result.storage().end(), 0);
       }
       return result;
    }

@@ -225,6 +225,67 @@ namespace TAT {
       bool operator!=(const polymorphic_allocator<T1>& lhs, const polymorphic_allocator<T2>& rhs) {
          return !(lhs == rhs);
       }
+
+      template<typename T>
+      struct no_initialize_polymorphic_allocator : polymorphic_allocator<T> {
+         using polymorphic_allocator<T>::polymorphic_allocator;
+
+         no_initialize_polymorphic_allocator(const no_initialize_polymorphic_allocator& other) = default;
+         template<typename U>
+         no_initialize_polymorphic_allocator(const no_initialize_polymorphic_allocator<U>& other) :
+               no_initialize_polymorphic_allocator(other.resource()) {}
+
+         no_initialize_polymorphic_allocator<T> select_on_container_copy_construction() const {
+            return no_initialize_polymorphic_allocator<T>();
+         }
+
+         template<typename U, typename... Args>
+         void construct([[maybe_unused]] U* p, Args&&... args) {
+            if constexpr (!((sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
+               new (p) U(std::forward<Args>(args)...);
+            }
+         }
+      };
+
+      template<typename T1, typename T2>
+      bool operator==(const no_initialize_polymorphic_allocator<T1>& lhs, const no_initialize_polymorphic_allocator<T2>& rhs) {
+         return *lhs.resource() == *rhs.resource();
+      }
+      template<typename T1, typename T2>
+      bool operator!=(const no_initialize_polymorphic_allocator<T1>& lhs, const no_initialize_polymorphic_allocator<T2>& rhs) {
+         return !(lhs == rhs);
+      }
+
+      /**
+       * Allocator without initialize the element if no parameter given
+       *
+       * Inherit from std::allocator
+       */
+      template<typename T>
+      struct no_initialize_allocator : std::allocator<T> {
+         using std::allocator<T>::allocator;
+
+         no_initialize_allocator(const no_initialize_allocator& other) = default;
+         template<typename U>
+         no_initialize_allocator(const no_initialize_allocator<U>& other) : no_initialize_allocator() {}
+
+         no_initialize_allocator<T> select_on_container_copy_construction() const {
+            return no_initialize_allocator<T>();
+         }
+
+         // It is useless, but base class has it so derived class must have it.
+         template<typename U>
+         struct rebind {
+            using other = no_initialize_allocator<U>;
+         };
+
+         template<typename U, typename... Args>
+         void construct([[maybe_unused]] U* p, Args&&... args) {
+            if constexpr (!((sizeof...(args) == 0) && (std::is_trivially_destructible_v<T>))) {
+               new (p) U(std::forward<Args>(args)...);
+            }
+         }
+      };
    } // namespace detail
 
    constexpr std::size_t default_buffer_size = 1 << 20;
@@ -253,6 +314,20 @@ namespace TAT {
 #include <vector>
 
 namespace TAT {
+   namespace no_initialize {
+      template<typename T>
+      using vector = std::vector<T, detail::no_initialize_allocator<T>>;
+
+      namespace pmr {
+         /**
+          * No initialize version of pmr vector used in tensor content
+          */
+         template<typename T>
+         using vector = std::vector<T, detail::no_initialize_polymorphic_allocator<T>>;
+      } // namespace pmr
+
+   } // namespace no_initialize
+
    namespace pmr {
       // The only difference betwen the below and std::pmr is default resource getter is thread unsafe
       template<typename T>

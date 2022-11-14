@@ -38,7 +38,7 @@ namespace TAT {
          result_edges.push_back(edges(i).total_dimension());
       }
       // Generate no symmetry tensor edge total dimension and create it first
-      auto result = Tensor<ScalarType, NoSymmetry, Name>(names(), std::move(result_edges));
+      auto result = Tensor<ScalarType, NoSymmetry, Name>(names(), std::move(result_edges)).zero();
       auto& result_block = result.blocks().begin()->value();
       // copy every block into no symmetry tensor
       // find the dimension of the block, the result leading is same to total dimension

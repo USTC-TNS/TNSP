@@ -286,8 +286,8 @@ namespace TAT {
 
    // vector io, bin and text
 
-   template<typename T>
-   std::ostream& operator<(std::ostream& out, const std::vector<T>& list) {
+   template<typename T, typename A>
+   std::ostream& operator<(std::ostream& out, const std::vector<T, A>& list) {
       Size count = list.size();
       out < count;
       if constexpr (is_name<T>) {
@@ -303,8 +303,8 @@ namespace TAT {
       }
       return out;
    }
-   template<typename T>
-   std::istream& operator>(std::istream& in, std::vector<T>& list) {
+   template<typename T, typename A>
+   std::istream& operator>(std::istream& in, std::vector<T, A>& list) {
       list.clear();
       Size count;
       in > count;
@@ -325,8 +325,8 @@ namespace TAT {
       return in;
    }
 
-   template<typename T, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
-   std::ostream& operator<<(std::ostream& out, const std::vector<T>& list) {
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
+   std::ostream& operator<<(std::ostream& out, const std::vector<T, A>& list) {
       detail::print_list(
             out,
             [offset = 0, l = list.data(), count = list.size()](std::ostream& out) mutable {
@@ -348,8 +348,8 @@ namespace TAT {
       return out;
    }
 
-   template<typename T, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
-   std::istream& operator>>(std::istream& in, std::vector<T>& list) {
+   template<typename T, typename A, typename = std::enable_if_t<is_scalar<T> || is_edge<T> || is_symmetry<T> || is_name<T>>>
+   std::istream& operator>>(std::istream& in, std::vector<T, A>& list) {
       list.clear();
       detail::scan_list(
             in,

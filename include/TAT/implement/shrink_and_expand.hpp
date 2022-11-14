@@ -81,7 +81,7 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
+      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges)).zero();
       helper.at(points) = 1;
       return contract(helper, contract_pairs);
    }
@@ -138,7 +138,7 @@ namespace TAT {
             }
          }
       }
-      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges));
+      auto helper = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(new_edges)).zero();
       helper.at(points) = 1;
       return contract(helper, contract_pairs);
    }

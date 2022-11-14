@@ -28,6 +28,7 @@
 #include <optional>
 #include <vector>
 
+#include "../utility/allocator.hpp"
 #include "../utility/multidimension_span.hpp"
 #include "edge.hpp"
 
@@ -54,13 +55,13 @@ namespace TAT {
       mdspan<std::optional<mdspan<scalar_t>>> m_blocks;
 
       std::vector<std::optional<mdspan<scalar_t>>> m_pool;
-      std::vector<scalar_t> m_storage;
+      no_initialize::vector<scalar_t> m_storage;
 
     public:
-      const std::vector<scalar_t>& storage() const {
+      const no_initialize::vector<scalar_t>& storage() const {
          return m_storage;
       }
-      std::vector<scalar_t>& storage() {
+      no_initialize::vector<scalar_t>& storage() {
          return m_storage;
       }
       const std::vector<edge_t>& edges() const {
@@ -205,7 +206,7 @@ namespace TAT {
       Core& operator=(Core&&) = delete;
 
       void _block_order_v0_to_v1() {
-         auto new_storage = std::vector<scalar_t>(m_storage.size());
+         auto new_storage = no_initialize::vector<scalar_t>(m_storage.size());
 
          std::vector<std::vector<symmetry_t>> old_order;
          for (auto it = blocks().begin(); it.valid; ++it) {

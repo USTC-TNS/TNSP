@@ -117,7 +117,7 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork);
-         auto work = pmr::vector<float>(lwork);
+         auto work = no_initialize::pmr::vector<float>(lwork);
          sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
@@ -133,7 +133,7 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork);
-         auto work = pmr::vector<double>(lwork);
+         auto work = no_initialize::pmr::vector<double>(lwork);
          dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
@@ -149,7 +149,7 @@ namespace TAT {
             float* s,
             std::complex<float>* vt) {
          int result;
-         auto rwork = pmr::vector<float>(5 * min);
+         auto rwork = no_initialize::pmr::vector<float>(5 * min);
          const int lwork_query = -1;
          std::complex<float> float_lwork;
          cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
@@ -157,7 +157,7 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork.real());
-         auto work = pmr::vector<std::complex<float>>(lwork);
+         auto work = no_initialize::pmr::vector<std::complex<float>>(lwork);
          cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
@@ -173,7 +173,7 @@ namespace TAT {
             double* s,
             std::complex<double>* vt) {
          int result;
-         auto rwork = pmr::vector<double>(5 * min);
+         auto rwork = no_initialize::pmr::vector<double>(5 * min);
          const int lwork_query = -1;
          std::complex<double> float_lwork;
          zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
@@ -181,7 +181,7 @@ namespace TAT {
             detail::what_if_lapack_error("Error in GESVD");
          }
          const int lwork = int(float_lwork.real());
-         auto work = pmr::vector<std::complex<double>>(lwork);
+         auto work = no_initialize::pmr::vector<std::complex<double>>(lwork);
          zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
          if (result != 0) {
             detail::what_if_lapack_error("Error in GESVD");
@@ -193,9 +193,9 @@ namespace TAT {
          auto kernel_guard = svd_kernel_guard();
          // after testing: m>n is better than m<n and false, true is obviously worse
          if (m > n) {
-            auto new_a = pmr::vector<ScalarType>(n * m);
-            auto old_u = pmr::vector<ScalarType>(n * min);
-            auto old_vt = pmr::vector<ScalarType>(min * m);
+            auto new_a = no_initialize::pmr::vector<ScalarType>(n * m);
+            auto old_u = no_initialize::pmr::vector<ScalarType>(n * min);
+            auto old_vt = no_initialize::pmr::vector<ScalarType>(min * m);
             // new_a = a^T
             // u s vt = a
             // vt^T s u^T = a^T
@@ -227,6 +227,7 @@ namespace TAT {
          auto result = Tensor<ScalarType, Symmetry, Name>(
                {singular_name_u, singular_name_v},
                {{std::move(segments_u), false}, {std::move(segments_v), true}});
+         result.zero();
          for (const auto& [symmetry, values] : singular) {
             const auto* data_source = values.data();
             auto* data_destination = result.blocks(pmr::vector<Symmetry>{-symmetry, symmetry}).data();

@@ -213,7 +213,7 @@ namespace TAT {
             // XXX   X  XXX    XQQ
             // XXX = XX XXX -> XXQ
             int result;
-            auto tau = pmr::vector<ScalarType>(min);
+            auto tau = no_initialize::pmr::vector<ScalarType>(min);
             const int lwork_query = -1;
             ScalarType float_lwork;
             gelqf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
@@ -221,7 +221,7 @@ namespace TAT {
                detail::what_if_lapack_error("Error in LQ");
             }
             const int lwork = to_int(float_lwork);
-            auto work = pmr::vector<ScalarType>(lwork);
+            auto work = no_initialize::pmr::vector<ScalarType>(lwork);
             gelqf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
             if (result != 0) {
                detail::what_if_lapack_error("Error in LQ");
@@ -255,7 +255,7 @@ namespace TAT {
             // XXX   XX XXX    XXX
             // XXX = XX  XX -> QXX
             int result;
-            auto tau = pmr::vector<ScalarType>(min);
+            auto tau = no_initialize::pmr::vector<ScalarType>(min);
             const int lwork_query = -1;
             ScalarType float_lwork;
             geqrf<ScalarType>(&n, &m, data, &n, tau.data(), &float_lwork, &lwork_query, &result);
@@ -263,7 +263,7 @@ namespace TAT {
                detail::what_if_lapack_error("Error in QR");
             }
             const int lwork = to_int(float_lwork);
-            auto work = pmr::vector<ScalarType>(lwork);
+            auto work = no_initialize::pmr::vector<ScalarType>(lwork);
             geqrf<ScalarType>(&n, &m, data, &n, tau.data(), work.data(), &lwork, &result);
             if (result != 0) {
                detail::what_if_lapack_error("Error in QR");
@@ -303,9 +303,9 @@ namespace TAT {
          // sometimes, transpose before qr/lq is faster, there is a simular operation in svd
          // by testing, m > n is better
          if (m > n) {
-            auto new_data = pmr::vector<ScalarType>(n * m);
-            auto old_data_1 = pmr::vector<ScalarType>(n * min);
-            auto old_data_2 = pmr::vector<ScalarType>(min * m);
+            auto new_data = no_initialize::pmr::vector<ScalarType>(n * m);
+            auto old_data_1 = no_initialize::pmr::vector<ScalarType>(n * min);
+            auto old_data_2 = no_initialize::pmr::vector<ScalarType>(min * m);
             matrix_transpose<pmr::vector<Size>>(m, n, data, new_data.data());
             calculate_qr_kernel(n, m, min, new_data.data(), old_data_1.data(), old_data_2.data(), !use_qr_not_lq);
             matrix_transpose<pmr::vector<Size>>(n, min, old_data_1.data(), data_2);

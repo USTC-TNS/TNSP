@@ -55,11 +55,11 @@ namespace TAT {
          // AX=B
          // A: n*n
          // B: n*nrhs
-         pmr::vector<ScalarType> AT(n * n);
+         no_initialize::pmr::vector<ScalarType> AT(n * n);
          matrix_transpose<pmr::vector<Size>>(n, n, A, AT.data());
-         pmr::vector<ScalarType> BT(n * nrhs);
+         no_initialize::pmr::vector<ScalarType> BT(n * nrhs);
          matrix_transpose<pmr::vector<Size>>(n, nrhs, B, BT.data());
-         pmr::vector<int> ipiv(n);
+         no_initialize::pmr::vector<int> ipiv(n);
          int result;
          gesv<ScalarType>(&n, &nrhs, AT.data(), &n, ipiv.data(), BT.data(), &n, &result);
          if (result != 0) {
@@ -100,13 +100,13 @@ namespace TAT {
             A[i] *= parameter;
          }
          // D=I, N=I, X=I, c=1
-         pmr::vector<ScalarType> D(n * n);
+         no_initialize::pmr::vector<ScalarType> D(n * n);
          initialize_identity_matrix(D.data(), n);
-         pmr::vector<ScalarType> N(n * n);
+         no_initialize::pmr::vector<ScalarType> N(n * n);
          initialize_identity_matrix(N.data(), n);
-         pmr::vector<ScalarType> X1(n * n);
+         no_initialize::pmr::vector<ScalarType> X1(n * n);
          initialize_identity_matrix(X1.data(), n);
-         pmr::vector<ScalarType> X2(n * n);
+         no_initialize::pmr::vector<ScalarType> X2(n * n);
          ScalarType c = 1;
          // for k=1:q
          const ScalarType alpha = 1;
@@ -128,8 +128,8 @@ namespace TAT {
             }
          }
          // solve D@F=N for F
-         pmr::vector<ScalarType> F1(n * n);
-         pmr::vector<ScalarType> F2(n * n);
+         no_initialize::pmr::vector<ScalarType> F1(n * n);
+         no_initialize::pmr::vector<ScalarType> F2(n * n);
          auto* R = j == 0 ? F : F1.data();
          // D@R=N
          linear_solve<ScalarType>(n, D.data(), n, N.data(), R);
