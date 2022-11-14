@@ -669,7 +669,7 @@ namespace TAT {
          typename = std::enable_if_t<is_scalar<ScalarType> && is_symmetry<Symmetry> && is_name<Name>>>
    std::ostream& operator<(std::ostream& out, const Tensor<ScalarType, Symmetry, Name>& tensor) {
       auto timer_guard = tensor_dump_guard();
-      out << 'T';
+      out << 'T' << 'A' << 'T';
       Rank version = 1;
       out < version;
       out < tensor.names();
@@ -696,9 +696,24 @@ namespace TAT {
    std::istream& operator>(std::istream& in, Tensor<ScalarType, Symmetry, Name>& tensor) {
       auto timer_guard = tensor_load_guard();
       Rank version = 0;
-      if (in.peek() == 'T') {
-         in.get();
-         in > version;
+      if (in.get() == 'T') {
+         if (in.get() == 'A') {
+            if (in.get() == 'T') {
+               in > version;
+            } else {
+               in.unget();
+               in.unget();
+               in.unget();
+               version = 0;
+            }
+         } else {
+            in.unget();
+            in.unget();
+            version = 0;
+         }
+      } else {
+         in.unget();
+         version = 0;
       }
       if (version == 0) {
          std::vector<Name> names;
