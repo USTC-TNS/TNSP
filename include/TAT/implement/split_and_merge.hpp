@@ -1,5 +1,5 @@
 /**
- * \file edge_miscellaneous.hpp
+ * \file split_and_merge.hpp
  *
  * Copyright (C) 2019-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
@@ -18,39 +18,12 @@
  */
 
 #pragma once
-#ifndef TAT_EDGE_MISCELLANEOUS_HPP
-#define TAT_EDGE_MISCELLANEOUS_HPP
+#ifndef TAT_SPLIT_AND_MERGE_HPP
+#define TAT_SPLIT_AND_MERGE_HPP
 
 #include "../structure/tensor.hpp"
 
 namespace TAT {
-   template<typename ScalarType, typename Symmetry, typename Name>
-   template<typename ResultName, typename>
-   auto Tensor<ScalarType, Symmetry, Name>::edge_rename(const std::unordered_map<Name, ResultName>& dictionary) const {
-      if constexpr (debug_mode) {
-         for (const auto& [name, new_name] : dictionary) {
-            if (auto found = find_by_name(name); found == names().end()) {
-               detail::error("Name missing in edge_rename");
-            }
-         }
-      }
-      auto result = Tensor<ScalarType, Symmetry, ResultName>();
-      result.m_core = m_core; // shallow copy
-      result.m_names.reserve(rank());
-      std::transform(names().begin(), names().end(), std::back_inserter(result.m_names), [&dictionary](const Name& name) {
-         if (auto position = dictionary.find(name); position == dictionary.end()) {
-            if constexpr (std::is_same_v<ResultName, Name>) {
-               return name;
-            } else {
-               detail::error("New names not found in edge_rename which change type of name");
-            }
-         } else {
-            return position->second;
-         }
-      });
-      return result;
-   }
-
    template<typename ScalarType, typename Symmetry, typename Name>
    Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::split_edge(
          const std::unordered_map<Name, std::vector<std::pair<Name, edge_segments_t<Symmetry>>>>& split,

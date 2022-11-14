@@ -32,7 +32,7 @@ namespace TAT {
 
    template<typename ScalarType, typename Symmetry, typename Name>
    template<typename A, typename B, typename C, typename D, typename E, typename F, typename G, typename H>
-   auto Tensor<ScalarType, Symmetry, Name>::edge_operator_implement(
+   Tensor<ScalarType, Symmetry, Name> Tensor<ScalarType, Symmetry, Name>::edge_operator_implement(
          const A& split_map,
          const B& reversed_names,
          const C& merge_map,

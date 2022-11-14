@@ -659,7 +659,7 @@ namespace TAT {
             typename F = empty_list<Name>,
             typename G = empty_list<Name>,
             typename H = empty_list<std::pair<Name, empty_list<std::pair<Symmetry, Size>>>>>
-      [[nodiscard]] auto edge_operator_implement(
+      [[nodiscard]] Tensor<scalar_t, symmetry_t, name_t> edge_operator_implement(
             const A& split_map,
             const B& reversed_names,
             const C& merge_map,
@@ -678,7 +678,30 @@ namespace TAT {
        * \return A tensor after renaming, share the core with the original tensor
        */
       template<typename ResultName = Name, typename = std::enable_if_t<is_name<ResultName>>>
-      [[nodiscard]] auto edge_rename(const std::unordered_map<Name, ResultName>& dictionary) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, ResultName> edge_rename(const std::unordered_map<Name, ResultName>& dictionary) const {
+         if constexpr (debug_mode) {
+            for (const auto& [name, new_name] : dictionary) {
+               if (auto found = find_by_name(name); found == names().end()) {
+                  detail::error("Name missing in edge_rename");
+               }
+            }
+         }
+         auto result = Tensor<ScalarType, Symmetry, ResultName>();
+         result.m_core = m_core; // shallow copy
+         result.m_names.reserve(rank());
+         std::transform(names().begin(), names().end(), std::back_inserter(result.m_names), [&dictionary](const Name& name) {
+            if (auto position = dictionary.find(name); position == dictionary.end()) {
+               if constexpr (std::is_same_v<ResultName, Name>) {
+                  return name;
+               } else {
+                  detail::error("New names not found in edge_rename which change type of name");
+               }
+            } else {
+               return position->second;
+            }
+         });
+         return result;
+      }
 
       /**
        * Transpose the tensor

@@ -38,12 +38,12 @@
 #include "implement/clear_symmetry.hpp"
 #include "implement/conjugate.hpp"
 #include "implement/contract.hpp"
-#include "implement/edge_miscellaneous.hpp"
 #include "implement/edge_operator.hpp"
 #include "implement/exponential.hpp"
 #include "implement/identity.hpp"
 #include "implement/qr.hpp"
 #include "implement/shrink_and_expand.hpp"
+#include "implement/split_and_merge.hpp"
 #include "implement/svd.hpp"
 #include "implement/trace.hpp"
 
