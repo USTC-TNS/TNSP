@@ -536,14 +536,16 @@ namespace TAT {
                         const DefaultName& common_name_v,
                         const DefaultName& singular_name_u,
                         const DefaultName& singular_name_v,
-                        double cut) {
+                        int cut,
+                        double relative_cut,
+                        double temperature) {
                         Cut real_cut = NoCut();
-                        if (cut > 0) {
-                           if (cut >= 1) {
-                              real_cut = RemainCut(Size(cut));
-                           } else {
-                              real_cut = RelativeCut(cut);
-                           }
+                        if (temperature > 0) { // T = 0 => RemainCut
+                           real_cut = BoltzmannCut(temperature, cut, &random_engine);
+                        } else if (relative_cut > 0) {
+                           real_cut = RelativeCut(relative_cut);
+                        } else if (cut > 0) {
+                           real_cut = RemainCut(cut);
                         }
                         auto result = tensor.svd(free_name_set_u, common_name_u, common_name_v, singular_name_u, singular_name_v, real_cut);
                         return py::make_tuple(std::move(result.U), std::move(result.S), std::move(result.V));
@@ -553,7 +555,9 @@ namespace TAT {
                      py::arg("common_name_v"),
                      py::arg("singular_name_u"),
                      py::arg("singular_name_v"),
-                     py::arg("cut") = -1,
+                     py::arg("cut") = 0,
+                     py::arg("relative_cut") = 0,
+                     py::arg("temperature") = 0,
                      "Singular value decomposition")
                .def(
                      "qr",

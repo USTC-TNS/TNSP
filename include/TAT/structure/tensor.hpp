@@ -25,6 +25,7 @@
 #include <array>
 #include <map>
 #include <memory>
+#include <random>
 #include <set>
 #include <tuple>
 #include <variant>
@@ -37,6 +38,7 @@
 #include "symmetry.hpp"
 
 namespace TAT {
+   struct NoCut {};
    struct RemainCut {
       Size value;
       explicit RemainCut(Size v) : value(v) {}
@@ -45,13 +47,18 @@ namespace TAT {
       double value;
       explicit RelativeCut(double v) : value(v) {}
    };
-   struct NoCut {};
+   struct BoltzmannCut {
+      double temperature;
+      Size value;
+      std::default_random_engine* engine;
+      BoltzmannCut(double t, Size v, std::default_random_engine* e) : temperature(t), value(v), engine(e) {}
+   };
    /**
     * Used to describle how to cut when doing svd to a tensor
     *
-    * Is one of RemainCut, RelativeCut and NoCut
+    * Is one of NoCut, RemainCut, RelativeCut and BoltzmannCut.
     */
-   using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
+   using Cut = std::variant<NoCut, RemainCut, RelativeCut, BoltzmannCut>;
 
    template<typename ScalarType = double, typename Symmetry = Symmetry<>, typename Name = DefaultName>
    struct TensorShape;

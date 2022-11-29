@@ -25,6 +25,7 @@
 
 #include "../structure/tensor.hpp"
 #include "../utility/allocator.hpp"
+#include "../utility/common_variable.hpp"
 #include "../utility/timer.hpp"
 
 extern "C" {
@@ -448,11 +449,12 @@ namespace TAT {
                      }
                   }
                }
-               if (maximum_singular != 0) {
+               if (maximum_singular == 0) {
                   // sometimes non zero singular number is less than cut_i
-                  remain_dimension_u.at(maximum_symmetry) += 1;
-                  remain_dimension_v.at(-maximum_symmetry) += 1;
+                  break;
                }
+               remain_dimension_u.at(maximum_symmetry) += 1;
+               remain_dimension_v.at(-maximum_symmetry) += 1;
             }
 
             // delete element of tensor S
@@ -499,6 +501,70 @@ namespace TAT {
             } else {
                it->second.resize(this_remain);
                ++it;
+            }
+         }
+      } else if (auto cut_value = std::get_if<BoltzmannCut>(&cut)) {
+         Size cut_i = cut_value->value;
+         if (cut_i < total_dimension) {
+            double temperature = cut_value->temperature;
+            auto engine = cut_value->engine; // this is a pointer
+            auto dist = std::uniform_real_distribution<real_scalar<ScalarType>>(0, 1);
+            for (const auto& [symmetry, vector_s] : result_s) {
+               remain_dimension_u[symmetry] = 0;
+               remain_dimension_v[-symmetry] = 0;
+            }
+            for (Size i = 0; i < cut_i; i++) {
+               // s_i' = s_i / sum of s     # for scaling invariance
+               // E_i = - ln s_i'           # s=0 should have p=0, since we can always add any number of zero singular
+               // p_i ~ exp( - E / T )      # by definition
+               // => p'_i = s_i' ^ (1 / T)
+               // => p_i = p'_i / sum of p'
+               real_scalar<ScalarType> sum_of_s = 0;
+               for (const auto& [symmetry, vector_s] : result_s) {
+                  if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
+                     auto this_s = vector_s[this_remain];
+                     sum_of_s += this_s;
+                  }
+               }
+               if (sum_of_s == 0) {
+                  // sometimes non zero singular number is less than cut_i
+                  break;
+               }
+               real_scalar<ScalarType> sum_of_p = 0;
+               for (const auto& [symmetry, vector_s] : result_s) {
+                  if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
+                     auto this_s = vector_s[this_remain];
+                     auto this_p = std::pow(this_s / sum_of_s, 1 / temperature);
+                     sum_of_p += this_p;
+                  }
+               }
+               real_scalar<ScalarType> random_number = dist(*engine) * sum_of_p;
+               real_scalar<ScalarType> resum_of_p = 0;
+               for (const auto& [symmetry, vector_s] : result_s) {
+                  if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
+                     auto this_s = vector_s[this_remain];
+                     auto this_p = std::pow(this_s / sum_of_s, 1 / temperature);
+                     resum_of_p += this_p;
+                     if (resum_of_p >= random_number) {
+                        // choose this symmetry
+                        remain_dimension_u[symmetry]++;
+                        remain_dimension_v[-symmetry]++;
+                        break;
+                     }
+                  }
+               }
+            }
+
+            // delete element of tensor S
+            for (auto it = result_s.begin(); it != result_s.end();) {
+               const auto& symmetry = it->first;
+               const auto& this_remain = remain_dimension_u.at(symmetry);
+               if (this_remain == 0) {
+                  it = result_s.erase(it);
+               } else {
+                  it->second.resize(this_remain);
+                  ++it;
+               }
             }
          }
       }
