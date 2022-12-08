@@ -332,7 +332,7 @@ class SimpleUpdateLattice(AbstractLattice):
                 result_tensor = result_tensor + tensor
         return result_positions, result_tensor
 
-    def update(self, total_step, delta_tau, new_dimension):
+    def update(self, total_step, delta_tau, new_dimension, temperature):
         """
         Do simple update on the lattice.
 
@@ -410,14 +410,16 @@ class SimpleUpdateLattice(AbstractLattice):
                 # In a single bundle, put each updater to its mpi rank process.
                 for index, coordinates, index_and_orbit, evolution_operator in bundle:
                     if index % mpi_size == mpi_rank:
-                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension,
+                                                        temperature)
                 # Bcast what modified
                 self._bcast_by_map(coordinates_map)
             for bundle, coordinates_map in reversed(updaters_bundles):
                 # In a single bundle, put each updater to its mpi rank process.
                 for index, coordinates, index_and_orbit, evolution_operator in bundle:
                     if index % mpi_size == mpi_rank:
-                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
+                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension,
+                                                        temperature)
                 # Bcast what modified
                 self._bcast_by_map(coordinates_map)
         showln(f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
@@ -455,7 +457,7 @@ class SimpleUpdateLattice(AbstractLattice):
             if l2 != self.L2 - 1:
                 self.virtual_bond[l1, l2, "R"] = self[l1, l2].edges("R")
 
-    def _single_term_simple_update(self, coordinates, index_and_orbit, evolution_operator, new_dimension):
+    def _single_term_simple_update(self, coordinates, index_and_orbit, evolution_operator, new_dimension, temperature):
         """
         Dispatcher to do simple step single term simple update.
 
@@ -485,6 +487,7 @@ class SimpleUpdateLattice(AbstractLattice):
                     index_and_orbit,
                     evolution_operator,
                     new_dimension,
+                    temperature,
                 )
             if coordinate_1[1] == coordinate_2[1] and abs(coordinate_1[0] - coordinate_2[0]) == 1:
                 return self._single_term_simple_update_double_site_nearest_vertical(
@@ -492,6 +495,7 @@ class SimpleUpdateLattice(AbstractLattice):
                     index_and_orbit,
                     evolution_operator,
                     new_dimension,
+                    temperature,
                 )
         raise NotImplementedError("Unsupported simple update style")
 
@@ -510,7 +514,7 @@ class SimpleUpdateLattice(AbstractLattice):
             .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in enumerate(orbits)}))
 
     def _single_term_simple_update_double_site_nearest_horizontal(self, coordinates, index_and_orbit,
-                                                                  evolution_operator, new_dimension):
+                                                                  evolution_operator, new_dimension, temperature):
         """
         See Also
         --------
@@ -556,7 +560,7 @@ class SimpleUpdateLattice(AbstractLattice):
                 {("R", "L")})  #
             .contract(evolution_operator, {(f"P{body_index}", f"I{body_index}") for body_index in range(body)})  #
             .svd({*(f"O{body_index}" for body_index, orbit in left_index_and_orbit), "L"}, "R", "L", "L", "R",
-                 new_dimension))
+                 new_dimension, temperature))
         s /= s.norm_2()
         self.environment[i, j, "R"] = s
         u = self._try_multiple(u, i, j, "R")
@@ -573,7 +577,7 @@ class SimpleUpdateLattice(AbstractLattice):
         self[i, j + 1] = v
 
     def _single_term_simple_update_double_site_nearest_vertical(self, coordinates, index_and_orbit, evolution_operator,
-                                                                new_dimension):
+                                                                new_dimension, temperature):
         """
         See Also
         --------
@@ -618,7 +622,7 @@ class SimpleUpdateLattice(AbstractLattice):
                       {("D", "U")})  #
             .contract(evolution_operator, {(f"P{body_index}", f"I{body_index}") for body_index in range(body)})  #
             .svd({*(f"O{body_index}" for body_index, orbit in up_index_and_orbit), "U"}, "D", "U", "U", "D",
-                 new_dimension))
+                 new_dimension, temperature))
         s /= s.norm_2()
         self.environment[i, j, "D"] = s
         u = self._try_multiple(u, i, j, "D")

@@ -263,8 +263,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.su_update(*config.args, **config.kwargs)
 
     @sharedoc(do_su_update)
-    def su_update(self, total_step, delta_tau, new_dimension):
-        self.su.update(total_step, delta_tau, new_dimension)
+    def su_update(self, total_step, delta_tau, new_dimension, temperature=0):
+        self.su.update(total_step, delta_tau, new_dimension, temperature=temperature)
 
     def do_su_energy(self, line):
         """
