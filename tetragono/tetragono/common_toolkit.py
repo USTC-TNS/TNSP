@@ -267,6 +267,17 @@ def safe_rename(tensor, name_map):
     return tensor.edge_rename(new_name_map)
 
 
+def safe_trace(tensor, pair):
+    new_pair = set()
+    for name_1, name_2 in pair:
+        if name_1 in tensor.names and name_2 in tensor.names:
+            new_pair.add((name_1, name_2))
+    if new_pair:
+        return tensor.trace(new_pair)
+    else:
+        return tensor
+
+
 def sigusr1_handler(signum, frame):
     with open("tetragono.backtrace", "a", encoding="utf-8") as file:
         file.write((str(mpi_rank) + " " + datetime.now().strftime("%Y-%m-%d-%H:%M:%S") + "\n" +
