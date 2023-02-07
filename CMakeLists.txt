@@ -13,7 +13,7 @@ if(TAT_MAIN_PROJECT)
   set(CMAKE_CXX_EXTENSIONS OFF)
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
   set(PROJECT_DESCRIPTION "TAT is a header-only c++ tensor library with support for Abelian symmetry tensor and fermi tensor.")
-  set(PROJECT_HOMEPAGE_URL "https://github.com/hzhangxyz/TAT")
+  set(PROJECT_HOMEPAGE_URL "https://github.com/USTC-TNS/TAT")
 endif()
 
 # common used cmake variables:

@@ -34,7 +34,7 @@ setup(
     description="lazy graph framework",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT/tree/TAT/lazy_graph",
+    url="https://github.com/USTC-TNS/TAT/tree/TAT/lazy_graph",
     packages=find_packages(),
     license="GPLv3",
     long_description=long_description,

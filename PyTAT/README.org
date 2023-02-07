@@ -2,12 +2,12 @@
 
 * PyTAT
 
-PyTAT is python binding for [[https://github.com/hzhangxyz/TAT][TAT]], which is a c++ tensor library with
+PyTAT is python binding for [[https://github.com/USTC-TNS/TAT][TAT]], which is a c++ tensor library with
 support for symmetry and fermion tensor.
 
 ** Install
 
-You can build by yourself, see [[https://github.com/hzhangxyz/TAT/blob/TAT/README.org][this]] for details. Or use =pip= to obtain
+You can build by yourself, see [[https://github.com/USTC-TNS/TAT/blob/TAT/README.org][this]] for details. Or use =pip= to obtain
 built distribution: =pip install PyTAT=.
 
 ** Documents

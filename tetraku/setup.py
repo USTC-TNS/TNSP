@@ -34,7 +34,7 @@ setup(
     description="data library used by tetragono",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT/tree/TAT/tetraku",
+    url="https://github.com/USTC-TNS/TAT/tree/TAT/tetraku",
     packages=find_packages(),
     install_requires=[
         f"tetragono=={version}",

@@ -1,6 +1,6 @@
 * Changelog
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.3.0...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.0...dev][Unreleased]]
 
 *** Added
 *** Changed
@@ -8,7 +8,7 @@
 *** Removed
 *** Fixed
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.23...v0.3.0][v0.3.0]] - 2022-11-15
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.23...v0.3.0][v0.3.0]] - 2022-11-15
 
 *** Added
 + *tetragono*: Tetragono will print backtrace of the current process when receiving SIGUSR1.
@@ -49,7 +49,7 @@
 *** Fixed
 + *tetragono*: Fix the wrong error message when trying to import module used by =ex_create=, =ap_ansatz_mul= and so on.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.22...v0.2.23][v0.2.23]] - 2022-10-09
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.22...v0.2.23][v0.2.23]] - 2022-10-09
 
 *** Added
 + *tetragono*: Add =ap_hamiltonian= to replace the hamiltonian of the ansatz product state in tetragono shell.
@@ -64,7 +64,7 @@
 + *tetragono*: =save_state_interval= option for =gm_run= and =ap_run= is removed. The state will be saved for every
   step.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.20...v0.2.22][v0.2.22]] - 2022-09-02
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.20...v0.2.22][v0.2.22]] - 2022-09-02
 
 *** Added
 + *tetragono*: Add =save_configuration_file= option for =gm_run= and =ap_run= in tetragono shell, which saves sampling
@@ -81,7 +81,7 @@
 *** Fixed
 + *TAT.hpp*: Fix an internal compiler error for some old compiler, caused by the feature: fusing edges during tracing.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.19...v0.2.20][v0.2.20]] - 2022-08-02
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.19...v0.2.20][v0.2.20]] - 2022-08-02
 
 *** Added
 + *tetraku*: Add models data and ansatzes data into an individual package named =tetraku=.
@@ -99,7 +99,7 @@
 *** Fixed
 + *TAT.hpp*: Fix a bug in windows platform when copying an edge with fermi symmetry.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.18...v0.2.19][v0.2.19]] - 2022-07-13
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.18...v0.2.19][v0.2.19]] - 2022-07-13
 
 *** Added
 + *tetragono*: Add a new command =gm_hamiltonian= to replace the Hamiltonian of the existent sampling lattice.
@@ -114,7 +114,7 @@
 + *tetragono*: Fix a bug in calculating the natural gradient of a complex tensor network state.
 + *tetragono*: Fix a bug in calculating the expect and the deviation in the ergodic sampling with subspace restricted.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.17...v0.2.18][v0.2.18]] - 2022-06-28
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.17...v0.2.18][v0.2.18]] - 2022-06-28
 
 *** Added
 + *tetragono*: Add compatibility support for python3.8.
@@ -129,7 +129,7 @@
 *** Deprecated
 + *tetragono*: The original function name =create= to create lattice is deprecated.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.13...v0.2.17][v0.2.17]] - 2022-06-12
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.13...v0.2.17][v0.2.17]] - 2022-06-12
 
 *** Added
 + *tetragono*: Add support for changing the hamiltonian of an existent sampling lattice. To do it, create a lattice with
@@ -146,7 +146,7 @@
 + *TAT.hpp*: Fix selecting the wrong constructor of =Edge= when using two vector iterators to construct =Edge=.
 + *TAT.hpp*: Fix bug when tensor SVD with relative cut cutting nothing.
 
-** [[https://github.com/hzhangxyz/TAT/compare/v0.2.12...v0.2.13][v0.2.13]] - 2022-04-26
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.12...v0.2.13][v0.2.13]] - 2022-04-26
 
 *** Added
 + *tetragono*: Allow passing function directly instead of module name string of various interface of mid-level API,

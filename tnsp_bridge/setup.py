@@ -34,7 +34,7 @@ setup(
     description="bridge from TNSP to TAT",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT/tree/TAT/tnsp_bridge",
+    url="https://github.com/USTC-TNS/TAT/tree/TAT/tnsp_bridge",
     packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",

@@ -1,6 +1,6 @@
 #+OPTIONS: toc:nil
 
-* [[https://github.com/hzhangxyz/TAT][TAT]] · [[https://github.com/hzhangxyz/TAT/releases/latest][https://img.shields.io/github/v/release/hzhangxyz/TAT.svg?style=flat-square]] [[/LICENSE.rst][https://img.shields.io/github/license/hzhangxyz/TAT.svg?style=flat-square]] [[https://github.com/hzhangxyz/TAT/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/hzhangxyz/TAT/build.yml.svg?style=flat-square]] [[https://hzhangxyz.github.io/TAT/index.html][https://img.shields.io/github/actions/workflow/status/hzhangxyz/TAT/doxygen.yml.svg?color=%237f7fff&label=reference&style=flat-square]]
+* [[https://github.com/USTC-TNS/TAT][TAT]] · [[https://github.com/USTC-TNS/TAT/releases/latest][https://img.shields.io/github/v/release/USTC-TNS/TAT.svg?style=flat-square]] [[/LICENSE.rst][https://img.shields.io/github/license/USTC-TNS/TAT.svg?style=flat-square]] [[https://github.com/USTC-TNS/TAT/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TAT/build.yml.svg?style=flat-square]] [[https://hzhangxyz.github.io/TAT/index.html][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TAT/doxygen.yml.svg?color=%237f7fff&label=reference&style=flat-square]]
 
   TAT is a header-only c++ tensor library with support for Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensor]] and [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermi tensor]]
 
@@ -42,7 +42,7 @@
 
    You can simply compile TAT with =em++= (no mpi support, no doubt), and link =liblapack.a=, =libblas.a=, =libf2c.a= compiled from [[https://www.netlib.org/clapack/][clapack-3.2.1]]
 
-   You can download them from [[https://github.com/hzhangxyz/TAT/releases/tag/v0.0.6][here]] or compile by yourself
+   You can download them from [[https://github.com/USTC-TNS/TAT/releases/tag/v0.0.6][here]] or compile by yourself
 
    If you are using cmake, you need to put these three files into directory =emscripten=, then run =emcmake cmake $path_to_TAT_root= which will configure it automatically
 

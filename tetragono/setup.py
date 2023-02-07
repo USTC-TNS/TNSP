@@ -34,7 +34,7 @@ setup(
     description="OBC square tensor network state(PEPS) library",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT/tree/TAT/tetragono",
+    url="https://github.com/USTC-TNS/TAT/tree/TAT/tetragono",
     packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",

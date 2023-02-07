@@ -79,7 +79,7 @@ setup(
     description="python binding for TAT(TAT is A Tensor library)",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/hzhangxyz/TAT/tree/TAT/PyTAT",
+    url="https://github.com/USTC-TNS/TAT/tree/TAT/PyTAT",
     ext_modules=[CMakeExtension("PyTAT")],
     cmdclass={
         'build_ext': build_ext,
