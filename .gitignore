@@ -2,7 +2,7 @@
 !/.github
 !/PyTAT
 !/examples
-!/include
+!/TAT
 !/lazy_graph
 !/python
 !/test
@@ -23,6 +23,7 @@
 !/Tensor.org
 
 /PyTAT/.*.cpp
+gcm.cache
 build
 dist
 .DS_Store
