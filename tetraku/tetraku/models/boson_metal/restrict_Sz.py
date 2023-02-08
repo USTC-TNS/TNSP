@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2022 Chao Wang<1023649157@qq.com>
+# Copyright (C) 2022-2023 Chao Wang<1023649157@qq.com>
 #                and Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify

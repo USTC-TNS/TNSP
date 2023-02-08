@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2020-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2020-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ class TetragonoCommandApp(cmd.Cmd):
         self.prompt = "TET> "
         self.stored_line = ""
         self.license = """
-Copyright (C) 2019-2021 Hao Zhang<zh970205@mail.ustc.edu.cn>
+Copyright (C) 2019-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 """

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment version")
-project(TAT VERSION 0.2.19 LANGUAGES CXX)
+project(TAT LANGUAGES CXX)
 
 # Check if it is main project
 set(TAT_MAIN_PROJECT OFF)
