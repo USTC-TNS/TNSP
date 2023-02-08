@@ -7,7 +7,8 @@ done: compile_information.o \
 			timer.o \
 			type_alias.o \
 			unordered_parameter.o \
-			windows_console_guard.o
+			windows_console_guard.o \
+			shared_ptr.o
 
 todo: log.o
 
