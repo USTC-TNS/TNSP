@@ -9,7 +9,7 @@ module;
 export module TAT.timer;
 
 import TAT.compile_information;
-import TAT.log;
+import TAT.log_and_exception;
 
 namespace TAT {
    using time_point = std::chrono::high_resolution_clock::time_point;

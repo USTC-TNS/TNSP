@@ -8,9 +8,10 @@ done: compile_information.o \
 			type_alias.o \
 			unordered_parameter.o \
 			windows_console_guard.o \
-			shared_ptr.o
+			shared_ptr.o \
+			multidimension_span.o
 
-todo: log.o
+todo: log_and_exception.o
 
 %.o: %.c++
 	g++ -std=c++20 -fmodules-ts -c $< -o $@
