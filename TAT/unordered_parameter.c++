@@ -1,9 +1,9 @@
 module;
 
-#include<cstdint>
+#include <cstdint>
 
 export module TAT.unordered_parameter;
 
 namespace TAT {
-   export constexpr std::size_t unordered_parameter = 4;
+   export inline constexpr std::size_t unordered_parameter = 4;
 } // namespace TAT

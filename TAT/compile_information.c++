@@ -8,7 +8,7 @@ namespace TAT {
    /**
     * Debug flag
     */
-   export constexpr bool debug_mode =
+   export inline constexpr bool debug_mode =
 #ifdef NDEBUG
          false
 #else
@@ -22,21 +22,31 @@ namespace TAT {
    /**
     * TAT version
     */
-   export const char* version = TAT_VERSION;
+   export inline const char* version = TAT_VERSION;
 
    /**
     * TAT informations about compiler and license
     */
-   export const char* information = "TAT " TAT_VERSION " ("
+   export inline const char* information = "TAT " TAT_VERSION " ("
 #ifdef TAT_BUILD_TYPE
-                                    "" TAT_BUILD_TYPE ", "
+                                           "" TAT_BUILD_TYPE ", "
 #endif
-                                    "" __DATE__ ", " __TIME__
+                                           "" __DATE__ ", " __TIME__
 #ifdef TAT_COMPILER_INFORMATION
-                                    ", " TAT_COMPILER_INFORMATION
+                                           ", " TAT_COMPILER_INFORMATION
 #endif
-                                    ")\n"
-                                    "Copyright (C) 2019-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
-                                    "This is free software; see the source for copying conditions.  There is NO\n"
-                                    "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+                                           ")\n"
+                                           "Copyright (C) 2019-2022 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+                                           "This is free software; see the source for copying conditions.  There is NO\n"
+                                           "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
+   /**
+    * Whether use timer
+    */
+   export inline constexpr bool use_timer =
+#ifdef TAT_USE_TIMER
+         true
+#else
+         false
+#endif
+         ;
 } // namespace TAT

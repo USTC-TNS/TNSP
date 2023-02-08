@@ -24,5 +24,5 @@ namespace TAT {
       }
 #endif
    };
-   const evil_t evil;
+   inline const evil_t evil;
 } // namespace TAT

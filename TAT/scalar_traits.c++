@@ -11,9 +11,9 @@ namespace TAT {
    concept is_real = std::is_scalar_v<T>;
 
    template<typename T>
-   struct is_complex_helper : std::bool_constant<false> {};
+   struct is_complex_helper : std::false_type {};
    template<typename T>
-   struct is_complex_helper<std::complex<T>> : std::bool_constant<true> {};
+   struct is_complex_helper<std::complex<T>> : std::true_type {};
    export template<typename T>
    concept is_complex = is_complex_helper<T>::value;
 
