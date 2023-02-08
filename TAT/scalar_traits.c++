@@ -1,9 +1,7 @@
-module;
-
-#include <complex>
-#include <type_traits>
-
 export module TAT.scalar_traits;
+
+import <complex>;
+import <type_traits>;
 
 namespace TAT {
    // traits about scalar

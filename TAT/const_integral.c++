@@ -1,8 +1,6 @@
-module;
-
-#include <variant>
-
 export module TAT.const_integral;
+
+import <variant>;
 
 namespace TAT {
    /**

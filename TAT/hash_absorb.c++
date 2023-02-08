@@ -1,8 +1,6 @@
-module;
-
-#include <cstdint>
-
 export module TAT.hash_absorb;
+
+import <cstdint>;
 
 namespace TAT {
    export std::size_t& hash_absorb(std::size_t& seed, std::size_t value) {

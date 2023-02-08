@@ -1,8 +1,6 @@
-module;
-
-#include <cstdint>
-
 export module TAT.type_alias;
+
+import <cstdint>;
 
 namespace TAT {
    // type alias

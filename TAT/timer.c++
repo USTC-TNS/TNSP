@@ -1,12 +1,10 @@
-module;
-
-#include <chrono>
-#include <stack>
-#include <string>
-#include <utility>
-#include <vector>
-
 export module TAT.timer;
+
+import <chrono>;
+import <stack>;
+import <string>;
+import <utility>;
+import <vector>;
 
 import TAT.compile_information;
 import TAT.log_and_exception;

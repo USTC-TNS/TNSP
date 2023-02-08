@@ -1,5 +1,3 @@
-module;
-
 export module TAT.overloaded;
 
 namespace TAT {

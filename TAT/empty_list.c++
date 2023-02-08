@@ -1,8 +1,6 @@
-module;
-
-#include <array>
-
 export module TAT.empty_list;
+
+import <array>;
 
 namespace TAT {
    export template<typename T>

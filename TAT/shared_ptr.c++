@@ -1,8 +1,6 @@
-module;
-
-#include <utility>
-
 export module TAT.shared_ptr;
+
+import <utility>;
 
 namespace TAT {
    template<typename T>

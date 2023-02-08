@@ -1,7 +1,3 @@
-module;
-
-#include <string>
-
 export module TAT.compile_information;
 
 namespace TAT {

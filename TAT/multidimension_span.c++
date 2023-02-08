@@ -1,10 +1,7 @@
-module;
-
-#include <array>
-#include <variant>
-#include <vector>
-
 export module TAT.multidimension_span;
+
+import <vector>;
+import <array>;
 
 import TAT.type_alias;
 import TAT.timer;

@@ -1,5 +1,3 @@
-module;
-
 export module TAT.log_and_exception;
 
 namespace TAT {
