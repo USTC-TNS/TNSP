@@ -41,14 +41,14 @@ def unsquash(new_state, old_state, cut_dimension):
         part2 = old_state[l1 * 2 + 1, l2]
         left_split = []
         if "L" in part1.names:
-            left_split.append(("L1", part1.edges("L").segment))
+            left_split.append(("L1", part1.edges("L").segments))
         if "L" in part2.names:
-            left_split.append(("L2", part2.edges("L").segment))
+            left_split.append(("L2", part2.edges("L").segments))
         down_split = []
         if "R" in part1.names:
-            down_split.append(("R1", part1.edges("R").segment))
+            down_split.append(("R1", part1.edges("R").segments))
         if "R" in part2.names:
-            down_split.append(("R2", part2.edges("R").segment))
+            down_split.append(("R2", part2.edges("R").segments))
         split_plan = {}
         if left_split:
             split_plan["L"] = left_split

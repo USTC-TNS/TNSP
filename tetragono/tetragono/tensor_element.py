@@ -53,7 +53,7 @@ def loop_nonzero_block(block, symmetries, rank, names, template):
 
 def loop_nonzero_tensor(tensor, names, rank):
     # see include/TAT/structure/edge.hpp
-    edges = [tensor.edges(i).segment for i in range(rank)]
+    edges = [tensor.edges(i).segments for i in range(rank)]
     arrow = [tensor.edges(i).arrow for i in range(rank)]
     Edge = tensor.model.Edge
     if rank == 0:

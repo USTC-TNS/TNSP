@@ -213,17 +213,17 @@ class ErgodicSampling(Sampling):
     def _zero_configuration(self):
         for l1, l2 in self.owner.sites():
             for orbit, edge in self.owner.physics_edges[l1, l2].items():
-                self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
+                self.configuration[l1, l2, orbit] = edge.point_by_index(0)
 
     def _next_configuration(self):
         for l1, l2 in self.owner.sites():
             for orbit, edge in self.owner.physics_edges[l1, l2].items():
-                index = edge.get_index_from_point(self.configuration[l1, l2, orbit])
+                index = edge.index_by_point(self.configuration[l1, l2, orbit])
                 index += 1
                 if index == edge.dimension:
-                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(0)
+                    self.configuration[l1, l2, orbit] = edge.point_by_index(0)
                 else:
-                    self.configuration[l1, l2, orbit] = edge.get_point_from_index(index)
+                    self.configuration[l1, l2, orbit] = edge.point_by_index(index)
                     return
 
     def _current_sampling(self):
