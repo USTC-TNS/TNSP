@@ -14,7 +14,7 @@
 + *tetragono*: Tetragono will print backtrace of the current process when receiving SIGUSR1.
 + *tetragono*: Add squash support for sampling lattice.
 *** Changed
-+ *TAT*: Use the multidimension span to record blocks in tensor, instead of the previous map data structure, some
++ *TAT.hpp*: Use the multidimension span to record blocks in tensor, instead of the previous map data structure, some
   related API is also updated. Detail update is followed:
   + About data
     + Tensor blocks is stored in a new order other than old version, the previous use a map from symmetry list to data
@@ -135,7 +135,7 @@
 + *tetragono*: Add support for changing the hamiltonian of an existent sampling lattice. To do it, create a lattice with
   target hamiltonians and then call =gm_data_load(file_name)= to replace tensors with data stored in file =file_name=.
   For low-level API, =lattice_1._lattice = lattice_2._lattice= could replace tensor data directly.
-+ *PyTAT*: Add edge fusing support when contracting two tensors.
++ *TAT.py*: Add edge fusing support when contracting two tensors.
 + *TAT.hpp*: Add support for being compiled by MSVC or Intel ICC.
 *** Changed
 + *tetragono*: Avoid data files being destroyed if a file system error appears when saving, such as the size limit of
