@@ -396,9 +396,9 @@ class Observer():
                         if self._cache_natural_delta:
                             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
                                 pickle.dump(holes, file)
-                            self._Deltas.append((reweight, None))
+                            self._Deltas.append((reweight, Es, None))
                         else:
-                            self._Deltas.append((reweight, holes))
+                            self._Deltas.append((reweight, Es, holes))
 
     def _expect_and_deviation(self, total, total_square, total_reweight):
         """
@@ -522,7 +522,7 @@ class Observer():
             The trace of metric.
         """
         result = 0.0
-        for reweight, deltas in self._weights_and_deltas():
+        for reweight, _, deltas in self._weights_and_deltas():
             result += lattice_prod_sum(lattice_conjugate(deltas), deltas) * reweight / self._total_weight
         result = mpi_comm.allreduce(result)
 
@@ -543,12 +543,12 @@ class Observer():
         """
         if self._cache_natural_delta:
             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "rb") as file:
-                for reweight, _ in self._Deltas:
+                for reweight, Es, _ in self._Deltas:
                     deltas = pickle.load(file)
-                    yield reweight, deltas
+                    yield reweight, Es, deltas
         else:
-            for reweight, deltas in self._Deltas:
-                yield reweight, deltas
+            for reweight, Es, deltas in self._Deltas:
+                yield reweight, Es, deltas
 
     def _metric_mv(self, gradient, epsilon):
         """
@@ -568,7 +568,7 @@ class Observer():
         """
         result_1 = np.array(
             [[gradient[l1][l2].same_shape().zero() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
-        for reweight, deltas in self._weights_and_deltas():
+        for reweight, _, deltas in self._weights_and_deltas():
             param = lattice_prod_sum(deltas, gradient) * reweight / self._total_weight
             lattice_update(result_1, param * lattice_conjugate(deltas))
         allreduce_lattice_buffer(result_1)
@@ -577,7 +577,16 @@ class Observer():
         result_2 = lattice_conjugate(self._Delta) * param
         return result_1 - result_2 + epsilon * gradient
 
-    def natural_gradient(self, step, error, epsilon):
+    def natural_gradient(self, step, error, epsilon, first=[True]):
+        if first[0]:
+            showln("==== DEPRECATED WARNING BEGIN ====")
+            showln("observer.natural_gradient is deprecated")
+            showln("use by_conjugate_gradient or by_direct_pseudo_inverse instead")
+            showln("===== DEPRECATED WARNING END =====")
+            first[0] = False
+        return self.natural_gradient_by_conjugate_gradient(step, error, epsilon)
+
+    def natural_gradient_by_conjugate_gradient(self, step, error, epsilon):
         """
         Get the energy natural gradient for every tensor.
 
@@ -638,6 +647,60 @@ class Observer():
             t += 1
         showln(f"calculate natural gradient done step={t} r^2/b^2={r_square/b_square}")
         return x
+
+    def natural_gradient_by_direct_pseudo_inverse(self, r_pinv, a_pinv):
+        """
+        Get the energy natural gradient for every tensor.
+
+        Parameters
+        ----------
+        r_pinv, a_pinv : float
+            Parameters control how to calculate pseudo inverse.
+
+        Returns
+        -------
+        list[list[Tensor]]
+            The gradient for every tensor.
+        """
+        # shape of   rho              is   s (* s)
+        # <X> = sum X_s rho_s / sum rho_s
+        # let r = rho / sum rho
+        # <X> = X r     # r is vector like
+        # <XY> = X r Y  # r is matrix like
+        # shape of   Delta - <Delta>  is   p * s
+        # shape of   E - <E>          is   s
+
+        # The program record:
+        # rho, E rho, Delta rho, Delta E rho
+        # The program calc:
+        # E = <E>
+        # G = <E Delta> - E <Delta> = < (E - <E>) (D - <D>) >
+        # Old equation is:    (Delta - <Delta>) r (Delta - <Delta>)^{+} NG = (Delta - <Delta>) r (E - <E>)
+        # That is             (Delta - <Delta>)^{+} NG = (E - <E>)
+        # New equation is:    NG = (Delta - <Delta>) [(Delta - <Delta>)^{+} (Delta - <Delta>) ]^{-1} (E - <E>)
+        show("calculate natural gradient done")
+        energy, _ = self.total_energy
+        N = int(self._count)
+        T = np.zeros([N, N])
+        e = np.zeros([N])
+        D = np.array(self._Delta) / self._total_weight
+        for i, [_, Es, di] in enumerate(self._weights_and_deltas()):
+            e[i] = Es - energy
+            for j, [_, _, dj] in enumerate(self._weights_and_deltas()):
+                T[i, j] = lattice_prod_sum(di - D, lattice_conjugate(dj - D))
+        T = np.asmatrix(T)
+        L, U = np.linalg.eigh(T)
+        L_max = np.max(L)
+        L_inv = 1 / (L * (1 + ((r_pinv * L_max + a_pinv) / L)**6))
+        T_inv = np.einsum("ij,j,jk->ik", U, L_inv, U.H)
+        T_inv_e = T_inv @ e
+        result = np.array(
+            [[self.owner[l1, l2].same_shape().zero() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
+        for i, [_, _, deltas] in enumerate(self._weights_and_deltas()):
+            param = T_inv_e[i]
+            lattice_update(result, param * lattice_conjugate(deltas - D))
+        showln("calculate natural gradient done")
+        return result
 
     def normalize_lattice(self):
         """

@@ -121,6 +121,9 @@ def gradient_descent(
         conjugate_gradient_method_error=0.0,
         metric_inverse_epsilon=0.01,
         cache_natural_delta=None,
+        use_natural_gradient_by_direct_pseudo_inverse=False,
+        natural_gradient_r_pinv=1e-12,
+        natural_gradient_a_pinv=0,
         # About gauge fixing
         fix_gauge=False,
         # About log and save state
@@ -260,8 +263,13 @@ def gradient_descent(
 
                 # Get gradient
                 if use_natural_gradient:
-                    grad = observer.natural_gradient(conjugate_gradient_method_step, conjugate_gradient_method_error,
-                                                     metric_inverse_epsilon)
+                    if use_natural_gradient_by_direct_pseudo_inverse:
+                        grad = observer.natural_gradient_by_direct_pseudo_inverse(natural_gradient_r_pinv,
+                                                                                  natural_gradient_a_pinv)
+                    else:
+                        grad = observer.natural_gradient_by_conjugate_gradient(conjugate_gradient_method_step,
+                                                                               conjugate_gradient_method_error,
+                                                                               metric_inverse_epsilon)
                 else:
                     grad = observer.gradient
 
