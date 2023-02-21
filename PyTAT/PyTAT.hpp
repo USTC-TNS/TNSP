@@ -436,16 +436,18 @@ namespace TAT {
 
    // About tensor
    template<typename T>
-   auto py_storage(T& tensor) {
+   auto py_storage(T& tensor, py::object& base) {
       using ScalarType = typename T::scalar_t;
       auto& s = tensor.storage();
-      return py::array_t<ScalarType>(py::buffer_info{
-            s.data(),
-            sizeof(ScalarType),
-            py::format_descriptor<ScalarType>::format(),
-            1,
-            std::vector<Size>{s.size()},
-            std::vector<Size>{sizeof(ScalarType)}});
+      return py::array_t<ScalarType>(
+            py::buffer_info{
+                  s.data(),
+                  sizeof(ScalarType),
+                  py::format_descriptor<ScalarType>::format(),
+                  1,
+                  std::vector<Size>{s.size()},
+                  std::vector<Size>{sizeof(ScalarType)}},
+            base);
    }
 
    template<typename T>
@@ -574,11 +576,13 @@ namespace TAT {
                      py::return_value_policy::reference_internal)
                .def_property(
                      "storage",
-                     [](T& tensor) {
-                        return py_storage(tensor);
+                     [](py::object& tensor) {
+                        auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
+                        return py_storage(t, tensor);
                      },
-                     [](T& tensor, py::object& value) {
-                        py_storage(tensor).attr("__setitem__")(py::ellipsis(), value);
+                     [](py::object& tensor, py::object& value) {
+                        auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
+                        py_storage(t, tensor).attr("__setitem__")(py::ellipsis(), value);
                      })
                .def_property_readonly(
                      "blocks",
