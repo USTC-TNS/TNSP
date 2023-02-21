@@ -736,7 +736,7 @@ namespace TAT {
                      "sqrt",
                      [](const T& tensor) {
                         return tensor.map([](ScalarType value) {
-                           return std::sqrt(value);
+                           return std::sqrt(std::abs(value));
                         });
                      },
                      "Get elementwise square root") // it is faster to implement in python, since it is common used

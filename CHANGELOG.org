@@ -4,6 +4,8 @@
 
 *** Added
 *** Changed
++ *TAT.py*: =sqrt= will calculate the square root of absoluate value in tensor elementwisely, instead of square root of
+  value itself and return =nan= for negative number.
 *** Deprecated
 *** Removed
 *** Fixed
