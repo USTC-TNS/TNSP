@@ -803,10 +803,10 @@ class SamplingLattice(AbstractLattice):
         u, s, v = big.svd({l_name for l_name in big.names if l_name.startswith("L_")}, "R", "L", "L", "R",
                           new_dimension)
         i = s.same_shape().identity({("L", "R")})
-        delta = np.sqrt(np.abs(s.storage))
-        delta[delta == 0] = 1
-        s.storage /= delta
-        i.storage *= delta
+        delta = s.same_shape()
+        delta.storage = np.sqrt(np.abs(s.storage))
+        i *= delta
+        s *= delta.reciprocal()
         left = left_q.contract(u, {("R", "L_L")}).contract(s, {("R", "L")})
         right = right_q.contract(v, {("L", "R_R")}).contract(i, {("L", "R")})
         self[l1, l2] = left.edge_rename({l_name: l_name[2:] for l_name in left.names if l_name.startswith("L_")})
@@ -832,10 +832,10 @@ class SamplingLattice(AbstractLattice):
         u, s, v = big.svd({u_name for u_name in big.names if u_name.startswith("U_")}, "D", "U", "U", "D",
                           new_dimension)
         i = s.same_shape().identity({("U", "D")})
-        delta = np.sqrt(np.abs(s.storage))
-        delta[delta == 0] = 1
-        s.storage /= delta
-        i.storage *= delta
+        delta = s.same_shape()
+        delta.storage = np.sqrt(np.abs(s.storage))
+        i *= delta
+        s *= delta.reciprocal()
         up = up_q.contract(u, {("D", "U_U")}).contract(s, {("D", "U")})
         down = down_q.contract(v, {("U", "D_D")}).contract(i, {("U", "D")})
         self[l1, l2] = up.edge_rename({u_name: u_name[2:] for u_name in up.names if u_name.startswith("U_")})

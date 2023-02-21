@@ -659,19 +659,16 @@ class SimpleUpdateLattice(AbstractLattice):
         environment_tensor = self.environment[i, j, direction]
         if environment_tensor is not None:
             if division:
-                environment_tensor = environment_tensor.map(lambda x: 0 if x == 0 else 1. / x)
+                environment_tensor = environment_tensor.reciprocal()
             if square_root:
-                # Cannot calculate sqrt trivially, prepare an identity matrix and get the square root of absolute value
-                # first. And then calculate time it or devide it with idenity
-                environment_tensor = environment_tensor.copy()  # copy it, since there is inplace operator later.
                 identity = environment_tensor.same_shape().identity({tuple(environment_tensor.names)})
-                delta = np.sqrt(np.abs(environment_tensor.storage))
-                delta[delta == 0] = 1
-                environment_tensor.storage /= delta
-                identity.storage *= delta
+                delta = environment_tensor.same_shape()
+                delta.storage = np.sqrt(np.abs(environment_tensor.storage))
                 # Delivery former identity and former environment tensor to four direction.
                 if direction in ("D", "R"):
-                    environment_tensor = identity
+                    environment_tensor = identity * delta
+                else:
+                    environment_tensor = environment_tensor * delta.reciprocal()
             if direction == "L":
                 tensor = tensor.contract(environment_tensor, {("L", "R")})
             if direction == "R":
