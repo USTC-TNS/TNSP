@@ -517,18 +517,14 @@ namespace TAT {
             self_m,
             "_Blocks",
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str())
-            .def(
-                  "__getitem__",
-                  [](B& b, const std::vector<std::pair<DefaultName, Symmetry>>& position) {
-                     return b.blocks(position);
-                  },
-                  py::return_value_policy::reference_internal)
-            .def(
-                  "__getitem__",
-                  [](B& b, const std::vector<DefaultName>& position) {
-                     return b.blocks(position);
-                  },
-                  py::return_value_policy::reference_internal)
+            .def("__getitem__",
+                 [](B& b, const std::vector<std::pair<DefaultName, Symmetry>>& position) {
+                    return b.blocks(position);
+                 })
+            .def("__getitem__",
+                 [](B& b, const std::vector<DefaultName>& position) {
+                    return b.blocks(position);
+                 })
             .def("__setitem__",
                  [](B& b, const std::vector<std::pair<DefaultName, Symmetry>>& position, py::object& value) {
                     b.blocks(position).attr("__setitem__")(py::ellipsis(), value);
