@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.0...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.1...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.0...v0.3.1][v0.3.1]] - 2023-02-21
 
 *** Added
 + *TAT.py*: Add binding for functions of Edge introduced in v0.3.0 such as =point_by_index=.
@@ -8,10 +16,8 @@
 + *TAT.py*: Update the function arguments names to keep the same with those in c++ side.
 + *TAT.py*: Remove navigator of TAT.py to get tensor type directly, please use module alias instead. For example,
   previous code such as `TAT("No", np.float64)` should be updated to `TAT.Normal.float64.Tensor`.
-*** Deprecated
 *** Removed
 + *TAT.py*: Remove optional FastName binding, which is useless in python side in fact.
-*** Fixed
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.2.23...v0.3.0][v0.3.0]] - 2022-11-15
 
