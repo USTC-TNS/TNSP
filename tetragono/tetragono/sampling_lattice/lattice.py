@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
 from ..abstract_lattice import AbstractLattice
-from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer
+from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer, safe_rename
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -365,13 +365,14 @@ class Configuration(SingleLayerAuxiliaries):
                 # Contract and get <psi|s|partial_x psi> / <psi|s|psi>
                 hole = hole.contract(inv_ws, contract_name)
                 # Rename to the correct edge names.
-                hole = hole.edge_rename({
-                    "L0": "R",
-                    "R0": "L",
-                    "U0": "D",
-                    "D0": "U",
-                    **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]},
-                })
+                hole = safe_rename(
+                    hole, {
+                        "L0": "R",
+                        "R0": "L",
+                        "U0": "D",
+                        "D0": "U",
+                        **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]},
+                    })
 
                 # hole owns conjugated physics edge, because of partial_x. Expand it by connecting it with a physics
                 # edge but one dimension, and a conjugated edge but full dimension tensor, which is just what
