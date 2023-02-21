@@ -1,7 +1,7 @@
 seed 2333
 su_create density_matrix_heisenberg L1=4 L2=4 D=4 J=-1
 su_dump su.dat
-!python infinite_temperature_single_orbit.py su.dat 0 2333
+!../clearmpi python infinite_temperature_single_orbit.py su.dat 0 2333
 su_load su.dat
 su_update 100 0.01 5
 su_to_gm
