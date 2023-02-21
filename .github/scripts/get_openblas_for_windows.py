@@ -19,7 +19,8 @@
 import urllib.request
 from zipfile import ZipFile
 
-openblas_url = "https://github.com/xianyi/OpenBLAS/releases/download/v0.3.20/OpenBLAS-0.3.20-x64.zip"
+openblas_version = "0.3.21"
+openblas_url = f"https://github.com/xianyi/OpenBLAS/releases/download/v{openblas_version}/OpenBLAS-{openblas_version}-x64.zip"
 
 urllib.request.urlretrieve(openblas_url, "openblas.zip")
 
