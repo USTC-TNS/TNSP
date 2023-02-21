@@ -803,8 +803,7 @@ class SamplingLattice(AbstractLattice):
         u, s, v = big.svd({l_name for l_name in big.names if l_name.startswith("L_")}, "R", "L", "L", "R",
                           new_dimension)
         i = s.same_shape().identity({("L", "R")})
-        delta = s.same_shape()
-        delta.storage = np.sqrt(np.abs(s.storage))
+        delta = s.sqrt()
         i *= delta
         s *= delta.reciprocal()
         left = left_q.contract(u, {("R", "L_L")}).contract(s, {("R", "L")})
@@ -832,8 +831,7 @@ class SamplingLattice(AbstractLattice):
         u, s, v = big.svd({u_name for u_name in big.names if u_name.startswith("U_")}, "D", "U", "U", "D",
                           new_dimension)
         i = s.same_shape().identity({("U", "D")})
-        delta = s.same_shape()
-        delta.storage = np.sqrt(np.abs(s.storage))
+        delta = s.sqrt()
         i *= delta
         s *= delta.reciprocal()
         up = up_q.contract(u, {("D", "U_U")}).contract(s, {("D", "U")})

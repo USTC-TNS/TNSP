@@ -59,8 +59,7 @@ def unsquash(new_state, old_state, cut_dimension):
             {"L1", "R1", "T", "U"} | {edge for edge in part1.names if edge.startswith("P")}, "D", "U", "U", "D",
             cut_dimension)
         identity = singular.same_shape().identity({("U", "D")})
-        delta = singular.same_shape()
-        delta.storage = np.sqrt(np.abs(singular.storage))
+        delta = singular.sqrt()
         identity *= delta
         singular *= delta.reciprocal()
         new_part1 = safe_rename(new_part1, {

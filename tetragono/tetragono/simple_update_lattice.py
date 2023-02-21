@@ -662,8 +662,7 @@ class SimpleUpdateLattice(AbstractLattice):
                 environment_tensor = environment_tensor.reciprocal()
             if square_root:
                 identity = environment_tensor.same_shape().identity({tuple(environment_tensor.names)})
-                delta = environment_tensor.same_shape()
-                delta.storage = np.sqrt(np.abs(environment_tensor.storage))
+                delta = environment_tensor.sqrt()
                 # Delivery former identity and former environment tensor to four direction.
                 if direction in ("D", "R"):
                     environment_tensor = identity * delta
