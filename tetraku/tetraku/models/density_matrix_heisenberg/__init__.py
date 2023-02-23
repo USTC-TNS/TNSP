@@ -43,6 +43,9 @@ def abstract_state(L1, L2, J, side=1):
     SS = tet.common_tensor.No.SS.to(float)
     JSS = -J * SS
     for layer in range(side):
+        # Hamiltonian for the second layer should be transposed
+        # (transpose but not conjugate, or conjugate but not transpose),
+        # But the hamiltonian is real, so nothing to do here
         for l1 in range(L1):
             for l2 in range(L2):
                 if l1 != 0:

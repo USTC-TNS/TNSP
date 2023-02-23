@@ -52,6 +52,9 @@ def abstract_state(L1, L2, t, J, mu, side=1):
     H = (-t) * CC + (J / 2) * (SS - nn / 4)
     single_site = mu * n
     for layer in range(side):
+        # Hamiltonian for the second layer should be transposed
+        # (transpose but not conjugate, or conjugate but not transpose),
+        # But the hamiltonian is real, so nothing to do here
         for l1 in range(L1):
             for l2 in range(L2):
                 state.hamiltonians[(l1, l2, layer),] = single_site
