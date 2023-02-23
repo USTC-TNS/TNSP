@@ -678,7 +678,7 @@ class Observer():
         # Old equation is:    (Delta - <Delta>) r (Delta - <Delta>)^{+} NG = (Delta - <Delta>) r (E - <E>)
         # That is             (Delta - <Delta>)^{+} NG = (E - <E>)
         # New equation is:    NG = (Delta - <Delta>) [(Delta - <Delta>)^{+} (Delta - <Delta>) ]^{-1} (E - <E>)
-        show("calculate natural gradient done")
+        show("calculating natural gradient")
         energy, _ = self.total_energy
         N = int(self._count)
         T = np.zeros([N, N])
