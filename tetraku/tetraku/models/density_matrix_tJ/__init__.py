@@ -20,7 +20,7 @@ import TAT
 import tetragono as tet
 
 
-def abstract_state(L1, L2, t, J, mu):
+def abstract_state(L1, L2, t, J, mu, side=1):
     """
     Create density matrix of tJ model state.
 
@@ -34,7 +34,11 @@ def abstract_state(L1, L2, t, J, mu):
         tJ model parameters.
     mu : float
         The chemical potential.
+    side : 1 | 2, default=1
+        The Hamiltonian should apply to single side or both side of density matrix.
     """
+    if side not in [0, 1]:
+        raise RuntimeError("side should be either 1 or 2")
     state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
     state.total_symmetry = (0, 0)
     for l1 in range(L1):
@@ -47,14 +51,14 @@ def abstract_state(L1, L2, t, J, mu):
     n = tet.common_tensor.FermiU1_tJ.n.to(float)
     H = (-t) * CC + (J / 2) * (SS - nn / 4)
     single_site = mu * n
-    for orbit in [0, 1]:
+    for layer in range(side):
         for l1 in range(L1):
             for l2 in range(L2):
-                state.hamiltonians[(l1, l2, orbit),] = single_site
+                state.hamiltonians[(l1, l2, layer),] = single_site
                 if l1 != 0:
-                    state.hamiltonians[(l1 - 1, l2, orbit), (l1, l2, orbit)] = H
+                    state.hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = H
                 if l2 != 0:
-                    state.hamiltonians[(l1, l2 - 1, orbit), (l1, l2, orbit)] = H
+                    state.hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = H
     return state
 
 

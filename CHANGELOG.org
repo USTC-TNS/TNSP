@@ -7,11 +7,12 @@
   add parameter =use_natural_gradient_by_direct_pseudo_inverse= (default is False), =natural_gradient_r_pinv= and
   =natural_gradient_a_pinv= for high/mid-level API in =gm_run= to use direct pseudo inverse to calculate natural
   gradient.
++ *tetraku*: Add Hamiltonian to another part of density matrix for density matrix of Heisenberg/Hubbard/tJ model. It is
+  to ensure the result density is unitary despite of errors introduced by contract and approximation. This is controled
+  by a new parameter =side= which is either =1= or =2=, default is =1=, which has the same behavior with before.
 *** Changed
 + *TAT.py*: =sqrt= will calculate the square root of absoluate value in tensor elementwisely, instead of square root of
   value itself and return =nan= for negative number.
-+ *tetraku*: Add Hamiltonian to another part of density matrix for density matrix of Heisenberg/Hubbard/tJ model. It is
-  to ensure the result density is unitary despite of errors introduced by contract and approximation.
 *** Deprecated
 + *tetragono*: =natural_gradient= for observer object is deprecated, users should specify the method to calculate
   natural gradient explicitly, which are =natural_gradient_by_direct_pseudo_inverse= and

@@ -20,7 +20,7 @@ import TAT
 import tetragono as tet
 
 
-def abstract_state(L1, L2, J):
+def abstract_state(L1, L2, J, side=1):
     """
     Create density matrix of a heisenberg state.
 
@@ -30,7 +30,11 @@ def abstract_state(L1, L2, J):
         The lattice size.
     J : float
         The heisenberg parameter.
+    side : 1 | 2, default=1
+        The Hamiltonian should apply to single side or both side of density matrix.
     """
+    if side not in [0, 1]:
+        raise RuntimeError("side should be either 1 or 2")
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     for l1 in range(L1):
         for l2 in range(L2):
@@ -38,13 +42,13 @@ def abstract_state(L1, L2, J):
                 state.physics_edges[(l1, l2, layer)] = 2
     SS = tet.common_tensor.No.SS.to(float)
     JSS = -J * SS
-    for orbit in [0, 1]:
+    for layer in range(side):
         for l1 in range(L1):
             for l2 in range(L2):
                 if l1 != 0:
-                    state.hamiltonians[(l1 - 1, l2, orbit), (l1, l2, orbit)] = JSS
+                    state.hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = JSS
                 if l2 != 0:
-                    state.hamiltonians[(l1, l2 - 1, orbit), (l1, l2, orbit)] = JSS
+                    state.hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = JSS
     return state
 
 
