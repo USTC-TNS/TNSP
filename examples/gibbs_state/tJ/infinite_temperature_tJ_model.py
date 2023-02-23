@@ -21,8 +21,7 @@ import TAT
 import tetragono as tet
 
 
-def initialize_infinite_temperature(file_name):
-    lattice = tet.read_from_file(file_name)
+def initialize_infinite_temperature(lattice):
     for row in lattice._lattice:
         for tensor in row:
             tensor.zero()
@@ -34,11 +33,14 @@ def initialize_infinite_temperature(file_name):
             position["P0"] = ((+1, +1), 0)
             position["P1"] = ((-1, -1), 0)
             tensor[position] = 1
-    tet.write_to_file(lattice, file_name)
+    return lattice
 
 
 def main(argv):
-    initialize_infinite_temperature(argv[1])
+    file_name = argv[1]
+    lattice = tet.read_from_file(file_name)
+    lattice = initialize_infinite_temperature(lattice)
+    tet.write_to_file(lattice, file_name)
 
 
 if __name__ == "__main__":
