@@ -17,9 +17,10 @@
 #
 
 import os
+import math
 import numpy as np
 from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update,
-                              lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_comm, pickle)
+                              lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_size, mpi_comm, pickle)
 from ..tensor_element import tensor_element
 from .lattice import ConfigurationPool
 
@@ -648,6 +649,33 @@ class Observer():
         showln(f"calculate natural gradient done step={t} r^2/b^2={r_square/b_square}")
         return x
 
+    def _direct_pseudo_inverse_block_plan(self):
+        # TODO need opt
+        N = int(self._count)
+        local_N = len(self._Deltas)
+        global_N = mpi_comm.allgather(local_N)
+
+        block_number = math.floor(mpi_size**0.5)
+        usable_process = block_number**2
+        block_size = math.ceil(N / block_number)
+        plan = []
+        for rank in range(mpi_size):
+            if rank < usable_process:
+                row = rank % block_number
+                column = rank // block_number
+                row_begin = row * block_size
+                row_end = row_begin + block_size
+                if row_end > N:
+                    row_end = N
+                column_begin = column * block_size
+                column_end = column_begin + block_size
+                if column_end > N:
+                    column_end = N
+                plan.append(((row_begin, row_end), (column_begin, column_end)))
+            else:
+                plan.append(((0, 0), (0, 0)))
+        return global_N, plan
+
     def natural_gradient_by_direct_pseudo_inverse(self, r_pinv, a_pinv):
         """
         Get the energy natural gradient for every tensor.
@@ -680,27 +708,66 @@ class Observer():
         # New equation is:    NG = (Delta - <Delta>) [(Delta - <Delta>)^{+} (Delta - <Delta>) ]^{-1} (E - <E>)
         show("calculating natural gradient")
         energy, _ = self.total_energy
+        D = np.array(self._Delta) / self._total_weight
         N = int(self._count)
         T = np.zeros([N, N])
         e = np.zeros([N])
-        D = np.array(self._Delta) / self._total_weight
-        for i, [_, Es, di] in enumerate(self._weights_and_deltas()):
-            e[i] = Es - energy
-            for j, [_, _, dj] in enumerate(self._weights_and_deltas()):
+
+        # Calculate T and e
+        global_N, plan = self._direct_pseudo_inverse_block_plan()
+        temp_deltas = [None for _ in range(N)]
+        index = 0
+        for src_rank in range(mpi_size):
+            if src_rank == mpi_rank:
+                iterator = self._weights_and_deltas()
+            else:
+                iterator = [(None, None, None) for _ in range(global_N[src_rank])]
+            for _, Es, delta in iterator:
+                # Set e
+                if src_rank == mpi_rank:
+                    e[index] = Es - energy
+                # Send delta to needed process
+                for dst_rank in range(mpi_size):
+                    if (plan[dst_rank][0][0] <= index < plan[dst_rank][0][1]) or (plan[dst_rank][1][0] <= index <
+                                                                                  plan[dst_rank][1][1]):
+                        # TODO need opt
+                        if src_rank == dst_rank == mpi_rank:
+                            temp_deltas[index] = delta
+                        elif mpi_rank == src_rank:
+                            mpi_comm.send(delta, dest=dst_rank)
+                        elif mpi_rank == dst_rank:
+                            temp_deltas[index] = mpi_comm.recv(source=src_rank)
+                index += 1
+        # Contract the block of this rank
+        for i in range(*plan[mpi_rank][0]):
+            for j in range(*plan[mpi_rank][1]):
+                di = temp_deltas[i]
+                dj = temp_deltas[j]
                 T[i, j] = lattice_prod_sum(di - D, lattice_conjugate(dj - D))
+        # Allreduce
+        allreduce_buffer(e)
+        allreduce_buffer(T)
+
+        # Calculate T_inv without parallel
+        # TODO need opt
         T = np.asmatrix(T)
         L, U = np.linalg.eigh(T)
         L_max = np.max(L)
         L_inv = 1 / (L * (1 + ((r_pinv * L_max + a_pinv) / L)**6))
         T_inv = np.einsum("ij,j,jk->ik", U, L_inv, U.H)
         T_inv_e = T_inv @ e
+
+        # Apply to e
         result = np.array(
             [[self.owner[l1, l2].same_shape().zero() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
+        local_offset = sum(global_N[:mpi_rank])
         for i, [_, _, deltas] in enumerate(self._weights_and_deltas()):
-            param = T_inv_e[i]
+            index = i + local_offset
+            param = T_inv_e[index]
             lattice_update(result, param * lattice_conjugate(deltas - D))
+        allreduce_lattice_buffer(result)
         showln("calculate natural gradient done")
-        return result
+        return result * 2
 
     def normalize_lattice(self):
         """
