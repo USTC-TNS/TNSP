@@ -47,13 +47,14 @@ def abstract_state(L1, L2, t, J, mu):
     n = tet.common_tensor.FermiU1_tJ.n.to(float)
     H = (-t) * CC + (J / 2) * (SS - nn / 4)
     single_site = mu * n
-    for l1 in range(L1):
-        for l2 in range(L2):
-            state.hamiltonians[(l1, l2, 0),] = single_site
-            if l1 != 0:
-                state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = H
-            if l2 != 0:
-                state.hamiltonians[(l1, l2 - 1, 0), (l1, l2, 0)] = H
+    for orbit in [0, 1]:
+        for l1 in range(L1):
+            for l2 in range(L2):
+                state.hamiltonians[(l1, l2, orbit),] = single_site
+                if l1 != 0:
+                    state.hamiltonians[(l1 - 1, l2, orbit), (l1, l2, orbit)] = H
+                if l2 != 0:
+                    state.hamiltonians[(l1, l2 - 1, orbit), (l1, l2, orbit)] = H
     return state
 
 

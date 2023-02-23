@@ -45,13 +45,14 @@ def abstract_state(L1, L2, t, U, mu):
     CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
     single_site = U * NN - mu * (N0 + N1)
     tCC = -t * CSCS
-    for l1 in range(L1):
-        for l2 in range(L2):
-            state.hamiltonians[(l1, l2, 0),] = single_site
-            if l1 != 0:
-                state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = tCC
-            if l2 != 0:
-                state.hamiltonians[(l1, l2 - 1, 0), (l1, l2, 0)] = tCC
+    for orbit in [0, 1]:
+        for l1 in range(L1):
+            for l2 in range(L2):
+                state.hamiltonians[(l1, l2, orbit),] = single_site
+                if l1 != 0:
+                    state.hamiltonians[(l1 - 1, l2, orbit), (l1, l2, orbit)] = tCC
+                if l2 != 0:
+                    state.hamiltonians[(l1, l2 - 1, orbit), (l1, l2, orbit)] = tCC
     return state
 
 

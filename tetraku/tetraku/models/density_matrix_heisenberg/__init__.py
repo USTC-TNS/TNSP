@@ -38,12 +38,13 @@ def abstract_state(L1, L2, J):
                 state.physics_edges[(l1, l2, layer)] = 2
     SS = tet.common_tensor.No.SS.to(float)
     JSS = -J * SS
-    for l1 in range(L1):
-        for l2 in range(L2):
-            if l1 != 0:
-                state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = JSS
-            if l2 != 0:
-                state.hamiltonians[(l1, l2 - 1, 0), (l1, l2, 0)] = JSS
+    for orbit in [0, 1]:
+        for l1 in range(L1):
+            for l2 in range(L2):
+                if l1 != 0:
+                    state.hamiltonians[(l1 - 1, l2, orbit), (l1, l2, orbit)] = JSS
+                if l2 != 0:
+                    state.hamiltonians[(l1, l2 - 1, orbit), (l1, l2, orbit)] = JSS
     return state
 
 
