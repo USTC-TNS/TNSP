@@ -5,4 +5,4 @@ su_dump su.dat
 su_load su.dat
 su_update 100 0.01 8
 su_to_gm
-gm_run 1000 10 0.01 configuration_cut_dimension=8 use_natural_gradient=True
+gm_run 1000 10 0.01 configuration_cut_dimension=8 use_natural_gradient=True use_natural_gradient_by_direct_pseudo_inverse=True
