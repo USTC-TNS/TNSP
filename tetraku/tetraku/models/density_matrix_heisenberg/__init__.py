@@ -55,7 +55,7 @@ def abstract_state(L1, L2, J, side=1):
     return state
 
 
-def abstract_lattice(L1, L2, D, J):
+def abstract_lattice(L1, L2, D, J, side=1):
     """
     Create density matrix of a heisenberg lattice.
 
@@ -67,8 +67,10 @@ def abstract_lattice(L1, L2, D, J):
         The cut dimension.
     J : float
         The heisenberg parameter.
+    side : 1 | 2, default=1
+        The Hamiltonian should apply to single side or both side of density matrix.
     """
-    state = tet.AbstractLattice(abstract_state(L1, L2, J))
+    state = tet.AbstractLattice(abstract_state(L1, L2, J, side=side))
     state.virtual_bond["R"] = D
     state.virtual_bond["D"] = D
     return state

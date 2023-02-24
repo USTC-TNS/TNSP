@@ -63,7 +63,7 @@ def abstract_state(L1, L2, t, U, mu, side=1):
     return state
 
 
-def abstract_lattice(L1, L2, t, U, mu):
+def abstract_lattice(L1, L2, t, U, mu, side=1):
     """
     Create density matrix of Hubbard model lattice.
 
@@ -75,7 +75,9 @@ def abstract_lattice(L1, L2, t, U, mu):
         Hubbard model parameters.
     mu : float
         The chemical potential.
+    side : 1 | 2, default=1
+        The Hamiltonian should apply to single side or both side of density matrix.
     """
-    state = tet.AbstractLattice(abstract_state(L1, L2, t, U, mu))
+    state = tet.AbstractLattice(abstract_state(L1, L2, t, U, mu, side=side))
     state.virtual_bond["R"] = state.virtual_bond["D"] = [(0, 1)]
     return state
