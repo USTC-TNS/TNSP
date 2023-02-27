@@ -16,7 +16,6 @@
  */
 
 #include "PyTAT.hpp"
-#include "configuration.hpp"
 
 namespace TAT {
 
@@ -43,7 +42,6 @@ namespace TAT {
       dealing_symmetry<NoSymmetry>(No_m, "No").def(py::init<>());
       dealing_edge<NoSymmetry, false>(No_m, "No");
       dealing_edge<NoSymmetry, true>(No_m, "No");
-      dealing_configuration<NoSymmetry>(No_m, "No");
 
       auto Z2_m = tat_m.def_submodule("Z2");
       dealing_symmetry<Z2Symmetry>(Z2_m, "Z2")
@@ -54,7 +52,6 @@ namespace TAT {
             });
       dealing_edge<Z2Symmetry, false>(Z2_m, "Z2");
       dealing_edge<Z2Symmetry, true>(Z2_m, "Z2");
-      dealing_configuration<Z2Symmetry>(Z2_m, "Z2");
 
       auto U1_m = tat_m.def_submodule("U1");
       dealing_symmetry<U1Symmetry>(U1_m, "U1")
@@ -65,7 +62,6 @@ namespace TAT {
             });
       dealing_edge<U1Symmetry, false>(U1_m, "U1");
       dealing_edge<U1Symmetry, true>(U1_m, "U1");
-      dealing_configuration<U1Symmetry>(U1_m, "U1");
 
       auto Fermi_m = tat_m.def_submodule("Fermi");
       dealing_symmetry<FermiSymmetry>(Fermi_m, "Fermi")
@@ -76,7 +72,6 @@ namespace TAT {
             });
       dealing_edge<FermiSymmetry, false>(Fermi_m, "Fermi");
       dealing_edge<FermiSymmetry, true>(Fermi_m, "Fermi");
-      dealing_configuration<FermiSymmetry>(Fermi_m, "Fermi");
 
       auto FermiZ2_m = tat_m.def_submodule("FermiZ2");
       dealing_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
@@ -96,7 +91,6 @@ namespace TAT {
             });
       dealing_edge<FermiZ2Symmetry, false>(FermiZ2_m, "FermiZ2");
       dealing_edge<FermiZ2Symmetry, true>(FermiZ2_m, "FermiZ2");
-      dealing_configuration<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2");
 
       auto FermiU1_m = tat_m.def_submodule("FermiU1");
       dealing_symmetry<FermiU1Symmetry>(FermiU1_m, "FermiU1")
@@ -116,7 +110,6 @@ namespace TAT {
             });
       dealing_edge<FermiU1Symmetry, false>(FermiU1_m, "FermiU1");
       dealing_edge<FermiU1Symmetry, true>(FermiU1_m, "FermiU1");
-      dealing_configuration<FermiU1Symmetry>(FermiU1_m, "FermiU1");
 
       auto Parity_m = tat_m.def_submodule("Parity");
       dealing_symmetry<ParitySymmetry>(Parity_m, "Pariry")
@@ -127,7 +120,6 @@ namespace TAT {
             });
       dealing_edge<ParitySymmetry, false>(Parity_m, "Parity");
       dealing_edge<ParitySymmetry, true>(Parity_m, "Parity");
-      dealing_configuration<ParitySymmetry>(Parity_m, "Parity");
 
       // tensor
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) at_exit(dealing_Tensor_##SYM##_##SCALARSHORT(SYM##_m, #SCALARSHORT, #SCALAR, #SYM));

@@ -18,6 +18,7 @@
 
 import numpy as np
 import torch
+import tetraux
 from .abstract_ansatz import AbstractAnsatz
 
 
@@ -70,7 +71,7 @@ class ConvolutionalNeural(AbstractAnsatz):
 
     def weight_and_delta(self, configurations, calculate_delta):
         configs = [config._configuration for config in configurations]
-        xs = torch.tensor(configs[0].export_orbit0(configs), dtype=self.dtype) * 2 - 1
+        xs = torch.tensor(tetraux.Configuration.export_orbit0(configs), dtype=self.dtype) * 2 - 1
         weight = self.get_weights(xs)
         if calculate_delta:
             number = len(configurations)

@@ -19,6 +19,7 @@
 from copyreg import _slotnames
 from ..abstract_state import AbstractState
 from ..common_toolkit import send, allreduce_iterator_buffer, bcast_iterator_buffer, showln
+import tetraux
 
 
 class Configuration:
@@ -27,9 +28,6 @@ class Configuration:
     """
 
     __slots__ = ["owner", "_configuration"]
-
-    def export_orbit0(self):
-        return self._configuration.export_orbit0()
 
     def copy(self):
         return Configuration(self.owner, self._configuration)
@@ -49,15 +47,15 @@ class Configuration:
 
         # Data storage of configuration, access it by configuration[l1, l2, orbit] instead
         if config is None:
-            self._configuration = owner.Tensor.model.Configuration(owner.L1, owner.L2)
+            self._configuration = tetraux.Configuration(owner.L1, owner.L2)
         else:
             self._configuration = config.copy()
 
     def __setitem__(self, key, value):
-        self._configuration[key] = value
+        self._configuration[key] = self.owner.physics_edges[key].index_by_point(value)
 
     def __getitem__(self, key):
-        return self._configuration[key]
+        return self.owner.physics_edges[key].point_by_index(self._configuration[key])
 
     def __delitem__(self, key):
         self.__setitem__(key, None)

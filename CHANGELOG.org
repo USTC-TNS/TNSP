@@ -13,6 +13,8 @@
 *** Changed
 + *TAT.py*: =sqrt= will calculate the square root of absoluate value in tensor elementwisely, instead of square root of
   value itself and return =nan= for negative number.
++ *tetraux*: Move =Configuration= for ansatz product state to an individual package named =tetraux= from =TAT.py=, which
+  is not related to the tensor itself.
 *** Deprecated
 + *tetragono*: =natural_gradient= for observer object is deprecated, users should specify the method to calculate
   natural gradient explicitly, which are =natural_gradient_by_direct_pseudo_inverse= and

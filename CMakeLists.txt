@@ -20,7 +20,7 @@ endif()
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
 # TAT_USE_MPI, TAT_MATH_LIBRARIES, BLA_VENDOR, BLA_STATIC
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
-# TAT_BUILD_PYTAT, TAT_BUILD_TEST
+# TAT_BUILD_PYTAT, TAT_BUILD_TETRAUX, TAT_BUILD_TEST
 
 # Add TAT target
 set(TAT_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -41,26 +41,29 @@ if(TAT_MAIN_PROJECT)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.rst DESTINATION share/licenses/TAT)
 endif()
 
-# PyTAT
-option(TAT_BUILD_PYTAT "Build PyTAT" ON)
+# Pybind11
 if(EMSCRIPTEN)
-  set(TAT_BUILD_PYTAT OFF)
-endif()
-if(TAT_BUILD_PYTAT)
+  set(TAT_PYBIND11_FOUND OFF)
+else()
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/pybind11)
     add_subdirectory(pybind11)
+    set(TAT_PYBIND11_FOUND ON)
     message(STATUS "Enable python(local)")
   else()
     find_package(pybind11 QUIET)
     if(pybind11_FOUND)
       message(STATUS "Enable python(system)")
+      set(TAT_PYBIND11_FOUND ON)
     else()
       message(STATUS "Disable python since pybind11 not found, try install pybind11 or put it into TAT directory")
-      set(TAT_BUILD_PYTAT OFF)
+      set(TAT_PYBIND11_FOUND OFF)
     endif()
   endif()
 endif()
-if(TAT_BUILD_PYTAT)
+
+# PyTAT
+option(TAT_BUILD_PYTAT "Build PyTAT" ON)
+if(TAT_BUILD_PYTAT AND TAT_PYBIND11_FOUND)
   file(GLOB PYTAT_SRC ${CMAKE_CURRENT_SOURCE_DIR}/PyTAT/*.cpp)
   set(Symmetries No Z2 U1 Fermi FermiZ2 FermiU1 Parity)
   set(Shorts S D C Z)
@@ -80,6 +83,13 @@ if(TAT_BUILD_PYTAT)
   pybind11_add_module(PyTAT ${PYTAT_SRC})
   target_link_libraries(PyTAT PRIVATE TAT)
   set_target_properties(PyTAT PROPERTIES OUTPUT_NAME TAT)
+endif()
+
+# tetraux
+option(TAT_BUILD_TETRAUX "Build tetraux" ON)
+if(TAT_BUILD_TETRAUX AND TAT_PYBIND11_FOUND)
+  pybind11_add_module(tetraux ${CMAKE_CURRENT_SOURCE_DIR}/tetraux/tetraux.cpp)
+  target_compile_features(tetraux PRIVATE cxx_std_17)
 endif()
 
 # Add test

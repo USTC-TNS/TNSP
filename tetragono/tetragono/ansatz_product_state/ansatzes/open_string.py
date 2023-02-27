@@ -18,6 +18,7 @@
 
 import numpy as np
 import torch
+import tetraux
 from ...common_toolkit import seed_differ
 from .abstract_ansatz import AbstractAnsatz
 
@@ -83,8 +84,8 @@ class OpenString(AbstractAnsatz):
         for index in range(self.length):
             sites = self.index_to_site[index]
             # order: C, P
-            hat = torch.tensor(configs[0].get_hat(configs, sites,
-                                                  [self.owner.physics_edges[site].dimension for site in sites]),
+            hat = torch.tensor(tetraux.Configuration.get_hat(
+                configs, sites, [self.owner.physics_edges[site].dimension for site in sites]),
                                dtype=torch.float64)
             hat_list.append(hat)
             fat_list.append(torch.einsum("cp,plr->clr", hat_list[index], self.tensor_list[index]))

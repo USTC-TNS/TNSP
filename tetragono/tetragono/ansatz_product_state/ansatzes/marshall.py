@@ -17,6 +17,7 @@
 #
 
 import numpy as np
+import tetraux
 from .abstract_ansatz import AbstractAnsatz
 
 
@@ -33,7 +34,7 @@ class Marshall(AbstractAnsatz):
 
     def weight_and_delta(self, configurations, calculate_delta):
         configs = [config._configuration for config in configurations]
-        orbit0 = configs[0].export_orbit0(configs) * 2 - 1  # C * L1 * L2
+        orbit0 = tetraux.Configuration.export_orbit0(configs) * 2 - 1  # C * L1 * L2
         weights = (-1)**(self.SA - (orbit0 * self.mask_A * 0.5).reshape([orbit0.shape[0], -1]).sum(axis=1))
         if calculate_delta:
             deltas = [np.empty(0, dtype=object) for _ in weights]
