@@ -33,7 +33,7 @@ def abstract_state(L1, L2, J, side=1):
     side : 1 | 2, default=1
         The Hamiltonian should apply to single side or both side of density matrix.
     """
-    if side not in [0, 1]:
+    if side not in [1, 2]:
         raise RuntimeError("side should be either 1 or 2")
     state = tet.AbstractState(TAT.No.D.Tensor, L1, L2)
     for l1 in range(L1):
