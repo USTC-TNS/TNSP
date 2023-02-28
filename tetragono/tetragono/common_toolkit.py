@@ -152,7 +152,8 @@ def read_from_file(file_name):
 
 def write_to_file(obj, file_name):
     if mpi_rank == 0:
-        tmp_file_name = f".{file_name}.tmp"
+        head, tail = os.path.split(file_name)
+        tmp_file_name = os.path.join(head, f".{tail}.tmp")
         with open(tmp_file_name, "wb") as file:
             pickle.dump(obj, file)
         os.rename(tmp_file_name, file_name)
