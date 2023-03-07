@@ -21,7 +21,8 @@ import signal
 from datetime import datetime
 import numpy as np
 import TAT
-from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
+from ..sampling_lattice import (SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling,
+                                MirrorDirectSampling)
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
                               write_to_file, get_imported_function)
 
@@ -232,6 +233,10 @@ def gradient_descent(
                 elif sampling_method == "direct":
                     sampling = DirectSampling(state, configuration_cut_dimension, restrict,
                                               direct_sampling_cut_dimension)
+                    sampling_total_step = sampling_total_step
+                elif sampling_method == "mirrordirect":
+                    sampling = MirrorDirectSampling(state, configuration_cut_dimension, restrict,
+                                                    direct_sampling_cut_dimension)
                     sampling_total_step = sampling_total_step
                 else:
                     raise ValueError("Invalid sampling method")

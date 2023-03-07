@@ -17,5 +17,5 @@
 #
 
 from .lattice import Configuration, SamplingLattice
-from .sampling import SweepSampling, ErgodicSampling, DirectSampling
+from .sampling import SweepSampling, ErgodicSampling, DirectSampling, MirrorDirectSampling
 from .observer import Observer

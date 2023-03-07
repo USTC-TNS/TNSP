@@ -3,6 +3,8 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add mirror direct sampling which is only used for Gibbs state on square lattice, and maintains the
+  symmetry of the Gibbs state.
 *** Changed
 *** Deprecated
 *** Removed

@@ -338,3 +338,27 @@ class DirectSampling(Sampling):
                 return i
         # Maybe p is a small but positive number now, because of numeric error.
         return i
+
+
+class MirrorDirectSampling(DirectSampling):
+    """
+    Mirror direct sampling, only work for density matrix on square lattice.
+    """
+
+    __slots__ = ["_last"]
+
+    def __init__(self, owner, cut_dimension, restrict_subspace, double_layer_cut_dimension):
+        super().__init__(owner, cut_dimension, restrict_subspace, double_layer_cut_dimension)
+        self._last = None
+
+    def __call__(self):
+        if self._last is None:
+            possibility, configuration = super().__call__()
+            self._last = possibility, configuration.copy()
+            return possibility, configuration
+        else:
+            possibility, configuration = self._last
+            self._last = None
+            for l1, l2 in self.owner.sites():
+                configuration[l1, l2, 0], configuration[l1, l2, 1] = configuration[l1, l2, 1], configuration[l1, l2, 0]
+            return possibility, configuration
