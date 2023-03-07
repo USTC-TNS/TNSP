@@ -5,7 +5,11 @@
 *** Added
 + *tetragono*: Add mirror direct sampling which is only used for Gibbs state on square lattice, and maintains the
   symmetry of the Gibbs state.
++ *tetraux*: Add a function =pseudo_inverse_kernel= used to speed up min-SR method via scalapack.
 *** Changed
++ *tetragono*: Use the new function =pseudo_inverse_kernel= in =tetraux= to speed up min-SR method which using
+  scalapack. Only when compiling tetraux with scalapack, this function will be compiled. Without scalapack support, the
+  min-SR method can not run parallelly.
 *** Deprecated
 *** Removed
 *** Fixed

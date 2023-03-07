@@ -90,6 +90,11 @@ option(TAT_BUILD_TETRAUX "Build tetraux" ON)
 if(TAT_BUILD_TETRAUX AND TAT_PYBIND11_FOUND)
   pybind11_add_module(tetraux ${CMAKE_CURRENT_SOURCE_DIR}/tetraux/tetraux.cpp)
   target_compile_features(tetraux PRIVATE cxx_std_17)
+  # control whether use scalapack
+  if(DEFINED TAT_TETRAUX_SCALAPACK)
+    target_link_libraries(tetraux PRIVATE ${TAT_TETRAUX_SCALAPACK})
+    target_compile_definitions(tetraux PRIVATE TAT_TETRAUX_SCALAPACK)
+  endif()
 endif()
 
 # Add test
