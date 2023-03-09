@@ -12,6 +12,7 @@
   min-SR method can not run parallelly.
 + *TAT.py*: Change the module alias name convension, =float= and =complex= without bytes specified would be considered
   as double precision now.
++ *TAT.py*: Add =dtype= class member for =Tensor= object, which makes it easier to communicate with numpy.
 *** Deprecated
 *** Removed
 *** Fixed

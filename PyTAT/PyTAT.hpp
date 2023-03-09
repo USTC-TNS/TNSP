@@ -548,6 +548,17 @@ namespace TAT {
             "Tensor",
             ("Tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str());
       tensor_t.attr("model") = symmetry_m;
+      tensor_t.attr("is_real") = is_real<ScalarType>;
+      tensor_t.attr("is_complex") = is_complex<ScalarType>;
+      if constexpr (std::is_same_v<ScalarType, float>) {
+         tensor_t.attr("dtype") = "float32";
+      } else if constexpr (std::is_same_v<ScalarType, double>) {
+         tensor_t.attr("dtype") = "float64";
+      } else if constexpr (std::is_same_v<ScalarType, std::complex<float>>) {
+         tensor_t.attr("dtype") = "complex64";
+      } else if constexpr (std::is_same_v<ScalarType, std::complex<double>>) {
+         tensor_t.attr("dtype") = "complex128";
+      }
 
       // Define tensor function after all tensor has been declared.
       return [=]() mutable {
@@ -657,7 +668,6 @@ namespace TAT {
                return std::complex<ScalarType>(ScalarType(tensor));
             });
          }
-         tensor_t.def_readonly_static("is_real", &is_real<ScalarType>).def_readonly_static("is_complex", &is_complex<ScalarType>);
 
          tensor_t
                .def("__str__",
