@@ -40,6 +40,7 @@ setup(
         f"PyTAT=={version}",
         f"lazy_graph=={version}",
         f"tetraux=={version}",
+        f"PyScalapack=={version}",
         "mpi4py",
         "numpy",
     ],
