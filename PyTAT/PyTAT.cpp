@@ -131,8 +131,8 @@ namespace TAT {
       for (auto sym_m_name : std::vector{"No", "Z2", "U1", "Fermi", "FermiZ2", "FermiU1", "Parity"}) {
          auto&& sym_m = tat_m.attr(sym_m_name);
 
-         sym_m.attr("float") = sym_m.attr("S");
-         sym_m.attr("complex") = sym_m.attr("C");
+         sym_m.attr("float") = sym_m.attr("D");
+         sym_m.attr("complex") = sym_m.attr("Z");
 
          sym_m.attr("float32") = sym_m.attr("S");
          sym_m.attr("float64") = sym_m.attr("D");
