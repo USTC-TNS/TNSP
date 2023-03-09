@@ -688,17 +688,18 @@ class Observer():
         # let r = rho / sum rho
         # <X> = X r     # r is vector like
         # <XY> = X r Y  # r is matrix like
-        # shape of   Delta - <Delta>  is   p * s
+        # shape of   Delta - <Delta>  is   s * p, which is gradient, not derivative
         # shape of   E - <E>          is   s
 
         # The program record:
         # rho, E rho, Delta rho, Delta E rho
         # The program calc:
         # E = <E>
-        # G = <E Delta> - E <Delta> = < (E - <E>) (D - <D>) >
-        # Old equation is:    (Delta - <Delta>) r (Delta - <Delta>)^{+} NG = (Delta - <Delta>) r (E - <E>)
-        # That is             (Delta - <Delta>)^{+} NG = (E - <E>)
-        # New equation is:    NG = (Delta - <Delta>) [(Delta - <Delta>)^{+} (Delta - <Delta>) ]^{-1} (E - <E>)
+        # G = (<E Delta> - E <Delta>)^{+} = (<(E - <E>) (D - <D>)>)^{+} = <(D - <D>)^{+} (E - <E>)^{+}>
+        # Old equation is:    (Delta - <Delta>)^{+} r (Delta - <Delta>) NG = (Delta - <Delta>)^{+} r (E - <E>)^{+}
+        # That is             (Delta - <Delta>) NG = (E - <E>)^{+}
+        # New equation is:    NG = (Delta - <Delta>)^{+} [(Delta - <Delta>) (Delta - <Delta>)^{+}]^{-1} (E - <E>)^{+}
+        # where g is just:    (Delta - <Delta>)^{+} r (Delta - <Delta>)
         show("calculating natural gradient")
         energy, _ = self.total_energy
         delta = self._delta_to_array(self._Delta) / self._total_weight
