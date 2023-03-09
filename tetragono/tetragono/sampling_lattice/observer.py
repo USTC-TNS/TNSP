@@ -650,15 +650,19 @@ class Observer():
         return x
 
     def _delta_to_array(self, delta):
+        # Both delta and result array is in bra space
         result = []
         for l1, l2 in self.owner.sites():
-            result.append(delta[l1][l2].transpose(self.owner[l1, l2].names).storage)
+            result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).storage)
         result = np.concatenate(result)
         return result
 
     def _array_to_delta(self, array):
+        # array is in ket space
+        # conjugate it to move it to bra space
+        array = np.conj(array)
         result = np.array(
-            [[self.owner[l1, l2].same_shape() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
+            [[self._Delta[l1][l2].same_shape() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
         index = 0
         for row in result:
             for tensor in row:
@@ -716,11 +720,12 @@ class Observer():
         Energy = np.asfortranarray(Energy, dtype=dtype)
 
         total_n_s = int(self._count)
-        result = self._array_to_delta(
-            self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries))
+        result_array = self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries)
+        result_delta = self._array_to_delta(result_array)
+        x = lattice_conjugate(result_delta * 2)
 
         showln("calculate natural gradient done")
-        return result * 2
+        return x
 
     @staticmethod
     def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries):
