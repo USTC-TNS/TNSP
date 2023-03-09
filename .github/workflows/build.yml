@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: install mpi and openblas
         run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev
       - name: make build directory
@@ -50,13 +50,13 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: install emacs
         run: sudo apt-get install -y emacs
       - name: export to markdown
         run: emacs ${{matrix.package}}/README.org --batch -f org-md-export-to-markdown --kill
       - name: upload to artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: README-of-${{matrix.package}}
           path: ${{matrix.package}}/README.md
@@ -151,27 +151,27 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: recovery tag information
         run: git fetch --tags --force
       - name: get pybind11
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: pybind/pybind11
           path: pybind11
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
       - name: install cibuildwheel
         run: python -m pip install cibuildwheel
       - name: download artifacts for PyTAT
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: README-of-PyTAT
           path: PyTAT
       - name: download artifacts for tetraux
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: README-of-tetraux
           path: tetraux
@@ -210,7 +210,7 @@ jobs:
           CIBW_BUILD_VERBOSITY: 1
         run: python -m cibuildwheel tetraux --output-dir dist
       - name: upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: dist/*.whl
 
@@ -231,17 +231,17 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: recovery tag information
         run: git fetch --tags --force
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
       - name: install wheel
         run: python -m pip install wheel
       - name: download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: README-of-${{matrix.package}}
           path: ${{matrix.package}}
@@ -249,7 +249,7 @@ jobs:
         working-directory: ${{github.workspace}}/${{matrix.package}}
         run: python setup.py bdist_wheel
       - name: upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: ${{github.workspace}}/${{matrix.package}}/dist/*.whl
 
@@ -261,9 +261,9 @@ jobs:
 
     steps:
       - name: download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
       - name: upload
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
@@ -279,7 +279,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: recovery tag information
@@ -291,7 +291,7 @@ jobs:
       - name: generate release description
         run: python .github/scripts/generate_release_description.py
       - name: download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
       - name: release
         uses: softprops/action-gh-release@v1
         with:
