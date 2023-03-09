@@ -18,8 +18,8 @@
 
 import os
 import numpy as np
-import tetraux
-from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, lattice_update,
+from PyScalapack import Scalapack
+from ..common_toolkit import (show, showln, allreduce_lattice_buffer, allreduce_buffer, bcast_buffer, lattice_update,
                               lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_size, mpi_comm, pickle)
 from ..tensor_element import tensor_element
 from .lattice import ConfigurationPool
@@ -701,35 +701,181 @@ class Observer():
         energy, _ = self.total_energy
         delta = self._delta_to_array(self._Delta) / self._total_weight
 
+        dtype = np.dtype(self.owner.Tensor.dtype)
+        btype = self.owner.Tensor.btype
+
         Delta = []
         Energy = []
         for _, energy_s, delta_s in self._weights_and_deltas():
             Delta.append(self._delta_to_array(delta_s) - delta)
             Energy.append(energy_s - energy)
-        Delta = np.asfortranarray(Delta)
-        Energy = np.asfortranarray(Energy)
+        Delta = np.asfortranarray(Delta, dtype=dtype)
+        Energy = np.asfortranarray(Energy, dtype=dtype)
 
         total_n_s = int(self._count)
-        result = self._array_to_delta(self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s))
+        result = self._array_to_delta(
+            self._pseudo_inverse_kernel(
+                Delta,
+                Energy,
+                r_pinv,
+                a_pinv,
+                total_n_s,
+                dtype,
+                btype,
+            ))
 
         showln("calculate natural gradient done")
         return result * 2
 
     @staticmethod
-    def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s):
-        if tetraux.pseudo_inverse_kernel_support:
-            NG = tetraux.pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s)
+    def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype):
+        scalapack = Scalapack("/usr/lib/libscalapack.so")
+
+        with scalapack(b'C', -1, 1) as context:
+            n_s, n_p = Delta.shape
+
+            rdtype = dtype.type().real.dtype
+            is_complex = np.issubdtype(dtype, np.complexfloating)
+            is_real = np.issubdtype(dtype, np.floating)
+
+            Delta = context.array(total_n_s, n_p, 1, n_p, data=Delta)
+            Energy = context.array(total_n_s, 1, 1, 1, data=Energy)
+
+            # Delta -> T
+            T = context.array(total_n_s, total_n_s, 1, total_n_s, dtype=dtype)
+            scalapack.pgemm[btype](
+                b'N',
+                b'C',
+                *(total_n_s, total_n_s, n_p),
+                scalapack.f_one[btype],
+                *Delta.scalapack_params(),
+                *Delta.scalapack_params(),
+                scalapack.f_zero[btype],
+                *T.scalapack_params(),
+            )
+
+            # T -> U
+            sqrt_size = int(context.size.value**0.5)
+            with scalapack(b'C', sqrt_size, sqrt_size) as context_square:
+                T_square = context_square.array(total_n_s, total_n_s, 4, 4, dtype=dtype)
+                scalapack.pgemr2d[btype](
+                    *(total_n_s, total_n_s),
+                    *T.scalapack_params(),
+                    *T_square.scalapack_params(),
+                    context.ictxt,
+                )
+
+                U_square = context_square.array(total_n_s, total_n_s, 4, 4, dtype=dtype)
+                L = np.zeros([total_n_s], dtype=rdtype)
+                if context_square:
+                    c_info = scalapack.ctypes.c_int()
+                    # maybe complex, always use double space of real
+                    c_f_lwork = (np.ctypeslib.as_ctypes_type(rdtype) * 2)()
+                    c_f_lrwork = np.ctypeslib.as_ctypes_type(rdtype)()
+                    c_liwork = scalapack.ctypes.c_int()
+                    scalapack.pheevd[btype](
+                        b'V',
+                        b'U',
+                        total_n_s,
+                        *T_square.scalapack_params(),
+                        scalapack.numpy_ptr(L),
+                        *U_square.scalapack_params(),
+                        *(c_f_lwork, scalapack.neg_one),
+                        *((c_f_lrwork, scalapack.neg_one) if is_complex else ()),
+                        *(c_liwork, scalapack.neg_one),
+                        c_info,
+                    )
+                    if c_info.value != 0:
+                        raise RuntimeError(f"Error in p?syevd or p?heevd with info = {c_info.value}")
+                    lwork = int(c_f_lwork[0])
+                    lrwork = int(c_f_lrwork.value)
+                    liwork = c_liwork.value
+                    work = np.zeros([lwork], dtype=dtype)
+                    rwork = np.zeros([lrwork], dtype=rdtype)
+                    iwork = np.zeros([liwork], dtype=int)
+                    scalapack.pheevd[btype](
+                        b'V',
+                        b'U',
+                        total_n_s,
+                        *T_square.scalapack_params(),
+                        scalapack.numpy_ptr(L),
+                        *U_square.scalapack_params(),
+                        *(scalapack.numpy_ptr(work), lwork),
+                        *((scalapack.numpy_ptr(rwork), lrwork) if is_complex else ()),
+                        *(scalapack.numpy_ptr(iwork), liwork),
+                        c_info,
+                    )
+                    if c_info.value != 0:
+                        raise RuntimeError(f"Error in p?syevd or p?heevd with info = {c_info.value}")
+
+                U = context.array(total_n_s, total_n_s, 1, total_n_s, dtype=dtype)
+                scalapack.pgemr2d[btype](
+                    *(total_n_s, total_n_s),
+                    *U_square.scalapack_params(),
+                    *U.scalapack_params(),
+                    context.ictxt,
+                )
+
+            # U -> UE
+            tmp1 = context.array(total_n_s, 1, 1, 1, dtype=dtype)
+            scalapack.pgemv[btype](
+                b'C',
+                *(total_n_s, total_n_s),
+                scalapack.f_one[btype],
+                *U.scalapack_params(),
+                *Energy.scalapack_params(),
+                scalapack.one,
+                scalapack.f_zero[btype],
+                *tmp1.scalapack_params(),
+                scalapack.one,
+            )
+
+            # UE -> LUE
+            bcast_buffer(L)
+            L_max = L[-1]
+            num = r_pinv * L_max + a_pinv
+            for i in range(n_s):
+                l = L[context.size.value * i + context.rank.value]
+                tmp1.data[i] /= l * (1 + (num / l)**6)
+
+            # LUE -> ULUE
+            tmp2 = context.array(total_n_s, 1, 1, 1, dtype=dtype)
+            scalapack.pgemv[btype](
+                b'N',
+                *(total_n_s, total_n_s),
+                scalapack.f_one[btype],
+                *U.scalapack_params(),
+                *tmp1.scalapack_params(),
+                scalapack.one,
+                scalapack.f_zero[btype],
+                *tmp2.scalapack_params(),
+                scalapack.one,
+            )
+
+            # ULUE -> Delta ULUE
+            NG = np.zeros([n_p], dtype=dtype)
+            scalapack.gemv[btype](
+                b'C',
+                *(n_s, n_p),
+                scalapack.f_one[btype],
+                *Delta.lapack_params(),
+                scalapack.numpy_ptr(tmp2.data),
+                scalapack.one,
+                scalapack.f_zero[btype],
+                scalapack.numpy_ptr(NG),
+                scalapack.one,
+            )
+
             allreduce_buffer(NG)
             return NG
-        elif mpi_size == 1:
-            T = Delta @ np.conj(Delta).T
-            L, U = np.linalg.eigh(T)
-            L_max = np.max(L)
-            L_inv = 1 / (L * (1 + ((r_pinv * L_max + a_pinv) / L)**6))
-            NG = np.einsum("ij,jk,k,kl,l->i", np.conj(Delta).T, U, L_inv, np.conj(U).T, Energy)
-            return NG
-        else:
-            raise RuntimeError("tetraux was not compiled with pseudo inverse kernel support.")
+
+        # The commented code is only for single process
+        # T = Delta @ np.conj(Delta).T
+        # L, U = np.linalg.eigh(T)
+        # L_max = np.max(L)
+        # L_inv = 1 / (L * (1 + ((r_pinv * L_max + a_pinv) / L)**6))
+        # NG = np.einsum("ij,jk,k,kl,l->i", np.conj(Delta).T, U, L_inv, np.conj(U).T, Energy)
+        # return NG
 
     def normalize_lattice(self):
         """
