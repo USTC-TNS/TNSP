@@ -632,7 +632,7 @@ class Observer():
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
             alpha = (lattice_prod_sum(lattice_conjugate(r), r).real /
-                     lattice_prod_sum(lattice_conjugate(r), self._metric_mv(p, relative_epsilon)).real)
+                     lattice_prod_sum(lattice_conjugate(p), self._metric_mv(p, relative_epsilon)).real)
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
