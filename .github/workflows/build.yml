@@ -46,6 +46,7 @@ jobs:
           - package: tetragono
           - package: tetraku
           - package: tetraux
+          - package: PyScalapack
 
     steps:
       - name: checkout
@@ -226,6 +227,7 @@ jobs:
           - package: lazy_graph
           - package: tetragono
           - package: tetraku
+          - package: PyScalapack
 
     steps:
       - name: checkout
