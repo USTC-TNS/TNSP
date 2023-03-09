@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...v0.3.3][v0.3.3]] - 2022-03-09
 
 *** Added
 + *tetragono*: Add mirror direct sampling which is only used for Gibbs state on square lattice, and maintains the
@@ -12,8 +20,6 @@
   libraries by parameter =scalapack_libraries= for =gm_run= when =natural_gradient_by_direct_pseudo_inverse= enabled.
 + *TAT.py*: Change the module alias name convension, =float= and =complex= without bytes specified would be considered
   as double precision now.
-*** Deprecated
-*** Removed
 *** Fixed
 + *tetragono*: Fix a bug when try to save a file with directory name. The previous program only allows to save file into
   the current directory.
