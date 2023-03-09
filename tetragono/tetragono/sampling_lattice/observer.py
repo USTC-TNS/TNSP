@@ -667,7 +667,7 @@ class Observer():
                 index += size
         return result
 
-    def natural_gradient_by_direct_pseudo_inverse(self, r_pinv, a_pinv):
+    def natural_gradient_by_direct_pseudo_inverse(self, r_pinv, a_pinv, libraries):
         """
         Get the energy natural gradient for every tensor.
 
@@ -675,6 +675,8 @@ class Observer():
         ----------
         r_pinv, a_pinv : float
             Parameters control how to calculate pseudo inverse.
+        libraries : list[str]
+            The dynamic link libraries containing scalapack functions.
 
         Returns
         -------
@@ -714,22 +716,14 @@ class Observer():
 
         total_n_s = int(self._count)
         result = self._array_to_delta(
-            self._pseudo_inverse_kernel(
-                Delta,
-                Energy,
-                r_pinv,
-                a_pinv,
-                total_n_s,
-                dtype,
-                btype,
-            ))
+            self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries))
 
         showln("calculate natural gradient done")
         return result * 2
 
     @staticmethod
-    def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype):
-        scalapack = Scalapack("/usr/lib/libscalapack.so")
+    def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries):
+        scalapack = Scalapack(*libraries)
 
         with scalapack(b'C', -1, 1) as context:
             n_s, n_p = Delta.shape

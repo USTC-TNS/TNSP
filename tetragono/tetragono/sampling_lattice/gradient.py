@@ -123,6 +123,7 @@ def gradient_descent(
         metric_inverse_epsilon=0.01,
         cache_natural_delta=None,
         use_natural_gradient_by_direct_pseudo_inverse=False,
+        scalapack_libraries=None,
         natural_gradient_r_pinv=1e-12,
         natural_gradient_a_pinv=0,
         # About gauge fixing
@@ -270,7 +271,8 @@ def gradient_descent(
                 if use_natural_gradient:
                     if use_natural_gradient_by_direct_pseudo_inverse:
                         grad = observer.natural_gradient_by_direct_pseudo_inverse(natural_gradient_r_pinv,
-                                                                                  natural_gradient_a_pinv)
+                                                                                  natural_gradient_a_pinv,
+                                                                                  scalapack_libraries.split(","))
                     else:
                         grad = observer.natural_gradient_by_conjugate_gradient(conjugate_gradient_method_step,
                                                                                conjugate_gradient_method_error,

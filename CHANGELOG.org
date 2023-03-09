@@ -8,7 +8,8 @@
 + *TAT.py*: Add =dtype= and =btype= class member for =Tensor= object, which makes it easier to communicate with numpy.
 + *scalapack.py*: Add a python wrapper for scalapack.
 *** Changed
-+ *tetragono*: Use the =PyScalapack= to speed up min-SR method.
++ *tetragono*: Use the =PyScalapack= to speed up min-SR method. User need to specify the path of scalapack dynamic link
+  libraries by parameter =scalapack_libraries= for =gm_run= when =natural_gradient_by_direct_pseudo_inverse= enabled.
 + *TAT.py*: Change the module alias name convension, =float= and =complex= without bytes specified would be considered
   as double precision now.
 *** Deprecated
