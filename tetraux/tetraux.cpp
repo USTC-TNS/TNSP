@@ -194,9 +194,12 @@ struct scalapack_array : array_desc {
       if (_data) {
          owndata = false;
          data = _data;
-      } else {
+      } else if (context.valid) {
          owndata = true;
          data = new std::remove_const_t<ScalarType>[local_m * local_n];
+      } else {
+         owndata = false;
+         data = nullptr;
       }
    }
    ~scalapack_array() {
