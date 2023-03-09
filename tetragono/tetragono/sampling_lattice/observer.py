@@ -710,7 +710,7 @@ class Observer():
         Energy = []
         for _, energy_s, delta_s in self._weights_and_deltas():
             Delta.append(self._delta_to_array(delta_s) - delta)
-            Energy.append(energy_s - energy)
+            Energy.append(energy_s.conjugate() - energy)
         Delta = np.asfortranarray(Delta, dtype=dtype)
         Energy = np.asfortranarray(Energy, dtype=dtype)
 
