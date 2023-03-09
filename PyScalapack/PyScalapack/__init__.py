@@ -164,10 +164,11 @@ class Array(ArrayDesc):
 
 class Scalapack():
 
-    def __init__(self, lib):
-        self.lib = ctypes.CDLL(lib, mode=ctypes.RTLD_GLOBAL)
+    def __init__(self, *libs):
+        self.libs = [ctypes.CDLL(lib, mode=ctypes.RTLD_GLOBAL) for lib in libs]
         self.function_database = {}
 
+        # Common used functions
         for name in ["p?gemm", "p?gemv", "?gemv", "p?gemr2d"]:
             setattr(self, name.replace("?", ""),
                     {btype: getattr(self, name.replace("?", btype.lower())) for btype in "SDCZ"})
@@ -178,7 +179,13 @@ class Scalapack():
 
     def __getattr__(self, name):
         if name not in self.function_database:
-            self.function_database[name] = self._fortran_function(getattr(self.lib, name + "_"))
+            real_name = name + "_"
+            for lib in self.libs:
+                if hasattr(lib, real_name):
+                    self.function_database[name] = self._fortran_function(getattr(lib, real_name))
+                    break
+            else:
+                raise AttributeError(f"No function named '{real_name}' in the libraries")
         return self.function_database[name]
 
     class Val():
