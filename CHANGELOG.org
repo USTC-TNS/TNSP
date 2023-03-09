@@ -6,13 +6,13 @@
 + *tetragono*: Add mirror direct sampling which is only used for Gibbs state on square lattice, and maintains the
   symmetry of the Gibbs state.
 + *tetraux*: Add a function =pseudo_inverse_kernel= used to speed up min-SR method via scalapack.
++ *TAT.py*: Add =dtype= and =btype= class member for =Tensor= object, which makes it easier to communicate with numpy.
 *** Changed
 + *tetragono*: Use the new function =pseudo_inverse_kernel= in =tetraux= to speed up min-SR method which using
   scalapack. Only when compiling tetraux with scalapack, this function will be compiled. Without scalapack support, the
   min-SR method can not run parallelly.
 + *TAT.py*: Change the module alias name convension, =float= and =complex= without bytes specified would be considered
   as double precision now.
-+ *TAT.py*: Add =dtype= class member for =Tensor= object, which makes it easier to communicate with numpy.
 *** Deprecated
 *** Removed
 *** Fixed

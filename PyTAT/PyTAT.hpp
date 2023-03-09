@@ -552,12 +552,16 @@ namespace TAT {
       tensor_t.attr("is_complex") = is_complex<ScalarType>;
       if constexpr (std::is_same_v<ScalarType, float>) {
          tensor_t.attr("dtype") = "float32";
+         tensor_t.attr("btype") = "S";
       } else if constexpr (std::is_same_v<ScalarType, double>) {
          tensor_t.attr("dtype") = "float64";
+         tensor_t.attr("btype") = "D";
       } else if constexpr (std::is_same_v<ScalarType, std::complex<float>>) {
          tensor_t.attr("dtype") = "complex64";
+         tensor_t.attr("btype") = "C";
       } else if constexpr (std::is_same_v<ScalarType, std::complex<double>>) {
          tensor_t.attr("dtype") = "complex128";
+         tensor_t.attr("btype") = "Z";
       }
 
       // Define tensor function after all tensor has been declared.
