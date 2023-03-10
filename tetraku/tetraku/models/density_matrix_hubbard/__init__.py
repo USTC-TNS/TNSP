@@ -18,7 +18,6 @@
 
 import TAT
 import tetragono as tet
-from tetragono.common_tensor.tensor_toolkit import half_reverse
 
 
 def abstract_state(L1, L2, t, U, mu, side=1):
@@ -50,10 +49,10 @@ def abstract_state(L1, L2, t, U, mu, side=1):
     CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
     single_site = U * NN - mu * (N0 + N1)
     tCC = -t * CSCS
-    single_site_double_side = [single_site, half_reverse(single_site.conjugate())]
-    tCC_double_side = [tCC, half_reverse(tCC.conjugate())]
+    single_site_double_side = [single_site, single_site.reverse_edge(set(single_site.names)).conjugate()]
+    tCC_double_side = [tCC, tCC.reverse_edge(set(tCC.names)).conjugate()]
     for layer in range(side):
-        # The hamiltonian in second layer is conjugate and half reverse of the first layer.
+        # The hamiltonian in second layer is conjugate and reverse of the first layer.
         for l1 in range(L1):
             for l2 in range(L2):
                 state.hamiltonians[(l1, l2, layer),] = single_site_double_side[layer]
