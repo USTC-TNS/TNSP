@@ -836,7 +836,11 @@ class Observer():
             num = r_pinv * L_max + a_pinv
             for i in range(n_s):
                 l = L[context.size.value * i + context.rank.value]
-                tmp1.data[i] /= l * (1 + (num / l)**6)
+                if l <= 0:
+                    l_inv = 0
+                else:
+                    l_inv = 1 / (l * (1 + (num / l)**6))
+                tmp1.data[i] *= l_inv
 
             # LUE -> ULUE
             tmp2 = context.array(total_n_s, 1, 1, 1, dtype=dtype)
