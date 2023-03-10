@@ -8,6 +8,8 @@
 *** Removed
 *** Fixed
 + *tetragono*: Fix bug in min-SR method when the model is complex, A conjugate operator was missing.
++ *tetragono*: Fix bug in mirror direct sampling method for symmetric system. A conjugate to symmetry part of the
+  configuration should be applied.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...v0.3.3][v0.3.3]] - 2022-03-09
 

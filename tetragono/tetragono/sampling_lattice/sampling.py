@@ -360,5 +360,8 @@ class MirrorDirectSampling(DirectSampling):
             possibility, configuration = self._last
             self._last = None
             for l1, l2 in self.owner.sites():
-                configuration[l1, l2, 0], configuration[l1, l2, 1] = configuration[l1, l2, 1], configuration[l1, l2, 0]
+                symmetry_0, offset_0 = configuration[l1, l2, 0]
+                symmetry_1, offset_1 = configuration[l1, l2, 1]
+                configuration[l1, l2, 1] = (-symmetry_0, offset_0)
+                configuration[l1, l2, 0] = (-symmetry_1, offset_1)
             return possibility, configuration
