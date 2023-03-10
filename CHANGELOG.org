@@ -11,6 +11,7 @@
 + *tetragono*: Fix bug in mirror direct sampling method for symmetric system. A conjugate to symmetry part of the
   configuration should be applied.
 + *tetragono*: Avoid =nan= in pseudo inverse of min-SR by checking whether the eigenvalue is zero first.
++ *tetraku*: Fix the wrong Hamiltonian for Gibbs state of Fermionic system.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...v0.3.3][v0.3.3]] - 2022-03-09
 

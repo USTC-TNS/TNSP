@@ -18,6 +18,7 @@
 
 import TAT
 import tetragono as tet
+from tetragono.common_tensor.tensor_toolkit import half_reverse
 
 
 def abstract_state(L1, L2, t, J, mu, side=1):
@@ -51,17 +52,17 @@ def abstract_state(L1, L2, t, J, mu, side=1):
     n = tet.common_tensor.FermiU1_tJ.n.to(float)
     H = (-t) * CC + (J / 2) * (SS - nn / 4)
     single_site = mu * n
+    H_double_side = [H, half_reverse(H.conjugate())]
+    single_site_double_side = [single_site, half_reverse(single_site.conjugate())]
     for layer in range(side):
-        # Hamiltonian for the second layer should be transposed
-        # (transpose but not conjugate, or conjugate but not transpose),
-        # But the hamiltonian is real, so nothing to do here
+        # The hamiltonian in second layer is conjugate and half reverse of the first layer.
         for l1 in range(L1):
             for l2 in range(L2):
-                state.hamiltonians[(l1, l2, layer),] = single_site
+                state.hamiltonians[(l1, l2, layer),] = single_site_double_side[layer]
                 if l1 != 0:
-                    state.hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = H
+                    state.hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = H_double_side[layer]
                 if l2 != 0:
-                    state.hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = H
+                    state.hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = H_double_side[layer]
     return state
 
 

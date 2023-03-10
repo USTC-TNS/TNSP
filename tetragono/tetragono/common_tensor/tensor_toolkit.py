@@ -45,3 +45,8 @@ def kronecker_product(res, *b):
     for i in b:
         res = res.contract(i, set())
     return res
+
+
+def half_reverse(tensor):
+    # Applying parity to I part and to O part are the same.
+    return tensor.reverse_edge(set(tensor.names), False, {name for name in tensor.names if name.startswith("O")})
