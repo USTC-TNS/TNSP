@@ -20,3 +20,5 @@ from . import No
 from . import Fermi
 from . import FermiU1_tJ
 from . import Fermi_Hubbard
+from . import Parity
+from . import Parity_Hubbard

@@ -3,6 +3,8 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add common used tensors for parity symmetry and some related tensor in Hubbard model with parity
+  symmetry.
 *** Changed
 *** Deprecated
 *** Removed
