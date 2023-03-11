@@ -42,8 +42,8 @@ def abstract_state(L1, L2, t, U, mu, side=1):
     state.total_symmetry = 0
     for l1 in range(L1):
         for l2 in range(L2):
-            state.physics_edges[(l1, l2, 0)] = [(0, 1), (+1, 2), (+2, 1)]
-            state.physics_edges[(l1, l2, 1)] = [(0, 1), (-1, 2), (-2, 1)]
+            state.physics_edges[(l1, l2, 0)] = [(False, 2), (True, 2)]
+            state.physics_edges[(l1, l2, 1)] = [(False, 2), (True, 2)]
     NN = tet.common_tensor.Parity_Hubbard.NN.to(float)
     N0 = tet.common_tensor.Parity_Hubbard.N0.to(float)
     N1 = tet.common_tensor.Parity_Hubbard.N1.to(float)
