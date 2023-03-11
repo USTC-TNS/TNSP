@@ -740,6 +740,8 @@ class Observer():
 
             Delta = context.array(total_n_s, n_p, 1, n_p, data=Delta)
             Energy = context.array(total_n_s, 1, 1, 1, data=Energy)
+            if Delta.local_m != n_s:
+                raise RuntimeError("local sampling number and global sampling number dismatch.")
 
             # Delta -> T
             T = context.array(total_n_s, total_n_s, 1, total_n_s, dtype=dtype)
