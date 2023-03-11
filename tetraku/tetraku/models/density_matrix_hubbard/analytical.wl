@@ -47,4 +47,4 @@ H = U Sum[
          {l1, L1 - 1}, {l2, L2}]);
 
 eigv = Eigenvalues[N[Normal[H]]] // Sort;
-Map[Print, Chop@eigv];
+Export[ToString[L1]<>"x"<>ToString[L2]<>"-U"<>ToString[U]<>"-mu"<>ToString[mu]<>".dat", eigv];
