@@ -121,6 +121,11 @@ class Node:
     def _iterator_on_upstream(self):
         """
         Iterate the upstreams;
+
+        Yields
+        ------
+        Node
+            All the upstreams of the current node.
         """
         # Loop over all its args and kwargs.
         for i in chain(self._args, self._kwargs.values()):
