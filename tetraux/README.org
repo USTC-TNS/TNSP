@@ -3,3 +3,5 @@
 * tetraux
 
 tetraux contains some auxiliary function and class used by tetragono.
+
+This subprocject is for tetragono internal use, and will not be documented currently.
