@@ -3,3 +3,5 @@
 * tetraku
 
 tetraku is a collection of commonly used models and ansatzes data used by tetragono.
+
+Further information is available from the README in each folder.
