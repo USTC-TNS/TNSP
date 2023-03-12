@@ -51,7 +51,7 @@ def abstract_state(L1, L2, t, J, mu, side=1):
     nn = tet.common_tensor.FermiU1_tJ.nn.to(float)
     n = tet.common_tensor.FermiU1_tJ.n.to(float)
     H = (-t) * CC + (J / 2) * (SS - nn / 4)
-    single_site = mu * n
+    single_site = -mu * n
     H_double_side = [H, half_reverse(H.conjugate())]
     single_site_double_side = [single_site, half_reverse(single_site.conjugate())]
     for layer in range(side):
