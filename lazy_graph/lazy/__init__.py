@@ -70,13 +70,11 @@ class Copy:
         # Update cache of the newly created node, if all upstream did not change, the new node will use the old cache.
         cache_valid = True
         # Check the difference one by one in all the upstream of this node.
-        for new, old in chain(zip(result._args, node._args), zip(result._kwargs.values(), node._kwargs.values())):
-            # Only check if the args or kwargs is also a node.
-            if isinstance(old, Node):
-                # If old upstream and new upstream own different cache, the cache is invalid.
-                if old._value != new._value:
-                    cache_valid = False
-                    break
+        for new, old in zip(result._iterator_on_upstream(), node._iterator_on_upstream()):
+            # If old upstream and new upstream own different cache, the cache is invalid.
+            if old._value != new._value:
+                cache_valid = False
+                break
         # All upstream cache did not change, so the newly created node also keep the cache same to old node.
         if cache_valid:
             result._value = node._value
@@ -120,27 +118,34 @@ class Node:
 
     __slots__ = ["_value", "_downstream", "_func", "_args", "_kwargs", "__weakref__"]
 
-    def _clear_downstream_of_upstream(self):
+    def _iterator_on_upstream(self):
         """
-        Clear itself from the downstream list of all its upstreams. It is called when deleting this node.
+        Iterate the upstreams;
         """
         # Loop over all its args and kwargs.
         for i in chain(self._args, self._kwargs.values()):
             # If it is a node, then it is an upstream.
             if isinstance(i, Node):
-                # So remove it.
-                i._downstream.remove(ref(self))
+                # OK, yield it out
+                yield i
+
+    def _clear_downstream_of_upstream(self):
+        """
+        Clear itself from the downstream list of all its upstreams. It is called when deleting this node.
+        """
+        # Loop over all upstream
+        for i in self._iterator_on_upstream():
+            # remove it.
+            i._downstream.remove(ref(self))
 
     def _add_downstream_of_upstream(self):
         """
         Add itself to the downstream list of all its upstreams. It is called when creating this node.
         """
-        # Loop over all its args and kwargs.
-        for i in chain(self._args, self._kwargs.values()):
-            # If it is a node, then it is an upstream.
-            if isinstance(i, Node):
-                # So add it.
-                i._downstream.add(ref(self))
+        # Loop over all upstream
+        for i in self._iterator_on_upstream():
+            # add it.
+            i._downstream.add(ref(self))
 
     def __del__(self):
         """
