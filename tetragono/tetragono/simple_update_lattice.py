@@ -17,10 +17,11 @@
 #
 
 from copyreg import _slotnames
+import platform
 import numpy as np
 from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_toolkit import show, showln, mpi_comm, mpi_rank, mpi_size
+from .common_toolkit import show, showln, mpi_comm, mpi_rank
 
 
 class SimpleUpdateLatticeEnvironment:
@@ -401,30 +402,66 @@ class SimpleUpdateLattice(AbstractLattice):
             updaters_bundles.append((this_bundle, coordinates_map))
         showln(f"Simple update max parallel size is {max_index}")
 
-        # Run simple update
-        for step in range(total_step):
-            show(f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}")
-            # Trotter expansion
-            # run updater bundle by bundle.
-            for bundle, coordinates_map in updaters_bundles:
-                # In a single bundle, put each updater to its mpi rank process.
-                for index, coordinates, index_and_orbit, evolution_operator in bundle:
-                    if index % mpi_size == mpi_rank:
-                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
-                # Bcast what modified
-                self._bcast_by_map(coordinates_map)
-            for bundle, coordinates_map in reversed(updaters_bundles):
-                # In a single bundle, put each updater to its mpi rank process.
-                for index, coordinates, index_and_orbit, evolution_operator in bundle:
-                    if index % mpi_size == mpi_rank:
-                        self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator, new_dimension)
-                # Bcast what modified
-                self._bcast_by_map(coordinates_map)
+        # Run simple update only in a small comm instead of comm_world.
+        su_comm = self._node0_mpi_comm()
+        if su_comm:
+            su_rank = su_comm.Get_rank()
+            su_size = su_comm.Get_size()
+            # Run simple update
+            for step in range(total_step):
+                show(f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}")
+                # Trotter expansion
+                # run updater bundle by bundle.
+                for bundle, coordinates_map in updaters_bundles:
+                    # In a single bundle, put each updater to its mpi rank process.
+                    for index, coordinates, index_and_orbit, evolution_operator in bundle:
+                        if index % su_size == su_rank:
+                            self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator,
+                                                            new_dimension)
+                    # Bcast what modified
+                    self._bcast_by_map(coordinates_map, su_comm, su_rank, su_size)
+                for bundle, coordinates_map in reversed(updaters_bundles):
+                    # In a single bundle, put each updater to its mpi rank process.
+                    for index, coordinates, index_and_orbit, evolution_operator in bundle:
+                        if index % su_size == su_rank:
+                            self._single_term_simple_update(coordinates, index_and_orbit, evolution_operator,
+                                                            new_dimension)
+                    # Bcast what modified
+                    self._bcast_by_map(coordinates_map, su_comm, su_rank, su_size)
+        # Bcast all the thing from rank 0
+        self._bcast_all()
         showln(f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
         # After simple update, virtual bond changed, so update it.
         self._update_virtual_bond()
 
-    def _bcast_by_map(self, coordinates_map):
+    def _node0_mpi_comm(self):
+        """
+        Create a new mpi comm containing only the processes in the same node with the rank 0 process.
+        For processes in other node, this function return None.
+
+        Returns
+        -------
+        mpi4py.MPI.Comm | None
+            The mpi comm containing only the processes in the node containing the rank 0 process.
+        """
+        hostname = platform.node()
+        hostname0 = mpi_comm.bcast(hostname)
+        new_comm = mpi_comm.Split(0 if hostname == hostname0 else 1, mpi_rank)
+        if hostname == hostname0:
+            return new_comm
+
+    def _bcast_all(self):
+        """
+        Bcast all the thing including tensor on lattice and on environment from rank 0 tensor.
+        """
+        for l1, l2 in self.sites():
+            self[l1, l2] = mpi_comm.bcast(self[l1, l2])
+            if l1 != 0:
+                self.environment[l1, l2, "U"] = mpi_comm.bcast(self.environment[l1, l2, "U"])
+            if l2 != 0:
+                self.environment[l1, l2, "L"] = mpi_comm.bcast(self.environment[l1, l2, "L"])
+
+    def _bcast_by_map(self, coordinates_map, su_comm, su_rank, su_size):
         """
         Bcast tensors according to a map recording which rank changed which tensor. The environment between two tensor
         changed by the same rank is considered changed by that rank too.
@@ -433,16 +470,20 @@ class SimpleUpdateLattice(AbstractLattice):
         ----------
         coordinates_map : dict[tuple[int, int], int]
             A map recording which rank changed which tensor.
+        su_comm : mpi4py.MPI.Comm
+            The mpi comm to do simple update
+        su_rank, su_size : int
+            The mpi rank and mpi size for the current process in su_comm
         """
         for l1, l2 in self.sites():
             if (l1, l2) in coordinates_map:
-                owner_rank = coordinates_map[l1, l2] % mpi_size
-                self[l1, l2] = mpi_comm.bcast(self[l1, l2], root=owner_rank)
+                owner_rank = coordinates_map[l1, l2] % su_size
+                self[l1, l2] = su_comm.bcast(self[l1, l2], root=owner_rank)
                 # If the nearest site is also belong to this rank, then the environment between them is also belong to it.
-                if (l1 - 1, l2) in coordinates_map and coordinates_map[l1 - 1, l2] % mpi_size == owner_rank:
-                    self.environment[l1, l2, "U"] = mpi_comm.bcast(self.environment[l1, l2, "U"], root=owner_rank)
-                if (l1, l2 - 1) in coordinates_map and coordinates_map[l1, l2 - 1] % mpi_size == owner_rank:
-                    self.environment[l1, l2, "L"] = mpi_comm.bcast(self.environment[l1, l2, "L"], root=owner_rank)
+                if (l1 - 1, l2) in coordinates_map and coordinates_map[l1 - 1, l2] % su_size == owner_rank:
+                    self.environment[l1, l2, "U"] = su_comm.bcast(self.environment[l1, l2, "U"], root=owner_rank)
+                if (l1, l2 - 1) in coordinates_map and coordinates_map[l1, l2 - 1] % su_size == owner_rank:
+                    self.environment[l1, l2, "L"] = su_comm.bcast(self.environment[l1, l2, "L"], root=owner_rank)
 
     def _update_virtual_bond(self):
         """
