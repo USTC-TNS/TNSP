@@ -6,8 +6,6 @@
 + *tetragono*: Add common used tensors for parity symmetry and some related tensor in Hubbard model with parity
   symmetry.
 + *scalapack.py*: Add documents for scalapack.py.
-+ *tetragono*: Simple update will now be done in a single node, this will speed up the program if the mpi job is
-  crossing multiple nodes.
 + *tetraku*: Add tV model.
 *** Changed
 + *tetraku*: Density matrix of Heisenberg/tJ/Hubbard model are renamed to =gibbs_*= from =density_matrix_*=.
