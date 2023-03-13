@@ -403,8 +403,10 @@ class SimpleUpdateLattice(AbstractLattice):
         showln(f"Simple update max parallel size is {max_index}")
 
         # Run simple update only in a small comm instead of comm_world.
-        su_comm, su_rank, su_size = self._node0_mpi_comm(max_index)
+        su_comm = self._node0_mpi_comm()
         if su_comm:
+            su_rank = su_comm.Get_rank()
+            su_size = su_comm.Get_size()
             # Run simple update
             for step in range(total_step):
                 show(f"Simple update, {total_step=}, {delta_tau=}, {new_dimension=}, {step=}")
@@ -426,48 +428,27 @@ class SimpleUpdateLattice(AbstractLattice):
                                                             new_dimension)
                     # Bcast what modified
                     self._bcast_by_map(coordinates_map, su_comm, su_rank, su_size)
-            # Close the mpi comm used for simple update
-            su_comm.Free()
         # Bcast all the thing from rank 0
         self._bcast_all()
         showln(f"Simple update done, {total_step=}, {delta_tau=}, {new_dimension=}")
         # After simple update, virtual bond changed, so update it.
         self._update_virtual_bond()
 
-    def _node0_mpi_comm(self, max_size):
+    def _node0_mpi_comm(self):
         """
         Create a new mpi comm containing only the processes in the same node with the rank 0 process.
         For processes in other node, this function return None.
-        The process number in the returned comm is limited to max_size.
-
-        Parameters
-        ----------
-        max_size : int
-            The max parallel rank for simple update job.
 
         Returns
         -------
-        mpi4py.MPI.Comm | None, int | None, int | None
-            The mpi comm containing only the processes in the node containing the rank 0 process. And the rank and size of the current process.
+        mpi4py.MPI.Comm | None
+            The mpi comm containing only the processes in the node containing the rank 0 process.
         """
         hostname = platform.node()
         hostname0 = mpi_comm.bcast(hostname)
-        node0_comm = mpi_comm.Split(0 if hostname == hostname0 else 1, mpi_rank)
-        if hostname != hostname0:
-            node0_comm.Free()
-            return None, None, None
-        node0_rank = node0_comm.Get_rank()
-        node0_size = node0_comm.Get_size()
-        if node0_size <= max_size:
-            return node0_comm, node0_rank, node0_size
-        result_comm = node0_comm.Split(0 if node0_rank < max_size else 1, node0_rank)
-        node0_comm.Free()
-        if node0_rank >= max_size:
-            result_comm.Free()
-            return None, None, None
-        result_rank = result_comm.Get_rank()
-        result_size = result_comm.Get_size()
-        return result_comm, result_rank, result_size
+        new_comm = mpi_comm.Split(0 if hostname == hostname0 else 1, mpi_rank)
+        if hostname == hostname0:
+            return new_comm
 
     def _bcast_all(self):
         """
