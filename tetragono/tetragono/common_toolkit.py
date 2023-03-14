@@ -277,3 +277,5 @@ def sigusr1_handler(signum, frame):
 
 
 signal.signal(signal.SIGUSR1, sigusr1_handler)
+
+gm_beta = 0

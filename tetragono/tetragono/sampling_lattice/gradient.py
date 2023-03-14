@@ -212,6 +212,19 @@ def gradient_descent(
             if need_energy_observer:
                 configuration_pool = []
             # Sampling and observe
+            if use_natural_gradient:
+                with seed_differ, observer:
+                    sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
+                    for sampling_step in range(sampling.total_step):
+                        if sampling_step % mpi_size == mpi_rank:
+                            possibility, configuration = sampling()
+                            observer(possibility, configuration)
+                            if need_energy_observer:
+                                configuration_pool.append((possibility, configuration))
+                            show(f"sampling {sampling_step}/{sampling.total_step}, energy={observer.energy}")
+                showln(f"sampling done, total_step={sampling.total_step}, energy={observer.energy}")
+                observer.natural_gradient_by_direct_pseudo_inverse(natural_gradient_r_pinv, natural_gradient_a_pinv,
+                                                                   scalapack_libraries.split(","), "ergodic")
             with seed_differ, observer:
                 # Sampling method
                 if sampling_method == "sweep":
@@ -242,13 +255,20 @@ def gradient_descent(
                 else:
                     raise ValueError("Invalid sampling method")
                 # Sampling run
+                sp = []
                 for sampling_step in range(sampling_total_step):
                     if sampling_step % mpi_size == mpi_rank:
                         possibility, configuration = sampling()
+                        sp.append((possibility, configuration.export_configuration()))
                         observer(possibility, configuration)
                         if need_energy_observer:
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
+                all_sp = mpi_comm.gather(sp, root=0)
+                from .. import common_toolkit
+                beta = common_toolkit.gm_beta
+                write_to_file(all_sp, f"sampling_{beta}.dat")
+                write_to_file(state, f"state_{beta}.dat")
                 # Save configuration
                 gathered_configurations = mpi_comm.allgather(configuration.export_configuration())
                 sampling_configurations.clear()
@@ -272,7 +292,8 @@ def gradient_descent(
                     if use_natural_gradient_by_direct_pseudo_inverse:
                         grad = observer.natural_gradient_by_direct_pseudo_inverse(natural_gradient_r_pinv,
                                                                                   natural_gradient_a_pinv,
-                                                                                  scalapack_libraries.split(","))
+                                                                                  scalapack_libraries.split(","),
+                                                                                  "direct")
                     else:
                         grad = observer.natural_gradient_by_conjugate_gradient(conjugate_gradient_method_step,
                                                                                conjugate_gradient_method_error,
@@ -316,6 +337,9 @@ def gradient_descent(
                 # Bcast state
                 state.bcast_lattice()
                 # sampling is not needed to refresh since every gradient step will use a new sampling object.
+
+                from .. import common_toolkit
+                common_toolkit.gm_beta += grad_step_size
 
                 # Save state
                 if save_state_file:

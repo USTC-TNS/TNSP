@@ -671,7 +671,7 @@ class Observer():
                 index += size
         return result
 
-    def natural_gradient_by_direct_pseudo_inverse(self, r_pinv, a_pinv, libraries):
+    def natural_gradient_by_direct_pseudo_inverse(self, r_pinv, a_pinv, libraries, name=""):
         """
         Get the energy natural gradient for every tensor.
 
@@ -713,9 +713,25 @@ class Observer():
 
         Delta = []
         Energy = []
-        for _, energy_s, delta_s in self._weights_and_deltas():
+        Reweight = []
+        for r, energy_s, delta_s in self._weights_and_deltas():
             Delta.append(self._delta_to_array(delta_s) - delta)
             Energy.append(energy_s.conjugate() - energy)
+            Reweight.append(r / self._total_weight)
+        if True:
+            allDelta = mpi_comm.gather(Delta)
+            allReweight = mpi_comm.gather(Reweight)
+            if mpi_rank == 0:
+                allDelta = np.array(np.concatenate(allDelta), dtype=dtype)
+                allReweight = np.array(np.concatenate(allReweight), dtype=dtype)
+                g = np.einsum("ij,j,jk->ik", np.conj(allDelta).T, allReweight, allDelta)
+                eigs = np.linalg.eigvalsh(g)
+                from .. import common_toolkit
+                beta = common_toolkit.gm_beta
+                with open(f"{name}_{beta}.dat", "wt") as file:
+                    print(*eigs, file=file)
+        if name == "ergodic":
+            return
         Delta = np.asfortranarray(Delta, dtype=dtype)
         Energy = np.asfortranarray(Energy, dtype=dtype)
 
