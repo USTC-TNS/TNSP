@@ -112,7 +112,7 @@ namespace TAT {
       dealing_edge<FermiU1Symmetry, true>(FermiU1_m, "FermiU1");
 
       auto Parity_m = tat_m.def_submodule("Parity");
-      dealing_symmetry<ParitySymmetry>(Parity_m, "Pariry")
+      dealing_symmetry<ParitySymmetry>(Parity_m, "Parity")
             .def(py::init<>())
             .def(implicit_init<ParitySymmetry, Z2>(), py::arg("parity"))
             .def_property_readonly("parity", [](const ParitySymmetry& symmetry) {
