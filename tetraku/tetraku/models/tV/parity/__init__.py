@@ -21,7 +21,7 @@ import tetragono as tet
 from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product
 
 
-def abstract_state(L1, L2, T, t, V):
+def abstract_state(L1, L2, t, V):
     """
     Create tV model state.
 
@@ -29,14 +29,12 @@ def abstract_state(L1, L2, T, t, V):
     ----------
     L1, L2 : int
         The lattice size.
-    T : int
-        The half particle number.
     t, V : float
         tV model parameters.
     """
     state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
-    state.total_symmetry = T
-    state.physics_edges[...] = [(0, 1), (1, 1)]
+    state.total_symmetry = False
+    state.physics_edges[...] = [(False, 1), (True, 1)]
     CC = tet.common_tensor.Parity.CC.to(float)
     N = tet.common_tensor.Parity.N.to(float)
     NN = kronecker_product(rename_io(N, [0]), rename_io(N, [1]))
@@ -46,7 +44,7 @@ def abstract_state(L1, L2, T, t, V):
     return state
 
 
-def abstract_lattice(L1, L2, D, T, t, V):
+def abstract_lattice(L1, L2, D, t, V):
     """
     Create tV model lattice.
 
@@ -56,12 +54,10 @@ def abstract_lattice(L1, L2, D, T, t, V):
         The lattice size.
     D : int
         The cut dimension.
-    T : int
-        The half particle number.
     t, V : float
         tV model parameters.
     """
-    state = tet.AbstractLattice(abstract_state(L1, L2, T, t, V))
+    state = tet.AbstractLattice(abstract_state(L1, L2, t, V))
     for l1, l2 in state.sites():
         if l1 != 0:
             state.virtual_bond[l1, l2, "U"] = [(False, D), (True, D)]
