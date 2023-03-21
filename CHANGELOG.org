@@ -11,6 +11,7 @@
 + *tetraku*: Density matrix of Heisenberg/tJ/Hubbard model are renamed to =gibbs_*= from =density_matrix_*=.
 *** Deprecated
 *** Removed
++ *tetragono*: The mirror direct sampling is removed, since it is useless according to the test result.
 *** Fixed
 + *tetragono*: Fix bug in min-SR method when the model is complex, A conjugate operator was missing.
 + *tetragono*: Avoid =nan= in pseudo inverse of min-SR by checking whether the eigenvalue is zero first.
