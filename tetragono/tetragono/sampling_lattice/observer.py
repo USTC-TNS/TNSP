@@ -731,13 +731,42 @@ class Observer():
         dtype = np.dtype(self.owner.Tensor.dtype)
         btype = self.owner.Tensor.btype
 
+        delta_e = self._delta_to_array(self._EDelta) / self._total_weight
+        gradient = (delta_e - energy * delta)
+
+        var = np.zeros_like(delta, dtype=dtype)
+        rrG = np.zeros_like(delta, dtype=dtype)
+
         Delta = []
         Energy = []
-        for _, energy_s, delta_s in self._weights_and_deltas():
-            Delta.append(self._delta_to_array(delta_s) - delta)
+        for r, energy_s, delta_s in self._weights_and_deltas():
+            delta_s = self._delta_to_array(delta_s)
+            gradient_s = (delta_s - delta) * (energy_s - energy)
+            var += (gradient_s - gradient)**2 * r**2
+            rrG += gradient_s * r**2
+            Delta.append(delta_s - delta)
             Energy.append(energy_s.conjugate() - energy)
         Delta = np.asfortranarray(Delta, dtype=dtype)
         Energy = np.asfortranarray(Energy, dtype=dtype)
+
+        import os
+        name = os.environ["NAME"]
+        allreduce_buffer(var)
+        var /= self._total_weight**2
+        dev = np.sqrt(np.sum(var))
+        norm = np.linalg.norm(gradient)
+        if mpi_rank == 0:
+            with open(f"error-{name}.log", "at") as file:
+                print(f"relative of error of gradient is {dev/norm}", file=file)
+        N = self._count
+        allreduce_buffer(rrG)
+        bias = gradient - gradient * (self._total_weight_square /
+                                      N) / (self._total_weight / N)**2 - 2 * (rrG / N) / (self._total_weight / N)**2
+        bias /= N
+        bias = np.linalg.norm(bias)
+        if mpi_rank == 0:
+            with open(f"bias-{name}.log", "at") as file:
+                print(f"relative of bias of gradient is {bias/norm}", file=file)
 
         total_n_s = int(self._count)
         result_array = self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries)
