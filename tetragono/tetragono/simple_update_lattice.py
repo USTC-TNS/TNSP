@@ -294,6 +294,70 @@ class SimpleUpdateLattice(AbstractLattice):
             raise NotImplementedError("Unsupported simple update style")
         return result
 
+    def _check_large_physical_dimension(self, input_plan, threshold):
+        """
+        Check to avoid merging physical edges to a single edge with very large dimension.
+
+        Parameters
+        ----------
+        input_plan : set[tuple[tuple[int, int, int], ...]]
+            The hamiltonian positions set to be merged.
+        threshold : int
+            The dimension of the merged edge must be less equal threshold.
+
+        Yields
+        ------
+        set[tuple[tuple[int, int, int], ...]]
+            The hamiltonian positions set to be merged, which will not merge edges to a large dimension edge.
+        """
+        # Yield proper positions set until remained set is empty
+        while input_plan:
+            used_orbits = set()  # set[tuple[int, int, int]]
+            merged_dimensions = {}  # map[tuple[int, int], int]
+            result = set()  # set[tuple[tuple[int, int, int], ...]]
+            # Try to add every positions in the set
+            for positions in input_plan:
+                # Create a copy for auxiliary variables
+                used_orbits_tmp = used_orbits.copy()
+                merged_dimensions_tmp = merged_dimensions.copy()
+                # Try to add positions to result
+                for position in positions:
+                    # Check position one by one
+                    if position not in used_orbits_tmp:
+                        # Not used, so add it now
+                        used_orbits_tmp.add(position)
+                        site = position[0], position[1]
+                        if site not in merged_dimensions_tmp:
+                            merged_dimensions_tmp[site] = 1
+                        merged_dimensions_tmp[site] *= self.physics_edges[position].dimension
+                        if merged_dimensions_tmp[site] > threshold:
+                            # Check failed, break the loop, and it will try to add next positions to result
+                            break
+                else:
+                    # All check passed, add it to result
+                    result.add(positions)
+                    used_orbits = used_orbits_tmp
+                    merged_dimensions = merged_dimensions_tmp
+            input_plan -= result
+            yield result
+
+    def _get_merge_hamiltonian_plan_with_check_large_physical_dimension(self, threshold=6):
+        """
+        Get the hamiltonian merging plan for simple update.
+
+        Parameters
+        ----------
+        threshold : int, default=6
+            The dimension of the merged edge must be less equal threshold.
+
+        Yields
+        ------
+        set[tuple[tuple[int, int, int], ...]]
+            The hamiltonian positions set to be merged, which will not merge edges to a large dimension edge.
+        """
+        for plan in self._get_merge_hamiltonian_plan():
+            yield from self._check_large_physical_dimension(plan, threshold=threshold)
+
     def _get_merge_hamiltonian(self, positions_list):
         """
         Merge several hamiltonian term into one term.
@@ -350,7 +414,8 @@ class SimpleUpdateLattice(AbstractLattice):
         # updater U_i = exp(- delta_tau H_i)
         # At this step, get the coordinates of every hamiltonian term instead of original knowning specific orbit only.
         updaters = []
-        for positions, hamiltonian_term in map(self._get_merge_hamiltonian, self._get_merge_hamiltonian_plan()):
+        for positions, hamiltonian_term in map(self._get_merge_hamiltonian,
+                                               self._get_merge_hamiltonian_plan_with_check_large_physical_dimension()):
             # coordinates is the site list of what this hamiltonian term effects on.
             # it may be less than hamiltonian rank
             coordinates = []
