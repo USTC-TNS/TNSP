@@ -316,7 +316,7 @@ class SimpleUpdateLattice(AbstractLattice):
             merged_dimensions = {}  # map[tuple[int, int], int]
             result = set()  # set[tuple[tuple[int, int, int], ...]]
             # Try to add every positions in the set
-            for positions in input_plan:
+            for positions in sorted(input_plan):
                 # Create a copy for auxiliary variables
                 used_orbits_tmp = used_orbits.copy()
                 merged_dimensions_tmp = merged_dimensions.copy()
