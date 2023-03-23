@@ -225,6 +225,70 @@ If sampling $s$ in some distribution $s \sim S$ with possibility $p(s)$. We get
 
 $E = \frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
 
+*** Bias and Variance of energy by sampling method
+
+Let us introduce a lemma first, For multinomial distribution $X_s \sim M(n, p_s)$
+and let $q_s=X_s/n$, we have
+$\langle F(q_s-p_s) \rangle = F(0) + \frac{1}{2n} \sum_{st} (\delta_{st} p_s - p_s p_t) \frac{\partial^2 F}{\partial \delta_s \delta_t}(0) + O(1/n^2)$.
+Since the first degree term $\langle q_s - p_s \rangle=0$,
+the second degree term $\langle (q_s-p_s)(q_t-p_t) \rangle = \frac{1}{n} (\delta_{st}p_s - p_s p_t)$
+and $\langle (q_s-p_s)^k \rangle = O(1/n^2)$ for $k>2$
+
+The exact energy is $E = \frac{\sum_s p_s \frac{\langle\psi|s|\psi\rangle}{p_s}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_s p_s \frac{\langle \psi | s | \psi \rangle}{p_s}}$.
+Let $r_s = \frac{\langle \psi|s|\psi\rangle}{p_s}$, $E_s = \frac{\sum_{s'}\langle\psi|s|H|s'|\psi\rangle}{\langle\psi|s|\psi\rangle}$,
+We have $E = \frac{\sum_s p_s r_s E_s}{\sum_s p_s r_s}$,
+The sampling method gives the energy as
+$\hat E = \frac{\sum_s q_s r_s E_s}{\sum_s q_s r_s}$.
+
+let $\langle O \rangle_p=\sum_{s}O(s)p(s)$, so $E=\frac{\langle r E\rangle_p}{\langle r \rangle_p}$,
+Ignore $O(1/n^2)$, we have
+$\langle \hat E - E \rangle = \frac{1}{n}\frac{\left\langle r^2\right\rangle  E - \left\langle E r^2\right\rangle }{\langle r\rangle ^2}$
+, so this is a biased estimator in fact.
+
+As for the variance,
+$\langle (\hat E - E)^2 \rangle =\frac{1}{n}\left( \frac{\langle r^2 \rangle_p \langle rE \rangle_p^2}{\langle r \rangle_p^4}-\frac{2 \langle r^2E \rangle_p \langle rE \rangle_p}{\langle r \rangle_p^3}+\frac{\langle r^2E^2 \rangle_p}{\langle r \rangle_p^2} \right)$.
+let $\langle O(s) \rangle_\psi = \frac{\langle O(s) r_s \rangle_p}{\langle r_s \rangle_p}$, $r'_s=\frac{r_s}{\langle r\rangle_p}$, the former formula could be written as
+$\langle (\hat E - E)^2 \rangle =\frac{1}{n}\left\langle (E - \langle E \rangle_\psi)^2 r' \right\rangle_\psi$.
+
+The code to get the result of variance in mathematica is followed
+#+begin_src mathematica :exports code
+exactE = Sum[p[ss] r[ss] e[ss], {ss, S}]/Sum[p[ss] r[ss], {ss, S}];
+hatE = Sum[q[ss] r[ss] e[ss], {ss, S}]/Sum[q[ss] r[ss], {ss, S}];
+dd = D[(hatE - exactE)^2, q[s], q[t]];
+Expect = Simplify[
+  1/(2 n) Sum[
+     Expand[(KroneckerDelta[s, t] p[s] - p[s] p[t]) dd], {s, S}, {t,
+      S}] //. {
+    (*q is set to p after derivate*)
+    q[s_] :> p[s],
+    (*Simplify delta*)
+    Sum[a_ KroneckerDelta[i_, j_], rb___, {j_, S}, re___] :>
+     If[Length[{re, rb}] != 0, Sum[a /. j -> i, rb, re],
+      a /. j -> i],
+    (*Improve readability of result*)
+    Sum[p[ss_] r[ss_] e[ss_], {ss_, S}] ->
+     AngleBracket[r \[CapitalEpsilon]],
+    Sum[p[ss_] r[ss_], {ss_, S}] -> AngleBracket[r],
+    Sum[p[ss_] r[ss_]^2 e[ss_], {ss_, S}] ->
+     AngleBracket[r^2 \[CapitalEpsilon]],
+    Sum[p[ss_] r[ss_]^2, {ss_, S}] -> AngleBracket[r^2],
+    Sum[p[ss_] r[ss_]^2 e[ss_]^2, {ss_, S}] ->
+     AngleBracket[r^2 \[CapitalEpsilon]^2],
+    (*Move symbol or number out from sum*)
+    Sum[a_ b_?NumericQ, r__] :> b Sum[a, r],
+    Sum[a_ b_?NumericQ, r__] :> b^n Sum[a, r],
+    Sum[a_ b_AngleBracket, r__] :> b Sum[a, r],
+    Sum[a_ b_AngleBracket^n_, r__] :> b^n Sum[a, r],
+    Sum[a_/b_AngleBracket, r__] :> 1/b Sum[a, r],
+    Sum[a_/b_AngleBracket^n_, r__] :> 1/b^n Sum[a, r],
+    (*Expand sum*)
+    Sum[a_Plus, b__] :> (Sum[#, b] & /@ a),
+    Sum[u_Times, {s_, S}, {t_, S}] :>
+     Sum[Select[u, #[[1]] == s &], {s, S}] Sum[
+       Select[u, #[[1]] == t &], {t, S}]
+    }]
+#+end_src
+
 *** General gradient method
 
 To minimize a function $E(x_i,x_i^*)$ locally, find $\min_{\delta x_i^* g^{ij} \delta x_j = r^2} \hat E(x_i + \delta x_i, x_i^* + \delta x_i^*)$.
@@ -309,3 +373,22 @@ $g^{Tij} = \frac{\sum_{s \sim S} r(s) \frac{\langle\partial_{T_i^*}\psi|s|\parti
 Then
 
 $g^{Tij} = \frac{\sum_{s \sim S} r(s) \frac{\langle\partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi|s|\psi \rangle}\frac{\langle \psi|s|\partial_{T_j}\psi\rangle}{\langle \psi|s|\psi \rangle}}{\sum_{s \sim S} r(s)} - \frac{\sum_{s \sim S} r(s) \frac{\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)} \frac{\sum_{s \sim S} r(s) \frac{\langle\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)}$
+
+** Bias and Variance of gradient
+
+Let $\Delta_s = \frac{\langle \partial_{T_i^*} \psi|s|\psi\rangle}{\psi|s|\psi}$, put $T_i^*$ in the context.
+Then we have the gradient
+$G = \frac{\partial E}{\partial T_i^*}=\frac{\sum_{s} p_s r_s \Delta_s E_s }{\sum_{s} p_s r_s}- \frac{\sum_s p_s r_s E_s}{\sum_s p_s r_s} \frac{\sum_{s} p_s r_s \Delta_s}{\sum_{s S} p_s r_s} = \frac{\langle r \Delta E\rangle_p}{\langle r \rangle_p} - \frac{\langle r E \rangle_p}{\langle r\rangle_p}\frac{\langle r\Delta\rangle_p}{\langle r\rangle_p}$.
+In the sampling method, the measured result is
+$\hat G=\frac{\sum_{s} q_s r_s \Delta_s E_s }{\sum_{s} q_s r_s}- \frac{\sum_s q_s r_s E_s}{\sum_s q_s r_s} \frac{\sum_{s S} q_s r_s \Delta_s}{\sum_{s S} q_s r_s}$
+
+If $r=1$, we have
+$\hat G - G = -\frac{1}{n} G$, so $\frac{n}{n-1} \hat G$ is the unbias estimator for $G$
+
+Now let $r$ be any reweight for sampling method again.
+$$(n-1)\langle \frac{n}{n-1}\hat G - G\rangle=\langle G\rangle_\psi + \langle r'\rangle_\psi \langle G \rangle_\psi - 2 \langle r' G \rangle_\psi$$
+where $\langle O(s) \rangle_\psi = \frac{\langle O(s) r_s \rangle_p}{\langle r_s \rangle_p}$, $G_s = (\Delta_s-\langle \Delta\rangle_\psi)(E_s-\langle E\rangle_\psi)$, $r'_s=\frac{r_s}{\langle r\rangle_p}$
+and gradient can also be written as $G=\langle (\Delta-\langle \Delta \rangle_\psi) (E - \langle E \rangle_\psi)\rangle_\psi=\langle G \rangle_\psi$
+
+The variance of gradient is
+$$\langle (\frac{n}{n-1}\hat G - G)^2 \rangle =\frac{1}{n}\left\langle (G - \langle G \rangle_\psi)^2 r' \right\rangle_\psi + O(1/n^2)$$
