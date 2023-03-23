@@ -11,6 +11,7 @@
 + *tetraku*: Density matrix of Heisenberg/tJ/Hubbard model are renamed to =gibbs_*= from =density_matrix_*=.
 + *tetragono*: Simple update will check to avoid merge physical edges into a single edge with very large dimension. It
   will only merge edges if the result edge has the dimension less equal to the =threshold=, which is =6= by default.
++ *tetragono*: Use better method to estimate the variance of measurement results observed by the sampling method.
 *** Deprecated
 *** Removed
 + *tetragono*: The mirror direct sampling is removed, since it is useless according to the test result.

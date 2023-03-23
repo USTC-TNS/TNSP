@@ -32,9 +32,10 @@ class Observer():
 
     __slots__ = [
         "owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
-        "_restrict_subspace", "_classical_energy", "_start", "_result", "_result_square", "_result_reweight", "_count",
-        "_total_weight", "_total_weight_square", "_total_log_ws", "_total_energy", "_total_energy_square",
-        "_total_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_pool"
+        "_restrict_subspace", "_classical_energy", "_start", "_result", "_result_square", "_result_reweight",
+        "_result_reweight_square", "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square",
+        "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
+        "_total_energy_reweight_square", "_total_energy_square_reweight_square", "_Delta", "_EDelta", "_Deltas", "_pool"
     ]
 
     def __enter__(self):
@@ -54,6 +55,14 @@ class Observer():
             name: {positions: 0.0 for positions, observer in observers.items()
                   } for name, observers in self._observer.items()
         }
+        self._result_reweight_square = {
+            name: {positions: 0.0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
+        self._result_square_reweight_square = {
+            name: {positions: 0.0 for positions, observer in observers.items()
+                  } for name, observers in self._observer.items()
+        }
         self._count = 0
         self._total_weight = 0.0
         self._total_weight_square = 0.0
@@ -61,6 +70,8 @@ class Observer():
         self._total_energy = 0.0
         self._total_energy_square = 0.0
         self._total_energy_reweight = 0.0
+        self._total_energy_reweight_square = 0.0
+        self._total_energy_square_reweight_square = 0.0
         if self._enable_gradient:
             self._Delta = [[self.owner[l1, l2].same_shape().conjugate().zero()
                             for l2 in range(self.owner.L2)]
@@ -87,6 +98,8 @@ class Observer():
                 buffer.append(self._result[name][positions])
                 buffer.append(self._result_square[name][positions])
                 buffer.append(self._result_reweight[name][positions])
+                buffer.append(self._result_reweight_square[name][positions])
+                buffer.append(self._result_square_reweight_square[name][positions])
         buffer.append(self._count)
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
@@ -94,11 +107,15 @@ class Observer():
         buffer.append(self._total_energy)
         buffer.append(self._total_energy_square)
         buffer.append(self._total_energy_reweight)
+        buffer.append(self._total_energy_reweight_square)
+        buffer.append(self._total_energy_square_reweight_square)
 
         buffer = np.array(buffer)
         allreduce_buffer(buffer)
         buffer = buffer.tolist()
 
+        self._total_energy_square_reweight_square = buffer.pop()
+        self._total_energy_reweight_square = buffer.pop()
         self._total_energy_reweight = buffer.pop()
         self._total_energy_square = buffer.pop()
         self._total_energy = buffer.pop()
@@ -108,6 +125,8 @@ class Observer():
         self._count = buffer.pop()
         for name, observers in reversed(self._observer.items()):
             for positions in reversed(observers):
+                self._result_square_reweight_square[name][positions] = buffer.pop()
+                self._result_reweight_square[name][positions] = buffer.pop()
                 self._result_reweight[name][positions] = buffer.pop()
                 self._result_square[name][positions] = buffer.pop()
                 self._result[name][positions] = buffer.pop()
@@ -171,6 +190,8 @@ class Observer():
         self._result = None  # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
         self._result_square = None
         self._result_reweight = None
+        self._result_reweight_square = None
+        self._result_square_reweight_square = None
         self._count = None  # int
         self._total_weight = None  # float
         self._total_weight_square = None
@@ -178,6 +199,8 @@ class Observer():
         self._total_energy = None
         self._total_energy_square = None
         self._total_energy_reweight = None
+        self._total_energy_reweight_square = None
+        self._total_energy_square_reweight_square = None
 
         # Values about gradient collected during observing
         self._Delta = None  # list[list[Tensor]]
@@ -372,8 +395,10 @@ class Observer():
                 # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
                 to_save = total_value.real
                 self._result[name][positions] += to_save
-                self._result_square[name][positions] += to_save * to_save
+                self._result_square[name][positions] += to_save**2
                 self._result_reweight[name][positions] += to_save * reweight
+                self._result_reweight_square[name][positions] += to_save * reweight**2
+                self._result_square_reweight_square[name][positions] += to_save**2 * reweight**2
                 if name == "energy":
                     Es += total_value  # Es maybe complex
             if name == "energy":
@@ -381,8 +406,10 @@ class Observer():
                     Es += self._classical_energy(configuration)
                 to_save = Es.real
                 self._total_energy += to_save
-                self._total_energy_square += to_save * to_save
+                self._total_energy_square += to_save**2
                 self._total_energy_reweight += to_save * reweight
+                self._total_energy_reweight_square += to_save * reweight**2
+                self._total_energy_square_reweight_square += to_save**2 * reweight**2
                 # Es should be complex here when calculating gradient
 
                 if self._enable_gradient:
@@ -401,51 +428,38 @@ class Observer():
                         else:
                             self._Deltas.append((reweight, Es, holes))
 
-    def _expect_and_deviation(self, total, total_square, total_reweight):
+    def _expect_and_deviation(self, total_reweight, total_reweight_square, total_square_reweight_square):
         """
         Get the expect value and deviation.
 
         Parameters
         ----------
-        total : float
-            The summation of observed value.
-        total_square : float
-            The summation of observed value square.
         total_reweight : float
             The summation of observed value with reweight.
+        total_reweight_square : float
+            The summation of observed value with reweight square.
+        total_square_reweight_square : float
+            The summation of observed value square with reweight square.
 
         Returns
         -------
         tuple[float, float]
             The expect value and deviation.
         """
-        if total == 0.0 or self._total_weight == 0.0:
+        if total_reweight == 0.0 or self._total_weight == 0.0:
             return 0.0, 0.0
 
         N = self._count
 
-        Eb = total / N
-        E2b = total_square / N
-        EWb = total_reweight / N
-        Wb = self._total_weight / N
-        W2b = self._total_weight_square / N
+        R = self._total_weight / N
+        ER = total_reweight / N
 
-        EV = E2b - Eb * Eb
-        WV = W2b - Wb * Wb
-        EWC = EWb - Eb * Wb
+        RR = self._total_weight_square / N
+        ERR = total_reweight_square / N
+        EERR = total_square_reweight_square / N
 
-        expect = EWb / Wb
-        # Derivation calculation
-        # expect   = sumEW / sumW
-        # variance = sum [W / sumW]^2 Var(E) +
-        #            sum [E / sumW - expect / sumW]^2 Var(W) +
-        #            sum [W / sumW][E / sumW - expect / sumW] Cov(E,W)
-        #          = W2b / (Wb^2 N) Var(E) +
-        #            (E2b + expect^2 - 2 expect Eb) / (Wb^2 N) Var(W) +
-        #            (EWb - expect Wb) / (Wb^2 N) Cov(E,W)
-        #          = [W2b EV + (E2b + expect^2 - 2 expect Eb) WV + (EWb - expect Wb) EWC] / (Wb^2 N)
-        variance = (W2b * EV + (E2b + expect * expect - 2 * expect * Eb) * WV +
-                    (EWb - expect * Wb) * EWC) / (Wb * Wb * N)
+        expect = ER / R
+        variance = (EERR - 2 * ERR * expect + RR * expect**2) / (N * R**2)
         if variance < 0.0:
             # When total summate several same values, numeric error will lead variance < 0
             deviation = 0.0
@@ -466,9 +480,10 @@ class Observer():
         """
         return {
             name: {
-                positions:
-                self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions],
-                                           self._result_reweight[name][positions]) for positions in data
+                positions: self._expect_and_deviation(self._result_reweight[name][positions],
+                                                      self._result_reweight_square[name][positions],
+                                                      self._result_square_reweight_square[name][positions])
+                for positions in data
             } for name, data in self._observer.items()
         }
 
@@ -482,7 +497,8 @@ class Observer():
         tuple[float, float]
             The total energy.
         """
-        return self._expect_and_deviation(self._total_energy, self._total_energy_square, self._total_energy_reweight)
+        return self._expect_and_deviation(self._total_energy_reweight, self._total_energy_reweight_square,
+                                          self._total_energy_square_reweight_square)
 
     @property
     def energy(self):
