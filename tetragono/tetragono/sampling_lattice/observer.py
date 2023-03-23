@@ -524,9 +524,11 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
+        N = self._count
         energy, _ = self.total_energy
-        b = (2 * (np.array(self._EDelta) / self._total_weight) - 2 * energy *
-             (np.array(self._Delta) / self._total_weight))
+        b = ((np.array(self._EDelta) / self._total_weight) - energy * (np.array(self._Delta) / self._total_weight))
+        b *= 2
+        b *= N / (N - 1)
         return lattice_conjugate(b)
 
     def _trace_metric(self):
