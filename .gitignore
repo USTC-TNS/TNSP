@@ -2,6 +2,7 @@
 !/.github
 !/PyTAT
 !/PyScalapack
+!/derivations
 !/examples
 !/include
 !/lazy_graph
