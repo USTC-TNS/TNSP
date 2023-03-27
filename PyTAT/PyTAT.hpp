@@ -98,7 +98,7 @@ namespace TAT {
    }
 
    // About random
-   inline auto random_engine = std::default_random_engine(std::random_device()());
+   inline auto random_engine = std::mt19937_64(std::random_device()());
    inline void set_random(py::module_& tat_m) {
       auto random_m = tat_m.def_submodule("random", "random for TAT");
       random_m.def(
