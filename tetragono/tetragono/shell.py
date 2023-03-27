@@ -329,7 +329,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @sharedoc(do_su_to_gm)
     def su_to_gm(self):
         self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
-        self.gm_conf = []
 
     def do_ex_update(self, line):
         """
@@ -411,7 +410,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         state = self.su_gm_create(SamplingLattice, *args, **kwargs)
         if state is not None:
             self.gm = state
-            self.gm_conf = []
 
     def do_gm_run(self, line):
         """
@@ -471,7 +469,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @sharedoc(do_gm_load)
     def gm_load(self, name):
         self.gm = read_from_file(name)
-        self.gm_conf = []
 
     def do_gm_conf_load(self, line):
         """
@@ -576,7 +573,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         state = self.ex_ap_create(AnsatzProductState, *args, **kwargs)
         if state is not None:
             self.ap = state
-            self.ap_conf = []
 
     def do_ap_dump(self, line):
         """
@@ -609,7 +605,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @sharedoc(do_ap_load)
     def ap_load(self, name):
         self.ap = read_from_file(name)
-        self.ap_conf = []
 
     def do_ap_ansatz_set(self, line):
         """
