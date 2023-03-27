@@ -161,6 +161,30 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             state = lattice_type(abstract_state(*args, **kwargs))
         return state
 
+    def do_numpy_hamiltonian(self, line):
+        """
+        Export hamiltonian as a numpy array to a file.
+
+        Parameters
+        ----------
+        file : str
+            The file that the hamiltonian is exported to.
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        config = Config(line)
+        self.numpy_hamiltonian(*config.args, **config.kwargs)
+
+    @sharedoc(do_numpy_hamiltonian)
+    def numpy_hamiltonian(self, file, model, *args, **kwargs):
+        state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
+        result = state.numpy_hamiltonian()
+        if result is not None:
+            write_to_file(result, file)
+        return result
+
     def do_ex_create(self, line):
         """
         Create a state used for exact update.
@@ -833,6 +857,7 @@ else:
 
     seed = app.seed
     shell = app.do_shell
+    numpy_hamiltonian = app.numpy_hamiltonian
 
     su_create = app.su_create
     su_dump = app.su_dump

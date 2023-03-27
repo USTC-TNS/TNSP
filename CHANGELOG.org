@@ -7,6 +7,8 @@
   symmetry.
 + *scalapack.py*: Add documents for scalapack.py.
 + *tetraku*: Add tV model.
++ *tetragono* Add =numpy_hamiltonian= in tetragono shell to export the Hamiltonian of a model to a file in numpy array
+  format.
 *** Changed
 + *tetraku*: Density matrix of Heisenberg/tJ/Hubbard model are renamed to =gibbs_*= from =density_matrix_*=.
 + *tetragono*: Simple update will check to avoid merge physical edges into a single edge with very large dimension. It
