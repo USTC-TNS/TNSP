@@ -397,7 +397,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         return expect, deviation / ((length - 1)**(1 / 2))
 
     @AutoCmd.decorator
-    def gm_bin_run(self, bin_number, sampling_total_step, *args, **kwargs, first=[True]):
+    def gm_bin_run(self, bin_number, sampling_total_step, *args, first=[True], **kwargs):
         """
         Measure with bin error estimation.
         """
@@ -418,6 +418,30 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             } for name, mapping in example.items()
         }
         return result_whole, result
+
+    @AutoCmd.decorator
+    def gm_alpha(self, alpha=None, first=[True]):
+        """
+        Set alpha for sampling method.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            The new alpha to be set.
+
+        Returns
+        -------
+        float
+            The previous alpha.
+        """
+        if first[0]:
+            showln("gm_alpha is experiment feature, which may be changed or removed in the future.")
+            first[0] = False
+        from .sampling_lattice import sampling as s
+        result = s.alpha
+        if alpha is not None:
+            s.alpha = alpha
+        return result
 
     @AutoCmd.decorator
     def gm_dump(self, name):
@@ -838,3 +862,4 @@ else:
     ap_run_g = app.ap_run_g
 
     gm_bin_run = app.gm_bin_run
+    gm_alpha = app.gm_alpha
