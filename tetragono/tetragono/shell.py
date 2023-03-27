@@ -31,6 +31,13 @@ from .ansatz_product_state import AnsatzProductState, Configuration as ap_Config
 from .sampling_lattice.gradient import gradient_descent as gm_gradient_descent
 from .ansatz_product_state.gradient import gradient_descent as ap_gradient_descent
 
+def set_alpha(alpha):
+	from .sampling_lattice import sampling as s
+	s.alpha = alpha
+def get_alpha():
+	from .sampling_lattice import sampling as s
+	return s.alpha
+
 
 class Config():
 
