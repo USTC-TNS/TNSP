@@ -22,12 +22,18 @@ import tetragono as tet
 
 
 def hopping_hamiltonians(state):
-    pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(float)
+    # Two part, normal Hamiltonian and hopping between subspace
+    SS = tet.common_tensor.No.SS.to(float)
+    between_subspace = tet.common_tensor.No.SxSx.to(float) - tet.common_tensor.No.SySy.to(float)
 
     hamiltonian = {}
 
     for l1 in range(state.L1):
         for l2 in range(state.L2):
-            hamiltonian[(l1, l2, 0),] = hamiltonian[(l1, l2, 1),] = pauli_x_pauli_x
+            hamiltonian[(l1, l2, 0), (l1, l2, 1)] = between_subspace
+            if l1 != 0:
+                hamiltonian[(l1 - 1, l2, 0), (l1, l2, 0)] = hamiltonian[(l1 - 1, l2, 1), (l1, l2, 1)] = SS
+            if l2 != 0:
+                hamiltonian[(l1, l2 - 1, 0), (l1, l2, 0)] = hamiltonian[(l1, l2 - 1, 1), (l1, l2, 1)] = SS
 
     return hamiltonian
