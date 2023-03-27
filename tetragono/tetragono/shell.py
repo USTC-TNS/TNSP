@@ -20,6 +20,7 @@ import os
 import sys
 import cmd
 import TAT
+from io import StringIO
 from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
                              get_imported_function, seed_differ)
 from . import conversion
@@ -820,7 +821,6 @@ if __name__ == "__main__":
                 TetragonoScriptApp(stdin=script_file).cmdloop()
     elif sys.argv[1] == "--":
         commands = " ".join(sys.argv[2:]).replace(" - ", "\n")
-        from io import StringIO
         script_file = StringIO(commands)
         TetragonoScriptApp(stdin=script_file).cmdloop()
     else:
