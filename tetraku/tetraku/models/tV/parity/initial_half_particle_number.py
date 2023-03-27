@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2023 Chao Wang<1023649157@qq.com>
+# Copyright (C) 2022-2023 Chao Wang<1023649157@qq.com>
+# Copyright (C) 2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
