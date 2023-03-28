@@ -195,7 +195,7 @@ def gradient_descent(
         need_energy_observer = use_line_search or use_check_difference
     else:
         need_energy_observer = False
-    if need_energy_observer:
+    if need_energy_observer or True:
         energy_observer = Observer(
             state,
             enable_energy=True,
@@ -211,6 +211,15 @@ def gradient_descent(
             if need_energy_observer:
                 configuration_pool = []
             # Sampling and observe
+            with seed_differ, energy_observer:
+                sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
+                for sampling_step in range(sampling.total_step):
+                    if sampling_step % mpi_size == mpi_rank:
+                        possibility, configuration = sampling()
+                        energy_observer(possibility, configuration)
+                        show(f"sampling {sampling_step}/{sampling.total_step}, energy={energy_observer.energy}")
+            showln(f"sampling done, total_step={sampling.total_step}, energy={energy_observer.energy}")
+            ergodic_dist = energy_observer.get_summary()
             with seed_differ, observer:
                 # Sampling method
                 if sampling_method == "sweep":
@@ -249,6 +258,16 @@ def gradient_descent(
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
+            direct_dist = observer.get_summary()
+            diff = ergodic_dist - direct_dist
+            showln(f"dist diff is {np.sum(np.abs(diff))}")
+            if mpi_rank == 0:
+                import os
+                name = os.environ["NAME"]
+                with open(f"ergodic-{name}.log", "at") as file:
+                    print(*ergodic_dist, file=file)
+                with open(f"direct-{name}.log", "at") as file:
+                    print(*direct_dist, file=file)
 
             # Measure log
             if measurement and mpi_rank == 0:

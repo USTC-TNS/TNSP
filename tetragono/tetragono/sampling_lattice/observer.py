@@ -35,7 +35,8 @@ class Observer():
         "_restrict_subspace", "_classical_energy", "_start", "_result", "_result_square", "_result_reweight",
         "_result_reweight_square", "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square",
         "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
-        "_total_energy_reweight_square", "_total_energy_square_reweight_square", "_Delta", "_EDelta", "_Deltas", "_pool"
+        "_total_energy_reweight_square", "_total_energy_square_reweight_square", "_Delta", "_EDelta", "_Deltas",
+        "_pool", "_summary"
     ]
 
     def __enter__(self):
@@ -85,6 +86,11 @@ class Observer():
             os.makedirs(self._cache_natural_delta, exist_ok=True)
             with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "wb") as file:
                 pass
+        d = 1
+        for l1, l2 in self.owner.sites():
+            for orbit in self.owner.physics_edges[l1, l2]:
+                d *= self.owner.physics_edges[l1, l2, orbit].dimension
+        self._summary = np.zeros(d)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """
@@ -134,6 +140,7 @@ class Observer():
         if self._enable_gradient:
             allreduce_lattice_buffer(self._Delta)
             allreduce_lattice_buffer(self._EDelta)
+        allreduce_buffer(self._summary)
 
     def __init__(
         self,
@@ -322,6 +329,17 @@ class Observer():
         """
         self._pool = ConfigurationPool(self.owner)
 
+    def add_summary(self, r, c):
+        i = 0
+        for l1, l2 in self.owner.sites():
+            for orbit in self.owner.physics_edges[l1, l2]:
+                i *= self.owner.physics_edges[l1, l2, orbit].dimension
+                i += c[l1, l2, orbit][1]
+        self._summary[i] += r
+
+    def get_summary(self):
+        return self._summary / self._total_weight
+
     def __call__(self, possibility, configuration):
         """
         Collect observer value from current configuration, the sampling should have distribution based on
@@ -350,6 +368,7 @@ class Observer():
             return
 
         reweight = ws.norm_2()**2 / possibility  # <psi|s|psi> / p(s)
+        self.add_summary(reweight, configuration)
         self._total_weight += reweight
         self._total_weight_square += reweight * reweight
         self._total_log_ws += np.log(np.abs(complex(ws)))
