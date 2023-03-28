@@ -448,42 +448,34 @@ class AbstractState:
 
     def numpy_hamiltonian(self):
         """
-        Get the numpy array as the hamiltonian, only work for no symmetry model.
+        Get the numpy array as the hamiltonian. It is dangerous to call this function on a large model.
 
         Returns
         -------
         np.ndarray
             The hamiltonian in numpy array format.
         """
-        if self.Tensor.model != TAT.No:
-            showln("It is only allowed to export no symmetry model to numpy array")
-            return
-        dtype = np.dtype(self.Tensor.dtype)
         edge_order = [(l1, l2, orbit) for l1, l2 in self.sites() for orbit in self.physics_edges[l1, l2]]
-        edge_dimension = [self.physics_edges[position].dimension for position in edge_order]
-        total_dimension = np.prod(edge_dimension)
         result = None
         for positions, hamiltonian in self._hamiltonians.items():
             body = hamiltonian.rank // 2
-            indices = [edge_order.index(position) for position in positions]
-            sorted_indices = sorted(indices)
-            sort_order = [indices.index(index) for index in sorted_indices]
-            this_term = hamiltonian.blocks[[
-                *(f"I{index}" for index in sort_order), *(f"O{index}" for index in sort_order)
-            ]]
-            interval_dimensions = [
-                np.prod(edge_dimension[(1 + sorted_indices[i - 1] if i != 0 else None):(
-                    sorted_indices[i] if i != body else None)],
-                        dtype=int) for i in range(body + 1)
-            ]
-            interval_matrix = [np.identity(interval_dimension) for interval_dimension in interval_dimensions]
-            for index, interval_matrix in enumerate(interval_matrix):
-                this_term = np.tensordot(this_term, interval_matrix, 0)
-                this_term = np.moveaxis(this_term, -1, index * 2 + body + index)
-                this_term = np.moveaxis(this_term, -1, index * 2)
-            this_term = this_term.reshape([total_dimension, total_dimension])
+            this_term = hamiltonian.edge_rename({f"I{i}": f"I{edge_order.index(positions[i])}" for i in range(body)} |
+                                                {f"O{i}": f"O{edge_order.index(positions[i])}" for i in range(body)})
+            for l1, l2 in self.sites():
+                for orbit in self.physics_edges[l1, l2]:
+                    if (l1, l2, orbit) not in positions:
+                        index = edge_order.index((l1, l2, orbit))
+                        edge = self.physics_edges[l1, l2, orbit]
+                        this_term = this_term.contract(
+                            self.Tensor([f"O{index}", f"I{index}"],
+                                        [edge, edge.conjugated()]).identity({(f"O{index}", f"I{index}")}), set())
+            this_array = this_term.merge_edge(
+                {
+                    "O": [f"O{i}" for i in range(self.site_number)],
+                    "I": [f"I{i}" for i in range(self.site_number)]
+                }, True, {"O"}).blocks[[("I", -self.total_symmetry), ("O", self.total_symmetry)]]
             if result is None:
-                result = this_term
+                result = this_array
             else:
-                result += this_term
+                result += this_array
         return result
