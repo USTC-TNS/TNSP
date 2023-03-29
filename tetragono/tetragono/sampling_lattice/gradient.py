@@ -122,7 +122,7 @@ def gradient_descent(
         metric_inverse_epsilon=0.01,
         cache_natural_delta=None,
         use_natural_gradient_by_direct_pseudo_inverse=False,
-        scalapack_libraries=None,
+        scalapack_libraries="libscalapack.so",
         natural_gradient_r_pinv=1e-12,
         natural_gradient_a_pinv=0,
         # About gauge fixing
