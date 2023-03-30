@@ -27,7 +27,7 @@
 + *tetraku*: Fix the wrong Hamiltonian for Gibbs state of Fermionic system.
 + *tetraku*: Fix the wrong sign of chemical potential for density matrix of tJ model.
 + *TAT.py*: Fix typo in the class name of parity symmetry.
-+ *tetragono*: Fix the bias of the gradient given by the sampling method.
++ *tetragono*: Fix the first order bias of the observables and the gradient given by the sampling method.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...v0.3.3][v0.3.3]] - 2022-03-09
 

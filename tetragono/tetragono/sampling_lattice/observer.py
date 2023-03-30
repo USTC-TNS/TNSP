@@ -451,15 +451,16 @@ class Observer():
 
         N = self._count
 
-        R = self._total_weight / N
-        ER = total_reweight / N
+        R = self._total_weight
+        ER = total_reweight
 
-        RR = self._total_weight_square / N
-        ERR = total_reweight_square / N
-        EERR = total_square_reweight_square / N
+        RR = self._total_weight_square
+        ERR = total_reweight_square
+        EERR = total_square_reweight_square
 
-        expect = ER / R
-        variance = (EERR - 2 * ERR * expect + RR * expect**2) / (N * R**2)
+        biased_expect = ER / R
+        expect = biased_expect + ERR / R**2 - biased_expect * RR / R**2
+        variance = (EERR - 2 * ERR * expect + RR * expect**2) / R**2
         if variance < 0.0:
             # When total summate several same values, numeric error will lead variance < 0
             deviation = 0.0
