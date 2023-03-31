@@ -683,9 +683,7 @@ class Observer():
         return result
 
     def _array_to_delta(self, array):
-        # array is in ket space
-        # conjugate it to move it to bra space
-        array = np.conj(array)
+        # Both array and result delta is in bra space
         result = np.array(
             [[self._Delta[l1][l2].same_shape() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)])
         index = 0
@@ -746,11 +744,9 @@ class Observer():
 
         total_n_s = int(self._count)
         result_array = self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries)
-        result_delta = self._array_to_delta(result_array)
-        x = lattice_conjugate(result_delta * 2)
-
+        x = 2 * result_array
         showln("calculate natural gradient done")
-        return x
+        return lattice_conjugate(self._array_to_delta(np.conj(x)))
 
     @staticmethod
     def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries):
