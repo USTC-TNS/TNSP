@@ -645,15 +645,15 @@ class Observer():
             if t == step:
                 showln("conjugate gradient max step count reached")
                 break
+            Ap = A(p)
+            pAp = np.dot(np.conj(p), Ap).real
             if error != 0.0:
                 if error**2 > r_square / b_square:
                     showln("conjugate gradient r^2 is small enough")
                     break
-                if t != 0 and error**2 > pAp / b_square:
+                if error**2 > pAp / b_square:
                     showln("conjugate gradient pAp is small enough")
                     break
-            Ap = A(p)
-            pAp = np.dot(np.conj(p), Ap).real
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square} pAp/b^2={pAp/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
             alpha = r_square / pAp
