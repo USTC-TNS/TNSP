@@ -302,6 +302,7 @@ class DirectSampling(Sampling):
                     if len(rho) == 0:
                         # Block mismatch, redo a sampling.
                         return self()
+                    rho = np.maximum(0, rho)**0.5
                     rho = rho / np.sum(rho)
                     choice = self._choice(random(), rho)
                     # Choose the configuration of this orbit
