@@ -649,13 +649,13 @@ class Observer():
                 if error**2 > r_square / b_square:
                     break
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
+            Ap = self._metric_mv(p, relative_epsilon)
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = (lattice_prod_sum(lattice_conjugate(r), r).real /
-                     lattice_prod_sum(lattice_conjugate(p), self._metric_mv(p, relative_epsilon)).real)
+            alpha = (r_square / lattice_prod_sum(lattice_conjugate(p), Ap).real)
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
-            new_r = r - alpha * self._metric_mv(p, relative_epsilon)
+            new_r = r - alpha * Ap
             new_r_square = lattice_prod_sum(lattice_conjugate(new_r), new_r).real
             # beta = (new_r @ new_r) / (r @ r)
             beta = new_r_square / r_square
