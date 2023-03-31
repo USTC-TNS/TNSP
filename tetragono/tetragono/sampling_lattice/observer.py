@@ -679,7 +679,7 @@ class Observer():
         result = []
         for l1, l2 in self.owner.sites():
             result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).storage)
-        result = np.concatenate(result)
+        result = np.concatenate(result, dtype=self.owner.Tensor.dtype)
         return result
 
     def _array_to_delta(self, array):
