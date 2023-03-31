@@ -458,8 +458,7 @@ class Observer():
         ERR = total_reweight_square
         EERR = total_square_reweight_square
 
-        biased_expect = ER / R
-        expect = biased_expect + ERR / R**2 - biased_expect * RR / R**2
+        expect = ER / R
         variance = (EERR - 2 * ERR * expect + RR * expect**2) / R**2
         if variance < 0.0:
             # When total summate several same values, numeric error will lead variance < 0
@@ -529,7 +528,6 @@ class Observer():
         energy, _ = self.total_energy
         b = ((np.array(self._EDelta) / self._total_weight) - energy * (np.array(self._Delta) / self._total_weight))
         b *= 2
-        b *= N / (N - 1)
         return lattice_conjugate(b)
 
     def _metric_tr(self):
