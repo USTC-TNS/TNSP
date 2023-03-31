@@ -632,11 +632,12 @@ class Observer():
 
         tr = self._trace_metric()
         n = sum(t.norm_num() for row in b for t in row)
-        relative_epsilon = epsilon * tr / n
+        absolute_epsilon = epsilon * tr / n
+        A = lambda v: self._metric_mv(v, absolute_epsilon)
 
         x = np.array([[t.same_shape().zero() for t in row] for row in b])
         # r = b - A@x
-        r = b - self._metric_mv(x, relative_epsilon)
+        r = b - A(x)
         r_square = lattice_prod_sum(lattice_conjugate(r), r).real
         # p = r
         p = r
@@ -653,7 +654,7 @@ class Observer():
                 if t != 0 and error**2 > pAp / b_square:
                     showln("conjugate gradient pAp is small enough")
                     break
-            Ap = self._metric_mv(p, relative_epsilon)
+            Ap = A(p)
             pAp = lattice_prod_sum(lattice_conjugate(p), Ap).real
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square} pAp/b^2={pAp/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
