@@ -644,14 +644,20 @@ class Observer():
         t = 0
         while True:
             if t == step:
+                showln("conjugate gradient max step count reached")
                 break
             if error != 0.0:
                 if error**2 > r_square / b_square:
+                    showln("conjugate gradient r^2 is small enough")
+                    break
+                if t != 0 and error**2 > pAp / b_square:
+                    showln("conjugate gradient pAp is small enough")
                     break
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             Ap = self._metric_mv(p, relative_epsilon)
+            pAp = lattice_prod_sum(lattice_conjugate(p), Ap).real
             # alpha = (r @ r) / (p @ A @ p)
-            alpha = (r_square / lattice_prod_sum(lattice_conjugate(p), Ap).real)
+            alpha = r_square / pAp
             # x = x + alpha * p
             x = x + alpha * p
             # new_r = r - alpha * A @ p
