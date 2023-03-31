@@ -657,7 +657,8 @@ class Observer():
             p = s + beta * p
             t += 1
         showln(f"calculate natural gradient done step={t} gamma/b^2={gamma/b_square}")
-        return lattice_conjugate(self._array_to_delta(np.conj(x)))
+        print(lattice_conjugate(self._array_to_delta(np.conj(x)))[0, 0])
+        exit()
 
     def _delta_to_array(self, delta):
         # Both delta and result array is in bra space
@@ -731,7 +732,8 @@ class Observer():
         result_array = self._pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries)
         x = 2 * result_array
         showln("calculate natural gradient done")
-        return lattice_conjugate(self._array_to_delta(np.conj(x)))
+        print(lattice_conjugate(self._array_to_delta(np.conj(x)))[0, 0])
+        exit()
 
     @staticmethod
     def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries):
