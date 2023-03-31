@@ -653,9 +653,9 @@ class Observer():
                 if t != 0 and error**2 > pAp / b_square:
                     showln("conjugate gradient pAp is small enough")
                     break
-            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             Ap = self._metric_mv(p, relative_epsilon)
             pAp = lattice_prod_sum(lattice_conjugate(p), Ap).real
+            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square} pAp/b^2={pAp/b_square}")
             # alpha = (r @ r) / (p @ A @ p)
             alpha = r_square / pAp
             # x = x + alpha * p
@@ -671,7 +671,7 @@ class Observer():
             # p = r + beta * p
             p = r + beta * p
             t += 1
-        showln(f"calculate natural gradient done step={t} r^2/b^2={r_square/b_square}")
+        showln(f"calculate natural gradient done step={t} r^2/b^2={r_square/b_square} pAp/b^2={pAp/b_square}")
         return x
 
     def _delta_to_array(self, delta):
