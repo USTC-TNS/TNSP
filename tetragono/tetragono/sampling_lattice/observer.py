@@ -449,8 +449,6 @@ class Observer():
         if total_reweight == 0.0 or self._total_weight == 0.0:
             return 0.0, 0.0
 
-        N = self._count
-
         R = self._total_weight
         ER = total_reweight
 
@@ -524,7 +522,6 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        N = self._count
         energy, _ = self.total_energy
         b = ((np.array(self._EDelta) / self._total_weight) - energy * (np.array(self._Delta) / self._total_weight))
         b *= 2
