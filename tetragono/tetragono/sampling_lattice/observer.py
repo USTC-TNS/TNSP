@@ -630,47 +630,35 @@ class Observer():
         # A = metric
         # A x = b
 
-        absolute_epsilon = epsilon * self._metric_tr() / len(b)
+        absolute_epsilon = 0
         A = lambda x: self._metric_mv(x, absolute_epsilon)
 
         x = np.zeros_like(b)
-        # r = b - A@x
         r = b - A(x)
-        r_square = np.dot(np.conj(r), r).real
-        # p = r
-        p = r
+        p = s = A(r)
+        gamma = (np.conj(s) @ s).real
         # loop
         t = 0
         while True:
             if t == step:
                 showln("conjugate gradient max step count reached")
                 break
-            Ap = A(p)
-            pAp = np.dot(np.conj(p), Ap).real
             if error != 0.0:
-                if error**2 > r_square / b_square:
-                    showln("conjugate gradient r^2 is small enough")
+                if error**2 > gamma / b_square:
+                    showln("conjugate gradient gamma is small enough")
                     break
-                if error**2 > pAp / b_square:
-                    showln("conjugate gradient pAp is small enough")
-                    break
-            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square} pAp/b^2={pAp/b_square}")
-            # alpha = (r @ r) / (p @ A @ p)
-            alpha = r_square / pAp
-            # x = x + alpha * p
+            show(f"conjugate gradient step={t} gamma/b^2={gamma/b_square}")
+            q = A(p)
+            alpha = gamma / (np.conj(q) @ q).real
             x = x + alpha * p
-            # new_r = r - alpha * A @ p
-            new_r = r - alpha * Ap
-            new_r_square = np.dot(np.conj(new_r), new_r).real
-            # beta = (new_r @ new_r) / (r @ r)
-            beta = new_r_square / r_square
-            # r = new_r
-            r = new_r
-            r_square = new_r_square
-            # p = r + beta * p
-            p = r + beta * p
+            r = r - alpha * q
+            s = A(r)
+            new_gamma = (np.conj(s) @ s).real
+            beta = new_gamma / gamma
+            gamma = new_gamma
+            p = s + beta * p
             t += 1
-        showln(f"calculate natural gradient done step={t} r^2/b^2={r_square/b_square} pAp/b^2={pAp/b_square}")
+        showln(f"calculate natural gradient done step={t} gamma/b^2={gamma/b_square}")
         return lattice_conjugate(self._array_to_delta(np.conj(x)))
 
     def _delta_to_array(self, delta):
