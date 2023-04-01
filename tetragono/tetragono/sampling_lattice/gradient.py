@@ -119,7 +119,7 @@ def gradient_descent(
         use_natural_gradient=False,
         conjugate_gradient_method_step=20,
         conjugate_gradient_method_error=0.0,
-        metric_inverse_epsilon=0.01,
+        metric_inverse_epsilon=None,
         cache_natural_delta=None,
         use_natural_gradient_by_direct_pseudo_inverse=False,
         scalapack_libraries="libscalapack.so",
