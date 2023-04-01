@@ -141,6 +141,11 @@ def gradient_descent(
         # About Measurement
         measurement=None):
 
+    if metric_inverse_epsilon is not None:
+        showln("===== DEPRECATED WARNING BEGIN =====")
+        showln(" metric_inverse_epsilon deprecated")
+        showln("====== DEPRECATED WARNING END ======")
+
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
     # Gradient step
@@ -270,8 +275,7 @@ def gradient_descent(
                                                                                   scalapack_libraries.split(","))
                     else:
                         grad = observer.natural_gradient_by_conjugate_gradient(conjugate_gradient_method_step,
-                                                                               conjugate_gradient_method_error,
-                                                                               metric_inverse_epsilon)
+                                                                               conjugate_gradient_method_error)
                 else:
                     grad = observer.gradient
 

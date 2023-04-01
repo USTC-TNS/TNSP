@@ -527,25 +527,6 @@ class Observer():
         b *= 2
         return lattice_conjugate(b)
 
-    def _metric_tr(self):
-        """
-        Get the trace of metric.
-
-        Returns
-        -------
-        float
-            The trace of metric.
-        """
-        array = self._delta_to_array(self._Delta) / self._total_weight
-
-        result = 0.0
-        for reweight, _, deltas in self._weights_and_deltas():
-            arrays = self._delta_to_array(deltas) - array
-            result += np.dot(arrays, np.conj(arrays)) * (reweight / self._total_weight)
-        result = mpi_comm.allreduce(result)
-
-        return result
-
     def _weights_and_deltas(self):
         """
         Get the series of weights and deltas, where the weight is <psi|s|psi> / p(s) and deltas is
@@ -565,33 +546,6 @@ class Observer():
             for reweight, Es, deltas in self._Deltas:
                 yield reweight, Es, deltas
 
-    def _metric_mv(self, gradient, epsilon):
-        """
-        Product metric and hole tensors in numpy format.
-
-        Parameters
-        ----------
-        gradient : np.ndarray
-            The hole tensors.
-        epsilon : float
-            The epsilon to avoid singularity of metric.
-
-        Returns
-        -------
-        np.ndarray
-            The product result.
-        """
-        array = self._delta_to_array(self._Delta) / self._total_weight
-
-        result = np.zeros_like(array)
-        for reweight, _, deltas in self._weights_and_deltas():
-            arrays = self._delta_to_array(deltas) - array
-            param = np.dot(arrays, gradient) * (reweight / self._total_weight)
-            result += param * np.conj(arrays)
-        allreduce_buffer(result)
-
-        return result + epsilon * gradient
-
     def natural_gradient(self, step, error, epsilon, first=[True]):
         if first[0]:
             showln("==== DEPRECATED WARNING BEGIN ====")
@@ -601,7 +555,7 @@ class Observer():
             first[0] = False
         return self.natural_gradient_by_conjugate_gradient(step, error, epsilon)
 
-    def natural_gradient_by_conjugate_gradient(self, step, error, epsilon):
+    def natural_gradient_by_conjugate_gradient(self, step, error):
         """
         Get the energy natural gradient for every tensor.
 
@@ -611,8 +565,6 @@ class Observer():
             conjugate gradient method step count.
         error : float
             conjugate gradient method expected error.
-        epsilon : float
-            The epsilon to avoid singularity of metric.
 
         Returns
         -------
@@ -620,17 +572,37 @@ class Observer():
             The gradient for every tensor.
         """
         show("calculating natural gradient")
-        b = np.conj(self._delta_to_array(lattice_conjugate(self.gradient)))
-        b_square = np.dot(np.conj(b), b).real
-        # A = metric
+        energy, _ = self.total_energy
+        delta = self._delta_to_array(self._Delta) / self._total_weight
+
+        dtype = np.dtype(self.owner.Tensor.dtype)
+        btype = self.owner.Tensor.btype
+
+        Delta = []
+        Energy = []
+        for _, energy_s, delta_s in self._weights_and_deltas():
+            Delta.append(self._delta_to_array(delta_s) - delta)
+            Energy.append(energy_s.conjugate() - energy)
+        Delta = np.asfortranarray(Delta, dtype=dtype)
+        Energy = np.asfortranarray(Energy, dtype=dtype)
+
         # A x = b
+        # AT A x = AT b
+        b = Energy  # Ns
+        b_square = mpi_comm.allreduce(np.dot(np.conj(b), b).real)
 
-        absolute_epsilon = epsilon * self._metric_tr() / len(b)
-        A = lambda x: self._metric_mv(x, absolute_epsilon)
+        # A = Delta, NsNp
+        def A(v):
+            return Delta @ v
 
-        x = np.zeros_like(b)
-        r = b - A(x)
-        p = s = A(r)
+        def AT(v):
+            result = np.conj(Delta.T) @ v
+            allreduce_buffer(result)
+            return result
+
+        x = np.zeros_like(Delta[0])  # Np
+        r = b - A(x)  # Ns
+        p = s = AT(r)  # Np
         gamma = (np.conj(s) @ s).real
         # loop
         t = 0
@@ -644,16 +616,18 @@ class Observer():
                     break
             show(f"conjugate gradient step={t} gamma/b^2={gamma/b_square}")
             q = A(p)
-            alpha = gamma / (np.conj(q) @ q).real
+            alpha = gamma / mpi_comm.allreduce((np.conj(q) @ q).real)
             x = x + alpha * p
             r = r - alpha * q
-            s = A(r)
+            s = AT(r)
             new_gamma = (np.conj(s) @ s).real
             beta = new_gamma / gamma
             gamma = new_gamma
             p = s + beta * p
             t += 1
-        showln(f"calculate natural gradient done step={t} gamma/b^2={gamma/b_square} {reason}")
+
+        x = 2 * x
+        showln(f"natural gradient calculated step={t} gamma/b^2={gamma/b_square} {reason}")
         return lattice_conjugate(self._array_to_delta(np.conj(x)))
 
     def _delta_to_array(self, delta):
