@@ -670,7 +670,7 @@ class Observer():
         # New equation is:    NG = (Delta - <Delta>)^{+} [(Delta - <Delta>) (Delta - <Delta>)^{+}]^{-1} (E - <E>)^{+}
         # where g is just:    (Delta - <Delta>)^{+} r (Delta - <Delta>)
         show("calculating natural gradient")
-        energy, _ = self.total_energy
+        energy = self._total_energy_with_imaginary_part()
         delta = self._delta_to_array(self._Delta) / self._total_weight
 
         dtype = np.dtype(self.owner.Tensor.dtype)
