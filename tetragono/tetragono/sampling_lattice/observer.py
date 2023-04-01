@@ -32,11 +32,10 @@ class Observer():
 
     __slots__ = [
         "owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
-        "_restrict_subspace", "_classical_energy", "_start", "_result", "_result_square", "_result_reweight",
-        "_result_reweight_square", "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square",
-        "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
-        "_total_energy_reweight_square", "_total_energy_square_reweight_square", "_total_imaginary_energy_reweight",
-        "_Delta", "_EDelta", "_Deltas", "_pool"
+        "_restrict_subspace", "_classical_energy", "_start", "_result_reweight", "_result_reweight_square",
+        "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square", "_total_log_ws",
+        "_total_energy_reweight", "_total_energy_reweight_square", "_total_energy_square_reweight_square",
+        "_total_imaginary_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_pool"
     ]
 
     def __enter__(self):
@@ -44,14 +43,6 @@ class Observer():
         Enter sampling loop, flush all cached data in the observer object.
         """
         self._start = True
-        self._result = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
-        }
-        self._result_square = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
-        }
         self._result_reweight = {
             name: {positions: 0.0 for positions, observer in observers.items()
                   } for name, observers in self._observer.items()
@@ -68,8 +59,6 @@ class Observer():
         self._total_weight = 0.0
         self._total_weight_square = 0.0
         self._total_log_ws = 0.0
-        self._total_energy = 0.0
-        self._total_energy_square = 0.0
         self._total_energy_reweight = 0.0
         self._total_energy_reweight_square = 0.0
         self._total_energy_square_reweight_square = 0.0
@@ -97,8 +86,6 @@ class Observer():
         buffer = []
         for name, observers in self._observer.items():
             for positions in observers:
-                buffer.append(self._result[name][positions])
-                buffer.append(self._result_square[name][positions])
                 buffer.append(self._result_reweight[name][positions])
                 buffer.append(self._result_reweight_square[name][positions])
                 buffer.append(self._result_square_reweight_square[name][positions])
@@ -106,8 +93,6 @@ class Observer():
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
         buffer.append(self._total_log_ws)
-        buffer.append(self._total_energy)
-        buffer.append(self._total_energy_square)
         buffer.append(self._total_energy_reweight)
         buffer.append(self._total_energy_reweight_square)
         buffer.append(self._total_energy_square_reweight_square)
@@ -121,8 +106,6 @@ class Observer():
         self._total_energy_square_reweight_square = buffer.pop()
         self._total_energy_reweight_square = buffer.pop()
         self._total_energy_reweight = buffer.pop()
-        self._total_energy_square = buffer.pop()
-        self._total_energy = buffer.pop()
         self._total_log_ws = buffer.pop()
         self._total_weight_square = buffer.pop()
         self._total_weight = buffer.pop()
@@ -132,8 +115,6 @@ class Observer():
                 self._result_square_reweight_square[name][positions] = buffer.pop()
                 self._result_reweight_square[name][positions] = buffer.pop()
                 self._result_reweight[name][positions] = buffer.pop()
-                self._result_square[name][positions] = buffer.pop()
-                self._result[name][positions] = buffer.pop()
 
         if self._enable_gradient:
             allreduce_lattice_buffer(self._Delta)
@@ -191,8 +172,7 @@ class Observer():
         self._start = False
 
         # Values collected during observing
-        self._result = None  # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
-        self._result_square = None
+        # dict[str, dict[tuple[tuple[int, int, int], ...], float]]
         self._result_reweight = None
         self._result_reweight_square = None
         self._result_square_reweight_square = None
@@ -200,8 +180,6 @@ class Observer():
         self._total_weight = None  # float
         self._total_weight_square = None
         self._total_log_ws = None
-        self._total_energy = None
-        self._total_energy_square = None
         self._total_energy_reweight = None
         self._total_energy_reweight_square = None
         self._total_energy_square_reweight_square = None
@@ -399,8 +377,6 @@ class Observer():
                     total_value += complex(value)
                 # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
                 to_save = total_value.real
-                self._result[name][positions] += to_save
-                self._result_square[name][positions] += to_save**2
                 self._result_reweight[name][positions] += to_save * reweight
                 self._result_reweight_square[name][positions] += to_save * reweight**2
                 self._result_square_reweight_square[name][positions] += to_save**2 * reweight**2
@@ -410,8 +386,6 @@ class Observer():
                 if self._classical_energy is not None:
                     Es += self._classical_energy(configuration)
                 to_save = Es.real
-                self._total_energy += to_save
-                self._total_energy_square += to_save**2
                 self._total_energy_reweight += to_save * reweight
                 self._total_energy_reweight_square += to_save * reweight**2
                 self._total_energy_square_reweight_square += to_save**2 * reweight**2
@@ -504,6 +478,12 @@ class Observer():
         return self._expect_and_deviation(self._total_energy_reweight, self._total_energy_reweight_square,
                                           self._total_energy_square_reweight_square)
 
+    def _total_energy_with_imaginary_part(self):
+        if self.owner.Tensor.is_complex:
+            return (self._total_energy_reweight + self._total_imaginary_energy_reweight * 1j) / self._total_weight
+        else:
+            return self._total_energy_reweight / self._total_weight
+
     @property
     def energy(self):
         """
@@ -528,10 +508,7 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        if self.owner.Tensor.is_complex:
-            energy = (self._total_energy_reweight + self._total_imaginary_energy_reweight * 1j) / self._total_weight
-        else:
-            energy = self._total_energy_reweight / self._total_weight
+        energy = self._total_energy_with_imaginary_part()
         b = ((np.array(self._EDelta) / self._total_weight) - energy * (np.array(self._Delta) / self._total_weight))
         b *= 2
         return lattice_conjugate(b)
@@ -581,7 +558,7 @@ class Observer():
             The gradient for every tensor.
         """
         show("calculating natural gradient")
-        energy, _ = self.total_energy
+        energy = self._total_energy_with_imaginary_part()
         delta = self._delta_to_array(self._Delta) / self._total_weight
 
         dtype = np.dtype(self.owner.Tensor.dtype)
