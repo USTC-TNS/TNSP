@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.4...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...v0.3.4][v0.3.4]] - 2023-04-01
 
 *** Added
 + *tetragono*: Add common used tensors for parity symmetry and some related tensor in Hubbard model with parity
@@ -19,7 +27,6 @@
 + *tetragono*: Use pseudo inverse directly in conjugate gradient method.
 + *TAT.py*: Use mt19937(64 bit) as the random generator instead of c++ default random generator which may be different
   on different platforms.
-*** Deprecated
 *** Removed
 + *tetragono*: The mirror direct sampling is removed, since it is useless according to the test result.
 *** Fixed
