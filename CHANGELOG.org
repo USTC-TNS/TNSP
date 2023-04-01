@@ -16,6 +16,7 @@
 + *tetragono*: Use better method to estimate the variance of measurement results observed by the sampling method.
 + *tetragono*: Tetragono shell will not refresh the corresponding configuration when creating or loading ap or gm state.
   Since sometimes user may want to share the configuration between states.
++ *tetragono*: Use pseudo inverse directly in conjugate gradient method.
 + *TAT.py*: Use mt19937(64 bit) as the random generator instead of c++ default random generator which may be different
   on different platforms.
 *** Deprecated
@@ -27,8 +28,6 @@
 + *tetraku*: Fix the wrong Hamiltonian for Gibbs state of Fermionic system.
 + *tetraku*: Fix the wrong sign of chemical potential for density matrix of tJ model.
 + *TAT.py*: Fix typo in the class name of parity symmetry.
-+ *tetragono*: Use pseudo inverse directly in conjugate gradient method.
-+ *tetragono*: Fix the termination condition of conjugate gradient method when the matrix is rank deficient.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...v0.3.3][v0.3.3]] - 2022-03-09
 
