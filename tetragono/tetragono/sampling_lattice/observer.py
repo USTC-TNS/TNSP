@@ -625,7 +625,7 @@ class Observer():
         # A = metric
         # A x = b
 
-        absolute_epsilon = 0
+        absolute_epsilon = epsilon * self._metric_tr() / len(b)
         A = lambda x: self._metric_mv(x, absolute_epsilon)
 
         x = np.zeros_like(b)
