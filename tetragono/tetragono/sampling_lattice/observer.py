@@ -636,11 +636,11 @@ class Observer():
         t = 0
         while True:
             if t == step:
-                showln("conjugate gradient max step count reached")
+                reason = "max step count reached"
                 break
             if error != 0.0:
                 if error**2 > gamma / b_square:
-                    showln("conjugate gradient gamma is small enough")
+                    reason = "gamma is small enough"
                     break
             show(f"conjugate gradient step={t} gamma/b^2={gamma/b_square}")
             q = A(p)
@@ -653,7 +653,7 @@ class Observer():
             gamma = new_gamma
             p = s + beta * p
             t += 1
-        showln(f"calculate natural gradient done step={t} gamma/b^2={gamma/b_square}")
+        showln(f"calculate natural gradient done step={t} gamma/b^2={gamma/b_square} {reason}")
         return lattice_conjugate(self._array_to_delta(np.conj(x)))
 
     def _delta_to_array(self, delta):
