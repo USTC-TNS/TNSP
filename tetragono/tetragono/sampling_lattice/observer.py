@@ -35,7 +35,8 @@ class Observer():
         "_restrict_subspace", "_classical_energy", "_start", "_result", "_result_square", "_result_reweight",
         "_result_reweight_square", "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square",
         "_total_log_ws", "_total_energy", "_total_energy_square", "_total_energy_reweight",
-        "_total_energy_reweight_square", "_total_energy_square_reweight_square", "_Delta", "_EDelta", "_Deltas", "_pool"
+        "_total_energy_reweight_square", "_total_energy_square_reweight_square", "_total_imaginary_energy_reweight",
+        "_Delta", "_EDelta", "_Deltas", "_pool"
     ]
 
     def __enter__(self):
@@ -72,6 +73,7 @@ class Observer():
         self._total_energy_reweight = 0.0
         self._total_energy_reweight_square = 0.0
         self._total_energy_square_reweight_square = 0.0
+        self._total_imaginary_energy_reweight = 0.0
         if self._enable_gradient:
             self._Delta = [[self.owner[l1, l2].same_shape().conjugate().zero()
                             for l2 in range(self.owner.L2)]
@@ -109,11 +111,13 @@ class Observer():
         buffer.append(self._total_energy_reweight)
         buffer.append(self._total_energy_reweight_square)
         buffer.append(self._total_energy_square_reweight_square)
+        buffer.append(self._total_imaginary_energy_reweight)
 
         buffer = np.array(buffer)
         allreduce_buffer(buffer)
         buffer = buffer.tolist()
 
+        self._total_imaginary_energy_reweight = buffer.pop()
         self._total_energy_square_reweight_square = buffer.pop()
         self._total_energy_reweight_square = buffer.pop()
         self._total_energy_reweight = buffer.pop()
@@ -201,6 +205,7 @@ class Observer():
         self._total_energy_reweight = None
         self._total_energy_reweight_square = None
         self._total_energy_square_reweight_square = None
+        self._total_imaginary_energy_reweight = None
 
         # Values about gradient collected during observing
         self._Delta = None  # list[list[Tensor]]
@@ -410,6 +415,7 @@ class Observer():
                 self._total_energy_reweight += to_save * reweight
                 self._total_energy_reweight_square += to_save * reweight**2
                 self._total_energy_square_reweight_square += to_save**2 * reweight**2
+                self._total_imaginary_energy_reweight += Es.imag * reweight
                 # Es should be complex here when calculating gradient
 
                 if self._enable_gradient:
@@ -522,7 +528,10 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
-        energy, _ = self.total_energy
+        if self.owner.Tensor.is_complex:
+            energy = (self._total_energy_reweight + self._total_imaginary_energy_reweight * 1j) / self._total_weight
+        else:
+            energy = self._total_energy_reweight / self._total_weight
         b = ((np.array(self._EDelta) / self._total_weight) - energy * (np.array(self._Delta) / self._total_weight))
         b *= 2
         return lattice_conjugate(b)
