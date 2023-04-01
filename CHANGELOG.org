@@ -25,6 +25,7 @@
 *** Fixed
 + *tetragono*: Fix bug in min-SR method when the model is complex, A conjugate operator was missing.
 + *tetragono*: Avoid =nan= in pseudo inverse of min-SR by checking whether the eigenvalue is zero first.
++ *tetragono*: Fix the missing imaginary part of energy when calculating gradient.
 + *tetraku*: Fix the wrong Hamiltonian for Gibbs state of Fermionic system.
 + *tetraku*: Fix the wrong sign of chemical potential for density matrix of tJ model.
 + *TAT.py*: Fix typo in the class name of parity symmetry.
