@@ -566,14 +566,15 @@ class Observer():
 
         Delta = []
         Energy = []
-        for _, energy_s, delta_s in self._weights_and_deltas():
-            Delta.append(self._delta_to_array(delta_s) - delta)
-            Energy.append(energy_s.conjugate() - energy)
+        for reweight_s, energy_s, delta_s in self._weights_and_deltas():
+            param = (reweight_s / self._total_weight)**(1 / 2)
+            Delta.append((self._delta_to_array(delta_s) - delta) * param)
+            Energy.append((energy_s.conjugate() - energy) * param)
         Delta = np.asarray(Delta, dtype=dtype)
         Energy = np.asarray(Energy, dtype=dtype)
 
         # A x = b
-        # DT D x = DT E
+        # DT r D x = DT r E
 
         # Delta, NsNp
         def D(v):
