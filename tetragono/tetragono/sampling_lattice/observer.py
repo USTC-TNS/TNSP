@@ -569,27 +569,31 @@ class Observer():
         for _, energy_s, delta_s in self._weights_and_deltas():
             Delta.append(self._delta_to_array(delta_s) - delta)
             Energy.append(energy_s.conjugate() - energy)
-        Delta = np.asfortranarray(Delta, dtype=dtype)
-        Energy = np.asfortranarray(Energy, dtype=dtype)
+        Delta = np.asarray(Delta, dtype=dtype)
+        Energy = np.asarray(Energy, dtype=dtype)
 
         # A x = b
-        # AT A x = AT b
-        b = Energy  # Ns
-        b_square = mpi_comm.allreduce(np.dot(np.conj(b), b).real)
+        # DT D x = DT E
 
-        # A = Delta, NsNp
-        def A(v):
+        # Delta, NsNp
+        def D(v):
             return Delta @ v
 
-        def AT(v):
+        def DT(v):
             result = np.conj(Delta.T) @ v
             allreduce_buffer(result)
             return result
 
-        x = np.zeros_like(Delta[0])  # Np
-        r = b - A(x)  # Ns
-        p = s = AT(r)  # Np
-        gamma = (np.conj(s) @ s).real
+        def A(v):
+            return DT(D(v))
+
+        b = DT(Energy)
+        b_square = np.dot(np.conj(b), b).real
+
+        x = np.zeros_like(b)
+        r = b - A(x)
+        p = r
+        r_square = np.dot(np.conj(r), r).real
         # loop
         t = 0
         while True:
@@ -597,23 +601,22 @@ class Observer():
                 reason = "max step count reached"
                 break
             if error != 0.0:
-                if error**2 > gamma / b_square:
-                    reason = "gamma is small enough"
+                if error**2 > r_square / b_square:
+                    reason = "r^2 is small enough"
                     break
-            show(f"conjugate gradient step={t} gamma/b^2={gamma/b_square}")
-            q = A(p)
-            alpha = gamma / mpi_comm.allreduce((np.conj(q) @ q).real)
+            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
+            Dp = D(p)
+            alpha = r_square / mpi_comm.allreduce((np.conj(Dp) @ Dp).real)
             x = x + alpha * p
-            r = r - alpha * q
-            s = AT(r)
-            new_gamma = (np.conj(s) @ s).real
-            beta = new_gamma / gamma
-            gamma = new_gamma
-            p = s + beta * p
+            r = r - alpha * DT(Dp)
+            new_r_square = np.dot(np.conj(r), r).real
+            beta = new_r_square / r_square
+            r_square = new_r_square
+            p = r + beta * p
             t += 1
 
         x = 2 * x
-        showln(f"natural gradient calculated step={t} gamma/b^2={gamma/b_square} {reason}")
+        showln(f"natural gradient calculated step={t} r^2/b^2={r_square/b_square} {reason}")
         return lattice_conjugate(self._array_to_delta(np.conj(x)))
 
     def _delta_to_array(self, delta):
