@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
 from ..abstract_lattice import AbstractLattice
-from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer, safe_rename
+from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer, safe_rename, mpi_size, mpi_rank, mpi_comm
 
 
 class Configuration(SingleLayerAuxiliaries):
@@ -758,6 +758,29 @@ class SamplingLattice(AbstractLattice):
             value += old
         self._lattice[l1, l2] = value
 
+    def _expand_dimension_vertical_1(self):
+        for l1, l2 in self.sites():
+            if l1 != 0 and l1 % 2 == 0:
+                yield l1 - 1, l2
+
+    def _expand_dimension_vertical_2(self):
+        for l1, l2 in self.sites():
+            if l1 != 0 and l1 % 2 == 1:
+                yield l1 - 1, l2
+
+    def _expand_dimension_horizontal_1(self):
+        for l1, l2 in self.sites():
+            if l2 != 0 and l2 % 2 == 0:
+                yield l1, l2 - 1
+
+    def _expand_dimension_horizontal_2(self):
+        for l1, l2 in self.sites():
+            if l2 != 0 and l2 % 2 == 1:
+                yield l1, l2 - 1
+
+    def _bcast_site_from(self, l1, l2, root):
+        self[l1, l2] = mpi_comm.bcast(self[l1, l2], root=root)
+
     def expand_dimension(self, new_dimension, epsilon):
         """
         Expand dimension of sampling lattice. If new_dimension equals to the origin dimension and epsilon is zero, this
@@ -770,18 +793,37 @@ class SamplingLattice(AbstractLattice):
         epsilon : float
             The relative error added into tensor.
         """
-        for l1, l2 in self.sites():
-            if l1 != 0 and l1 % 2 == 0:
-                self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
-        for l1, l2 in self.sites():
-            if l1 != 0 and l1 % 2 == 1:
-                self._expand_vertical(l1 - 1, l2, new_dimension, epsilon)
-        for l1, l2 in self.sites():
-            if l2 != 0 and l2 % 2 == 0:
-                self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
-        for l1, l2 in self.sites():
-            if l2 != 0 and l2 % 2 == 1:
-                self._expand_horizontal(l1, l2 - 1, new_dimension, epsilon)
+        for index, [l1, l2] in enumerate(self._expand_dimension_vertical_1()):
+            if index % mpi_size == mpi_rank:
+                self._expand_vertical(l1, l2, new_dimension, epsilon)
+        for index, [l1, l2] in enumerate(self._expand_dimension_vertical_1()):
+            root = index % mpi_size
+            self._bcast_site_from(l1, l2, root)
+            self._bcast_site_from(l1 + 1, l2, root)
+
+        for index, [l1, l2] in enumerate(self._expand_dimension_vertical_2()):
+            if index % mpi_size == mpi_rank:
+                self._expand_vertical(l1, l2, new_dimension, epsilon)
+        for index, [l1, l2] in enumerate(self._expand_dimension_vertical_2()):
+            root = index % mpi_size
+            self._bcast_site_from(l1, l2, root)
+            self._bcast_site_from(l1 + 1, l2, root)
+
+        for index, [l1, l2] in enumerate(self._expand_dimension_horizontal_1()):
+            if index % mpi_size == mpi_rank:
+                self._expand_horizontal(l1, l2, new_dimension, epsilon)
+        for index, [l1, l2] in enumerate(self._expand_dimension_horizontal_1()):
+            root = index % mpi_size
+            self._bcast_site_from(l1, l2, root)
+            self._bcast_site_from(l1, l2 + 1, root)
+
+        for index, [l1, l2] in enumerate(self._expand_dimension_horizontal_2()):
+            if index % mpi_size == mpi_rank:
+                self._expand_horizontal(l1, l2, new_dimension, epsilon)
+        for index, [l1, l2] in enumerate(self._expand_dimension_horizontal_2()):
+            root = index % mpi_size
+            self._bcast_site_from(l1, l2, root)
+            self._bcast_site_from(l1, l2 + 1, root)
 
     def _expand_horizontal(self, l1, l2, new_dimension, epsilon):
         left = self[l1, l2]
