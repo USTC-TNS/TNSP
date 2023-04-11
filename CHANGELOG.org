@@ -4,6 +4,7 @@
 
 *** Added
 *** Changed
++ *tetragono*: =new_dimension= in simple update will be intepreted as the threshold of singular value when it is float.
 *** Deprecated
 *** Removed
 *** Fixed
