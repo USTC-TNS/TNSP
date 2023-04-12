@@ -316,6 +316,7 @@ class SimpleUpdateLattice(AbstractLattice):
             merged_dimensions = {}  # map[tuple[int, int], int]
             result = set()  # set[tuple[tuple[int, int, int], ...]]
             # Try to add every positions in the set
+            not_first = False
             for positions in sorted(input_plan):
                 # Create a copy for auxiliary variables
                 used_orbits_tmp = used_orbits.copy()
@@ -330,7 +331,7 @@ class SimpleUpdateLattice(AbstractLattice):
                         if site not in merged_dimensions_tmp:
                             merged_dimensions_tmp[site] = 1
                         merged_dimensions_tmp[site] *= self.physics_edges[position].dimension
-                        if merged_dimensions_tmp[site] > threshold:
+                        if not_first and merged_dimensions_tmp[site] > threshold:
                             # Check failed, break the loop, and it will try to add next positions to result
                             break
                 else:
@@ -338,6 +339,7 @@ class SimpleUpdateLattice(AbstractLattice):
                     result.add(positions)
                     used_orbits = used_orbits_tmp
                     merged_dimensions = merged_dimensions_tmp
+                not_first = True
             input_plan -= result
             yield result
 

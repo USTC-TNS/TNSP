@@ -11,6 +11,8 @@
 *** Deprecated
 *** Removed
 *** Fixed
++ *tetragono*: Fix a bug in merging physical edges during simple update. When the hamiltonian on single site with a
+  large dimension is operated, the dead loop would occur previously.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...v0.3.4][v0.3.5]] - 2023-04-01
 
