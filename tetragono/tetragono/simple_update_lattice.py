@@ -23,6 +23,15 @@ from .abstract_lattice import AbstractLattice
 from .common_toolkit import show, showln, mpi_comm, mpi_rank, mpi_size
 
 
+def max_parallel_size_shown(state, pool=set()):
+    state_id = id(state)
+    if state_id in pool:
+        return True
+    else:
+        pool.add(state_id)
+        return False
+
+
 class SimpleUpdateLatticeEnvironment:
     """
     Environment handler for simple update lattice.
@@ -466,7 +475,8 @@ class SimpleUpdateLattice(AbstractLattice):
             updaters = remained_updaters
             # Append this bundle to updaters_bundles.
             updaters_bundles.append((this_bundle, coordinates_map))
-        showln(f"Simple update max parallel size is {max_index}")
+        if not max_parallel_size_shown(self):
+            showln(f"Simple update max parallel size is {max_index}")
 
         # Run simple update
         for step in range(total_step):
