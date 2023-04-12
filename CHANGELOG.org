@@ -6,6 +6,7 @@
 + *TAT.hpp*: Add =clear_fermi_symmetry= for tensor with fermionic symmetry, which convert the tensor to the simplest
   fermionic tensor, tensor with parity symmetry.
 + *TAT.py*: Add python binding for =clear_fermi_symmetry=.
++ *tetragono*: Check whether the state is =None= when dump the state to file to avoid overwriting file by mistake.
 *** Changed
 + *tetragono*: =new_dimension= in simple update will be intepreted as the threshold of singular value when it is float.
 *** Deprecated

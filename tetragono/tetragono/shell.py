@@ -253,7 +253,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_su_dump)
     def su_dump(self, name):
-        write_to_file(self.su, name)
+        if self.su is None:
+            showln("su is None")
+        else:
+            write_to_file(self.su, name)
 
     def do_su_load(self, line):
         """
@@ -373,7 +376,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_ex_dump)
     def ex_dump(self, name):
-        write_to_file(self.ex, name)
+        if self.ex is None:
+            showln("ex is None")
+        else:
+            write_to_file(self.ex, name)
 
     def do_ex_load(self, line):
         """
@@ -436,7 +442,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_gm_dump)
     def gm_dump(self, name):
-        write_to_file(self.gm, name)
+        if self.gm is None:
+            showln("gm is None")
+        else:
+            write_to_file(self.gm, name)
 
     def do_gm_conf_dump(self, line):
         """
@@ -452,7 +461,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_gm_conf_dump)
     def gm_conf_dump(self, name):
-        write_to_file(self.gm_conf, name)
+        if self.gm_conf is None:
+            showln("gm_conf is None")
+        else:
+            write_to_file(self.gm_conf, name)
 
     def do_gm_load(self, line):
         """
@@ -588,7 +600,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_ap_dump)
     def ap_dump(self, name):
-        write_to_file(self.ap, name)
+        if self.ap is None:
+            showln("ap is None")
+        else:
+            write_to_file(self.ap, name)
 
     def do_ap_load(self, line):
         """
@@ -765,7 +780,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @sharedoc(do_ap_conf_dump)
     def ap_conf_dump(self, name):
-        write_to_file(self.ap_conf, name)
+        if self.ap_conf is None:
+            showln("ap_conf is None")
+        else:
+            write_to_file(self.ap_conf, name)
 
     def do_ap_conf_load(self, line):
         """
