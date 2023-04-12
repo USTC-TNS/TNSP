@@ -833,6 +833,7 @@ namespace TAT {
                .def("norm_sum", &T::template norm<1>, "Get 1 norm, namely summation of all element absolute value")
                .def("norm_2", &T::template norm<2>, "Get 2 norm")
                .def("clear_symmetry", &T::clear_symmetry, "Convert symmetry tensor to non-symmetry tensor")
+               .def("clear_fermi_symmetry", &T::clear_fermi_symmetry, "Convert fermi symmetry tensor to parity symmetry tensor")
                .def(
                      "edge_rename",
                      [](const T& tensor, const std::unordered_map<DefaultName, DefaultName>& dictionary) {

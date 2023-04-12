@@ -64,7 +64,7 @@ namespace TAT {
             return new std::byte[bytes];
          }
          virtual void do_deallocate(void* p, std::size_t, std::size_t) override {
-            delete[]((std::byte*)p);
+            delete[] ((std::byte*)p);
          }
          virtual bool do_is_equal(const memory_resource& other) const override {
             return this == &other;

@@ -254,15 +254,9 @@ namespace TAT {
       template<typename T>
       using map_from_name = std::unordered_map<name_t, T>;
 #define TAT_DEFINE_TENSOR_AT(ARG) \
-   [[nodiscard]] const scalar_t& at(const ARG& arg) const { \
-      return at<>(arg); \
-   } \
-   [[nodiscard]] scalar_t& at(const ARG& arg) { \
-      return at<>(arg); \
-   } \
-   [[nodiscard]] const scalar_t& const_at(const ARG& arg) const { \
-      return const_at<>(arg); \
-   }
+   [[nodiscard]] const scalar_t& at(const ARG& arg) const { return at<>(arg); } \
+   [[nodiscard]] scalar_t& at(const ARG& arg) { return at<>(arg); } \
+   [[nodiscard]] const scalar_t& const_at(const ARG& arg) const { return const_at<>(arg); }
       // coord may be ambiguous to point, because position may be ambiguous to symmetry
       // TAT_DEFINE_TENSOR_AT(std::vector<typename edge_t::coord_t>)
       TAT_DEFINE_TENSOR_AT(std::vector<typename edge_t::index_t>)
@@ -605,6 +599,13 @@ namespace TAT {
        * \note it is dangerous for fermi tensor
        */
       [[nodiscard]] Tensor<ScalarType, NoSymmetry, Name> clear_symmetry() const;
+
+      /**
+       * Convert fermionic symmetry tensor to parity symmetry tensor
+       *
+       * \note it is invalid for bose tensor
+       */
+      [[nodiscard]] Tensor<ScalarType, ParitySymmetry, Name> clear_fermi_symmetry() const;
 
     public:
       // Operators
