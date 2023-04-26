@@ -258,7 +258,7 @@ $0=\frac{\partial L}{\partial \delta x_i} = \frac{\partial E}{\partial x_i} + \l
 $0=\frac{\partial L}{\partial \delta x_i^*} = \frac{\partial E}{\partial x_i^*} + \lambda g^{ij} \delta x_j$
 
 So
-$\delta x_i = -\frac{1}{\lambda} g_{ij}\frac{E}{\partial x_j^*}$,
+$\delta x_i = -\frac{1}{\lambda} g_{ij}\frac{\partial E}{\partial x_j^*}$,
 $\delta x_i^* = - \frac{1}{\lambda} g_{ij}^* \frac{\partial E}{\partial x_j}$
 
 *** Metric conversion
