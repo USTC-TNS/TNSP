@@ -598,7 +598,7 @@ namespace TAT {
        *
        * \note it is dangerous for fermi tensor
        */
-      [[nodiscard]] Tensor<ScalarType, NoSymmetry, Name> clear_symmetry() const;
+      [[nodiscard]] Tensor<ScalarType, NoSymmetry, Name> clear_bose_symmetry() const;
 
       /**
        * Convert fermionic symmetry tensor to parity symmetry tensor
@@ -606,6 +606,15 @@ namespace TAT {
        * \note it is invalid for bose tensor
        */
       [[nodiscard]] Tensor<ScalarType, ParitySymmetry, Name> clear_fermi_symmetry() const;
+
+      [[nodiscard]] auto clear_symmetry() const {
+         if constexpr (symmetry_t::is_fermi_symmetry) {
+            return clear_fermi_symmetry();
+         } else {
+            return clear_bose_symmetry();
+         }
+      }
+
 
     public:
       // Operators

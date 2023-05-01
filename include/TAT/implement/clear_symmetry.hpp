@@ -27,7 +27,7 @@
 
 namespace TAT {
    template<typename ScalarType, typename Symmetry, typename Name>
-   Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_symmetry() const {
+   Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_bose_symmetry() const {
       auto pmr_guard = scope_resource(default_buffer_size);
       if constexpr (Symmetry::is_fermi_symmetry) {
          detail::warning("Clearing a fermi tensor's symmetry, it is dangerous if you do not take care of edge order");

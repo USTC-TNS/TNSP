@@ -9,6 +9,9 @@
 + *tetragono*: Check whether the state is =None= when dump the state to file to avoid overwriting file by mistake.
 *** Changed
 + *tetragono*: =new_dimension= in simple update will be intepreted as the threshold of singular value when it is float.
++ *TAT.hpp, TAT.py*: =clear_symmetry= will return NoSymmetry tensor or ParityTensor based on whether the original tensor
+  is fermionic. The previous behavior would give NoSymmetry tensor only, which is dangerous for fermionic tensor, is
+  renamed to =clear_bose_symmetry=.
 *** Deprecated
 *** Removed
 *** Fixed
