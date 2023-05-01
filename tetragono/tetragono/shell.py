@@ -64,16 +64,35 @@ class Config():
                 self.args.append(v)
 
 
-def sharedoc(func_with_doc):
+class AutoCmdMeta(type):
 
-    def decorator(func_without_doc):
-        func_without_doc.__doc__ = func_with_doc.__doc__
-        return func_without_doc
+    def _auto_func_generator(name, doc):
 
-    return decorator
+        def _auto_func(self, line):
+            config = Config(line)
+            return getattr(self, name)(*config.args, **config.kwargs)
+
+        _auto_func.__doc__ = doc
+        return _auto_func
+
+    def __new__(cls, name, bases, attrs):
+        auto_attrs = {}
+        for key, value in attrs.items():
+            if hasattr(value, "_auto_cmd_meta_mark"):
+                auto_attrs[f"do_{key}"] = cls._auto_func_generator(key, value.__doc__)
+
+        return type.__new__(cls, name, bases, attrs | auto_attrs)
 
 
-class TetragonoCommandApp(cmd.Cmd):
+class AutoCmd(cmd.Cmd, metaclass=AutoCmdMeta):
+
+    @staticmethod
+    def decorator(function):
+        function._auto_cmd_meta_mark = None
+        return function
+
+
+class TetragonoCommandApp(AutoCmd):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -135,7 +154,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         return True
 
-    def do_seed(self, line):
+    @AutoCmd.decorator
+    def seed(self, random_seed):
         """
         Set random seed.
 
@@ -144,11 +164,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         random_seed : int
             The new random seed.
         """
-        config = Config(line)
-        self.seed(*config.args, **config.kwargs)
-
-    @sharedoc(do_seed)
-    def seed(self, random_seed):
         TAT.random.seed(random_seed)
 
     @staticmethod
@@ -161,7 +176,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             state = lattice_type(abstract_state(*args, **kwargs))
         return state
 
-    def do_numpy_hamiltonian(self, line):
+    @AutoCmd.decorator
+    def numpy_hamiltonian(self, file, model, *args, **kwargs):
         """
         Export hamiltonian as a numpy array to a file.
 
@@ -174,18 +190,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.numpy_hamiltonian(*config.args, **config.kwargs)
-
-    @sharedoc(do_numpy_hamiltonian)
-    def numpy_hamiltonian(self, file, model, *args, **kwargs):
         state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
         result = state.numpy_hamiltonian()
         if result is not None:
             write_to_file(result, file)
         return result
 
-    def do_ex_create(self, line):
+    @AutoCmd.decorator
+    def ex_create(self, *args, **kwargs):
         """
         Create a state used for exact update.
 
@@ -196,11 +208,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.ex_create(*config.args, **config.kwargs)
-
-    @sharedoc(do_ex_create)
-    def ex_create(self, *args, **kwargs):
         state = self.ex_ap_create(ExactState, *args, **kwargs)
         if state is not None:
             self.ex = state
@@ -219,7 +226,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             state[l1, l2] /= state[l1, l2].norm_max()
         return state
 
-    def do_su_create(self, line):
+    @AutoCmd.decorator
+    def su_create(self, *args, **kwargs):
         """
         Create a lattice used for simple update.
 
@@ -230,16 +238,12 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.su_create(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_create)
-    def su_create(self, *args, **kwargs):
         state = self.su_gm_create(SimpleUpdateLattice, *args, **kwargs)
         if state is not None:
             self.su = state
 
-    def do_su_dump(self, line):
+    @AutoCmd.decorator
+    def su_dump(self, name):
         """
         Dump the simple update lattice into file.
 
@@ -248,17 +252,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.su_dump(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_dump)
-    def su_dump(self, name):
         if self.su is None:
             showln("su is None")
         else:
             write_to_file(self.su, name)
 
-    def do_su_load(self, line):
+    @AutoCmd.decorator
+    def su_load(self, name):
         """
         Load the simple update lattice from file.
 
@@ -267,14 +267,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.su_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_load)
-    def su_load(self, name):
         self.su = read_from_file(name)
 
-    def do_su_update(self, line):
+    @AutoCmd.decorator
+    def su_update(self, total_step, delta_tau, new_dimension):
         """
         Do simple update.
 
@@ -287,14 +283,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         new_dimension : int
             The new cut dimension used in simple update, or the amplitude of dimension expandance.
         """
-        config = Config(line)
-        self.su_update(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_update)
-    def su_update(self, total_step, delta_tau, new_dimension):
         self.su.update(total_step, delta_tau, new_dimension)
 
-    def do_su_energy(self, line):
+    @AutoCmd.decorator
+    def su_energy(self, cut_dimension):
         """
         Calculate simple update lattice with double layer auxiliaries.
 
@@ -303,37 +295,25 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         cut_dimension : int
             The cut_dimension used in double layer auxiliaries.
         """
-        config = Config(line)
-        self.su_energy(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_energy)
-    def su_energy(self, cut_dimension):
         self.su.initialize_auxiliaries(cut_dimension)
         showln("Simple update lattice energy is", self.su.observe_energy())
 
-    def do_su_to_ex(self, line):
+    @AutoCmd.decorator
+    def su_to_ex(self):
         """
         Convert simple update lattice to exact lattice.
         """
-        config = Config(line)
-        self.su_to_ex(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_to_ex)
-    def su_to_ex(self):
         self.ex = conversion.simple_update_lattice_to_exact_state(self.su)
 
-    def do_su_to_gm(self, line):
+    @AutoCmd.decorator
+    def su_to_gm(self):
         """
         Convert simple update lattice to sampling lattice.
         """
-        config = Config(line)
-        self.su_to_gm(*config.args, **config.kwargs)
-
-    @sharedoc(do_su_to_gm)
-    def su_to_gm(self):
         self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
 
-    def do_ex_update(self, line):
+    @AutoCmd.decorator
+    def ex_update(self, total_step, approximate_energy):
         """
         Do exact update.
 
@@ -344,25 +324,17 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         approximate_energy : float
             The approximate energy per site, it should ensure the ground state energy is the largest after shifting.
         """
-        config = Config(line)
-        self.ex_update(*config.args, **config.kwargs)
-
-    @sharedoc(do_ex_update)
-    def ex_update(self, total_step, approximate_energy):
         self.ex.update(total_step, approximate_energy)
 
-    def do_ex_energy(self, line):
+    @AutoCmd.decorator
+    def ex_energy(self):
         """
         Calculate exact energy.
         """
-        config = Config(line)
-        self.ex_energy(*config.args, **config.kwargs)
-
-    @sharedoc(do_ex_energy)
-    def ex_energy(self):
         showln("Exact state energy is", self.ex.observe_energy())
 
-    def do_ex_dump(self, line):
+    @AutoCmd.decorator
+    def ex_dump(self, name):
         """
         Dump the exact update lattice into file.
 
@@ -371,17 +343,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.ex_dump(*config.args, **config.kwargs)
-
-    @sharedoc(do_ex_dump)
-    def ex_dump(self, name):
         if self.ex is None:
             showln("ex is None")
         else:
             write_to_file(self.ex, name)
 
-    def do_ex_load(self, line):
+    @AutoCmd.decorator
+    def ex_load(self, name):
         """
         Load the exact update lattice from file.
 
@@ -390,14 +358,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.ex_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_ex_load)
-    def ex_load(self, name):
         self.ex = read_from_file(name)
 
-    def do_gm_create(self, line):
+    @AutoCmd.decorator
+    def gm_create(self, *args, **kwargs):
         """
         Create a lattice used for gradient method.
 
@@ -408,27 +372,19 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.gm_create(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_create)
-    def gm_create(self, *args, **kwargs):
         state = self.su_gm_create(SamplingLattice, *args, **kwargs)
         if state is not None:
             self.gm = state
 
-    def do_gm_run(self, line):
+    @AutoCmd.decorator
+    def gm_run(self, *args, **kwargs):
         """
         Do gradient descent. see sampling_lattice/gradient.py for details.
         """
-        config = Config(line)
-        self.gm_run(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_run)
-    def gm_run(self, *args, **kwargs):
         gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
 
-    def do_gm_dump(self, line):
+    @AutoCmd.decorator
+    def gm_dump(self, name):
         """
         Dump the sampling lattice into file.
 
@@ -437,17 +393,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.gm_dump(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_dump)
-    def gm_dump(self, name):
         if self.gm is None:
             showln("gm is None")
         else:
             write_to_file(self.gm, name)
 
-    def do_gm_conf_dump(self, line):
+    @AutoCmd.decorator
+    def gm_conf_dump(self, name):
         """
         Dump the sampling lattice configuration into file.
 
@@ -456,17 +408,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.gm_conf_dump(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_conf_dump)
-    def gm_conf_dump(self, name):
         if self.gm_conf is None:
             showln("gm_conf is None")
         else:
             write_to_file(self.gm_conf, name)
 
-    def do_gm_load(self, line):
+    @AutoCmd.decorator
+    def gm_load(self, name):
         """
         Load the sampling lattice from file.
 
@@ -475,14 +423,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.gm_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_load)
-    def gm_load(self, name):
         self.gm = read_from_file(name)
 
-    def do_gm_conf_load(self, line):
+    @AutoCmd.decorator
+    def gm_conf_load(self, name):
         """
         Load the sampling lattice configuration from file.
 
@@ -491,14 +435,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.gm_conf_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_conf_load)
-    def gm_conf_load(self, name):
         self.gm_conf = read_from_file(name)
 
-    def do_gm_conf_create(self, line):
+    @AutoCmd.decorator
+    def gm_conf_create(self, module_name):
         """
         Create configuration of sampling lattice.
 
@@ -507,29 +447,21 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         module_name : str
             The module name to create initial configuration of sampling lattice.
         """
-        config = Config(line)
-        self.gm_conf_create(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_conf_create)
-    def gm_conf_create(self, module_name):
         with seed_differ:
             # This configuration should never be used, so cut dimension is -1
             configuration = gm_Configuration(self.gm, -1)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.gm_conf = mpi_comm.allgather(configuration.export_configuration())
 
-    def do_gm_clear_symmetry(self, line):
+    @AutoCmd.decorator
+    def gm_clear_symmetry(self):
         """
         Clear the symmetry of sampling lattice.
         """
-        config = Config(line)
-        self.gm_clear_symmetry(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_clear_symmetry)
-    def gm_clear_symmetry(self):
         self.gm = self.gm.clear_symmetry()
 
-    def do_gm_hamiltonian(self, line):
+    @AutoCmd.decorator
+    def gm_hamiltonian(self, model, *args, **kwargs):
         """
         Replace the hamiltonian of the sampling lattice with another one.
 
@@ -540,15 +472,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.gm_hamiltonian(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_hamiltonian)
-    def gm_hamiltonian(self, model, *args, **kwargs):
         new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
         self.gm._hamiltonians = new_state._hamiltonians
 
-    def do_gm_expand(self, line):
+    @AutoCmd.decorator
+    def gm_expand(self, new_dimension, epsilon):
         """
         Expand dimension of sampling lattice.
 
@@ -559,25 +487,17 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         epsilon : float
             The relative error added into tensor.
         """
-        config = Config(line)
-        self.gm_expand(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_expand)
-    def gm_expand(self, new_dimension, epsilon):
         self.gm.expand_dimension(new_dimension, epsilon)
 
-    def do_gm_to_ex(self, line):
+    @AutoCmd.decorator
+    def gm_to_ex(self):
         """
         Convert sampling lattice to exact lattice.
         """
-        config = Config(line)
-        self.gm_to_ex(*config.args, **config.kwargs)
-
-    @sharedoc(do_gm_to_ex)
-    def gm_to_ex(self):
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
-    def do_ap_create(self, line):
+    @AutoCmd.decorator
+    def ap_create(self, *args, **kwargs):
         """
         Create a ansatz product state.
 
@@ -588,16 +508,12 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.ap_create(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_create)
-    def ap_create(self, *args, **kwargs):
         state = self.ex_ap_create(AnsatzProductState, *args, **kwargs)
         if state is not None:
             self.ap = state
 
-    def do_ap_dump(self, line):
+    @AutoCmd.decorator
+    def ap_dump(self, name):
         """
         Dump the ansatz product state into file.
 
@@ -606,17 +522,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.ap_dump(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_dump)
-    def ap_dump(self, name):
         if self.ap is None:
             showln("ap is None")
         else:
             write_to_file(self.ap, name)
 
-    def do_ap_load(self, line):
+    @AutoCmd.decorator
+    def ap_load(self, name):
         """
         Load the ansatz product state from file.
 
@@ -625,14 +537,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.ap_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_load)
-    def ap_load(self, name):
         self.ap = read_from_file(name)
 
-    def do_ap_ansatz_set(self, line):
+    @AutoCmd.decorator
+    def ap_ansatz_set(self, name, ansatz, *args, **kwargs):
         """
         Set the ansatz for ansatz product state.
 
@@ -645,18 +553,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to ansatz creater function.
         """
-        config = Config(line)
-        self.ap_ansatz_set(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_ansatz_set)
-    def ap_ansatz_set(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
         if len(args) == 1 and args[0] == "help":
             showln(create_ansatz.__doc__.replace("\n", "\n    "))
         else:
             self.ap.set_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
 
-    def do_ap_ansatz_add(self, line):
+    @AutoCmd.decorator
+    def ap_ansatz_add(self, name, ansatz, *args, **kwargs):
         """
         Add the ansatz for ansatz product state.
 
@@ -669,18 +573,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to ansatz creater function.
         """
-        config = Config(line)
-        self.ap_ansatz_add(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_ansatz_add)
-    def ap_ansatz_add(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
         if len(args) == 1 and args[0] == "help":
             showln(create_ansatz.__doc__.replace("\n", "\n    "))
         else:
             self.ap.add_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
 
-    def do_ap_ansatz_mul(self, line):
+    @AutoCmd.decorator
+    def ap_ansatz_mul(self, name, ansatz, *args, **kwargs):
         """
         Mul the ansatz for ansatz product state.
 
@@ -693,29 +593,21 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to ansatz creater function.
         """
-        config = Config(line)
-        self.ap_ansatz_mul(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_ansatz_mul)
-    def ap_ansatz_mul(self, name, ansatz, *args, **kwargs):
         create_ansatz = get_imported_function(ansatz, "ansatz")
         if len(args) == 1 and args[0] == "help":
             showln(create_ansatz.__doc__.replace("\n", "\n    "))
         else:
             self.ap.mul_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
 
-    def do_ap_ansatz_show(self, line):
+    @AutoCmd.decorator
+    def ap_ansatz_show(self):
         """
         Show the ansatz for ansatz product state.
         """
-        config = Config(line)
-        self.ap_ansatz_show(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_ansatz_show)
-    def ap_ansatz_show(self):
         self.ap.show_ansatz()
 
-    def do_ap_ansatz_lock(self, line):
+    @AutoCmd.decorator
+    def ap_ansatz_lock(self, path=""):
         """
         Lock the ansatz for ansatz product state.
 
@@ -724,14 +616,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         path : str, default=""
             The path of ansatz to lock.
         """
-        config = Config(line)
-        self.ap_ansatz_lock(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_ansatz_lock)
-    def ap_ansatz_lock(self, path=""):
         self.ap.ansatz.lock(path)
 
-    def do_ap_ansatz_unlock(self, line):
+    @AutoCmd.decorator
+    def ap_ansatz_unlock(self, path=""):
         """
         Unlock the ansatz for ansatz product state.
 
@@ -740,25 +628,17 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         path : str, default=""
             The path of ansatz to unlock.
         """
-        config = Config(line)
-        self.ap_ansatz_unlock(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_ansatz_unlock)
-    def ap_ansatz_unlock(self, path=""):
         self.ap.ansatz.unlock(path)
 
-    def do_ap_run(self, line):
+    @AutoCmd.decorator
+    def ap_run(self, *args, **kwargs):
         """
         Do gradient descent on ansatz product state. see ansatz_product_state/gradient.py for details.
         """
-        config = Config(line)
-        self.ap_run(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_run)
-    def ap_run(self, *args, **kwargs):
         ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf)
 
-    def do_ap_conf_create(self, line):
+    @AutoCmd.decorator
+    def ap_conf_create(self, module_name):
         """
         Create configuration of ansatz product state.
 
@@ -767,17 +647,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         module_name : str
             The module name to create initial configuration of ansatz product state.
         """
-        config = Config(line)
-        self.ap_conf_create(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_conf_create)
-    def ap_conf_create(self, module_name):
         with seed_differ:
             configuration = ap_Configuration(self.ap)
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.ap_conf = mpi_comm.allgather(configuration.export_configuration())
 
-    def do_ap_conf_dump(self, line):
+    @AutoCmd.decorator
+    def ap_conf_dump(self, name):
         """
         Dump the ansatz product state configuration into file.
 
@@ -786,17 +662,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.ap_conf_dump(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_conf_dump)
-    def ap_conf_dump(self, name):
         if self.ap_conf is None:
             showln("ap_conf is None")
         else:
             write_to_file(self.ap_conf, name)
 
-    def do_ap_conf_load(self, line):
+    @AutoCmd.decorator
+    def ap_conf_load(self, name):
         """
         Load the ansatz product state configuration from file.
 
@@ -805,14 +677,10 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        config = Config(line)
-        self.ap_conf_load(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_conf_load)
-    def ap_conf_load(self, name):
         self.ap_conf = read_from_file(name)
 
-    def do_ap_hamiltonian(self, line):
+    @AutoCmd.decorator
+    def ap_hamiltonian(self, model, *args, **kwargs):
         """
         Replace the hamiltonian of the ansatz product state with another one.
 
@@ -823,11 +691,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to model creater function.
         """
-        config = Config(line)
-        self.ap_hamiltonian(*config.args, **config.kwargs)
-
-    @sharedoc(do_ap_hamiltonian)
-    def ap_hamiltonian(self, model, *args, **kwargs):
         new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
         self.ap._hamiltonians = new_state._hamiltonians
 
