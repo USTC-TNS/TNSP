@@ -518,6 +518,17 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             configuration = get_imported_function(module_name, "initial_configuration")(configuration)
             self.gm_conf = mpi_comm.allgather(configuration.export_configuration())
 
+    def do_gm_clear_symmetry(self, line):
+        """
+        Clear the symmetry of sampling lattice.
+        """
+        config = Config(line)
+        self.gm_clear_symmetry(*config.args, **config.kwargs)
+
+    @sharedoc(do_gm_clear_symmetry)
+    def gm_clear_symmetry(self):
+        self.gm = self.gm.clear_symmetry()
+
     def do_gm_hamiltonian(self, line):
         """
         Replace the hamiltonian of the sampling lattice with another one.
@@ -896,6 +907,7 @@ else:
     gm_conf_load = app.gm_conf_load
     gm_conf_create = app.gm_conf_create
     gm_hamiltonian = app.gm_hamiltonian
+    gm_clear_symmetry = app.gm_clear_symmetry
 
     ap_create = app.ap_create
     ap_dump = app.ap_dump

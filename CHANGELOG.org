@@ -7,6 +7,7 @@
   fermionic tensor, tensor with parity symmetry.
 + *TAT.py*: Add python binding for =clear_fermi_symmetry=.
 + *tetragono*: Check whether the state is =None= when dump the state to file to avoid overwriting file by mistake.
++ *tetragono*: Add =gm_clear_symmetry= for sampling lattice.
 *** Changed
 + *tetragono*: =new_dimension= in simple update will be intepreted as the threshold of singular value when it is float.
 + *TAT.hpp, TAT.py*: =clear_symmetry= will return NoSymmetry tensor or ParityTensor based on whether the original tensor

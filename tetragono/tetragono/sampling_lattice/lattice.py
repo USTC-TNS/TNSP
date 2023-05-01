@@ -19,6 +19,7 @@
 from copyreg import _slotnames
 import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
+from ..abstract_state import AbstractState
 from ..abstract_lattice import AbstractLattice
 from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer, safe_rename, mpi_size, mpi_rank, mpi_comm
 
@@ -915,3 +916,47 @@ class SamplingLattice(AbstractLattice):
         Bcast the lattice, to ensure the data keep the same across different process.
         """
         bcast_lattice_buffer(self._lattice, root=root)
+
+    def clear_symmetry(self):
+        """
+        Clear symmetry for the model
+
+        Returns
+        -------
+        SamplingLattice
+            The result lattice with NoSymmetry tensor(for bosonic system) or ParitySymmetry tensor(for fermionic system).
+        """
+        lattice = [[self[l1, l2].clear_symmetry() for l2 in range(self.L2)] for l1 in range(self.L1)]
+        hamiltonians = {key: value.clear_symmetry() for key, value in self._hamiltonians.items()}
+
+        # Find which tensor contains T edge
+        for l1, l2 in self.sites():
+            t_edge_tensor = lattice[l1][l2]
+            if "T" in t_edge_tensor.names:
+                break
+
+        # AbstractState
+        state = AbstractState(type(t_edge_tensor), self.L1, self.L2)
+        [(t_edge_symmetry, _)] = t_edge_tensor.edges("T").segments
+        state.total_symmetry = -t_edge_symmetry
+        for l1, l2 in self.sites():
+            tensor = lattice[l1][l2]
+            for name in tensor.names:
+                if name.startswith("P"):
+                    orbit = int(name[1:])
+                    state.physics_edges[l1, l2, orbit] = tensor.edges(name)
+        state._hamiltonians = hamiltonians
+
+        # AbstractLattice
+        state = AbstractLattice(state)
+        for l1, l2 in self.sites():
+            if l1 != 0:
+                state.virtual_bond[l1, l2, "U"] = lattice[l1][l2].edges("U")
+            if l2 != 0:
+                state.virtual_bond[l1, l2, "L"] = lattice[l1][l2].edges("L")
+
+        # SamplingLattice
+        state = SamplingLattice(state)
+        state._lattice = np.array(lattice)
+
+        return state
