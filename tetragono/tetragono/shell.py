@@ -70,7 +70,7 @@ class AutoCmdMeta(type):
 
         def _auto_func(self, line):
             config = Config(line)
-            return getattr(self, name)(*config.args, **config.kwargs)
+            getattr(self, name)(*config.args, **config.kwargs)
 
         _auto_func.__doc__ = doc
         return _auto_func
@@ -183,7 +183,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
         Parameters
         ----------
-        file : str
+        file : str | None
             The file that the hamiltonian is exported to.
         model : str
             The model names.
@@ -192,7 +192,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
         result = state.numpy_hamiltonian()
-        if result is not None:
+        if result is not None and file is not None:
             write_to_file(result, file)
         return result
 
