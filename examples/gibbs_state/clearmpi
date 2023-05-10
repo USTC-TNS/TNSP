@@ -1,3 +1,0 @@
-env \
--u OMPI_MCA_orte_local_daemon_uri \
-$@
