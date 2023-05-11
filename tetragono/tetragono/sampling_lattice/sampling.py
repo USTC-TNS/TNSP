@@ -18,7 +18,7 @@
 
 import numpy as np
 import TAT
-from ..auxiliaries import DoubleLayerAuxiliaries, ThreeLineAuxiliaries
+from ..auxiliaries import DoubleLayerAuxiliaries
 from ..common_toolkit import mpi_rank, mpi_size
 from ..tensor_element import tensor_element
 from .lattice import Configuration, SamplingLattice
@@ -251,20 +251,10 @@ class DirectSampling(Sampling):
         random = TAT.random.uniform_real(0, 1)
         # The priori possibility
         possibility = 1.
+        # configuration of this double layer auxiliaries is selected one by one
+        double_layer = self._double_layer_auxiliaries.copy()
+
         for l1 in range(self.owner.L1):
-
-            # This three line auxiliaries contains one line for the sampled part, one line for the unsampled part and
-            # one line for the sampling line part.
-            three_line_auxiliaries = ThreeLineAuxiliaries(self.owner.L2, self.owner.Tensor, self._cut_dimension)
-            for l2 in range(self.owner.L2):
-                tensor_1 = configuration._up_to_down_site[l1 - 1, l2]()
-                three_line_auxiliaries[0, l2, "n"] = tensor_1
-                three_line_auxiliaries[0, l2, "c"] = tensor_1.conjugate()
-                tensor_2 = self.owner[l1, l2]
-                three_line_auxiliaries[1, l2, "n"] = tensor_2
-                three_line_auxiliaries[1, l2, "c"] = tensor_2.conjugate()
-                three_line_auxiliaries[2, l2] = self._double_layer_auxiliaries._down_to_up_site[l1 + 1, l2]()
-
             for l2 in range(self.owner.L2):
                 # Choose configuration and calculate shrinked tensor orbit by orbit.
                 shrinked_site_tensor = self.owner[l1, l2]
@@ -272,30 +262,14 @@ class DirectSampling(Sampling):
                 # This iterator will read the config dict when yielding, so update the config and then calculate the
                 # next item of this iterator.
                 shrinkers = configuration._get_shrinker((l1, l2), config)
-                # The hole of this site.
-                # This hole style is like double layer auxiliaries hole.
-                site_hole = three_line_auxiliaries.hole(l2)
-                unsampled_orbits = set(self.owner.physics_edges[l1, l2])
-                # The orbit order is important, because of iterator shrinkers.
                 for orbit in sorted(self.owner.physics_edges[l1, l2]):
-                    # Trace all unsampled orbits.
-                    # The transpose ensure elements are all positive.
-                    unsampled_orbits.remove(orbit)
-                    hole = (
-                        site_hole  #
-                        .trace({(f"I{unsampled_orbit}", f"O{unsampled_orbit}") for unsampled_orbit in unsampled_orbits}
-                              )  #
-                        .edge_rename({
-                            f"I{orbit}": "I",
-                            f"O{orbit}": "O"
-                        })  #
-                        .transpose(["I", "O"]))
-                    hole_edge = hole.edges("O")
+                    hole = double_layer.hole(((l1, l2, orbit),))
+                    hole_edge = hole.edges("O0")
                     # Calculate rho for all the segments of the physics edge of this orbit
                     rho = []
                     for seg in hole_edge.segments:
                         symmetry, _ = seg
-                        block_rho = hole.blocks[[("I", -symmetry), ("O", symmetry)]]
+                        block_rho = hole.blocks[[("I0", -symmetry), ("O0", symmetry)]]
                         diag_rho = np.diagonal(block_rho)
                         rho = [*rho, *diag_rho]
                     rho = np.array(rho).real
@@ -313,13 +287,8 @@ class DirectSampling(Sampling):
                     shrinked_site_tensor = (
                         shrinked_site_tensor  #
                         .contract(shrinker.edge_rename({"P": f"P{orbit}"}), {(f"P{orbit}", "Q")}))
-                    site_hole = (
-                        site_hole  #
-                        .contract(shrinker.edge_rename({"P": f"O{orbit}"}), {(f"O{orbit}", "Q")})  #
-                        .contract(shrinker.conjugate().edge_rename({"P": f"I{orbit}"}), {(f"I{orbit}", "Q")})  #
-                        .trace({(f"I{orbit}", f"O{orbit}")}))
-                    three_line_auxiliaries[1, l2, "n"] = shrinked_site_tensor
-                    three_line_auxiliaries[1, l2, "c"] = shrinked_site_tensor.conjugate()
+                    double_layer[l1, l2, "n"] = shrinked_site_tensor
+                    double_layer[l1, l2, "c"] = shrinked_site_tensor.conjugate()
 
         if self._restrict_subspace is not None:
             if not self._restrict_subspace(configuration):
