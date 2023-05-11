@@ -69,10 +69,9 @@ class Configuration:
         list[list[dict[int, EdgePoint]]]
             The configuration data of all the sites
         """
-        return [[{orbit: self._configuration[l1, l2, orbit]
-                  for orbit in self.owner.physics_edges[l1, l2]}
-                 for l2 in range(self.owner.L2)]
-                for l1 in range(self.owner.L1)]
+        return [[{
+            orbit: self._configuration[l1, l2, orbit] for orbit in self.owner.physics_edges[l1, l2]
+        } for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
 
     def import_configuration(self, config):
         """

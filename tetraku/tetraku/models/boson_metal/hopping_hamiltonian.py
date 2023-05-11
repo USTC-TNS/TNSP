@@ -33,7 +33,9 @@ def hopping_hamiltonians(state):
 
     for l1 in range(state.L1):
         for l2 in range(state.L2):
-            hami[(l1, l2, 0),] = n_term
+            hami[
+                (l1, l2, 0),
+            ] = n_term
             if l1 != 0:
                 hami[(l1 - 1, l2, 0), (l1, l2, 0)] = hop_term
             if l2 != 0:

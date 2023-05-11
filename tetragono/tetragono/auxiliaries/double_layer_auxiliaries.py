@@ -618,7 +618,9 @@ class DoubleLayerAuxiliaries:
                         self._lattice_n[i][j](), {
                             "R": "RN",
                             "D": "DN",
-                            **{f"P{orbit}": f"O{body_index}" for body_index, orbit in left_index_and_orbit}
+                            **{
+                                f"P{orbit}": f"O{body_index}" for body_index, orbit in left_index_and_orbit
+                            }
                         }),
                     {("RN", "L"), ("DN", "U")},
                 )
@@ -628,7 +630,9 @@ class DoubleLayerAuxiliaries:
                         self._lattice_c[i][j](), {
                             "R": "RC",
                             "D": "DC",
-                            **{f"P{orbit}": f"I{body_index}" for body_index, orbit in left_index_and_orbit}
+                            **{
+                                f"P{orbit}": f"I{body_index}" for body_index, orbit in left_index_and_orbit
+                            }
                         }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
@@ -642,7 +646,9 @@ class DoubleLayerAuxiliaries:
                         self._lattice_n[i][j + 1](), {
                             "R": "RN",
                             "D": "DN",
-                            **{f"P{orbit}": f"O{body_index}" for body_index, orbit in right_index_and_orbit}
+                            **{
+                                f"P{orbit}": f"O{body_index}" for body_index, orbit in right_index_and_orbit
+                            }
                         }),
                     {("RN", "L"), ("DN", "U")},
                 )
@@ -652,7 +658,9 @@ class DoubleLayerAuxiliaries:
                         self._lattice_c[i][j + 1](), {
                             "R": "RC",
                             "D": "DC",
-                            **{f"P{orbit}": f"I{body_index}" for body_index, orbit in right_index_and_orbit}
+                            **{
+                                f"P{orbit}": f"I{body_index}" for body_index, orbit in right_index_and_orbit
+                            }
                         }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
@@ -688,7 +696,9 @@ class DoubleLayerAuxiliaries:
                     safe_rename(self._lattice_n[i][j](), {
                         "R": "RN",
                         "D": "DN",
-                        **{f"P{orbit}": f"O{body_index}" for body_index, orbit in up_index_and_orbit}
+                        **{
+                            f"P{orbit}": f"O{body_index}" for body_index, orbit in up_index_and_orbit
+                        }
                     }),
                     {("RN", "L"), ("DN", "U")},
                 )
@@ -697,7 +707,9 @@ class DoubleLayerAuxiliaries:
                     safe_rename(self._lattice_c[i][j](), {
                         "R": "RC",
                         "D": "DC",
-                        **{f"P{orbit}": f"I{body_index}" for body_index, orbit in up_index_and_orbit}
+                        **{
+                            f"P{orbit}": f"I{body_index}" for body_index, orbit in up_index_and_orbit
+                        }
                     }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,
@@ -711,7 +723,9 @@ class DoubleLayerAuxiliaries:
                         self._lattice_n[i + 1][j](), {
                             "R": "RN",
                             "D": "DN",
-                            **{f"P{orbit}": f"O{body_index}" for body_index, orbit in down_index_and_orbit}
+                            **{
+                                f"P{orbit}": f"O{body_index}" for body_index, orbit in down_index_and_orbit
+                            }
                         }),
                     {("RN", "L"), ("DN", "U")},
                 )
@@ -721,7 +735,9 @@ class DoubleLayerAuxiliaries:
                         self._lattice_c[i + 1][j](), {
                             "R": "RC",
                             "D": "DC",
-                            **{f"P{orbit}": f"I{body_index}" for body_index, orbit in down_index_and_orbit}
+                            **{
+                                f"P{orbit}": f"I{body_index}" for body_index, orbit in down_index_and_orbit
+                            }
                         }),
                     {("RC", "L"), ("DC", "U"), ("T", "T")},
                     contract_all_physics_edges=True,

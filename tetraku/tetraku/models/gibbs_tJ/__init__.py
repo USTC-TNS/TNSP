@@ -58,7 +58,9 @@ def abstract_state(L1, L2, t, J, mu, side=1):
         # The hamiltonian in second layer is conjugate and half reverse of the first layer.
         for l1 in range(L1):
             for l2 in range(L2):
-                state.hamiltonians[(l1, l2, layer),] = single_site_double_side[layer]
+                state.hamiltonians[
+                    (l1, l2, layer),
+                ] = single_site_double_side[layer]
                 if l1 != 0:
                     state.hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = H_double_side[layer]
                 if l2 != 0:

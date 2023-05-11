@@ -25,10 +25,18 @@ Tensor = TAT.FermiU1.Z.Tensor
 EF = Fedge[(0, 0), (+1, -1), (+1, +1)]
 ET = Tedge[(0, 0), (-1, +1), (-1, -1)]
 
-CPU = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[(-1, -1),]]).range(1, 0)
-CPD = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[(-1, +1),]]).range(1, 0)
-CMU = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[(+1, +1),]]).range(1, 0)
-CMD = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[(+1, -1),]]).range(1, 0)
+CPU = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
+    (-1, -1),
+]]).range(1, 0)
+CPD = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
+    (-1, +1),
+]]).range(1, 0)
+CMU = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
+    (+1, +1),
+]]).range(1, 0)
+CMD = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
+    (+1, -1),
+]]).range(1, 0)
 
 C0UC1U = rename_io(CPU, [0]).contract(rename_io(CMU, [1]), {("T", "T")})
 C0DC1D = rename_io(CPD, [0]).contract(rename_io(CMD, [1]), {("T", "T")})

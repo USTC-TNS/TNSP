@@ -52,7 +52,9 @@ def abstract_state(L1, L2, J, K, mu):
 
     for l1 in range(L1):
         for l2 in range(L2):
-            state.hamiltonians[(l1, l2, 0),] = n_term
+            state.hamiltonians[
+                (l1, l2, 0),
+            ] = n_term
             if l1 != 0:
                 state.hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0)] = hop_term
             if l2 != 0:

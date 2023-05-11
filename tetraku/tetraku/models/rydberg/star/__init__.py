@@ -47,9 +47,13 @@ def abstract_state(L1, L2, delta, omega, radius, U):
     for l1 in range(L1):
         for l2 in range(L2):
             if l2 % 4 == 0 if l1 % 2 == 0 else l2 % 4 == 2:
-                state.hamiltonians[(l1, l2, 0),] = single_body_hamiltonian_with_U
+                state.hamiltonians[
+                    (l1, l2, 0),
+                ] = single_body_hamiltonian_with_U
             else:
-                state.hamiltonians[(l1, l2, 0),] = single_body_hamiltonian
+                state.hamiltonians[
+                    (l1, l2, 0),
+                ] = single_body_hamiltonian
     nn = kronecker_product(rename_io(n, [0]), rename_io(n, [1]))
     for al1 in range(L1):
         for al2 in range(L2):

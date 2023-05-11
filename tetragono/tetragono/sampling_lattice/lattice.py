@@ -69,10 +69,9 @@ class Configuration(SingleLayerAuxiliaries):
 
         # EdgePoint = tuple[self.Symmetry, int]
         # The data storage for spin configuration, access it by configuration[l1, l2, orbit] instead.
-        self._configuration = [[{orbit: None
-                                 for orbit in self.owner.physics_edges[l1, l2]}
-                                for l2 in range(self.owner.L2)]
-                               for l1 in range(self.owner.L1)]
+        self._configuration = [[{
+            orbit: None for orbit in self.owner.physics_edges[l1, l2]
+        } for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
         self._set_site_without_orbit()
         # The holes cache for this configuration, access it by configuration.holes()
         self._holes = None
@@ -348,8 +347,10 @@ class Configuration(SingleLayerAuxiliaries):
             ws = self.hole(())  # |s|psi>
             inv_ws_conj = ws / (ws.norm_2()**2)  # |s|psi> / <psi|s|psi>
             inv_ws = inv_ws_conj.conjugate()  # <psi|s| / <psi|s|psi>
-            all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.owner.L1)
-                                       for l2 in range(self.owner.L2) for orbit in self.owner.physics_edges[l1, l2]}
+            all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}")
+                                       for l1 in range(self.owner.L1)
+                                       for l2 in range(self.owner.L2)
+                                       for orbit in self.owner.physics_edges[l1, l2]}
 
             # Calculate
             holes = [[None for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
@@ -372,7 +373,9 @@ class Configuration(SingleLayerAuxiliaries):
                         "R0": "L",
                         "U0": "D",
                         "D0": "U",
-                        **{f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]},
+                        **{
+                            f"P_{l1}_{l2}_{orbit}": f"P{orbit}" for orbit in self.owner.physics_edges[l1, l2]
+                        },
                     })
 
                 # hole owns conjugated physics edge, because of partial_x. Expand it by connecting it with a physics
@@ -466,7 +469,9 @@ class ConfigurationPool:
         tuple[EdgePoint, ...]
             the config list.
         """
-        return tuple(configuration[l1, l2, orbit] for l1 in range(self.owner.L1) for l2 in range(self.owner.L2)
+        return tuple(configuration[l1, l2, orbit]
+                     for l1 in range(self.owner.L1)
+                     for l2 in range(self.owner.L2)
                      for orbit in self.owner.physics_edges[l1, l2])
 
     def _config_list_replace(self, config, replacement):

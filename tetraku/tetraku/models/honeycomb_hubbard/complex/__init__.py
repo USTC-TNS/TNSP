@@ -48,9 +48,13 @@ def abstract_state(L1, L2, T, t, U):
     for l1 in range(L1):
         for l2 in range(L2):
             if (l1, l2) != (0, 0):
-                state.hamiltonians[(l1, l2, 0),] = UNN
+                state.hamiltonians[
+                    (l1, l2, 0),
+                ] = UNN
             if (l1, l2) != (L1 - 1, L2 - 1):
-                state.hamiltonians[(l1, l2, 1),] = UNN
+                state.hamiltonians[
+                    (l1, l2, 1),
+                ] = UNN
             if (l1, l2) != (0, 0) and (l1, l2) != (L1 - 1, L2 - 1):
                 state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = tCSCS
             if l1 != 0:

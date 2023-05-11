@@ -61,16 +61,28 @@ def abstract_state(L1, L2, delta, omega, U):
     for l1 in range(L1):
         for l2 in range(L2):
             if l2 != L2 - 1:
-                state.hamiltonians[(l1, l2, 0),] = H
-                state.hamiltonians[(l1, l2, 1),] = H
+                state.hamiltonians[
+                    (l1, l2, 0),
+                ] = H
+                state.hamiltonians[
+                    (l1, l2, 1),
+                ] = H
             if l1 != L1 - 1:
-                state.hamiltonians[(l1, l2, 2),] = H
+                state.hamiltonians[
+                    (l1, l2, 2),
+                ] = H
             if l1 != L1 - 1 and l2 != L2 - 1:
-                state.hamiltonians[(l1, l2, 3),] = H
+                state.hamiltonians[
+                    (l1, l2, 3),
+                ] = H
             if l1 != L1 - 1 and l2 != 0:
-                state.hamiltonians[(l1, l2, 4),] = H
+                state.hamiltonians[
+                    (l1, l2, 4),
+                ] = H
             if l1 != L1 - 1:
-                state.hamiltonians[(l1, l2, 5),] = H
+                state.hamiltonians[
+                    (l1, l2, 5),
+                ] = H
 
     nn = kronecker_product(rename_io(n, [0]), rename_io(n, [1]))
     Unn = U * nn

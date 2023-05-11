@@ -387,8 +387,11 @@ class SimpleUpdateLattice(AbstractLattice):
         result_tensor = None
         for positions in positions_list:
             rename = {index: result_positions.index(position) for index, position in enumerate(positions)}
-            tensor = self._hamiltonians[positions].edge_rename({f"I{i}": f"I{j}" for i, j in rename.items()} |
-                                                               {f"O{i}": f"O{j}" for i, j in rename.items()})
+            tensor = self._hamiltonians[positions].edge_rename({
+                f"I{i}": f"I{j}" for i, j in rename.items()
+            } | {
+                f"O{i}": f"O{j}" for i, j in rename.items()
+            })
 
             empty = [(index, position) for index, position in enumerate(result_positions) if position not in positions]
             if len(empty) != 0:
@@ -584,7 +587,9 @@ class SimpleUpdateLattice(AbstractLattice):
             self[coordinate]  #
             .contract(evolution_operator,
                       {(f"P{orbit}", f"I{body_index}") for body_index, orbit in enumerate(orbits)})  #
-            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in enumerate(orbits)}))
+            .edge_rename({
+                f"O{body_index}": f"P{orbit}" for body_index, orbit in enumerate(orbits)
+            }))
 
     def _single_term_simple_update_double_site_nearest_horizontal(self, coordinates, index_and_orbit,
                                                                   evolution_operator, new_dimension):
@@ -625,10 +630,13 @@ class SimpleUpdateLattice(AbstractLattice):
         right_q, right_r = right.qr("r", {*(f"P{orbit}" for body_index, orbit in right_index_and_orbit), "L"}, "L", "R")
         u, s, v = (
             left_r  #
-            .edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in left_index_and_orbit})  #
+            .edge_rename({
+                f"P{orbit}": f"P{body_index}" for body_index, orbit in left_index_and_orbit
+            })  #
             .contract(
-                right_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in right_index_and_orbit}),
-                {("R", "L")})  #
+                right_r.edge_rename({
+                    f"P{orbit}": f"P{body_index}" for body_index, orbit in right_index_and_orbit
+                }), {("R", "L")})  #
             .contract(evolution_operator, {(f"P{body_index}", f"I{body_index}") for body_index in range(body)})  #
             .svd({*(f"O{body_index}" for body_index, orbit in left_index_and_orbit), "L"}, "R", "L", "L", "R",
                  new_dimension))
@@ -638,13 +646,17 @@ class SimpleUpdateLattice(AbstractLattice):
         u = (
             u  #
             .contract(left_q, {("L", "R")})  #
-            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in left_index_and_orbit}))
+            .edge_rename({
+                f"O{body_index}": f"P{orbit}" for body_index, orbit in left_index_and_orbit
+            }))
         self[i, j] = u
         v = self._try_multiple(v, i, j + 1, "L")
         v = (
             v  #
             .contract(right_q, {("R", "L")})  #
-            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in right_index_and_orbit}))
+            .edge_rename({
+                f"O{body_index}": f"P{orbit}" for body_index, orbit in right_index_and_orbit
+            }))
         self[i, j + 1] = v
 
     def _single_term_simple_update_double_site_nearest_vertical(self, coordinates, index_and_orbit, evolution_operator,
@@ -686,9 +698,12 @@ class SimpleUpdateLattice(AbstractLattice):
         down_q, down_r = down.qr("r", {*(f"P{orbit}" for body_index, orbit in down_index_and_orbit), "U"}, "U", "D")
         u, s, v = (
             up_r  #
-            .edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in up_index_and_orbit})  #
-            .contract(down_r.edge_rename({f"P{orbit}": f"P{body_index}" for body_index, orbit in down_index_and_orbit}),
-                      {("D", "U")})  #
+            .edge_rename({
+                f"P{orbit}": f"P{body_index}" for body_index, orbit in up_index_and_orbit
+            })  #
+            .contract(down_r.edge_rename({
+                f"P{orbit}": f"P{body_index}" for body_index, orbit in down_index_and_orbit
+            }), {("D", "U")})  #
             .contract(evolution_operator, {(f"P{body_index}", f"I{body_index}") for body_index in range(body)})  #
             .svd({*(f"O{body_index}" for body_index, orbit in up_index_and_orbit), "U"}, "D", "U", "U", "D",
                  new_dimension))
@@ -698,13 +713,17 @@ class SimpleUpdateLattice(AbstractLattice):
         u = (
             u  #
             .contract(up_q, {("U", "D")})  #
-            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in up_index_and_orbit}))
+            .edge_rename({
+                f"O{body_index}": f"P{orbit}" for body_index, orbit in up_index_and_orbit
+            }))
         self[i, j] = u
         v = self._try_multiple(v, i + 1, j, "U")
         v = (
             v  #
             .contract(down_q, {("D", "U")})  #
-            .edge_rename({f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit}))
+            .edge_rename({
+                f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit
+            }))
         self[i + 1, j] = v
 
     def _try_multiple(self, tensor, i, j, direction, *, division=False, square_root=False):

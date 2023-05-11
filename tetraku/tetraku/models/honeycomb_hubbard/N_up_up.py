@@ -26,9 +26,11 @@ def measurement(state):
     NN = kronecker_product(rename_io(N_up, [0]), rename_io(N_up, [1]))
 
     result = {
-        ((al1, al2, aorbit), (bl1, bl2, borbit)): NN for al1 in range(state.L1) for al2 in range(state.L2)
+        ((al1, al2, aorbit), (bl1, bl2, borbit)): NN for al1 in range(state.L1)
+        for al2 in range(state.L2)
         for aorbit in range(0 if (al1, al2) != (0, 0) else 1, 2 if (al1, al2) != (state.L1 - 1, state.L2 - 1) else 1)
-        for bl1 in range(state.L1) for bl2 in range(state.L2)
+        for bl1 in range(state.L1)
+        for bl2 in range(state.L2)
         for borbit in range(0 if (bl1, bl2) != (0, 0) else 1, 2 if (bl1, bl2) != (state.L1 - 1, state.L2 - 1) else 1)
         if (al1, al2, aorbit) != (bl1, bl2, borbit)
     }

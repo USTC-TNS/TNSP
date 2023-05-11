@@ -41,16 +41,19 @@ class Observer:
         """
         self._start = True
         self._result = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
+            name: {
+                positions: 0.0 for positions, observer in observers.items()
+            } for name, observers in self._observer.items()
         }
         self._result_square = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
+            name: {
+                positions: 0.0 for positions, observer in observers.items()
+            } for name, observers in self._observer.items()
         }
         self._result_reweight = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
+            name: {
+                positions: 0.0 for positions, observer in observers.items()
+            } for name, observers in self._observer.items()
         }
         self._count = 0
         self._total_weight = 0.0
@@ -445,8 +448,8 @@ class Observer:
         return {
             name: {
                 positions:
-                self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions],
-                                           self._result_reweight[name][pisitions]) for positions in data
+                    self._expect_and_deviation(self._result[name][positions], self._result_square[name][positions],
+                                               self._result_reweight[name][pisitions]) for positions in data
             } for name, data in self._observer.items()
         }
 

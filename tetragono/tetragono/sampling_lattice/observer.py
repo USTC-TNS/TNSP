@@ -44,16 +44,19 @@ class Observer():
         """
         self._start = True
         self._result_reweight = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
+            name: {
+                positions: 0.0 for positions, observer in observers.items()
+            } for name, observers in self._observer.items()
         }
         self._result_reweight_square = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
+            name: {
+                positions: 0.0 for positions, observer in observers.items()
+            } for name, observers in self._observer.items()
         }
         self._result_square_reweight_square = {
-            name: {positions: 0.0 for positions, observer in observers.items()
-                  } for name, observers in self._observer.items()
+            name: {
+                positions: 0.0 for positions, observer in observers.items()
+            } for name, observers in self._observer.items()
         }
         self._count = 0
         self._total_weight = 0.0
@@ -338,8 +341,10 @@ class Observer():
         self._total_log_ws += np.log(np.abs(complex(ws)))
 
         inv_ws_conj = ws / (ws.norm_2()**2)  # |s|psi> / <psi|s|psi>
-        all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for l1 in range(self.owner.L1)
-                                   for l2 in range(self.owner.L2) for orbit in self.owner.physics_edges[l1, l2]}
+        all_name = {("T", "T")} | {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}")
+                                   for l1 in range(self.owner.L1)
+                                   for l2 in range(self.owner.L2)
+                                   for orbit in self.owner.physics_edges[l1, l2]}
         for name, observers in self._observer.items():
             if name == "energy":
                 Es = 0.0
@@ -458,9 +463,10 @@ class Observer():
         """
         return {
             name: {
-                positions: self._expect_and_deviation(self._result_reweight[name][positions],
-                                                      self._result_reweight_square[name][positions],
-                                                      self._result_square_reweight_square[name][positions])
+                positions:
+                    self._expect_and_deviation(self._result_reweight[name][positions],
+                                               self._result_reweight_square[name][positions],
+                                               self._result_square_reweight_square[name][positions])
                 for positions in data
             } for name, data in self._observer.items()
         }
