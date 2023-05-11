@@ -413,6 +413,22 @@ class Observer():
                         else:
                             self._Deltas.append((reweight, Es, holes))
 
+    @property
+    def stability(self):
+        """
+        The stability of the sampling method.
+        """
+        N = self._count
+        expect = self._total_weight / N
+        expect_square = expect**2
+        square_expect = self._total_weight_square / N
+        variance = square_expect - expect_square
+        if variance < 0.0:
+            deviation = 0.0
+        else:
+            deviation = variance**0.5
+        return deviation / expect
+
     def _expect_and_deviation(self, total_reweight, total_reweight_square, total_square_reweight_square):
         """
         Get the expect value and deviation.

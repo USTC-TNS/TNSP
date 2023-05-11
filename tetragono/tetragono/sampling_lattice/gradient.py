@@ -254,6 +254,8 @@ def gradient_descent(
                 sampling_configurations.clear()
                 sampling_configurations += gathered_configurations
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
+            if sampling_method == "direct":
+                showln(f"direct sampling stability is {observer.stability}")
 
             # Measure log
             if measurement and mpi_rank == 0:
