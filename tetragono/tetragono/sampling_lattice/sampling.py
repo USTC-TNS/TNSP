@@ -251,10 +251,21 @@ class DirectSampling(Sampling):
         random = TAT.random.uniform_real(0, 1)
         # The priori possibility
         possibility = 1.
-        # configuration of this double layer auxiliaries is selected one by one
-        double_layer = self._double_layer_auxiliaries.copy()
 
         for l1 in range(self.owner.L1):
+            # configuration of this double layer auxiliaries is selected one by one
+            double_layer = DoubleLayerAuxiliaries(3, self.owner.L2, self._double_layer_cut_dimension, True,
+                                                  self.owner.Tensor)
+            for l2 in range(self.owner.L2):
+                tensor_0 = configuration._up_to_down_site[l1 - 1, l2]()
+                double_layer[0, l2, "n"] = tensor_0
+                double_layer[0, l2, "c"] = tensor_0.conjugate()
+                tensor_1 = self.owner[l1, l2]
+                double_layer[1, l2, "n"] = tensor_1
+                double_layer[1, l2, "c"] = tensor_1.conjugate()
+                tensor_2 = self._double_layer_auxiliaries._down_to_up_site[l1 + 1, l2]()
+                double_layer._down_to_up_site[2, l2].reset(tensor_2)
+
             for l2 in range(self.owner.L2):
                 # Choose configuration and calculate shrinked tensor orbit by orbit.
                 shrinked_site_tensor = self.owner[l1, l2]
@@ -263,7 +274,7 @@ class DirectSampling(Sampling):
                 # next item of this iterator.
                 shrinkers = configuration._get_shrinker((l1, l2), config)
                 for orbit in sorted(self.owner.physics_edges[l1, l2]):
-                    hole = double_layer.hole(((l1, l2, orbit),))
+                    hole = double_layer.hole(((1, l2, orbit),))
                     hole_edge = hole.edges("O0")
                     # Calculate rho for all the segments of the physics edge of this orbit
                     rho = []
@@ -287,8 +298,8 @@ class DirectSampling(Sampling):
                     shrinked_site_tensor = (
                         shrinked_site_tensor  #
                         .contract(shrinker.edge_rename({"P": f"P{orbit}"}), {(f"P{orbit}", "Q")}))
-                    double_layer[l1, l2, "n"] = shrinked_site_tensor
-                    double_layer[l1, l2, "c"] = shrinked_site_tensor.conjugate()
+                    double_layer[1, l2, "n"] = shrinked_site_tensor
+                    double_layer[1, l2, "c"] = shrinked_site_tensor.conjugate()
 
         if self._restrict_subspace is not None:
             if not self._restrict_subspace(configuration):
