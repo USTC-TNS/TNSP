@@ -914,12 +914,12 @@ namespace TAT {
                         const DefaultName& singular_name_u,
                         const DefaultName& singular_name_v,
                         double cut) {
-                        Cut real_cut = NoCut();
+                        Cut real_cut = Cut();
                         if (cut > 0) {
                            if (cut >= 1) {
-                              real_cut = RemainCut(Size(cut));
+                              real_cut = Cut(Size(cut));
                            } else {
-                              real_cut = RelativeCut(cut);
+                              real_cut = Cut(cut);
                            }
                         }
                         auto result = tensor.svd(free_names_u, common_name_u, common_name_v, singular_name_u, singular_name_v, real_cut);

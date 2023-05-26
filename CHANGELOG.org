@@ -10,12 +10,16 @@
 + *tetragono*: Add =gm_clear_symmetry= for sampling lattice.
 + *tetragono*: Add =gm_run_g= and =ap_run_g= for middle level API. These are generators, which yield the energy of the
   state before gradient descent after every gradient step.
++ *TAT.hpp*: =Cut= is used directly for the dimension cut in svd. =Cut= will detect the type of the input to determine
+  whether it is relative cut or remain cut, if nothing provided, the behavior of previous =NoCut= will be used. And user
+  could also set remain cut and relative cut together.
 *** Changed
 + *tetragono*: =new_dimension= in simple update will be intepreted as the threshold of singular value when it is float.
 + *TAT.hpp, TAT.py*: =clear_symmetry= will return NoSymmetry tensor or ParityTensor based on whether the original tensor
   is fermionic. The previous behavior would give NoSymmetry tensor only, which is dangerous for fermionic tensor, is
   renamed to =clear_bose_symmetry=.
 *** Deprecated
++ *TAT.hpp*: =NoCut=, =RemainCut=, =RelativeCut= is deprecated, please use =Cut= directly.
 *** Removed
 *** Fixed
 + *tetragono*: Fix a bug in merging physical edges during simple update. When the hamiltonian on single site with a

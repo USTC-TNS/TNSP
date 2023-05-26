@@ -48,10 +48,21 @@ namespace TAT {
    struct NoCut {};
    /**
     * Used to describle how to cut when doing svd to a tensor
-    *
-    * Is one of RemainCut, RelativeCut and NoCut
     */
-   using Cut = std::variant<RemainCut, RelativeCut, NoCut>;
+   struct Cut {
+      Size remain_cut;
+      double relative_cut;
+
+      Cut(Size i, double f) : remain_cut(i), relative_cut(f) {}
+      Cut(double f, Size i) : remain_cut(i), relative_cut(f) {}
+      Cut() : remain_cut(-1), relative_cut(0) {}
+      Cut(Size i) : remain_cut(i), relative_cut(0) {}
+      Cut(double f) : remain_cut(-1), relative_cut(f) {}
+
+      [[deprecated("NoCut is deprecated, use Cut directly")]] Cut(NoCut) : Cut() {}
+      [[deprecated("RelativeCut is deprecated, use Cut directly")]] Cut(RelativeCut c) : Cut(c.value) {}
+      [[deprecated("RemainCut is deprecated, use Cut directly")]] Cut(RemainCut c) : Cut(c.value) {}
+   };
 
    template<typename ScalarType = double, typename Symmetry = Symmetry<>, typename Name = DefaultName>
    struct TensorShape;
@@ -871,7 +882,7 @@ namespace TAT {
           const Name& common_name_v,
           const Name& singular_name_u,
           const Name& singular_name_v,
-          Cut cut = NoCut()) const;
+          Cut cut = Cut()) const;
 
       /**
        * Calculate QR of the tensor

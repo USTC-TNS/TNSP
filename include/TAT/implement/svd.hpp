@@ -430,76 +430,50 @@ namespace TAT {
       }
       auto remain_dimension_u = pmr::unordered_map<Symmetry, Size>(unordered_parameter * result_s.size());
       auto remain_dimension_v = pmr::unordered_map<Symmetry, Size>(unordered_parameter * result_s.size());
-      if (auto cut_value = std::get_if<RemainCut>(&cut)) {
-         Size cut_i = cut_value->value;
-         if (cut_i < total_dimension) {
-            for (const auto& [symmetry, vector_s] : result_s) {
-               remain_dimension_u[symmetry] = 0;
-               remain_dimension_v[-symmetry] = 0;
-            }
-            for (Size i = 0; i < cut_i; i++) {
-               Symmetry maximum_symmetry;
-               real_scalar<ScalarType> maximum_singular = 0;
-               for (const auto& [symmetry, vector_s] : result_s) {
-                  if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
-                     if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
-                        maximum_singular = this_singular;
-                        maximum_symmetry = symmetry;
-                     }
-                  }
-               }
-               if (maximum_singular != 0) {
-                  // sometimes non zero singular number is less than cut_i
-                  remain_dimension_u.at(maximum_symmetry) += 1;
-                  remain_dimension_v.at(-maximum_symmetry) += 1;
-               }
-            }
 
-            // delete element of tensor S
-            for (auto it = result_s.begin(); it != result_s.end();) {
-               const auto& symmetry = it->first;
-               const auto& this_remain = remain_dimension_u.at(symmetry);
-               if (this_remain == 0) {
-                  it = result_s.erase(it);
-               } else {
-                  it->second.resize(this_remain);
-                  ++it;
-               }
+      real_scalar<ScalarType> total_maximum_singular = 0;
+      for (const auto& [symmetry, vector_s] : result_s) {
+         for (const auto& this_singular : vector_s) {
+            if (this_singular > total_maximum_singular) {
+               total_maximum_singular = this_singular;
             }
          }
-      } else if (auto cut_value = std::get_if<RelativeCut>(&cut)) {
+      }
+      const real_scalar<ScalarType> cut_threshold = cut.relative_cut * total_maximum_singular;
+      const Size remain_cut = cut.remain_cut < total_dimension ? cut.remain_cut : total_dimension;
+
+      for (const auto& [symmetry, vector_s] : result_s) {
+         remain_dimension_u[symmetry] = 0;
+         remain_dimension_v[-symmetry] = 0;
+      }
+      for (Size i = 0; i < remain_cut; i++) {
+         Symmetry maximum_symmetry;
          real_scalar<ScalarType> maximum_singular = 0;
          for (const auto& [symmetry, vector_s] : result_s) {
-            for (const auto& this_singular : vector_s) {
-               if (this_singular > maximum_singular) {
+            if (auto& this_remain = remain_dimension_u.at(symmetry); this_remain != vector_s.size()) {
+               if (auto this_singular = vector_s[this_remain]; this_singular > maximum_singular) {
                   maximum_singular = this_singular;
+                  maximum_symmetry = symmetry;
                }
             }
          }
-         real_scalar<ScalarType> threshold = cut_value->value * maximum_singular;
-         for (const auto& [symmetry, vector_s] : result_s) {
-            auto current_size = vector_s.size();
-            remain_dimension_u[symmetry] = current_size;
-            remain_dimension_v[-symmetry] = current_size;
-            for (auto i = 0; i < current_size; i++) {
-               if (vector_s[i] < threshold) {
-                  remain_dimension_u[symmetry] = i;
-                  remain_dimension_v[-symmetry] = i;
-                  break;
-               }
-            }
+         if (maximum_singular > cut_threshold) {
+            // If the singular is too small, do not remain it.
+            remain_dimension_u.at(maximum_symmetry) += 1;
+            remain_dimension_v.at(-maximum_symmetry) += 1;
+         } else {
+            break;
          }
-
-         // delete element of tensor S
-         for (auto it = result_s.begin(); it != result_s.end();) {
-            const auto& symmetry = it->first;
-            const auto& this_remain = remain_dimension_u.at(symmetry);
-            if (this_remain == 0) {
-               it = result_s.erase(it);
-            } else {
-               it->second.resize(this_remain);
-               ++it;
-            }
+      }
+      // delete element of tensor S
+      for (auto it = result_s.begin(); it != result_s.end();) {
+         const auto& symmetry = it->first;
+         const auto& this_remain = remain_dimension_u.at(symmetry);
+         if (this_remain == 0) {
+            it = result_s.erase(it);
+         } else {
+            it->second.resize(this_remain);
+            ++it;
          }
       }
       // cut analyze done
