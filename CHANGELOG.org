@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.5...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.5...v0.3.6][v0.3.6]] - 2023-05-26
 
 *** Added
 + *TAT.hpp*: Add =clear_fermi_symmetry= for tensor with fermionic symmetry, which convert the tensor to the simplest
@@ -20,12 +28,11 @@
   renamed to =clear_bose_symmetry=.
 *** Deprecated
 + *TAT.hpp*: =NoCut=, =RemainCut=, =RelativeCut= is deprecated, please use =Cut= directly.
-*** Removed
 *** Fixed
 + *tetragono*: Fix a bug in merging physical edges during simple update. When the hamiltonian on single site with a
   large dimension is operated, the dead loop would occur previously.
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...v0.3.4][v0.3.5]] - 2023-04-01
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...v0.3.5][v0.3.5]] - 2023-04-01
 
 *** Added
 + *tetragono*: Add common used tensors for parity symmetry and some related tensor in Hubbard model with parity
