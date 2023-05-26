@@ -299,8 +299,9 @@ class DirectSampling(Sampling):
                         diag_rho = np.diagonal(block_rho)
                         rho = [*rho, *diag_rho]
                     rho = np.array(rho).real
-                    if len(rho) == 0:
-                        # Block mismatch, redo a sampling.
+                    rho = np.maximum(rho, 0)  # Sometimes there is some negative value because of numeric error.
+                    if np.sum(rho) == 0:
+                        # Block mismatch, or total possibility at this step too small, redo a sampling.
                         return self()
                     rho = rho / np.sum(rho)
                     choice = self._choice(random(), rho)
