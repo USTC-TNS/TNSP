@@ -323,5 +323,8 @@ def gradient_descent(
                     write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
                 if save_configuration_file:
                     write_to_file(sampling_configurations, save_configuration_file)
+
+                # Yield the energy
+                yield observer.energy
             if sigint_handler():
                 break
