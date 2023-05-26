@@ -384,6 +384,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         for _ in gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf):
             pass
 
+    def gm_run_g(self, *args, **kwargs):
+        yield from gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
+
     @AutoCmd.decorator
     def gm_dump(self, name):
         """
@@ -639,6 +642,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         for _ in ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf):
             pass
 
+    def ap_run_g(self, *args, **kwargs):
+        yield from ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf)
+
     @AutoCmd.decorator
     def ap_conf_create(self, module_name):
         """
@@ -788,3 +794,6 @@ else:
     ap_conf_dump = app.ap_conf_dump
     ap_conf_load = app.ap_conf_load
     ap_hamiltonian = app.ap_hamiltonian
+
+    gm_run_g = app.gm_run_g
+    ap_run_g = app.ap_run_g
