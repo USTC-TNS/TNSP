@@ -3,6 +3,8 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add support to calculate deviation of the observer set as a whole, which is useful since many observables
+  are the summation of several local observables.
 *** Changed
 *** Deprecated
 *** Removed

@@ -34,7 +34,7 @@ class Observer():
         "owner", "_observer", "_enable_gradient", "_enable_natural", "_cache_natural_delta", "_cache_configuration",
         "_restrict_subspace", "_classical_energy", "_start", "_result_reweight", "_result_reweight_square",
         "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square", "_total_log_ws",
-        "_total_energy_reweight", "_total_energy_reweight_square", "_total_energy_square_reweight_square",
+        "_whole_result_reweight", "_whole_result_reweight_square", "_whole_result_square_reweight_square",
         "_total_imaginary_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_pool"
     ]
 
@@ -62,9 +62,9 @@ class Observer():
         self._total_weight = 0.0
         self._total_weight_square = 0.0
         self._total_log_ws = 0.0
-        self._total_energy_reweight = 0.0
-        self._total_energy_reweight_square = 0.0
-        self._total_energy_square_reweight_square = 0.0
+        self._whole_result_reweight = {name: 0.0 for name in self._observer}
+        self._whole_result_reweight_square = {name: 0.0 for name in self._observer}
+        self._whole_result_square_reweight_square = {name: 0.0 for name in self._observer}
         self._total_imaginary_energy_reweight = 0.0
         if self._enable_gradient:
             self._Delta = [[self.owner[l1, l2].same_shape().conjugate().zero()
@@ -96,9 +96,10 @@ class Observer():
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
         buffer.append(self._total_log_ws)
-        buffer.append(self._total_energy_reweight)
-        buffer.append(self._total_energy_reweight_square)
-        buffer.append(self._total_energy_square_reweight_square)
+        for name in self._observer:
+            buffer.append(self._whole_result_reweight[name])
+            buffer.append(self._whole_result_reweight_square[name])
+            buffer.append(self._whole_result_square_reweight_square[name])
         buffer.append(self._total_imaginary_energy_reweight)
 
         buffer = np.array(buffer)
@@ -106,9 +107,10 @@ class Observer():
         buffer = buffer.tolist()
 
         self._total_imaginary_energy_reweight = buffer.pop()
-        self._total_energy_square_reweight_square = buffer.pop()
-        self._total_energy_reweight_square = buffer.pop()
-        self._total_energy_reweight = buffer.pop()
+        for name in reversed(self._observer):
+            self._whole_result_square_reweight_square[name] = buffer.pop()
+            self._whole_result_reweight_square[name] = buffer.pop()
+            self._whole_result_reweight[name] = buffer.pop()
         self._total_log_ws = buffer.pop()
         self._total_weight_square = buffer.pop()
         self._total_weight = buffer.pop()
@@ -183,9 +185,9 @@ class Observer():
         self._total_weight = None  # float
         self._total_weight_square = None
         self._total_log_ws = None
-        self._total_energy_reweight = None
-        self._total_energy_reweight_square = None
-        self._total_energy_square_reweight_square = None
+        self._whole_result_reweight = None
+        self._whole_result_reweight_square = None
+        self._whole_result_square_reweight_square = None
         self._total_imaginary_energy_reweight = None
 
         # Values about gradient collected during observing
@@ -346,8 +348,7 @@ class Observer():
                                    for l2 in range(self.owner.L2)
                                    for orbit in self.owner.physics_edges[l1, l2]}
         for name, observers in self._observer.items():
-            if name == "energy":
-                Es = 0.0
+            whole_name_value = 0
             for positions, observer in observers.items():
                 body = len(positions)
                 positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
@@ -385,33 +386,32 @@ class Observer():
                 self._result_reweight[name][positions] += to_save * reweight
                 self._result_reweight_square[name][positions] += to_save * reweight**2
                 self._result_square_reweight_square[name][positions] += to_save**2 * reweight**2
-                if name == "energy":
-                    Es += total_value  # Es maybe complex
+                whole_name_value += total_value  # maybe complex
+            if name == "energy" and self._classical_energy is not None:
+                whole_name_value += self._classical_energy(configuration)
+            to_save = whole_name_value.real
+            self._whole_result_reweight[name] += to_save * reweight
+            self._whole_result_reweight_square[name] += to_save * reweight**2
+            self._whole_result_square_reweight_square[name] += to_save**2 * reweight**2
             if name == "energy":
-                if self._classical_energy is not None:
-                    Es += self._classical_energy(configuration)
-                to_save = Es.real
-                self._total_energy_reweight += to_save * reweight
-                self._total_energy_reweight_square += to_save * reweight**2
-                self._total_energy_square_reweight_square += to_save**2 * reweight**2
-                self._total_imaginary_energy_reweight += Es.imag * reweight
+                self._total_imaginary_energy_reweight += whole_name_value.imag * reweight
                 # Es should be complex here when calculating gradient
-
-                if self._enable_gradient:
-                    holes = configuration.holes()  # <psi|s|partial_x psi> / <psi|s|psi>
-                    if self.owner.Tensor.is_real:
-                        Es = Es.real
-                    for l1, l2 in self.owner.sites():
-                        hole = holes[l1][l2] * reweight
-                        self._Delta[l1][l2] += hole
-                        self._EDelta[l1][l2] += Es * hole
-                    if self._enable_natural:
-                        if self._cache_natural_delta:
-                            with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
-                                pickle.dump(holes, file)
-                            self._Deltas.append((reweight, Es, None))
-                        else:
-                            self._Deltas.append((reweight, Es, holes))
+            if name == "energy" and self._enable_gradient:
+                Es = whole_name_value
+                if self.owner.Tensor.is_real:
+                    Es = Es.real
+                holes = configuration.holes()  # <psi|s|partial_x psi> / <psi|s|psi>
+                for l1, l2 in self.owner.sites():
+                    hole = holes[l1][l2] * reweight
+                    self._Delta[l1][l2] += hole
+                    self._EDelta[l1][l2] += Es * hole
+                if self._enable_natural:
+                    if self._cache_natural_delta:
+                        with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
+                            pickle.dump(holes, file)
+                        self._Deltas.append((reweight, Es, None))
+                    else:
+                        self._Deltas.append((reweight, Es, holes))
 
     @property
     def stability(self):
@@ -488,6 +488,22 @@ class Observer():
         }
 
     @property
+    def whole_result(self):
+        """
+        Get the observer result of the whole observer set. It is useful if the deviation of the whole is wanted.
+
+        Returns
+        -------
+        dict[str, tuple[float, float]]
+            The observer result of each observer set name.
+        """
+        return {
+            name:
+                self._expect_and_deviation(self._whole_result_reweight[name], self._whole_result_reweight_square[name],
+                                           self._whole_result_square_reweight_square[name]) for name in self._observer
+        }
+
+    @property
     def total_energy(self):
         """
         Get the observed energy.
@@ -497,14 +513,16 @@ class Observer():
         tuple[float, float]
             The total energy.
         """
-        return self._expect_and_deviation(self._total_energy_reweight, self._total_energy_reweight_square,
-                                          self._total_energy_square_reweight_square)
+        name = "energy"
+        return self._expect_and_deviation(self._whole_result_reweight[name], self._whole_result_reweight_square[name],
+                                          self._whole_result_square_reweight_square[name])
 
     def _total_energy_with_imaginary_part(self):
+        name = "energy"
         if self.owner.Tensor.is_complex:
-            return (self._total_energy_reweight + self._total_imaginary_energy_reweight * 1j) / self._total_weight
+            return (self._whole_result_reweight[name] + self._total_imaginary_energy_reweight * 1j) / self._total_weight
         else:
-            return self._total_energy_reweight / self._total_weight
+            return self._whole_result_reweight[name] / self._total_weight
 
     @property
     def energy(self):
