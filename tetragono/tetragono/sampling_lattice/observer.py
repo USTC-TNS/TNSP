@@ -618,10 +618,18 @@ class Observer():
 
         # Delta, NsNp
         def D(v):
-            return Delta @ v
+            # Ns Np * Np => Ns
+            if Energy.size != 0:
+                return Delta @ v
+            else:
+                return np.zeros_like(Energy)
 
         def DT(v):
-            result = np.conj(Delta.T) @ v
+            # Np Ns * Ns => Np
+            if Energy.size != 0:
+                result = np.conj(Delta.T) @ v
+            else:
+                result = np.zeros_like(delta)
             allreduce_buffer(result)
             return result
 
