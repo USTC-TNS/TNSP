@@ -442,7 +442,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_conf = read_from_file(name)
 
     @AutoCmd.decorator
-    def gm_conf_create(self, module_name):
+    def gm_conf_create(self, module_name, *args, **kwargs):
         """
         Create configuration of sampling lattice.
 
@@ -450,11 +450,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         ----------
         module_name : str
             The module name to create initial configuration of sampling lattice.
+        args, kwargs
+            Arguments passed to module configuration creater function.
         """
         with seed_differ:
             # This configuration should never be used, so cut dimension is -1
             configuration = gm_Configuration(self.gm, -1)
-            configuration = get_imported_function(module_name, "initial_configuration")(configuration)
+            initial_configuration = get_imported_function(module_name, "initial_configuration")
+            configuration = initial_configuration(configuration, *args, **kwargs)
             self.gm_conf = mpi_comm.allgather(configuration.export_configuration())
 
     @AutoCmd.decorator
@@ -646,7 +649,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         yield from ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf)
 
     @AutoCmd.decorator
-    def ap_conf_create(self, module_name):
+    def ap_conf_create(self, module_name, *args, **kwargs):
         """
         Create configuration of ansatz product state.
 
@@ -654,10 +657,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         ----------
         module_name : str
             The module name to create initial configuration of ansatz product state.
+        args, kwargs
+            Arguments passed to module configuration creater function.
         """
         with seed_differ:
             configuration = ap_Configuration(self.ap)
-            configuration = get_imported_function(module_name, "initial_configuration")(configuration)
+            initial_configuration = get_imported_function(module_name, "initial_configuration")
+            configuration = initial_configuration(configuration, *args, **kwargs)
             self.ap_conf = mpi_comm.allgather(configuration.export_configuration())
 
     @AutoCmd.decorator

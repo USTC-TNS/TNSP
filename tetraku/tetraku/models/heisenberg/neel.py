@@ -19,11 +19,13 @@
 import TAT
 
 
-def initial_configuration(conf):
+def initial_configuration(conf, zero_first=True):
+    zero = 0 if zero_first else 1
+    one = 1 if zero_first else 0
     for l1 in range(conf.owner.L1):
         for l2 in range(conf.owner.L2):
             if (l1 + l2) % 2 == 0:
-                conf[l1, l2, 0] = TAT.No.Symmetry(), 0
+                conf[l1, l2, 0] = TAT.No.Symmetry(), zero
             else:
-                conf[l1, l2, 0] = TAT.No.Symmetry(), 1
+                conf[l1, l2, 0] = TAT.No.Symmetry(), one
     return conf
