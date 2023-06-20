@@ -16,14 +16,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import inspect
 import signal
 from datetime import datetime
 import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
-                              write_to_file, get_imported_function)
+                              write_to_file, get_imported_function, restrict_wrapper, measurement_wrapper)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -162,18 +161,7 @@ def gradient_descent(
     # Restrict subspace
     if restrict_subspace is not None:
         origin_restrict = get_imported_function(restrict_subspace, "restrict")
-        if len(inspect.signature(origin_restrict).parameters) == 1:
-
-            def restrict(configuration, replacement=None):
-                if replacement is None:
-                    return origin_restrict(configuration)
-                else:
-                    configuration = configuration.copy()
-                    for [l1, l2, orbit], new_site_config in replacement.items():
-                        configuration[l1, l2, orbit] = new_site_config
-                    return origin_restrict(configuration)
-        else:
-            restrict = origin_restrict
+        restrict = restrict_wrapper(origin_restrict)
     else:
         restrict = None
 
@@ -261,7 +249,9 @@ def gradient_descent(
             if measurement and mpi_rank == 0:
                 for measurement_name in measurement_names:
                     measurement_result = observer.result[measurement_name]
-                    get_imported_function(measurement_name, "save_result")(state, measurement_result, grad_step)
+                    measurement_whole_result = observer.whole_result[measurement_name]
+                    save_result = measurement_wrapper(get_imported_function(measurement_name, "save_result"))
+                    save_result(state, measurement_result, measurement_whole_result, grad_step)
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:

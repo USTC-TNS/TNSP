@@ -7,7 +7,10 @@
   are the summation of several local observables.
 + *tetragono*: Add arguments support for =gm_conf_create= and =ap_conf_create= in tetragono shell.
 *** Changed
++ *tetragono*: =save_result= accept another parameter, which is the total result of the whole observers set. Its
+  signature is =state=, =result=, =whole_result= and =step= now.
 *** Deprecated
++ *tetragono*: The previous signature of =save_result=: =state=, =result= and =step= is deprecated.
 *** Removed
 *** Fixed
 

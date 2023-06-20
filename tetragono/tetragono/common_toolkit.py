@@ -22,6 +22,7 @@ try:
     import cPickle as pickle
 except:
     import pickle
+import inspect
 import signal
 from traceback import format_stack
 from datetime import datetime
@@ -277,3 +278,49 @@ def sigusr1_handler(signum, frame):
 
 
 signal.signal(signal.SIGUSR1, sigusr1_handler)
+
+
+def restrict_wrapper(origin_restrict):
+    # parameter may be:
+    # 1. only configuration
+    # 2. configuration and replacement
+    if len(inspect.signature(origin_restrict).parameters) == 1:
+
+        def restrict(configuration, replacement=None):
+            if replacement is None:
+                return origin_restrict(configuration)
+            else:
+                configuration = configuration.copy()
+                for [l1, l2, orbit], new_site_config in replacement.items():
+                    configuration[l1, l2, orbit] = new_site_config
+                return origin_restrict(configuration)
+    else:
+        restrict = origin_restrict
+    return restrict
+
+
+def show_deprecated_measurement_with_three_arguments(first=[True]):
+    if first[0]:
+        showln("===== DEPRECATED WARNING BEGIN =====")
+        showln("    save_result argument changed    ")
+        showln("     three arguments deprecated     ")
+        showln("====== DEPRECATED WARNING END ======")
+        first[0] = False
+
+
+def measurement_wrapper(origin_measurement):
+
+    def measurement(*args):
+        try:
+            inspect.signature(origin_measurement).bind(*args)
+            args_callable = True
+        except TypeError:
+            args_callable = False
+        if args_callable:
+            return origin_measurement(*args)
+        else:
+            state, result, _, step = args
+            show_deprecated_measurement_with_three_arguments()
+            return origin_measurement(state, result, step)
+
+    return measurement
