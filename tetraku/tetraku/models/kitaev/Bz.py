@@ -17,15 +17,17 @@
 #
 
 import tetragono as tet
-from .tools import sites
+from tetragono.common_tensor.tensor_toolkit import kronecker_product, rename_io
+from .tools import bonds_z
 
 
 def measurement(state):
     Sz = tet.common_tensor.No.Sz.to(float)
-    result = {(site,): Sz for site in sites(state)}
+    SzSz = kronecker_product(rename_io(Sz, [0]), rename_io(Sz, [1]))
+    result = {bond: SzSz for bond in bonds_z(state)}
     return result
 
 
 def save_result(state, result, whole_result, step):
-    with open("Sz.log", "a", encoding="utf-8") as file:
+    with open("Bz.log", "a", encoding="utf-8") as file:
         print(result, file=file)

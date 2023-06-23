@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2021-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,16 +16,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import tetragono as tet
-from .tools import sites
+
+def sites(state):
+    for l1, l2 in state.sites():
+        if (l1, l2) != (0, 0):
+            yield l1, l2, 0
+        if (l1, l2) != (state.L1 - 1, state.L2 - 1):
+            yield l1, l2, 1
 
 
-def measurement(state):
-    Sz = tet.common_tensor.No.Sz.to(float)
-    result = {(site,): Sz for site in sites(state)}
-    return result
-
-
-def save_result(state, result, whole_result, step):
-    with open("Sz.log", "a", encoding="utf-8") as file:
-        print(result, file=file)
+def bonds_z(state):
+    for l1, l2 in state.sites():
+        if (l1, l2) not in [(0, 0), (state.L1 - 1, state.L2 - 1)]:
+            yield (l1, l2, 0), (l1, l2, 1)
