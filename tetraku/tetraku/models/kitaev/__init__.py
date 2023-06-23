@@ -48,11 +48,11 @@ def abstract_state(L1, L2, Jx, Jy, Jz):
     for l1 in range(L1):
         for l2 in range(L2):
             if (l1, l2) not in ((0, 0), (L1 - 1, L2 - 1)):
-                state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = Hx
+                state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = Hz
             if l1 != 0:
-                state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = Hy
+                state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = Hx
             if l2 != 0:
-                state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = Hz
+                state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = Hy
     return state
 
 

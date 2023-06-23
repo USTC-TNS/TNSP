@@ -19,9 +19,9 @@ siteNumber = L1*L2*2-2;
 getIndex[l1_,l2_,orbit_]:=((l1-1)*L2+(l2-1))*2+(orbit-1);
 H = ConstantArray[0, {siteNumber, siteNumber}];
 Table[
-        If[{a,b}!={1,1}&&{a,b}!={L1,L2},H[[getIndex[a,b,1],getIndex[a,b,2]]]=Jx];
-        If[a!=1,H[[getIndex[a-1,b,2],getIndex[a,b,1]]]=Jy];
-        If[b!=1,H[[getIndex[a,b-1,2],getIndex[a,b,1]]]=Jz],
+        If[{a,b}!={1,1}&&{a,b}!={L1,L2},H[[getIndex[a,b,1],getIndex[a,b,2]]]=Jz];
+        If[a!=1,H[[getIndex[a-1,b,2],getIndex[a,b,1]]]=Jx];
+        If[b!=1,H[[getIndex[a,b-1,2],getIndex[a,b,1]]]=Jy],
         {a, L1},
         {b, L2}];
 H = H + Transpose[H];
