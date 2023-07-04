@@ -314,7 +314,8 @@ def gradient_descent(
                 if save_configuration_file:
                     write_to_file(sampling_configurations, save_configuration_file)
 
-                # Yield the energy
-                yield observer.energy
+            # Yield the energy
+            yield observer.energy
+
             if sigint_handler():
                 break
