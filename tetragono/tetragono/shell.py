@@ -381,8 +381,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Do gradient descent. see sampling_lattice/gradient.py for details.
         """
-        for _ in gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf):
+        for result in gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf):
             pass
+        return result
 
     def gm_run_g(self, *args, **kwargs):
         yield from gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
@@ -642,8 +643,9 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Do gradient descent on ansatz product state. see ansatz_product_state/gradient.py for details.
         """
-        for _ in ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf):
+        for result in ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf):
             pass
+        return result
 
     def ap_run_g(self, *args, **kwargs):
         yield from ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf)
