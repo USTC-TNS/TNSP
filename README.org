@@ -1,4 +1,7 @@
 #+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage{listings}
+#+LATEX_HEADER: \lstdefinestyle{mystyle}{basicstyle=\ttfamily\footnotesize, numbersep=5pt, showspaces=false, showstringspaces=false, showtabs=false, numbers=left, captionpos=b, frame=lines, breakatwhitespace=false, breaklines=true, keepspaces=true, tabsize=4}
+#+LATEX_HEADER: \lstset{style=mystyle}
 
 * [[https://github.com/USTC-TNS/TAT][TAT]] · [[https://github.com/USTC-TNS/TAT/releases/latest][https://img.shields.io/github/v/release/USTC-TNS/TAT.svg?style=flat-square]] [[/LICENSE.rst][https://img.shields.io/github/license/USTC-TNS/TAT.svg?style=flat-square]] [[https://github.com/USTC-TNS/TAT/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TAT/build.yml.svg?style=flat-square]] [[https://USTC-TNS.github.io/TAT/index.html][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TAT/doxygen.yml.svg?color=%237f7fff&label=reference&style=flat-square]]
 
@@ -63,6 +66,28 @@
                (ansi-color-apply-on-region beg end))))))
      (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
      (setq org-babel-min-lines-for-block-output 1)
+
+     (defun my-latex-export-src-blocks (text backend info)
+       (when (org-export-derived-backend-p backend 'latex)
+         (with-temp-buffer
+           (insert text)
+           ;; replace verbatim env by listings
+           (goto-char (point-min))
+           (replace-string "\\begin{verbatim}" "\\begin{lstlisting}[language=C++]")
+           (replace-string "\\end{verbatim}" "\\end{lstlisting}")
+           (buffer-substring-no-properties (point-min) (point-max)))))
+     (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+     (defun my-latex-export-example-blocks (text backend info)
+       (when (org-export-derived-backend-p backend 'latex)
+         (with-temp-buffer
+           (insert text)
+           ;; replace verbatim env by listings
+           (goto-char (point-min))
+           (replace-string "\\begin{verbatim}" "\\begin{lstlisting}")
+           (replace-string "\\end{verbatim}" "\\end{lstlisting}")
+           (buffer-substring-no-properties (point-min) (point-max)))))
+     (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
    #+end_src
 
 *** Create tensor
