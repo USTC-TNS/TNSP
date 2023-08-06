@@ -118,7 +118,6 @@ def gradient_descent(
         use_natural_gradient=False,
         conjugate_gradient_method_step=20,
         conjugate_gradient_method_error=0.0,
-        metric_inverse_epsilon=None,
         cache_natural_delta=None,
         use_natural_gradient_by_direct_pseudo_inverse=False,
         scalapack_libraries="libscalapack.so",
@@ -139,11 +138,6 @@ def gradient_descent(
         check_difference_delta=1e-8,
         # About Measurement
         measurement=None):
-
-    if metric_inverse_epsilon is not None:
-        showln("===== DEPRECATED WARNING BEGIN =====")
-        showln(" metric_inverse_epsilon deprecated")
-        showln("====== DEPRECATED WARNING END ======")
 
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 

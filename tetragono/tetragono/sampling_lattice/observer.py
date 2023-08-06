@@ -572,15 +572,6 @@ class Observer():
             for reweight, Es, deltas in self._Deltas:
                 yield reweight, Es, deltas
 
-    def natural_gradient(self, step, error, epsilon, first=[True]):
-        if first[0]:
-            showln("==== DEPRECATED WARNING BEGIN ====")
-            showln("observer.natural_gradient is deprecated")
-            showln("use by_conjugate_gradient or by_direct_pseudo_inverse instead")
-            showln("===== DEPRECATED WARNING END =====")
-            first[0] = False
-        return self.natural_gradient_by_conjugate_gradient(step, error, epsilon)
-
     def natural_gradient_by_conjugate_gradient(self, step, error):
         """
         Get the energy natural gradient for every tensor.

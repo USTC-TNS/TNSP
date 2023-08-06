@@ -13,6 +13,8 @@
 *** Deprecated
 + *tetragono*: The previous signature of =save_result=: =state=, =result= and =step= is deprecated.
 *** Removed
++ *tetragono*: Remove the deprecated function =natural_gradient= and the deprecated paramter =metric_inverse_epsilon=
+  for =gm_run=.
 *** Fixed
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.5...v0.3.6][v0.3.6]] - 2023-05-26
