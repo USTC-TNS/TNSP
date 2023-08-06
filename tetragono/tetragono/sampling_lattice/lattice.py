@@ -279,8 +279,7 @@ class Configuration(SingleLayerAuxiliaries):
             edge.
         """
         l1, l2 = l1l2
-        # An certain order is required.
-        for orbit in sorted(self.owner.physics_edges[l1, l2]):
+        for orbit in self.owner.physics_edges[l1, l2]:
             edge = self.owner.physics_edges[l1, l2, orbit]
             symmetry, index = configuration[orbit]
             # P side is dimension one edge

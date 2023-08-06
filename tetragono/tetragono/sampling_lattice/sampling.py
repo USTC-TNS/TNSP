@@ -276,8 +276,8 @@ class DirectSampling(Sampling):
                 # This hole style is like double layer auxiliaries hole.
                 site_hole = three_line_auxiliaries.hole(l2)
                 unsampled_orbits = set(self.owner.physics_edges[l1, l2])
-                # The orbit order is important, because of iterator shrinkers.
-                for orbit in sorted(self.owner.physics_edges[l1, l2]):
+                # The orbit order is maintained by physics edges handler.
+                for orbit in self.owner.physics_edges[l1, l2]:
                     # Trace all unsampled orbits.
                     # The transpose ensure elements are all positive.
                     unsampled_orbits.remove(orbit)

@@ -94,6 +94,8 @@ class AbstractStatePhysicsEdge:
         elif len(l1l2o) == 3:
             l1, l2, orbit = l1l2o
             self.owner._physics_edges[l1][l2][orbit] = edge
+            # Once the edge has been set, resort the dict of this site
+            self.owner._physics_edges[l1][l2] = dict(sorted(self.owner._physics_edges[l1][l2].items()))
         elif len(l1l2o) == 2:
             l1, l2 = l1l2o
             self.owner._physics_edges[l1][l2] = {0: edge}
@@ -141,7 +143,7 @@ class AbstractStateHamiltonian:
         """
         Iterate on the hamiltonians
         """
-        return iter(self.owner._hamiltonians.items())
+        return iter(sorted(self.owner._hamiltonians.items()))
 
     def __setitem__(self, arg, tensor):
         """

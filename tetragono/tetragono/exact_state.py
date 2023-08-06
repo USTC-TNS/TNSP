@@ -85,16 +85,8 @@ class ExactState(AbstractState):
         Tensor
             The state vector
         """
-        names = [
-            f"P_{l1}_{l2}_{orbit}" for l1 in range(self.L1) for l2 in range(self.L2)
-            for orbit in sorted(self.physics_edges[l1, l2])
-        ]
-        edges = [
-            self.physics_edges[l1, l2, orbit]
-            for l1 in range(self.L1)
-            for l2 in range(self.L2)
-            for orbit in sorted(self.physics_edges[l1, l2])
-        ]
+        names = [f"P_{l1}_{l2}_{orbit}" for [l1, l2, orbit], edge in self.physics_edges]
+        edges = [edge for [l1, l2, orbit], edge in self.physics_edges]
         names.append("T")
         edges.append(self._total_symmetry_edge)
         vector = self.Tensor(names, edges).randn()
@@ -138,8 +130,10 @@ class ExactState(AbstractState):
                     .edge_rename({
                         f"O{t}": f"P_{i}_{j}_{orbit}" for t, [i, j, orbit] in enumerate(positions)
                     })  #
-                    .contract(self.vector,
-                              {(f"I{t}", f"P_{i}_{j}_{orbit}") for t, [i, j, orbit] in enumerate(positions)}))
+                    .contract(
+                        self.vector,
+                        {(f"I{t}", f"P_{i}_{j}_{orbit}") for t, [i, j, orbit] in enumerate(positions)},
+                    ))
             # To calculate a v - H v => v *= a; v -= H v
             self.vector *= total_approximate_energy
             self.vector -= temporary_vector
@@ -186,14 +180,16 @@ class ExactState(AbstractState):
                 .contract(
                     observer.edge_rename({
                         f"O{t}": f"P_{l1}_{l2}_{orbit}" for t, [l1, l2, orbit] in enumerate(positions)
-                    }), {(f"P_{l1}_{l2}_{orbit}", f"I{t}") for t, [l1, l2, orbit] in enumerate(positions)}))
+                    }),
+                    {(f"P_{l1}_{l2}_{orbit}", f"I{t}") for t, [l1, l2, orbit] in enumerate(positions)},
+                ))
         result = (
             result  #
             .contract(
-                self.vector.conjugate(), {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}")
-                                          for l1 in range(self.L1)
-                                          for l2 in range(self.L2)
-                                          for orbit in self.physics_edges[l1, l2]} | {("T", "T")}))
+                self.vector.conjugate(),
+                {(f"P_{l1}_{l2}_{orbit}", f"P_{l1}_{l2}_{orbit}") for [l1, l2, orbit], edge in self.physics_edges} |
+                {("T", "T")},
+            ))
         return complex(result).real
 
     def observe_energy(self):
