@@ -63,6 +63,14 @@ class AbstractStatePhysicsEdge:
         else:
             raise ValueError("Invalid getitem argument for physics edge handler")
 
+    def __iter__(self):
+        """
+        Iterate on physics edges.
+        """
+        for l1, l2 in self.owner.sites():
+            for orbit, edge in self.owner._physics_edges[l1][l2].items():
+                yield (l1, l2, orbit), edge
+
     def __setitem__(self, l1l2o, edge):
         """
         Set the physics edge for abstract state.
@@ -80,15 +88,15 @@ class AbstractStatePhysicsEdge:
             An edge or something that can be used to construct an edge.
         """
         self.owner._site_number = None
-        if l1l2o == ...:
-            edge = self.owner._construct_physics_edge(edge)
+        edge = self.owner._construct_physics_edge(edge)
+        if l1l2o is ...:
             self.owner._physics_edges = [[{0: edge} for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
         elif len(l1l2o) == 3:
             l1, l2, orbit = l1l2o
-            self.owner._physics_edges[l1][l2][orbit] = self.owner._construct_physics_edge(edge)
+            self.owner._physics_edges[l1][l2][orbit] = edge
         elif len(l1l2o) == 2:
             l1, l2 = l1l2o
-            self.owner._physics_edges[l1][l2] = {0: self.owner._construct_physics_edge(edge)}
+            self.owner._physics_edges[l1][l2] = {0: edge}
         else:
             raise ValueError("Invalid setitem argument for physics edge handler")
 
@@ -126,7 +134,7 @@ class AbstractStateHamiltonian:
         Tensor
             The hamiltonian tensor
         """
-        points = tuple(point if len(point) == 3 else (point[0], point[1], 0) for point in arg)
+        points = tuple(point if len(point) == 3 else (point[0], point[1], 0) for point in points)
         return self.owner._hamiltonians[points]
 
     def __iter__(self):
@@ -438,9 +446,7 @@ class AbstractState:
             The total site number.
         """
         if self._site_number is None:
-            self._site_number = 0
-            for l1, l2 in self.sites():
-                self._site_number += len(self.physics_edges[l1, l2])
+            self._site_number = len(list(self.physics_edges))
         return self._site_number
 
     def numpy_hamiltonian(self):
@@ -452,20 +458,21 @@ class AbstractState:
         np.ndarray
             The hamiltonian in numpy array format.
         """
-        edge_order = [(l1, l2, orbit) for l1, l2 in self.sites() for orbit in self.physics_edges[l1, l2]]
+        edge_order = [l1l2o for l1l2o, edge in self.physics_edges]
         result = None
-        for positions, hamiltonian in self._hamiltonians.items():
-            body = hamiltonian.rank // 2
+        for positions, hamiltonian in self.hamiltonians:
+            body = len(positions)
             this_term = hamiltonian.edge_rename({f"I{i}": f"I{edge_order.index(positions[i])}" for i in range(body)} |
                                                 {f"O{i}": f"O{edge_order.index(positions[i])}" for i in range(body)})
-            for l1, l2 in self.sites():
-                for orbit in self.physics_edges[l1, l2]:
-                    if (l1, l2, orbit) not in positions:
-                        index = edge_order.index((l1, l2, orbit))
-                        edge = self.physics_edges[l1, l2, orbit]
-                        this_term = this_term.contract(
-                            self.Tensor([f"O{index}", f"I{index}"],
-                                        [edge, edge.conjugated()]).identity({(f"O{index}", f"I{index}")}), set())
+            for l1l2o, edge in self.physics_edges:
+                if l1l2o not in positions:
+                    index = edge_order.index(l1l2o)
+                    identity = (
+                        self.Tensor([f"O{index}", f"I{index}"], [edge, edge.conjugated()])  #
+                        .identity({(f"O{index}", f"I{index}")}))
+                    this_term = this_term.contract(identity, set())
+            # Here, apply merge sign to "I" but not to "O"
+            # In fact, it is also OK if apply merge sign to "O" instead of "I"
             this_array = this_term.merge_edge(
                 {
                     "O": [f"O{i}" for i in range(self.site_number)],
