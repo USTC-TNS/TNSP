@@ -175,7 +175,12 @@ def gradient_descent(
         classical_energy=classical_energy,
     )
     if measurement:
-        measurement_names = measurement.split(",")
+        if isinstance(measurement, str):
+            # It is measurement modules names joined by ","
+            measurement_names = measurement.split(",")
+        else:
+            # It is a python list with measurement modules names or function directly.
+            measurement_names = measurement
         for measurement_name in measurement_names:
             observer.add_observer(measurement_name, get_imported_function(measurement_name, "measurement")(state))
     if use_gradient:
@@ -244,13 +249,16 @@ def gradient_descent(
             measurement_whole_result = observer.whole_result
             if measurement and mpi_rank == 0:
                 for measurement_name in measurement_names:
-                    save_result = measurement_wrapper(get_imported_function(measurement_name, "save_result"))
-                    save_result(
-                        state,
-                        measurement_result[measurement_name],
-                        measurement_whole_result[measurement_name],
-                        grad_step,
-                    )
+                    # If measurement_name is not a module name but a function directly,
+                    # it is only used when setting the measurement.
+                    if isinstance(measurement_name, str):
+                        save_result = measurement_wrapper(get_imported_function(measurement_name, "save_result"))
+                        save_result(
+                            state,
+                            measurement_result[measurement_name],
+                            measurement_whole_result[measurement_name],
+                            grad_step,
+                        )
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
