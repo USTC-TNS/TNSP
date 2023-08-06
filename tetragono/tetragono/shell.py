@@ -381,12 +381,40 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Do gradient descent. see sampling_lattice/gradient.py for details.
         """
-        for result in gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf):
+        for result in self.gm_run_g(*args, **kwargs):
             pass
         return result
 
     def gm_run_g(self, *args, **kwargs):
         yield from gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
+
+    def bin_estimate(self, values):
+        value = [v for v, d in values]
+        length = len(value)
+        expect = sum(value) / length
+        expect_of_square = sum(v**2 for v in value) / length
+        deviation = (expect_of_square - expect**2)**(1 / 2)
+        return expect, deviation / ((length - 1)**(1 / 2))
+
+    @AutoCmd.decorator
+    def gm_bin_run(self, bin_number, sampling_total_step, *args, **kwargs):
+        """
+        Measure with bin error estimation.
+        """
+        sampling_total_steps = [sampling_total_step // bin_number for _ in range(bin_number)]
+        difference = sampling_total_step - sum(sampling_total_steps)
+        for i in range(difference):
+            sampling_total_steps[i] += 1
+
+        results = [self.gm_run(bin_total_step, 0, 0, *args, **kwargs) for bin_total_step in sampling_total_steps]
+        example_whole, example = results[0]
+        result_whole = {name: self.bin_estimate(r[0][name] for r in results) for name in example_whole}
+        result = {
+            name: {
+                positions: self.bin_estimate(r[1][name][positions] for r in results) for positions in mapping
+            } for name, mapping in example.items()
+        }
+        return result_whole, result
 
     @AutoCmd.decorator
     def gm_dump(self, name):
