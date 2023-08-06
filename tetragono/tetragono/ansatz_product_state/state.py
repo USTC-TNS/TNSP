@@ -119,6 +119,10 @@ class AnsatzProductState(AbstractState):
         # version 4 to version 5
         if state["data_version"] == 4:
             state["data_version"] = 5
+        # version 5 to version 6
+        if state["data_version"] == 5:
+            self._v5_to_v6_attribute(state)
+            state["data_version"] = 6
         # setstate
         for key, value in state.items():
             setattr(self, key, value)

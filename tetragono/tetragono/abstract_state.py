@@ -186,7 +186,8 @@ class AbstractState:
     """
 
     __slots__ = [
-        "Tensor", "L1", "L2", "_physics_edges", "_hamiltonians", "_total_symmetry", "_site_number", "data_version"
+        "Tensor", "L1", "L2", "_physics_edges", "_hamiltonians", "_total_symmetry", "_site_number", "data_version",
+        "attribute"
     ]
 
     def sites(self):
@@ -239,6 +240,14 @@ class AbstractState:
         del state["_L2"]
         del state["_Tensor"]
 
+    def _v5_to_v6_attribute(self, state):
+        """
+        Update the data from version 5 to version 6.
+
+        From version 5 to version 6, a member called attribute is added, which is a dict.
+        """
+        state["attribute"] = {}
+
     def __init__(self, Tensor, L1, L2):
         """
         Create an abstract state.
@@ -268,7 +277,10 @@ class AbstractState:
         # The total site number of the whole state, access it by state.site_number
         self._site_number = None
 
-        self.data_version = 5
+        # Customed attribute used by user
+        self.attribute = {}
+
+        self.data_version = 6
 
     def _init_by_copy(self, other):
         """
@@ -286,6 +298,7 @@ class AbstractState:
         self._hamiltonians = other._hamiltonians.copy()
         self._total_symmetry = other._total_symmetry
         self._site_number = other._site_number
+        self.attribute = other.attribute.copy()
         self.data_version = other.data_version
 
     def _construct_symmetry(self, value):
