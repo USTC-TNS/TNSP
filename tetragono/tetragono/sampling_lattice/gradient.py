@@ -240,12 +240,17 @@ def gradient_descent(
                 showln(f"direct sampling stability is {observer.stability}")
 
             # Measure log
+            measurement_result = observer.result
+            measurement_whole_result = observer.whole_result
             if measurement and mpi_rank == 0:
                 for measurement_name in measurement_names:
-                    measurement_result = observer.result[measurement_name]
-                    measurement_whole_result = observer.whole_result[measurement_name]
                     save_result = measurement_wrapper(get_imported_function(measurement_name, "save_result"))
-                    save_result(state, measurement_result, measurement_whole_result, grad_step)
+                    save_result(
+                        state,
+                        measurement_result[measurement_name],
+                        measurement_whole_result[measurement_name],
+                        grad_step,
+                    )
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
@@ -308,8 +313,8 @@ def gradient_descent(
                 if save_configuration_file:
                     write_to_file(sampling_configurations, save_configuration_file)
 
-            # Yield the energy
-            yield observer.energy
+            # Yield the measurement result
+            yield (measurement_whole_result, measurement_result)
 
             if sigint_handler():
                 break

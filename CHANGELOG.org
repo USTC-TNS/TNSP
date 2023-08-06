@@ -11,6 +11,7 @@
 + *tetragono*: =save_result= accept another parameter, which is the total result of the whole observers set. Its
   signature is =state=, =result=, =whole_result= and =step= now.
 + *tetraku*: Change the defnition of x/y/z link in kitaev model. The bond inside one tensor is z link now.
++ *tetragono*: =gm_run(_g)= will now return/yield all the measurement result instead of energy only.
 *** Deprecated
 + *tetragono*: The previous signature of =save_result=: =state=, =result= and =step= is deprecated.
 *** Removed
