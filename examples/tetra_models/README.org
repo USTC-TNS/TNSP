@@ -1,6 +1,0 @@
-* This is folder containing some examples of tetra_models
-
-* There are also some links to =/tetraku/tetraku/tetra_models=
-They are for compatibility.
-You are not expected to use it.
-It is DEPRECATED!
