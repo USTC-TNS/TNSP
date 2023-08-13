@@ -66,7 +66,7 @@ def abstract_state(L1, L2, t, U, mu, side=1):
     return state
 
 
-def abstract_lattice(L1, L2, t, U, mu, side=1):
+def abstract_lattice(L1, L2, t, U, mu, side=1, D=1):
     """
     Create density matrix of Hubbard model lattice.
 
@@ -80,7 +80,15 @@ def abstract_lattice(L1, L2, t, U, mu, side=1):
         The chemical potential.
     side : 1 | 2, default=1
         The Hamiltonian should apply to single side or both side of density matrix.
+    D : int, default=1
+        The initial virtual dimension in PEPS network.
     """
     state = tet.AbstractLattice(abstract_state(L1, L2, t, U, mu, side=side))
-    state.virtual_bond["R"] = state.virtual_bond["D"] = [(0, 1)]
+    if D == 1:
+        edge = [(False, 1)]
+    else:
+        D1 = D // 2
+        D2 = D - D1
+        edge = [(False, D1), (True, D2)]
+    state.virtual_bond["R"] = state.virtual_bond["D"] = edge
     return state
