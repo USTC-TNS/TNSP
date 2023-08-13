@@ -397,10 +397,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         return expect, deviation / ((length - 1)**(1 / 2))
 
     @AutoCmd.decorator
-    def gm_bin_run(self, bin_number, sampling_total_step, *args, **kwargs):
+    def gm_bin_run(self, bin_number, sampling_total_step, *args, **kwargs, first=[True]):
         """
         Measure with bin error estimation.
         """
+        if first[0]:
+            showln("gm_bin_run is experiment feature, which may be changed or removed in the future.")
+            first[0] = False
         sampling_total_steps = [sampling_total_step // bin_number for _ in range(bin_number)]
         difference = sampling_total_step - sum(sampling_total_steps)
         for i in range(difference):
@@ -833,3 +836,5 @@ else:
 
     gm_run_g = app.gm_run_g
     ap_run_g = app.ap_run_g
+
+    gm_bin_run = app.gm_bin_run
