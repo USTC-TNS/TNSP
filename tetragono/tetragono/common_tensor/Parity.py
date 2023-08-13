@@ -39,3 +39,6 @@ CC = C0C1 + C1C0
 I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
 
 N = rename_io(CP, [0]).contract(rename_io(CM, [0]), {("T", "T"), ("I0", "O0")})
+
+CP2 = rename_io(CP, [0]).contract(rename_io(CP.reverse_edge({"T"}), [1]), {("T", "T")})
+CM2 = rename_io(CM, [1]).contract(rename_io(CM.reverse_edge({"T"}), [0]), {("T", "T")})

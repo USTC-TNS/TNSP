@@ -17,7 +17,7 @@
 #
 
 from .tensor_toolkit import rename_io, kronecker_product
-from .Parity import Tensor, CC, I, N, C0C1, C1C0
+from .Parity import Tensor, CC, I, N, C0C1, C1C0, CP2, CM2
 
 # Merge two spin
 # This is following sjdong's convension
@@ -37,12 +37,58 @@ CSCS = kronecker_product(
     rename_io(I, [0]),
     rename_io(I, [1]),
 )
+singlet = kronecker_product(
+    rename_io(CP2, [0, 3]),
+    rename_io(I, [1]),
+    rename_io(I, [2]),
+) - kronecker_product(
+    rename_io(CP2, [1, 2]),
+    rename_io(I, [0]),
+    rename_io(I, [3]),
+) + kronecker_product(
+    rename_io(CM2, [3, 0]),
+    rename_io(I, [1]),
+    rename_io(I, [2]),
+) - kronecker_product(
+    rename_io(CM2, [2, 1]),
+    rename_io(I, [0]),
+    rename_io(I, [3]),
+)
+triplet = kronecker_product(
+    rename_io(CP2, [0, 3]),
+    rename_io(I, [1]),
+    rename_io(I, [2]),
+) + kronecker_product(
+    rename_io(CP2, [1, 2]),
+    rename_io(I, [0]),
+    rename_io(I, [3]),
+) + kronecker_product(
+    rename_io(CM2, [3, 0]),
+    rename_io(I, [1]),
+    rename_io(I, [2]),
+) + kronecker_product(
+    rename_io(CM2, [2, 1]),
+    rename_io(I, [0]),
+    rename_io(I, [3]),
+)
 # Merge order: Up, Down
 CSCS = CSCS.merge_edge({
     "I0": ["I0", "I2"],
     "O0": ["O0", "O2"],
     "I1": ["I1", "I3"],
     "O1": ["O1", "O3"],
+}, put_sign_in_H, {"O0", "O1"})
+singlet = singlet.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+    "I1": ["I2", "I3"],
+    "O1": ["O2", "O3"],
+}, put_sign_in_H, {"O0", "O1"})
+triplet = triplet.merge_edge({
+    "I0": ["I0", "I1"],
+    "O0": ["O0", "O1"],
+    "I1": ["I2", "I3"],
+    "O1": ["O2", "O3"],
 }, put_sign_in_H, {"O0", "O1"})
 
 NN = kronecker_product(rename_io(N, [0]), rename_io(N, [1]))
