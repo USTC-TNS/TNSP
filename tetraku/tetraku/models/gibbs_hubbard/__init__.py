@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2021-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -38,16 +38,16 @@ def abstract_state(L1, L2, t, U, mu, side=1):
     """
     if side not in [1, 2]:
         raise RuntimeError("side should be either 1 or 2")
-    state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
     state.total_symmetry = 0
     for l1 in range(L1):
         for l2 in range(L2):
-            state.physics_edges[(l1, l2, 0)] = [(0, 1), (+1, 2), (+2, 1)]
-            state.physics_edges[(l1, l2, 1)] = [(0, 1), (-1, 2), (-2, 1)]
-    NN = tet.common_tensor.Fermi_Hubbard.NN.to(float)
-    N0 = tet.common_tensor.Fermi_Hubbard.N0.to(float)
-    N1 = tet.common_tensor.Fermi_Hubbard.N1.to(float)
-    CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
+            state.physics_edges[(l1, l2, 0)] = [(False, 2), (True, 2)]
+            state.physics_edges[(l1, l2, 1)] = [(False, 2), (True, 2)]
+    NN = tet.common_tensor.Parity_Hubbard.NN.to(float)
+    N0 = tet.common_tensor.Parity_Hubbard.N0.to(float)
+    N1 = tet.common_tensor.Parity_Hubbard.N1.to(float)
+    CSCS = tet.common_tensor.Parity_Hubbard.CSCS.to(float)
     single_site = U * NN - mu * (N0 + N1)
     tCC = -t * CSCS
     single_site_double_side = [single_site, half_reverse(single_site.conjugate())]
