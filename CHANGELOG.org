@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.7...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...v0.3.7][v0.3.7]] - 2023-08-15
 
 *** Added
 + *tetragono*: Add support to calculate deviation of the observer set as a whole, which is useful since many observables
@@ -17,7 +25,6 @@
 *** Removed
 + *tetragono*: Remove the deprecated function =natural_gradient= and the deprecated paramter =metric_inverse_epsilon=
   for =gm_run=.
-*** Fixed
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.5...v0.3.6][v0.3.6]] - 2023-05-26
 
