@@ -300,7 +300,7 @@ class AbstractState:
         self._hamiltonians = other._hamiltonians.copy()
         self._total_symmetry = other._total_symmetry
         self._site_number = other._site_number
-        self.attribute = other.attribute.copy()
+        self.attribute = other.attribute
         self.data_version = other.data_version
 
     def _construct_symmetry(self, value):
