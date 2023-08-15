@@ -182,7 +182,7 @@ def gradient_descent(
             # It is a python list with measurement modules names or function directly.
             measurement_names = measurement
         for measurement_name in measurement_names:
-            observer.add_observer(measurement_name, get_imported_function(measurement_name, "measurement")(state))
+            observer.add_observer(str(measurement_name), get_imported_function(measurement_name, "measurement")(state))
     if use_gradient:
         need_energy_observer = use_line_search or use_check_difference
     else:
