@@ -27,8 +27,6 @@ def hopping_hamiltonians(state):
     # Two part, normal Hamiltonian and hopping between subspace
     hamiltonians = {}
 
-    CM2 = rename_io(CM, [0]).contract(rename_io(CM, [1]), {("T", "T")})
-    CP2 = rename_io(CP, [0]).contract(rename_io(CP, [1]), {("T", "T")})
     CCCC = (C0C1 + C1C0 + CM2 + CP2).merge_edge({"I0": ["I0", "I1"], "O0": ["O0", "O1"]})
     between_subspace = kronecker_product(rename_io(CCCC, [0]), rename_io(CCCC, [1]))
 
