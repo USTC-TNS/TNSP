@@ -1,4 +1,0 @@
-* Do not use this directory
-This directory is for compatibility.
-You are not expected to use it.
-It is DEPRECATED!
