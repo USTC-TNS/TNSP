@@ -4,6 +4,7 @@
 
 *** Added
 *** Changed
++ *tetragono*: The interface of =save_result= allow only =(state, result, whole_result)= now.
 *** Deprecated
 *** Removed
 *** Fixed

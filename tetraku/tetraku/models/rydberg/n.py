@@ -24,7 +24,7 @@ def measurement(state):
     return {((l1, l2, 0),): n for l1 in range(state.L1) for l2 in range(state.L2)}
 
 
-def save_result(state, result, step):
+def save_result(state, result, whole_result):
     n = [result[
         (l1, l2, 0),
     ][0] for l1 in range(state.L1) for l2 in range(state.L2)]

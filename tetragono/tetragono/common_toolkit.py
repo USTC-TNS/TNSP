@@ -297,30 +297,3 @@ def restrict_wrapper(origin_restrict):
     else:
         restrict = origin_restrict
     return restrict
-
-
-def show_deprecated_measurement_with_three_arguments(first=[True]):
-    if first[0]:
-        showln("===== DEPRECATED WARNING BEGIN =====")
-        showln("    save_result argument changed    ")
-        showln("     three arguments deprecated     ")
-        showln("====== DEPRECATED WARNING END ======")
-        first[0] = False
-
-
-def measurement_wrapper(origin_measurement):
-
-    def measurement(*args):
-        try:
-            inspect.signature(origin_measurement).bind(*args)
-            args_callable = True
-        except TypeError:
-            args_callable = False
-        if args_callable:
-            return origin_measurement(*args)
-        else:
-            state, result, _, step = args
-            show_deprecated_measurement_with_three_arguments()
-            return origin_measurement(state, result, step)
-
-    return measurement

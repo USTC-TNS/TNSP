@@ -26,6 +26,6 @@ def measurement(state):
     return result
 
 
-def save_result(state, result, whole_result, step):
+def save_result(state, result, whole_result):
     with open("Sz.log", "a", encoding="utf-8") as file:
         print(result, file=file)

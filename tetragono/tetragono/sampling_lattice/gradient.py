@@ -22,7 +22,7 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
-                              write_to_file, get_imported_function, restrict_wrapper, measurement_wrapper)
+                              write_to_file, get_imported_function, restrict_wrapper)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -255,12 +255,11 @@ def gradient_descent(
                     # If measure_term is not a module name but a function directly,
                     # it is only used when setting the measurement.
                     if isinstance(measure_term, str):
-                        save_result = measurement_wrapper(get_imported_function(measure_term, "save_result"))
+                        save_result = get_imported_function(measure_term, "save_result")
                         save_result(
                             state,
                             measurement_result[measure_term],
                             measurement_whole_result[measure_term],
-                            grad_step,
                         )
             # Energy log
             if log_file and mpi_rank == 0:

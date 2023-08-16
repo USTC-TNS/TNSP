@@ -22,7 +22,7 @@ import numpy as np
 import TAT
 from ..ansatz_product_state import AnsatzProductState, Observer, SweepSampling, ErgodicSampling
 from ..common_toolkit import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, write_to_file,
-                              get_imported_function, restrict_wrapper, measurement_wrapper, send)
+                              get_imported_function, restrict_wrapper, send)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -240,8 +240,8 @@ def gradient_descent(
                     measurement_result = observer.result[measurement_name]
                     measurement_whole_result = None
                     # TODO ansatz product state does not implement it yet.
-                    save_result = measurement_wrapper(get_imported_function(measurement_name, "save_result"))
-                    save_result(state, measurement_result, measurement_whole_result, grad_step)
+                    save_result = get_imported_function(measurement_name, "save_result")
+                    save_result(state, measurement_result, measurement_whole_result)
             # Energy log
             if log_file and mpi_rank == 0:
                 with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
