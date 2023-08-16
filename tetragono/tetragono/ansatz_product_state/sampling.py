@@ -18,7 +18,7 @@
 
 import numpy as np
 import TAT
-from ..common_toolkit import mpi_rank, mpi_size
+from ..utility import mpi_rank, mpi_size
 from ..tensor_element import tensor_element
 from .state import Configuration, AnsatzProductState
 

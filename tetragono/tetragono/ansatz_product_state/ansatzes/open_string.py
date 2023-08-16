@@ -19,7 +19,7 @@
 import numpy as np
 import torch
 import tetraux
-from ...common_toolkit import seed_differ
+from ...utility import seed_differ
 from .abstract_ansatz import AbstractAnsatz
 
 

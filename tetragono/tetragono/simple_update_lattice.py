@@ -20,7 +20,7 @@ from copyreg import _slotnames
 import numpy as np
 from .auxiliaries import DoubleLayerAuxiliaries
 from .abstract_lattice import AbstractLattice
-from .common_toolkit import show, showln, mpi_comm, mpi_rank, mpi_size
+from .utility import show, showln, mpi_comm, mpi_rank, mpi_size
 
 
 def max_parallel_size_shown(state, pool=set()):

@@ -21,7 +21,7 @@ import numpy as np
 from ..auxiliaries import SingleLayerAuxiliaries
 from ..abstract_state import AbstractState
 from ..abstract_lattice import AbstractLattice
-from ..common_toolkit import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer, safe_rename, mpi_size, mpi_rank, mpi_comm
+from ..utility import lattice_prod_sum, lattice_conjugate, showln, bcast_lattice_buffer, safe_rename, mpi_size, mpi_rank, mpi_comm
 
 
 class Configuration(SingleLayerAuxiliaries):

@@ -17,7 +17,7 @@
 #
 
 import numpy as np
-from ...common_toolkit import safe_rename
+from ...utility import safe_rename
 from ...abstract_state import AbstractState
 from ...abstract_lattice import AbstractLattice
 from ..lattice import SamplingLattice

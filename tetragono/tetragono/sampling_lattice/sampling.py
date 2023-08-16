@@ -19,7 +19,7 @@
 import numpy as np
 import TAT
 from ..auxiliaries import DoubleLayerAuxiliaries, ThreeLineAuxiliaries
-from ..common_toolkit import mpi_rank, mpi_size
+from ..utility import mpi_rank, mpi_size
 from ..tensor_element import tensor_element
 from .lattice import Configuration, SamplingLattice
 

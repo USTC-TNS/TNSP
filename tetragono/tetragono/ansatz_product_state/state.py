@@ -18,7 +18,7 @@
 
 from copyreg import _slotnames
 from ..abstract_state import AbstractState
-from ..common_toolkit import send, allreduce_iterator_buffer, bcast_iterator_buffer, showln
+from ..utility import send, allreduce_iterator_buffer, bcast_iterator_buffer, showln
 import tetraux
 
 

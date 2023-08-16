@@ -18,7 +18,7 @@
 
 import os
 import numpy as np
-from ..common_toolkit import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln, pickle
+from ..utility import allreduce_buffer, allreduce_iterator_buffer, mpi_rank, mpi_comm, show, showln, pickle
 from ..tensor_element import tensor_element
 from .state import Configuration
 

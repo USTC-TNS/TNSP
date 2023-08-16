@@ -21,8 +21,8 @@ import sys
 import cmd
 import TAT
 from io import StringIO
-from .common_toolkit import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
-                             get_imported_function, seed_differ)
+from .utility import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
+                      get_imported_function, seed_differ)
 from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice

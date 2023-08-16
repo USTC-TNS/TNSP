@@ -26,8 +26,8 @@ from .sampling_lattice import SamplingLattice, Configuration, Observer, SweepSam
 # Miscellaneous
 from . import conversion
 from . import common_tensor
-from . import common_toolkit
-from .common_toolkit import *
+from . import utility
+from .utility import *
 
 # Ansatz product state
 from . import ansatz_product_state
