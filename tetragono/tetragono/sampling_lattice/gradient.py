@@ -177,12 +177,15 @@ def gradient_descent(
     if measurement:
         if isinstance(measurement, str):
             # It is measurement modules names joined by ","
-            measurement_names = measurement.split(",")
-        else:
-            # It is a python list with measurement modules names or function directly.
-            measurement_names = measurement
-        for measurement_name in measurement_names:
-            observer.add_observer(str(measurement_name), get_imported_function(measurement_name, "measurement")(state))
+            measurement = measurement.split(",")
+        if not isinstance(measurement, list):
+            measurement = [measurement]
+        # It is a python list of measurement modules names or function directly.
+        for measure_term in measurement:
+            if isinstance(measure_term, str):
+                observer.add_observer(measure_term, get_imported_function(measure_term, "measurement")(state))
+            else:
+                observer.add_observer(measure_term.__name__, measure_term(state))
     if use_gradient:
         need_energy_observer = use_line_search or use_check_difference
     else:
@@ -247,16 +250,16 @@ def gradient_descent(
             # Measure log
             measurement_result = observer.result
             measurement_whole_result = observer.whole_result
-            if measurement and mpi_rank == 0:
-                for measurement_name in measurement_names:
-                    # If measurement_name is not a module name but a function directly,
+            if measurement is not None and mpi_rank == 0:
+                for measure_term in measurement:
+                    # If measure_term is not a module name but a function directly,
                     # it is only used when setting the measurement.
-                    if isinstance(measurement_name, str):
-                        save_result = measurement_wrapper(get_imported_function(measurement_name, "save_result"))
+                    if isinstance(measure_term, str):
+                        save_result = measurement_wrapper(get_imported_function(measure_term, "save_result"))
                         save_result(
                             state,
-                            measurement_result[measurement_name],
-                            measurement_whole_result[measurement_name],
+                            measurement_result[measure_term],
+                            measurement_whole_result[measure_term],
                             grad_step,
                         )
             # Energy log
