@@ -7,6 +7,7 @@
 + *tetragono*: The interface of =save_result= allow only =(state, result, whole_result)= now.
 *** Deprecated
 *** Removed
++ *TAT.hpp*: Remove deprecated tensor member function =get_rank=, =find_rank_from_name= and =get_rank_from_name=.
 *** Fixed
 + *TAT.hpp*: Fix a bug about parity sign when =merge_map= is empty.
 + *TAT.hpp*: Fix invalid access to a empty =vector= when splitting the first edge into zero edges.
