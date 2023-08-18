@@ -150,7 +150,7 @@ namespace TAT {
                   edges_after_split.emplace_back(split_edge.segments(), edges_before_split[index_before_split].arrow());
                   this_split_shape.push_back(split_edge.segments_size());
                }
-               const auto this_edges_after_split = &edges_after_split[this_split_begin_index_after_split];
+               const auto this_edges_after_split = edges_after_split.data() + this_split_begin_index_after_split;
                auto& this_offset = split_offsets.emplace_back(std::in_place, nullptr, std::move(this_split_shape)).value();
                auto& this_offset_pool =
                      split_offsets_pool.emplace_back(this_offset.size(), std::tuple<Symmetry, Size, Size, Size, Size>{{}, 0, 1, 0, 0});
