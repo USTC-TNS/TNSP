@@ -130,11 +130,11 @@ namespace TAT {
          return offset;
       }
     public:
-      template<typename Vector>
+      template<typename Vector = vector_t>
       const T& at(const Vector& indices) const {
          return data()[get_offset(indices)];
       }
-      template<typename Vector>
+      template<typename Vector = vector_t>
       T& at(const Vector& indices) {
          return data()[get_offset(indices)];
       }
@@ -219,7 +219,7 @@ namespace TAT {
       }
 
     public:
-      template<typename Vector>
+      template<typename Vector = vector_t>
       mdspan<T, U> transpose(const Vector& plan) {
          vector_t new_dimensions(rank());
          vector_t new_leadings(rank());
@@ -229,7 +229,7 @@ namespace TAT {
          }
          return mdspan<T, U>(data(), std::move(new_dimensions), std::move(new_leadings));
       }
-      template<typename Vector>
+      template<typename Vector = vector_t>
       mdspan<const T, U> transpose(const Vector& plan) const {
          vector_t new_dimensions(rank());
          vector_t new_leadings(rank());

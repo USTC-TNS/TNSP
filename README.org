@@ -14,6 +14,7 @@
    * c++ compiler with c++17 support(such as GCC 7.3+, Clang 6.0+)
    * LAPACK/BLAS or MKL
    * MPI(optional for parallel computing)
+   * [[https://github.com/google/googletest][gtest]](optional for test)
    * [[https://github.com/pybind/pybind11][pybind11]](optional for python binding)
    * [[https://github.com/numpy/numpy][numpy]](optional in python binding to export data into numpy array)
 
