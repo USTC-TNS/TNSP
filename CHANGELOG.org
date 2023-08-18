@@ -8,6 +8,7 @@
 *** Deprecated
 *** Removed
 *** Fixed
++ *TAT.hpp*: Fix a bug about parity sign when =merge_map= is empty.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...v0.3.7][v0.3.7]] - 2023-08-15
 

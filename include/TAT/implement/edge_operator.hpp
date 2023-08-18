@@ -419,8 +419,11 @@ namespace TAT {
 
       // put res_edge into res
       auto result = Tensor<ScalarType, Symmetry, Name>(std::move(new_names), std::move(result_edges));
-      // names_after_merge is moved, use result.names() instead.
       const auto& edges_after_merge = result.edges();
+
+      // The previous one is moved.
+      const auto& names_after_merge_new = result.names();
+      const auto& names_before_merge_new = merge_map.size() != 0 ? real_names_before_merge : names_after_merge_new;
 
       // marks:
       // split_flag_mark
@@ -451,11 +454,11 @@ namespace TAT {
             }
             for (auto i = 0; i < rank_at_transpose; i++) {
                reversed_after_transpose_flags_mark.push_back(
-                     parity_exclude_names_reversed_after_transpose.find(names_before_merge[i]) ==
+                     parity_exclude_names_reversed_after_transpose.find(names_before_merge_new[i]) ==
                      parity_exclude_names_reversed_after_transpose.end());
             }
             for (auto i = 0; i < rank_after_merge; i++) {
-               merge_flags_mark.push_back(parity_exclude_names_merge.find(result.names(i)) == parity_exclude_names_merge.end());
+               merge_flags_mark.push_back(parity_exclude_names_merge.find(names_after_merge_new[i]) == parity_exclude_names_merge.end());
             }
          } else {
             for (auto i = 0; i < rank_before_split; i++) {
@@ -468,11 +471,11 @@ namespace TAT {
             }
             for (auto i = 0; i < rank_at_transpose; i++) {
                reversed_after_transpose_flags_mark.push_back(
-                     parity_exclude_names_reversed_after_transpose.find(names_before_merge[i]) !=
+                     parity_exclude_names_reversed_after_transpose.find(names_before_merge_new[i]) !=
                      parity_exclude_names_reversed_after_transpose.end());
             }
             for (auto i = 0; i < rank_after_merge; i++) {
-               merge_flags_mark.push_back(parity_exclude_names_merge.find(result.names(i)) != parity_exclude_names_merge.end());
+               merge_flags_mark.push_back(parity_exclude_names_merge.find(names_after_merge_new[i]) != parity_exclude_names_merge.end());
             }
          }
       }
