@@ -32,6 +32,7 @@ dist
 __pycache__
 ltximg
 auto
+.coverage
 .ipynb_checkpoints
 .mypy_cache
 *.slo
