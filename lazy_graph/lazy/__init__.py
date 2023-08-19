@@ -220,7 +220,7 @@ class Node:
 
         Returns
         -------
-        tuple[Node, args, kwargs, list[key], int]
+        tuple[Node, args, kwargs, tuple[key, ...], list[int]]
             The frame used for calculating the value of this node.
         """
         l_args = len(self._args)
@@ -252,7 +252,7 @@ class Node:
 
         Parameters
         ----------
-        stack : list[tuple[Node, args, kwargs, list[key], int]]
+        stack : list[tuple[Node, args, kwargs, tuple[key, ...], list[int]]]
             The stack used to run recursion.
         """
         # If the stack is empty, all works done, return
