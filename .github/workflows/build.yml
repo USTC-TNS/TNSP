@@ -4,23 +4,26 @@ on: [push, pull_request]
 
 jobs:
   test_TAT_hpp:
-    name: test TAT.hpp except svd and qr
+    name: test TAT.hpp
     runs-on: ubuntu-latest
     if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
 
     steps:
       - name: checkout
         uses: actions/checkout@v3
-      - name: install mpi and openblas
-        run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev
+      - name: install mpi, openblas and gtest/gmock
+        run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev libgtest-dev libgmock-dev
       - name: make build directory
         run: mkdir ${{runner.workspace}}/build
       - name: configure
         working-directory: ${{runner.workspace}}/build
         run: cmake ${{github.workspace}}
+      - name: build
+        working-directory: ${{runner.workspace}}/build
+        run: make test_executables -j 2
       - name: ctest
         working-directory: ${{runner.workspace}}/build
-        run: ctest -E ^test_\(svd\|qr\)$ -j 2
+        run: ctest -j 2
 
   test_lazy_py:
     name: test lazy.py
