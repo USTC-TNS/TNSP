@@ -369,7 +369,7 @@ namespace TAT {
       }
    }
 
-   template<typename Vector, typename T>
+   template<typename Vector = std::vector<Size>, typename T>
    void matrix_transpose(Size m, Size n, const T* source, T* destination) {
       // source m*n
       // destination n*m
