@@ -90,6 +90,30 @@ class SweepSampling(Sampling):
         # Sweep sampling needs a proper sweep order to trigger less auxiliary refresh.
         self._sweep_order = self._get_proper_position_order()
 
+    def _is_diagonal_configuration(self, replacement):
+        # This function is a part of experiment feature
+        for l1, l2 in self.owner.sites():
+            p0 = (l1, l2, 0)
+            p1 = (l1, l2, 1)
+            o0 = replacement.get(p0, self.configuration[p0])
+            o1 = replacement.get(p1, self.configuration[p1])
+            if o0 != o1:
+                return False
+        return True
+
+    def _process_smalldiag(self, ws, replacement={}):
+        # This function is a part of experiment feature
+        if "smalldiag" in self.owner.attribute:
+            minimum, maximum, rate = self.owner.attribute["smalldiag"]
+            if self._is_diagonal_configuration(replacement):
+                beta = self.owner.attribute["beta"] * rate
+                if beta > maximum:
+                    beta == maximum
+                if beta < minimum:
+                    beta = minimum
+                ws = ws * beta
+        return ws
+
     def _single_term(self, positions, hamiltonian, ws):
         body = len(positions)
         # tuple[EdgePoint, ...]
@@ -108,6 +132,7 @@ class SweepSampling(Sampling):
                     # Then wss is zero forcely, hopping possibility is zero definitely, so hopping failed.
                     return ws
             wss = self.configuration.replace(replacement)  # which return a tensor, we only need its norm
+            wss = self._process_smalldiag(wss, replacement)
             alpha = self.owner.attribute.get("alpha", 1)
             p = (wss / ws).norm_2()**(2 * alpha) * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
@@ -121,6 +146,7 @@ class SweepSampling(Sampling):
         if not self.configuration.valid():
             raise RuntimeError("Configuration not initialized")
         ws = self.configuration.hole(())
+        ws = self._process_smalldiag(ws)
         for positions in self._sweep_order:
             hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)

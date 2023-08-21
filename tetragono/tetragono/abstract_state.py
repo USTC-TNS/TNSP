@@ -285,6 +285,11 @@ class AbstractState:
         # Current experiment feature list is
         # - alpha: float
         #       Use p^alpha instead on p as possibility in sampling method.
+        # - smalldiag: tuple[float, float, float]
+        #       Smaller diagonal possibility item for density matrix in sampling method.
+        #       Three parts of `smalldiag` are minimum, maximum, rate.
+        #       This attribute requires user to maintain attribute "beta" manually.
+        #       The coefficient is beta*rate, but clamped between minimum and maximum.
 
         self.data_version = 6
 
