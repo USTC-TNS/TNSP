@@ -23,8 +23,6 @@ from ..utility import mpi_rank, mpi_size
 from ..tensor_element import tensor_element
 from .lattice import Configuration, SamplingLattice
 
-alpha = 1
-
 
 class Sampling:
     """
@@ -110,6 +108,7 @@ class SweepSampling(Sampling):
                     # Then wss is zero forcely, hopping possibility is zero definitely, so hopping failed.
                     return ws
             wss = self.configuration.replace(replacement)  # which return a tensor, we only need its norm
+            alpha = self.owner.attribute.get("alpha", 1)
             p = (wss / ws).norm_2()**(2 * alpha) * hopping_number / hopping_number_s
             if TAT.random.uniform_real(0, 1)() < p:
                 # Hopping success, update ws and configuration
@@ -125,6 +124,7 @@ class SweepSampling(Sampling):
         for positions in self._sweep_order:
             hamiltonian = self._hopping_hamiltonians[positions]
             ws = self._single_term(positions, hamiltonian, ws)
+        alpha = self.owner.attribute.get("alpha", 1)
         return ws.norm_2()**(2 * alpha), self.configuration.copy()
 
     def _get_proper_position_order(self):
@@ -305,6 +305,7 @@ class DirectSampling(Sampling):
                     if np.sum(rho) == 0:
                         # Block mismatch, or total possibility at this step too small, redo a sampling.
                         return self()
+                    alpha = self.owner.attribute.get("alpha", 1)
                     rho = rho**alpha
                     rho = rho / np.sum(rho)
                     choice = self._choice(random(), rho)

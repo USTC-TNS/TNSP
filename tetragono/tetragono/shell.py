@@ -435,12 +435,13 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The previous alpha.
         """
         if first[0]:
-            showln("gm_alpha is experiment feature, which may be changed or removed in the future.")
+            showln("gm_alpha is experiment feature, this interface will be removed in the future.")
+            showln("new interface is to use app.gm.attribute['alpha']=0.5, for alpha=0.5 as example")
+            showln("please update your code as soon as possible.")
             first[0] = False
-        from .sampling_lattice import sampling as s
-        result = s.alpha
+        result = self.gm.attribute.get("alpha", 1)
         if alpha is not None:
-            s.alpha = alpha
+            self.gm.attribute["alpha"] = alpha
         return result
 
     @AutoCmd.decorator

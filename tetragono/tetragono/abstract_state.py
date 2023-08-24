@@ -281,6 +281,10 @@ class AbstractState:
 
         # Customed attribute used by user
         self.attribute = {}
+        # This attribute is also used for experiment feature.
+        # Current experiment feature list is
+        # - alpha: float
+        #       Use p^alpha instead on p as possibility in sampling method.
 
         self.data_version = 6
 
