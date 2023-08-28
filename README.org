@@ -46,7 +46,7 @@
 
    You can simply compile TAT with =em++= (no mpi support, no doubt), and link =liblapack.a=, =libblas.a=, =libf2c.a= compiled from [[https://www.netlib.org/clapack/][clapack-3.2.1]]
 
-   You can download them from [[https://github.com/USTC-TNS/TAT/releases/tag/v0.0.6][here]] or compile by yourself
+   You can download them from [[emscripten][here]] or compile by yourself
 
    If you are using cmake, you need to put these three files into directory =emscripten=, then run =emcmake cmake $path_to_TAT_root= which will configure it automatically
 
