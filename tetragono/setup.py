@@ -16,11 +16,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import email
 from setuptools import setup, find_packages
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 
-version = check_output(["git", "describe"]).decode("utf-8")
-version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
+try:
+    version = check_output(["git", "describe"]).decode("utf-8")
+    version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
+except CalledProcessError:
+    with open("PKG-INFO", "rt", encoding="utf-8") as file:
+        version = email.parser.Parser().parse(file)["Version"]
 
 try:
     with open("README.md", "rt", encoding="utf-8") as file:

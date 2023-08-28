@@ -262,8 +262,8 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.x"
-      - name: install wheel
-        run: python -m pip install wheel
+      - name: install python build
+        run: python -m pip install build
       - name: download artifacts
         uses: actions/download-artifact@v3
         with:
@@ -271,7 +271,7 @@ jobs:
           path: ${{matrix.package}}
       - name: build wheel
         working-directory: ${{github.workspace}}/${{matrix.package}}
-        run: python setup.py bdist_wheel
+        run: python -m build
       - name: upload artifact
         uses: actions/upload-artifact@v3
         with:
