@@ -13,6 +13,12 @@ support for symmetry and fermion tensor.
 You can build by yourself, see [[https://github.com/USTC-TNS/TAT/blob/TAT/README.org][this]] for details. Or use =pip= to obtain
 built distribution: =pip install PyTAT=.
 
+** Use in [[https://github.com/pyodide/pyodide][Pyodide]]
+
+Refer to [[https://pyodide.org/en/stable/development/building-and-testing-packages.html][this]] to build PyTAT in pyodide environment.
+Please make sure =-fPIC= was added when [[../README.org#use-with-emscripten][compile]] LAPACK/BLAS in emscripten version,
+and =--exports pyinit= was added to arguments of =pyodide build=.
+
 ** Documents
 
 #+begin_src emacs-lisp :exports none :results silent
