@@ -52,11 +52,13 @@ class build_ext(build_ext_original):
             "-DTAT_USE_MPI=" + "OFF",
             "-DCMAKE_CXX_FLAGS=" + "-DTAT_VERSION=" + "\\\"" + version + "\\\"",
             "-DPYTHON_EXECUTABLE=" + sys.executable,
+            "-DTAT_BUILD_TETRAUX=" + "OFF",
+            "-DTAT_BUILD_TEST=" + "OFF",
         ]
         if "CMAKEFLAGS" in os.environ:
             cmake_args += os.environ["CMAKEFLAGS"].split("|")
         os.chdir(str(build_dir))
-        self.spawn(['cmake', str(cwd.parent)] + cmake_args)
+        self.spawn(['cmake', str(cwd / "parent")] + cmake_args)
 
         if not self.dry_run:
             if "MAKEFLAGS" in os.environ:

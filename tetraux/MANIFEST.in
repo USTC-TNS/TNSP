@@ -1,0 +1,2 @@
+include parent/tetraux/tetraux.cpp
+include parent/CMakeLists.txt parent/TAT-config.cmake.in parent/TAT.pc.in
