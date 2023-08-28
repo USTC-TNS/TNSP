@@ -52,7 +52,7 @@
 
    Please notice that =-s EMULATE_FUNCTION_POINTER_CASTS=1= is needed for =em++= to compile TAT.
 
-   If clapack is compiled by yourself, several patch should be applied, including missing =#include <stdio.h>= in =BLAS/SRC/xerbla.c=, return type of =s_copy=, =s_cat= declaration in many lapack function.
+   If clapack is compiled by yourself, several [[emscripten/fix-for-emscripten.clapack-3.2.1-CMAKE.patch][patch]] should be applied, including missing =#include <stdio.h>= in =BLAS/SRC/xerbla.c=, return type of =s_copy=, =s_cat= declaration in many lapack function.
 
 ** Documents
    

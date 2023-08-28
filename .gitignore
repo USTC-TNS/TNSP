@@ -3,6 +3,7 @@
 !/PyTAT
 !/PyScalapack
 !/derivations
+!/emscripten
 !/examples
 !/include
 !/lazy_graph
