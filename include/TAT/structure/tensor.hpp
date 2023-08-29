@@ -816,11 +816,9 @@ namespace TAT {
        * Get the conjugated tensor
        * \note for symmetry tensor, every symmetry is transformed to -symmetry,
        * for fermion tensor, arrow is reversed, for complex tensor value got conjugated
-       * \param default_is_physics_edge all edges are treated as physics edge by default
-       * \param exclude_names the edges set which are different from the default edge type.
+       * \param trivial_metric apply a trivial metric when conjugate the tensor.
        */
-      [[nodiscard]] Tensor<ScalarType, Symmetry, Name>
-      conjugate(bool default_is_physics_edge = false, const std::unordered_set<Name>& exclude_names = {}) const;
+      [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate(bool trivial_metric = false) const;
 
       /**
        * Set the tensor as identity inplacely

@@ -899,11 +899,7 @@ namespace TAT {
                      "Get a identity tensor with same shape",
                      py::return_value_policy::reference_internal)
                .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 2, "Calculate exponential like matrix")
-               .def("conjugate",
-                    &T::conjugate,
-                    py::arg("default_is_physics_edge") = false,
-                    py::arg("exclude_names") = py::set(),
-                    "Get the conjugate Tensor")
+               .def("conjugate", &T::conjugate, py::arg("trivial_metric") = false, "Get the conjugate Tensor")
                .def("trace", &T::trace, py::arg("trace_pairs"), py::arg("fuse_names") = py::dict(), "Calculate trace or partial trace of a tensor")
                .def(
                      "svd",

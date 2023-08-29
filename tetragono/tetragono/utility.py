@@ -163,7 +163,7 @@ def write_to_file(obj, file_name):
 
 @np.vectorize
 def lattice_conjugate(tensor):
-    return tensor.conjugate(default_is_physics_edge=True)
+    return tensor.conjugate(True)
 
 
 @np.vectorize

@@ -5,6 +5,10 @@
 *** Added
 *** Changed
 + *tetragono*: The interface of =save_result= allow only =(state, result, whole_result)= now.
++ *TAT.hpp*: Change the view of sign problem in =conjugate=, there is only one conjugate, but the trivial metric may not
+  be positive definite, so in gradient descent, this negative metric term need to be considered, the optional paramter
+  =trivial_metric= is used to apply the trivial metric when conjugating.
++ *TAT.py*: Update the new interface of =conjugate=.
 *** Deprecated
 *** Removed
 + *TAT.hpp*: Remove deprecated tensor member function =get_rank=, =find_rank_from_name= and =get_rank_from_name=.
