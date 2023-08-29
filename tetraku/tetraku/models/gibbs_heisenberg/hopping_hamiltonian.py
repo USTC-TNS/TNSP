@@ -22,6 +22,9 @@ import tetragono as tet
 
 
 def hopping_hamiltonians(state):
+    # This hopping hamiltonian restrict nothing but ensure the result is valid density matrix,
+    # Since the only interlayer term is |down><down| <-> |up><up|.
+
     # Two part, normal Hamiltonian and hopping between subspace
     SS = tet.common_tensor.No.SS.to(float)
     between_subspace = tet.common_tensor.No.SxSx.to(float) - tet.common_tensor.No.SySy.to(float)

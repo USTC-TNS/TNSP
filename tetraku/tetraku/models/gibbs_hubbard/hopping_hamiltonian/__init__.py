@@ -24,23 +24,27 @@ from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product,
 
 
 def hopping_hamiltonians(state):
-    # This hopping hamiltonian allow any hopping in possible space.
-    # Even if the density matrix is invalid such as |3 particle><1 particle| term.
+    # This hopping hamiltonian restrict the parity symmetry in each layer.
+    # so it does not allow hopping from |2 particle><2 particle| to |1 particle><1 particle|,
+    # but allow hopping from |2><2| to |0><0|.
+    # Since the only restriction is parity symmetry in each layer, it is also possible to
+    # get the invalid density matrix such as |2><2| to |0><2|.
 
     # Two part, normal Hamiltonian and hopping between subspace
     hamiltonians = {}
 
-    between_subspace = C0C1 + C1C0 + CM2 + CP2
+    CCCC = (C0C1 + C1C0 + CM2 + CP2).merge_edge({"I0": ["I0", "I1"], "O0": ["O0", "O1"]})
+    between_subspace = kronecker_product(rename_io(CCCC, [0]), rename_io(CCCC, [1]))
 
-    CC = tet.common_tensor.Parity.CC.to(float)
-    CC_double_side = [CC, half_reverse(CC.conjugate())]
+    CSCS = tet.common_tensor.Parity_Hubbard.CSCS.to(float)
+    CSCS_double_side = [CSCS, half_reverse(CSCS.conjugate())]
 
     for l1, l2 in state.sites():
         hamiltonians[(l1, l2, 0), (l1, l2, 1)] = between_subspace
         for layer in range(2):
             # The hamiltonian in second layer is conjugate and half reverse of the first layer.
             if l1 != 0:
-                hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = CC_double_side[layer]
+                hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = CSCS_double_side[layer]
             if l2 != 0:
-                hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = CC_double_side[layer]
+                hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = CSCS_double_side[layer]
     return hamiltonians
