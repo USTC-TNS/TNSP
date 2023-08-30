@@ -261,6 +261,7 @@ namespace TAT {
    using FermiZ2Symmetry = Symmetry<fermi<U1>, bose<Z2>>;
    using FermiU1Symmetry = Symmetry<fermi<U1>, bose<U1>>;
    using ParitySymmetry = Symmetry<fermi<Z2>>;
+   using FermiFermiSymmetry = Symmetry<fermi<U1>, fermi<U1>>;
 } // namespace TAT
 
 namespace std {

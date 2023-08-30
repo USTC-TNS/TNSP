@@ -121,6 +121,25 @@ namespace TAT {
       dealing_edge<ParitySymmetry, false>(Parity_m, "Parity");
       dealing_edge<ParitySymmetry, true>(Parity_m, "Parity");
 
+      auto FermiFermi_m = tat_m.def_submodule("FermiFermi");
+      dealing_symmetry<FermiFermiSymmetry>(FermiFermi_m, "FermiFermi")
+            .def(py::init<>())
+            .def(py::init<U1, U1>(), py::arg("fermi_0"), py::arg("fermi_1"))
+            .def(implicit_init<FermiFermiSymmetry, const std::tuple<U1, U1>&>([](const std::tuple<U1, U1>& p) {
+                    return std::make_from_tuple<FermiFermiSymmetry>(p);
+                 }),
+                 py::arg("tuple_of_fermi_0_fermi_1"))
+            .def_property_readonly(
+                  "fermi_0",
+                  [](const FermiFermiSymmetry& symmetry) {
+                     return std::get<0>(symmetry);
+                  })
+            .def_property_readonly("fermi_1", [](const FermiFermiSymmetry& symmetry) {
+               return std::get<1>(symmetry);
+            });
+      dealing_edge<FermiFermiSymmetry, false>(FermiFermi_m, "FermiFermi");
+      dealing_edge<FermiFermiSymmetry, true>(FermiFermi_m, "FermiFermi");
+
       // tensor
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) at_exit(dealing_Tensor_##SYM##_##SCALARSHORT(SYM##_m, #SCALARSHORT, #SCALAR, #SYM));
       TAT_LOOP_ALL_SCALAR_SYMMETRY
@@ -128,7 +147,7 @@ namespace TAT {
 
       // Set alias
       tat_m.attr("Normal") = tat_m.attr("No");
-      for (auto sym_m_name : std::vector{"No", "Z2", "U1", "Fermi", "FermiZ2", "FermiU1", "Parity"}) {
+      for (auto sym_m_name : std::vector{"No", "Z2", "U1", "Fermi", "FermiZ2", "FermiU1", "Parity", "FermiFermi"}) {
          auto&& sym_m = tat_m.attr(sym_m_name);
 
          sym_m.attr("float") = sym_m.attr("D");
