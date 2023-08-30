@@ -19,19 +19,29 @@
 import TAT
 from .tensor_toolkit import Fedge, Tedge, rename_io
 
-Tensor = TAT.FermiU1.Z.Tensor
+Tensor = TAT.FermiFermi.Z.Tensor
 
-EF = Fedge[(0, 0), (+1, +1), (+1, -1), (+2, 0)]
-ET = Tedge[(0, 0), (-1, -1), (-1, +1), (-2, 0)]
+EF = Fedge[(0, 0), (0, +1), (+1, 0), (+1, +1)]
+ET = Tedge[(0, 0), (0, -1), (-1, 0), (-1, -1)]
 
 
 def _generate_Up_and_Down(_name, _spin):
-    CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
-        (-1, -_spin),
-    ]]).range(1, 0)
-    CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
-        (+1, +_spin),
-    ]]).range(1, 0)
+    if _spin == +1:
+        CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
+            (-1, 0),
+        ]]).range(1, 0)
+        CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
+            (+1, 0),
+        ]]).range(1, 0)
+    elif _spin == -1:
+        CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
+            (0, -1),
+        ]]).range(1, 0)
+        CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
+            (0, +1),
+        ]]).range(1, 0)
+    else:
+        raise RuntimeError("Program should not come here")
     C0C1 = rename_io(CP, [0]).contract(rename_io(CM, [1]), {("T", "T")})
     C1C0 = rename_io(CP, [1]).contract(rename_io(CM, [0]), {("T", "T")})
     CC = C0C1 + C1C0

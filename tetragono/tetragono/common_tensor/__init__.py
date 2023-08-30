@@ -18,6 +18,7 @@
 
 from . import No
 from . import Fermi
+from . import FermiFermi_Hubbard
 from . import FermiU1_Hubbard
 from . import FermiU1_tJ
 from . import Fermi_Hubbard
