@@ -23,7 +23,7 @@ jobs:
         run: make test_executables -j 2
       - name: ctest
         working-directory: ${{runner.workspace}}/build
-        run: ctest -j 2
+        run: ctest -j 2 --verbose
 
   test_lazy_py:
     name: test lazy.py

@@ -30,6 +30,11 @@
 
 namespace TAT {
    namespace detail {
+      // These two string is to avoid duplicated copy string when format data to string.
+      // The original output workflow is print to stringstream and convert to string.
+      // c++ default stringstream will copy string, this stream will move the internal string
+      // The original input workflow is create stringstream by copy input string.
+      // This stream will only use the string view of the input.
       template<typename char_type>
       class basic_instringstream :
             private std::basic_streambuf<char_type, std::char_traits<char_type>>,
@@ -157,6 +162,9 @@ namespace TAT {
 
       template<typename Func>
       std::ostream& print_list(std::ostream& out, Func&& print, char left, char right) {
+         // This will print the list item one by one via calling `print(out)`, which return false if it is not the last item
+         // and return true if it is the last item.
+         // If the list is empty, it should return true directly.
          out << left;
          while (!print(out)) {
             out << ',';
