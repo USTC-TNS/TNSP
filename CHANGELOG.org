@@ -9,6 +9,7 @@
   be positive definite, so in gradient descent, this negative metric term need to be considered, the optional paramter
   =trivial_metric= is used to apply the trivial metric when conjugating.
 + *TAT.py*: Update the new interface of =conjugate=.
++ *TAT.py*: Use customized string stream in =TAT.py= to avoid a duplicated copy of string.
 *** Deprecated
 *** Removed
 + *TAT.hpp*: Remove deprecated tensor member function =get_rank=, =find_rank_from_name= and =get_rank_from_name=.

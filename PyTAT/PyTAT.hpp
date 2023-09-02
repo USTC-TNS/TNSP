@@ -53,7 +53,6 @@ namespace py = pybind11;
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(Parity) \
    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiFermi)
 
-
 namespace TAT {
    // Auxiliaries
    struct AtExit {
@@ -168,29 +167,29 @@ namespace TAT {
                  })
             .def("__repr__",
                  [=](const Symmetry& symmetry) {
-                    auto out = std::stringstream();
+                    auto out = detail::basic_outstringstream<char>();
                     out << name;
                     out << "Symmetry";
                     out << "[";
                     out << symmetry;
                     out << "]";
-                    return out.str();
+                    return std::move(out).str();
                  })
             .def("__str__",
                  [=](const Symmetry& symmetry) {
-                    auto out = std::stringstream();
+                    auto out = detail::basic_outstringstream<char>();
                     out << symmetry;
-                    return out.str();
+                    return std::move(out).str();
                  })
             .def(py::pickle(
                   [](const Symmetry& symmetry) {
-                     auto out = std::stringstream();
+                     auto out = detail::basic_outstringstream<char>();
                      out < symmetry;
-                     return py::bytes(out.str());
+                     return py::bytes(std::move(out).str());
                   },
                   [](const py::bytes& bytes) {
                      Symmetry symmetry;
-                     auto in = std::stringstream(std::string(bytes));
+                     auto in = detail::basic_instringstream<char>(std::string(bytes));
                      in > symmetry;
                      return symmetry;
                   }));
@@ -290,13 +289,13 @@ namespace TAT {
 
          result.def(py::pickle(
                [](const E& edge) {
-                  auto out = std::stringstream();
+                  auto out = detail::basic_outstringstream<char>();
                   out < edge;
-                  return py::bytes(out.str());
+                  return py::bytes(std::move(out).str());
                },
                [](const py::bytes& bytes) {
                   E edge;
-                  auto in = std::stringstream(std::string(bytes));
+                  auto in = detail::basic_instringstream<char>(std::string(bytes));
                   in > edge;
                   return edge;
                }));
@@ -304,12 +303,12 @@ namespace TAT {
          // __str__ and __repr__
          result.def("__str__",
                     [](const E& edge) {
-                       auto out = std::stringstream();
+                       auto out = detail::basic_outstringstream<char>();
                        out << edge;
-                       return out.str();
+                       return std::move(out).str();
                     })
                .def("__repr__", [name](const E& edge) {
-                  auto out = std::stringstream();
+                  auto out = detail::basic_outstringstream<char>();
                   out << name << "Edge";
                   if constexpr (Symmetry::length == 0) {
                      out << "[";
@@ -318,7 +317,7 @@ namespace TAT {
                   if constexpr (Symmetry::length == 0) {
                      out << "]";
                   }
-                  return out.str();
+                  return std::move(out).str();
                });
       }
 
@@ -682,10 +681,10 @@ namespace TAT {
                     })
                .def("__repr__",
                     [tensor_name](const T& tensor) {
-                       auto out = std::stringstream();
+                       auto out = detail::basic_outstringstream<char>();
                        out << tensor_name << "Tensor";
                        out << tensor.shape();
-                       return out.str();
+                       return std::move(out).str();
                     })
                .def(
                      "dump",
@@ -720,9 +719,9 @@ namespace TAT {
                     py::arg("edge_arrow") = py::list(),
                     "Create high rank tensor with only one element")
                .def(py::init<>([](const std::string& string) {
-                       auto ss = std::stringstream(string);
+                       auto in = detail::basic_instringstream<char>(string);
                        auto result = T();
-                       ss >> result;
+                       in >> result;
                        return result;
                     }),
                     "Read tensor from text string");
