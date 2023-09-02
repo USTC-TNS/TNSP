@@ -8,15 +8,26 @@ TEST(test_name, basic_usage) {
    ASSERT_STREQ(static_cast<const std::string&>(n).c_str(), "right");
 }
 
-TEST(test_name, hash_and_order) {
+TEST(test_name, ordered_map) {
    auto n = TAT::DefaultName("left");
-   auto n_set = std::unordered_set<TAT::DefaultName>();
-   n_set.insert(n);
-   n_set.insert(n);
-   auto n_unordered_set = std::unordered_set<TAT::DefaultName>();
-   n_unordered_set.insert(n);
-   n_unordered_set.insert(n);
-   auto n_set_unordered_set = std::unordered_set<std::pair<TAT::DefaultName, TAT::DefaultName>>();
-   n_set_unordered_set.insert({n, n});
-   n_set_unordered_set.insert({n, n});
+   auto s = std::unordered_set<TAT::DefaultName>();
+   s.insert(n);
+   s.insert(n);
+   ASSERT_EQ(s.size(), 1);
+}
+
+TEST(test_name, unordered_map) {
+   auto n = TAT::DefaultName("left");
+   auto s = std::unordered_set<TAT::DefaultName>();
+   s.insert(n);
+   s.insert(n);
+   ASSERT_EQ(s.size(), 1);
+}
+
+TEST(test_name, unordered_pair_map) {
+   auto n = TAT::DefaultName("left");
+   auto s = std::unordered_set<std::pair<TAT::DefaultName, TAT::DefaultName>>();
+   s.insert({n, n});
+   s.insert({n, n});
+   ASSERT_EQ(s.size(), 1);
 }

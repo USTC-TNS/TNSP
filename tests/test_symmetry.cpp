@@ -1,9 +1,11 @@
 #include <TAT/TAT.hpp>
 #include <gtest/gtest.h>
 
-TEST(test_symmetry, basic_usage) {
-   auto x = TAT::Symmetry<>();
+TEST(test_symmetry, create_object) {
    ASSERT_EQ(TAT::Symmetry<int>(0), TAT::Symmetry<TAT::bose<int>>());
+}
+
+TEST(test_symmetry, operators) {
    ASSERT_EQ(TAT::Symmetry<int>(2), TAT::Symmetry<int>(1) + TAT::Symmetry<int>(1));
    ASSERT_EQ(TAT::Symmetry<TAT::fermi<int>>(2), TAT::Symmetry<TAT::fermi<int>>(1) + TAT::Symmetry<TAT::fermi<int>>(1));
    ASSERT_EQ(TAT::Symmetry<TAT::bose<bool>>(false), TAT::Symmetry<TAT::bose<bool>>(true) + TAT::Symmetry<TAT::bose<bool>>(true));
@@ -21,17 +23,20 @@ TEST(test_symmetry, basic_usage) {
    ASSERT_EQ(y, (TAT::Symmetry<int, bool>(5, true)));
 }
 
-TEST(test_symmetry, hash_and_order) {
-   auto x = std::map<TAT::Symmetry<bool, int>, int>();
-   x[{6, false}] = 7;
-   x[{2, true}] = 9;
-   ASSERT_EQ((x[{6, false}]), 7);
-   ASSERT_EQ((x[{2, true}]), 9);
-   auto y = std::unordered_map<TAT::Symmetry<bool, int>, int>();
-   y[{6, false}] = 7;
-   y[{2, true}] = 9;
-   ASSERT_EQ((y[{6, false}]), 7);
-   ASSERT_EQ((y[{2, true}]), 9);
+TEST(test_symmetry, order_map) {
+   auto m = std::map<TAT::Symmetry<bool, int>, int>();
+   m[{6, false}] = 7;
+   m[{2, true}] = 9;
+   ASSERT_EQ((m[{6, false}]), 7);
+   ASSERT_EQ((m[{2, true}]), 9);
+}
+
+TEST(test_symmetry, hash_map) {
+   auto m = std::unordered_map<TAT::Symmetry<bool, int>, int>();
+   m[{6, false}] = 7;
+   m[{2, true}] = 9;
+   ASSERT_EQ((m[{6, false}]), 7);
+   ASSERT_EQ((m[{2, true}]), 9);
 }
 
 TEST(test_symmetry, parity) {

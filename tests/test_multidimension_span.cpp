@@ -115,6 +115,7 @@ TEST(test_multidimension_span, transform_with_transpose_throw) {
          auto s_span = TAT::mdspan<int>(s_data.data(), {2, 3, 4});
          auto d_data = std::vector<int>(24);
          auto d_span = TAT::mdspan<int>(s_data.data(), {4, 3, 2});
+         // shape not same, should throw
          auto transposed_s_span = s_span.transpose({2, 0, 1});
          TAT::mdspan_transform(transposed_s_span, d_span, [](auto x) {
             return x;
