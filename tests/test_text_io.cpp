@@ -11,7 +11,7 @@ TEST(test_text_io, basic_usage_nosymmetry) {
    std::stringstream out;
    out << a;
    auto expect = "{\x1B[32mnames\x1B[0m:[L.*&^eft,R--..ight],\x1B[32medges\x1B[0m:[3,4],\x1B[32mblocks\x1B[0m:[0,1,2,3,4,5,6,7,8,9,10,11]}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }
 
 TEST(test_text_io, basic_usage_u1symmetry) {
@@ -29,7 +29,7 @@ TEST(test_text_io, basic_usage_u1symmetry) {
                  "\x1B[33m[-2,1,1,0]\x1B[0m:[0,1,2,3,4,5,6,7],\x1B[33m[-1,0,1,0]\x1B[0m:[8,9,10,11],\x1B[33m[-1,1,0,0]\x1B[0m:[12,13,14,15,16,17,18,"
                  "19],\x1B[33m[-1,1,1,-1]\x1B[0m:[20,21,22,23],\x1B[33m[0,0,0,0]\x1B[0m:[24,25,26,27],\x1B[33m[0,0,1,-1]\x1B[0m:[28,29],\x1B[33m[0,1"
                  ",0,-1]\x1B[0m:[30,31,32,33],\x1B[33m[0,1,1,-2]\x1B[0m:[34,35,36,37,38,39,40,41]}}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }
 
 TEST(test_text_io, basic_usage_nosymmetry_shape) {
@@ -42,7 +42,7 @@ TEST(test_text_io, basic_usage_nosymmetry_shape) {
    std::stringstream out;
    out << a.shape();
    auto expect = "{\x1B[32mnames\x1B[0m:[L.*&^eft,R--..ight],\x1B[32medges\x1B[0m:[3,4]}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }
 
 TEST(test_text_io, basic_usage_nosymmetry_show) {
@@ -53,7 +53,7 @@ TEST(test_text_io, basic_usage_nosymmetry_show) {
    std::stringstream(input) >> a >> b;
    ASSERT_EQ(b, '?');
    auto expect = "{\x1B[32mnames\x1B[0m:[L.*&^eft,R--..ight],\x1B[32medges\x1B[0m:[3,4],\x1B[32mblocks\x1B[0m:[0,1,2,3,4,5,6,7,8,9,10,11]}";
-   ASSERT_STREQ(a.show().c_str(), expect);
+   ASSERT_EQ(a.show(), expect);
 }
 
 TEST(test_text_io, basic_usage_nosymmetry_complex) {
@@ -66,7 +66,7 @@ TEST(test_text_io, basic_usage_nosymmetry_complex) {
    std::stringstream out;
    out << a;
    auto expect = "{\x1B[32mnames\x1B[0m:[L.*&^eft,R--..ight],\x1B[32medges\x1B[0m:[3,4],\x1B[32mblocks\x1B[0m:[0,1,2,3,4,5,6,7,8,9,10,11]}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }
 
 TEST(test_text_io, basic_usage_u1symmetry_complex) {
@@ -84,7 +84,7 @@ TEST(test_text_io, basic_usage_u1symmetry_complex) {
                  "\x1B[33m[-2,1,1,0]\x1B[0m:[0,1,2,3,4,5,6,7],\x1B[33m[-1,0,1,0]\x1B[0m:[8,9,10,11],\x1B[33m[-1,1,0,0]\x1B[0m:[12,13,14,15,16,17,18,"
                  "19],\x1B[33m[-1,1,1,-1]\x1B[0m:[20,21,22,23],\x1B[33m[0,0,0,0]\x1B[0m:[24,25,26,27],\x1B[33m[0,0,1,-1]\x1B[0m:[28,29],\x1B[33m[0,1"
                  ",0,-1]\x1B[0m:[30,31,32,33],\x1B[33m[0,1,1,-2]\x1B[0m:[34,35,36,37,38,39,40,41]}}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }
 
 TEST(test_text_io, basic_usage_u1symmetry_empty_block) {
@@ -98,7 +98,7 @@ TEST(test_text_io, basic_usage_u1symmetry_empty_block) {
    out << a;
    auto expect = "{\x1B[32mnames\x1B[0m:[i,j],\x1B[32medges\x1B[0m:[{0:0,1:1},{0:2,-1:3}],\x1B[32mblocks\x1B[0m:{\x1B[33m[0,0]\x1B[0m:[],\x1B[33m[1,"
                  "-1]\x1B[0m:[0,1,2]}}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }
 
 TEST(test_text_io, basic_usage_u1symmetry_no_block) {
@@ -111,5 +111,5 @@ TEST(test_text_io, basic_usage_u1symmetry_no_block) {
    std::stringstream out;
    out << a;
    auto expect = "{\x1B[32mnames\x1B[0m:[i,j],\x1B[32medges\x1B[0m:[{0:2},{-1:3}],\x1B[32mblocks\x1B[0m:{}}";
-   ASSERT_STREQ(out.str().c_str(), expect);
+   ASSERT_EQ(out.str(), expect);
 }

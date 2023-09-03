@@ -52,7 +52,7 @@ TEST(test_binary_io_utility, input_string_for_name) {
    std::stringstream in(src);
    std::string n;
    read_string_for_name(in, n);
-   ASSERT_STREQ(n.c_str(), "abcd");
+   ASSERT_EQ(n, "abcd");
 }
 
 TEST(test_binary_io_utility, input_fastname_for_name) {
@@ -65,7 +65,7 @@ TEST(test_binary_io_utility, input_fastname_for_name) {
    std::stringstream in(src);
    FastName n;
    read_fastname_for_name(in, n);
-   ASSERT_STREQ(static_cast<const std::string&>(n).c_str(), "abcd");
+   ASSERT_EQ(static_cast<const std::string&>(n), "abcd");
 }
 
 TEST(test_binary_io_utility, io_vector_pod) {

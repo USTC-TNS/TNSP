@@ -3,9 +3,9 @@
 
 TEST(test_name, basic_usage) {
    auto n = TAT::DefaultName("left");
-   ASSERT_STREQ(static_cast<const std::string&>(n).c_str(), "left");
+   ASSERT_EQ(static_cast<const std::string&>(n), "left");
    n = "right";
-   ASSERT_STREQ(static_cast<const std::string&>(n).c_str(), "right");
+   ASSERT_EQ(static_cast<const std::string&>(n), "right");
 }
 
 TEST(test_name, ordered_map) {

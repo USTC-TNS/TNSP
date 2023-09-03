@@ -17,9 +17,9 @@ TEST(test_text_io_utility, output_complex) {
    detail::print_complex(out, std::complex<float>(-1, 0)) << "\n";
    detail::print_complex(out, std::complex<float>(0, -1)) << "\n";
    detail::print_complex(out, std::complex<float>(0, 0)) << "\n";
-   ASSERT_STREQ(out.str().c_str(), "1+2i\n1-2i\n-1+2i\n-1-2i\n1\n1i\n-1\n-1i\n0\n");
+   ASSERT_EQ(out.str(), "1+2i\n1-2i\n-1+2i\n-1-2i\n1\n1i\n-1\n-1i\n0\n");
 
-   ASSERT_STREQ(static_cast<std::stringstream&&>(detail::print_complex(std::stringstream(), std::complex<float>(0, 0))).str().c_str(), "0");
+   ASSERT_EQ(static_cast<std::stringstream&&>(detail::print_complex(std::stringstream(), std::complex<float>(0, 0))).str(), "0");
 }
 
 TEST(test_text_io_utility, input_complex) {
@@ -71,7 +71,7 @@ TEST(test_text_io_utility, output_list) {
          },
          '[',
          ']');
-   ASSERT_STREQ(out.str().c_str(), "[1,2,3]");
+   ASSERT_EQ(out.str(), "[1,2,3]");
 }
 TEST(test_text_io_utility, output_list_empty) {
    using namespace TAT;
@@ -89,7 +89,7 @@ TEST(test_text_io_utility, output_list_empty) {
          },
          '[',
          ']');
-   ASSERT_STREQ(out.str().c_str(), "[]");
+   ASSERT_EQ(out.str(), "[]");
 }
 
 TEST(test_text_io_utility, input_list) {
@@ -129,7 +129,7 @@ TEST(test_text_io_utility, output_string_for_name) {
 
    std::stringstream out;
    print_string_for_name(out, "hello") << " world";
-   ASSERT_STREQ(out.str().c_str(), "hello world");
+   ASSERT_EQ(out.str(), "hello world");
 }
 
 TEST(test_text_io_utility, output_fastname_for_name) {
@@ -137,7 +137,7 @@ TEST(test_text_io_utility, output_fastname_for_name) {
 
    std::stringstream out;
    print_fastname_for_name(out, FastName("hello")) << " world";
-   ASSERT_STREQ(out.str().c_str(), "hello world");
+   ASSERT_EQ(out.str(), "hello world");
 }
 
 TEST(test_text_io_utility, input_string_for_name) {
@@ -147,18 +147,18 @@ TEST(test_text_io_utility, input_string_for_name) {
 
    std::string name1;
    scan_string_for_name(in, name1);
-   ASSERT_STREQ(name1.c_str(), "hello");
+   ASSERT_EQ(name1, "hello");
    ASSERT_EQ(in.get(), '\n');
 
    std::string name2;
    scan_string_for_name(in, name2);
-   ASSERT_STREQ(name2.c_str(), "world");
+   ASSERT_EQ(name2, "world");
    ASSERT_EQ(in.get(), ',');
    ASSERT_EQ(in.get(), '\n');
 
    std::string name3;
    scan_string_for_name(in, name3);
-   ASSERT_STREQ(name3.c_str(), "ohh");
+   ASSERT_EQ(name3, "ohh");
    ASSERT_EQ(in.get(), ']');
    ASSERT_EQ(in.get(), '\n');
 }
@@ -170,18 +170,18 @@ TEST(test_text_io_utility, input_fastname_for_name) {
 
    FastName name1;
    scan_fastname_for_name(in, name1);
-   ASSERT_STREQ(static_cast<const std::string&>(name1).c_str(), "hello");
+   ASSERT_EQ(static_cast<const std::string&>(name1), "hello");
    ASSERT_EQ(in.get(), '\n');
 
    FastName name2;
    scan_fastname_for_name(in, name2);
-   ASSERT_STREQ(static_cast<const std::string&>(name2).c_str(), "world");
+   ASSERT_EQ(static_cast<const std::string&>(name2), "world");
    ASSERT_EQ(in.get(), ',');
    ASSERT_EQ(in.get(), '\n');
 
    FastName name3;
    scan_fastname_for_name(in, name3);
-   ASSERT_STREQ(static_cast<const std::string&>(name3).c_str(), "ohh");
+   ASSERT_EQ(static_cast<const std::string&>(name3), "ohh");
    ASSERT_EQ(in.get(), ']');
    ASSERT_EQ(in.get(), '\n');
 }

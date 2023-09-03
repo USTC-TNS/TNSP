@@ -4,15 +4,15 @@
 TEST(test_text_io_edge, output_symmetry) {
    std::stringstream s1;
    s1 << TAT::Symmetry<>();
-   ASSERT_STREQ(s1.str().c_str(), "");
+   ASSERT_EQ(s1.str(), "");
 
    std::stringstream s2;
    s2 << TAT::Symmetry<TAT::bose<int>>(233);
-   ASSERT_STREQ(s2.str().c_str(), "233");
+   ASSERT_EQ(s2.str(), "233");
 
    std::stringstream s3;
    s3 << TAT::Symmetry<int, int>(233, 666);
-   ASSERT_STREQ(s3.str().c_str(), "(233,666)");
+   ASSERT_EQ(s3.str(), "(233,666)");
 }
 
 TEST(test_text_io_edge, input_symmetry) {

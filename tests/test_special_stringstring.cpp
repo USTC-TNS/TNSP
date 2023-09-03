@@ -19,7 +19,7 @@ TEST(test_special_stringstring, special_ostream) {
    int a = 1, b = 2, c = 3;
    out << a << b << c;
    auto string = std::move(out).str();
-   EXPECT_STREQ(string.c_str(), "123");
+   EXPECT_EQ(string, "123");
    EXPECT_STREQ(std::move(out).str().c_str(), "");
 }
 
@@ -31,6 +31,6 @@ TEST(test_special_stringstring, special_ostream_overflow) {
    int a = 123, b = 234, c = 345;
    out << a << b << c;
    auto string = std::move(out).str();
-   EXPECT_STREQ(string.c_str(), "123234345");
+   EXPECT_EQ(string, "123234345");
    EXPECT_STREQ(std::move(out).str().c_str(), "");
 }
