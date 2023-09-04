@@ -446,6 +446,7 @@ namespace TAT {
       };
       // determine common edge order depend on what
       // to ensure less transpose need to be done
+      bool tensor_1_larger_than_tensor_2 = tensor_1.storage().size() > tensor_2.storage().size();
       if (free_rank_1 == 0) {
          put_common_1_right = true;
          fit_tensor_2_common_edges(); // tensor 1 is smaller, so let tensor 2 has better order
@@ -454,21 +455,34 @@ namespace TAT {
          put_common_2_right = true;
          fit_tensor_1_common_edges(); // tensor 2 is smaller, so let tensor 1 has better order
          put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
-      } else if (free_names_1.back() != tensor_1.names().back()) { // last name in tensor_1 is common name
-         put_common_1_right = true;
-         fit_tensor_1_common_edges();
-         put_common_2_right = common_names_2.empty() || common_names_2.back() == tensor_2.names().back();
-      } else if (free_names_2.back() != tensor_2.names().back()) { // last name in tensor_2 is common name
-         put_common_2_right = true;
-         fit_tensor_2_common_edges();
-         put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
-      } else {
-         put_common_1_right = false;
-         put_common_2_right = false;
-         // fit the larger tensor
-         if (tensor_1.storage().size() > tensor_2.storage().size()) {
+      } else if (tensor_1_larger_than_tensor_2) {
+         if (free_names_1.back() != tensor_1.names().back()) { // last name in tensor_1 is common name
+            put_common_1_right = true;
             fit_tensor_1_common_edges();
+            put_common_2_right = common_names_2.empty() || common_names_2.back() == tensor_2.names().back();
+         } else if (free_names_2.back() != tensor_2.names().back()) { // last name in tensor_2 is common name
+            put_common_2_right = true;
+            fit_tensor_2_common_edges();
+            put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
          } else {
+            put_common_1_right = false;
+            put_common_2_right = false;
+            // fit the larger tensor, tensor_1 larger
+            fit_tensor_1_common_edges();
+         }
+      } else {
+         if (free_names_2.back() != tensor_2.names().back()) { // last name in tensor_2 is common name
+            put_common_2_right = true;
+            fit_tensor_2_common_edges();
+            put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
+         } else if (free_names_1.back() != tensor_1.names().back()) { // last name in tensor_1 is common name
+            put_common_1_right = true;
+            fit_tensor_1_common_edges();
+            put_common_2_right = common_names_2.empty() || common_names_2.back() == tensor_2.names().back();
+         } else {
+            put_common_1_right = false;
+            put_common_2_right = false;
+            // fit the larger tensor, tensor_2 larger
             fit_tensor_2_common_edges();
          }
       }
@@ -720,6 +734,7 @@ namespace TAT {
       };
       // determine common edge order depend on what
       // to ensure less transpose need to be done
+      bool tensor_1_larger_than_tensor_2 = tensor_1.storage().size() > tensor_2.storage().size();
       if (free_rank_1 == 0) {
          put_common_1_right = true;
          fit_tensor_2_common_edges(); // tensor 1 is smaller, so let tensor 2 has better order
@@ -728,21 +743,34 @@ namespace TAT {
          put_common_2_right = true;
          fit_tensor_1_common_edges(); // tensor 2 is smaller, so let tensor 1 has better order
          put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
-      } else if (free_names_1.back() != tensor_1.names().back()) { // last name in tensor_1 is common name
-         put_common_1_right = true;
-         fit_tensor_1_common_edges();
-         put_common_2_right = common_names_2.empty() || common_names_2.back() == tensor_2.names().back();
-      } else if (free_names_2.back() != tensor_2.names().back()) { // last name in tensor_2 is common name
-         put_common_2_right = true;
-         fit_tensor_2_common_edges();
-         put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
-      } else {
-         put_common_1_right = false;
-         put_common_2_right = false;
-         // fit the larger tensor
-         if (tensor_1.storage().size() > tensor_2.storage().size()) {
+      } else if (tensor_1_larger_than_tensor_2) {
+         if (free_names_1.back() != tensor_1.names().back()) { // last name in tensor_1 is common name
+            put_common_1_right = true;
             fit_tensor_1_common_edges();
+            put_common_2_right = common_names_2.empty() || common_names_2.back() == tensor_2.names().back();
+         } else if (free_names_2.back() != tensor_2.names().back()) { // last name in tensor_2 is common name
+            put_common_2_right = true;
+            fit_tensor_2_common_edges();
+            put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
          } else {
+            put_common_1_right = false;
+            put_common_2_right = false;
+            // fit the larger tensor, tensor_1 larger
+            fit_tensor_1_common_edges();
+         }
+      } else {
+         if (free_names_2.back() != tensor_2.names().back()) { // last name in tensor_2 is common name
+            put_common_2_right = true;
+            fit_tensor_2_common_edges();
+            put_common_1_right = common_names_1.empty() || common_names_1.back() == tensor_1.names().back();
+         } else if (free_names_1.back() != tensor_1.names().back()) { // last name in tensor_1 is common name
+            put_common_1_right = true;
+            fit_tensor_1_common_edges();
+            put_common_2_right = common_names_2.empty() || common_names_2.back() == tensor_2.names().back();
+         } else {
+            put_common_1_right = false;
+            put_common_2_right = false;
+            // fit the larger tensor, tensor_2 larger
             fit_tensor_2_common_edges();
          }
       }

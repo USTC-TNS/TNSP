@@ -10,6 +10,8 @@
   =trivial_metric= is used to apply the trivial metric when conjugating.
 + *TAT.py*: Update the new interface of =conjugate=.
 + *TAT.py*: Use customized string stream in =TAT.py= to avoid a duplicated copy of string.
++ *TAT.hpp*: Check the larger tensor to try to fit the common edges in contract, if not proper, check the other one. The
+  previous behavior always check tensor 1 firstly and check tensor 2 secondly.
 *** Deprecated
 *** Removed
 + *TAT.hpp*: Remove deprecated tensor member function =get_rank=, =find_rank_from_name= and =get_rank_from_name=.
