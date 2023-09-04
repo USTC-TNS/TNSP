@@ -351,7 +351,7 @@ namespace TAT {
             if (end_of_merge != 1 + start_of_merge) {
                // merge edge begin
                // result edge and offset
-               const auto this_edges_before_merge = &edges_before_merge[start_of_merge];
+               const auto this_edges_before_merge = edges_before_merge.data() + start_of_merge;
                auto& this_offset = merge_offsets.emplace_back(std::in_place, nullptr, std::move(this_merge_shape)).value();
                auto& this_offset_pool =
                      merge_offsets_pool.emplace_back(this_offset.size(), std::tuple<Symmetry, Size, Size, Size, Size>{{}, 0, 1, 0, 0});
@@ -581,13 +581,13 @@ namespace TAT {
             if (index_before_merge != 1 + this_merge_begin_index_before_merge) {
                // normal merge
                const auto& [symmetry, position, size, offset, parity] =
-                     merge_offsets[index_after_merge]->at(&positions_before_merge[this_merge_begin_index_before_merge]);
+                     merge_offsets[index_after_merge]->at(positions_before_merge.data() + this_merge_begin_index_before_merge);
                positions_after_merge[index_after_merge] = position;
                offsets_after_merge[index_after_merge] = offset;
                total_parity ^= ((parity & 2) != 0) && merge_flags_mark[index_after_merge];
             } else {
                // trivial merge
-               positions_after_merge[index_after_merge] = positions_before_merge[index_before_merge - 1];
+               positions_after_merge[index_after_merge] = positions_before_merge[this_merge_begin_index_before_merge];
                offsets_after_merge[index_after_merge] = 0;
             }
          }
@@ -602,13 +602,13 @@ namespace TAT {
             if (index_after_split != 1 + this_split_begin_index_after_split) {
                // normal split
                const auto& [symmetry, position, size, offset, parity] =
-                     split_offsets[index_before_split]->at(&positions_after_split[this_split_begin_index_after_split]);
+                     split_offsets[index_before_split]->at(positions_after_split.data() + this_split_begin_index_after_split);
                positions_before_split[index_before_split] = position;
                offsets_before_split[index_before_split] = offset;
                total_parity ^= ((parity & 2) != 0) && split_flags_mark[index_before_split];
             } else {
                // trivial split
-               positions_before_split[index_before_split] = positions_after_split[index_after_split - 1];
+               positions_before_split[index_before_split] = positions_after_split[this_split_begin_index_after_split];
                offsets_before_split[index_before_split] = 0;
             }
          }

@@ -16,6 +16,8 @@
 *** Fixed
 + *TAT.hpp*: Fix a bug about parity sign when =merge_map= is empty.
 + *TAT.hpp*: Fix invalid access to a empty =vector= when splitting the first edge into zero edges.
++ *TAT.hpp*: Fix out of range pointer error when try to split a trivial edge ={{Symmetry(), 1}}= to no edge, or merge no
+  edge into a trivial edge.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...v0.3.7][v0.3.7]] - 2023-08-15
 
