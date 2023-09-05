@@ -84,7 +84,7 @@ namespace TAT {
          auto symmetries = pmr::vector<Symmetry>();
          symmetries.reserve(rank());
          for (auto i = 0; i < rank(); i++) {
-            symmetries[i] = edges(i).segments(it.indices[i]).first;
+            symmetries.emplace_back(edges(i).segments(it.indices[i]).first);
          }
 
          bool not_diagonal = false;

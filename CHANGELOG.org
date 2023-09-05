@@ -20,6 +20,8 @@
 + *TAT.hpp*: Fix invalid access to a empty =vector= when splitting the first edge into zero edges.
 + *TAT.hpp*: Fix out of range pointer error when try to split a trivial edge ={{Symmetry(), 1}}= to no edge, or merge no
   edge into a trivial edge.
++ *TAT.hpp*: Fix an out of range bug in =identity.hpp=. It created a pod vector with memory reserved and use the item
+  directly previously, without resize, which would not cause critical issue in fact. Emplace the item when using now.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...v0.3.7][v0.3.7]] - 2023-08-15
 
