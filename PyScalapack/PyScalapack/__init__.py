@@ -168,7 +168,7 @@ class ArrayDesc(ctypes.Structure):
     The blacs array desc wrapper.
     """
     _fields_ = [
-        ("ctypes", ctypes.c_int),
+        ("dtype", ctypes.c_int),
         ("ctxt", ctypes.c_int),
         ("m", ctypes.c_int),
         ("n", ctypes.c_int),
@@ -180,8 +180,8 @@ class ArrayDesc(ctypes.Structure):
     ]
 
     @property
-    def c_ctypes(self):
-        return ctypes.c_int.from_buffer(self, self.__class__.ctypes.offset)
+    def c_dtype(self):
+        return ctypes.c_int.from_buffer(self, self.__class__.dtype.offset)
 
     @property
     def c_ctxt(self):
@@ -242,7 +242,7 @@ class Array(ArrayDesc):
         --------
         Context.array : Create a blacs array in the Context.
         """
-        # ctypes is always 1 for dense matrix.
+        # dtype is always 1 for dense matrix.
         # rsrc and csrc is always 0.
         # lld will be set layer
         super().__init__(1, context.ictxt, m, n, mb, nb, 0, 0, 0)
