@@ -96,7 +96,8 @@ TEST(test_svd, fermi_symmetry_cut) {
 }
 
 TEST(test_svd, no_symmetry_cut_too_small) {
-   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {2, 2}}.range(1, 0);
+   auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {2, 2}}.zero();
+   a.at(std::vector<TAT::Size>{0, 0}) = 1;
    auto [u, s, v] = a.svd({"B"}, "E", "F", "U", "V", 8ul);
    ASSERT_NEAR(check_unitary(u, "E", "E'"), 0, 1e-8);
    ASSERT_NEAR(check_unitary(v, "F", "F'"), 0, 1e-8);
