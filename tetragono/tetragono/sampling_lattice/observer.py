@@ -18,7 +18,7 @@
 
 import os
 import numpy as np
-from PyScalapack import Scalapack
+import PyScalapack
 from ..utility import (show, showln, allreduce_lattice_buffer, allreduce_buffer, bcast_buffer, lattice_update,
                        lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_size, mpi_comm, pickle)
 from ..tensor_element import tensor_element
@@ -735,7 +735,7 @@ class Observer():
 
     @staticmethod
     def _pseudo_inverse_kernel(Delta, Energy, r_pinv, a_pinv, total_n_s, dtype, btype, libraries):
-        scalapack = Scalapack(*libraries)
+        scalapack = PyScalapack(*libraries)
 
         with scalapack(b'C', -1, 1) as context:
             n_s, n_p = Delta.shape

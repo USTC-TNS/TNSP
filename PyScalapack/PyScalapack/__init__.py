@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import sys
 import ctypes
 import numpy as np
 
@@ -457,3 +458,6 @@ class Scalapack():
 
     # Add ctypes as a field of the Scalapack
     import ctypes
+
+
+sys.modules[__name__] = Scalapack
