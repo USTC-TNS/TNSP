@@ -15,8 +15,11 @@ TEST(test_binary_io_utility, write) {
 
 TEST(test_binary_io_utility, read) {
    using namespace TAT;
+
    int v = 2333;
-   std::istringstream in(reinterpret_cast<char*>(&v));
+   std::string vs(100, ' ');
+   *reinterpret_cast<int*>(vs.data()) = v;
+   std::istringstream in(vs);
    int i;
    in > i;
    ASSERT_EQ(v, i);

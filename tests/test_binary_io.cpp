@@ -76,8 +76,11 @@ TEST(test_binary_io, rvalue_of_stream) {
    using namespace TAT;
 
    int v = 2333;
+   std::string vs(100, ' ');
+   *reinterpret_cast<int*>(vs.data()) = v;
+   std::istringstream in(vs);
    int i;
-   std::istringstream(reinterpret_cast<char*>(&v)) > i;
+   in > i;
    ASSERT_EQ(i, v);
    std::string out_str = static_cast<std::ostringstream&&>(std::ostringstream() < i).str();
    ASSERT_EQ(*reinterpret_cast<int*>(out_str.data()), v);
