@@ -154,3 +154,8 @@ TEST(test_create_fermi_tensor, conversion_scalar) {
    ASSERT_FLOAT_EQ(a.const_at(), 2333);
    ASSERT_FLOAT_EQ(double(a), 2333);
 }
+
+TEST(test_create_fermi_tensor, conversion_scalar_empty) {
+   auto a = TAT::Tensor<double, TAT::FermiSymmetry>({"i"}, {{{+1, 2333}}}).range(2333);
+   ASSERT_FLOAT_EQ(double(a), 0);
+}

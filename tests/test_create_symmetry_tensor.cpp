@@ -140,3 +140,8 @@ TEST(test_create_symmetry_tensor, conversion_scalar) {
    ASSERT_FLOAT_EQ(a.const_at(), 2333);
    ASSERT_FLOAT_EQ(double(a), 2333);
 }
+
+TEST(test_create_symmetry_tensor, conversion_scalar_empty) {
+   auto a = TAT::Tensor<double, TAT::U1Symmetry>({"i"}, {{{+1, 2333}}}).range(2333);
+   ASSERT_FLOAT_EQ(double(a), 0);
+}
