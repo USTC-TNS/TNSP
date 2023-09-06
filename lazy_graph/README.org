@@ -26,7 +26,7 @@ Copy or link this folder directly. Or use =pip= to obtain the distribution =pip 
 
 *** Simple example
 
-#+begin_src python :results output :exports both
+#+begin_src python :results output :exports both :session
   from lazy import Root, Node
 
 
@@ -51,17 +51,11 @@ calculating 1 + 2
 c is 3
 #+end_example
 
+The value of node =c= is calculated when needed.
+
 *** Update upstream
 
-#+begin_src python :results output :exports both
-  from lazy import Root, Node
-
-
-  def add(a, b):
-      print(f"calculating {a} + {b}")
-      return a + b
-
-
+#+begin_src python :results output :exports both :session
   print("create nodes")
   a = Root(1)
   b = Root(2)
@@ -90,13 +84,12 @@ calculating 4 + 2
 c is 6
 #+end_example
 
+The value of node =c= will be recalculated only if its upstream updated.
+
 *** Normal argument or keyword argument are also available
 
-#+begin_src python :results output :exports both
-  from lazy import Root, Node
-
-
-  def add(a, b, c, d):
+#+begin_src python :results output :exports both :session
+  def add4(a, b, c, d):
       print(f"calculating {a} + {b} + {c} + {d}")
       return a + b + c + d
 
@@ -104,7 +97,7 @@ c is 6
   print("create nodes")
   a = Root(1)
   c = Root(3)
-  z = Node(add, a, 2, c=c, d=4)
+  z = Node(add4, a, 2, c=c, d=4)
   print("get the value")
   print(f"c is {z()}")
 #+end_src
@@ -117,16 +110,12 @@ calculating 1 + 2 + 3 + 4
 c is 10
 #+end_example
 
+Both position arguments and keyword arguments are supported, and it could be mixed with normal arguments.
+
 *** Copy the lazy graph
 
-#+begin_src python :results output :exports both
-  from lazy import Root, Node, Copy
-
-
-  def add(a, b):
-      print(f"calculating {a} + {b}")
-      return a + b
-
+#+begin_src python :results output :exports both :session
+  from lazy import Copy
 
   print("create nodes")
   a = Root(1)
@@ -165,4 +154,74 @@ get the old value and new value
 calculating 4 + 2
 calculating 8 + 2
 c is 6, new c is 10
+#+end_example
+
+Copy the same relation between node =a=, =b= and =c= to a new lazy graph.
+It shares the initial value from the origin nodes, but does not affect each other then.
+
+Please notice that you can copy part of lazy graph. For example, copy =b= and =c= here, and share the same =a=.
+So that, updating =a= results in both =c= and =new_c= updated, while =b= or =new_b= only affects one of =c= or =new_c=.
+
+#+begin_src python :results output :exports both :session
+  copy = Copy()
+  new_b = copy(b)
+  new_c = copy(c)
+
+  print(f"a is {a()}")
+  print(f"b is {b()}, new b is {new_b()}")
+  print(f"c is {c()}, new c is {new_c()}")
+  b.reset(8)
+  print(f"c is {c()}, new c is {new_c()}")
+  new_b.reset(10)
+  print(f"c is {c()}, new c is {new_c()}")
+  a.reset(6)
+  print(f"c is {c()}, new c is {new_c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+a is 4
+b is 2, new b is 2
+c is 6, new c is 6
+calculating 4 + 8
+c is 12, new c is 6
+calculating 4 + 10
+c is 12, new c is 14
+calculating 6 + 8
+calculating 6 + 10
+c is 14, new c is 16
+#+end_example
+
+If you copy the same node by the same copy object twice, you will get the same copied node.
+
+#+begin_src python :results output :exports both :session
+  new_c = copy(c)
+  new_c_2 = copy(c)
+  print(id(new_c) == id(new_c_2))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+True
+#+end_example
+
+When copy a lazy graph, it is always required to copy upstream before the downstreams copied, so that, this package could maintain the dependencies.
+
+*** Check whether a node has been calculated
+
+#+begin_src python :results output :exports both :session
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print(bool(c))
+  print("c is", c())
+  print(bool(c))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+False
+calculating 1 + 2
+c is 3
+True
 #+end_example
