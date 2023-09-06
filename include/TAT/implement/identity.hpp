@@ -30,6 +30,7 @@ namespace TAT {
    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::unordered_set<std::pair<Name, Name>>& pairs) & {
       // the order of fermi arrow should be (false true) before set to delta
       auto pmr_guard = scope_resource(default_buffer_size);
+      acquire_data_ownership("Set the the shared tensor to identity, copy happened here");
       auto half_rank = rank() / 2;
 
       auto ordered_index_pairs = pmr::vector<std::pair<Rank, Rank>>();

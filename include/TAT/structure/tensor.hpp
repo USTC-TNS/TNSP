@@ -177,6 +177,7 @@ namespace TAT {
          return m_core->blocks();
       }
       [[nodiscard]] mdspan<std::optional<mdspan<scalar_t>>>& blocks() {
+         acquire_data_ownership("Get reference which may change the shared tensor, copy happened here, use const_blocks to get const reference");
          return m_core->blocks();
       }
       [[nodiscard]] const mdspan<std::optional<mdspan<scalar_t>>>& const_blocks() const {
@@ -199,7 +200,7 @@ namespace TAT {
       }
       template<typename T>
       [[nodiscard]] auto& blocks(const T& arg) {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
+         acquire_data_ownership("Get reference which may change the shared tensor, copy happened here, use const_blocks to get const reference");
          return const_cast<mdspan<scalar_t>&>(const_cast<const self_t*>(this)->blocks(arg));
       }
       template<typename T>
@@ -209,14 +210,14 @@ namespace TAT {
       // Two of non const version are needed
       // Since c++ need to try to convert literal value to 2 kind of type(vector<symmetry>, map<name, symmetry>).
       [[nodiscard]] auto& blocks(const std::vector<symmetry_t>& arg) {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
+         acquire_data_ownership("Get reference which may change the shared tensor, copy happened here, use const_blocks to get const reference");
          return const_cast<mdspan<scalar_t>&>(const_cast<const self_t*>(this)->blocks(arg));
       }
       [[nodiscard]] const auto& const_blocks(const std::vector<symmetry_t>& arg) const {
          return blocks(arg);
       }
       [[nodiscard]] auto& blocks(const std::unordered_map<name_t, symmetry_t>& arg) {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
+         acquire_data_ownership("Get reference which may change the shared tensor, copy happened here, use const_at to get const reference");
          return const_cast<mdspan<scalar_t>&>(const_cast<const self_t*>(this)->blocks(arg));
       }
       [[nodiscard]] const auto& const_blocks(const std::unordered_map<name_t, symmetry_t>& arg) const {
@@ -240,7 +241,7 @@ namespace TAT {
       }
       template<typename T>
       [[nodiscard]] scalar_t& at(const T& arg) {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
+         acquire_data_ownership("Get reference which may change the shared tensor, copy happened here, use const_at to get const reference");
          return const_cast<scalar_t&>(const_cast<const self_t*>(this)->at(arg));
       }
       template<typename T>
@@ -250,12 +251,12 @@ namespace TAT {
 
       [[nodiscard]] const scalar_t& at() const {
          if (!scalar_like()) {
-            detail::error("Try to get the only element of t he tensor which contains more than one element");
+            detail::error("Try to get the only element of the tensor which does not contains only one element");
          }
          return storage().front();
       }
       [[nodiscard]] scalar_t& at() {
-         acquare_data_ownership("Get reference which may change of shared tensor, copy happened here, use const_at to get const reference");
+         acquire_data_ownership("Get reference which may change the shared tensor, copy happened here, use const_at to get const reference");
          return const_cast<scalar_t&>(const_cast<const self_t*>(this)->at());
       }
       [[nodiscard]] const scalar_t& const_at() const {
@@ -402,7 +403,7 @@ namespace TAT {
        */
       template<typename Function>
       Tensor<ScalarType, Symmetry, Name>& transform(Function&& function) & {
-         acquare_data_ownership("Set tensor shared in transform, copy happened here");
+         acquire_data_ownership("Set tensor shared in transform, copy happened here");
          std::transform(storage().begin(), storage().end(), storage().begin(), std::forward<Function>(function));
          return *this;
       }
@@ -412,7 +413,7 @@ namespace TAT {
       }
       template<typename OtherScalarType, typename Function>
       Tensor<ScalarType, Symmetry, Name>& zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) & {
-         acquare_data_ownership("Set tensor shared in zip_transform, copy happened here");
+         acquire_data_ownership("Set tensor shared in zip_transform, copy happened here");
          if constexpr (debug_mode) {
             if (rank() != other.rank()) {
                detail::error("Try to do zip_transform on two different rank tensor");
@@ -505,7 +506,7 @@ namespace TAT {
        */
       template<typename Generator>
       Tensor<ScalarType, Symmetry, Name>& set(Generator&& generator) & {
-         acquare_data_ownership("Set tensor shared, copy happened here");
+         acquire_data_ownership("Set tensor shared, copy happened here");
          std::generate(storage().begin(), storage().end(), std::forward<Generator>(generator));
          return *this;
       }
@@ -543,10 +544,10 @@ namespace TAT {
       }
 
       /**
-       * Acquare tensor data's ownership, it will copy the core if the core is shared
+       * Acquire tensor data's ownership, it will copy the core if the core is shared
        * \param message warning message if core is copied
        */
-      void acquare_data_ownership(const char* message = "") {
+      void acquire_data_ownership(const char* message = "") {
          if (m_core.use_count() != 1) {
             m_core = detail::shared_ptr<Core<ScalarType, Symmetry>>::make(*m_core);
             if (*message != 0) {

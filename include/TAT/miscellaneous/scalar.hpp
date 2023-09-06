@@ -102,7 +102,7 @@ namespace TAT {
          typename = std::enable_if_t<is_complex<ScalarType1> || is_real<ScalarType2>>> \
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
       auto timer_guard = scalar_inplace_guard(); \
-      tensor_1.acquare_data_ownership("Inplace operator on tensor shared, copy happened here"); \
+      tensor_1.acquire_data_ownership("Inplace operator on tensor shared, copy happened here"); \
       return tensor_1.zip_transform(tensor_2, [](const auto& x, const auto& y) { \
          return EVAL; \
       }); \
@@ -116,7 +116,7 @@ namespace TAT {
          typename = std::enable_if_t<is_complex<ScalarType1> || is_real<ScalarType2>>> \
    Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const ScalarType2& number_2) { \
       auto timer_guard = scalar_inplace_guard(); \
-      tensor_1.acquare_data_ownership("Inplace operator on tensor shared, copy happened here"); \
+      tensor_1.acquire_data_ownership("Inplace operator on tensor shared, copy happened here"); \
       return tensor_1.transform([&y = number_2](const auto& x) { \
          return EVAL; \
       }); \
