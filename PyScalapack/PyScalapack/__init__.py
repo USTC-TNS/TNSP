@@ -64,6 +64,8 @@ class Context():
         scope : b'A' | b'R' | b'C'
             The scope to barrier.
         """
+        if scope not in [b'A', b'R', b'C']:
+            raise RuntimeError(f"scope should be b'A', b'R' or b'C', but it is {scope}.")
         self.scalapack.blacs_barrier(self.ictxt, ctypes.c_char(scope))
 
     def _call_blacs_pinfo(self):
@@ -258,15 +260,22 @@ class Array(ArrayDesc):
         if data is not None:
             # Use the array from the given numpy array.
             self.data = data
-            # The given numpy array must be fortran contiguous.
-            if not self.data.flags.f_contiguous:
-                raise RuntimeError("Scalapack array must be Fortran contiguous")
-        elif context:
-            # Create the local array, by the shape calculated by numroc.
-            self.data = np.zeros([self.local_m, self.local_n], dtype=dtype, order="F")
+            if self.context.layout.value == b'C':
+                # The given numpy array must be fortran contiguous.
+                if not self.data.flags.f_contiguous:
+                    raise RuntimeError("Scalapack array must be Fortran contiguous")
+            else:
+                # The given numpy array must be c contiguous.
+                if not self.data.flags.c_contiguous:
+                    raise RuntimeError("Scalapack array must be C contiguous")
         else:
-            # Just a placeholder, the current process is out of the grid.
-            self.data = np.zeros([1, 1], dtype=dtype, order="F")
+            order = 'F' if self.context.layout.value == b'C' else 'C'
+            if context:
+                # Create the local array, by the shape calculated by numroc.
+                self.data = np.zeros([self.local_m, self.local_n], dtype=dtype, order=order)
+            else:
+                # Just a placeholder, the current process is out of the grid.
+                self.data = np.zeros([1, 1], dtype=dtype, order=order)
 
     def scalapack_params(self):
         """
@@ -338,6 +347,8 @@ class Scalapack():
         Context
             The created blacs Context.
         """
+        if layout not in [b'R', b'C']:
+            raise RuntimeError(f"layout should be b'R' or b'C' but it is {layout}.")
         return Context(self, layout, nprow, npcol)
 
     def __getattr__(self, name):
