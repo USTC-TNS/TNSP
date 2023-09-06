@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import os
 import sys
 import ctypes
 import numpy as np
@@ -313,7 +314,24 @@ class Array(ArrayDesc):
 
 class Scalapack():
 
-    def __init__(self, *libs):
+    @staticmethod
+    def _default_dll_loader(lib):
+        """
+        The default loader for the dynamic shared library.
+
+        Parameters
+        ----------
+        lib : str
+            The name of the dynamic shared library.
+
+        Returns
+        -------
+        Any
+            The dynamic shared library object, it is usually a ctypes.CDLL.
+        """
+        return ctypes.CDLL(lib, mode=os.RTLD_LAZY | os.RTLD_GLOBAL)
+
+    def __init__(self, *libs, loader=None):
         """
         Create scalapack library handle from the given pathes as scalapack dynamic linked lbiraries.
 
@@ -321,8 +339,12 @@ class Scalapack():
         ----------
         *libs : list[str]
             The dynamics linked libraries full pathes or just the file names if in the default directory.
+        loader : Callable
+            The loader for the dynamic shared libraries.
         """
-        self.libs = [ctypes.CDLL(lib, mode=ctypes.RTLD_GLOBAL) for lib in libs]
+        if loader is None:
+            loader = self._default_dll_loader
+        self.libs = [loader(lib) for lib in libs]
         self.function_database = {}
 
         # Common used functions
