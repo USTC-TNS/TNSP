@@ -1,0 +1,23 @@
+**********************************************************
+****length_and_type           6           integer
+****Below are the input parameter of type integer
+**********************************************************
+   L1            4
+   L2            4
+   random_Seed   233
+   TotalN        28
+   initialDeg    4
+   initialQNLen  4
+**********************************************************
+****length_and_type           0           real*8
+****Below are the input parameter of type real*8
+**********************************************************
+**********************************************************
+****length_and_type          4           character
+****Below are the input parameter of type character
+**********************************************************
+   read_name     null
+   All_D1  i=6
+   All_step1 i=2000
+   All_tau1 d=0.05
+

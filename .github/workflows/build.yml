@@ -1,0 +1,333 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  test_TAT_hpp:
+    name: test TAT.hpp
+    runs-on: ubuntu-latest
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install mpi, openblas and gtest/gmock
+        run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev libgtest-dev libgmock-dev
+      - name: make build directory
+        run: mkdir ${{runner.workspace}}/build
+      - name: configure
+        working-directory: ${{runner.workspace}}/build
+        run: cmake ${{github.workspace}}
+      - name: build
+        working-directory: ${{runner.workspace}}/build
+        run: make test_executables -j 2
+      - name: ctest
+        working-directory: ${{runner.workspace}}/build
+        run: ctest -j 2 --verbose
+
+  test_lazy_py:
+    name: test lazy.py
+    runs-on: ubuntu-latest
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: install pytest
+        run: pip install pytest pytest-cov
+      - name: run test
+        working-directory: ${{github.workspace}}/lazy_graph
+        run: python -m pytest --cov=lazy --cov-fail-under=100
+
+  test_scalapack_py:
+    name: test scalapack.py
+    runs-on: ubuntu-latest
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install mpi, scalapack
+        run: sudo apt-get install -y mpi-default-dev libscalapack-mpi-dev
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: install pytest, mpi4py and numpy
+        run: pip install pytest pytest-cov pytest-mpi mpi4py numpy
+      - name: link scalapack library
+        working-directory: ${{github.workspace}}/PyScalapack
+        run: ln -s /usr/lib/x86_64-linux-gnu/libscalapack-openmpi.so libscalapack.so 
+      - name: run test
+        working-directory: ${{github.workspace}}/PyScalapack
+        run: mpirun --oversubscribe -n 6 coverage run -m pytest --capture=no --with-mpi && coverage combine && coverage report
+        env:
+          LD_LIBRARY_PATH: .
+
+  build_wheels_trigger:
+    name: trigger for building wheels
+    runs-on: ubuntu-latest
+    needs: [test_TAT_hpp, test_lazy_py, test_scalapack_py]
+    if: "github.event_name == 'push' && (startsWith(github.ref, 'refs/tags') || contains(toJSON(github.event.commits.*.message), '[force ci]'))"
+    steps:
+      - name: nothing
+        run: echo this is an empty job
+
+  generate_python_markdown_readme:
+    name: generate README.md for python package
+    runs-on: ubuntu-latest
+    needs: build_wheels_trigger
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: PyTAT
+          - package: tnsp_bridge
+          - package: lazy_graph
+          - package: tetragono
+          - package: tetraku
+          - package: tetraux
+          - package: PyScalapack
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install emacs
+        run: sudo apt-get install -y emacs
+      - name: export to markdown
+        run: emacs ${{matrix.package}}/README.org --batch -f org-md-export-to-markdown --kill
+      - name: upload to artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: README-of-${{matrix.package}}
+          path: ${{matrix.package}}/README.md
+
+  build_pytat_wheels:
+    name: build PyTAT wheels
+    runs-on: ${{ matrix.os }}
+    needs: [build_wheels_trigger, generate_python_markdown_readme]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python: 38
+            platform_id: manylinux_x86_64
+            manylinux_image: manylinux2014
+            cpu_number: 2
+          - os: ubuntu-latest
+            python: 39
+            platform_id: manylinux_x86_64
+            manylinux_image: manylinux2014
+            cpu_number: 2
+          - os: ubuntu-latest
+            python: 310
+            platform_id: manylinux_x86_64
+            manylinux_image: manylinux2014
+            cpu_number: 2
+          - os: ubuntu-latest
+            python: 311
+            platform_id: manylinux_x86_64
+            manylinux_image: manylinux2014
+            cpu_number: 2
+
+          - os: macos-latest
+            python: 310
+            platform_id: macosx_x86_64
+            mac_arch: x86_64
+            cpu_number: 3
+          - os: macos-latest
+            python: 311
+            platform_id: macosx_x86_64
+            mac_arch: x86_64
+            cpu_number: 3
+
+          - os: macos-latest
+            python: 310
+            platform_id: macosx_arm64
+            mac_arch: arm64
+            cpu_number: 3
+          - os: macos-latest
+            python: 311
+            platform_id: macosx_arm64
+            mac_arch: arm64
+            cpu_number: 3
+
+          - os: windows-latest
+            python: 38
+            platform_id: win_amd64
+            cpu_number: 2
+          - os: windows-latest
+            python: 39
+            platform_id: win_amd64
+            cpu_number: 2
+          - os: windows-latest
+            python: 310
+            platform_id: win_amd64
+            cpu_number: 2
+          - os: windows-latest
+            python: 311
+            platform_id: win_amd64
+            cpu_number: 2
+
+    steps:
+      - name: update llvm
+        if: ${{ matrix.os=='windows-latest' }}
+        run: choco upgrade llvm
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: recovery tag information
+        run: git fetch --tags --force
+      - name: get pybind11
+        uses: actions/checkout@v3
+        with:
+          repository: pybind/pybind11
+          path: pybind11
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: install cibuildwheel
+        run: python -m pip install cibuildwheel
+      - name: download artifacts for PyTAT
+        uses: actions/download-artifact@v3
+        with:
+          name: README-of-PyTAT
+          path: PyTAT
+      - name: download artifacts for tetraux
+        uses: actions/download-artifact@v3
+        with:
+          name: README-of-tetraux
+          path: tetraux
+      - name: build wheel for PyTAT
+        env:
+          CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
+          CIBW_ARCHS: all
+          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
+
+          CIBW_BEFORE_ALL_LINUX: yum install -y openblas-devel
+          CIBW_BEFORE_ALL_WINDOWS: cmd /c python .github\scripts\get_openblas_for_windows.py && choco install -y ninja
+          CIBW_BEFORE_ALL_MACOS: ""
+
+          CIBW_ENVIRONMENT_LINUX: MAKEFLAGS=--parallel=${{ matrix.cpu_number }}
+          CIBW_ENVIRONMENT_WINDOWS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-GNinja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../../lib/libopenblas"
+          CIBW_ENVIRONMENT_MACOS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-DCMAKE_OSX_ARCHITECTURES=${{ matrix.mac_arch }}"
+
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
+          CIBW_BUILD_VERBOSITY: 1
+        run: python -m cibuildwheel PyTAT --output-dir dist
+      - name: build wheel for tetraux
+        env:
+          CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
+          CIBW_ARCHS: all
+          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
+
+          CIBW_BEFORE_ALL_LINUX: yum install -y openblas-devel
+          CIBW_BEFORE_ALL_WINDOWS: cmd /c python .github\scripts\get_openblas_for_windows.py && choco install -y ninja
+          CIBW_BEFORE_ALL_MACOS: ""
+
+          CIBW_ENVIRONMENT_LINUX: MAKEFLAGS=--parallel=${{ matrix.cpu_number }}
+          CIBW_ENVIRONMENT_WINDOWS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-GNinja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../../lib/libopenblas"
+          CIBW_ENVIRONMENT_MACOS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-DCMAKE_OSX_ARCHITECTURES=${{ matrix.mac_arch }}"
+
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
+          CIBW_BUILD_VERBOSITY: 1
+        run: python -m cibuildwheel tetraux --output-dir dist
+      - name: upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: dist/*.whl
+
+  build_pure_python_wheels:
+    name: build pure python wheels
+    runs-on: ubuntu-latest
+    needs: [build_wheels_trigger, generate_python_markdown_readme]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: tnsp_bridge
+          - package: lazy_graph
+          - package: tetragono
+          - package: tetraku
+          - package: PyScalapack
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: recovery tag information
+        run: git fetch --tags --force
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: install python build
+        run: python -m pip install build
+      - name: download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: README-of-${{matrix.package}}
+          path: ${{matrix.package}}
+      - name: build wheel
+        working-directory: ${{github.workspace}}/${{matrix.package}}
+        run: python -m build
+      - name: upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{github.workspace}}/${{matrix.package}}/dist/*.whl
+
+  upload_pypi:
+    name: upload wheels to pypi
+    runs-on: ubuntu-latest
+    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
+    if: startsWith(github.ref, 'refs/tags')
+
+    steps:
+      - name: download artifacts
+        uses: actions/download-artifact@v3
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: upload
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages-dir: artifact
+
+  create_release:
+    name: create github release
+    runs-on: ubuntu-latest
+    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
+    if: startsWith(github.ref, 'refs/tags')
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: recovery tag information
+        run: git fetch --tags --force
+      - name: install emacs
+        run: sudo apt-get install -y emacs
+      - name: export to markdown
+        run: emacs CHANGELOG.org --batch -f org-md-export-to-markdown --kill
+      - name: generate release description
+        run: python .github/scripts/generate_release_description.py
+      - name: download artifacts
+        uses: actions/download-artifact@v3
+      - name: release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifact/*.whl
+          body_path: release_description.md

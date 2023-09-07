@@ -1,0 +1,1 @@
+$$H=-J_x \sum_{(i,j,k,l)\in\texttt{odd}} \sigma^x_i \sigma^x_j \sigma^x_k \sigma^x_l -J_z \sum_{(i,j,k,l)\in\texttt{even}} \sigma^z_i \sigma^z_j \sigma^z_k \sigma^z_l$$

@@ -1,0 +1,6 @@
+[run]
+parallel=True
+omit=tests/*
+
+[report]
+fail_under=100

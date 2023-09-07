@@ -1,0 +1,30 @@
+/**
+ * Copyright (C) 2022-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include "PyTAT.hpp"
+namespace TAT {
+    std::function<void()> @FUNCTION_NAME@(
+            py::module_& symmetry_m,
+            const std::string& scalar_short_name,
+            const std::string& scalar_name,
+            const std::string& symmetry_short_name
+    ) {
+        using Scalar = @SCALAR_NAME@;
+        using Symmetry = @SYMMETRY_NAME@;
+        return dealing_tensor<Scalar, Symmetry>(symmetry_m, scalar_short_name, scalar_name, symmetry_short_name);
+    }
+} // namespace TAT

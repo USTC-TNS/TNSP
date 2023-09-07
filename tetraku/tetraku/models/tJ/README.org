@@ -1,0 +1,1 @@
+$$H=-t \sum_{\langle i, j \rangle, \sigma} \left( c_{i\sigma}^\dagger c_{j\sigma} + h.c. \right) + \frac{1}{2} J \sum_{\langle i,j \rangle} \left( S_i \cdot S_j - \frac{n_i n_j}{4} \right)$$

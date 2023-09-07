@@ -1,0 +1,302 @@
+#+OPTIONS: toc:nil
+
+* PyScalapack
+
+PyScalapack is a Python wrapper for ScaLAPACK.
+
+** Install
+
+Please copy or link this folder directly. Alternatively, you can use =pip= to install the PyScalapack distribution with the command =pip install PyScalapack=.
+
+** Documents
+
+#+begin_src emacs-lisp :exports none :results silent
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+#+end_src
+
+*** Load scalapack
+
+The scalapack dynamic linked library needs to be loaded first.
+
+#+begin_src python :results output :exports both
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+#+end_src
+
+#+RESULTS:
+
+Pass all of the shared libraries into =PyScalapack= if the ScaLAPACK functions are placed in several different cdecl convention dynamic shared libraries.
+For example, =PyScalapack("libmkl_scalapack_lp64.so", "libmkl_blacs_openmpi_lp64.so", ...)=.
+
+*** Create a context
+
+Please create a BLACS context to perform other BLACS or ScaLAPACK operations.
+ScaLAPACK uses a BLACS context to indicate how a distributed matrix is placed across different processes.
+A context is necessary to create a BLACS matrix.
+The only three arguments needed to create a context are the layout (column major or row major), the number of rows in the process grid, and the number of columns in the process grid.
+Please ensure that =nprow * npcol = size= to prevent any process from idling.
+The layout should be set to b'C' for column major or b'R' for row major.
+
+#+begin_src python :results output :exports both
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  with scalapack(layout=b'C', nprow=1, npcol=1) as context:
+      print("Blacs raw ictx handle:", context.ictxt)
+      print("Process grid rank and size:", context.rank, context.size)
+      print("Process grid layout:", context.layout)
+      print("Process grid shape:", context.nprow, context.npcol)
+      print("Current process index grid:", context.myrow, context.mycol)
+      print("Whether current process is valid in the grid:", context.valid)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Blacs raw ictx handle: c_int(0)
+Process grid rank and size: c_int(0) c_int(1)
+Process grid layout: c_char(b'C')
+Process grid shape: c_int(1) c_int(1)
+Current process index grid: c_int(0) c_int(0)
+Whether current process is valid in the grid: True
+#+end_example
+
+When the product of nprow and npcol is smaller than size, some processes are not included in the context, and these processes are marked as invalid in PyScalapack.
+You can determine if the current process is valid by accessing =context.valid= or simply using =bool(context)=.
+
+**** Barrier
+
+You can use the function =context.barrier(scope=b'A')= to synchronize all processes in the process grid.
+Moreover, you can call =context.barrier(scope=b'R')= to synchronize all processes in the same row of the process grid,
+or use =context.barrier(scope=b'C')= to synchronize all processes in the same column of the process grid.
+
+*** Create an array
+
+Create a block-cyclic distributed array using the provided code.
+The shape of the matrix is determined by arguments =m= and =n=, while the block size of the matrix to be distributed among different processes is determined by =mb= and =nb=.
+Once distributed among the process grid, each process will have its own local matrix shape, which can be obtained using =local_m= and =local_n=.
+
+#+begin_src python :results output :exports both :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 4 -s all python
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libmpi.so", "libmkl_core.so", "libmkl_sequential.so", "libmkl_intel_lp64.so",
+                          "libmkl_blacs_intelmpi_lp64.so", "libmkl_scalapack_lp64.so")
+
+  with scalapack(b'C', 2, 2) as context:
+      array = context.array(m=23, n=45, mb=2, nb=2, dtype=np.float64)
+      if context.rank.value == 0:
+          print(f"Matrix shape is {array.m} * {array.n}")
+      print(f"Matrix local shape at ({context.myrow.value}, {context.mycol.value}) is {array.local_m} * {array.local_n}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Matrix shape is 23 * 45
+Matrix local shape at (0, 0) is 12 * 23
+Matrix local shape at (1, 0) is 11 * 23
+Matrix local shape at (0, 1) is 12 * 22
+Matrix local shape at (1, 1) is 11 * 22
+#+end_example
+
+When creating the array, pass =dtype= to create a new matrix filled with zeros in the specified data type,
+or pass an existing numpy array with =data= to share its memory. For example,
+
+#+begin_src python :results output :exports both
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  with scalapack(b'C', 1, 1) as context:
+      array = context.array(m=128, n=512, mb=1, nb=1, data=np.zeros([128, 512], order='F'))
+      print("Matrix shape:", array.m, array.n)
+      print("Matrix local shape:", array.local_m, array.local_n)
+
+  with scalapack(b'R', 1, 1) as context:
+      array = context.array(m=128, n=512, mb=1, nb=1, data=np.zeros([128, 512], order='C'))
+      print("Matrix shape:", array.m, array.n)
+      print("Matrix local shape:", array.local_m, array.local_n)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+Matrix shape: 128 512
+Matrix local shape: 128 512
+Matrix shape: 128 512
+Matrix local shape: 128 512
+#+end_example
+
+Please make sure that the numpy =order= is appropriate for the context layout. Use 'F' for column major layout and 'C' for row major layout.
+If the grid size is other than =1x1=, users should prepare the correct matrix local shape first.
+
+*** Redistribute array
+
+For array redistribution in ScaLAPACK, the =p?gemr2d= routine is utilized.
+
+#+begin_src python :results output :exports both :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 2 -s all python
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libmpi.so", "libmkl_core.so", "libmkl_sequential.so", "libmkl_intel_lp64.so",
+                          "libmkl_blacs_intelmpi_lp64.so", "libmkl_scalapack_lp64.so")
+
+  with scalapack(b'C', 1, 2) as context1:
+      with scalapack(b'C', 2, 1) as context2:
+          m = 2
+          n = 2
+          array1 = context1.array(m=m, n=n, mb=1, nb=1, dtype=np.float64)
+          array1.data[...] = np.random.randn(*array1.data.shape)
+          print(f"rank={context1.rank.value} before redistribute {array1.data.reshape([-1])}")
+          array2 = context2.array(m=m, n=n, mb=1, nb=1, dtype=np.float64)
+          scalapack.pgemr2d["D"](
+              ,*(m, n),
+              ,*array1.scalapack_params(),
+              ,*array2.scalapack_params(),
+              context1.ictxt,
+          )
+          print(f"rank={context2.rank.value} after redistribute {array2.data.reshape([-1])}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+rank=0 before redistribute [ 1.0460689  -0.32543216]
+rank=1 before redistribute [0.57973354 0.31722263]
+rank=0 after redistribute [1.0460689  0.57973354]
+rank=1 after redistribute [-0.32543216  0.31722263]
+#+end_example
+
+*** Call scalapack function
+
+Here is an example that calls pdgemm and compares it to the product calculated by numpy.
+
+#+begin_src python :results output :exports both :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 4 -s all python
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libmpi.so", "libmkl_core.so", "libmkl_sequential.so", "libmkl_intel_lp64.so",
+                          "libmkl_blacs_intelmpi_lp64.so", "libmkl_scalapack_lp64.so")
+
+  L1 = 128
+  L2 = 512
+  with scalapack(b'C', 2, 2) as context, scalapack(b'C', 1, 1) as context0:
+      # Create array0 add 1*1 grid
+      array0 = context0.array(m=L1, n=L2, mb=1, nb=1, dtype=np.float64)
+      if context0:
+          array0.data[...] = np.random.randn(*array0.data.shape)
+
+      # Redistribute array0 to 2*2 grid as array
+      array = context.array(m=L1, n=L2, mb=1, nb=1, dtype=np.float64)
+      scalapack.pgemr2d["D"](*(L1, L2), *array0.scalapack_params(), *array.scalapack_params(), context.ictxt)
+
+      # Call pdgemm to get the product of array and array in 2*2 grid
+      result = context.array(m=L1, n=L1, mb=1, nb=1, dtype=np.float64)
+      scalapack.pdgemm(
+          b'N',
+          b'T',
+          ,*(L1, L1, L2),
+          scalapack.d_one,
+          ,*array.scalapack_params(),
+          ,*array.scalapack_params(),
+          scalapack.d_zero,
+          ,*result.scalapack_params(),
+      )
+
+      # Redistribute result to 1*1 grid as result0
+      result0 = context0.array(m=L1, n=L1, mb=1, nb=1, dtype=np.float64)
+      scalapack.pgemr2d["D"](*(L1, L1), *result.scalapack_params(), *result0.scalapack_params(), context.ictxt)
+
+      # Check result0 == array0 * array0^T
+      if context0:
+          diff = result0.data - array0.data @ array0.data.T
+          print(np.linalg.norm(diff))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+2.603367787519907e-12
+#+end_example
+
+**** Call lapack function
+
+This package also provides an interface to easily call LAPACK/BLAS functions.
+
+#+begin_src python :results output :exports both
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  L1 = 128
+  L2 = 512
+  with scalapack(b'C', 1, 1) as context:
+      array = context.array(m=L1, n=L2, mb=1, nb=1, dtype=np.float64)
+      array.data[...] = np.random.randn(*array.data.shape)
+
+      result = context.array(m=L1, n=L1, mb=1, nb=1, dtype=np.float64)
+      scalapack.dgemm(
+          b'N',
+          b'T',
+          ,*(L1, L1, L2),
+          scalapack.d_one,
+          ,*array.lapack_params(),
+          ,*array.lapack_params(),
+          scalapack.d_zero,
+          ,*result.lapack_params(),
+      )
+
+      diff = result.data - array.data @ array.data.T
+      print(np.linalg.norm(diff))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+0.0
+#+end_example
+
+*** Generic variables and functions
+
+=f_one= and =f_zero= are used to retrieve the floating point values of =1= and =0=, respectively, based on the selected scalar type, which can be quite useful in certain situations.
+
+#+begin_src python :results output :exports both
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  print(scalapack.f_one["D"] == scalapack.d_one)
+  print(scalapack.f_zero["Z"] == scalapack.z_zero)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+True
+True
+#+end_example
+
+Some functions, such as =p?gemm=, can be selected using =pgemm[char]=, where char is one of =S=, =D=, =C=, =Z=.
+However, this mapping is not applied to all functions since it is done manually.
+We only map the functions that we are currently using.
+If you want to add other ScaLAPACK functions, you can add the mapping yourself or create an issue or pull request.
+
+#+begin_src python :results output :exports both
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  print(scalapack.pgemm["D"] == scalapack.pdgemm)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+True
+#+end_example

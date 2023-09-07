@@ -1,0 +1,316 @@
+* Changelog
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.9...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.7...v0.3.9][v0.3.9]] - 2023-09-07
+
+*** Changed
++ *tetragono*: The interface of =save_result= allow only =(state, result, whole_result)= now.
++ *TAT.hpp*: Change the view of sign problem in =conjugate=, there is only one conjugate, but the trivial metric may not
+  be positive definite, so in gradient descent, this negative metric term need to be considered, the optional paramter
+  =trivial_metric= is used to apply the trivial metric when conjugating.
++ *TAT.py*: Update the new interface of =conjugate=.
++ *TAT.py*: Use customized string stream in =TAT.py= to avoid a duplicated copy of string.
++ *TAT.hpp*: Check the larger tensor to try to fit the common edges in contract, if not proper, check the other one. The
+  previous behavior always check tensor 1 firstly and check tensor 2 secondly.
++ *scalapack.py*: Change the loader API. The previous way is =from PyScalapack import Scalapack= and using
+  =Scalapack("libscalapack.so")= to get the scalapack object, Now user should use =import PyScalapack= and
+  =PyScalapack("libscalapack.so")= directly.
+*** Removed
++ *TAT.hpp*: Remove deprecated tensor member function =get_rank=, =find_rank_from_name= and =get_rank_from_name=.
+*** Fixed
++ *TAT.hpp*: Fix a bug about parity sign when =merge_map= is empty.
++ *TAT.hpp*: Fix invalid access to a empty =vector= when splitting the first edge into zero edges.
++ *TAT.hpp*: Fix out of range pointer error when try to split a trivial edge ={{Symmetry(), 1}}= to no edge, or merge no
+  edge into a trivial edge.
++ *TAT.hpp*: Fix an out of range bug in =identity.hpp=. It created a pod vector with memory reserved and use the item
+  directly previously, without resize, which would not cause critical issue in fact. Emplace the item when using now.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.6...v0.3.7][v0.3.7]] - 2023-08-15
+
+*** Added
++ *tetragono*: Add support to calculate deviation of the observer set as a whole, which is useful since many observables
+  are the summation of several local observables.
++ *tetragono*: Add arguments support for =gm_conf_create= and =ap_conf_create= in tetragono shell.
++ *tetragono*: Add a member dict called =attribute= to =AbstractState=, which may contain customed data used by user.
+*** Changed
++ *tetragono*: =save_result= accept another parameter, which is the total result of the whole observers set. Its
+  signature is =state=, =result=, =whole_result= and =step= now.
++ *tetraku*: Change the defnition of x/y/z link in kitaev model. The bond inside one tensor is z link now.
++ *tetragono*: =gm_run(_g)= will now return/yield all the measurement result instead of energy only.
+*** Deprecated
++ *tetragono*: The previous signature of =save_result=: =state=, =result= and =step= is deprecated.
+*** Removed
++ *tetragono*: Remove the deprecated function =natural_gradient= and the deprecated paramter =metric_inverse_epsilon=
+  for =gm_run=.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.5...v0.3.6][v0.3.6]] - 2023-05-26
+
+*** Added
++ *TAT.hpp*: Add =clear_fermi_symmetry= for tensor with fermionic symmetry, which convert the tensor to the simplest
+  fermionic tensor, tensor with parity symmetry.
++ *TAT.py*: Add python binding for =clear_fermi_symmetry=.
++ *tetragono*: Check whether the state is =None= when dump the state to file to avoid overwriting file by mistake.
++ *tetragono*: Add =gm_clear_symmetry= for sampling lattice.
++ *tetragono*: Add =gm_run_g= and =ap_run_g= for middle level API. These are generators, which yield the energy of the
+  state before gradient descent after every gradient step.
++ *TAT.hpp*: =Cut= is used directly for the dimension cut in svd. =Cut= will detect the type of the input to determine
+  whether it is relative cut or remain cut, if nothing provided, the behavior of previous =NoCut= will be used. And user
+  could also set remain cut and relative cut together.
+*** Changed
++ *tetragono*: =new_dimension= in simple update will be intepreted as the threshold of singular value when it is float.
++ *TAT.hpp, TAT.py*: =clear_symmetry= will return NoSymmetry tensor or ParityTensor based on whether the original tensor
+  is fermionic. The previous behavior would give NoSymmetry tensor only, which is dangerous for fermionic tensor, is
+  renamed to =clear_bose_symmetry=.
+*** Deprecated
++ *TAT.hpp*: =NoCut=, =RemainCut=, =RelativeCut= is deprecated, please use =Cut= directly.
+*** Fixed
++ *tetragono*: Fix a bug in merging physical edges during simple update. When the hamiltonian on single site with a
+  large dimension is operated, the dead loop would occur previously.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.3...v0.3.5][v0.3.5]] - 2023-04-01
+
+*** Added
++ *tetragono*: Add common used tensors for parity symmetry and some related tensor in Hubbard model with parity
+  symmetry.
++ *scalapack.py*: Add documents for scalapack.py.
++ *tetraku*: Add tV model.
++ *tetragono* Add =numpy_hamiltonian= in tetragono shell to export the Hamiltonian of a model to a file in numpy array
+  format.
+*** Changed
++ *tetraku*: Density matrix of Heisenberg/tJ/Hubbard model are renamed to =gibbs_*= from =density_matrix_*=.
++ *tetragono*: Simple update will check to avoid merge physical edges into a single edge with very large dimension. It
+  will only merge edges if the result edge has the dimension less equal to the =threshold=, which is =6= by default.
++ *tetragono*: Use better method to estimate the variance of measurement results observed by the sampling method.
++ *tetragono*: Tetragono shell will not refresh the corresponding configuration when creating or loading ap or gm state.
+  Since sometimes user may want to share the configuration between states.
++ *tetragono*: Use pseudo inverse directly in conjugate gradient method.
++ *TAT.py*: Use mt19937(64 bit) as the random generator instead of c++ default random generator which may be different
+  on different platforms.
+*** Removed
++ *tetragono*: The mirror direct sampling is removed, since it is useless according to the test result.
+*** Fixed
++ *tetragono*: Fix bug in min-SR method when the model is complex, A conjugate operator was missing.
++ *tetragono*: Avoid =nan= in pseudo inverse of min-SR by checking whether the eigenvalue is zero first.
++ *tetragono*: Fix the missing imaginary part of energy when calculating gradient.
++ *tetraku*: Fix the wrong Hamiltonian for Gibbs state of Fermionic system.
++ *tetraku*: Fix the wrong sign of chemical potential for density matrix of tJ model.
++ *TAT.py*: Fix typo in the class name of parity symmetry.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.2...v0.3.3][v0.3.3]] - 2022-03-09
+
+*** Added
++ *tetragono*: Add mirror direct sampling which is only used for Gibbs state on square lattice, and maintains the
+  symmetry of the Gibbs state.
++ *TAT.py*: Add =dtype= and =btype= class member for =Tensor= object, which makes it easier to communicate with numpy.
++ *scalapack.py*: Add a python wrapper for scalapack.
+*** Changed
++ *tetragono*: Use the =PyScalapack= to speed up min-SR method. User need to specify the path of scalapack dynamic link
+  libraries by parameter =scalapack_libraries= for =gm_run= when =natural_gradient_by_direct_pseudo_inverse= enabled.
++ *TAT.py*: Change the module alias name convension, =float= and =complex= without bytes specified would be considered
+  as double precision now.
+*** Fixed
++ *tetragono*: Fix a bug when try to save a file with directory name. The previous program only allows to save file into
+  the current directory.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.1...v0.3.2][v0.3.2]] - 2022-02-28
+
+*** Added
++ *tetragono*: Add =natural_gradient_by_direct_pseudo_inverse= to calculate natural gradient for sampling lattice. And
+  add parameter =use_natural_gradient_by_direct_pseudo_inverse= (default is False), =natural_gradient_r_pinv= and
+  =natural_gradient_a_pinv= for high/mid-level API in =gm_run= to use direct pseudo inverse to calculate natural
+  gradient.
++ *tetraku*: Add Hamiltonian to another part of density matrix for density matrix of Heisenberg/Hubbard/tJ model. It is
+  to ensure the result density is unitary despite of errors introduced by contract and approximation. This is controled
+  by a new parameter =side= which is either =1= or =2=, default is =1=, which has the same behavior with before.
+*** Changed
++ *TAT.py*: =sqrt= will calculate the square root of absoluate value in tensor elementwisely, instead of square root of
+  value itself and return =nan= for negative number.
++ *tetraux*: Move =Configuration= for ansatz product state to an individual package named =tetraux= from =TAT.py=, which
+  is not related to the tensor itself.
+*** Deprecated
++ *tetragono*: =natural_gradient= for observer object is deprecated, users should specify the method to calculate
+  natural gradient explicitly, which are =natural_gradient_by_direct_pseudo_inverse= and
+  =natural_gradient_by_conjugate_gradient=.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.0...v0.3.1][v0.3.1]] - 2023-02-21
+
+*** Added
++ *TAT.py*: Add binding for functions of Edge introduced in v0.3.0 such as =point_by_index=.
+*** Changed
++ *TAT.py*: Update the function arguments names to keep the same with those in c++ side.
++ *TAT.py*: Remove navigator of TAT.py to get tensor type directly, please use module alias instead. For example,
+  previous code such as `TAT("No", np.float64)` should be updated to `TAT.Normal.float64.Tensor`.
+*** Removed
++ *TAT.py*: Remove optional FastName binding, which is useless in python side in fact.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.23...v0.3.0][v0.3.0]] - 2022-11-15
+
+*** Added
++ *tetragono*: Tetragono will print backtrace of the current process when receiving SIGUSR1.
++ *tetragono*: Add squash support for sampling lattice.
+*** Changed
++ *TAT.hpp*: Use the multidimension span to record blocks in tensor, instead of the previous map data structure, some
+  related API is also updated. Detail update is followed:
+  + About data
+    + Tensor blocks is stored in a new order other than old version, the previous use a map from symmetry list to data
+      block, which follows the lexicographical order of symmetry list. The new order follows the lexicographical order
+      of the symmetry position list for a data block. Inside the data structure, the blocks are stored in a simple and
+      raw tensor like structure called =multidimension_span=.
+    + Because of the block order update, use random number to fill a tensor will return a different one other than the
+      previous version even with the same random seed.
+    + The edge is now assumed *stable*, That is to say the edge will not lose any segment during operations. In the
+      previous version, the edge segment will be erased if no block in the tensor using that segment.
+  + About edge API
+    + The type =edge_segment_t= is renamed to =edge_segments_t= because it is really several segments, not only one
+      segment.
+    + Some old function was renamed, such as =get_point_from_index= to =point_by_index=. The old name is deprecated and
+      will be removed later.
+    + Drop the support for reorder segments.
+    + Use =edge.segment()= to obtain the real segment for an edge, instead of the original way to access member
+      =edge.segment= directly.
+  + About tensor API
+    + Some old function was renamed, such as =get_rank_from_name= to =rank_by_name=. The old name is deprecated and will
+      be removed later.
+    + Use =tensor.names()= to obtain the tensor edge names, instead of the original way to access member =tensor.names=
+      directly.
+    + Because the edge is stable now, scalar operations on two tensor with segment and block mising is not allowed now.
++ *tetragono*: Update line search strategy, remove =line_search_error_threshold=, add =line_search_parameter= in
+  =ap_run= and =gm_run=. =line_search_parameter= multiplied =step_size= obtained by line search will be the real step
+  size used to update the state.
+*** Deprecated
+*** Removed
++ *tetragono*: =gm_data_load= is removed, please use =gm_hamiltonian= to replace the hamiltonian instead.
++ *wrapper*: =wrapper_TAT= is removed.
+*** Fixed
++ *tetragono*: Fix the wrong error message when trying to import module used by =ex_create=, =ap_ansatz_mul= and so on.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.22...v0.2.23][v0.2.23]] - 2022-10-09
+
+*** Added
++ *tetragono*: Add =ap_hamiltonian= to replace the hamiltonian of the ansatz product state in tetragono shell.
++ *tetragono*: Add =multichain_number= for =ap_run=, which will run multiple chains inside the same MPI process.
++ *wrapper*: Add python package =wrapper_TAT= to provide a wrapper over torch to provide similar interface as =TAT.py=.
++ *tetragono*: Add =observe_max_batch_size= option for =ap_run=, which will set the max limit of batch size when
+  calculating wss.
+*** Deprecated
++ *tetragono*: =gm_data_load= is deprecated, it will be removed in the future, please use =gm_hamiltonian= to replace
+  the hamiltonian instead.
+*** Removed
++ *tetragono*: =save_state_interval= option for =gm_run= and =ap_run= is removed. The state will be saved for every
+  step.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.20...v0.2.22][v0.2.22]] - 2022-09-02
+
+*** Added
++ *tetragono*: Add =save_configuration_file= option for =gm_run= and =ap_run= in tetragono shell, which saves sampling
+  configurations during gradient descent.
++ *tetragono*: Add list as interface for =rename_io= in =tetragono.common_tensor.tensor_toolkit=. Original argument such
+  as ={0: a, 1: b, 2: c}= can be written as =[a, b, c]=.
+*** Deprecated
++ *tetragono*: =save_state_interval= option for =gm_run= and =ap_run= is deprecated. The state will be saved for every
+  step if =save_state_file= was not set in the future.
+*** Removed
++ *tetragono*: The original function name =create= to create lattice is removed, which was deprecated in v0.2.18. The
+  new function name to create lattice is =abstract_lattice=.
++ *tetragono*: =_owner= of Configuration for sampling lattice and ansatz product state is removed, use =owner= instead.
+*** Fixed
++ *TAT.hpp*: Fix an internal compiler error for some old compiler, caused by the feature: fusing edges during tracing.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.19...v0.2.20][v0.2.20]] - 2022-08-02
+
+*** Added
++ *tetraku*: Add models data and ansatzes data into an individual package named =tetraku=.
++ *tetragono*: Configuration use =owner= to get the owner sampling lattice object of this configuration object, instead
+  of the previous =_owner=.
++ *TAT.hpp*: Add fusing edges support when =trace= a tensor, to keep the consistency with function =contract=.
++ *TAT.py*: Add fusing edges argument binding for function =trace= of the tensor.
+*** Changed
++ *tetragono*: Rename multiple product state to ansatz product state, to avoid the ambiguous abbreivation. Rename all
+  =mp_xxx= to =ap_xxx= in tetragono shell.
++ *TAT.hpp*: Two new internal names used by user customed name type are added: =Trace_4= and =Trace_5=. For the simple
+  internal name usage, two new default internal names are added: =Default_3= and =Default_5=.
+*** Deprecated
++ *tetragono*: =_owner= of Configuration for sampling lattice is deprecated, use =owner= instead.
+*** Fixed
++ *TAT.hpp*: Fix a bug in windows platform when copying an edge with fermi symmetry.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.18...v0.2.19][v0.2.19]] - 2022-07-13
+
+*** Added
++ *tetragono*: Add a new command =gm_hamiltonian= to replace the Hamiltonian of the existent sampling lattice.
++ *tetragono*: Add =conjugate_gradient_method_error= option for =gm_run= and =mp_run= in teragono shell. The conjugate
+  gradient will stop if =conjugate_gradient_method_step= reached OR =conjugate_gradient_method_error= reached. Set
+  =conjugate_gradient_method_error= to =0.0= to skip error checking or set =conjugate_gradient_method_step= to =-1= to
+  skip step checking.
+*** Changed
++ *lazy*: Using a manual stack to run the recursion now, to avoid the recursion depth limit.
+*** Fixed
++ *tetragono*: Fix a problem when calling =gm_data_load= in tetragono shell.
++ *tetragono*: Fix a bug in calculating the natural gradient of a complex tensor network state.
++ *tetragono*: Fix a bug in calculating the expect and the deviation in the ergodic sampling with subspace restricted.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.17...v0.2.18][v0.2.18]] - 2022-06-28
+
+*** Added
++ *tetragono*: Add compatibility support for python3.8.
++ *tetragono*: Add =ex_create= command for tetragono shell, which calls =abstract_state= to create an =exact_lattice=.
++ *tetragono*: Add the multiple product state, which is the supertype of the string bond state and the convolutional
+  neural network state, and add its high-level API in tetragono.shell.
+*** Changed
++ *tetragono*: The function name to create a lattice changes from =create= to =abstract_lattice=. And it is recommended
+  to split it into two parts: =abstract_state= to create an abstract state and =abstract_lattice= to convert the
+  abstract state into an abstract lattice.
++ *tetragono*: The epsilon to avoid the singularity of the metric in the natural gradient method is relative now.
+*** Deprecated
++ *tetragono*: The original function name =create= to create lattice is deprecated.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.13...v0.2.17][v0.2.17]] - 2022-06-12
+
+*** Added
++ *tetragono*: Add support for changing the hamiltonian of an existent sampling lattice. To do it, create a lattice with
+  target hamiltonians and then call =gm_data_load(file_name)= to replace tensors with data stored in file =file_name=.
+  For low-level API, =lattice_1._lattice = lattice_2._lattice= could replace tensor data directly.
++ *TAT.py*: Add edge fusing support when contracting two tensors.
++ *TAT.hpp*: Add support for being compiled by MSVC or Intel ICC.
+*** Changed
++ *tetragono*: Avoid data files being destroyed if a file system error appears when saving, such as the size limit of
+  quota reached.
+*** Removed
++ *tetragono*: Submodule =common_variable= is removed, please use =common_tensor= or =common_toolkit= instead.
+*** Fixed
++ *TAT.hpp*: Fix selecting the wrong constructor of =Edge= when using two vector iterators to construct =Edge=.
++ *TAT.hpp*: Fix bug when tensor SVD with relative cut cutting nothing.
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.2.12...v0.2.13][v0.2.13]] - 2022-04-26
+
+*** Added
++ *tetragono*: Allow passing function directly instead of module name string of various interface of mid-level API,
+  including =restrict= for restricting subspace, =measurement= for measuring values, =initial_configuration= for
+  initializing sampling configurations, and =hopping_hamiltonians= for fake hamiltonians used by sweep sampling.
++ *tetragono*: Add =load_configuration= to load configuration from a saved file to a =Configuration= object for
+  low-level API.
++ *tetragono*: Add classical term of energy for sampling lattice. To do it, call
+  =observer.set_classical_energy(classical_energy)= to set a function with configuration as input, and returns a float
+  as classical energy. For mid-level API, pass a module containing function =classical_energy= or the function itself as
+  parameter =classical_energy= to =gm_run= or =gradient_descent=.
+*** Changed
++ *tetragono*: Using =hopping_hamiltonians= instead of original =hamiltonians= for the name of function which generates
+  fake hamiltonians used by sweep sampling.
++ *tetragono*: Updating interface for generating initial sampling configuration(=initial_configuration=). Previously,
+  =state= and =Dc= are given, it is needed to create =Configuration= manually. Currently, the input function will get
+  initiated =Configuration=, and set configuration on it directly.
++ *tetragono*: Configuration information is maintained by three mid-level API now: =gm_conf_create=, =gm_conf_load=, and
+  =gm_conf_dump=. Call =gm_conf_load(file_name)= to load configuration from file. Call =gm_conf_dump(file_name)= to dump
+  configuration to file after =gm_run=. Call =gm_conf_create(initial_configuration)= to using function
+  =initial_configuration= to initialize configuration.
++ *tetragono*: Rename parameter name =sweep_initial_configuration= to =sampling_configurations=. Generally, this
+  parameter is not used directly by mid-level API, and it is needed to use =gm_conf_create/load/dump= to manipulate it.
+  In the low-level API environment, =load_configuration= may be used to create configuration passed to
+  =sampling_configurations=.

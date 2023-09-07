@@ -1,0 +1,1 @@
+$$H=-t \sum_{\langle i, j \rangle} \left( c_i^\dagger c_j + h.c. \right) + V \sum_{\langle i, j \rangle} n_i n_j$$

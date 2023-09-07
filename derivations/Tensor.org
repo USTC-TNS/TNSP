@@ -1,0 +1,377 @@
+#+title: Tensor and Tensor Network, with Symmetry and Fermion
+#+author: Hao Zhang
+#+email: zh970205@mail.ustc.edu.cn
+
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-format-latex-options (plist-put org-format-latex-options :scale 2.0))
+#+end_src
+
+* Tensor Network
+
+** Normal Tensor Network
+
+*** Normal Tensor
+
+    A raw tensor $T$ is just a multi-rank array, like $T_{i_{T,0},i_{T,1},\cdots,i_{T,R_T}}$,
+
+    where $R_T$ is the rank of $T$, and $i_{T,r}$ is the index of $r$ -th rank,
+
+    it takes value between $0$ to $I_{T,r}-1$,
+
+    and $I_{T,r}$ is the dimension of $r$ -th rank of tensor $T$.
+
+*** Tensor Network
+
+    A state $P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}}$ can be describle as a tensor network
+
+    $P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}} = \prod T \prod I \prod O$
+
+    $\prod T = \prod_{n=0}^{N-1} T^n_{i_{T^n,0},i_{T^n,1},\cdots,i_{T^n,R_{T^n}}}$
+
+    $\prod I = \prod_{b=0}^{B-1} \delta^{i_{T^{A_b^1}, {E_b^1}}}_{i_{T^{A_b^2}, {E_b^2}}}$
+
+    $\prod O = \prod_{r=0}^{R_P-1} \delta^{i_{P,r}}_{i_{T^{A'_r},E'_r}}$
+
+    where $N$ is the tensor number of this network, and $B$ is the internal bond number;
+
+    Tensor $A_b^1$ and $A_b^2$ is link by bound $b$, linked edge is $E_b^1$ and $E_b^2$;
+
+    Edge $E'_r$ of tensor $A'_r$ is present as $r$ -th index of original state $P$.
+
+*** EPR Pair Interpretation
+
+**** Internal bond
+
+    $b$ -th term of $\prod I$ is $\delta^{i_{T^{A_b^1}, {E_b^1}}}_{i_{T^{A_b^2}, {E_b^2}}}$, It can be rewritten as
+
+    $c_{b,1,i_{T^{A_b^1}, {E_b^1}}} c_{b,2,i_{T^{A_b^2}, {E_b^2}}} \prod_{d} c^\dagger_{b,1,d} c^\dagger_{b,2,d}$
+
+    So now we interpret the bond of tensor network as boson EPR pair.
+
+**** External bond
+
+     The original state $P$ can rewritten as
+
+     $P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}} \prod_{r=0}^{R_P-1} f_r^{\dagger i_{P,r}} |\Omega\rangle$
+
+     So now
+
+     $\prod O = \prod_{r=0}^{R_P-1} \delta^{i_{P,r}}_{i_{T^{A'_r},E'_r}} f_r^{\dagger i_{P,r}} = \prod_{r=0}^{R_P-1}  f_r^{\dagger i_{T^{A'_r},E'_r}}$
+
+     To be the same with EPR pair language
+
+     $\prod O = \prod_{r=0}^{R_P-1} \prod_{d} c_{r,1,i_{T^{A'_r}, E'_r}} c_{r,1,d}^\dagger f_r^{\dagger d}$
+
+
+*** Hamiltonian on Tensor Network State
+
+    Hamiltonian is represented as
+
+    $H = \prod_{r=0}^{R_H-1} f_r^{\dagger i_{H,1,r}} |\Omega\rangle H_{i_{H,1,0}, i_{H,1,1}, \cdots i_{H,1,R_H}, i_{H,2,0}, i_{H,2,1}, \cdots i_{H,2,R_H}} \langle\Omega| \prod_{r=0}^{R_H-1} f_r^{i_{H,2,r}}$
+
+    conbine with $\prod O$, it is easily to rewrite $\langle \Omega | f_r^{i_{H,2,r}} f_r^{\dagger i_{T^{A'_r},E'_r}} | \Omega \rangle$ to single particle operators to construct a real EPR pair.
+
+** Symmetry Tensor and Symmetry Tensor Network
+
+   TODO
+
+** Fermi Tensor and Fermi Tensor Network
+
+*** Fermi Tensor
+
+   Change all EPR pair operator above to fermi particle
+
+   $P = P_{i_{P,0},i_{P,1},\cdots,i_{P,R_P}} \prod_{r=0}^{R_P-1} f_r^{\dagger i_{P,r}} |\Omega\rangle = \prod T \prod I \prod O |\Omega\rangle$
+
+   $\prod T = \prod_{n=0}^{N-1} T^n_{i_{T^n,0},i_{T^n,1},\cdots,i_{T^n,R_{T^n}}} \prod_{r=0}^{R_N-1} c_{B_{n,r},A_{n,r}, i_{T^n,r}}$
+
+   $\prod I = \prod_{b=0}^{B-1} \prod_{d} c^\dagger_{b,1,d} c^\dagger_{b,2,d}$
+
+   where the $A_{n,r}$ -th particle in EPR pair $B_{n,r}$ connect to edge $r$ of tensor $n$.
+
+   $\prod O = \prod_{r=0}^{R_P-1} \prod_{d} c_{r,1,d}^\dagger f_r^{\dagger d}$
+
+   It should be noticed that the order of terms in $\prod O$ is $cf$ since $A f^\dagger B=Ac c^\dagger f^\dagger B = (AcB)(c^\dagger f^\dagger)$
+
+   It is free to set parity of particle $c$ in both  $\prod O$ and $\prod T$;
+
+   Now set parity of $c$ in $\prod O$ the same to $f_r^{\dagger d}$, so each term of $\prod O$ is boson totally.
+
+   And restrict the ansatz that, each term of $\prod T$ is boson totally, which will lead the tensor becoming blocked tensor.
+
+   At last, it is obviously that every term of $\prod I$ is boson totally.
+
+   So every term of the tensor network is boson.
+
+*** Operations
+
+    + Transpose
+
+      Exchange $c$ in the single term of $\prod T$ produce a sign, depending on the detail of transpose plan.
+
+      It should be noticed that each block of the same tensor is applied to different sign.
+
+    + Merge and Split
+
+      It means we need to merge or split EPR pairs.
+
+      $(c_1 c_2) (c_3 c_4) (c_1^\dagger c_3^\dagger) (c_2^\dagger c_4^\dagger) = Parity (c_1 c_2) (c_3 c_4) ((c_1c_2)^\dagger (c_3c_4)^\dagger)$
+
+      where $Parity=+1$ is any of two EPR pair is boson, and $Parity=-1$ if both of two EPR pair is fermion.
+
+      Before merge or split, $c_{1,a} c_{1,b}^\dagger |\Omega\rangle = \delta_{a,b} |\Omega\rangle$
+
+      And now, we also have $c_{1,a}c_{2,b}c_{2,d}^\dagger c_{1,d}^\dagger|\Omega\rangle = \delta_{ab,cd} |\Omega\rangle$, so that is OK.
+
+      It should be noticed that only one sign is produced when merging or splitting the edge of two contracting tensor.
+
+    + Reverse
+
+      Exchange the order in EPR pair produce a sign, trivially
+
+    + Contract
+
+      $(c_1c_2)(c_3c_4)(c_3^\dagger c_2^\dagger) = c_1c_4$, Just merge, transpose, reverse the edge before contract and than recovery everything.
+
+    + Conjugate
+
+      Conjugate is used when computing $\langle \Psi | H | \Psi \rangle$.
+
+      Suppose two tensor is connected and they are something like $(ABC)(DEF)(B^\dagger E^\dagger)$, where $B$ and $E$ is the EPR pairs, and $ACDF$ is other operators.
+
+      Conjugate result is $(EB)(C^\dagger B^\dagger A^\dagger) (F^\dagger E^\dagger D^\dagger)$, after considering a full transpose, it is $(E B) (A B^\dagger C) (D E^\dagger F)$, here the dagger of other operators is omit.
+
+      And then, equals to $(ABC)(DEF)(E^\dagger B^\dagger)$, since the both side of these operators is vacuum, so $B_i B_j^\dagger = B_j B_i^\dagger$.
+
+      In short, doing conjugate will reverse the EPR pair order and product a full transpose sign.
+
+    + Reciprocal
+
+      $T^{-1}=\frac{T^\dagger}{TT^\dagger}$
+
+    + Identity
+
+      It is easy to prove $(\cdots A) (\cdots D) (\mathrm{id} C B) (A^\dagger B^\dagger)(C^\dagger D^\dagger)=(\cdots A) (\cdots D) (A^\dagger D^\dagger)$
+
+      then $\mathrm{id}=\delta$, so we need to transpose the tensor to certain order before set value of tensor to $\delta$
+
+    + Trace
+
+      $(\cdots DA)(A^\dagger D^\dagger) = (\cdots)$, just need to merge and transpose to certain order before tracing.
+
+      This is equals to
+
+      $(\cdots DA)(\mathrm{id}CB)(A^\dagger B^\dagger)(C^\dagger D^\dagger)$
+
+    + Exponential
+
+      To calculate exponential, reverse and merge the tensor to a matrix, let the edge be like $(AB)(\cdots B^\dagger)(A^\dagger \cdots)$, apply sign to only one side.
+
+      Then calculate the matrix exponential, and recovery edge, so now shoud only apply sign to the side as step above.
+
+*** Some Note
+
+**** EPR pair arrow in TAT
+
+     For an EPR pair $A^\dagger B^\dagger$, edge $A$ is mark as =arrow=false=, and edge $B$ is mark as =arrow=true=.
+
+**** For multi-fermion tensor
+
+     For most operations, multi-fermion operator act as a whole, and the total parity of multi-fermion is concerned.
+
+     For operations merge and split, let $A,C,E,G$ be first fermion and $B,D,F,H$ be second fermion, we have
+
+     $(\cdots(AB)(CD)\cdots)(\cdots(EF)(GH)\cdots)((AB)(EF))((CD)(GH))$
+
+     to merge, apply single-fermion merge/split rule, get
+
+     $LHS=P(\cdots(ABCD)\cdots)(\cdots(EFGH)\cdots)((ABCD)(EFGH))$
+
+     where $P$ is the sign generated by single-fermion merge/split rule, then
+
+     $LHS=P(\cdots((AC)(BD))\cdots)(\cdots((EG)(FH))\cdots)((AC)(BD)(EG)(FH))$
+
+     so the merge/split rule for multi-fermion tensor is the same with single-fermion tensor
+
+** Fermi Tensor Network
+
+   As above, hamiltonian is represented as
+
+   $H = \prod_{r=0}^{R_H-1} f_r^{\dagger i_{H,1,r}} |\Omega\rangle H_{i_{H,1,0}, i_{H,1,1}, \cdots i_{H,1,R_H}, i_{H,2,0}, i_{H,2,1}, \cdots i_{H,2,R_H}} \langle\Omega| \prod_{r=0}^{R_H-1} f_r^{i_{H,2,r}}$
+
+   And now $f$ is fermion operator. We still rewrite $f^i$ to single particle operators, like
+
+   $f^i c_d^\dagger f^{\dagger d} = c_{f,i} c_d^\dagger c_{f,d}^\dagger$
+
+   So for hamitiltonian, it is just needed to pay attension to its EPR pair order.
+
+   Then we can construct tensor network like normal tensor.
+
+* Algorithm on Tensor Network
+
+TODO
+
+** Sampling based gradient descent
+
+*** Energy of state
+
+Consider a state $|\psi\rangle$.
+
+Energy is $E=\frac{\langle \psi | H | \psi \rangle}{\langle \psi | \psi \rangle}$.
+
+So $E=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle}$, where $s$ is the projector in Hilbert space.
+
+If sampling $s$ in some distribution $s \sim S$ with possibility $p(s)$. We get
+
+$E = \frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+*** Bias and Variance of energy by sampling method
+
+Let us introduce a lemma first, For multinomial distribution $X_s \sim M(n, p_s)$
+and let $q_s=X_s/n$, we have
+$$\langle F(q_s-p_s) \rangle = F(0) + \frac{1}{2n} \sum_{st} (\delta_{st} p_s - p_s p_t) \frac{\partial^2 F}{\partial \delta_s \delta_t}(0) + O(1/n^2)$$.
+Since the first degree term $\langle q_s - p_s \rangle=0$,
+the second degree term $\langle (q_s-p_s)(q_t-p_t) \rangle = \frac{1}{n} (\delta_{st}p_s - p_s p_t)$
+and $\langle (q_s-p_s)^k \rangle = O(1/n^2)$ for $k>2$
+
+The exact energy is $E = \frac{\sum_s p_s \frac{\langle\psi|s|\psi\rangle}{p_s}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_s p_s \frac{\langle \psi | s | \psi \rangle}{p_s}}$.
+Let $r_s = \frac{\langle \psi|s|\psi\rangle}{p_s}$, $E_s = \frac{\sum_{s'}\langle\psi|s|H|s'|\psi\rangle}{\langle\psi|s|\psi\rangle}$, $\langle O \rangle_p=\sum_{s}O(s)p(s)$, $\langle O(s) \rangle_\psi = \frac{\langle O(s) r_s \rangle_p}{\langle r_s \rangle_p}$, $r'_s=\frac{r_s}{\langle r\rangle_p}$,
+We have $E = \frac{\sum_s p_s r_s E_s}{\sum_s p_s r_s} = \frac{\langle r E \rangle_p}{\langle r\rangle_p} = \langle E \rangle_\psi$,
+While the sampling method gives the energy as
+$\hat E = \frac{\sum_s q_s r_s E_s}{\sum_s q_s r_s}$, which is different with the exact one.
+Plese notice that in the context, $\langle \rangle$ without subscript refers to the expect over the multinomial distribution.
+
+Ignore $O(1/n^2)$ term, we have
+$$\langle \hat E - E \rangle = - \frac{1}{n}\langle ( E - \langle E \rangle_\psi ) (r' - \langle r' \rangle_\psi) \rangle_\psi$$
+, so this is a biased estimator in fact. As for the variance,
+$$\langle (\hat E - E)^2 \rangle =\frac{1}{n}\left\langle (E - \langle E \rangle_\psi)^2 r' \right\rangle_\psi$$.
+
+*** General gradient method
+
+To minimize a function $E(x_i,x_i^*)$ locally, find $\min_{\delta x_i^* g^{ij} \delta x_j = r^2} \hat E(x_i + \delta x_i, x_i^* + \delta x_i^*)$.
+
+Where $\hat E(x_i+\delta x_i, x_i^* + \delta x_i^*)=E(x_i,x_i^*) + \frac{\partial E}{\partial x_i} \delta x_i + \frac{\partial E}{\partial x_i^*}\delta x_i^*$
+
+So $L(\delta x_i, \delta x_i^*, \lambda) = E(x_i) + \frac{\partial E}{\partial x_i} \delta x_i + \frac{\partial E}{\partial x_i^*} \delta x_i^* + \lambda (\delta x_i^* g^{ij} \delta x_j - r^2)$
+
+$0=\frac{\partial L}{\partial \delta x_i} = \frac{\partial E}{\partial x_i} + \lambda \delta x_j^* g^{ji}$,
+$0=\frac{\partial L}{\partial \delta x_i^*} = \frac{\partial E}{\partial x_i^*} + \lambda g^{ij} \delta x_j$
+
+So
+$\delta x_i = -\frac{1}{\lambda} g_{ij}\frac{\partial E}{\partial x_j^*}$,
+$\delta x_i^* = - \frac{1}{\lambda} g_{ij}^* \frac{\partial E}{\partial x_j}$
+
+*** Metric conversion
+
+For two space $A$ and $B$
+
+$x^{A*}_i g^{Aij} y^A_j = x^{B*}_i g^{Bij} y^B_j$
+
+So
+
+$g^{Aij} = \frac{\partial x^{B*}_k}{\partial x^{A*}_i} g^{Bkl} \frac{\partial y^B_l}{\partial y^A_j}$
+
+*** Stochastic reconfiguration
+
+Consider trivial metric in Hibert space, $g^H_{ij}=\delta_{ij}$.
+
+$\psi_i^H = \frac{\psi_i^C}{\sqrt{\sum_k \psi_k^{C*} \psi_k^C}}$
+
+$\frac{\partial \psi^H_i}{\partial \psi^C_j} = \frac{1}{|\psi^C|} (\delta_{ij} - \frac{1}{2}\frac{\psi^C_i \psi^{C*}_j}{|\psi^C|^2})$
+
+$g^{Cij} = \frac{1}{|\psi^C|}(\delta_{ki} - \frac{\psi^{C*}_k \psi^C_i}{|\psi^C|^2}) \delta_{kl} \frac{1}{|\psi^C|}(\delta_{lj} - \frac{\psi^C_l \psi^{C*}_j}{|\psi^C|^2})$
+
+$g^{Cij} = \frac{1}{|\psi^C|^2}(\delta_{ki} - \frac{\psi^{C*}_k \psi^C_i}{|\psi^C|^2}) (\delta_{kj} - \frac{\psi^C_k \psi^{C*}_j}{|\psi^C|^2})$
+
+$g^{Cij} = \frac{1}{|\psi^C|^2}(\delta_{ij} - \frac{\psi^C_i \psi^{C*}_j}{|\psi^C|^2})$
+
+For a ansatz space $T$, metric is
+
+$g^{Tij} = \frac{\partial \psi_k^*}{\partial T_i^*} \frac{1}{|\psi|^2}(\delta_{kl} - \frac{\psi_k \psi_l^*}{|\psi|^2}) \frac{\partial \psi_l}{\partial T_j}$
+
+$g^{Tij} = \frac{1}{|\psi|^2}\frac{\partial \psi_k^*}{\partial T_i^*} (\delta_{kl} - \frac{\psi_k \psi_l^*}{|\psi|^2}) \frac{\partial \psi_l}{\partial T_j}$
+
+$g^{Tij} = \frac{1}{|\psi|^2} \left(\frac{\partial \psi_k^*}{\partial T_i^*} \frac{\partial \psi_k}{\partial T_j} - \frac{\partial \psi_k^*}{\partial T_i^*} \frac{\psi_k \psi_l^*}{|\psi|^2} \frac{\partial \psi_l}{\partial T_j}\right)$
+
+*** Gradient of state represented by tensor network
+
+Consider a state $|\psi\rangle$ represented by some tensor $T_i$, noted as $|\psi(T_i)\rangle$
+
+Rewrite metric in projector form
+
+$g^{Tij} = \frac{\sum_k\langle \partial_{T_i^*}\psi|k|\partial_{T_j}\psi\rangle}{\langle \psi | \psi \rangle} - \frac{\sum_k\langle \partial_{T_i^*}\psi|k|\psi\rangle}{\langle\psi|\psi\rangle} \frac{\sum_l\langle\psi|l|\partial_{T_j}\psi\rangle}{\langle\psi|\psi\rangle}$
+
+To calculate the gradient itself.
+
+$E=\frac{\sum_{s,s'}\langle \psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle}$
+
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s,s'}\langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle\psi|\psi\rangle}$
+
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s,s'}\langle \psi | s' | H | s | \partial_{T_i}\psi \rangle}{\sum_{s}\langle \psi | s | \psi \rangle} - E \frac{\sum_s\langle\psi|s|\partial_{T_i}\psi\rangle}{\langle\psi|\psi\rangle}$
+
+Similar to $E = \frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \partial_{T_i^*}\psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s' | H | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}-\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}\frac{\sum_{s \sim S} \frac{\langle\psi|s|\psi\rangle}{p(s)}\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} \frac{\langle \psi | s | \psi \rangle}{p(s)}}$
+
+While $\langle a | s | b \rangle = \frac{\langle a | s | \psi \rangle \langle \psi | s | b \rangle}{\langle \psi | s | \psi \rangle}$, and set $r(s)=\frac{\langle \psi|s|\psi\rangle}{p(s)}$
+
+$E = \frac{\sum_{s \sim S} r(s)\frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+
+$\frac{\partial E}{\partial T_i^*}=\frac{\sum_{s \sim S} r(s)\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle} \frac{\sum_{s'} \langle \psi | s | H | s' | \psi \rangle}{\langle \psi | s | \psi \rangle} }{\sum_{s \sim S} r(s)}- E \frac{\sum_{s \sim S} r(s)\frac{\langle \partial_{T_i^*}\psi | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+
+$\frac{\partial E}{\partial T_i}=\frac{\sum_{s \sim S} r(s)\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle \psi | s | \psi \rangle}\frac{\sum_{s'} \langle \psi | s' | H | s | \psi \rangle}{\langle\psi|s|\psi\rangle}}{r(s)}-E\frac{\sum_{s \sim S} r(s)\frac{\langle \psi | s | \partial_{T_i}\psi \rangle}{\langle\psi|s|\psi\rangle}}{\sum_{s \sim S} r(s)}$
+
+Rewrite metric in sampling form
+
+$g^{Tij} = \frac{\sum_{s \sim S} r(s) \frac{\langle\partial_{T_i^*}\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi|s|\psi \rangle}}{\sum_{s \sim S} r(s)} - \frac{\sum_{s \sim S} r(s) \frac{\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)} \frac{\sum_{s \sim S} r(s) \frac{\langle\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)}$
+
+Then
+
+$g^{Tij} = \frac{\sum_{s \sim S} r(s) \frac{\langle\partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi|s|\psi \rangle}\frac{\langle \psi|s|\partial_{T_j}\psi\rangle}{\langle \psi|s|\psi \rangle}}{\sum_{s \sim S} r(s)} - \frac{\sum_{s \sim S} r(s) \frac{\langle \partial_{T_i^*}\psi|s|\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)} \frac{\sum_{s \sim S} r(s) \frac{\langle\psi|s|\partial_{T_j}\psi\rangle}{\langle \psi | s | \psi \rangle}}{\sum_{s \sim S} r(s)}$
+
+*** Bias and Variance of gradient
+
+Let $\Delta_s = \frac{\langle \partial_{T_i^*} \psi|s|\psi\rangle}{\psi|s|\psi}$, put $T_i^*$ in the context.
+Then we have the gradient
+$$G = \frac{\partial E}{\partial T_i^*}=\frac{\sum_{s} p_s r_s \Delta_s E_s }{\sum_{s} p_s r_s}- \frac{\sum_s p_s r_s E_s}{\sum_s p_s r_s} \frac{\sum_{s} p_s r_s \Delta_s}{\sum_{s S} p_s r_s} = \frac{\langle r \Delta E\rangle_p}{\langle r \rangle_p} - \frac{\langle r E \rangle_p}{\langle r\rangle_p}\frac{\langle r\Delta\rangle_p}{\langle r\rangle_p}$$
+$$G = \langle \Delta E \rangle_\psi - \langle \Delta \rangle_\psi \langle E \rangle_\psi = \langle (\Delta - \langle \Delta \rangle_\psi) (E - \langle E\rangle_\psi) \rangle_\psi = \langle G \rangle_\psi$$
+where $G_s = (\Delta_s-\langle \Delta\rangle_\psi)(E_s-\langle E\rangle_\psi)$.
+In the sampling method, the measured result is
+$\hat G=\frac{\sum_{s} q_s r_s \Delta_s E_s }{\sum_{s} q_s r_s}- \frac{\sum_s q_s r_s E_s}{\sum_s q_s r_s} \frac{\sum_{s S} q_s r_s \Delta_s}{\sum_{s S} q_s r_s}$
+
+If $r=1$, we have
+$\hat G - G = -\frac{1}{n} G$, so $\frac{n}{n-1} \hat G$ is the unbias estimator for $G$
+
+Now let $r$ be any reweight for sampling method again.
+$$(n-1)\langle \frac{n}{n-1}\hat G - G\rangle=\langle G\rangle_\psi + \langle r'\rangle_\psi \langle G \rangle_\psi - 2 \langle r' G \rangle_\psi$$
+
+The variance of gradient is
+$$\langle (\frac{n}{n-1}\hat G - G)^2 \rangle =\frac{1}{n}\left\langle (G - \langle G \rangle_\psi)^2 r' \right\rangle_\psi + O(1/n^2)$$
+
+*** Variance of natural gradient without normalization
+
+Without normalization, natural gradient can be represented as
+$$\min \sum_{s\in H} |\sum_p \Delta_{sp} NG_p - E_s|^2$$ , where $H$ is the configuration set in the Hilbert space.
+It means $$NG=\Delta^+ E$$ , where $A^+$ is the pseudo inverse of $A$.
+
+As for sampling method, only configuration in the sampling result will be calculated, that is
+$$\min\sum_{s\in S} |\sum_p \Delta_{sp} \widehat{NG}_p - E_s|^2$$ , where $S$ the sampling result set. It could also be written as
+$$\min \sum_{s\in H} |\sum_p P_s \Delta_{sp} \widehat{NG}_p - P_s E_s|^2$$ , where $P_s=1$ if $s\in S$, and $P_s=0$ otherwise.
+Then it can be expressed as a similar formula as
+$$\widehat{NG} = (P \Delta)^+ (P E) = \Delta^+ P^+ P E = \Delta^+ P E$$
+
+The error of the natural gradient is $NG - \widehat{NG} = \Delta^+ (1-P) E$, and its distance in the Hilbert space is
+$d^2 = (NG-\widehat{NG})^H g (NG-\widehat{NG}) = E^\dagger (1-P)^\dagger \Delta^{\dagger +} \Delta^\dagger \Delta \Delta^+ (1-P) E$, where $g = \Delta^\dagger \Delta$.
+While $\Delta^{\dagger +} \Delta^\dagger \Delta = \Delta$, so $d^2 = E^\dagger (1-P) \Delta \Delta^\dagger (1-P) E$.
+
+$\Delta \Delta^\dagger$ is nothing but the projector to the representable subspace of the neighbor in the Hilbert space.
+If the ansatz is strong enough, that every state in Hilbert space can be represented in ansatz space, $\Delta \Delta^\dagger = 1$.
+Then $d^2 = \sum_s (1-P_s)|E_s|^2$.
+
+And it expectation is $\langle d^2 \rangle = \sum_s (1-p_s)^n E_s^2$, To minimize it, let
+$$L=\sum_s (1-p_s)^n E_s^2 + \lambda \sum_s(1 - p_s)$$, then $0=\frac{\partial L}{\partial p_s} = -n (1-p_s)^{n-1} E_s^2 - \lambda$,
+so $p_s = 1 - C E_s^{\frac{-2}{n-1}}$. And $1=\sum_s p_s = \sum_s 1 - C E_s^{\frac{-2}{n-1}}$, $C = \frac{d-1}{\sum_s E_s^{\frac{-2}{n-1}}}$.
+So $p_s = 1 - (d-1) \frac{E_s^{\frac{-2}{n-1}}}{\sum_t E_t^{\frac{-2}{n-1}}}$. And expand it we get $p_s = \frac{1}{d} + \frac{2(d-1)}{nd}\left(\ln E_s - \frac{\sum_t \ln E_t}{d} \right) + O(1/n^2)$,
+where $d$ is the dimension of Hilbert space.
