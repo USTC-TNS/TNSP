@@ -2,7 +2,8 @@
 
 * tnsp-bridge
 
-tnsp-bridge is a small tool to convert tensor data from [[https://www.sciencedirect.com/science/article/pii/S001046551830078X][tnsp]] format to TAT format.
+TNSP-Bridge is a tool used to convert tensor data from [[https://www.sciencedirect.com/science/article/pii/S001046551830078X][TNSP]] format to TAT format.
 
-The formats of TNSP between versions often vary, and this subprocject only works for TNSP 4.0.2.
-Since this subprocject is used in rare case, it will not be documented currently.
+The formats of TNSP vary between versions, and this subproject specifically works for TNSP 4.0.2.
+
+As this subproject is rarely used, it is not currently documented.
