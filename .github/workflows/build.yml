@@ -175,6 +175,9 @@ jobs:
             cpu_number: 2
 
     steps:
+      - name: update llvm
+        if: ${{ matrix.os=='windows-latest' }}
+        run: choco upgrade llvm
       - name: checkout
         uses: actions/checkout@v3
         with:
