@@ -2,12 +2,11 @@
 
 * lazy-graph
 
-lazy-graph is python package for lazy evaluation, with enhancement for updating values of upstream and copying the
-entire lazy graph.
+The lazy-graph is a Python package that enables lazy evaluation and provides additional features for updating upstream values and copying the entire lazy graph.
 
 ** Install
 
-Copy or link this folder directly. Or use =pip= to obtain the distribution =pip install lazy_graph=.
+Please copy or link this folder directly. Alternatively, you can use =pip= to install the lazy-graph distribution with the command =pip install lazy_graph=.
 
 ** Documents
 
@@ -51,7 +50,7 @@ calculating 1 + 2
 c is 3
 #+end_example
 
-The value of node =c= is calculated when needed.
+The value of node =c= is calculated when it is needed.
 
 *** Update upstream
 
@@ -84,7 +83,7 @@ calculating 4 + 2
 c is 6
 #+end_example
 
-The value of node =c= will be recalculated only if its upstream updated.
+The value of node =c= will only be recalculated if its upstream is updated, and retrieving its value multiple times will not result in duplicate calculations.
 
 *** Normal argument or keyword argument are also available
 
@@ -110,7 +109,7 @@ calculating 1 + 2 + 3 + 4
 c is 10
 #+end_example
 
-Both position arguments and keyword arguments are supported, and it could be mixed with normal arguments.
+Both position arguments and keyword arguments are supported, and they can also be mixed with normal arguments.
 
 *** Copy the lazy graph
 
@@ -156,11 +155,12 @@ calculating 8 + 2
 c is 6, new c is 10
 #+end_example
 
-Copy the same relation between node =a=, =b= and =c= to a new lazy graph.
-It shares the initial value from the origin nodes, but does not affect each other then.
+Copy the same relation between node =a=, =b=, and =c= to a new lazy graph.
+The new graph shares the initial value from the original nodes but does not have any other effects on each other.
 
-Please notice that you can copy part of lazy graph. For example, copy =b= and =c= here, and share the same =a=.
-So that, updating =a= results in both =c= and =new_c= updated, while =b= or =new_b= only affects one of =c= or =new_c=.
+Please note that you can copy a part of the lazy graph.
+For example, copy =b= and =c= here while sharing the same =a=.
+This means that updating =a= will result in both =c= and =new_c= being updated, while =b= or =new_b= will only affect either =c= or =new_c=.
 
 #+begin_src python :results output :exports both :session
   copy = Copy()
@@ -192,7 +192,7 @@ calculating 6 + 10
 c is 14, new c is 16
 #+end_example
 
-If you copy the same node by the same copy object twice, you will get the same copied node.
+If you copy the same node using the same copy object twice, you will get the same copied node.
 
 #+begin_src python :results output :exports both :session
   new_c = copy(c)
@@ -205,7 +205,7 @@ If you copy the same node by the same copy object twice, you will get the same c
 True
 #+end_example
 
-When copy a lazy graph, it is always required to copy upstream before the downstreams copied, so that, this package could maintain the dependencies.
+When copying a lazy graph, it is always necessary to copy the upstream nodes before the downstream nodes are copied, so that this package can maintain the dependencies.
 
 *** Check whether a node has been calculated
 
