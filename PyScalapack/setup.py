@@ -41,6 +41,9 @@ setup(
     author_email="zh970205@mail.ustc.edu.cn",
     url="https://github.com/USTC-TNS/TAT/tree/TAT/PyScalapack",
     packages=find_packages(),
+    install_requires=[
+        "numpy",
+    ],
     license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
