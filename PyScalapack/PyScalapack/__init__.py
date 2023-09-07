@@ -67,7 +67,8 @@ class Context():
         """
         if scope not in [b'A', b'R', b'C']:
             raise RuntimeError(f"scope should be b'A', b'R' or b'C', but it is {scope}.")
-        self.scalapack.blacs_barrier(self.ictxt, ctypes.c_char(scope))
+        if self:
+            self.scalapack.blacs_barrier(self.ictxt, ctypes.c_char(scope))
 
     def _call_blacs_pinfo(self):
         """
@@ -259,8 +260,15 @@ class Array(ArrayDesc):
 
         # Set the local array.
         if data is not None:
+            # data and dtype cannot be set at the same time
+            if dtype is not None:
+                raise RuntimeError("Data and dtype cannot be set at the same time")
+            # The given data should have the correct shape
+            if context and data.shape != (self.local_m, self.local_n):
+                raise RuntimeError(f"Given data local shape mismatch, {data.shape} != {(self.local_m, self.local_n)}")
             # Use the array from the given numpy array.
             self.data = data
+            # Check the contiguous
             if self.context.layout.value == b'C':
                 # The given numpy array must be fortran contiguous.
                 if not self.data.flags.f_contiguous:
