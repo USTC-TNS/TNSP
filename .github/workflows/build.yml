@@ -42,10 +42,34 @@ jobs:
         working-directory: ${{github.workspace}}/lazy_graph
         run: python -m pytest --cov=lazy --cov-fail-under=100
 
+  test_scalapack_py:
+    name: test scalapack.py
+    runs-on: ubuntu-latest
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install mpi, scalapack
+        run: sudo apt-get install -y mpi-default-dev libscalapack-mpi-dev
+      - name: setup python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+      - name: install pytest, mpi4py and numpy
+        run: pip install pytest pytest-cov pytest-mpi mpi4py numpy
+      - name: link scalapack library
+        working-directory: ${{github.workspace}}/PyScalapack
+        run: ln -s /usr/lib/x86_64-linux-gnu/libscalapack-openmpi.so libscalapack.so 
+      - name: run test
+        working-directory: ${{github.workspace}}/PyScalapack
+        run: mpirun --oversubscribe -n 6 coverage run -m pytest --capture=no --with-mpi && coverage combine && coverage report
+        env:
+          LD_LIBRARY_PATH: .
+
   build_wheels_trigger:
     name: trigger for building wheels
     runs-on: ubuntu-latest
-    needs: [test_TAT_hpp, test_lazy_py]
+    needs: [test_TAT_hpp, test_lazy_py, test_scalapack_py]
     if: "github.event_name == 'push' && (startsWith(github.ref, 'refs/tags') || contains(toJSON(github.event.commits.*.message), '[force ci]'))"
     steps:
       - name: nothing
