@@ -1,8 +1,15 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.7...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.9...dev][Unreleased]]
 
 *** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.7...v0.3.9][v0.3.9]] - 2023-09-07
+
 *** Changed
 + *tetragono*: The interface of =save_result= allow only =(state, result, whole_result)= now.
 + *TAT.hpp*: Change the view of sign problem in =conjugate=, there is only one conjugate, but the trivial metric may not
@@ -15,7 +22,6 @@
 + *scalapack.py*: Change the loader API. The previous way is =from PyScalapack import Scalapack= and using
   =Scalapack("libscalapack.so")= to get the scalapack object, Now user should use =import PyScalapack= and
   =PyScalapack("libscalapack.so")= directly.
-*** Deprecated
 *** Removed
 + *TAT.hpp*: Remove deprecated tensor member function =get_rank=, =find_rank_from_name= and =get_rank_from_name=.
 *** Fixed
