@@ -2,6 +2,6 @@
 
 * tetraux
 
-tetraux contains some auxiliary function and class used by tetragono.
+Tetraux contains auxiliary functions and classes utilized by tetragono.
 
-This subprocject is for tetragono internal use, and will not be documented currently.
+This subproject is intended for internal use and will not be documented at the moment."
