@@ -40,7 +40,7 @@ namespace TAT {
 
         // symmetry and edge and edge segment
         auto No_m = tat_m.def_submodule("No");
-        dealing_symmetry<NoSymmetry>(No_m, "No").def(py::init<>());
+        dealing_symmetry<NoSymmetry>(No_m, "No").def(py::init<>()).def(implicit_from_tuple<NoSymmetry, std::tuple<>>(), py::arg("empty_tuple"));
         dealing_edge<NoSymmetry, false>(No_m, "No");
         dealing_edge<NoSymmetry, true>(No_m, "No");
 
@@ -48,6 +48,7 @@ namespace TAT {
         dealing_symmetry<Z2Symmetry>(Z2_m, "Z2")
             .def(py::init<>())
             .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
+            .def(implicit_from_tuple<Z2Symmetry, std::tuple<Z2>>(), py::arg("tuple_of_z2"))
             .def_property_readonly("z2", [](const Z2Symmetry& symmetry) { return std::get<0>(symmetry); });
         dealing_edge<Z2Symmetry, false>(Z2_m, "Z2");
         dealing_edge<Z2Symmetry, true>(Z2_m, "Z2");
@@ -56,6 +57,7 @@ namespace TAT {
         dealing_symmetry<U1Symmetry>(U1_m, "U1")
             .def(py::init<>())
             .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
+            .def(implicit_from_tuple<U1Symmetry, std::tuple<U1>>(), py::arg("tuple_of_u1"))
             .def_property_readonly("u1", [](const U1Symmetry& symmetry) { return std::get<0>(symmetry); });
         dealing_edge<U1Symmetry, false>(U1_m, "U1");
         dealing_edge<U1Symmetry, true>(U1_m, "U1");
@@ -64,6 +66,7 @@ namespace TAT {
         dealing_symmetry<FermiSymmetry>(Fermi_m, "Fermi")
             .def(py::init<>())
             .def(implicit_init<FermiSymmetry, U1>(), py::arg("fermi"))
+            .def(implicit_from_tuple<FermiSymmetry, std::tuple<U1>>(), py::arg("tuple_of_fermi"))
             .def_property_readonly("fermi", [](const FermiSymmetry& symmetry) { return std::get<0>(symmetry); });
         dealing_edge<FermiSymmetry, false>(Fermi_m, "Fermi");
         dealing_edge<FermiSymmetry, true>(Fermi_m, "Fermi");
@@ -72,12 +75,7 @@ namespace TAT {
         dealing_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
             .def(py::init<>())
             .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
-            .def(
-                implicit_init<FermiZ2Symmetry, const std::tuple<U1, Z2>&>([](const std::tuple<U1, Z2>& p) {
-                    return std::make_from_tuple<FermiZ2Symmetry>(p);
-                }),
-                py::arg("tuple_of_fermi_z2")
-            )
+            .def(implicit_from_tuple<FermiZ2Symmetry, std::tuple<U1, Z2>>(), py::arg("tuple_of_fermi_z2"))
             .def_property_readonly("fermi", [](const FermiZ2Symmetry& symmetry) { return std::get<0>(symmetry); })
             .def_property_readonly("z2", [](const FermiZ2Symmetry& symmetry) { return std::get<1>(symmetry); });
         dealing_edge<FermiZ2Symmetry, false>(FermiZ2_m, "FermiZ2");
@@ -87,12 +85,7 @@ namespace TAT {
         dealing_symmetry<FermiU1Symmetry>(FermiU1_m, "FermiU1")
             .def(py::init<>())
             .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
-            .def(
-                implicit_init<FermiU1Symmetry, const std::tuple<U1, U1>&>([](const std::tuple<U1, U1>& p) {
-                    return std::make_from_tuple<FermiU1Symmetry>(p);
-                }),
-                py::arg("tuple_of_fermi_u1")
-            )
+            .def(implicit_from_tuple<FermiU1Symmetry, std::tuple<U1, U1>>(), py::arg("tuple_of_fermi_u1"))
             .def_property_readonly("fermi", [](const FermiU1Symmetry& symmetry) { return std::get<0>(symmetry); })
             .def_property_readonly("u1", [](const FermiU1Symmetry& symmetry) { return std::get<1>(symmetry); });
         dealing_edge<FermiU1Symmetry, false>(FermiU1_m, "FermiU1");
@@ -102,6 +95,7 @@ namespace TAT {
         dealing_symmetry<ParitySymmetry>(Parity_m, "Parity")
             .def(py::init<>())
             .def(implicit_init<ParitySymmetry, Z2>(), py::arg("parity"))
+            .def(implicit_from_tuple<ParitySymmetry, std::tuple<Z2>>(), py::arg("tuple_of_z2"))
             .def_property_readonly("parity", [](const ParitySymmetry& symmetry) { return std::get<0>(symmetry); });
         dealing_edge<ParitySymmetry, false>(Parity_m, "Parity");
         dealing_edge<ParitySymmetry, true>(Parity_m, "Parity");
@@ -110,12 +104,7 @@ namespace TAT {
         dealing_symmetry<FermiFermiSymmetry>(FermiFermi_m, "FermiFermi")
             .def(py::init<>())
             .def(py::init<U1, U1>(), py::arg("fermi_0"), py::arg("fermi_1"))
-            .def(
-                implicit_init<FermiFermiSymmetry, const std::tuple<U1, U1>&>([](const std::tuple<U1, U1>& p) {
-                    return std::make_from_tuple<FermiFermiSymmetry>(p);
-                }),
-                py::arg("tuple_of_fermi_0_fermi_1")
-            )
+            .def(implicit_from_tuple<FermiFermiSymmetry, std::tuple<U1, U1>>(), py::arg("tuple_of_fermi_0_fermi_1"))
             .def_property_readonly("fermi_0", [](const FermiFermiSymmetry& symmetry) { return std::get<0>(symmetry); })
             .def_property_readonly("fermi_1", [](const FermiFermiSymmetry& symmetry) { return std::get<1>(symmetry); });
         dealing_edge<FermiFermiSymmetry, false>(FermiFermi_m, "FermiFermi");

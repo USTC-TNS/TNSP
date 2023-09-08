@@ -82,6 +82,11 @@ namespace TAT {
         return py::init(func);
     }
 
+    template<typename Type, typename Input>
+    auto implicit_from_tuple() {
+        return implicit_init<Type, const Input&>([](const Input& p) { return std::make_from_tuple<Type>(p); });
+    }
+
     // About callable module
     inline void set_callable(py::module_& tat_m) {
         auto py_type = py::module_::import("builtins").attr("type");
