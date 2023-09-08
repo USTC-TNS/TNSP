@@ -38,6 +38,7 @@ TEST(test_contract, no_symmetry_example_1) {
     auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "C", "E", "F"}, {1, 3, 3, 1}}.set(
         [i = 0, v = std::vector<double>{316, 796, 1276, 428, 1164, 1900, 540, 1532, 2524}]() mutable { return v[i++]; }
     );
+    ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);
 }
 
 TEST(test_contract, u1_symmetry_example_0) {
