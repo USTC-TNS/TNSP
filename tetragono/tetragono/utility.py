@@ -50,6 +50,12 @@ def showln(*args, **kwargs):
         print(clear_line, *args, **kwargs)
 
 
+def allreduce_number(number, *, dtype=np.float64):
+    buffer = np.array(number, dtype=dtype)
+    mpi_comm.Allreduce(MPI.IN_PLACE, buffer)
+    return buffer
+
+
 def allgather_array(array):
     array = np.ascontiguousarray(array)  # Ensure C order
     result = np.zeros([mpi_size, *array.shape], dtype=array.dtype)
@@ -70,6 +76,15 @@ def allreduce_iterator_buffer(iterator):
 
 def allreduce_lattice_buffer(lattice):
     return allreduce_iterator_buffer(tensor.storage for row in lattice for tensor in row)
+
+
+def bcast_number(number, *, root=0, dtype=np.float64):
+    if mpi_rank != root:
+        # In cast number is None
+        number = 0
+    buffer = np.array(number, dtype=dtype)
+    mpi_comm.Bcast(buffer, root=root)
+    return buffer
 
 
 def bcast_buffer(buffer, root=0):
@@ -111,7 +126,7 @@ class SignalHandler():
     def __call__(self):
         if self.sigint_recv:
             print(f" process {mpi_rank} receive {self.signal.name}")
-        result = mpi_comm.allreduce(self.sigint_recv)
+        result = allreduce_number(self.sigint_recv, dtype=np.int64)
         self.sigint_recv = 0
         return result != 0
 
@@ -135,7 +150,7 @@ class SeedDiffer:
         TAT.random.uniform_real(0, 1)()
 
     def make_seed_same(self):
-        self.seed = mpi_comm.allreduce(self.random_int() // mpi_size)
+        self.seed = allreduce_number(self.random_int() // mpi_size, dtype=np.int64)
         TAT.random.seed(self.seed)
 
     def __enter__(self):
@@ -165,7 +180,7 @@ def write_to_file(obj, file_name):
         with open(tmp_file_name, "wb") as file:
             pickle.dump(obj, file)
         os.rename(tmp_file_name, file_name)
-    mpi_comm.barrier()
+    mpi_comm.Barrier()
 
 
 @np.vectorize

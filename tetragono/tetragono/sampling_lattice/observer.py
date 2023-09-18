@@ -19,8 +19,8 @@
 import os
 import numpy as np
 import PyScalapack
-from ..utility import (show, showln, allreduce_lattice_buffer, allreduce_buffer, bcast_buffer, lattice_update,
-                       lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_size, mpi_comm, pickle)
+from ..utility import (show, showln, allreduce_lattice_buffer, allreduce_buffer, allreduce_number, bcast_buffer,
+                       lattice_update, lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_size, mpi_comm, pickle)
 from ..tensor_element import tensor_element
 from .lattice import ConfigurationPool
 
@@ -646,7 +646,7 @@ class Observer():
                     break
             show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
             Dp = D(p)
-            alpha = r_square / mpi_comm.allreduce((np.conj(Dp) @ Dp).real)
+            alpha = r_square / allreduce_number((np.conj(Dp) @ Dp).real)
             x = x + alpha * p
             r = r - alpha * DT(Dp)
             new_r_square = np.dot(np.conj(r), r).real

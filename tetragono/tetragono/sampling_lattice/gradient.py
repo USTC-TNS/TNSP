@@ -21,8 +21,8 @@ from datetime import datetime
 import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..utility import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
-                       write_to_file, get_imported_function, restrict_wrapper, allgather_array)
+from ..utility import (show, showln, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize, write_to_file,
+                       get_imported_function, restrict_wrapper, allgather_array, bcast_number)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -65,7 +65,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         for l1, l2 in state.sites():
             state[l1, l2] = saved_state[l1][l2]
 
-    grad_dot_begin = mpi_comm.bcast(state.lattice_dot(grad, observer.gradient))
+    grad_dot_begin = bcast_number(state.lattice_dot(grad, observer.gradient))
     if grad_dot_begin > 0:
         for l1, l2 in state.sites():
             state[l1, l2] = state[l1, l2] - step_size * grad[l1][l2]
@@ -74,7 +74,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
                 configuration.refresh_all()
                 energy_observer(possibility, configuration)
                 show(f"predicting eta={step_size}, energy={energy_observer.energy}")
-        grad_dot_end = mpi_comm.bcast(state.lattice_dot(grad, energy_observer.gradient))
+        grad_dot_end = bcast_number(state.lattice_dot(grad, energy_observer.gradient))
         showln(f"predict eta={step_size}, energy={energy_observer.energy}, gradient dot={grad_dot_end}")
         restore_state()
 
@@ -88,7 +88,7 @@ def line_search(state, observer, grad, energy_observer, configuration_pool, step
         step_size = step_size
         showln(f"step_size is chosen as {step_size}, since grad_dot(begin) < 0")
 
-    return mpi_comm.bcast(step_size)
+    return bcast_number(step_size)
 
 
 def gradient_descent(
