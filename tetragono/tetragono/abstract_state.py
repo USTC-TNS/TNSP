@@ -93,6 +93,8 @@ class AbstractStatePhysicsEdge:
             self.owner._physics_edges = [[{0: edge} for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
         elif len(l1l2o) == 3:
             l1, l2, orbit = l1l2o
+            if orbit < 0:
+                raise ValueError("Orbit index should be non-negative")
             self.owner._physics_edges[l1][l2][orbit] = edge
             # Once the edge has been set, resort the dict of this site
             self.owner._physics_edges[l1][l2] = dict(sorted(self.owner._physics_edges[l1][l2].items()))

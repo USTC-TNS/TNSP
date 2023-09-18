@@ -4,6 +4,7 @@
 
 *** Added
 *** Changed
++ *tetragono*: The physics edge index should be non-negative now.
 *** Deprecated
 *** Removed
 + *tetragono*: Remove ansatz product state support, which may be added again in the future, but it require many updates.
