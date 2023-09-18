@@ -131,7 +131,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         if mpi_rank == 0:
             os.system(line)
-        mpi_comm.barrier()
+        mpi_comm.Barrier()
 
     def do_EOF(self, line):
         """
@@ -601,7 +601,7 @@ if __name__ == "__main__":
         showln("shell.py: Error: unrecognized command-line option")
         showln(help_message)
         sys.exit(1)
-    mpi_comm.barrier()
+    mpi_comm.Barrier()
 else:
     app = TetragonoCommandApp()
 
