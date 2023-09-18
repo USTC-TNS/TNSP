@@ -48,7 +48,9 @@ class Configuration(SingleLayerAuxiliaries):
         result = super().copy(cp=cp)
 
         result.owner = self.owner
-        result._configuration = self.export_configuration()
+        result._configuration = [
+            [self._configuration[l1][l2].copy() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)
+        ]
         result._set_site_without_orbit()
         result._holes = self._holes
         return result
@@ -182,12 +184,25 @@ class Configuration(SingleLayerAuxiliaries):
 
         Parameters
         ----------
-        config : list[list[dict[int, ?EdgePoint]]]
-            The configuration data of all the sites
+        config : array
+            The configuration data of all the sites, three dimensional numpy array. non-negative for edge_index, -1 for not exist, -2 for None.
         """
+        if isinstance(config, list):
+            # For compatibility
+            for l1, l2 in self.owner.sites():
+                for orbit, edge_point in config[l1][l2].items():
+                    self[l1, l2, orbit] = edge_point
         for l1, l2 in self.owner.sites():
-            for orbit, edge_point in config[l1][l2].items():
-                self[l1, l2, orbit] = edge_point
+            for orbit, edge_index in enumerate(config[l1][l2]):
+                if edge_index == -2:
+                    self[l1, l2, orbit] = None
+                elif edge_index == -1:
+                    continue
+                elif edge_index >= 0:
+                    edge = self.owner.physics_edges[l1, l2, orbit]
+                    self[l1, l2, orbit] = edge.point_by_index(edge_index)
+                else:
+                    raise RuntimeError("Invalid edge index")
 
     def export_configuration(self):
         """
@@ -195,10 +210,22 @@ class Configuration(SingleLayerAuxiliaries):
 
         Returns
         -------
-        list[list[dict[int, EdgePoint]]]
-            The configuration data of all the sites
+        array
+            The configuration data of all the sites, three dimensional numpy array. non-negative for edge_index, -1 for not exist, -2 for None.
         """
-        return [[self._configuration[l1][l2].copy() for l2 in range(self.owner.L2)] for l1 in range(self.owner.L1)]
+        # Find the max orbit
+        max_orbit = max(orbit for [l1, l2, orbit], _ in self.owner.physics_edges)
+        # Create an empty result array
+        result = np.zeros([self.owner.L1, self.owner.L2, max_orbit + 1], dtype=np.int64) - 1
+        # Set the element one by one
+        for [l1, l2, orbit], edge in self.owner.physics_edges:
+            edge_point = self[l1, l2, orbit]
+            if edge_point is None:
+                edge_index = -2
+            else:
+                edge_index = edge.index_by_point(edge_point)
+            result[l1, l2, orbit] = edge_index
+        return result
 
     def replace(self, replacement, *, hint=None):
         """

@@ -22,7 +22,7 @@ import cmd
 import TAT
 from io import StringIO
 from .utility import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
-                      get_imported_function, seed_differ)
+                      get_imported_function, seed_differ, allgather_array)
 from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
@@ -515,7 +515,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             configuration = gm_Configuration(self.gm, -1)
             initial_configuration = get_imported_function(module_name, "initial_configuration")
             configuration = initial_configuration(configuration, *args, **kwargs)
-            self.gm_conf = mpi_comm.allgather(configuration.export_configuration())
+            self.gm_conf = allgather_array(configuration.export_configuration())
 
     @AutoCmd.decorator
     def gm_clear_symmetry(self):

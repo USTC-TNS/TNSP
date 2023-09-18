@@ -50,6 +50,13 @@ def showln(*args, **kwargs):
         print(clear_line, *args, **kwargs)
 
 
+def allgather_array(array):
+    array = np.ascontiguousarray(array)  # Ensure C order
+    result = np.zeros([mpi_size, *array.shape], dtype=array.dtype)
+    mpi_comm.Allgather(array, result)
+    return result
+
+
 def allreduce_buffer(buffer):
     mpi_comm.Allreduce(MPI.IN_PLACE, buffer)
 

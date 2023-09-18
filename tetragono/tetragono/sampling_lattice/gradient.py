@@ -22,7 +22,7 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..utility import (show, showln, mpi_comm, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize,
-                       write_to_file, get_imported_function, restrict_wrapper)
+                       write_to_file, get_imported_function, restrict_wrapper, allgather_array)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -240,9 +240,9 @@ def gradient_descent(
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configuration
-                gathered_configurations = mpi_comm.allgather(configuration.export_configuration())
-                sampling_configurations.clear()
-                sampling_configurations += gathered_configurations
+                gathered_configurations = allgather_array(configuration.export_configuration())
+                sampling_configurations.resize(gathered_configurations.shape)
+                np.copyto(sampling_configurations, gathered_configurations)
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
             if sampling_method == "direct":
                 showln(f"direct sampling stability is {observer.stability}")
