@@ -162,59 +162,29 @@ extern "C" {
 namespace TAT {
     namespace detail {
         template<typename ScalarType>
-        constexpr int (*gemm)(
-            const char* transpose_a,
-            const char* transpose_b,
-            const int* m,
-            const int* n,
-            const int* k,
-            const ScalarType* alpha,
-            const ScalarType* a,
-            const int* lda,
-            const ScalarType* b,
-            const int* ldb,
-            const ScalarType* beta,
-            ScalarType* c,
-            const int* ldc
-        ) = nullptr;
+        constexpr auto gemm = nullptr;
 
         template<>
-        inline auto gemm<float> = sgemm_;
+        inline constexpr auto gemm<float> = sgemm_;
         template<>
-        inline auto gemm<double> = dgemm_;
+        inline constexpr auto gemm<double> = dgemm_;
         template<>
-        inline auto gemm<std::complex<float>> = cgemm_;
+        inline constexpr auto gemm<std::complex<float>> = cgemm_;
         template<>
-        inline auto gemm<std::complex<double>> = zgemm_;
+        inline constexpr auto gemm<std::complex<double>> = zgemm_;
 
         template<typename ScalarType>
-        constexpr int (*mkl_gemm_batch)(
-            const char* transpose_a,
-            const char* transpose_b,
-            const int* m,
-            const int* n,
-            const int* k,
-            const ScalarType* alpha,
-            const ScalarType** a,
-            const int* lda,
-            const ScalarType** b,
-            const int* ldb,
-            const ScalarType* beta,
-            ScalarType** c,
-            const int* ldc,
-            const int* group_count,
-            const int* group_size
-        ) = nullptr;
+        constexpr auto mkl_gemm_batch = nullptr;
 
 #ifdef TAT_USE_MKL_GEMM_BATCH
         template<>
-        inline auto mkl_gemm_batch<float> = sgemm_batch_;
+        inline constexpr auto mkl_gemm_batch<float> = sgemm_batch_;
         template<>
-        inline auto mkl_gemm_batch<double> = dgemm_batch_;
+        inline constexpr auto mkl_gemm_batch<double> = dgemm_batch_;
         template<>
-        inline auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
+        inline constexpr auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
         template<>
-        inline auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
+        inline constexpr auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
 #endif
     } // namespace detail
 

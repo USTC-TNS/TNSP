@@ -39,16 +39,15 @@ extern "C" {
 namespace TAT {
     namespace detail {
         template<typename ScalarType>
-        constexpr int (*gesv)(const int* n, const int* nrhs, ScalarType* A, const int* lda, int* ipiv, ScalarType* B, const int* ldb, int* info) =
-            nullptr;
+        constexpr auto gesv = nullptr;
         template<>
-        inline auto gesv<float> = sgesv_;
+        inline constexpr auto gesv<float> = sgesv_;
         template<>
-        inline auto gesv<double> = dgesv_;
+        inline constexpr auto gesv<double> = dgesv_;
         template<>
-        inline auto gesv<std::complex<float>> = cgesv_;
+        inline constexpr auto gesv<std::complex<float>> = cgesv_;
         template<>
-        inline auto gesv<std::complex<double>> = zgesv_;
+        inline constexpr auto gesv<std::complex<double>> = zgesv_;
 
         template<typename ScalarType>
         void linear_solve(int n, ScalarType* A, int nrhs, ScalarType* B, ScalarType* X) {
