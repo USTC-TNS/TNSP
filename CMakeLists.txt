@@ -87,6 +87,7 @@ option(TAT_BUILD_TETRAUX "Build tetraux" ON)
 if(TAT_BUILD_TETRAUX AND TAT_PYBIND11_FOUND)
   pybind11_add_module(tetraux ${CMAKE_CURRENT_SOURCE_DIR}/tetraux/tetraux.cpp)
   target_compile_features(tetraux PRIVATE cxx_std_17)
+  target_link_libraries(tetraux PRIVATE ${MPI_LIBRARIES} ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES} hipblas)
 endif()
 
 # Add test

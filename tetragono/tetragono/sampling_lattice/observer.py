@@ -28,6 +28,23 @@ from .lattice import ConfigurationPool
 global_start_time = time.time()
 cg_accum_time = 0
 
+from mpi4py import MPI
+import tetraux
+
+local_name = np.array([ord(i) for i in MPI.Get_processor_name()], dtype=np.int32)  # 机器名，用于识别是否在同一个节点
+max_name_length = np.array(len(local_name), dtype=np.int32)  # 为了allgather所有的机器名，需要知道机器名的最长长度
+mpi_comm.Allreduce(MPI.IN_PLACE, max_name_length, MPI.MAX)  # 得到最长机器名长度
+local_name.resize(max_name_length)  # 将短的机器名补长
+all_name = np.zeros([mpi_size, max_name_length], dtype=np.int32)  # 准备buffer接受所有的机器名
+mpi_comm.Allgather(local_name, all_name)  # allgather，接受所有机器名字到all_name
+color = next(index for index, name in enumerate(all_name) if np.array_equal(name, local_name))  # 获得用于识别同一个节点的mpi color
+mpi_local_comm = mpi_comm.Split(color, mpi_rank)  # 根据节点color划分comm，在同一个节点的进程属于同一个mpi_local_comm
+gpu_number = 4  # 东方系统上一个节点4个gpu，先写死在这里
+gpu_color = mpi_local_comm.Get_rank() % gpu_number  # 为了将多个cpu的数据发送到同一个gpu中，需要再次划分comm
+mpi_gpu_comm = mpi_local_comm.Split(gpu_color, mpi_rank)  # 将要把数据发送至同一个gpu的进程，属于同一个mpi_gpu_comm
+exec_color = 1 if mpi_gpu_comm.Get_rank() == 0 else 0  # 每个mpi_gpu_comm中选取一个进程用来控制gpu
+mpi_exec_comm = mpi_comm.Split(exec_color, mpi_rank)  # 这些控制gpu的进程放在同一个mpi_exec_comm中
+
 
 class Observer():
     """
@@ -606,60 +623,33 @@ class Observer():
             Energy.append((energy_s.conjugate() - energy) * param)
         Delta = np.asarray(Delta)
         Energy = np.asarray(Energy)
+        dtype = Energy.dtype
 
-        # A x = b
-        # DT r D x = DT r E
+        Ns = len(Energy)
+        Np = len(delta)
 
-        # Delta, NsNp
-        def D(v):
-            # Ns Np * Np => Ns
-            if Energy.size != 0:
-                return Delta @ v
-            else:
-                return np.zeros_like(Energy)
+        local_Ns = np.array(Ns, dtype=np.int32)  # 本进程的Ns
+        gpu_Ns_list = np.zeros([mpi_gpu_comm.Get_size()], dtype=np.int32)  # 同一个gpu comm中所有进程的Ns
+        mpi_gpu_comm.Gather(local_Ns, gpu_Ns_list)  # Gather到控制gpu的进程中
+        gpu_Ns_total = sum(gpu_Ns_list)  # 控制gpu的进程需要知道自己一共要处理多少采样
+        gpu_Energy = np.zeros([gpu_Ns_total], dtype=dtype)  # 控制gpu的进程需要收集所有的Energy
+        mpi_gpu_comm.Gatherv(Energy, (gpu_Energy, gpu_Ns_list))  # 收集
+        gpu_Delta = np.zeros([gpu_Ns_total, Np], dtype=dtype)  # 控制gpu的进程需要手机所有的Delta
+        mpi_gpu_comm.Gatherv(Delta, (gpu_Delta, gpu_Ns_list * Np))  # 收集
 
-        def DT(v):
-            # Np Ns * Ns => Np
-            if Energy.size != 0:
-                result = np.conj(Delta.T) @ v
-            else:
-                result = np.zeros_like(delta)
-            allreduce_buffer(result)
-            return result
+        if exec_color == 1:
+            x, reason, result_step, result_error = tetraux.cg(gpu_Ns_total, Np, gpu_Energy, gpu_Delta, step, error,
+                                                              gpu_color, mpi_exec_comm)
+        else:
+            x = np.zeros([Np], dtype=dtype)
+            reason = ""
+            result_step = 0
+            result_error = 0
 
-        def A(v):
-            return DT(D(v))
-
-        b = DT(Energy)
-        b_square = np.dot(np.conj(b), b).real
-
-        x = np.zeros_like(b)
-        r = b - A(x)
-        p = r
-        r_square = np.dot(np.conj(r), r).real
-        # loop
-        t = 0
-        while True:
-            if t == step:
-                reason = "max step count reached"
-                break
-            if error != 0.0:
-                if error**2 > r_square / b_square:
-                    reason = "r^2 is small enough"
-                    break
-            show(f"conjugate gradient step={t} r^2/b^2={r_square/b_square}")
-            Dp = D(p)
-            alpha = r_square / allreduce_number((np.conj(Dp) @ Dp).real)
-            x = x + alpha * p
-            r = r - alpha * DT(Dp)
-            new_r_square = np.dot(np.conj(r), r).real
-            beta = new_r_square / r_square
-            r_square = new_r_square
-            p = r + beta * p
-            t += 1
+        mpi_gpu_comm.Bcast(x)  # 只有控制gpu的进程有求逆结果，需要bcast到所有进程中
 
         x = 2 * x
-        showln(f"natural gradient calculated step={t} r^2/b^2={r_square/b_square} {reason}")
+        showln(f"natural gradient calculated step={result_step} r^2/b^2={result_error} {reason}")
         global cg_accum_time
         cg_accum_time += time.time() - cg_start_time
         showln(f"{cg_accum_time}/{time.time() - global_start_time}")
