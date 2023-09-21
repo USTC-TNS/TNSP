@@ -638,8 +638,48 @@ class Observer():
         mpi_gpu_comm.Gatherv(Delta, (gpu_Delta, gpu_Ns_list * Np))  # 收集
 
         if exec_color == 1:
-            x, reason, result_step, result_error = tetraux.cg(gpu_Ns_total, Np, gpu_Energy, gpu_Delta, step, error,
-                                                              gpu_color, mpi_exec_comm)
+            # 重新分发矩阵
+
+            # comm基本信息
+            exec_rank = mpi_exec_comm.Get_rank()
+            exec_size = mpi_exec_comm.Get_size()
+            # 所有进程都要知道每个进程的构型数目信息
+            Ns_list = np.zeros([exec_size], dtype=np.int32)
+            mpi_exec_comm.Allgather(np.array(gpu_Ns_total, dtype=np.int32), Ns_list)
+            Ns_total = sum(Ns_list)
+            # 所有进程都知道每个进程的Energy
+            all_Energy = np.zeros([Ns_total], dtype=dtype)
+            mpi_exec_comm.Allgatherv(gpu_Energy, (all_Energy, Ns_list))
+            # 切割Np
+            quotient = Np // exec_size
+            remainder = Np % exec_size
+            Np_list = np.zeros(exec_size, dtype=np.int32) + quotient
+            Np_list[:remainder] += 1
+            # 每个进程先行切割自己的Delta
+            Delta_pre = np.zeros([Np * Ns_list[exec_rank]], dtype=dtype)
+            begin = 0
+            end = 0
+            Ns_local = Ns_list[exec_rank]
+            for i in range(exec_size):
+                end += Np_list[i]
+                np.copyto(
+                    Delta_pre[begin * Ns_local:end * Ns_local].reshape([Ns_local, Np_list[i]]),
+                    gpu_Delta[:, begin:end],
+                )
+                begin = end
+            send_info = Ns_list[exec_rank] * Np_list
+            # 准备buff接受重新分发后的矩阵
+            Delta_redistributed = np.zeros([Ns_total, Np_list[exec_rank]], dtype=dtype)
+            recv_info = Ns_list * Np_list[exec_rank]
+            # 接收
+            mpi_exec_comm.Barrier()  # 不加的话mpi会出错，似乎是mpi的一个bug
+            mpi_exec_comm.Alltoallv((Delta_pre, send_info), (Delta_redistributed, recv_info))
+
+            x_i, reason, result_step, result_error = tetraux.cg(Ns_total, Np_list[exec_rank], all_Energy,
+                                                                Delta_redistributed, step, error, gpu_color,
+                                                                mpi_exec_comm)
+            x = np.zeros([Np], dtype=dtype)
+            mpi_exec_comm.Allgatherv(x_i, (x, Np_list))
         else:
             x = np.zeros([Np], dtype=dtype)
             reason = ""

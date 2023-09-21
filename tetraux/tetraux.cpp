@@ -160,7 +160,7 @@ auto cg(
     real_base<Scalar> new_r_square;
     real_base<Scalar> alpha;
     real_base<Scalar> beta;
-    std::unique_ptr<Scalar[]> res_h(new Scalar[Np]);
+    std::unique_ptr<Scalar[]> res_h(new Scalar[Ns]);
 
     // For complex scalar, conjugate on Delta is needed
     if constexpr (!std::is_same_v<real_base<Scalar>, Scalar>) {
@@ -175,6 +175,11 @@ auto cg(
         // res = Delta @ v
         // Previous: N -> fix fortran order -> T -> manually conjugate -> C
         gemv<Scalar>(handle.get(), blas_op_c, Np, Ns, &f_one, Delta.get(), Np, v.get(), i_one, &f_zero, res.get(), i_one);
+        // allreduce res
+        // TODO: For rocm aware mpi, it is possible to allreduce directly inside gpu.
+        res.to_host(res_h.get());
+        MPI_Allreduce(MPI_IN_PLACE, res_h.get(), Ns, mpi_datatype<Scalar>, MPI_SUM, comm);
+        res.from_host(res_h.get());
     };
     auto DT = [&](gpu_array<Scalar>& v, // Ns
                   gpu_array<Scalar>& res // Np
@@ -182,11 +187,6 @@ auto cg(
         // res = Delta.H @ v
         // Previous: C -> fix fortran order -> C without T -> manually conjugate -> N
         gemv<Scalar>(handle.get(), blas_op_n, Np, Ns, &f_one, Delta.get(), Np, v.get(), i_one, &f_zero, res.get(), i_one);
-        // allreduce res
-        // TODO: For rocm aware mpi, it is possible to allreduce directly inside gpu.
-        res.to_host(res_h.get());
-        MPI_Allreduce(MPI_IN_PLACE, res_h.get(), Np, mpi_datatype<Scalar>, MPI_SUM, comm);
-        res.from_host(res_h.get());
     };
 
     // CG
@@ -196,6 +196,7 @@ auto cg(
     // b_square = b.H @ b
     nrm2<Scalar>(handle.get(), Np, b.get(), i_one, &b_square);
     b_square = b_square * b_square;
+    MPI_Allreduce(MPI_IN_PLACE, &b_square, 1, mpi_datatype<real_base<Scalar>>, MPI_SUM, comm);
 
     // x = 0
     scal<Scalar>(handle.get(), Np, &f_zero, x.get(), i_one);
@@ -206,6 +207,7 @@ auto cg(
     // r_square = r.H @ r
     nrm2<Scalar>(handle.get(), Np, r.get(), i_one, &r_square);
     r_square = r_square * r_square;
+    MPI_Allreduce(MPI_IN_PLACE, &r_square, 1, mpi_datatype<real_base<Scalar>>, MPI_SUM, comm);
 
     int t = 0;
     const char* reason;
@@ -224,7 +226,6 @@ auto cg(
         // alpha = r_square / allreduce(Dp.H @ Dp)
         nrm2<Scalar>(handle.get(), Ns, Dp.get(), i_one, &alpha);
         alpha = alpha * alpha;
-        MPI_Allreduce(MPI_IN_PLACE, &alpha, 1, mpi_datatype<real_base<Scalar>>, MPI_SUM, comm);
         alpha = r_square / alpha;
         // x = x + alpha * p
         Scalar c_alpha = alpha;
@@ -236,6 +237,7 @@ auto cg(
         // new_r_square = r.H @ r
         nrm2<Scalar>(handle.get(), Np, r.get(), i_one, &new_r_square);
         new_r_square = new_r_square * new_r_square;
+        MPI_Allreduce(MPI_IN_PLACE, &new_r_square, 1, mpi_datatype<real_base<Scalar>>, MPI_SUM, comm);
         // beta = new_r_square / r_square
         beta = new_r_square / r_square;
         // r_square = new_r_square
