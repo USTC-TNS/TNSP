@@ -17,12 +17,16 @@
 #
 
 import os
+import time
 import numpy as np
 import PyScalapack
 from ..utility import (show, showln, allreduce_lattice_buffer, allreduce_buffer, allreduce_number, bcast_buffer,
                        lattice_update, lattice_prod_sum, lattice_conjugate, mpi_rank, mpi_size, mpi_comm, pickle)
 from ..tensor_element import tensor_element
 from .lattice import ConfigurationPool
+
+global_start_time = time.time()
+cg_accum_time = 0
 
 
 class Observer():
@@ -589,6 +593,8 @@ class Observer():
         list[list[Tensor]]
             The gradient for every tensor.
         """
+        cg_start_time = time.time()
+
         show("calculating natural gradient")
         energy = self._total_energy_with_imaginary_part()
         delta = self._delta_to_array(self._Delta) / self._total_weight
@@ -657,6 +663,11 @@ class Observer():
 
         x = 2 * x
         showln(f"natural gradient calculated step={t} r^2/b^2={r_square/b_square} {reason}")
+
+        global cg_accum_time
+        cg_accum_time += time.time() - cg_start_time
+        showln(f"{cg_accum_time}/{time.time() - global_start_time}")
+
         return lattice_conjugate(self._array_to_delta(np.conj(x)))
 
     def _delta_to_array(self, delta):
