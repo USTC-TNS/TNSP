@@ -24,9 +24,10 @@ from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product,
 
 
 def hopping_hamiltonians(state):
-    # This hopping hamiltonian restrict the u1*u1 symmetry in each layer.
-    # so it does NOT allow hopping from |2 particle><2 particle| to |1 particle><1 particle|,
-    # or hopping from |2><2| to |0><0|. It even also restrict the spin z for each layer.
+    # This hopping hamiltonian restrict the u1*u1 symmetry (particle number conversation for spin up and spin down) in each layer.
+
+    # So, it does NOT allow hopping from |2 particle><2 particle| to |1 particle><1 particle|,
+    # or from |2><2| to |0><0|. It also restricts the spin z for each layer.
 
     hamiltonians = {}
 

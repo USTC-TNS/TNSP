@@ -22,6 +22,7 @@ import tetragono as tet
 
 
 def initial_configuration(configuration):
+    # This function initialize the configuration as anti-ferromagnetic phase, and it is one of the major terms in infinite temperature.
     state = configuration.owner
     for l1, l2 in state.sites():
         if (l1 + l2) % 2 == 0:

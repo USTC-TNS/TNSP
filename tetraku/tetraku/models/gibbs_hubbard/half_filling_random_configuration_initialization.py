@@ -22,9 +22,20 @@ import tetragono as tet
 
 
 def initial_configuration(configuration):
-    # This function initialize the configuration randomly but ensure it is the major term in the infinite temperature.
+    # This function initialize the configuration randomly but ensures
+    # 1. It is the major term in the infinite temperature.
+    # 2. It is half-filling configuration without double occupancy.
+    # 3. The total spin z is zero, i.e, the particle numbers of spin up and spin down equal.
     state = configuration.owner
-    random = TAT.random.uniform_int(0, 1)
     for l1, l2 in state.sites():
-        configuration[l1, l2, 0] = configuration[l1, l2, 1] = random()
+        configuration[l1, l2, 0] = configuration[l1, l2, 1] = (True, 0)
+    pool = set()
+    random_l1 = TAT.random.uniform_int(0, state.L1 - 1)
+    random_l2 = TAT.random.uniform_int(0, state.L2 - 1)
+    while len(pool) < state.L1 * state.L2 // 2:
+        l1 = random_l1()
+        l2 = random_l2()
+        if (l1, l2) not in pool:
+            pool.add((l1, l2))
+            configuration[l1, l2, 0] = configuration[l1, l2, 1] = (True, 1)
     return configuration

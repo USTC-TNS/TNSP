@@ -24,17 +24,22 @@ from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product,
 
 
 def hopping_hamiltonians(state):
-    # This hopping hamiltonian restrict the parity symmetry in each layer.
-    # so it does not allow hopping from |2 particle><2 particle| to |1 particle><1 particle|,
-    # but allow hopping from |2><2| to |0><0|.
-    # Since the only restriction is parity symmetry in each layer, it is also possible to
-    # get the invalid density matrix such as |2><2| to |0><2|.
+    # This hopping hamiltonian restrict nothing but ensure the result is valid density matrix,
+    # Since the only interlayer term is c_u c_u and c_d c_d for spin up or spin down (two operators belong to two layers).
 
     # Two part, normal Hamiltonian and hopping between subspace
     hamiltonians = {}
 
-    CCCC = (C0C1 + C1C0 + CM2 + CP2).merge_edge({"I0": ["I0", "I1"], "O0": ["O0", "O1"]})
-    between_subspace = kronecker_product(rename_io(CCCC, [0]), rename_io(CCCC, [1]))
+    CC = CM2 + CP2
+    # Order: 0 up, 1 up, 0 down, 1 down
+    CCII = kronecker_product(rename_io(CC, [0, 1]), rename_io(I, [2]), rename_io(I, [3]))
+    IICC = kronecker_product(rename_io(CC, [2, 3]), rename_io(I, [0]), rename_io(I, [1]))
+    between_subspace = (CCII + IICC).merge_edge({
+        "I0": ["I0", "I2"],
+        "O0": ["O0", "O2"],
+        "I1": ["I1", "I3"],
+        "O1": ["O1", "O3"],
+    })
 
     CSCS = tet.common_tensor.Parity_Hubbard.CSCS.to(float)
     CSCS_double_side = [CSCS, half_reverse(CSCS.conjugate())]

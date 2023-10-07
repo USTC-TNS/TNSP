@@ -24,13 +24,13 @@ from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product,
 
 
 def hopping_hamiltonians(state):
-    # This hopping hamiltonian allow any hopping in possible space.
-    # Even if the density matrix is invalid such as |3 particle><1 particle| term.
+    # This hopping hamiltonian restrict nothing but ensure the result is valid density matrix,
+    # Since the only interlayer term is |1><1| <-> |0><0|
 
     # Two part, normal Hamiltonian and hopping between subspace
     hamiltonians = {}
 
-    between_subspace = C0C1 + C1C0 + CM2 + CP2
+    between_subspace = CM2 + CP2
 
     CC = tet.common_tensor.Parity.CC.to(float)
     CC_double_side = [CC, half_reverse(CC.conjugate())]
