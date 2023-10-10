@@ -49,9 +49,6 @@ setup(
         "mpi4py",
         "numpy",
     ],
-    extras_require={
-        "APS": ["torch",],
-    },
     license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",

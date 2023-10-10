@@ -27,9 +27,7 @@ from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration as gm_Configuration
-from .ansatz_product_state import AnsatzProductState, Configuration as ap_Configuration
 from .sampling_lattice.gradient import gradient_descent as gm_gradient_descent
-from .ansatz_product_state.gradient import gradient_descent as ap_gradient_descent
 
 
 class Config():
@@ -110,8 +108,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex = None
         self.gm = None
         self.gm_conf = []
-        self.ap = None
-        self.ap_conf = []
 
     def precmd(self, line):
         line = line.split("#")[0].strip()
@@ -560,212 +556,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
-    @AutoCmd.decorator
-    def ap_create(self, *args, **kwargs):
-        """
-        Create a ansatz product state.
-
-        Parameters
-        ----------
-        model : str
-            The model names.
-        args, kwargs
-            Arguments passed to model creater function.
-        """
-        state = self.ex_ap_create(AnsatzProductState, *args, **kwargs)
-        if state is not None:
-            self.ap = state
-
-    @AutoCmd.decorator
-    def ap_dump(self, name):
-        """
-        Dump the ansatz product state into file.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        if self.ap is None:
-            showln("ap is None")
-        else:
-            write_to_file(self.ap, name)
-
-    @AutoCmd.decorator
-    def ap_load(self, name):
-        """
-        Load the ansatz product state from file.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        self.ap = read_from_file(name)
-
-    @AutoCmd.decorator
-    def ap_ansatz_set(self, name, ansatz, *args, **kwargs):
-        """
-        Set the ansatz for ansatz product state.
-
-        Parameters
-        ----------
-        name : str
-            The subansatz name in this state.
-        ansatz : str
-            The ansatz names.
-        args, kwargs
-            Arguments passed to ansatz creater function.
-        """
-        create_ansatz = get_imported_function(ansatz, "ansatz")
-        if len(args) == 1 and args[0] == "help":
-            showln(create_ansatz.__doc__.replace("\n", "\n    "))
-        else:
-            self.ap.set_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
-
-    @AutoCmd.decorator
-    def ap_ansatz_add(self, name, ansatz, *args, **kwargs):
-        """
-        Add the ansatz for ansatz product state.
-
-        Parameters
-        ----------
-        name : str
-            The subansatz name in this state.
-        ansatz : str
-            The ansatz names.
-        args, kwargs
-            Arguments passed to ansatz creater function.
-        """
-        create_ansatz = get_imported_function(ansatz, "ansatz")
-        if len(args) == 1 and args[0] == "help":
-            showln(create_ansatz.__doc__.replace("\n", "\n    "))
-        else:
-            self.ap.add_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
-
-    @AutoCmd.decorator
-    def ap_ansatz_mul(self, name, ansatz, *args, **kwargs):
-        """
-        Mul the ansatz for ansatz product state.
-
-        Parameters
-        ----------
-        name : str
-            The subansatz name in this state.
-        ansatz : str
-            The ansatz names.
-        args, kwargs
-            Arguments passed to ansatz creater function.
-        """
-        create_ansatz = get_imported_function(ansatz, "ansatz")
-        if len(args) == 1 and args[0] == "help":
-            showln(create_ansatz.__doc__.replace("\n", "\n    "))
-        else:
-            self.ap.mul_ansatz(create_ansatz(self.ap, *args, **kwargs), name)
-
-    @AutoCmd.decorator
-    def ap_ansatz_show(self):
-        """
-        Show the ansatz for ansatz product state.
-        """
-        self.ap.show_ansatz()
-
-    @AutoCmd.decorator
-    def ap_ansatz_lock(self, path=""):
-        """
-        Lock the ansatz for ansatz product state.
-
-        Parameters
-        ----------
-        path : str, default=""
-            The path of ansatz to lock.
-        """
-        self.ap.ansatz.lock(path)
-
-    @AutoCmd.decorator
-    def ap_ansatz_unlock(self, path=""):
-        """
-        Unlock the ansatz for ansatz product state.
-
-        Parameters
-        ----------
-        path : str, default=""
-            The path of ansatz to unlock.
-        """
-        self.ap.ansatz.unlock(path)
-
-    @AutoCmd.decorator
-    def ap_run(self, *args, **kwargs):
-        """
-        Do gradient descent on ansatz product state. see ansatz_product_state/gradient.py for details.
-        """
-        for result in ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf):
-            pass
-        return result
-
-    def ap_run_g(self, *args, **kwargs):
-        yield from ap_gradient_descent(self.ap, *args, **kwargs, sampling_configurations=self.ap_conf)
-
-    @AutoCmd.decorator
-    def ap_conf_create(self, module_name, *args, **kwargs):
-        """
-        Create configuration of ansatz product state.
-
-        Parameters
-        ----------
-        module_name : str
-            The module name to create initial configuration of ansatz product state.
-        args, kwargs
-            Arguments passed to module configuration creater function.
-        """
-        with seed_differ:
-            configuration = ap_Configuration(self.ap)
-            initial_configuration = get_imported_function(module_name, "initial_configuration")
-            configuration = initial_configuration(configuration, *args, **kwargs)
-            self.ap_conf = mpi_comm.allgather(configuration.export_configuration())
-
-    @AutoCmd.decorator
-    def ap_conf_dump(self, name):
-        """
-        Dump the ansatz product state configuration into file.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        if self.ap_conf is None:
-            showln("ap_conf is None")
-        else:
-            write_to_file(self.ap_conf, name)
-
-    @AutoCmd.decorator
-    def ap_conf_load(self, name):
-        """
-        Load the ansatz product state configuration from file.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        self.ap_conf = read_from_file(name)
-
-    @AutoCmd.decorator
-    def ap_hamiltonian(self, model, *args, **kwargs):
-        """
-        Replace the hamiltonian of the ansatz product state with another one.
-
-        Parameters
-        ----------
-        model : str
-            The model names.
-        args, kwargs
-            Arguments passed to model creater function.
-        """
-        new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
-        self.ap._hamiltonians = new_state._hamiltonians
-
 
 class TetragonoScriptApp(TetragonoCommandApp):
 
@@ -844,23 +634,7 @@ else:
     gm_hamiltonian = app.gm_hamiltonian
     gm_clear_symmetry = app.gm_clear_symmetry
 
-    ap_create = app.ap_create
-    ap_dump = app.ap_dump
-    ap_load = app.ap_load
-    ap_ansatz_set = app.ap_ansatz_set
-    ap_ansatz_add = app.ap_ansatz_add
-    ap_ansatz_mul = app.ap_ansatz_mul
-    ap_ansatz_show = app.ap_ansatz_show
-    ap_ansatz_lock = app.ap_ansatz_lock
-    ap_ansatz_unlock = app.ap_ansatz_unlock
-    ap_run = app.ap_run
-    ap_conf_create = app.ap_conf_create
-    ap_conf_dump = app.ap_conf_dump
-    ap_conf_load = app.ap_conf_load
-    ap_hamiltonian = app.ap_hamiltonian
-
     gm_run_g = app.gm_run_g
-    ap_run_g = app.ap_run_g
 
     gm_bin_run = app.gm_bin_run
     gm_alpha = app.gm_alpha

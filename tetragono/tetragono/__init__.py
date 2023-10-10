@@ -28,6 +28,3 @@ from . import conversion
 from . import common_tensor
 from . import utility
 from .utility import *
-
-# Ansatz product state
-from . import ansatz_product_state
