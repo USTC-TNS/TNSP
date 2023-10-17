@@ -315,14 +315,12 @@ def gradient_descent(
                 observer.normalize_lattice()
                 # Bcast state
                 state.bcast_lattice()
-                # sampling is not needed to refresh since every gradient step will use a new sampling object.
 
-                # Save state
-                if save_state_file:
-                    write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
-                if save_configuration_file:
-                    write_to_file(sampling_configurations, save_configuration_file)
-
+            # Save state
+            if save_state_file:
+                write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
+            if save_configuration_file:
+                write_to_file(sampling_configurations, save_configuration_file)
             # Yield the measurement result
             yield (measurement_whole_result, measurement_result)
 
