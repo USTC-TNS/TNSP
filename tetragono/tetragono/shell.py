@@ -23,11 +23,11 @@ from io import StringIO
 import numpy as np
 import TAT
 from .utility import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
-                      get_imported_function, seed_differ, allgather_array)
+                      get_imported_function, allgather_array, restrict_wrapper)
 from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
-from .sampling_lattice import SamplingLattice, Configuration as gm_Configuration
+from .sampling_lattice import SamplingLattice, Configuration as gm_Configuration, SweepSampling
 from .sampling_lattice.gradient import gradient_descent as gm_gradient_descent
 
 
@@ -557,6 +557,53 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
+    @AutoCmd.decorator
+    def gm_conf_eq(self, step, configuration_cut_dimension, sweep_hopping_hamiltonians=None, restrict_subspace=None):
+        """
+        Equilibium the configuration of sampling lattice.
+
+        Parameters
+        ----------
+        step : int
+            The step of sweep sampling for each process.
+        configuration_cut_dimension : int
+            The dimension cut in auxiliary tensor network.
+        sweep_hopping_hamiltonians : str, optional
+            The sweep hopping hamiltonians setter module name.
+        restrict_subspace : str, optional
+            The subspace restricter module name.
+        """
+        with seed_differ:
+            state = self.gm
+            sampling_configurations = self.gm_conf
+            # Restrict subspace
+            if restrict_subspace is not None:
+                origin_restrict = get_imported_function(restrict_subspace, "restrict")
+                restrict = restrict_wrapper(origin_restrict)
+            else:
+                restrict = None
+            # Initialize sampling object
+            if sweep_hopping_hamiltonians is not None:
+                hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians, "hopping_hamiltonians")(state)
+            else:
+                hopping_hamiltonians = None
+            sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
+            # Initial sweep configuration
+            if len(sampling_configurations) < mpi_size:
+                choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
+            else:
+                choose = mpi_rank
+            sampling.configuration.import_configuration(sampling_configurations[choose])
+            # Equilibium
+            for sampling_step in range(step):
+                possibility, configuration = sampling()
+                show(f"equilibium {sampling_step}/{step}")
+            # Save configuration
+            gathered_configurations = allgather_array(configuration.export_configuration())
+            sampling_configurations.resize(gathered_configurations.shape, refcheck=False)
+            np.copyto(sampling_configurations, gathered_configurations)
+            showln(f"equilibium done, total_step={step}")
+
 
 class TetragonoScriptApp(TetragonoCommandApp):
 
@@ -632,6 +679,7 @@ else:
     gm_conf_dump = app.gm_conf_dump
     gm_conf_load = app.gm_conf_load
     gm_conf_create = app.gm_conf_create
+    gm_conf_eq = app.gm_conf_eq
     gm_hamiltonian = app.gm_hamiltonian
     gm_clear_symmetry = app.gm_clear_symmetry
 

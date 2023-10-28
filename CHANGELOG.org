@@ -3,6 +3,7 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.10...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add =gm_conf_eq= to equilibrium the configuration of the sampling lattice.
 *** Changed
 + *tetragono*: The physics edge index should be non-negative now.
 *** Deprecated
