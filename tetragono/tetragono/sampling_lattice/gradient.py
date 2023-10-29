@@ -22,7 +22,7 @@ import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..utility import (show, showln, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize, write_to_file,
-                       get_imported_function, restrict_wrapper, allgather_array, bcast_number)
+                       get_imported_function, restrict_wrapper, bcast_number, write_configurations)
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -217,11 +217,7 @@ def gradient_descent(
                     sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
                     sampling_total_step = sampling_total_step
                     # Initial sweep configuration
-                    if len(sampling_configurations) < mpi_size:
-                        choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
-                    else:
-                        choose = mpi_rank
-                    sampling.configuration.import_configuration(sampling_configurations[choose])
+                    sampling.configuration.import_configuration(sampling_configurations)
                 elif sampling_method == "ergodic":
                     sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
                     sampling_total_step = sampling.total_step
@@ -240,9 +236,9 @@ def gradient_descent(
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configuration
-                gathered_configurations = allgather_array(configuration.export_configuration())
-                sampling_configurations.resize(gathered_configurations.shape, refcheck=False)
-                np.copyto(sampling_configurations, gathered_configurations)
+                new_configurations = configuration.export_configuration()
+                sampling_configurations.resize(new_configurations.shape, refcheck=False)
+                np.copyto(sampling_configurations, new_configurations)
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
             if sampling_method == "direct":
                 showln(f"direct sampling stability is {observer.stability}")
@@ -320,7 +316,8 @@ def gradient_descent(
             if save_state_file:
                 write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
             if save_configuration_file:
-                write_to_file(sampling_configurations, save_configuration_file)
+                write_configurations(sampling_configurations,
+                                     save_configuration_file.replace("%s", str(grad_step)).replace("%t", time_str))
             # Yield the measurement result
             yield (measurement_whole_result, measurement_result)
 

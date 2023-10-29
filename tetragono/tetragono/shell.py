@@ -23,7 +23,8 @@ from io import StringIO
 import numpy as np
 import TAT
 from .utility import (mpi_rank, mpi_size, mpi_comm, write_to_file, read_from_file, show, showln, seed_differ,
-                      get_imported_function, allgather_array, restrict_wrapper)
+                      get_imported_function, allgather_array, restrict_wrapper, write_configurations,
+                      read_configurations)
 from . import conversion
 from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
@@ -466,10 +467,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        if self.gm_conf is None:
-            showln("gm_conf is None")
-        else:
-            write_to_file(self.gm_conf, name)
+        write_configurations(self.gm_conf, name)
 
     @AutoCmd.decorator
     def gm_load(self, name):
@@ -484,6 +482,25 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm = read_from_file(name)
 
     @AutoCmd.decorator
+    def gm_conf_load_compat(self, name):
+        """
+        Load the sampling lattice configuration from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        config = read_from_file(name)
+        size = len(config)
+        if size < mpi_size:
+            with seed_differ:
+                choose = TAT.random.uniform_int(0, size - 1)()
+        else:
+            choose = mpi_rank
+        self.gm_conf = config[choose]
+
+    @AutoCmd.decorator
     def gm_conf_load(self, name):
         """
         Load the sampling lattice configuration from file.
@@ -493,7 +510,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         name : str
             The file name.
         """
-        self.gm_conf = read_from_file(name).copy()
+        self.gm_conf = read_configurations(name)
 
     @AutoCmd.decorator
     def gm_conf_create(self, module_name, *args, **kwargs):
@@ -512,7 +529,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             configuration = gm_Configuration(self.gm, -1)
             initial_configuration = get_imported_function(module_name, "initial_configuration")
             configuration = initial_configuration(configuration, *args, **kwargs)
-            self.gm_conf = allgather_array(configuration.export_configuration())
+            self.gm_conf = configuration.export_configuration()
 
     @AutoCmd.decorator
     def gm_clear_symmetry(self):
@@ -589,19 +606,15 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                 hopping_hamiltonians = None
             sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
             # Initial sweep configuration
-            if len(sampling_configurations) < mpi_size:
-                choose = TAT.random.uniform_int(0, len(sampling_configurations) - 1)()
-            else:
-                choose = mpi_rank
-            sampling.configuration.import_configuration(sampling_configurations[choose])
+            sampling.configuration.import_configuration(sampling_configurations)
             # Equilibium
             for sampling_step in range(step):
                 possibility, configuration = sampling()
                 show(f"equilibium {sampling_step}/{step}")
             # Save configuration
-            gathered_configurations = allgather_array(configuration.export_configuration())
-            sampling_configurations.resize(gathered_configurations.shape, refcheck=False)
-            np.copyto(sampling_configurations, gathered_configurations)
+            new_configurations = configuration.export_configuration()
+            sampling_configurations.resize(new_configurations.shape, refcheck=False)
+            np.copyto(sampling_configurations, new_configurations)
             showln(f"equilibium done, total_step={step}")
 
 
@@ -678,6 +691,7 @@ else:
     gm_to_ex = app.gm_to_ex
     gm_conf_dump = app.gm_conf_dump
     gm_conf_load = app.gm_conf_load
+    gm_conf_load_compat = app.gm_conf_load_compat
     gm_conf_create = app.gm_conf_create
     gm_conf_eq = app.gm_conf_eq
     gm_hamiltonian = app.gm_hamiltonian

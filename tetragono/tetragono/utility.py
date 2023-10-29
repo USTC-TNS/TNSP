@@ -319,3 +319,34 @@ def restrict_wrapper(origin_restrict):
     else:
         restrict = origin_restrict
     return restrict
+
+
+def write_configurations(config, file_name):
+    config = np.asarray(config, dtype=np.int64)
+    file = MPI.File.Open(mpi_comm, file_name, MPI.MODE_WRONLY | MPI.MODE_CREATE)
+    shape = config.shape
+    head = np.array([mpi_size, len(shape), *shape], dtype=np.int64)
+    if mpi_rank == 0:
+        file.Write_at(0, head)
+    offset = head.nbytes + mpi_rank * config.nbytes
+    file.Write_at(offset, config)
+    file.Close()
+
+
+def read_configurations(file_name):
+    file = MPI.File.Open(mpi_comm, file_name, MPI.MODE_RDONLY)
+    head1 = np.zeros(2, dtype=np.int64)
+    file.Read_at(0, head1)
+    size, config_rank = head1
+    head2 = np.zeros(config_rank, dtype=np.int64)
+    file.Read_at(head1.nbytes, head2)
+    config = np.zeros(head2, dtype=np.int64)
+    if size < mpi_size:
+        with seed_differ:
+            choose = TAT.random.uniform_int(0, size - 1)()
+    else:
+        choose = mpi_rank
+    offset = head1.nbytes + head2.nbytes + choose * config.nbytes
+    file.Read_at(offset, config)
+    file.Close()
+    return config
