@@ -4,6 +4,7 @@
 
 *** Added
 + *tetragono*: Add =gm_conf_eq= to equilibrium the configuration of the sampling lattice.
++ *TAT.py*: Add =TAT.parity=, =TAT.arrow= to convert =+1= to =False= and =-1= to =True=.
 *** Changed
 + *tetragono*: The physics edge index should be non-negative now.
 + *tetragono*: Use MPI IO to speed up the performance of configurations. Previously, every process will read all

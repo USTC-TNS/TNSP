@@ -19,6 +19,16 @@
 
 namespace TAT {
 
+    bool parity_and_arrow(int p) {
+        if (p == +1) {
+            return false;
+        } else if (p == -1) {
+            return true;
+        } else {
+            throw std::runtime_error("Parity should be either +1 or -1.");
+        }
+    }
+
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
     std::function<void()> dealing_Tensor_##SYM##_##SCALARSHORT( \
         py::module_& symmetry_m, \
@@ -128,6 +138,10 @@ namespace TAT {
             sym_m.attr("complex64") = sym_m.attr("C");
             sym_m.attr("complex128") = sym_m.attr("Z");
         }
+
+        // Shaojun Dong wants to use +1 and -1 to identify parity instead of False and True, make him happy.
+        tat_m.def("parity", parity_and_arrow);
+        tat_m.def("arrow", parity_and_arrow);
 
         at_exit.release();
     }
