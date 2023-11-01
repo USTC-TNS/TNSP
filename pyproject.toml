@@ -1,0 +1,32 @@
+[project]
+name = "tat"
+version = "0.4.0"
+authors = [
+  {email = "zh970205@mail.ustc.edu.cn", name = "Hao Zhang"}
+]
+description = "A Fermionic tensor library based on pytorch."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "GPL-3.0-or-later"}
+dependencies = [
+  "multimethod>=1.9",
+  "torch>=1.12",
+]
+
+[tool.pylint]
+max-line-length = 120
+generated-members = "torch.*"
+init-hook="import sys; sys.path.append(\".\")"
+
+[tool.yapf]
+based_on_style = "google"
+column_limit = 120
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["tests",]
+addopts = "--cov=tat"
