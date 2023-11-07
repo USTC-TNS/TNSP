@@ -11,6 +11,8 @@
   configuration and choose a single configuration when reading, and allgather all configuration and write to file when
   writing. Now, the program uses MPI IO to write file parallelly, and read the corresponding configuration directly
   without read all configurations.
++ *tetragono*: Yield measurement result before save state and configuration in gradient descent of sampling lattice.
+  Since user may want to update attributes out of yield.
 *** Deprecated
 *** Removed
 + *tetragono*: Remove ansatz product state support, which may be added again in the future, but it require many updates.

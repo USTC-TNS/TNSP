@@ -312,14 +312,15 @@ def gradient_descent(
                 # Bcast state
                 state.bcast_lattice()
 
+            # Yield the measurement result
+            yield (measurement_whole_result, measurement_result)
+
             # Save state
             if save_state_file:
                 write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
             if save_configuration_file:
                 write_configurations(sampling_configurations,
                                      save_configuration_file.replace("%s", str(grad_step)).replace("%t", time_str))
-            # Yield the measurement result
-            yield (measurement_whole_result, measurement_result)
 
             if sigint_handler():
                 break
