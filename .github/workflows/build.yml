@@ -114,6 +114,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Always support linux x86_64 platform
           - os: ubuntu-latest
             python: 38
             platform_id: manylinux_x86_64
@@ -134,33 +135,36 @@ jobs:
             platform_id: manylinux_x86_64
             manylinux_image: manylinux2014
             cpu_number: 2
-
-          - os: macos-latest
-            python: 310
-            platform_id: macosx_x86_64
-            mac_arch: x86_64
-            cpu_number: 3
-          - os: macos-latest
-            python: 311
-            platform_id: macosx_x86_64
-            mac_arch: x86_64
-            cpu_number: 3
-
-          - os: macos-latest
-            python: 310
-            platform_id: macosx_arm64
-            mac_arch: arm64
-            cpu_number: 3
-          - os: macos-latest
-            python: 311
-            platform_id: macosx_arm64
-            mac_arch: arm64
-            cpu_number: 3
-
-          - os: windows-latest
-            python: 38
-            platform_id: win_amd64
+          - os: ubuntu-latest
+            python: 312
+            platform_id: manylinux_x86_64
+            manylinux_image: manylinux2014
             cpu_number: 2
+
+          # Only support the latest two version for macos platform
+          - os: macos-latest
+            python: 311
+            platform_id: macosx_x86_64
+            mac_arch: x86_64
+            cpu_number: 3
+          - os: macos-latest
+            python: 312
+            platform_id: macosx_x86_64
+            mac_arch: x86_64
+            cpu_number: 3
+
+          - os: macos-latest
+            python: 311
+            platform_id: macosx_arm64
+            mac_arch: arm64
+            cpu_number: 3
+          - os: macos-latest
+            python: 312
+            platform_id: macosx_arm64
+            mac_arch: arm64
+            cpu_number: 3
+
+          # Only support latest four version for windows amd64 platform
           - os: windows-latest
             python: 39
             platform_id: win_amd64
@@ -171,6 +175,10 @@ jobs:
             cpu_number: 2
           - os: windows-latest
             python: 311
+            platform_id: win_amd64
+            cpu_number: 2
+          - os: windows-latest
+            python: 312
             platform_id: win_amd64
             cpu_number: 2
 
