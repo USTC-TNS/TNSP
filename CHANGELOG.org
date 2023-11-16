@@ -13,6 +13,9 @@
   without read all configurations.
 + *tetragono*: Yield measurement result before save state and configuration in gradient descent of sampling lattice.
   Since user may want to update attributes out of yield.
++ *tetragono*: Allow user to set hamiltonian term on the same positions multiple times, which allows user to use
+  =state.hamiltonians[positions]+=tensor=. Previously, the program will throw error saying hamiltonian term has already
+  been set, but recently, some models need adding term on the same positions.
 *** Deprecated
 *** Removed
 + *tetragono*: Remove ansatz product state support, which may be added again in the future, but it require many updates.

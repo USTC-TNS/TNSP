@@ -455,8 +455,6 @@ class AbstractState:
                 raise ValueError("Wrong hamiltonian edge")
             if edge_out.conjugated() != edge_in:
                 raise ValueError("Wrong hamiltonian edge")
-        if points in self._hamiltonians:
-            raise RuntimeError("This hamiltonian term is already set")
 
         if tensor.norm_max() != 0:
             self._hamiltonians[points] = tensor
