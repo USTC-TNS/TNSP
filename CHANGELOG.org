@@ -20,6 +20,7 @@
 *** Removed
 + *tetragono*: Remove ansatz product state support, which may be added again in the future, but it require many updates.
 *** Fixed
++ *tetragono*: Fix bug when total sampling number less than process number in sampling gradient.
 
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.7...v0.3.9][v0.3.9]] - 2023-09-07
 

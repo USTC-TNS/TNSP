@@ -236,9 +236,10 @@ def gradient_descent(
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configuration
-                new_configurations = configuration.export_configuration()
-                sampling_configurations.resize(new_configurations.shape, refcheck=False)
-                np.copyto(sampling_configurations, new_configurations)
+                if mpi_rank < sampling_total_step:
+                    new_configurations = configuration.export_configuration()
+                    sampling_configurations.resize(new_configurations.shape, refcheck=False)
+                    np.copyto(sampling_configurations, new_configurations)
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
             if sampling_method == "direct":
                 showln(f"direct sampling stability is {observer.stability}")
