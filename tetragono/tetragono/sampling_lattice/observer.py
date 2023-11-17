@@ -274,8 +274,10 @@ class Observer():
         if self._start:
             raise RuntimeError("Cannot enable hole after sampling start")
         for positions, observer in observers.items():
-            if not isinstance(observer, self.owner.Tensor):
-                raise TypeError("Wrong observer type")
+            pass
+            # Do not check the type of observer temporarily
+            #if not isinstance(observer, self.owner.Tensor):
+            #    raise TypeError("Wrong observer type")
         self._observer[name] = observers
 
     def add_energy(self):
@@ -596,6 +598,7 @@ class Observer():
         Energy = []
         for reweight_s, energy_s, delta_s in self._weights_and_deltas():
             param = (reweight_s / self._total_weight)**(1 / 2)
+            param = param.item()
             Delta.append((self._delta_to_array(delta_s) - delta) * param)
             Energy.append((energy_s.conjugate() - energy) * param)
         Delta = np.asarray(Delta)
@@ -660,7 +663,7 @@ class Observer():
         # Both delta and result array is in bra space
         result = []
         for l1, l2 in self.owner.sites():
-            result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).storage)
+            result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).copy().storage)
         result = np.concatenate(result)
         return result
 

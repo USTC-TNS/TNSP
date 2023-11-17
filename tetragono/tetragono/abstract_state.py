@@ -438,8 +438,9 @@ class AbstractState:
              The hamiltonian tensor.
         """
         body = len(points)
-        if not isinstance(tensor, self.Tensor):
-            raise TypeError("Wrong hamiltonian type")
+        # Do not check hamiltonian type temporarily
+        #if not isinstance(tensor, self.Tensor):
+        #    raise TypeError("Wrong hamiltonian type")
         if {f"{i}" for i in tensor.names} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
             raise ValueError("Wrong hamiltonian name")
         for i in range(body):

@@ -27,62 +27,41 @@ def tensor_element(tensor):
     return element_pool[tensor_id]
 
 
-def loop_nonzero_block(block, symmetries, rank, names, template):
+def loop_nonzero_tensor(tensor, names, rank):
+    if tensor.data.nelement() == 0:
+        return
+    if rank == 0:
+        # rank == 0
+        yield [], tensor
+        return
     indices = [0 for _ in range(rank)]
-    for i in range(rank):
-        if block.shape[i] == 0:
-            # dims == 0
-            return
     while True:
-        value = block[tuple(indices)]
-        if value != 0:
-            # yield
-            template[{names[i]: 0 for i in range(rank)}] = value
-            yield [(symmetries[i], indices[i]) for i in range(rank)], template.copy()
+        if tensor.data[tuple(indices)] != 0:
+            element = tensor.__class__(
+                names=tensor.names,
+                edges=tuple(tensor.edges[i].__class__(
+                    fermion=tensor.fermion,
+                    dtypes=tensor.dtypes,
+                    symmetry=tuple(symmetryp[indices[i]].reshape([1]) for symmetry in tensor.edges[i].symmetry),
+                    dimension=1,
+                    arrow=tensor.edges[i].arrow,
+                    parity=tensor.edges[i].parity[indices[i]].reshape([1]),
+                ) for i in range(rank)),
+                fermion=tensor.fermion,
+                dtypes=tensor.dtypes,
+                data=tensor.data[tuple(indices)].reshape([1 for _ in range(rank)]),
+                mask=tensor.mask[tuple(indices)].reshape([1 for _ in range(rank)]),
+            )
+            yield [tensor.edges[i].point_by_index(indices[i]) for i in range(rank)], element
 
         edge_position = rank - 1
-
         indices[edge_position] += 1
-        while indices[edge_position] == block.shape[edge_position]:
+        while indices[edge_position] == tensor.edges[edge_position].dimension:
             if edge_position == 0:
                 return
             indices[edge_position] = 0
             edge_position -= 1
             indices[edge_position] += 1
-
-
-def loop_nonzero_tensor(tensor, names, rank):
-    # see include/TAT/structure/edge.hpp
-    edges = [tensor.edges[i].segments for i in range(rank)]
-    arrow = [tensor.edges[i].arrow for i in range(rank)]
-    Edge = tensor.model.Edge
-    if rank == 0:
-        # rank == 0
-        yield [], tensor
-        return
-    symmetry_indices = [0 for _ in range(rank)]
-    for i in range(rank):
-        if len(edges[i]) == 0:
-            # dims == 0
-            return
-    zero_symmetry = tensor.model.Symmetry()
-    while True:
-        symmetries = [edges[i][symmetry_indices[i]][0] for i in range(rank)]
-        if sum(symmetries, start=zero_symmetry) == zero_symmetry:
-            block = tensor.blocks[[(names[i], symmetries[i]) for i in range(rank)]]
-            template_edges = [Edge([symmetries[i]], arrow[i]) for i in range(rank)]
-            template = type(tensor)(names, template_edges)
-            yield from loop_nonzero_block(block, symmetries, rank, names, template)
-
-        edge_position = rank - 1
-
-        symmetry_indices[edge_position] += 1
-        while symmetry_indices[edge_position] == len(edges[edge_position]):
-            if edge_position == 0:
-                return
-            symmetry_indices[edge_position] = 0
-            edge_position -= 1
-            symmetry_indices[edge_position] += 1
 
 
 def conjugate_symmetry(edge_point):

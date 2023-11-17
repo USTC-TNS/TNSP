@@ -320,12 +320,7 @@ class DirectSampling(Sampling):
                         .transpose(["I", "O"]))
                     hole_edge = hole.edge_by_name("O")
                     # Calculate rho for all the segments of the physics edge of this orbit
-                    rho = []
-                    for seg in hole_edge.segments:
-                        symmetry, _ = seg
-                        block_rho = hole.blocks[[("I", -symmetry), ("O", symmetry)]]
-                        diag_rho = np.diagonal(block_rho)
-                        rho = [*rho, *diag_rho]
+                    rho = hole.data.diagonal()
                     rho = np.array(rho).real
                     rho = np.maximum(rho, 0)  # Sometimes there is some negative value because of numeric error.
                     if np.sum(rho) == 0:
