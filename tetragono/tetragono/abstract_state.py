@@ -183,6 +183,10 @@ class AbstractStateHamiltonian:
             points = tuple(point if len(point) == 3 else (point[0], point[1], 0) for point in arg)
             self.owner._set_hamiltonian(points, tensor)
 
+    def add_term(self, arg, tensor_param_and_so_on):
+        points = tuple(point if len(point) == 3 else (point[0], point[1], 0) for point in arg)
+        self.owner._add_hamiltonian(points, tensor_param_and_so_on)
+
 
 class AbstractState:
     """
@@ -458,6 +462,30 @@ class AbstractState:
 
         if tensor.norm_max() != 0:
             self._hamiltonians[points] = tensor
+
+    def _add_hamiltonian(self, points, tensor_param_and_so_on):
+        tensor = tensor_param_and_so_on[0]
+
+        body = len(points)
+        if not isinstance(tensor, self.Tensor):
+            raise TypeError("Wrong hamiltonian type")
+        if {f"{i}" for i in tensor.names} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
+            raise ValueError("Wrong hamiltonian name")
+        for i in range(body):
+            edge_out = tensor.edges(f"O{i}")
+            edge_in = tensor.edges(f"I{i}")
+            if edge_out != self.physics_edges[points[i]]:
+                raise ValueError("Wrong hamiltonian edge")
+            if edge_out.conjugated() != edge_in:
+                raise ValueError("Wrong hamiltonian edge")
+
+        if tensor.norm_max() != 0:
+            if points not in self._hamiltonians:
+                self._hamiltonians[points] = []
+            if not isinstance(self._hamiltonians[points], list):
+                self._hamiltonians[points] = [(self._hamiltonians[points], 1)]
+
+            self._hamiltonians[points].append(tensor_param_and_so_on)
 
     @property
     def site_number(self):

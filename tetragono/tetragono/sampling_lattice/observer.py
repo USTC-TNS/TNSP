@@ -273,9 +273,9 @@ class Observer():
         """
         if self._start:
             raise RuntimeError("Cannot enable hole after sampling start")
-        for positions, observer in observers.items():
-            if not isinstance(observer, self.owner.Tensor):
-                raise TypeError("Wrong observer type")
+        #for positions, observer in observers.items():
+        #    if not isinstance(observer, self.owner.Tensor):
+        #        raise TypeError("Wrong observer type")
         self._observer[name] = observers
 
     def add_energy(self):
@@ -352,35 +352,38 @@ class Observer():
             for positions, observer in observers.items():
                 body = len(positions)
                 positions_configuration = tuple(configuration[l1l2o] for l1l2o in positions)
-                element_pool = tensor_element(observer)
-                if positions_configuration not in element_pool:
-                    continue
                 total_value = 0
                 physics_names = [f"P_{l1}_{l2}_{orbit}" for l1, l2, orbit in positions]
-                for positions_configuration_s, observer_shrinked in element_pool[positions_configuration].items():
-                    # observer_shrinked is |s'|H|s|
-                    replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
-                    # Calculate wss: |s'|psi>
-                    if self._restrict_subspace is not None:
-                        if not self._restrict_subspace(configuration, replacement):
-                            # wss should be zero, this term is zero, continue to next wss
-                            continue
-                    if self._cache_configuration:
-                        wss = self._pool.wss(configuration, replacement)
-                    else:
-                        wss = configuration.replace(replacement)
-                        if wss is None:
-                            raise NotImplementedError(
-                                "not implemented replace style, set cache_configuration to True to calculate it")
-                    if wss.norm_max() == 0:
+                if not isinstance(observer, list):
+                    observer = [(observer, 1)]
+                for tensor, param, *_ in observer:
+                    element_pool = tensor_element(tensor)
+                    if positions_configuration not in element_pool:
                         continue
-                    # <psi|s'|H|s|psi> / <psi|s|psi>
-                    value = (
-                        inv_ws_conj  #
-                        .contract(observer_shrinked, {(physics_names[i], f"I{i}") for i in range(body)})  #
-                        .edge_rename({f"O{i}": physics_names[i] for i in range(body)})  #
-                        .contract(wss.conjugate(), all_name))
-                    total_value += complex(value)
+                    for positions_configuration_s, observer_shrinked in element_pool[positions_configuration].items():
+                        # observer_shrinked is |s'|H|s|
+                        replacement = {positions[i]: positions_configuration_s[i] for i in range(body)}
+                        # Calculate wss: |s'|psi>
+                        if self._restrict_subspace is not None:
+                            if not self._restrict_subspace(configuration, replacement):
+                                # wss should be zero, this term is zero, continue to next wss
+                                continue
+                        if self._cache_configuration:
+                            wss = self._pool.wss(configuration, replacement)
+                        else:
+                            wss = configuration.replace(replacement)
+                            if wss is None:
+                                raise NotImplementedError(
+                                    "not implemented replace style, set cache_configuration to True to calculate it")
+                        if wss.norm_max() == 0:
+                            continue
+                        # <psi|s'|H|s|psi> / <psi|s|psi>
+                        value = (
+                            inv_ws_conj  #
+                            .contract(observer_shrinked, {(physics_names[i], f"I{i}") for i in range(body)})  #
+                            .edge_rename({f"O{i}": physics_names[i] for i in range(body)})  #
+                            .contract(wss.conjugate(), all_name))
+                        total_value += complex(value) * param
                 # total_value is sum_s' <psi|s'|H|s|psi> / <psi|s|psi>
                 to_save = total_value.real
                 self._result_reweight[name][positions] += to_save * reweight
