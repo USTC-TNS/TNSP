@@ -33,7 +33,7 @@ extern "C" {
         const char* job_vt,
         const int* m,
         const int* n,
-        const float* a,
+        float* a,
         const int* ld_a,
         float* s,
         float* u,
@@ -49,7 +49,7 @@ extern "C" {
         const char* job_vt,
         const int* m,
         const int* n,
-        const double* a,
+        double* a,
         const int* ld_a,
         double* s,
         double* u,
@@ -65,7 +65,7 @@ extern "C" {
         const char* job_vt,
         const int* m,
         const int* n,
-        const std::complex<float>* a,
+        std::complex<float>* a,
         const int* ld_a,
         float* s,
         std::complex<float>* u,
@@ -82,7 +82,7 @@ extern "C" {
         const char* job_vt,
         const int* m,
         const int* n,
-        const std::complex<double>* a,
+        std::complex<double>* a,
         const int* ld_a,
         double* s,
         std::complex<double>* u,
@@ -102,18 +102,11 @@ namespace TAT {
 
     namespace detail {
         template<typename ScalarType>
-        void calculate_svd_kernel(
-            const int& m,
-            const int& n,
-            const int& min,
-            const ScalarType* a,
-            ScalarType* u,
-            real_scalar<ScalarType>* s,
-            ScalarType* vt
-        );
+        void
+        calculate_svd_kernel(const int& m, const int& n, const int& min, ScalarType* a, ScalarType* u, real_scalar<ScalarType>* s, ScalarType* vt);
 
         template<>
-        inline void calculate_svd_kernel<float>(const int& m, const int& n, const int& min, const float* a, float* u, float* s, float* vt) {
+        inline void calculate_svd_kernel<float>(const int& m, const int& n, const int& min, float* a, float* u, float* s, float* vt) {
             int result;
             const int lwork_query = -1;
             float float_lwork;
@@ -129,7 +122,7 @@ namespace TAT {
             }
         }
         template<>
-        inline void calculate_svd_kernel<double>(const int& m, const int& n, const int& min, const double* a, double* u, double* s, double* vt) {
+        inline void calculate_svd_kernel<double>(const int& m, const int& n, const int& min, double* a, double* u, double* s, double* vt) {
             int result;
             const int lwork_query = -1;
             double float_lwork;
@@ -149,7 +142,7 @@ namespace TAT {
             const int& m,
             const int& n,
             const int& min,
-            const std::complex<float>* a,
+            std::complex<float>* a,
             std::complex<float>* u,
             float* s,
             std::complex<float>* vt
@@ -174,7 +167,7 @@ namespace TAT {
             const int& m,
             const int& n,
             const int& min,
-            const std::complex<double>* a,
+            std::complex<double>* a,
             std::complex<double>* u,
             double* s,
             std::complex<double>* vt
@@ -196,8 +189,7 @@ namespace TAT {
         }
 
         template<typename ScalarType>
-        void
-        calculate_svd(const int& m, const int& n, const int& min, const ScalarType* a, ScalarType* u, real_scalar<ScalarType>* s, ScalarType* vt) {
+        void calculate_svd(const int& m, const int& n, const int& min, ScalarType* a, ScalarType* u, real_scalar<ScalarType>* s, ScalarType* vt) {
             auto kernel_guard = svd_kernel_guard();
             // after testing: m>n is better than m<n and false, true is obviously worse
             if (m > n) {
@@ -423,7 +415,7 @@ namespace TAT {
 
             auto* data_1 = tensor_1.blocks(pmr::vector<Size>{position_0_input, position_common}).data();
             auto* data_2 = tensor_2.blocks(pmr::vector<Size>{position_common, position_1_input}).data();
-            const auto* data = tensor_merged.blocks(pmr::vector<Size>{position_0_input, position_1_input}).data();
+            auto* data = tensor_merged.blocks(pmr::vector<Size>{position_0_input, position_1_input}).data();
 
             auto s = pmr::vector<real_scalar<ScalarType>>(k);
             auto* data_s = s.data();
