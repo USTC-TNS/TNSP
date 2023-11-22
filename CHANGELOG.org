@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.10...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.11...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.10...v0.3.11][v0.3.11]] - 2023-11-22
 
 *** Added
 + *tetragono*: Add =gm_conf_eq= to equilibrium the configuration of the sampling lattice.
@@ -16,7 +24,6 @@
 + *tetragono*: Allow user to set hamiltonian term on the same positions multiple times, which allows user to use
   =state.hamiltonians[positions]+=tensor=. Previously, the program will throw error saying hamiltonian term has already
   been set, but recently, some models need adding term on the same positions.
-*** Deprecated
 *** Removed
 + *tetragono*: Remove ansatz product state support, which may be added again in the future, but it require many updates.
 *** Fixed
