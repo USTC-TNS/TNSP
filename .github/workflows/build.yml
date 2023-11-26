@@ -206,6 +206,10 @@ jobs:
           path: PyTAT
       - name: build wheel for PyTAT
         env:
+          CIBW_TEST_REQUIRES: pytest
+          CIBW_TEST_COMMAND: pytest {project}/PyTAT/tests
+          CIBW_TEST_SKIP: "*-macosx_arm64"
+
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
           CIBW_ARCHS: all
           CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
