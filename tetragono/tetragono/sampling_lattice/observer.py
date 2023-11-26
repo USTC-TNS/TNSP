@@ -592,17 +592,14 @@ class Observer():
         energy = self._total_energy_with_imaginary_part()
         delta = self._delta_to_array(self._Delta) / self._total_weight
 
-        dtype = np.dtype(self.owner.Tensor.dtype)
-        btype = self.owner.Tensor.btype
-
         Delta = []
         Energy = []
         for reweight_s, energy_s, delta_s in self._weights_and_deltas():
             param = (reweight_s / self._total_weight)**(1 / 2)
             Delta.append((self._delta_to_array(delta_s) - delta) * param)
             Energy.append((energy_s.conjugate() - energy) * param)
-        Delta = np.asarray(Delta, dtype=dtype)
-        Energy = np.asarray(Energy, dtype=dtype)
+        Delta = np.asarray(Delta)
+        Energy = np.asarray(Energy)
 
         # A x = b
         # DT r D x = DT r E
@@ -664,7 +661,7 @@ class Observer():
         result = []
         for l1, l2 in self.owner.sites():
             result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).storage)
-        result = np.concatenate(result, dtype=self.owner.Tensor.dtype)
+        result = np.concatenate(result)
         return result
 
     def _array_to_delta(self, array):
