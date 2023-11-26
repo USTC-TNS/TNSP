@@ -178,14 +178,20 @@ namespace TAT {
             return where->second;
         }
 
-        void conjugate() {
+        [[deprecated("conjugate inplace is renamed to conjugate_")]] void conjugate() {
+            conjugate_();
+        }
+        void conjugate_() {
             static_assert(is_not_pointer);
             for (auto& [symmetry, dimension] : m_segments) {
                 symmetry = -symmetry;
             }
         }
 
-        edge_segments_t<symmetry_t> conjugated() const {
+        [[deprecated("conjugate outplace is renamed to conjugate")]] edge_segments_t<symmetry_t> conjugated() const {
+            return conjugate();
+        }
+        edge_segments_t<symmetry_t> conjugate() const {
             segments_t result;
             result.reserve(segments_size());
             for (const auto& [symmetry, dimension] : segments()) {
@@ -269,12 +275,19 @@ namespace TAT {
             base_segments_t(typename base_segments_t::symlist_t(symmetries)),
             base_arrow_t(arrow) { }
 
-        void conjugate() {
-            base_segments_t::conjugate();
+        [[deprecated("conjugate inplace is renamed to conjugate_")]] void conjugate() {
+            conjugate_();
+        }
+        void conjugate_() {
+            base_segments_t::conjugate_();
             base_arrow_t::reverse_arrow();
         }
-        Edge<Symmetry> conjugated() const {
-            return Edge<Symmetry>(std::move(base_segments_t::conjugated()), !base_arrow_t::arrow());
+
+        [[deprecated("conjugate outplace is renamed to conjugate")]] Edge<Symmetry> conjugated() const {
+            return conjugate();
+        }
+        Edge<Symmetry> conjugate() const {
+            return Edge<Symmetry>(std::move(base_segments_t::conjugate()), !base_arrow_t::arrow());
         }
     };
 

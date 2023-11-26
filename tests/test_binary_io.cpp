@@ -3,7 +3,7 @@
 
 TEST(test_binary_io, no_symmetry) {
     std::stringstream ss;
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.range();
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.range_();
     ss < a;
     auto b = TAT::Tensor<double, TAT::NoSymmetry>();
     ss > b;
@@ -15,7 +15,7 @@ TEST(test_binary_io, u1_symmetry) {
     auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
         {"Left", "Right", "Up"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-                  .range(2));
+                  .range_(2));
     ss < a;
     auto b = TAT::Tensor<double, TAT::U1Symmetry>();
     ss > b;
@@ -24,7 +24,7 @@ TEST(test_binary_io, u1_symmetry) {
 
 TEST(test_binary_io, no_symmetry_complex_number) {
     std::stringstream ss;
-    auto a = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{"Up", "Left", "Right"}, {1, 2, 3}}.set([]() {
+    auto a = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{"Up", "Left", "Right"}, {1, 2, 3}}.set_([]() {
         static int i = 0;
         static int arr[6] = {0x12345, 0x23456, 0x34567, 0x45678, 0x56789, 0x6789a};
         return arr[i++];
@@ -41,7 +41,7 @@ TEST(test_binary_io, u1_symmetry_complex_number) {
         TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
             {"Left", "Right", "Up"},
             {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
-            .range(2);
+            .range_(2);
     ss < a;
     auto b = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
     ss > b;
@@ -57,7 +57,7 @@ TEST(test_binary_io, fermi_symmetry) {
     auto a = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
         {"Left", "Right", "Up"},
         {t_edge({-2, 3}, {0, 1}, {-1, 2}), f_edge({0, 2}, {1, 3}), f_edge({0, 3}, {1, 1})}}
-                  .range(2));
+                  .range_(2));
     ss < a;
     auto b = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
     ss > b;
@@ -66,7 +66,7 @@ TEST(test_binary_io, fermi_symmetry) {
 
 TEST(test_binary_io, dump_and_load) {
     std::stringstream ss;
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.range();
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right", "Up"}, {2, 3, 4}}.range_();
     auto b = TAT::Tensor<double, TAT::NoSymmetry>();
     b.load(a.dump());
     ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);

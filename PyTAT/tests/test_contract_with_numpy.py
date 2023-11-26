@@ -28,8 +28,8 @@ def test_main():
             for i, j in enumerate(dim_B)
         ]
 
-        A = Tensor([f"A.{i}" for i in range(rank_A)], dim_A).randn()
-        B = Tensor([f"B.{i}" for i in range(rank_B)], dim_B).randn()
+        A = Tensor([f"A.{i}" for i in range(rank_A)], dim_A).randn_()
+        B = Tensor([f"B.{i}" for i in range(rank_B)], dim_B).randn_()
         v_t = A.contract(B, {(f"A.{i}", f"B.{j}") for i, j in zip(contract_name_A, contract_name_B)})
         v_t = v_t.blocks[v_t.names]
         v_n = np.tensordot(A.blocks[A.names], B.blocks[B.names], [contract_name_A, contract_name_B])

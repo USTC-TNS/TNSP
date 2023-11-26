@@ -43,7 +43,7 @@ namespace TAT {
         auto result_edges = std::vector<Edge<Symmetry>>();
         result_edges.reserve(rank());
         for (const auto& edge : edges()) {
-            result_edges.push_back(edge.conjugated());
+            result_edges.push_back(edge.conjugate());
         }
         auto result = Tensor<ScalarType, Symmetry, Name>(names(), std::move(result_edges));
 

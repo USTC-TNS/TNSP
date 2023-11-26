@@ -14,7 +14,7 @@ TEST(test_create_symmetry_tensor, basic_usage) {
     // 0 0 0 : 1*2*3
     auto a =
         (TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Up"}, {edge_seg({1, 3}, {0, 1}), edge_seg({1, 1}, {0, 2}), edge_seg({1, 2}, {0, 3})}}
-             .range());
+             .range_());
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_EQ(a.names(2), "Up");
@@ -52,7 +52,7 @@ TEST(test_create_symmetry_tensor, basic_usage) {
 }
 
 TEST(test_create_symmetry_tensor, when_0rank) {
-    auto a = TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.range(2333);
+    auto a = TAT::Tensor<double, TAT::U1Symmetry>{{}, {}}.range_(2333);
     ASSERT_THAT(a.names(), ElementsAre());
     ASSERT_THAT(a.storage(), ElementsAre(2333));
 
@@ -75,7 +75,7 @@ TEST(test_create_symmetry_tensor, when_0size) {
     using sym_t = TAT::U1Symmetry;
     auto a =
         (TAT::Tensor<double, sym_t>({"Left", "Right", "Up"}, {edge_seg({0, 0}), edge_seg({-1, 1}, {0, 2}, {1, 3}), edge_seg({-1, 2}, {0, 3}, {1, 1})})
-             .zero());
+             .zero_());
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_EQ(a.names(2), "Up");
@@ -104,7 +104,7 @@ TEST(test_create_symmetry_tensor, when_0block) {
                   {"Left", "Right", "Up"},
                   {std::vector<sym_t>(), edge_seg({-1, 1}, {0, 2}, {1, 3}), edge_seg({-1, 2}, {0, 3}, {1, 1})}
     )
-                  .zero());
+                  .zero_());
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_EQ(a.names(2), "Up");
@@ -144,6 +144,6 @@ TEST(test_create_symmetry_tensor, conversion_scalar) {
 }
 
 TEST(test_create_symmetry_tensor, conversion_scalar_empty) {
-    auto a = TAT::Tensor<double, TAT::U1Symmetry>({"i"}, {{{+1, 2333}}}).range(2333);
+    auto a = TAT::Tensor<double, TAT::U1Symmetry>({"i"}, {{{+1, 2333}}}).range_(2333);
     ASSERT_FLOAT_EQ(double(a), 0);
 }

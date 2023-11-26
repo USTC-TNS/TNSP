@@ -209,7 +209,7 @@ namespace TAT {
                 split_1.push_back({name_1, {edges(index_1).segments()}});
                 split_2.push_back({name_2, {edges(index_2).segments()}});
                 if constexpr (debug_mode) {
-                    if (edges(index_1).conjugated() != edges(index_2)) {
+                    if (edges(index_1).conjugate() != edges(index_2)) {
                         detail::error("Incompatible edges in exponential");
                     }
                 }

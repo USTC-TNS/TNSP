@@ -35,13 +35,13 @@ bool order_lists[8][3]{
 };
 
 TEST(test_identity, no_symmetry_0) {
-    auto a = TAT::Tensor<float, TAT::NoSymmetry>({"i", "j"}, {4, 4}).identity({{"i", "j"}});
+    auto a = TAT::Tensor<float, TAT::NoSymmetry>({"i", "j"}, {4, 4}).identity_({{"i", "j"}});
     ASSERT_FLOAT_EQ((a - a.contract(a, {{"i", "j"}})).norm<-1>(), 0);
     ASSERT_FLOAT_EQ((a - a.contract(a, {{"j", "i"}})).norm<-1>(), 0);
 }
 
 TEST(test_identity, no_symmetry_1) {
-    auto a = TAT::Tensor<float, TAT::NoSymmetry>({"i", "j"}, {4, 4}).identity({{"j", "i"}});
+    auto a = TAT::Tensor<float, TAT::NoSymmetry>({"i", "j"}, {4, 4}).identity_({{"j", "i"}});
     ASSERT_FLOAT_EQ((a - a.contract(a, {{"i", "j"}})).norm<-1>(), 0);
     ASSERT_FLOAT_EQ((a - a.contract(a, {{"j", "i"}})).norm<-1>(), 0);
 }
@@ -57,7 +57,7 @@ TEST(test_identity, no_symmetry_2) {
             auto p1 = pairs_index[i * 2 + 1];
             pairs.insert({a.names(p0), a.names(p1)});
         }
-        a.identity(pairs);
+        a.identity_(pairs);
         ASSERT_FLOAT_EQ((a - a.contract(a, pairs)).norm<-1>(), 0);
     }
 }
@@ -74,7 +74,7 @@ TEST(test_identity, z2_symmetry_0) {
             auto p1 = pairs_index[i * 2 + 1];
             pairs.insert({a.names(p0), a.names(p1)});
         }
-        a.identity(pairs);
+        a.identity_(pairs);
         ASSERT_FLOAT_EQ((a - a.contract(a, pairs)).norm<-1>(), 0);
     }
 }
@@ -96,7 +96,7 @@ TEST(test_identity, u1_symmetry_0) {
             edges[p1] = edge1;
         }
         auto a = TAT::Tensor<float, TAT::U1Symmetry>(names, edges);
-        a.identity(pairs);
+        a.identity_(pairs);
         ASSERT_FLOAT_EQ((a - a.contract(a, pairs)).norm<-1>(), 0);
     }
 }
@@ -124,7 +124,7 @@ TEST(test_identity, fermi_symmetry_0) {
                 }
             }
             auto a = TAT::Tensor<float, TAT::FermiSymmetry>(names, edges);
-            a.identity(pairs);
+            a.identity_(pairs);
             ASSERT_FLOAT_EQ((a - a.contract(a, pairs)).norm<-1>(), 0);
         }
     }

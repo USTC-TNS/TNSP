@@ -7,7 +7,7 @@ def test_tensor_and_number():
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
-    ]).range()
+    ]).range_()
     assert a.storage.size == 32
     s_a = np.arange(32, dtype=float)
     assert all(a.storage == s_a)
@@ -39,8 +39,8 @@ def test_tensor_and_number():
 
 def test_tensor_and_tensor():
     import numpy as np
-    a = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range()
-    b = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range(0, 0.1)
+    a = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range_()
+    b = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range_(0, 0.1)
     s_a = np.zeros(12)
     s_b = np.zeros(12)
     s_a[0] = s_b[0] = 0
@@ -71,7 +71,7 @@ def test_tensor_and_number_inplace():
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
-    ]).range()
+    ]).range_()
     s_a = np.arange(32, dtype=float)
     assert all(a.storage == s_a)
     a += 1.5
@@ -90,8 +90,8 @@ def test_tensor_and_number_inplace():
 
 def test_tensor_and_tensor_inplace():
     import numpy as np
-    a = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range()
-    b = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range(0, 0.1)
+    a = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range_()
+    b = TAT.No.D.Tensor(["Left", "Right"], [3, 4]).range_(0, 0.1)
     s_a = np.zeros(12)
     s_b = np.zeros(12)
     s_a[0] = s_b[0] = 0

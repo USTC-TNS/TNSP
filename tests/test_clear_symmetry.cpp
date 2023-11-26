@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 TEST(test_clear_symmetry, bose_mode) {
-    auto a = TAT::Tensor<float, TAT::U1Symmetry>({"i", "j"}, {{{0, 2}, {1, 3}, {2, 5}}, {{0, 5}, {-1, 4}, {-2, 2}}}).range();
+    auto a = TAT::Tensor<float, TAT::U1Symmetry>({"i", "j"}, {{{0, 2}, {1, 3}, {2, 5}}, {{0, 5}, {-1, 4}, {-2, 2}}}).range_();
     auto b = a.clear_symmetry();
     for (auto sym = 0; sym < 3; sym++) {
         auto dim_i = a.edges(0).dimension_by_symmetry(+sym);
@@ -18,7 +18,7 @@ TEST(test_clear_symmetry, bose_mode) {
 }
 
 TEST(test_clear_symmetry, fermi_mode) {
-    auto a = TAT::Tensor<float, TAT::FermiSymmetry>({"i", "j"}, {{{0, 2}, {1, 3}, {2, 5}}, {{0, 5}, {-1, 4}, {-2, 2}}}).range();
+    auto a = TAT::Tensor<float, TAT::FermiSymmetry>({"i", "j"}, {{{0, 2}, {1, 3}, {2, 5}}, {{0, 5}, {-1, 4}, {-2, 2}}}).range_();
     auto b = a.clear_symmetry();
     for (auto sym = 0; sym < 3; sym++) {
         auto dim_i = a.edges(0).dimension_by_symmetry(+sym);

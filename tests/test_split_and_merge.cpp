@@ -5,7 +5,7 @@
 using namespace testing;
 
 TEST(test_split_and_merge, no_symmetry_basic) {
-    const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.range();
+    const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {2, 3}}.range_();
 
     const auto b = a.merge_edge({{"Merged", {"Left", "Right"}}});
     ASSERT_THAT(b.storage(), ElementsAreArray(a.storage()));
@@ -19,7 +19,7 @@ TEST(test_split_and_merge, no_symmetry_basic) {
 }
 
 TEST(test_split_and_merge, no_symmetry_high_dimension) {
-    const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"1", "2", "3", "4", "5", "6", "7", "8"}, {2, 2, 2, 2, 2, 2, 2, 2}}.range();
+    const auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"1", "2", "3", "4", "5", "6", "7", "8"}, {2, 2, 2, 2, 2, 2, 2, 2}}.range_();
     for (auto i = 0; i < 8; i++) {
         for (auto j = i; j < 8; j++) {
             std::vector<std::string> names;
@@ -37,8 +37,8 @@ TEST(test_split_and_merge, no_symmetry_high_dimension) {
 }
 
 TEST(test_split_and_merge, u1_symmetry_basic) {
-    const auto a = TAT::Tensor<double, TAT::U1Symmetry>{{"i", "j"}, {{-1, 0, +1}, {-1, 0, +1}}}.range();
-    const auto d = TAT::Tensor<double, TAT::U1Symmetry>{{"m"}, {{{-2, 1}, {-1, 2}, {0, 3}, {+1, 2}, {+2, 1}}}}.range();
+    const auto a = TAT::Tensor<double, TAT::U1Symmetry>{{"i", "j"}, {{-1, 0, +1}, {-1, 0, +1}}}.range_();
+    const auto d = TAT::Tensor<double, TAT::U1Symmetry>{{"m"}, {{{-2, 1}, {-1, 2}, {0, 3}, {+1, 2}, {+2, 1}}}}.range_();
 
     const auto b = a.merge_edge({{"m", {"i", "j"}}});
     ASSERT_FLOAT_EQ((d - b).norm<-1>(), 0);
@@ -49,7 +49,7 @@ TEST(test_split_and_merge, u1_symmetry_basic) {
 TEST(test_split_and_merge, u1_symmetry_high_dimension) {
     const auto edge = TAT::Edge<TAT::U1Symmetry>({{-1, 2}, {0, 2}, {+1, 2}});
     // 6^5 = 7776
-    const auto a = TAT::Tensor<double, TAT::U1Symmetry>{{"1", "2", "3", "4", "5"}, {edge, edge, edge, edge, edge}}.range();
+    const auto a = TAT::Tensor<double, TAT::U1Symmetry>{{"1", "2", "3", "4", "5"}, {edge, edge, edge, edge, edge}}.range_();
     for (auto i = 0; i < 5; i++) {
         for (auto j = i; j < 5; j++) {
             std::vector<std::string> names;
@@ -67,7 +67,7 @@ TEST(test_split_and_merge, u1_symmetry_high_dimension) {
 
 TEST(test_split_and_merge, fermi_symmetry_high_dimension) {
     const auto edge = TAT::Edge<TAT::FermiSymmetry>({{-1, 2}, {0, 2}, {+1, 2}});
-    const auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{"1", "2", "3", "4", "5"}, {edge, edge, edge, edge, edge}}.range();
+    const auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{"1", "2", "3", "4", "5"}, {edge, edge, edge, edge, edge}}.range_();
     for (auto i = 0; i < 5; i++) {
         for (auto j = i; j < 5; j++) {
             for (auto apply_parity = 0; apply_parity < 2; apply_parity++) {
@@ -87,9 +87,9 @@ TEST(test_split_and_merge, fermi_symmetry_high_dimension) {
 
 TEST(test_split_and_merge, fermi_symmetry_high_dimension_compare_u1) {
     const auto edge_u1 = TAT::Edge<TAT::U1Symmetry>({{-1, 1}, {0, 1}, {+1, 1}});
-    const auto a_u1 = TAT::Tensor<double, TAT::U1Symmetry>{{"1", "2", "3", "4", "5"}, {edge_u1, edge_u1, edge_u1, edge_u1, edge_u1}}.range(1);
+    const auto a_u1 = TAT::Tensor<double, TAT::U1Symmetry>{{"1", "2", "3", "4", "5"}, {edge_u1, edge_u1, edge_u1, edge_u1, edge_u1}}.range_(1);
     const auto edge_f = TAT::Edge<TAT::FermiSymmetry>({{-1, 1}, {0, 1}, {+1, 1}});
-    const auto a_f = TAT::Tensor<double, TAT::FermiSymmetry>{{"1", "2", "3", "4", "5"}, {edge_f, edge_f, edge_f, edge_f, edge_f}}.range(1);
+    const auto a_f = TAT::Tensor<double, TAT::FermiSymmetry>{{"1", "2", "3", "4", "5"}, {edge_f, edge_f, edge_f, edge_f, edge_f}}.range_(1);
     for (auto i = 0; i < 5; i++) {
         for (auto j = i; j < 5; j++) {
             for (auto apply_parity = 0; apply_parity < 2; apply_parity++) {

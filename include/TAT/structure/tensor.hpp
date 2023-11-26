@@ -401,22 +401,42 @@ namespace TAT {
 
         // elementwise operators
       public:
+        template<typename Function>
+        [[deprecated("transform(...) has been renamed to transform_(...)")]] Tensor<ScalarType, Symmetry, Name>& transform(Function&& function) & {
+            return transform_(std::forward<Function>(function));
+        }
+        template<typename Function>
+        [[deprecated("transform(...) has been renamed to transform_(...)"), nodiscard]] Tensor<ScalarType, Symmetry, Name>&& transform(
+            Function&& function
+        ) && {
+            return std::move(transform_(std::forward<Function>(function)));
+        }
+        template<typename OtherScalarType, typename Function>
+        [[deprecated("zip_transform(...) has been renamed to zip_transform_(...)")]] Tensor<ScalarType, Symmetry, Name>&
+        zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) & {
+            return zip_transform_(other, std::forward<Function>(function));
+        }
+        template<typename OtherScalarType, typename Function>
+        [[deprecated("zip_transform(...) has been renamed to zip_transform_(...)"), nodiscard]] Tensor<ScalarType, Symmetry, Name>&&
+        zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) && {
+            return std::move(zip_transform_(other, std::forward<Function>(function)));
+        }
         /**
          * Do the same operator to the every value element of the tensor, inplacely
          * \param function The operator
          */
         template<typename Function>
-        Tensor<ScalarType, Symmetry, Name>& transform(Function&& function) & {
+        Tensor<ScalarType, Symmetry, Name>& transform_(Function&& function) & {
             acquire_data_ownership("Set tensor shared in transform, copy happened here");
             std::transform(storage().begin(), storage().end(), storage().begin(), std::forward<Function>(function));
             return *this;
         }
         template<typename Function>
-        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& transform(Function&& function) && {
-            return std::move(transform(std::forward<Function>(function)));
+        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& transform_(Function&& function) && {
+            return std::move(transform_(std::forward<Function>(function)));
         }
         template<typename OtherScalarType, typename Function>
-        Tensor<ScalarType, Symmetry, Name>& zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) & {
+        Tensor<ScalarType, Symmetry, Name>& zip_transform_(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) & {
             acquire_data_ownership("Set tensor shared in zip_transform, copy happened here");
             if constexpr (debug_mode) {
                 if (rank() != other.rank()) {
@@ -440,8 +460,8 @@ namespace TAT {
         }
         template<typename OtherScalarType, typename Function>
         [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&&
-        zip_transform(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) && {
-            return std::move(zip_transform(other, std::forward<Function>(function)));
+        zip_transform_(const Tensor<OtherScalarType, Symmetry, Name>& other, Function&& function) && {
+            return std::move(zip_transform_(other, std::forward<Function>(function)));
         }
 
         /**
@@ -509,45 +529,66 @@ namespace TAT {
             return map([](const ScalarType& x) -> ScalarType { return x; });
         }
 
+        template<typename Generator>
+        [[deprecated("set is renamed to set_")]] Tensor<ScalarType, Symmetry, Name>& set(Generator&& generator) & {
+            return set_(std::forward<Generator>(generator));
+        }
+        template<typename Generator>
+        [[deprecated("set is renamed to set_"), nodiscard]] Tensor<ScalarType, Symmetry, Name>&& set(Generator&& generator) && {
+            return std::move(set_(std::forward<Generator>(generator)));
+        }
         /**
          * Set value of tensor by a generator elementwisely
          * \param generator Generator accept non argument, and return scalartype
          */
         template<typename Generator>
-        Tensor<ScalarType, Symmetry, Name>& set(Generator&& generator) & {
+        Tensor<ScalarType, Symmetry, Name>& set_(Generator&& generator) & {
             acquire_data_ownership("Set tensor shared, copy happened here");
             std::generate(storage().begin(), storage().end(), std::forward<Generator>(generator));
             return *this;
         }
         template<typename Generator>
-        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& set(Generator&& generator) && {
-            return std::move(set(std::forward<Generator>(generator)));
+        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& set_(Generator&& generator) && {
+            return std::move(set_(std::forward<Generator>(generator)));
         }
 
+        [[deprecated("zero is renamed to zero_")]] Tensor<ScalarType, Symmetry, Name>& zero() & {
+            return zero_();
+        }
+        [[deprecated("zero is renamed to zero_"), nodiscard]] Tensor<ScalarType, Symmetry, Name>&& zero() && {
+            return std::move(zero_());
+        }
         /**
          * Set all the value of the tensor to zero
          * \see set
          */
-        Tensor<ScalarType, Symmetry, Name>& zero() & {
-            return set([]() -> ScalarType { return 0; });
+        Tensor<ScalarType, Symmetry, Name>& zero_() & {
+            return set_([]() -> ScalarType { return 0; });
         }
-        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& zero() && {
-            return std::move(zero());
+        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& zero_() && {
+            return std::move(zero_());
         }
 
+        [[deprecated("range is renamed to range_")]] Tensor<ScalarType, Symmetry, Name>& range(ScalarType first = 0, ScalarType step = 1) & {
+            return range_(first, step);
+        }
+        [[deprecated("range is renamed to range_"), nodiscard]] Tensor<ScalarType, Symmetry, Name>&&
+        range(ScalarType first = 0, ScalarType step = 1) && {
+            return std::move(range_(first, step));
+        }
         /**
          * Set the value of tensor as natural number, used for test
          * \see set
          */
-        Tensor<ScalarType, Symmetry, Name>& range(ScalarType first = 0, ScalarType step = 1) & {
-            return set([&first, step]() -> ScalarType {
+        Tensor<ScalarType, Symmetry, Name>& range_(ScalarType first = 0, ScalarType step = 1) & {
+            return set_([&first, step]() -> ScalarType {
                 auto result = first;
                 first += step;
                 return result;
             });
         }
-        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& range(ScalarType first = 0, ScalarType step = 1) && {
-            return std::move(range(first, step));
+        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& range_(ScalarType first = 0, ScalarType step = 1) && {
+            return std::move(range_(first, step));
         }
 
         /**
@@ -844,14 +885,24 @@ namespace TAT {
          */
         [[nodiscard]] Tensor<ScalarType, Symmetry, Name> conjugate(bool trivial_metric = false) const;
 
+        [[deprecated("identity(...) is renamed to identity_(...)")]] Tensor<ScalarType, Symmetry, Name>& identity(
+            const std::unordered_set<std::pair<Name, Name>>& pairs
+        ) & {
+            return identity_(pairs);
+        }
+        [[deprecated("identity(...) is renamed to identity_(...)"), nodiscard]] Tensor<ScalarType, Symmetry, Name>&& identity(
+            const std::unordered_set<std::pair<Name, Name>>& pairs
+        ) && {
+            return std::move(identity_(pairs));
+        }
         /**
          * Set the tensor as identity inplacely
          * \param pairs pair set describing how to treat the tensor as matrix
          */
-        Tensor<ScalarType, Symmetry, Name>& identity(const std::unordered_set<std::pair<Name, Name>>& pairs) &;
+        Tensor<ScalarType, Symmetry, Name>& identity_(const std::unordered_set<std::pair<Name, Name>>& pairs) &;
 
-        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& identity(const std::unordered_set<std::pair<Name, Name>>& pairs) && {
-            return std::move(identity(pairs));
+        [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& identity_(const std::unordered_set<std::pair<Name, Name>>& pairs) && {
+            return std::move(identity_(pairs));
         }
 
         /**

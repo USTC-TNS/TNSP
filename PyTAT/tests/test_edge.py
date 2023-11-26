@@ -48,7 +48,7 @@ def test_compare_segments():
 def test_conjugate():
     e1 = TAT.Fermi.Edge([(+1, 2), (+2, 2), (+3, 2)], True)
     e2 = TAT.Fermi.Edge([(-1, 2), (-2, 2), (-3, 2)], False)
-    assert e1.conjugated() == e2
+    assert e1.conjugate() == e2
 
 
 def test_segments_size():

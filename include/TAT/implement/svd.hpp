@@ -228,7 +228,7 @@ namespace TAT {
                 {singular_name_u, singular_name_v},
                 {{std::move(segments_u), false}, {std::move(segments_v), true}}
             );
-            result.zero();
+            result.zero_();
             for (const auto& [symmetry, values] : singular) {
                 const auto* data_source = values.data();
                 auto* data_destination = result.blocks(pmr::vector<Symmetry>{-symmetry, symmetry}).data();

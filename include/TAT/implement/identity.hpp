@@ -27,7 +27,7 @@
 
 namespace TAT {
     template<typename ScalarType, typename Symmetry, typename Name>
-    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity(const std::unordered_set<std::pair<Name, Name>>& pairs) & {
+    Tensor<ScalarType, Symmetry, Name>& Tensor<ScalarType, Symmetry, Name>::identity_(const std::unordered_set<std::pair<Name, Name>>& pairs) & {
         // the order of fermi arrow should be (false true) before set to delta
         auto pmr_guard = scope_resource(default_buffer_size);
         acquire_data_ownership("Set the the shared tensor to identity, copy happened here");
@@ -74,7 +74,7 @@ namespace TAT {
             }
         }
 
-        zero();
+        zero_();
 
         for (auto it = blocks().begin(); it.valid; ++it) {
             if (!it->has_value()) {

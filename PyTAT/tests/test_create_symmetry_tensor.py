@@ -9,7 +9,7 @@ def test_basic_usage():
     a = TAT.Z2.D.Tensor(
         ["Left", "Right", "Up"],
         [[(True, 3), (False, 1)], [(True, 1), (False, 2)], [(True, 2), (False, 3)]],
-    ).range()
+    ).range_()
     assert a.names == ["Left", "Right", "Up"]
     assert a.rank == 3
     assert a.storage.size == 1 * 2 * 3 + 1 * 1 * 2 + 3 * 2 * 2 + 3 * 1 * 3
@@ -27,7 +27,7 @@ def test_basic_usage():
 
 
 def test_when_0rank():
-    a = TAT.U1.D.Tensor([], []).range(2333)
+    a = TAT.U1.D.Tensor([], []).range_(2333)
     assert a.names == []
     assert a.rank == 0
     assert (a.storage == [2333]).all()
@@ -43,7 +43,7 @@ def test_when_0size():
         [[
             (0, 0),
         ], [(-1, 1), (0, 2), (1, 3)], [(-1, 2), (0, 3), (1, 1)]],
-    ).zero()
+    ).zero_()
     assert a.names == ["Left", "Right", "Up"]
     assert a.rank == 3
     assert a.storage.size == 0
@@ -58,7 +58,7 @@ def test_when_0block():
     a = TAT.U1.D.Tensor(
         ["Left", "Right", "Up"],
         [[], [(-1, 1), (0, 2), (1, 3)], [(-1, 2), (0, 3), (1, 1)]],
-    ).zero()
+    ).zero_()
     assert a.names == ["Left", "Right", "Up"]
     assert a.rank == 3
     assert a.storage.size == 0
@@ -87,6 +87,6 @@ def test_conversion_scalar():
 def test_conversion_scalar_empty():
     a = TAT.U1.D.Tensor(["i"], [[
         (+2, 333),
-    ]]).range(2333)
+    ]]).range_(2333)
     assert a.rank == 1
     assert float(a) == 0

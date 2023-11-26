@@ -18,7 +18,7 @@ TEST(test_create_fermi_tensor, basic_usage) {
         {"Left", "Right", "Up"},
         {edge_t({1, 3}, {0, 1}), edge_f({1, 1}, {0, 2}), edge_t({1, 2}, {0, 3})},
     }
-                  .range());
+                  .range_());
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_EQ(a.names(2), "Up");
@@ -62,7 +62,7 @@ TEST(test_create_fermi_tensor, basic_usage) {
 }
 
 TEST(test_create_fermi_tensor, when_0rank) {
-    auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{}, {}}.range(2333);
+    auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{}, {}}.range_(2333);
     ASSERT_THAT(a.names(), ElementsAre());
     ASSERT_THAT(a.storage(), ElementsAre(2333));
 
@@ -84,7 +84,7 @@ TEST(test_create_fermi_tensor, when_0rank) {
 TEST(test_create_fermi_tensor, when_0size) {
     using sym_t = TAT::FermiSymmetry;
     auto a = (TAT::Tensor<double, sym_t>({"Left", "Right", "Up"}, {edge_f({0, 0}), edge_t({-1, 1}, {0, 2}, {1, 3}), edge_t({-1, 2}, {0, 3}, {1, 1})})
-                  .zero());
+                  .zero_());
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_EQ(a.names(2), "Up");
@@ -116,7 +116,7 @@ TEST(test_create_fermi_tensor, when_0block) {
                   {"Left", "Right", "Up"},
                   {{std::vector<sym_t>(), false}, edge_f({-1, 1}, {0, 2}, {1, 3}), edge_t({-1, 2}, {0, 3}, {1, 1})}
     )
-                  .zero());
+                  .zero_());
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_EQ(a.names(2), "Up");
@@ -161,6 +161,6 @@ TEST(test_create_fermi_tensor, conversion_scalar) {
 }
 
 TEST(test_create_fermi_tensor, conversion_scalar_empty) {
-    auto a = TAT::Tensor<double, TAT::FermiSymmetry>({"i"}, {{{+1, 2333}}}).range(2333);
+    auto a = TAT::Tensor<double, TAT::FermiSymmetry>({"i"}, {{{+1, 2333}}}).range_(2333);
     ASSERT_FLOAT_EQ(double(a), 0);
 }

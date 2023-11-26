@@ -14,7 +14,7 @@ def test_main():
 
         dim_A = np.random.randint(1, max_random, size=rank_A)
 
-        A = Tensor([f"A.{i}" for i in range(rank_A)], dim_A.tolist()).randn()
+        A = Tensor([f"A.{i}" for i in range(rank_A)], dim_A.tolist()).randn_()
 
         Q, R = A.qr("Q", {f"A.{i}" for i in U_leg}, "QR.Q", "QR.R")
         re_A = Q.contract(R, {("QR.Q", "QR.R")})

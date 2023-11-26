@@ -2,7 +2,7 @@ import TAT
 
 
 def test_no_symmetry_example_0():
-    a = TAT.No.D.Tensor(["A", "B"], [8, 8]).range()
+    a = TAT.No.D.Tensor(["A", "B"], [8, 8]).range_()
     b = a.edge_rename({
         "A": "C"
     }).edge_operator({
@@ -30,7 +30,7 @@ def test_u1_symmetry_example_0():
         [(-1, 1), (0, 4), (1, 2)],
         [(-1, 2), (0, 3), (1, 1)],
         [(-1, 1), (0, 3), (1, 2)],
-    ]).range()
+    ]).range_()
     b = a.edge_rename({
         "Right": "Right1"
     }).split_edge({"Down": [
@@ -56,7 +56,7 @@ def test_fermi_symmetry_example_0():
         [(-1, 1), (0, 4), (1, 2)],
         [(-1, 2), (0, 3), (1, 1)],
         [(-1, 1), (0, 3), (1, 2)],
-    ]).range()
+    ]).range_()
     b = a.edge_rename({
         "Right": "Right1"
     }).split_edge({"Down": [

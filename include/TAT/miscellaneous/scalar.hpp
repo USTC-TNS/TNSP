@@ -97,7 +97,7 @@ namespace TAT {
     Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const Tensor<ScalarType2, Symmetry, Name>& tensor_2) { \
         auto timer_guard = scalar_inplace_guard(); \
         tensor_1.acquire_data_ownership("Inplace operator on tensor shared, copy happened here"); \
-        return tensor_1.zip_transform(tensor_2, [](const auto& x, const auto& y) { return EVAL; }); \
+        return tensor_1.zip_transform_(tensor_2, [](const auto& x, const auto& y) { return EVAL; }); \
     } \
     template< \
         typename ScalarType1, \
@@ -109,7 +109,7 @@ namespace TAT {
     Tensor<ScalarType1, Symmetry, Name>& OP(Tensor<ScalarType1, Symmetry, Name>& tensor_1, const ScalarType2& number_2) { \
         auto timer_guard = scalar_inplace_guard(); \
         tensor_1.acquire_data_ownership("Inplace operator on tensor shared, copy happened here"); \
-        return tensor_1.transform([&y = number_2](const auto& x) { return EVAL; }); \
+        return tensor_1.transform_([&y = number_2](const auto& x) { return EVAL; }); \
     }
     TAT_DEFINE_SCALAR_OPERATOR(operator+=, x + y)
     TAT_DEFINE_SCALAR_OPERATOR(operator-=, x - y)

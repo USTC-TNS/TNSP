@@ -5,7 +5,7 @@ def test_bose_mode():
     a = TAT.U1.S.Tensor(["i", "j"], [
         [(0, 2), (1, 3), (2, 5)],
         [(0, 5), (-1, 4), (-2, 2)],
-    ]).range()
+    ]).range_()
     b = a.clear_symmetry()
     for sym in range(3):
         dim_i = a.edges(0).dimension_by_symmetry(+sym)
@@ -21,7 +21,7 @@ def test_fermi_mode():
     a = TAT.Fermi.S.Tensor(["i", "j"], [
         [(0, 2), (1, 3), (2, 5)],
         [(0, 5), (-1, 4), (-2, 2)],
-    ]).range()
+    ]).range_()
     b = a.clear_symmetry()
     for sym in range(3):
         dim_i = a.edges(0).dimension_by_symmetry(+sym)

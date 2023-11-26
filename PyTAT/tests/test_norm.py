@@ -6,7 +6,7 @@ def test_basic_usage():
         [(-1, 3), (0, 1), (1, 2)],
         [(-1, 1), (0, 2), (1, 3)],
         [(-1, 2), (0, 3), (1, 1)],
-    ]).range(7).to("complex128")
+    ]).range_(7).to("complex128")
     assert t.storage.size == 60
     assert t.norm_max() == 66
     assert t.norm_num() == 60

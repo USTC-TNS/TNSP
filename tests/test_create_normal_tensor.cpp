@@ -5,7 +5,7 @@
 using namespace testing;
 
 TEST(test_create_normal_tensor, basic_usage) {
-    auto a = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range();
+    auto a = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range_();
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_THAT(a.names(), ElementsAre("Left", "Right"));
@@ -31,7 +31,7 @@ TEST(test_create_normal_tensor, basic_usage) {
 }
 
 TEST(test_create_normal_tensor, when_0rank) {
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{}, {}}.range();
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{}, {}}.range_();
     ASSERT_THAT(a.names(), ElementsAre());
     ASSERT_THAT(a.storage(), ElementsAre(0));
 
@@ -51,7 +51,7 @@ TEST(test_create_normal_tensor, when_0rank) {
 }
 
 TEST(test_create_normal_tensor, when_0size) {
-    auto a = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {0, 4}}.range();
+    auto a = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>{{"Left", "Right"}, {0, 4}}.range_();
     ASSERT_EQ(a.names(0), "Left");
     ASSERT_EQ(a.names(1), "Right");
     ASSERT_THAT(a.names(), ElementsAre("Left", "Right"));

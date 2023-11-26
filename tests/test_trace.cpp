@@ -20,16 +20,16 @@ auto trace_two(const T& tensor, const N& pairs, const F& fuses = {}) {
         double_names.insert({n1, n1});
         names.push_back(n0);
         names.push_back(n1);
-        edges.push_back(tensor.edges(n0).conjugated());
-        edges.push_back(tensor.edges(n1).conjugated());
+        edges.push_back(tensor.edges(n0).conjugate());
+        edges.push_back(tensor.edges(n1).conjugate());
     }
-    auto identity = T(names, edges).identity(pairs);
+    auto identity = T(names, edges).identity_(pairs);
     if (fuses.size() != 0) {
         // identity *= tee
         for (const auto& [out, ins] : fuses) {
             const auto& [in_0, in_1] = ins;
             auto dimension = tensor.edges(in_0).total_dimension();
-            auto tee = T({out, in_0, in_1}, {dimension, dimension, dimension}).zero();
+            auto tee = T({out, in_0, in_1}, {dimension, dimension, dimension}).zero_();
             for (TAT::Size i = 0; i < dimension; i++) {
                 tee.at(std::vector<TAT::Size>{i, i, i}) = 1;
             }
@@ -50,10 +50,10 @@ auto diff_of_pair(const P& p) {
 #define CHECK_PAIR(x) ASSERT_FLOAT_EQ(diff_of_pair(x), 0)
 
 TEST(test_trace, no_symmetry) {
-    CHECK_PAIR(trace_two(TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C", "D", "E"}, {2, 3, 2, 3, 4}).range(), {{"A", "C"}, {"B", "D"}}));
-    CHECK_PAIR(trace_two(TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {2, 2, 3}).range(), {{"A", "B"}}));
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {4, 3, 5}).range();
-    auto b = TAT::Tensor<double, TAT::NoSymmetry>({"D", "E", "F"}, {5, 4, 6}).range();
+    CHECK_PAIR(trace_two(TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C", "D", "E"}, {2, 3, 2, 3, 4}).range_(), {{"A", "C"}, {"B", "D"}}));
+    CHECK_PAIR(trace_two(TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {2, 2, 3}).range_(), {{"A", "B"}}));
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B", "C"}, {4, 3, 5}).range_();
+    auto b = TAT::Tensor<double, TAT::NoSymmetry>({"D", "E", "F"}, {5, 4, 6}).range_();
     CHECK_PAIR(trace_two(a.contract(b, {}), {{"A", "E"}, {"C", "D"}}));
 }
 
@@ -61,11 +61,11 @@ TEST(test_trace, u1_symmetry) {
     auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({0, 2}, {-1, 1}, {-2, 2})}}
-                  .range());
+                  .range_());
     auto b = (TAT::Tensor<double, TAT::U1Symmetry>{
         {"E", "F", "G", "H"},
         {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2}), f_edge({0, 2}, {1, 1}, {2, 2})}}
-                  .range());
+                  .range_());
     auto c = a.contract(b, {});
     auto d = trace_two(c, {{"B", "G"}});
     CHECK_PAIR(d);
@@ -80,11 +80,11 @@ TEST(test_trace, fermi_symmetry) {
     auto a = (TAT::Tensor<double, TAT::FermiSymmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
-                  .range());
+                  .range_());
     auto b = (TAT::Tensor<double, TAT::FermiSymmetry>{
         {"E", "F", "G", "H"},
         {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2}), f_edge({2, 2}, {1, 1}, {0, 2})}}
-                  .range());
+                  .range_());
     auto c = a.contract(b, {});
     auto d = trace_two(c, {{"B", "G"}});
     CHECK_PAIR(d);
@@ -96,8 +96,8 @@ TEST(test_trace, fermi_symmetry) {
 }
 
 TEST(test_trace, fuse) {
-    auto a = (TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {4, 4, 4, 4}}.range());
-    auto b = (TAT::Tensor<double, TAT::NoSymmetry>{{"E", "F", "G", "H"}, {4, 4, 4, 4}}.range());
+    auto a = (TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B", "C", "D"}, {4, 4, 4, 4}}.range_());
+    auto b = (TAT::Tensor<double, TAT::NoSymmetry>{{"E", "F", "G", "H"}, {4, 4, 4, 4}}.range_());
     auto c = a.contract(b, {});
     auto d = trace_two(c, {{"B", "G"}}, {{"X", {"C", "F"}}});
     CHECK_PAIR(d);

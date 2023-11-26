@@ -477,7 +477,7 @@ namespace TAT {
         if constexpr (debug_mode) {
             // contract edges segments correct
             for (const auto& [name_1, name_2] : contract_pairs) {
-                if (tensor_1.edges(name_1).conjugated() != tensor_2.edges(name_2)) {
+                if (tensor_1.edges(name_1).conjugate() != tensor_2.edges(name_2)) {
                     detail::error("Incompatible edge segments in contract");
                 }
             }

@@ -2,14 +2,14 @@ import TAT
 
 
 def test_no_symmetry_basic_0():
-    a = TAT.No.D.Tensor(["Left", "Right"], [2, 3]).range()
+    a = TAT.No.D.Tensor(["Left", "Right"], [2, 3]).range_()
     b = a.transpose(["Right", "Left"])
     assert all(a.storage == [0, 1, 2, 3, 4, 5])
     assert all(b.storage == [0, 3, 1, 4, 2, 5])
 
 
 def test_no_symmetry_basic_1():
-    a = TAT.No.D.Tensor(["i", "j", "k"], [2, 3, 4]).range()
+    a = TAT.No.D.Tensor(["i", "j", "k"], [2, 3, 4]).range_()
     for result_edge in [
         ["i", "j", "k"],
         ["i", "k", "j"],
@@ -26,7 +26,7 @@ def test_no_symmetry_basic_1():
 
 
 def test_no_symmetry_high_dimension():
-    a = TAT.No.D.Tensor(["i", "j", "k", "l", "m", "n"], [2, 2, 2, 2, 2, 2]).range()
+    a = TAT.No.D.Tensor(["i", "j", "k", "l", "m", "n"], [2, 2, 2, 2, 2, 2]).range_()
     b = a.transpose(["l", "j", "i", "n", "k", "m"])
     for i in range(2):
         for j in range(2):
@@ -53,7 +53,7 @@ def test_no_symmetry_high_dimension():
 
 def test_z2_symmetry_high_dimension():
     edge = TAT.Z2.Edge([(False, 2), (True, 2)])
-    a = TAT.Z2.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range()
+    a = TAT.Z2.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range_()
     b = a.transpose(["l", "j", "i", "n", "k", "m"])
     for i in range(2):
         for j in range(2):
@@ -88,7 +88,7 @@ def test_z2_symmetry_high_dimension():
 
 def test_parity_symmetry_high_dimension():
     edge = TAT.Parity.Edge([(False, 2), (True, 2)])
-    a = TAT.Parity.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range()
+    a = TAT.Parity.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range_()
     b = a.transpose(["l", "j", "i", "n", "k", "m"])
     for i in range(2):
         for j in range(2):

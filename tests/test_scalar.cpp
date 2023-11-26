@@ -7,7 +7,7 @@ using namespace testing;
 
 TEST(test_scalar, tensor_and_number) {
     auto a =
-        TAT::Tensor<std::complex<double>, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}.range(
+        TAT::Tensor<std::complex<double>, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}.range_(
         ); // 0..31
     std::valarray<std::complex<double>> s_a = std::valarray<std::complex<double>>(32);
     for (auto i = 0; i < 32; i++) {
@@ -41,8 +41,8 @@ TEST(test_scalar, tensor_and_number) {
 }
 
 TEST(test_scalar, tensor_and_tensor) {
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range();
-    auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range(0, 0.1);
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range_();
+    auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range_(0, 0.1);
     std::valarray<double> s_a = std::valarray<double>(12);
     std::valarray<double> s_b = std::valarray<double>(12);
     s_a[0] = s_b[0] = 0;
@@ -68,7 +68,7 @@ TEST(test_scalar, tensor_and_tensor) {
 
 TEST(test_scalar, tensor_and_number_inplace) {
     auto a =
-        TAT::Tensor<std::complex<double>, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}.range(
+        TAT::Tensor<std::complex<double>, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}.range_(
         ); // 0..31
     std::valarray<std::complex<double>> s_a = std::valarray<std::complex<double>>(32);
     for (auto i = 0; i < 32; i++) {
@@ -90,8 +90,8 @@ TEST(test_scalar, tensor_and_number_inplace) {
 }
 
 TEST(test_scalar, tensor_and_tensor_inplace) {
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range();
-    auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range(0, 0.1);
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range_();
+    auto b = TAT::Tensor<double, TAT::NoSymmetry>{{"Left", "Right"}, {3, 4}}.range_(0, 0.1);
     std::valarray<double> s_a = std::valarray<double>(12);
     std::valarray<double> s_b = std::valarray<double>(12);
     s_a[0] = s_b[0] = 0;

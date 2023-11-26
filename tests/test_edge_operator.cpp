@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 TEST(test_edge_operator, no_symmetry_example_0) {
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {8, 8}}.range();
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>{{"A", "B"}, {8, 8}}.range_();
     auto b = a.edge_rename({{"A", "C"}}
     ).edge_operator({{"C", {{"D", 4}, {"E", 2}}}, {"B", {{"F", 2}, {"G", 4}}}}, {"D", "F"}, {{"I", {"D", "F"}}, {"J", {"G", "E"}}}, {"J", "I"});
     auto b_s = a.edge_rename({{"A", "C"}})
@@ -16,7 +16,7 @@ TEST(test_edge_operator, u1_symmetry_example_0) {
     auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
         {"Left", "Right", "Up", "Down"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 4}, {1, 2}}, {{-1, 2}, {0, 3}, {1, 1}}, {{-1, 1}, {0, 3}, {1, 2}}}}
-                  .range());
+                  .range_());
     auto b = a.edge_rename({{"Right", "Right1"}}).split_edge({{"Down", {{"Down1", {{{0, 1}, {1, 2}}}}, {"Down2", {{{-1, 1}, {0, 1}}}}}}});
     auto c = b.transpose({"Down1", "Right1", "Up", "Left", "Down2"});
     auto d = c.merge_edge({{"Left", {"Left", "Down2"}}});
@@ -34,7 +34,7 @@ TEST(test_edge_operator, fermi_symmetry_example_0) {
     auto a = (TAT::Tensor<double, TAT::FermiSymmetry>{
         {"Left", "Right", "Up", "Down"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 4}, {1, 2}}, {{-1, 2}, {0, 3}, {1, 1}}, {{-1, 1}, {0, 3}, {1, 2}}}}
-                  .range());
+                  .range_());
     auto b = a.edge_rename({{"Right", "Right1"}}).split_edge({{"Down", {{"Down1", {{{0, 1}, {1, 2}}}}, {"Down2", {{{-1, 1}, {0, 1}}}}}}});
     auto r = b.reverse_edge({"Left"});
     auto c = r.transpose({"Down1", "Right1", "Up", "Left", "Down2"});

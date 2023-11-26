@@ -7,7 +7,7 @@ def test_basic_rename():
         [(False, 1), (True, 2)],
         [(False, 3), (True, 4)],
         [(False, 5), (True, 6)],
-    ]).range()
+    ]).range_()
     t2 = t1.edge_rename({"Left": "Up"})
     assert t1.names == ["Left", "Right", "Phy"]
     assert t2.names == ["Up", "Right", "Phy"]

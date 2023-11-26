@@ -88,9 +88,9 @@ TEST(test_edge, compare_seg) {
 
 TEST(test_edge, conjugate) {
     auto e1 = TAT::Edge<TAT::Symmetry<TAT::fermi<int>>>({{1, 2}, {2, 2}, {3, 2}}, true);
-    auto e2 = TAT::Edge<TAT::Symmetry<TAT::fermi<int>>>({{-1, 2}, {-2, 2}, {-3, 2}}, false);
-    ASSERT_TRUE(e1 == e2.conjugated());
-    e1.conjugate();
+    const auto e2 = TAT::Edge<TAT::Symmetry<TAT::fermi<int>>>({{-1, 2}, {-2, 2}, {-3, 2}}, false);
+    ASSERT_TRUE(e1 == e2.conjugate());
+    e1.conjugate_();
     ASSERT_TRUE(e1 == e2);
 }
 

@@ -31,13 +31,13 @@ order_lists = [
 
 
 def test_no_symmetry_0():
-    a = TAT.No.float.Tensor(["i", "j"], [4, 4]).identity({("i", "j")})
+    a = TAT.No.float.Tensor(["i", "j"], [4, 4]).identity_({("i", "j")})
     assert (a - a.contract(a, {("i", "j")})).norm_max() == 0
     assert (a - a.contract(a, {("j", "i")})).norm_max() == 0
 
 
 def test_no_symmetry_1():
-    a = TAT.No.float.Tensor(["i", "j"], [4, 4]).identity({("j", "i")})
+    a = TAT.No.float.Tensor(["i", "j"], [4, 4]).identity_({("j", "i")})
     assert (a - a.contract(a, {("i", "j")})).norm_max() == 0
     assert (a - a.contract(a, {("j", "i")})).norm_max() == 0
 
@@ -45,13 +45,13 @@ def test_no_symmetry_1():
 def test_no_symmetry_2():
     half_rank = 3
     for pairs_index in arrange_pairs_indices:
-        a = TAT.No.S.Tensor(["1", "2", "3", "4", "5", "6"], [4, 4, 4, 4, 4, 4]).range()
+        a = TAT.No.S.Tensor(["1", "2", "3", "4", "5", "6"], [4, 4, 4, 4, 4, 4]).range_()
         pairs = set()
         for i in range(half_rank):
             p0 = pairs_index[i * 2 + 0]
             p1 = pairs_index[i * 2 + 1]
             pairs.add((a.names[p0], a.names[p1]))
-        a.identity(pairs)
+        a.identity_(pairs)
         assert (a - a.contract(a, pairs)).norm_max() == 0
 
 
@@ -59,13 +59,13 @@ def test_z2_symmetry_0():
     half_rank = 3
     edge = [(False, 2), (True, 2)]
     for pairs_index in arrange_pairs_indices:
-        a = TAT.Z2.S.Tensor(["1", "2", "3", "4", "5", "6"], [edge, edge, edge, edge, edge, edge]).range()
+        a = TAT.Z2.S.Tensor(["1", "2", "3", "4", "5", "6"], [edge, edge, edge, edge, edge, edge]).range_()
         pairs = set()
         for i in range(half_rank):
             p0 = pairs_index[i * 2 + 0]
             p1 = pairs_index[i * 2 + 1]
             pairs.add((a.names[p0], a.names[p1]))
-        a.identity(pairs)
+        a.identity_(pairs)
         assert (a - a.contract(a, pairs)).norm_max() == 0
 
 
@@ -83,8 +83,8 @@ def test_u1_symmetry_0():
             pairs.add((names[p0], names[p1]))
             edges[p0] = edge0
             edges[p1] = edge1
-        a = TAT.U1.S.Tensor(names, edges).range()
-        a.identity(pairs)
+        a = TAT.U1.S.Tensor(names, edges).range_()
+        a.identity_(pairs)
         assert (a - a.contract(a, pairs)).norm_max() == 0
 
 
@@ -107,6 +107,6 @@ def test_fermi_symmetry_0():
                 else:
                     edges[p0] = edge1
                     edges[p1] = edge0
-            a = TAT.Fermi.S.Tensor(names, edges).range()
-            a.identity(pairs)
+            a = TAT.Fermi.S.Tensor(names, edges).range_()
+            a.identity_(pairs)
             assert (a - a.contract(a, pairs)).norm_max() == 0

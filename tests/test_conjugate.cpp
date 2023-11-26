@@ -2,13 +2,13 @@
 #include <gtest/gtest.h>
 
 TEST(test_conjugate, no_symmetry_float) {
-    auto A = TAT::Tensor<double, TAT::NoSymmetry>({"i", "j"}, {2, 3}).range();
+    auto A = TAT::Tensor<double, TAT::NoSymmetry>({"i", "j"}, {2, 3}).range_();
     auto A_c = A.conjugate();
     ASSERT_EQ(&A.storage(), &A_c.storage());
 }
 
 TEST(test_conjugate, no_symmetry_complex) {
-    auto A = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>({"i", "j"}, {2, 3}).range({1, 5}, {1, 7});
+    auto A = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>({"i", "j"}, {2, 3}).range_({1, 5}, {1, 7});
     auto A_c = A.conjugate();
     auto B = A * A_c;
     for (auto i : B.storage()) {
@@ -17,7 +17,7 @@ TEST(test_conjugate, no_symmetry_complex) {
 }
 
 TEST(test_conjugate, u1_symmetry_float) {
-    auto A = (TAT::Tensor<double, TAT::U1Symmetry>({"i", "j"}, {{{-1, 2}, {0, 2}, {+1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}}).range(-8, 1));
+    auto A = (TAT::Tensor<double, TAT::U1Symmetry>({"i", "j"}, {{{-1, 2}, {0, 2}, {+1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}}).range_(-8, 1));
     auto A_c = A.conjugate();
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_GT(double(B), 0);
@@ -26,7 +26,7 @@ TEST(test_conjugate, u1_symmetry_float) {
 
 TEST(test_conjugate, u1_symmetry_complex) {
     auto A = (TAT::Tensor<std::complex<double>, TAT::U1Symmetry>({"i", "j"}, {{{-1, 2}, {0, 2}, {+1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}})
-                  .range({-8, -20}, {1, 7}));
+                  .range_({-8, -20}, {1, 7}));
     auto A_c = A.conjugate();
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_FLOAT_EQ(std::complex<double>(B).imag(), 0);
@@ -35,7 +35,7 @@ TEST(test_conjugate, u1_symmetry_complex) {
 }
 
 TEST(test_conjugate, fermi_symmmtry_float) {
-    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>({"i", "j"}, {{{-1, 2}, {0, 2}, {+1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}}).range(-8, 1));
+    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>({"i", "j"}, {{{-1, 2}, {0, 2}, {+1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}}).range_(-8, 1));
     auto A_c = A.conjugate();
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_GT(double(B), 0);
@@ -43,7 +43,7 @@ TEST(test_conjugate, fermi_symmmtry_float) {
 }
 
 TEST(test_conjugate, fermi_symmmtry_float_bidirection_arrow) {
-    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>({"i", "j"}, {{{{-1, 2}, {+1, 2}}, false}, {{{-1, 2}, {+1, 2}}, true}}).range(-8, 1));
+    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>({"i", "j"}, {{{{-1, 2}, {+1, 2}}, false}, {{{-1, 2}, {+1, 2}}, true}}).range_(-8, 1));
     auto A_c = A.conjugate();
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_LE(double(B), 0); // The A * Ac may not be positive
@@ -51,7 +51,7 @@ TEST(test_conjugate, fermi_symmmtry_float_bidirection_arrow) {
 }
 
 TEST(test_conjugate, fermi_symmmtry_float_bidirection_arrow_fixed) {
-    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>({"i", "j"}, {{{{-1, 2}, {+1, 2}}, false}, {{{-1, 2}, {+1, 2}}, true}}).range(-8, 1));
+    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>({"i", "j"}, {{{{-1, 2}, {+1, 2}}, false}, {{{-1, 2}, {+1, 2}}, true}}).range_(-8, 1));
     auto A_c = A.conjugate(true);
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_GE(double(B), 0);
@@ -60,7 +60,7 @@ TEST(test_conjugate, fermi_symmmtry_float_bidirection_arrow_fixed) {
 
 TEST(test_conjugate, fermi_symmmtry_complex) {
     auto A = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>({"i", "j"}, {{{-1, 2}, {0, 2}, {+1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}})
-                  .range({-8, -20}, {1, 7}));
+                  .range_({-8, -20}, {1, 7}));
     auto A_c = A.conjugate();
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_GT(std::complex<double>(B).real(), 0);
@@ -70,7 +70,7 @@ TEST(test_conjugate, fermi_symmmtry_complex) {
 
 TEST(test_conjugate, fermi_symmmtry_complex_bidirection_arrow) {
     auto A = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>({"i", "j"}, {{{{-1, 2}, {+1, 2}}, false}, {{{-1, 2}, {+1, 2}}, true}})
-                  .range({-8, -20}, {1, 7}));
+                  .range_({-8, -20}, {1, 7}));
     auto A_c = A.conjugate();
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_LE(std::complex<double>(B).real(), 0); // The A * Ac may not be positive
@@ -80,7 +80,7 @@ TEST(test_conjugate, fermi_symmmtry_complex_bidirection_arrow) {
 
 TEST(test_conjugate, fermi_symmmtry_complex_bidirection_arrow_fixed) {
     auto A = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>({"i", "j"}, {{{{-1, 2}, {+1, 2}}, false}, {{{-1, 2}, {+1, 2}}, true}})
-                  .range({-8, -20}, {1, 7}));
+                  .range_({-8, -20}, {1, 7}));
     auto A_c = A.conjugate(true);
     auto B = A.contract(A_c, {{"i", "i"}, {"j", "j"}});
     ASSERT_GE(std::complex<double>(B).real(), 0);
@@ -94,13 +94,13 @@ TEST(test_conjugate, fermi_symmetry_contract_with_conjugate) {
         {
             {{{-1, 2}, {0, 2}, {+1, 2}}, false},
             {{{+1, 2}, {0, 2}, {-1, 2}}, true},
-        }}.range({-8, -20}, {1, 7}));
+        }}.range_({-8, -20}, {1, 7}));
     auto B = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
         {"i", "j"},
         {
             {{{-1, 2}, {0, 2}, {+1, 2}}, false},
             {{{+1, 2}, {0, 2}, {-1, 2}}, true},
-        }}.range({-7, -29}, {5, 3}));
+        }}.range_({-7, -29}, {5, 3}));
     auto C = A.contract(B, {{"i", "j"}});
     auto A_c = A.conjugate();
     auto B_c = B.conjugate();
@@ -114,13 +114,13 @@ TEST(test_conjugate, fermi_symmetry_contract_with_conjugate_arrow_fix_wrong) {
         {
             {{{-1, 2}, {0, 2}, {+1, 2}}, false},
             {{{+1, 2}, {0, 2}, {-1, 2}}, true},
-        }}.range({-8, -20}, {1, 7}));
+        }}.range_({-8, -20}, {1, 7}));
     auto B = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
         {"i", "j"},
         {
             {{{-1, 2}, {0, 2}, {+1, 2}}, false},
             {{{+1, 2}, {0, 2}, {-1, 2}}, true},
-        }}.range({-7, -29}, {5, 3}));
+        }}.range_({-7, -29}, {5, 3}));
     auto C = A.contract(B, {{"i", "j"}});
     auto A_c = A.conjugate(true);
     auto B_c = B.conjugate(true);

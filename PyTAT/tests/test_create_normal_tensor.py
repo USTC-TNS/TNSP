@@ -2,7 +2,7 @@ import TAT
 
 
 def test_basic_usage():
-    a = TAT.No.Z.Tensor(["Left", "Right"], [3, 4]).range()
+    a = TAT.No.Z.Tensor(["Left", "Right"], [3, 4]).range_()
     assert a.names == ["Left", "Right"]
     assert a.rank == 2
     assert (a.storage == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).all()
@@ -21,7 +21,7 @@ def test_basic_usage():
 
 
 def test_when_0rank():
-    a = TAT.No.Z.Tensor([], []).range()
+    a = TAT.No.Z.Tensor([], []).range_()
     assert a.names == []
     assert a.rank == 0
     assert (a.storage == [0]).all()
@@ -32,7 +32,7 @@ def test_when_0rank():
 
 
 def test_when_0size():
-    a = TAT.No.Z.Tensor(["Left", "Right"], [0, 4]).range()
+    a = TAT.No.Z.Tensor(["Left", "Right"], [0, 4]).range_()
     assert a.names == ["Left", "Right"]
     assert a.rank == 2
     assert a.storage.size == 0

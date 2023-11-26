@@ -2,7 +2,7 @@ import TAT
 
 
 def reference_exponential(tensor, pairs, step):
-    result = tensor.same_shape().identity(pairs)
+    result = tensor.same_shape().identity_(pairs)
     power = result
     for i in range(1, step):
         power = power.contract(tensor, pairs) / i
@@ -11,7 +11,7 @@ def reference_exponential(tensor, pairs, step):
 
 
 def test_no_symmetry():
-    A = TAT.No.D.Tensor(["i", "j"], [3, 3]).range()
+    A = TAT.No.D.Tensor(["i", "j"], [3, 3]).range_()
     pairs = {("i", "j")}
     expA = A.exponential(pairs, 10)
     expA_r = reference_exponential(A, pairs, 100)
@@ -27,7 +27,7 @@ def test_u1_symmetry():
             [(+1, 2), (0, 2), (-1, 2)],
             [(-1, 2), (0, 2), (+1, 2)],
         ],
-    ).range()
+    ).range_()
     A /= A.norm_max()
     pairs = {("i", "k"), ("l", "j")}
     expA = A.exponential(pairs, 10)
@@ -44,7 +44,7 @@ def test_fermi_symmetry():
             ([(+1, 2), (0, 2), (-1, 2)], False),
             ([(-1, 2), (0, 2), (+1, 2)], False),
         ],
-    ).range()
+    ).range_()
     A /= A.norm_max()
     pairs = {("i", "k"), ("l", "j")}
     expA = A.exponential(pairs, 10)

@@ -34,8 +34,8 @@ def test_main():
         for i in range(rank_total):
             dim_A[total_leg_A[i]] = dim_B[total_leg_B[i]] = np.random.randint(2, max_random)
 
-        A = Tensor(name_list_A, dim_A).range()
-        B = Tensor(name_list_B, dim_B).range()
+        A = Tensor(name_list_A, dim_A).range_()
+        B = Tensor(name_list_B, dim_B).range_()
         C = A.contract(B, {(f"A.{contract_leg_A[i]}", f"B.{contract_leg_B[i]}") for i in range(rank_contract)},
                        fuse_names)
         # print(repr(A))

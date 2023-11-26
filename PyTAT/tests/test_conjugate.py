@@ -2,13 +2,13 @@ import TAT
 
 
 def test_no_symmetry_float():
-    A = TAT.No.D.Tensor(["i", "j"], [2, 3]).range()
+    A = TAT.No.D.Tensor(["i", "j"], [2, 3]).range_()
     A_c = A.conjugate()
     assert all(A.storage.conj() == A_c.storage)
 
 
 def test_no_symmetry_complex():
-    A = TAT.No.Z.Tensor(["i", "j"], [2, 3]).range(1 + 5j, 1 + 7j)
+    A = TAT.No.Z.Tensor(["i", "j"], [2, 3]).range_(1 + 5j, 1 + 7j)
     A_c = A.conjugate()
     assert all(A.storage.conj() == A_c.storage)
 
@@ -20,7 +20,7 @@ def test_u1_symmetry_float():
             [(-1, 2), (0, 2), (+1, 2)],
             [(-1, 2), (0, 2), (+1, 2)],
         ],
-    ).range(-8, +1)
+    ).range_(-8, +1)
     A_c = A.conjugate()
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert float(B) > 0
@@ -34,7 +34,7 @@ def test_u1_symmetry_complex():
             [(-1, 2), (0, 2), (+1, 2)],
             [(-1, 2), (0, 2), (+1, 2)],
         ],
-    ).range(-8 - 20j, +1 + 7j)
+    ).range_(-8 - 20j, +1 + 7j)
     A_c = A.conjugate()
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert complex(B).real > 0
@@ -49,7 +49,7 @@ def test_Fermi_symmetry_float():
             [(-1, 2), (0, 2), (+1, 2)],
             [(-1, 2), (0, 2), (+1, 2)],
         ],
-    ).range(-8, +1)
+    ).range_(-8, +1)
     A_c = A.conjugate()
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert float(B) > 0
@@ -63,7 +63,7 @@ def test_Fermi_symmetry_float_bidirection_arrow():
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(-1, 2), (0, 2), (+1, 2)], True),
         ],
-    ).range(-8, +1)
+    ).range_(-8, +1)
     A_c = A.conjugate()
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert float(B) < 0  # The A * Ac may not be positive
@@ -77,7 +77,7 @@ def test_Fermi_symmetry_float_bidirection_arrow_fixed():
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(-1, 2), (0, 2), (+1, 2)], True),
         ],
-    ).range(-8, +1)
+    ).range_(-8, +1)
     A_c = A.conjugate(True)
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert float(B) > 0
@@ -91,7 +91,7 @@ def test_fermi_symmetry_complex():
             [(-1, 2), (0, 2), (+1, 2)],
             [(-1, 2), (0, 2), (+1, 2)],
         ],
-    ).range(-8 - 20j, +1 + 7j)
+    ).range_(-8 - 20j, +1 + 7j)
     A_c = A.conjugate()
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert complex(B).real > 0
@@ -106,7 +106,7 @@ def test_fermi_symmetry_complex_bidirection_arrow():
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(-1, 2), (0, 2), (+1, 2)], True),
         ],
-    ).range(-8 - 20j, +1 + 7j)
+    ).range_(-8 - 20j, +1 + 7j)
     A_c = A.conjugate()
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert complex(B).real < 0
@@ -121,7 +121,7 @@ def test_fermi_symmetry_complex_bidirection_arrow_fixed():
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(-1, 2), (0, 2), (+1, 2)], True),
         ],
-    ).range(-8 - 20j, +1 + 7j)
+    ).range_(-8 - 20j, +1 + 7j)
     A_c = A.conjugate(True)
     B = A.contract(A_c, {("i", "i"), ("j", "j")})
     assert complex(B).real > 0
@@ -136,14 +136,14 @@ def test_fermi_symmetry_contract_with_conjugate():
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(+1, 2), (0, 2), (-1, 2)], True),
         ],
-    ).range(-8 - 20j, +1 + 7j)
+    ).range_(-8 - 20j, +1 + 7j)
     B = TAT.Fermi.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(+1, 2), (0, 2), (-1, 2)], True),
         ],
-    ).range(-7 - 29j, +5 + 3j)
+    ).range_(-7 - 29j, +5 + 3j)
     C = A.contract(B, {("i", "j")})
     A_c = A.conjugate()
     B_c = B.conjugate()
@@ -158,14 +158,14 @@ def test_fermi_symmetry_contract_with_conjugate_arrow_fix_wrong():
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(+1, 2), (0, 2), (-1, 2)], True),
         ],
-    ).range(-8 - 20j, +1 + 7j)
+    ).range_(-8 - 20j, +1 + 7j)
     B = TAT.Fermi.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(+1, 2), (0, 2), (-1, 2)], True),
         ],
-    ).range(-7 - 29j, +5 + 3j)
+    ).range_(-7 - 29j, +5 + 3j)
     C = A.contract(B, {("i", "j")})
     A_c = A.conjugate(True)
     B_c = B.conjugate(True)

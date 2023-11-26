@@ -12,13 +12,13 @@ def trace_two(tensor, pairs, fuses={}):
         double_names.add((n1, n1))
         names.append(n0)
         names.append(n1)
-        edges.append(tensor.edges(n0).conjugated())
-        edges.append(tensor.edges(n1).conjugated())
-    identity = tensor.__class__(names, edges).identity(pairs)
+        edges.append(tensor.edges(n0).conjugate())
+        edges.append(tensor.edges(n1).conjugate())
+    identity = tensor.__class__(names, edges).identity_(pairs)
     if fuses:
         for out, [in_0, in_1] in fuses.items():
             dimension = tensor.edges(in_0).dimension
-            tee = tensor.__class__([out, in_0, in_1], [dimension, dimension, dimension]).zero()
+            tee = tensor.__class__([out, in_0, in_1], [dimension, dimension, dimension]).zero_()
             for i in range(dimension):
                 tee[{out: i, in_0: i, in_1: i}] = 1
             identity = identity.contract(tee, set())
@@ -34,13 +34,13 @@ def test_no_symmetry():
     trace_two(TAT.No.D.Tensor(
         ["A", "B", "C", "D", "E"],
         [2, 3, 2, 3, 4],
-    ).range(), {("A", "C"), ("B", "D")})
+    ).range_(), {("A", "C"), ("B", "D")})
     trace_two(TAT.No.D.Tensor(
         ["A", "B", "C"],
         [2, 3, 2],
-    ).range(), {("A", "C")})
-    a = TAT.No.D.Tensor(["A", "B", "C"], [4, 3, 5]).range()
-    b = TAT.No.D.Tensor(["D", "E", "F"], [5, 4, 6]).range()
+    ).range_(), {("A", "C")})
+    a = TAT.No.D.Tensor(["A", "B", "C"], [4, 3, 5]).range_()
+    b = TAT.No.D.Tensor(["D", "E", "F"], [5, 4, 6]).range_()
     trace_two(a.contract(b, set()), {("A", "E"), ("C", "D")})
 
 
@@ -53,7 +53,7 @@ def test_u1_symmetry():
             ([(0, 2), (1, 2)], False),
             ([(0, 2), (-1, 1), (-2, 2)], True),
         ],
-    ).range()
+    ).range_()
     b = TAT.U1.D.Tensor(
         ["E", "F", "G", "H"],
         [
@@ -62,7 +62,7 @@ def test_u1_symmetry():
             ([(0, 1), (-1, 2)], True),
             ([(0, 2), (1, 1), (2, 2)], False),
         ],
-    ).range()
+    ).range_()
     c = a.contract(b, set())
     d = trace_two(c, {("B", "G")})
     e = trace_two(d[0], {("H", "D")})
@@ -79,7 +79,7 @@ def test_fermi_symmetry():
             ([(0, 2), (1, 2)], False),
             ([(-2, 2), (-1, 1), (0, 2)], True),
         ],
-    ).range()
+    ).range_()
     b = TAT.Fermi.D.Tensor(
         ["E", "F", "G", "H"],
         [
@@ -88,7 +88,7 @@ def test_fermi_symmetry():
             ([(0, 1), (-1, 2)], True),
             ([(2, 2), (1, 1), (0, 2)], False),
         ],
-    ).range()
+    ).range_()
     c = a.contract(b, set())
     d = trace_two(c, {("B", "G")})
     e = trace_two(d[0], {("H", "D")})
@@ -97,8 +97,8 @@ def test_fermi_symmetry():
 
 
 def test_fuse():
-    a = TAT.No.D.Tensor(["A", "B", "C", "D"], [4, 4, 4, 4]).range()
-    b = TAT.No.D.Tensor(["E", "F", "G", "H"], [4, 4, 4, 4]).range()
+    a = TAT.No.D.Tensor(["A", "B", "C", "D"], [4, 4, 4, 4]).range_()
+    b = TAT.No.D.Tensor(["E", "F", "G", "H"], [4, 4, 4, 4]).range_()
     c = a.contract(b, set())
     d = trace_two(c, {("B", "G")}, {"X": ("C", "F")})
     e = trace_two(d[0], set(), {"Y": ("A", "H")})

@@ -19,17 +19,17 @@ auto check_unitary(const T& tensor, const std::string& name, const std::string& 
     }
     auto conjugated = tensor.conjugate(true).edge_rename({{name, name_prime}});
     auto product = tensor.contract(conjugated, pairs);
-    auto identity = product.same_shape().identity({{name, name_prime}});
+    auto identity = product.same_shape().identity_({{name, name_prime}});
     if constexpr (T::symmetry_t::is_fermi_symmetry) {
         // some sign maybe wrong
-        product.transform([](auto x) { return std::abs(x); });
-        identity.transform([](auto x) { return std::abs(x); });
+        product.transform_([](auto x) { return std::abs(x); });
+        identity.transform_([](auto x) { return std::abs(x); });
     }
     return (product - identity).template norm<-1>();
 }
 
 TEST(test_qr, no_symmetry_0) {
-    auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B"}, {5, 10}).range();
+    auto a = TAT::Tensor<double, TAT::NoSymmetry>({"A", "B"}, {5, 10}).range_();
     auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
     auto [q_2, r_2] = a.qr('q', {"B"}, "newQ", "newR");
     ASSERT_FLOAT_EQ((q - q_2).norm<-1>(), 0);
@@ -43,7 +43,7 @@ TEST(test_qr, no_symmetry_0) {
 }
 
 TEST(test_qr, no_symmetry_1) {
-    auto a = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>({"A", "B"}, {10, 5}).range({-21, -29}, {+2, +3});
+    auto a = TAT::Tensor<std::complex<double>, TAT::NoSymmetry>({"A", "B"}, {10, 5}).range_({-21, -29}, {+2, +3});
     auto [q, r] = a.qr('q', {"A"}, "newQ", "newR");
     auto [q_2, r_2] = a.qr('r', {"B"}, "newQ", "newR");
     ASSERT_FLOAT_EQ((q - q_2).norm<-1>(), 0);
@@ -57,7 +57,7 @@ TEST(test_qr, no_symmetry_1) {
 }
 
 TEST(test_qr, fermi_symmetry_0) {
-    auto a = TAT::Tensor<double, TAT::FermiSymmetry>({"A", "B"}, {{{{-1, 2}, {0, 1}, {+1, 2}}, false}, {{{-1, 4}, {0, 3}, {+1, 3}}, true}}).range();
+    auto a = TAT::Tensor<double, TAT::FermiSymmetry>({"A", "B"}, {{{{-1, 2}, {0, 1}, {+1, 2}}, false}, {{{-1, 4}, {0, 3}, {+1, 3}}, true}}).range_();
     auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
     auto [q_2, r_2] = a.qr('q', {"B"}, "newQ", "newR");
     ASSERT_FLOAT_EQ((q - q_2).norm<-1>(), 0);
@@ -78,7 +78,7 @@ TEST(test_qr, fermi_symmetry_1) {
                       {{{-1, 4}, {0, 3}, {+1, 3}}, false},
                   }
     )
-                  .range());
+                  .range_());
     auto [q, r] = a.qr('q', {"A"}, "newQ", "newR");
     auto [q_2, r_2] = a.qr('r', {"B"}, "newQ", "newR");
     ASSERT_FLOAT_EQ((q - q_2).norm<-1>(), 0);
@@ -99,7 +99,7 @@ TEST(test_qr, fermi_symmetry_edge_mismatch) {
                       {{{-1, 4}, {0, 3}, {+2, 3}}, true},
                   }
     )
-                  .range());
+                  .range_());
     auto [q, r] = a.qr('q', {"A"}, "newQ", "newR");
     auto [q_2, r_2] = a.qr('r', {"B"}, "newQ", "newR");
     ASSERT_FLOAT_EQ((q - q_2).norm<-1>(), 0);

@@ -53,6 +53,8 @@ namespace py = pybind11;
     TAT_SINGLE_SYMMETRY_ALL_SCALAR(Parity) \
     TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiFermi)
 
+#define deprecated(message) PyErr_WarnEx(PyExc_DeprecationWarning, message, 1)
+
 namespace TAT {
     // Auxiliaries
     struct AtExit {
@@ -279,7 +281,14 @@ namespace TAT {
                 .def("index_by_point", &E::index_by_point)
                 .def("position_by_symmetry", &E::position_by_symmetry)
                 .def("dimension_by_symmetry", &E::dimension_by_symmetry)
-                .def("conjugated", &E::conjugated, "Get conjugated edge of this edge")
+                .def(
+                    "conjugated",
+                    [](const E& edge) {
+                        deprecated("conjugated() is deprecated, use conjugate() instead.");
+                        return edge.conjugate();
+                    }
+                )
+                .def("conjugate", static_cast<E (E::*)() const>(&E::conjugate), "Get conjugated edge of this edge")
                 .def_property_readonly("dimension", &E::total_dimension)
                 .def(py::self == py::self)
                 .def(py::self != py::self);
@@ -740,7 +749,16 @@ namespace TAT {
                 )
                 .def(
                     "transform",
-                    [](T& tensor, std::function<ScalarType(ScalarType)>& function) -> T& { return tensor.transform(function); },
+                    [](T& tensor, std::function<ScalarType(ScalarType)>& function) -> T& {
+                        deprecated("transform(...) is deprecated, use transform_(...) instead.");
+                        return tensor.transform_(function);
+                    },
+                    py::arg("function"),
+                    py::return_value_policy::reference_internal
+                )
+                .def(
+                    "transform_",
+                    [](T& tensor, std::function<ScalarType(ScalarType)>& function) -> T& { return tensor.transform_(function); },
                     // write function explicitly to avoid const T&/T& ambigiuous
                     // if use py::overload_cast, I need to write argument type twice
                     py::arg("function"),
@@ -765,20 +783,47 @@ namespace TAT {
                 )
                 .def(
                     "set",
-                    [](T& tensor, std::function<ScalarType()>& function) -> T& { return tensor.set(function); },
+                    [](T& tensor, std::function<ScalarType()>& function) -> T& {
+                        deprecated("set(...) is deprecated, use set_(...) instead.");
+                        return tensor.set_(function);
+                    },
+                    py::arg("function"),
+                    py::return_value_policy::reference_internal
+                )
+                .def(
+                    "set_",
+                    [](T& tensor, std::function<ScalarType()>& function) -> T& { return tensor.set_(function); },
                     py::arg("function"),
                     "Set every element of a tensor by a function",
                     py::return_value_policy::reference_internal
                 )
                 .def(
                     "zero",
-                    [](T& tensor) -> T& { return tensor.zero(); },
+                    [](T& tensor) -> T& {
+                        deprecated("zero() is deprecated, use zero_() instead.");
+                        return tensor.zero_();
+                    },
+                    py::return_value_policy::reference_internal
+                )
+                .def(
+                    "zero_",
+                    [](T& tensor) -> T& { return tensor.zero_(); },
                     "Set all element zero",
                     py::return_value_policy::reference_internal
                 )
                 .def(
                     "range",
-                    [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.range(first, step); },
+                    [](T& tensor, ScalarType first, ScalarType step) -> T& {
+                        deprecated("range(...) is deprecated, use range_(...) instead.");
+                        return tensor.range_(first, step);
+                    },
+                    py::arg("first") = 0,
+                    py::arg("step") = 1,
+                    py::return_value_policy::reference_internal
+                )
+                .def(
+                    "range_",
+                    [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.range_(first, step); },
                     py::arg("first") = 0,
                     py::arg("step") = 1,
                     "Useful function generate simple data in tensor element for test",
@@ -896,7 +941,16 @@ namespace TAT {
             tensor_t
                 .def(
                     "identity",
-                    [](T& tensor, std::unordered_set<std::pair<DefaultName, DefaultName>>& pairs) -> T& { return tensor.identity(pairs); },
+                    [](T& tensor, std::unordered_set<std::pair<DefaultName, DefaultName>>& pairs) -> T& {
+                        deprecated("identity(...) is deprecated, use identity_(...) instead.");
+                        return tensor.identity_(pairs);
+                    },
+                    py::arg("pairs"),
+                    py::return_value_policy::reference_internal
+                )
+                .def(
+                    "identity_",
+                    [](T& tensor, std::unordered_set<std::pair<DefaultName, DefaultName>>& pairs) -> T& { return tensor.identity_(pairs); },
                     py::arg("pairs"),
                     "Get a identity tensor with same shape",
                     py::return_value_policy::reference_internal
@@ -965,16 +1019,25 @@ namespace TAT {
                 )
                 .def(
                     "rand",
+                    [](py::object& tensor, ScalarType min, ScalarType max) {
+                        deprecated("rand(...) is deprecated, use rand_(...) instead.");
+                        return tensor.attr("rand_")(min, max);
+                    },
+                    py::arg("min") = 0,
+                    py::arg("max") = one
+                )
+                .def(
+                    "rand_",
                     [](T& tensor, ScalarType min, ScalarType max) -> T& {
                         if constexpr (is_complex<ScalarType>) {
                             auto distribution_real = std::uniform_real_distribution<real_scalar<ScalarType>>(min.real(), max.real());
                             auto distribution_imag = std::uniform_real_distribution<real_scalar<ScalarType>>(min.imag(), max.imag());
-                            return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
+                            return tensor.set_([&distribution_real, &distribution_imag]() -> ScalarType {
                                 return {distribution_real(random_engine), distribution_imag(random_engine)};
                             });
                         } else {
                             auto distribution = std::uniform_real_distribution<real_scalar<ScalarType>>(min, max);
-                            return tensor.set([&distribution]() { return distribution(random_engine); });
+                            return tensor.set_([&distribution]() { return distribution(random_engine); });
                         }
                     },
                     py::arg("min") = 0,
@@ -984,16 +1047,25 @@ namespace TAT {
                 )
                 .def(
                     "randn",
+                    [](py::object& tensor, ScalarType mean, ScalarType stddev) {
+                        deprecated("randn(...) is deprecated, use randn_(...) instead.");
+                        return tensor.attr("randn_")(mean, stddev);
+                    },
+                    py::arg("min") = 0,
+                    py::arg("max") = one
+                )
+                .def(
+                    "randn_",
                     [](T& tensor, ScalarType mean, ScalarType stddev) -> T& {
                         if constexpr (is_complex<ScalarType>) {
                             auto distribution_real = std::normal_distribution<real_scalar<ScalarType>>(mean.real(), stddev.real());
                             auto distribution_imag = std::normal_distribution<real_scalar<ScalarType>>(mean.imag(), stddev.imag());
-                            return tensor.set([&distribution_real, &distribution_imag]() -> ScalarType {
+                            return tensor.set_([&distribution_real, &distribution_imag]() -> ScalarType {
                                 return {distribution_real(random_engine), distribution_imag(random_engine)};
                             });
                         } else {
                             auto distribution = std::normal_distribution<real_scalar<ScalarType>>(mean, stddev);
-                            return tensor.set([&distribution]() { return distribution(random_engine); });
+                            return tensor.set_([&distribution]() { return distribution(random_engine); });
                         }
                     },
                     py::arg("mean") = 0,
