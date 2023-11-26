@@ -57,7 +57,6 @@ class build_ext(build_ext_original):
             "-DTAT_USE_MPI=" + "OFF",
             "-DCMAKE_CXX_FLAGS=" + "-DTAT_VERSION=" + "\\\"" + version + "\\\"",
             "-DPYTHON_EXECUTABLE=" + sys.executable,
-            "-DTAT_BUILD_TETRAUX=" + "OFF",
             "-DTAT_BUILD_TEST=" + "OFF",
         ]
         if "CMAKEFLAGS" in os.environ:

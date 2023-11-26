@@ -1,7 +1,0 @@
-#+OPTIONS: toc:nil
-
-* tetraux
-
-Tetraux contains auxiliary functions and classes utilized by tetragono.
-
-This subproject is intended for internal use and will not be documented at the moment."

@@ -6,7 +6,7 @@ vcpkg_from_github(
 
 vcpkg_cmake_configure(
   SOURCE_PATH "${SOURCE_PATH}"
-  OPTIONS -DTAT_BUILD_PYTAT=OFF -DTAT_BUILD_TETRAUX=OFF -DTAT_BUILD_TEST=OFF
+  OPTIONS -DTAT_BUILD_PYTAT=OFF -DTAT_BUILD_TEST=OFF
 )
 
 vcpkg_cmake_install()

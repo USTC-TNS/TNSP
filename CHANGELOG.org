@@ -6,6 +6,7 @@
 *** Changed
 *** Deprecated
 *** Removed
++ *tetraux*: Package tetraux is removed, because it is useless since ansatz product state removed.
 *** Fixed
 + *TAT.hpp*: Fix type mutability information in declaration of LAPACK function =?gesvd=.
 
