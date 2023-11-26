@@ -151,7 +151,7 @@ class AbstractLattice(AbstractState):
             if edge is not None:
                 names.append(direction)
                 edges.append(edge)
-        return self.Tensor(names, edges).randn()
+        return self.Tensor(names, edges).randn_()
 
     def _default_bonds(self, l1, l2):
         """
@@ -239,4 +239,4 @@ class AbstractLattice(AbstractState):
             direction = "U"
         else:
             raise ValueError("Invalid direction when setting virtual bond")
-        self._set_virtual_bond_single_side((l1, l2, direction), edge.conjugated())
+        self._set_virtual_bond_single_side((l1, l2, direction), edge.conjugate())

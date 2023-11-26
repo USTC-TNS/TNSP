@@ -453,7 +453,7 @@ class AbstractState:
             edge_in = tensor.edges(f"I{i}")
             if edge_out != self.physics_edges[points[i]]:
                 raise ValueError("Wrong hamiltonian edge")
-            if edge_out.conjugated() != edge_in:
+            if edge_out.conjugate() != edge_in:
                 raise ValueError("Wrong hamiltonian edge")
 
         if tensor.norm_max() != 0:
@@ -492,8 +492,8 @@ class AbstractState:
                 if l1l2o not in positions:
                     index = edge_order.index(l1l2o)
                     identity = (
-                        self.Tensor([f"O{index}", f"I{index}"], [edge, edge.conjugated()])  #
-                        .identity({(f"O{index}", f"I{index}")}))
+                        self.Tensor([f"O{index}", f"I{index}"], [edge, edge.conjugate()])  #
+                        .identity_({(f"O{index}", f"I{index}")}))
                     this_term = this_term.contract(identity, set())
             # Here, apply merge sign to "I" but not to "O"
             # In fact, it is also OK if apply merge sign to "O" instead of "I"

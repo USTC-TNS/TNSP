@@ -58,7 +58,7 @@ def unsquash(new_state, old_state, cut_dimension):
         new_part1, singular, new_part2 = both.svd(
             {"U1", "D1", "T", "L"} | {edge for edge in part1.names if edge.startswith("P")}, "R", "L", "L", "R",
             cut_dimension)
-        identity = singular.same_shape().identity({("L", "R")})
+        identity = singular.same_shape().identity_({("L", "R")})
         delta = singular.sqrt()
         identity *= delta
         singular *= delta.reciprocal()

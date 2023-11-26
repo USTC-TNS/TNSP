@@ -207,7 +207,7 @@ def lattice_update(tensors_1, tensors_2):
 
 @np.vectorize
 def lattice_randomize(tensor):
-    random_same_shape = tensor.same_shape().rand(0, 1)
+    random_same_shape = tensor.same_shape().rand_(0, 1)
     random_same_shape.storage *= np.sign(tensor.storage)
     return random_same_shape
 

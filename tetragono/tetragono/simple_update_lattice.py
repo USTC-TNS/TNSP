@@ -402,8 +402,8 @@ class SimpleUpdateLattice(AbstractLattice):
                 empty_out_name = [f"O{index}" for index, position in empty]
                 empty_in_name = [f"I{index}" for index, position in empty]
                 empty_out_edge = [self.physics_edges[position] for index, position in empty]
-                empty_in_edge = [self.physics_edges[position].conjugated() for index, position in empty]
-                identity = self.Tensor(empty_out_name + empty_in_name, empty_out_edge + empty_in_edge).identity({
+                empty_in_edge = [self.physics_edges[position].conjugate() for index, position in empty]
+                identity = self.Tensor(empty_out_name + empty_in_name, empty_out_edge + empty_in_edge).identity_({
                     (o, i) for o, i in zip(empty_out_name, empty_in_name)
                 })
                 tensor = tensor.contract(identity, set())
@@ -550,7 +550,7 @@ class SimpleUpdateLattice(AbstractLattice):
         index_and_orbit : list[tuple[int, int]]
             The list of the coordinates index and the orbit index of every hamiltonian edge.
         evolution_operator : Tensor
-            $\exp^{-\Delta\tau H}$, used to update the state.
+            $\\exp^{-\\Delta\\tau H}$, used to update the state.
         new_dimension : int | float
             The dimension cut used in svd of simple update, or the amplitude of dimension expandance.
         """
@@ -757,7 +757,7 @@ class SimpleUpdateLattice(AbstractLattice):
             if division:
                 environment_tensor = environment_tensor.reciprocal()
             if square_root:
-                identity = environment_tensor.same_shape().identity({tuple(environment_tensor.names)})
+                identity = environment_tensor.same_shape().identity_({tuple(environment_tensor.names)})
                 delta = environment_tensor.sqrt()
                 # Delivery former identity and former environment tensor to four direction.
                 if direction in ("D", "R"):

@@ -29,24 +29,24 @@ def _generate_Up_and_Down(_name, _spin):
     if _spin == +1:
         CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
             (-1, 0),
-        ]]).range(1, 0)
+        ]]).range_(1, 0)
         CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
             (+1, 0),
-        ]]).range(1, 0)
+        ]]).range_(1, 0)
     elif _spin == -1:
         CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
             (0, -1),
-        ]]).range(1, 0)
+        ]]).range_(1, 0)
         CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
             (0, +1),
-        ]]).range(1, 0)
+        ]]).range_(1, 0)
     else:
         raise RuntimeError("Program should not come here")
     C0C1 = rename_io(CP, [0]).contract(rename_io(CM, [1]), {("T", "T")})
     C1C0 = rename_io(CP, [1]).contract(rename_io(CM, [0]), {("T", "T")})
     CC = C0C1 + C1C0
 
-    I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
+    I = Tensor(["O0", "I0"], [EF, ET]).identity_({("I0", "O0")})
 
     N = rename_io(CP, [0]).contract(rename_io(CM, [0]), {("T", "T"), ("I0", "O0")})
 

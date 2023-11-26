@@ -230,7 +230,7 @@ class Configuration(SingleLayerAuxiliaries):
 
     def replace(self, replacement, *, hint=None):
         """
-        Calculate $\langle s\psi\rangle$ with several $s$ replaced.
+        Calculate $\\langle s\\psi\\rangle$ with several $s$ replaced.
 
         Parameters
         ----------
@@ -242,7 +242,7 @@ class Configuration(SingleLayerAuxiliaries):
         Returns
         -------
         Tensor | None
-            $\langle s\psi\rangle$ with several $s$ replaced. If replace style is not implemented yet, None will be
+            $\\langle s\\psi\\rangle$ with several $s$ replaced. If replace style is not implemented yet, None will be
         returned.
         """
         grouped_replacement = {}  # dict[tuple[int, int], dict[int, EdgePoint]]
@@ -312,7 +312,7 @@ class Configuration(SingleLayerAuxiliaries):
             symmetry, index = configuration[orbit]
             # P side is dimension one edge
             # Q side is connected to lattice
-            shrinker = self.Tensor(["P", "Q"], [[(symmetry, 1)], edge.conjugated()]).zero()
+            shrinker = self.Tensor(["P", "Q"], [[(symmetry, 1)], edge.conjugate()]).zero_()
             shrinker[{"Q": (-symmetry, index), "P": (symmetry, 0)}] = 1
             yield orbit, shrinker
 
@@ -573,7 +573,7 @@ class ConfigurationPool:
         Returns
         -------
         Tensor
-            $\langle s\psi\rangle$ with several $s$ replaced.
+            $\\langle s\\psi\\rangle$ with several $s$ replaced.
         """
         # Try replace directly first
         wss = configuration.replace(replacement)
@@ -791,7 +791,7 @@ class SamplingLattice(AbstractLattice):
             value = self.Tensor(old.names, [
                 self.physics_edges[l1, l2, int(name[1:])] if name.startswith("P") else old.edges(name)
                 for name in old.names
-            ]).zero()
+            ]).zero_()
             value += old
         self._lattice[l1, l2] = value
 
@@ -878,10 +878,10 @@ class SamplingLattice(AbstractLattice):
         right_r = right_r.edge_rename({name: f"R_{name}" for name in right_r.names})
         big = left_r.contract(right_r, {("L_R", "R_L")})
         norm = big.norm_max()
-        big += big.same_shape().randn() * epsilon * norm
+        big += big.same_shape().randn_() * epsilon * norm
         u, s, v = big.svd({l_name for l_name in big.names if l_name.startswith("L_")}, "R", "L", "L", "R",
                           new_dimension)
-        i = s.same_shape().identity({("L", "R")})
+        i = s.same_shape().identity_({("L", "R")})
         delta = s.sqrt()
         i *= delta
         s *= delta.reciprocal()
@@ -906,10 +906,10 @@ class SamplingLattice(AbstractLattice):
         down_r = down_r.edge_rename({name: f"D_{name}" for name in down_r.names})
         big = up_r.contract(down_r, {("U_D", "D_U")})
         norm = big.norm_max()
-        big += big.same_shape().randn() * epsilon * norm
+        big += big.same_shape().randn_() * epsilon * norm
         u, s, v = big.svd({u_name for u_name in big.names if u_name.startswith("U_")}, "D", "U", "U", "D",
                           new_dimension)
-        i = s.same_shape().identity({("U", "D")})
+        i = s.same_shape().identity_({("U", "D")})
         delta = s.sqrt()
         i *= delta
         s *= delta.reciprocal()

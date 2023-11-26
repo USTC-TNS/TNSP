@@ -41,7 +41,7 @@ def abstract_state(L1, L2, J, K, mu):
     pauli_z = tet.common_tensor.No.pauli_z.to(float)
     identity = tet.common_tensor.No.identity.to(float)
 
-    plaq = Tensor(["I0", "O0", "I1", "O1", "I2", "O2", "I3", "O3"], [2, 2, 2, 2, 2, 2, 2, 2]).zero()
+    plaq = Tensor(["I0", "O0", "I1", "O1", "I2", "O2", "I3", "O3"], [2, 2, 2, 2, 2, 2, 2, 2]).zero_()
     plaq[{"I0": 0, "I1": 1, "I2": 0, "I3": 1, "O0": 1, "O1": 0, "O2": 1, "O3": 0}] = 1
     plaq[{"I0": 1, "I1": 0, "I2": 1, "I3": 0, "O0": 0, "O1": 1, "O2": 0, "O3": 1}] = 1
     plaq = plaq.to(float)

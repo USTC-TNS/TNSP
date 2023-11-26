@@ -67,10 +67,10 @@ class Observer():
         self._whole_result_square_reweight_square = {name: 0.0 for name in self._observer}
         self._total_imaginary_energy_reweight = 0.0
         if self._enable_gradient:
-            self._Delta = [[self.owner[l1, l2].same_shape().conjugate().zero()
+            self._Delta = [[self.owner[l1, l2].same_shape().conjugate().zero_()
                             for l2 in range(self.owner.L2)]
                            for l1 in range(self.owner.L1)]
-            self._EDelta = [[self.owner[l1, l2].same_shape().conjugate().zero()
+            self._EDelta = [[self.owner[l1, l2].same_shape().conjugate().zero_()
                              for l2 in range(self.owner.L2)]
                             for l1 in range(self.owner.L1)]
             if self._enable_natural:
@@ -313,7 +313,7 @@ class Observer():
     def __call__(self, possibility, configuration):
         """
         Collect observer value from current configuration, the sampling should have distribution based on
-        $|\langle\psi s\rangle|^2$, If it is not, a reweight argument should be passed with a non-one float number.
+        $|\\langle\\psi s\\rangle|^2$, If it is not, a reweight argument should be passed with a non-one float number.
 
         Parameters
         ----------

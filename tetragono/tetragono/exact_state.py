@@ -89,7 +89,7 @@ class ExactState(AbstractState):
         edges = [edge for [l1, l2, orbit], edge in self.physics_edges]
         names.append("T")
         edges.append(self._total_symmetry_edge)
-        vector = self.Tensor(names, edges).randn()
+        vector = self.Tensor(names, edges).randn_()
         vector /= vector.norm_2()
         return vector
 
@@ -122,7 +122,7 @@ class ExactState(AbstractState):
             # let a be total_approximate_energy
             # v <- a v - H v = (a - H) v => E = a - |v'|/|v|
             # temporary_vector: H v
-            temporary_vector = self.vector.same_shape().zero()
+            temporary_vector = self.vector.same_shape().zero_()
             for positions, value in self.hamiltonians:
                 # H v = sum_i H_i v
                 temporary_vector += (
@@ -157,7 +157,7 @@ class ExactState(AbstractState):
     def observe(self, positions, observer):
         """
         Observe the state. If the oboserver is None and positions is an empty tuple, return normalization parameter
-        $\langle\psi|\psi\rangle$.
+        $\\langle\\psi|\\psi\\rangle$.
 
         Parameters
         ----------

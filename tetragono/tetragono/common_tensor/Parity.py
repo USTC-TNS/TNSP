@@ -26,17 +26,17 @@ ET = Tedge[False, True]
 
 CP = Tensor(["O0", "I0", "T"], [EF, ET, Fedge[
     True,
-]]).zero()
+]]).zero_()
 CP[{"O0": (True, 0), "I0": (False, 0), "T": (True, 0)}] = 1
 CM = Tensor(["O0", "I0", "T"], [EF, ET, Tedge[
     True,
-]]).zero()
+]]).zero_()
 CM[{"O0": (False, 0), "I0": (True, 0), "T": (True, 0)}] = 1
 C0C1 = rename_io(CP, [0]).contract(rename_io(CM, [1]), {("T", "T")})
 C1C0 = rename_io(CP, [1]).contract(rename_io(CM, [0]), {("T", "T")})
 CC = C0C1 + C1C0
 
-I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
+I = Tensor(["O0", "I0"], [EF, ET]).identity_({("I0", "O0")})
 
 N = rename_io(CP, [0]).contract(rename_io(CM, [0]), {("T", "T"), ("I0", "O0")})
 
