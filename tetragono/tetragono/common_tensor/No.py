@@ -21,19 +21,23 @@ from .tensor_toolkit import rename_io, kronecker_product
 
 Tensor = TAT.No.Z.Tensor
 
-identity = Tensor(["I0", "O0"], [2, 2])
-identity.blocks[identity.names] = [[1, 0], [0, 1]]
+identity = Tensor(["I0", "O0"], [2, 2]).zero_()
+identity[{"I0": 0, "O0": 0}] = 1
+identity[{"I0": 1, "O0": 1}] = 1
 
-pauli_x = Tensor(["I0", "O0"], [2, 2])
-pauli_x.blocks[pauli_x.names] = [[0, 1], [1, 0]]
+pauli_x = Tensor(["I0", "O0"], [2, 2]).zero_()
+pauli_x[{"I0": 0, "O0": 1}] = 1
+pauli_x[{"I0": 1, "O0": 0}] = 1
 Sx = pauli_x / 2
 
-pauli_y = Tensor(["I0", "O0"], [2, 2])
-pauli_y.blocks[pauli_y.names] = [[0, -1j], [1j, 0]]
+pauli_y = Tensor(["I0", "O0"], [2, 2]).zero_()
+pauli_y[{"I0": 0, "O0": 1}] = -1j
+pauli_y[{"I0": 1, "O0": 0}] = +1j
 Sy = pauli_y / 2
 
-pauli_z = Tensor(["I0", "O0"], [2, 2])
-pauli_z.blocks[pauli_z.names] = [[1, 0], [0, -1]]
+pauli_z = Tensor(["I0", "O0"], [2, 2]).zero_()
+pauli_z[{"I0": 0, "O0": 0}] = +1
+pauli_z[{"I0": 1, "O0": 1}] = -1
 Sz = pauli_z / 2
 
 pauli_x_pauli_x = kronecker_product(
