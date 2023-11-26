@@ -12,12 +12,12 @@ def trace_two(tensor, pairs, fuses={}):
         double_names.add((n1, n1))
         names.append(n0)
         names.append(n1)
-        edges.append(tensor.edges(n0).conjugate())
-        edges.append(tensor.edges(n1).conjugate())
+        edges.append(tensor.edge_by_name(n0).conjugate())
+        edges.append(tensor.edge_by_name(n1).conjugate())
     identity = tensor.__class__(names, edges).identity_(pairs)
     if fuses:
         for out, [in_0, in_1] in fuses.items():
-            dimension = tensor.edges(in_0).dimension
+            dimension = tensor.edge_by_name(in_0).dimension
             tee = tensor.__class__([out, in_0, in_1], [dimension, dimension, dimension]).zero_()
             for i in range(dimension):
                 tee[{out: i, in_0: i, in_1: i}] = 1

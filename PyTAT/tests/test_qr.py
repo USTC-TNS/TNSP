@@ -23,8 +23,8 @@ def test_no_symmetry_0():
     assert (r - r_2).norm_max() == 0
     assert q.names == ["newQ", "B"]
     assert r.names == ["A", "newR"]
-    assert q.edges("newQ").dimension == 5
-    assert r.edges("newR").dimension == 5
+    assert q.edge_by_name("newQ").dimension == 5
+    assert r.edge_by_name("newR").dimension == 5
     check_unitary(q, "newQ", "newQ'", False)
     assert (q.contract(r, {("newQ", "newR")}) - a).norm_max() < 1e-6
 
@@ -37,8 +37,8 @@ def test_no_symmetry_1():
     assert (r - r_2).norm_max() == 0
     assert q.names == ["newQ", "B"]
     assert r.names == ["A", "newR"]
-    assert q.edges("newQ").dimension == 5
-    assert r.edges("newR").dimension == 5
+    assert q.edge_by_name("newQ").dimension == 5
+    assert r.edge_by_name("newR").dimension == 5
     check_unitary(q, "newQ", "newQ'", False)
     assert (q.contract(r, {("newQ", "newR")}) - a).norm_max() < 1e-6
 
@@ -57,8 +57,8 @@ def test_fermi_symmetry_0():
     assert (r - r_2).norm_max() == 0
     assert q.names == ["newQ", "B"]
     assert r.names == ["A", "newR"]
-    assert q.edges("newQ").dimension == 5
-    assert r.edges("newR").dimension == 5
+    assert q.edge_by_name("newQ").dimension == 5
+    assert r.edge_by_name("newR").dimension == 5
     check_unitary(q, "newQ", "newQ'", True)
     assert (q.contract(r, {("newQ", "newR")}) - a).norm_max() < 1e-6
 
@@ -77,8 +77,8 @@ def test_fermi_symmetry_1():
     assert (r - r_2).norm_max() == 0
     assert q.names == ["newQ", "B"]
     assert r.names == ["A", "newR"]
-    assert q.edges("newQ").dimension == 5
-    assert r.edges("newR").dimension == 5
+    assert q.edge_by_name("newQ").dimension == 5
+    assert r.edge_by_name("newR").dimension == 5
     check_unitary(q, "newQ", "newQ'", True)
     assert (q.contract(r, {("newQ", "newR")}) - a).norm_max() < 1e-6
 
@@ -97,7 +97,7 @@ def test_fermi_symmetry_edge_mismatch():
     assert (r - r_2).norm_max() == 0
     assert q.names == ["A", "newQ"]
     assert r.names == ["newR", "B"]
-    assert q.edges("newQ").dimension == 2
-    assert r.edges("newR").dimension == 2
+    assert q.edge_by_name("newQ").dimension == 2
+    assert r.edge_by_name("newR").dimension == 2
     check_unitary(q, "newQ", "newQ'", True)
     assert (q.contract(r, {("newQ", "newR")}) - a).norm_max() < 1e-6

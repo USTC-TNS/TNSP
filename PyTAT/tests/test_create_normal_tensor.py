@@ -6,8 +6,8 @@ def test_basic_usage():
     assert a.names == ["Left", "Right"]
     assert a.rank == 2
     assert (a.storage == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]).all()
-    assert a.edges(0) == a.edges("Left")
-    assert a.edges(1) == a.edges("Right")
+    assert a.edges[0] == a.edge_by_name("Left")
+    assert a.edges[1] == a.edge_by_name("Right")
 
     assert a.blocks["Left", "Right"].shape == (3, 4)
     assert a.blocks["Right", "Left"].shape == (4, 3)
@@ -36,8 +36,8 @@ def test_when_0size():
     assert a.names == ["Left", "Right"]
     assert a.rank == 2
     assert a.storage.size == 0
-    assert a.edges(0) == a.edges("Left")
-    assert a.edges(1) == a.edges("Right")
+    assert a.edges[0] == a.edge_by_name("Left")
+    assert a.edges[1] == a.edge_by_name("Right")
 
     assert a.blocks["Left", "Right"].shape == (0, 4)
     assert a.blocks[("Left", ()), ("Right", ())].shape == (0, 4)
@@ -49,8 +49,8 @@ def test_conversion_scalar():
     assert a.names == ["i", "j"]
     assert a.rank == 2
     assert (a.storage == [2333]).all()
-    assert a.edges(0) == a.edges("i")
-    assert a.edges(1) == a.edges("j")
+    assert a.edges[0] == a.edge_by_name("i")
+    assert a.edges[1] == a.edge_by_name("j")
 
     assert a.blocks["i", "j"].shape == (1, 1)
     assert a.blocks[("i", ()), ("j", ())].shape == (1, 1)

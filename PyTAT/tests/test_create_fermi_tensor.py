@@ -26,12 +26,12 @@ def test_basic_usage():
         Tedge[(True, 2), (False, 3)],
     ]).range_()
     assert a.names == ["Left", "Right", "Up"]
-    assert a.edges("Left") == a.edges(0)
-    assert a.edges("Right") == a.edges(1)
-    assert a.edges("Up") == a.edges(2)
-    assert a.edges(0).arrow == True
-    assert a.edges(1).arrow == False
-    assert a.edges(2).arrow == True
+    assert a.edge_by_name("Left") == a.edges[0]
+    assert a.edge_by_name("Right") == a.edges[1]
+    assert a.edge_by_name("Up") == a.edges[2]
+    assert a.edges[0].arrow == True
+    assert a.edges[1].arrow == False
+    assert a.edges[2].arrow == True
 
     assert a.blocks[("Left", True), ("Right", False), ("Up", True)].shape == (3, 2, 2)
     assert a.blocks[("Left", False), ("Up", True), ("Right", True)].shape == (1, 2, 1)
@@ -59,12 +59,12 @@ def test_when_0size():
     ]).zero_()
     assert a.names == ["Left", "Right", "Up"]
     assert a.storage.size == 0
-    assert a.edges("Left") == a.edges(0)
-    assert a.edges("Right") == a.edges(1)
-    assert a.edges("Up") == a.edges(2)
-    assert a.edges(0).arrow == False
-    assert a.edges(1).arrow == True
-    assert a.edges(2).arrow == True
+    assert a.edge_by_name("Left") == a.edges[0]
+    assert a.edge_by_name("Right") == a.edges[1]
+    assert a.edge_by_name("Up") == a.edges[2]
+    assert a.edges[0].arrow == False
+    assert a.edges[1].arrow == True
+    assert a.edges[2].arrow == True
 
     assert a.blocks[("Left", 0), ("Right", +1), ("Up", -1)].shape == (0, 3, 2)
     assert a.blocks[("Left", 0), ("Up", -1), ("Right", +1)].shape == (0, 2, 3)
@@ -78,22 +78,22 @@ def test_when_0block():
     ]).zero_()
     assert a.names == ["Left", "Right", "Up"]
     assert a.storage.size == 0
-    assert a.edges("Left") == a.edges(0)
-    assert a.edges("Right") == a.edges(1)
-    assert a.edges("Up") == a.edges(2)
-    assert a.edges(0).arrow == False
-    assert a.edges(1).arrow == False
-    assert a.edges(2).arrow == True
+    assert a.edge_by_name("Left") == a.edges[0]
+    assert a.edge_by_name("Right") == a.edges[1]
+    assert a.edge_by_name("Up") == a.edges[2]
+    assert a.edges[0].arrow == False
+    assert a.edges[1].arrow == False
+    assert a.edges[2].arrow == True
 
 
 def test_conversion_scalar():
     a = TAT.Fermi.D.Tensor(2333, ["i", "j"], [-2, +2], [True, False])
     assert a.names == ["i", "j"]
     assert (a.storage == [2333]).all()
-    assert a.edges("i") == a.edges(0)
-    assert a.edges("j") == a.edges(1)
-    assert a.edges(0).arrow == True
-    assert a.edges(1).arrow == False
+    assert a.edge_by_name("i") == a.edges[0]
+    assert a.edge_by_name("j") == a.edges[1]
+    assert a.edges[0].arrow == True
+    assert a.edges[1].arrow == False
 
     assert a.blocks[("i", -2), ("j", +2)].shape == (1, 1)
     assert a.blocks[("j", +2), ("i", -2)].shape == (1, 1)

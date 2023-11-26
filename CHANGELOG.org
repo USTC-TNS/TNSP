@@ -3,10 +3,13 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.11...dev][Unreleased]]
 
 *** Added
++ *TAT.py*: =edges[int]= and =edge_by_name(str)= are the new interface for indexing edges in tensor, the previous
+  interface has been deprecated.
 *** Changed
 + *TAT.hpp*: The names of all inplace functions are renamed with a suffix =_=.
 + *TAT.py*: The names of all inplace functions are renamed with a suffix =_=.
 *** Deprecated
++ *TAT.py*: =edges(str)= and =edges(int)= is deprecated for tensor.
 *** Removed
 + *tetraux*: Package tetraux is removed, because it is useless since ansatz product state removed.
 *** Fixed

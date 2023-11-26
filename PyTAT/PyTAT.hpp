@@ -507,6 +507,28 @@ namespace TAT {
     }
 
     template<typename ScalarType, typename Symmetry>
+    struct edges_of_tensor {
+        py::object tensor;
+
+        edges_of_tensor(py::object& t) : tensor(t) { }
+
+        const auto& edge_by_rank_nodep(Rank index) {
+            auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
+            return t.edges(index);
+        }
+        const auto& edge_by_rank(Rank index) {
+            deprecated("edges(int) is deprecated, use edges[int] instead.");
+            auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
+            return t.edges(index);
+        }
+        const auto& edge_by_name(DefaultName name) {
+            deprecated("edges(str) is deprecated, use edge_by_name(str) instead.");
+            auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
+            return t.edges(name);
+        }
+    };
+
+    template<typename ScalarType, typename Symmetry>
     struct blocks_of_tensor {
         py::object tensor;
 
@@ -548,6 +570,12 @@ namespace TAT {
         using B = blocks_of_tensor<ScalarType, Symmetry>;
         using E = Edge<Symmetry>;
         std::string tensor_name = scalar_short_name + symmetry_short_name;
+
+        using tE = edges_of_tensor<ScalarType, Symmetry>;
+        py::class_<tE>(self_m, "_Edges", "A temperary proxy for tensor edges. After deprecated edges(...) removed, this type could be removed")
+            .def("__getitem__", &tE::edge_by_rank_nodep, py::return_value_policy::reference_internal) // OK
+            .def("__call__", &tE::edge_by_rank, py::return_value_policy::reference_internal) // Deprecated
+            .def("__call__", &tE::edge_by_name, py::return_value_policy::reference_internal); // Deprecated
 
         py::class_<B>(
             self_m,
@@ -599,14 +627,10 @@ namespace TAT {
         // Define tensor function after all tensor has been declared.
         return [=]() mutable {
             tensor_t.def_property_readonly("names", [](const T& tensor) { return tensor.names(); })
+                .def_property_readonly("edges", [](py::object& tensor) { return edges_of_tensor<ScalarType, Symmetry>(tensor); })
                 .def_property_readonly("rank", [](const T& tensor) { return tensor.rank(); })
                 .def(
-                    "edges",
-                    [](const T& tensor, Rank r) -> const E& { return tensor.edges(r); },
-                    py::return_value_policy::reference_internal
-                )
-                .def(
-                    "edges",
+                    "edge_by_name",
                     [](const T& tensor, DefaultName r) -> const E& { return tensor.edges(r); },
                     py::return_value_policy::reference_internal
                 )
