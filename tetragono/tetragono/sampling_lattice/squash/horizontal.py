@@ -41,14 +41,14 @@ def unsquash(new_state, old_state, cut_dimension):
         part2 = old_state[l1, l2 * 2 + 1]
         up_split = []
         if "U" in part1.names:
-            up_split.append(("U1", part1.edges("U").segments))
+            up_split.append(("U1", part1.edge_by_name("U").segments))
         if "U" in part2.names:
-            up_split.append(("U2", part2.edges("U").segments))
+            up_split.append(("U2", part2.edge_by_name("U").segments))
         down_split = []
         if "D" in part1.names:
-            down_split.append(("D1", part1.edges("D").segments))
+            down_split.append(("D1", part1.edge_by_name("D").segments))
         if "D" in part2.names:
-            down_split.append(("D2", part2.edges("D").segments))
+            down_split.append(("D2", part2.edge_by_name("D").segments))
         split_plan = {}
         if up_split:
             split_plan["U"] = up_split
@@ -75,9 +75,9 @@ def unsquash(new_state, old_state, cut_dimension):
     # Update virtual bond
     for l1, l2 in old_state.sites():
         if l1 != old_state.L1 - 1:
-            old_state.virtual_bond[l1, l2, "D"] = old_state[l1, l2].edges("D")
+            old_state.virtual_bond[l1, l2, "D"] = old_state[l1, l2].edge_by_name("D")
         if l2 != old_state.L2 - 1:
-            old_state.virtual_bond[l1, l2, "R"] = old_state[l1, l2].edges("R")
+            old_state.virtual_bond[l1, l2, "R"] = old_state[l1, l2].edge_by_name("R")
     return old_state
 
 
@@ -132,9 +132,9 @@ def squash(old_state):
     # Set virtual bond
     for l1, l2 in new_state.sites():
         if l2 != new_state.L2 - 1:
-            new_state.virtual_bond[l1, l2, "R"] = temporary_lattice[l1][l2].edges("R")
+            new_state.virtual_bond[l1, l2, "R"] = temporary_lattice[l1][l2].edge_by_name("R")
         if l1 != new_state.L1 - 1:
-            new_state.virtual_bond[l1, l2, "D"] = temporary_lattice[l1][l2].edges("D")
+            new_state.virtual_bond[l1, l2, "D"] = temporary_lattice[l1][l2].edge_by_name("D")
     new_state = SamplingLattice(new_state)
     # Set lattice tensor
     for l1, l2 in new_state.sites():

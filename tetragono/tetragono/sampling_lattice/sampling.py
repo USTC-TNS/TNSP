@@ -318,7 +318,7 @@ class DirectSampling(Sampling):
                             f"O{orbit}": "O"
                         })  #
                         .transpose(["I", "O"]))
-                    hole_edge = hole.edges("O")
+                    hole_edge = hole.edge_by_name("O")
                     # Calculate rho for all the segments of the physics edge of this orbit
                     rho = []
                     for seg in hole_edge.segments:

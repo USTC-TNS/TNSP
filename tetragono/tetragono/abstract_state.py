@@ -449,8 +449,8 @@ class AbstractState:
         if {f"{i}" for i in tensor.names} != {f"{i}{j}" for i in ["I", "O"] for j in range(body)}:
             raise ValueError("Wrong hamiltonian name")
         for i in range(body):
-            edge_out = tensor.edges(f"O{i}")
-            edge_in = tensor.edges(f"I{i}")
+            edge_out = tensor.edge_by_name(f"O{i}")
+            edge_in = tensor.edge_by_name(f"I{i}")
             if edge_out != self.physics_edges[points[i]]:
                 raise ValueError("Wrong hamiltonian edge")
             if edge_out.conjugate() != edge_in:

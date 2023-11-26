@@ -786,10 +786,10 @@ class SamplingLattice(AbstractLattice):
             The tensor used to set.
         """
         l1, l2 = l1l2
-        if any(value.edges(f"P{orbit}") != edge for orbit, edge in self.physics_edges[l1, l2].items()):
+        if any(value.edge_by_name(f"P{orbit}") != edge for orbit, edge in self.physics_edges[l1, l2].items()):
             old = value
             value = self.Tensor(old.names, [
-                self.physics_edges[l1, l2, int(name[1:])] if name.startswith("P") else old.edges(name)
+                self.physics_edges[l1, l2, int(name[1:])] if name.startswith("P") else old.edge_by_name(name)
                 for name in old.names
             ]).zero_()
             value += old
@@ -865,7 +865,7 @@ class SamplingLattice(AbstractLattice):
     def _expand_horizontal(self, l1, l2, new_dimension, epsilon):
         left = self[l1, l2]
         right = self[l1, l2 + 1]
-        original_dimension = left.edges("R").dimension
+        original_dimension = left.edge_by_name("R").dimension
         if isinstance(new_dimension, float):
             new_dimension = round(original_dimension * new_dimension)
         if epsilon == 0:
@@ -893,7 +893,7 @@ class SamplingLattice(AbstractLattice):
     def _expand_vertical(self, l1, l2, new_dimension, epsilon):
         up = self[l1, l2]
         down = self[l1 + 1, l2]
-        original_dimension = up.edges("D").dimension
+        original_dimension = up.edge_by_name("D").dimension
         if isinstance(new_dimension, float):
             new_dimension = round(original_dimension * new_dimension)
         if epsilon == 0:
@@ -973,23 +973,23 @@ class SamplingLattice(AbstractLattice):
 
         # AbstractState
         state = AbstractState(type(t_edge_tensor), self.L1, self.L2)
-        [(t_edge_symmetry, _)] = t_edge_tensor.edges("T").segments
+        [(t_edge_symmetry, _)] = t_edge_tensor.edge_by_name("T").segments
         state.total_symmetry = -t_edge_symmetry
         for l1, l2 in self.sites():
             tensor = lattice[l1][l2]
             for name in tensor.names:
                 if name.startswith("P"):
                     orbit = int(name[1:])
-                    state.physics_edges[l1, l2, orbit] = tensor.edges(name)
+                    state.physics_edges[l1, l2, orbit] = tensor.edge_by_name(name)
         state._hamiltonians = hamiltonians
 
         # AbstractLattice
         state = AbstractLattice(state)
         for l1, l2 in self.sites():
             if l1 != 0:
-                state.virtual_bond[l1, l2, "U"] = lattice[l1][l2].edges("U")
+                state.virtual_bond[l1, l2, "U"] = lattice[l1][l2].edge_by_name("U")
             if l2 != 0:
-                state.virtual_bond[l1, l2, "L"] = lattice[l1][l2].edges("L")
+                state.virtual_bond[l1, l2, "L"] = lattice[l1][l2].edge_by_name("L")
 
         # SamplingLattice
         state = SamplingLattice(state)
