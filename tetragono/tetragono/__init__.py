@@ -16,6 +16,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from mpi4py import MPI
+import torch
+
+if torch.cuda.device_count() != 0:
+    torch.set_default_tensor_type(torch.cuda.FloatTensor)
+    torch.cuda.set_device(
+        MPI.COMM_WORLD.Split_type(MPI.COMM_TYPE_SHARED, MPI.COMM_WORLD.Get_rank()).Get_rank() %
+        torch.cuda.device_count())
+
 # States
 from .abstract_state import AbstractState
 from .exact_state import ExactState

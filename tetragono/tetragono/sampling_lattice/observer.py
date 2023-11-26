@@ -102,7 +102,8 @@ class Observer():
             buffer.append(self._whole_result_square_reweight_square[name])
         buffer.append(self._total_imaginary_energy_reweight)
 
-        buffer = np.array(buffer)
+        import torch
+        buffer = torch.tensor(buffer).cpu()
         allreduce_buffer(buffer)
         buffer = buffer.tolist()
 
@@ -663,7 +664,7 @@ class Observer():
         # Both delta and result array is in bra space
         result = []
         for l1, l2 in self.owner.sites():
-            result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).copy().storage)
+            result.append(delta[l1][l2].transpose(self._Delta[l1][l2].names).copy().storage.cpu())
         result = np.concatenate(result)
         return result
 

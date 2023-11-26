@@ -68,10 +68,8 @@ def allreduce_buffer(buffer):
 
 
 def allreduce_iterator_buffer(iterator):
-    requests = []
     for tensor in iterator:
-        requests.append(mpi_comm.Iallreduce(MPI.IN_PLACE, tensor))
-    MPI.Request.Waitall(requests)
+        mpi_comm.Allreduce(MPI.IN_PLACE, tensor)
 
 
 def allreduce_lattice_buffer(lattice):
@@ -92,10 +90,8 @@ def bcast_buffer(buffer, root=0):
 
 
 def bcast_iterator_buffer(iterator, root=0):
-    requests = []
     for tensor in iterator:
-        requests.append(mpi_comm.Ibcast(tensor, root=root))
-    MPI.Request.Waitall(requests)
+        mpi_comm.Bcast(tensor, root=root)
 
 
 def bcast_lattice_buffer(lattice, root=0):
@@ -190,7 +186,7 @@ def lattice_conjugate(tensor):
 
 @np.vectorize
 def lattice_dot(tensor_1, tensor_2):
-    return tensor_1.contract(tensor_2, {(name, name) for name in tensor_1.names}).storage[0]
+    return tensor_1.contract(tensor_2, {(name, name) for name in tensor_1.names}).storage.cpu().item()
 
 
 def lattice_prod_sum(tensors_1, tensors_2):
