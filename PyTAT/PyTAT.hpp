@@ -148,6 +148,7 @@ namespace TAT {
         // define TAT.Fermi.Symmetry as FermiSymmetry in this function
         // it does not define constructor, it is needed to define constructor later
         return py::class_<Symmetry>(symmetry_m, "Symmetry", (std::string(name) + "Symmetry").c_str())
+            .def(py::init<Symmetry>())
             .def(py::self < py::self)
             .def(py::self > py::self)
             .def(py::self <= py::self)
@@ -270,6 +271,7 @@ namespace TAT {
 
         auto result =
             py::class_<E>(symmetry_m, real_edge ? "Edge" : "EdgeSegment", ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
+                .def(py::init<E>())
                 .def(implicit_init<E, Size>(), py::arg("dimension"), "Edge with only one trivial segment")
                 .def_property_readonly("segments", static_cast<const typename E::segments_t& (E::*)() const>(&E::segments))
                 .def_property_readonly("segments_size", &E::segments_size)
@@ -626,7 +628,8 @@ namespace TAT {
 
         // Define tensor function after all tensor has been declared.
         return [=]() mutable {
-            tensor_t.def_property_readonly("names", [](const T& tensor) { return tensor.names(); })
+            tensor_t.def(py::init<T>())
+                .def_property_readonly("names", [](const T& tensor) { return tensor.names(); })
                 .def_property_readonly("edges", [](py::object& tensor) { return edges_of_tensor<ScalarType, Symmetry>(tensor); })
                 .def_property_readonly("rank", [](const T& tensor) { return tensor.rank(); })
                 .def(
