@@ -328,10 +328,7 @@ class AbstractState:
         Symmetry
             The result symmetry object.
         """
-        if isinstance(value, self.Symmetry):
-            return value
-        else:
-            return self.Symmetry(value)
+        return self.Symmetry(value)
 
     @property
     def total_symmetry(self):
@@ -383,10 +380,7 @@ class AbstractState:
         Edge
             The result edge object.
         """
-        if isinstance(value, self.Edge):
-            return value
-        else:
-            return self.Edge(value)
+        return self.Edge(value)
 
     def _construct_physics_edge(self, edge):
         """
