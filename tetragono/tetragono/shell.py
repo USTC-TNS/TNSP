@@ -138,6 +138,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         """
         Exit tetra shell.
         """
+        if mpi_rank == 0:
+            print("EOF")
         return True
 
     def do_exit(self, line):
