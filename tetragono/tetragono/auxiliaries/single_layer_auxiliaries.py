@@ -461,41 +461,7 @@ class SingleLayerAuxiliaries:
 
     @staticmethod
     def _two_line_to_one_line(udlr_name, line_1, line_2, cut, normalize):
-        [up, down, left, right] = udlr_name
-        left1 = left + "1"
-        left2 = left + "2"
-        right1 = right + "1"
-        right2 = right + "2"
-
-        length = len(line_1)
-        if len(line_1) != len(line_2):
-            raise ValueError("Different Length in Two Line to One Line")
-        double_line = []
-        for i in range(length):
-            double_line.append(
-                safe_contract(safe_rename(line_1[i], {
-                    left: left1,
-                    right: right1
-                }), safe_rename(line_2[i], {
-                    left: left2,
-                    right: right2
-                }), {(down, up)}))
-
-        for i in range(length - 1):
-            q, r = double_line[i].qr('r', {r_name for r_name in (right1, right2) if r_name in double_line[i].names},
-                                     right, left)
-            double_line[i] = q
-            double_line[i + 1] = safe_contract(double_line[i + 1], r, {(left1, right1), (left2, right2)})
-
-        for i in reversed(range(1, length)):
-            [u, s, v] = double_line[i].svd({left}, right, left, left, right, cut)
-            if normalize:
-                s /= s.norm_2()
-            double_line[i] = v
-            double_line[i - 1] = safe_contract(safe_contract(double_line[i - 1], u, {(right, left)}), s,
-                                               {(right, left)})
-
-        return double_line
+        return _two_line_to_one_line_impl(udlr_name, line_1, line_2, cut, normalize)
 
     def replace(self, replacement, *, hint=None):
         if len(replacement) == 0:
@@ -810,3 +776,105 @@ class SingleLayerAuxiliaries:
                     return result
 
         raise NotImplementedError("Unsupported auxilary hole style")
+
+
+import torch
+from tat import Edge, Tensor
+
+
+def unpack_edge(edge):
+    return list(edge.fermion), list(edge.dtypes), list(edge.symmetry), edge.dimension, edge.arrow, edge.parity
+
+
+def unpack_tensor(tensor):
+    return (
+        list(tensor.fermion),
+        list(tensor.dtypes),
+        list(tensor.names),
+        [unpack_edge(edge) for edge in tensor.edges],
+        tensor.data,
+        tensor.mask,
+    )
+
+
+def unpack_line(line):
+    return tuple(unpack_tensor(tensor) for tensor in line)
+
+
+def pack_edge(pack):
+    fermion, dtypes, symmetry, dimension, arrow, parity = pack
+    return Edge(fermion=tuple(fermion),
+                dtypes=tuple(dtypes),
+                symmetry=tuple(symmetry),
+                dimension=dimension,
+                arrow=arrow,
+                parity=parity)
+
+
+def pack_tensor(pack):
+    fermion, dtypes, names, unpacked_edges, data, mask = pack
+    return Tensor(fermion=tuple(fermion),
+                  dtypes=tuple(dtypes),
+                  names=tuple(names),
+                  edges=tuple(pack_edge(edge) for edge in unpacked_edges),
+                  data=data,
+                  mask=mask)
+
+
+def pack_line(pack):
+    return [pack_tensor(tensor) for tensor in pack]
+
+
+def _two_line_to_one_line_impl(udlr_name, line_1, line_2, cut, normalize, traced_pool={}):
+    unpacked_1 = unpack_line(line_1)
+    unpacked_2 = unpack_line(line_2)
+    param = (udlr_name, unpacked_1, unpacked_2, cut, normalize)
+    if (udlr_name, cut, normalize) not in traced_pool:
+        traced_pool[udlr_name, cut, normalize] = torch.jit.trace(_kernel, param)
+    result = traced_pool[udlr_name, cut, normal](param)
+    return pack_line(result)
+
+
+def _kernel(
+    udlr_name: str,
+    unpacked_1: list[tuple[list[bool], list[torch.dtype], list[str], list[tuple[list[bool], list[torch.dtype], list[torch.Tensor], int, bool, torch.Tensor]], torch.Tensor, torch.Tensor]],
+    unpacked_2: list[tuple[list[bool], list[torch.dtype], list[str], list[tuple[list[bool], list[torch.dtype], list[torch.Tensor], int, bool, torch.Tensor]], torch.Tensor, torch.Tensor]],
+    cut: int,
+    normalize: bool,
+):
+    line_1 = pack_line(unpacked_1)
+    line_2 = pack_line(unpacked_2)
+    [up, down, left, right] = udlr_name
+    left1 = left + "1"
+    left2 = left + "2"
+    right1 = right + "1"
+    right2 = right + "2"
+
+    length = len(line_1)
+    if len(line_1) != len(line_2):
+        raise ValueError("Different Length in Two Line to One Line")
+    double_line = []
+    for i in range(length):
+        double_line.append(
+            safe_contract(safe_rename(line_1[i], {
+                left: left1,
+                right: right1
+            }), safe_rename(line_2[i], {
+                left: left2,
+                right: right2
+            }), {(down, up)}))
+
+    for i in range(length - 1):
+        q, r = double_line[i].qr('r', {r_name for r_name in (right1, right2) if r_name in double_line[i].names}, right,
+                                 left)
+        double_line[i] = q
+        double_line[i + 1] = safe_contract(double_line[i + 1], r, {(left1, right1), (left2, right2)})
+
+    for i in reversed(range(1, length)):
+        [u, s, v] = double_line[i].svd({left}, right, left, left, right, cut)
+        if normalize:
+            s /= s.norm_2()
+        double_line[i] = v
+        double_line[i - 1] = safe_contract(safe_contract(double_line[i - 1], u, {(right, left)}), s, {(right, left)})
+
+    return unpack_line(double_line)
