@@ -13,6 +13,9 @@
 + *TAT.py*: =edges(str)= and =edges(int)= is deprecated for tensor.
 *** Removed
 + *tetraux*: Package tetraux is removed, because it is useless since ansatz product state removed.
++ *tetragono*: =gm_bin_run= and =gm_alpha= are removed. =gm_bin_run= is removed since it only works for sweep sampling,
+  but there is a better way to do so: sampling multiple Markov Chain in the same process. =gm_alpha= is removed since
+  user should set attribute of the state manually instead.
 *** Fixed
 + *TAT.hpp*: Fix type mutability information in declaration of LAPACK function =?gesvd=.
 

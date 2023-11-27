@@ -395,54 +395,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         return expect, deviation / ((length - 1)**(1 / 2))
 
     @AutoCmd.decorator
-    def gm_bin_run(self, bin_number, sampling_total_step, *args, first=[True], **kwargs):
-        """
-        Measure with bin error estimation.
-        """
-        if first[0]:
-            showln("gm_bin_run is experiment feature, which may be changed or removed in the future.")
-            first[0] = False
-        sampling_total_steps = [sampling_total_step // bin_number for _ in range(bin_number)]
-        difference = sampling_total_step - sum(sampling_total_steps)
-        for i in range(difference):
-            sampling_total_steps[i] += 1
-
-        results = [self.gm_run(bin_total_step, 0, 0, *args, **kwargs) for bin_total_step in sampling_total_steps]
-        example_whole, example = results[0]
-        result_whole = {name: self.bin_estimate(r[0][name] for r in results) for name in example_whole}
-        result = {
-            name: {
-                positions: self.bin_estimate(r[1][name][positions] for r in results) for positions in mapping
-            } for name, mapping in example.items()
-        }
-        return result_whole, result
-
-    @AutoCmd.decorator
-    def gm_alpha(self, alpha=None, first=[True]):
-        """
-        Set alpha for sampling method.
-
-        Parameters
-        ----------
-        alpha : float, optional
-            The new alpha to be set.
-
-        Returns
-        -------
-        float
-            The previous alpha.
-        """
-        if first[0]:
-            showln("gm_alpha is experiment feature, this interface will be removed in the future.")
-            showln("new interface is to use app.gm.attribute['alpha']=0.5, for alpha=0.5 as example")
-            showln("please update your code as soon as possible.")
-            first[0] = False
-        result = self.gm.attribute.get("alpha", 1)
-        if alpha is not None:
-            self.gm.attribute["alpha"] = alpha
-        return result
-
-    @AutoCmd.decorator
     def gm_dump(self, name):
         """
         Dump the sampling lattice into file.
@@ -698,6 +650,3 @@ else:
     gm_clear_symmetry = app.gm_clear_symmetry
 
     gm_run_g = app.gm_run_g
-
-    gm_bin_run = app.gm_bin_run
-    gm_alpha = app.gm_alpha
