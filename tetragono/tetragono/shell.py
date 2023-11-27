@@ -376,15 +376,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
     @AutoCmd.decorator
     def gm_run(self, *args, **kwargs):
-        """
-        Do gradient descent. see sampling_lattice/gradient.py for details.
-        """
         for result in self.gm_run_g(*args, **kwargs):
             pass
         return result
 
     def gm_run_g(self, *args, **kwargs):
         yield from gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
+
+    gm_run.__doc__ = gm_run_g.__doc__ = gm_gradient_descent.__doc__
 
     def bin_estimate(self, values):
         value = [v for v, d in values]

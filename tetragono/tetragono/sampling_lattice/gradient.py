@@ -138,6 +138,130 @@ def gradient_descent(
         check_difference_delta=1e-8,
         # About Measurement
         measurement=None):
+    """
+    Gradient method on sampling lattice.
+
+    Parameters
+    ----------
+    state : SamplingLattice
+        The sampling lattice to do gradient descent, if the function is invoked from gm_run(_g) interface, this
+        parameter should be omitted.
+    sampling_total_step : int, default=0
+        The sampling total step at each gradient descent step, if the sampling method is set to ergodic method, this
+        parameter will be ignored.
+    grad_total_step : int, default=1
+        The gradient descent step. If user pass 0 to this parameter, it will be set as 1 again.
+    grad_step_size : float, default=0
+        The gradient descent step size. it is the absolute step size of the gradient descent, if
+        `use_fix_relative_step_size` is set to True, and is the relative step size if that is set to False.
+
+    # About observer
+    cache_configuration : bool | "drop", default=False
+        Whether to cache the auxiliary tensors of configurations. If it is True, all auxiliary tensors would be saved
+        during single gradient descent step. If it is "drop", all auxiliary tensors would be saved during single
+        sampling observation. If it is False, program could not measure long range observables.
+    classical_energy : Callable | str | None, default=None:
+        A module name or function defines the classical energy shift. It accepts configuration and returns a float as
+        energy shift.
+
+    # About sampling
+    sampling_method : "direct" | "sweep" | "ergodic", default="direct"
+        The sampling method, which could be one of direct, sweep and ergodic.
+    configuration_cut_dimension : int | None, default=None
+        The dimension cut in two line to one line step. If it is left default None, programs will break if the program
+        try to calculate two line to one line.
+    direct_sampling_cut_dimension : int, default=4
+        The dimension cut in estimating environment during direct sampling.
+    sampling_configurations : object, default=zero_configuration
+        The initial configuration used in sweep sampling methods. All sampling methods will save the last configuration
+        into this sampling_configurations variable. If the function is invoked from gm_run(_g) interface, this parameter
+        should be omitted.
+    sweep_hopping_hamiltonians : Callable | str | None, default=None
+        The module name or function that set the sweep hopping hamiltonians. It accepts state and return a dictionary
+        representing hamiltonians as dict[tuple[tuple[int, int, int], ...], Tensor]. If it is left as None, the
+        hamiltonians of the state itself will be used.
+
+    # About subspace
+    restrict_subspace : Callable | str | None, default=None
+        The restrict subspace during sampling configurations. It causes low efficient except for sweep sampling. Please
+        notice that for sweep sampling, subspace restricting chould be achieved by setting proper sweep hopping
+        hamiltonians sometimes, so maybe there is no need to set this parameter.
+
+    # About gradient method
+    use_check_difference : bool, default=False
+        Check the gradient with numeric difference. WARNING: do not enable it unless you know what you are doing, this
+        option is used for internal debugging.
+    use_line_search : bool, default=False
+        Whether to deploy line search, if it is enabled, `use_fix_relative_step_size` will be set to True forcely,
+        `momentum_parameter` and `use_random_gradient` will be ignored.
+    use_fix_relative_step_size : bool, default=False
+        Whether to use relative step size or absoluate step size in gradient descent. This option will be set to True
+        forcely if line search enabled.
+    use_random_gradient : bool, default=False
+        Whether to use only the sign of the gradient but replace the absolute value as random numbers in uniform
+        distribution between 0 and 1. After the absolute value reconstructed, relative or absoluate step size will be
+        multipled on it. This parameter will be ignored if line search enabled.
+    momentum_parameter : float, default=0.0
+        Whether to deply momentum between gradient descent steps. The real update x will be `x' * p + g * (1-p)` where p
+        is this `momentum_parameter`, x' is the real update in the last step, and g is the gradient. This parameter will
+        be ignored if line search enabled.
+
+    # About natural gradient
+    use_natural_gradient : bool, default=False
+        Whether to enable natural gradient instead of trivial gradient.
+    conjugate_gradient_method_step : int, default=20
+        The max step in conjugate gradient method which calculates naturual gradient. If it is set to -1, there is no
+        step limit.
+    conjugate_gradient_method_error : float, default=0.0
+        The error tolerance in conjugate gradient method which calculates natural gradient. CG will break if step limit
+        reached or error tolerance achieved.
+    cache_natural_delta : str | None, default=None
+        Whether to cache delta used in natural gradient. If it is left default None, all delta will be saved in memory
+        during single gradient descent step. If it is set to a string, it means file path, all delta will be saved to
+        file first during sampling configurations, and read it back when calculating natural gradient.
+    use_natural_gradient_by_direct_pseudo_inverse : bool, default=False
+        Whether to use pseudo inverse directly instead of conjugate method when calculating natural gradient.
+    scalapack_libraries : str, default="libscalapack.so"
+        The scalapack library path used in pseudo inverse for calculating natural gradient.
+    natural_gradient_r_pinv : float, default=1e-12
+        The r_pinv used in pseudo inverse for calculating natural gradient.
+    natural_gradient_a_pinv : float, default=0
+        The a_pinv used in pseudo inverse for calculating natural gradient.
+
+    # About gauge fixing
+    fix_gauge : bool, default=False
+        Whether to fix gauge of tensor network between every gradient descent steps.
+
+    # About log and save state
+    log_file : str, default=None
+        The energy log file path during gradient descent.
+    save_state_file : str, default=None
+        The state data file path during gradient descent.
+    save_configuration_file : str, default=None
+        The configuration data file path during gradient descent.
+
+    # About line search
+    line_search_amplitude : float, default=1.2
+        The amplitude used in line search
+    line_search_parameter : float, default=0.6
+        The parameter used in line search
+
+    # About momentum
+    orthogonalize_momentum : bool, default=False
+        Whether to orthogonalize the momentum before calculating the real update.
+
+    # About check difference
+    check_difference_delta : float, default=1e-8
+        The parameter used in check difference.
+
+    # About Measurement
+    measurement : str | Callable | list[str | Callable] | None, default=None
+        The list or one of the module name or function that defines the observables which should be measured during
+        sampling configurations. If it is module, the function `save_result` in the same module will be called with
+        measurement result after measured. If it is callable directly, the only way to retrieve the result is to get the
+        yield result of this function. To get the yield result, consider using `gm_run_g` instead if you are using
+        `gm_run`.
+    """
 
     time_str = datetime.now().strftime("%Y-%m-%d-%H:%M:%S")
 
