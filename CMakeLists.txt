@@ -20,7 +20,7 @@ endif()
 # CMAKE_BUILD_TYPE, CMAKE_CXX_FLAGS
 # TAT_USE_MPI, TAT_MATH_LIBRARIES, BLA_VENDOR, BLA_STATIC
 # PYBIND11_PYTHON_VERSION, PYTHON_EXECUTABLE
-# TAT_BUILD_PYTAT, TAT_BUILD_TEST
+# TAT_BUILD_PYTAT, TAT_BUILD_TETRAUX, TAT_BUILD_TEST
 
 # Add TAT target
 set(TAT_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -80,6 +80,13 @@ if(TAT_BUILD_PYTAT AND TAT_PYBIND11_FOUND)
   target_link_libraries(PyTAT PRIVATE TAT)
   target_include_directories(PyTAT PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/PyTAT)
   set_target_properties(PyTAT PROPERTIES OUTPUT_NAME TAT)
+endif()
+
+# tetraux
+option(TAT_BUILD_TETRAUX "Build tetraux" ON)
+if(TAT_BUILD_TETRAUX AND TAT_PYBIND11_FOUND)
+  pybind11_add_module(tetraux ${CMAKE_CURRENT_SOURCE_DIR}/tetraux/tetraux.cpp)
+  target_compile_features(tetraux PRIVATE cxx_std_17)
 endif()
 
 # Add test

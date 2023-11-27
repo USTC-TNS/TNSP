@@ -57,7 +57,7 @@ class build_ext(build_ext_original):
             "-DTAT_USE_MPI=" + "OFF",
             "-DCMAKE_CXX_FLAGS=" + "-DTAT_VERSION=" + "\\\"" + version + "\\\"",
             "-DPYTHON_EXECUTABLE=" + sys.executable,
-            "-DTAT_BUILD_TETRAUX=" + "OFF",
+            "-DTAT_BUILD_PYTAT=" + "OFF",
             "-DTAT_BUILD_TEST=" + "OFF",
         ]
         if "CMAKEFLAGS" in os.environ:
@@ -81,19 +81,16 @@ except FileNotFoundError:
     long_description = "empty description"
 
 setup(
-    name="PyTAT",
+    name="tetraux",
     version=version,
-    description="python binding for TAT(TAT is A Tensor library)",
+    description="tetraux contains some auxiliary function and class used by tetragono.",
     author="Hao Zhang",
     author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/USTC-TNS/TAT/tree/TAT/PyTAT",
-    ext_modules=[CMakeExtension("PyTAT")],
+    url="https://github.com/USTC-TNS/TAT/tree/TAT/tetraux",
+    ext_modules=[CMakeExtension("tetraux")],
     cmdclass={
         'build_ext': build_ext,
     },
-    install_requires=[
-        "numpy",
-    ],
     license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
