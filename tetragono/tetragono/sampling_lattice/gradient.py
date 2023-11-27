@@ -23,6 +23,8 @@ import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
 from ..utility import (show, showln, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize, write_to_file,
                        get_imported_function, restrict_wrapper, bcast_number, write_configurations)
+from ..conversion import simple_update_lattice_to_sampling_lattice
+from .lattice import Configuration
 
 
 def check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta):
@@ -106,6 +108,7 @@ def gradient_descent(
         direct_sampling_cut_dimension=4,
         sampling_configurations=np.zeros(0, dtype=np.int64),
         sweep_hopping_hamiltonians=None,
+        sampling_state=None,
         # About subspace
         restrict_subspace=None,
         # About gradient method
@@ -324,6 +327,9 @@ def gradient_descent(
             classical_energy=classical_energy,
         )
 
+    if sampling_state is None:
+        sampling_state = state
+
     # Main loop
     with SignalHandler(signal.SIGINT) as sigint_handler:
         for grad_step in range(grad_total_step):
@@ -332,21 +338,26 @@ def gradient_descent(
             # Sampling and observe
             with seed_differ, observer:
                 # Sampling method
+                if not isinstance(sampling_state, SamplingLattice):
+                    state_in_sampling = simple_update_lattice_to_sampling_lattice(sampling_state)
+                else:
+                    state_in_sampling = sampling_state
                 if sampling_method == "sweep":
                     if sweep_hopping_hamiltonians is not None:
                         hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians,
                                                                      "hopping_hamiltonians")(state)
                     else:
                         hopping_hamiltonians = None
-                    sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
+                    sampling = SweepSampling(state_in_sampling, configuration_cut_dimension, restrict,
+                                             hopping_hamiltonians)
                     sampling_total_step = sampling_total_step
                     # Initial sweep configuration
                     sampling.configuration.import_configuration(sampling_configurations)
                 elif sampling_method == "ergodic":
-                    sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
+                    sampling = ErgodicSampling(state_in_sampling, configuration_cut_dimension, restrict)
                     sampling_total_step = sampling.total_step
                 elif sampling_method == "direct":
-                    sampling = DirectSampling(state, configuration_cut_dimension, restrict,
+                    sampling = DirectSampling(state_in_sampling, configuration_cut_dimension, restrict,
                                               direct_sampling_cut_dimension)
                     sampling_total_step = sampling_total_step
                 else:
@@ -355,6 +366,11 @@ def gradient_descent(
                 for sampling_step in range(sampling_total_step):
                     if sampling_step % mpi_size == mpi_rank:
                         possibility, configuration = sampling()
+                        if sampling_state is not state:
+                            old_configuration = configuration
+                            configuration = Configuration(state, configuration_cut_dimension)
+                            for [l1, l2, orbit], _ in state.physics_edges:
+                                configuration[l1, l2, orbit] = old_configuration[l1, l2, orbit]
                         observer(possibility, configuration)
                         if need_energy_observer:
                             configuration_pool.append((possibility, configuration))

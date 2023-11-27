@@ -30,6 +30,7 @@ from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration as gm_Configuration, SweepSampling
 from .sampling_lattice.gradient import gradient_descent as gm_gradient_descent
+from .conversion import simple_update_lattice_to_sampling_lattice
 
 
 class Config():
@@ -528,7 +529,12 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
     @AutoCmd.decorator
-    def gm_conf_eq(self, step, configuration_cut_dimension, sweep_hopping_hamiltonians=None, restrict_subspace=None):
+    def gm_conf_eq(self,
+                   step,
+                   configuration_cut_dimension,
+                   sweep_hopping_hamiltonians=None,
+                   restrict_subspace=None,
+                   sampling_state=None):
         """
         Equilibium the configuration of sampling lattice.
 
@@ -546,6 +552,12 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         with seed_differ:
             state = self.gm
             sampling_configurations = self.gm_conf
+            if sampling_state is None:
+                sampling_state = state
+            if not isinstance(sampling_state, SamplingLattice):
+                state_in_sampling = simple_update_lattice_to_sampling_lattice(sampling_state)
+            else:
+                state_in_sampling = sampling_state
             # Restrict subspace
             if restrict_subspace is not None:
                 origin_restrict = get_imported_function(restrict_subspace, "restrict")
@@ -557,7 +569,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
                 hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians, "hopping_hamiltonians")(state)
             else:
                 hopping_hamiltonians = None
-            sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
+            sampling = SweepSampling(state_in_sampling, configuration_cut_dimension, restrict, hopping_hamiltonians)
             # Initial sweep configuration
             sampling.configuration.import_configuration(sampling_configurations)
             # Equilibium
