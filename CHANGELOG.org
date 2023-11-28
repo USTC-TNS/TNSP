@@ -6,6 +6,7 @@
 + *TAT.py*: =edges[int]= and =edge_by_name(str)= are the new interface for indexing edges in tensor, the previous
   interface has been deprecated.
 + *TAT.py*: Add copy constructor for =Symmetry=, =Edge= and =Tensor=.
++ *tetragono*: Add an internal option =use_mpi_io= to toggle whether to use mpi io when read/write configurations.
 *** Changed
 + *TAT.hpp*: The names of all inplace functions are renamed with a suffix =_=.
 + *TAT.py*: The names of all inplace functions are renamed with a suffix =_=.
