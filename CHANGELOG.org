@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TAT/compare/v0.3.11...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.12...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TAT/compare/v0.3.11...v0.3.12][v0.3.12]] - 2023-11-29
 
 *** Added
 + *TAT.py*: =edges[int]= and =edge_by_name(str)= are the new interface for indexing edges in tensor, the previous
