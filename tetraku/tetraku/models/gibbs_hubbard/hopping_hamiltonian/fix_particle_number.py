@@ -33,6 +33,7 @@ def hopping_hamiltonians(state):
 
     CSCS = tet.common_tensor.Parity_Hubbard.CSCS.to(float)
     CSCS_double_side = [CSCS, half_reverse(CSCS.conjugate())]
+    CSCSCSCS = kronecker_product(rename_io(CSCS_double_side[0], [0, 1]), rename_io(CSCS_double_side[1], [2, 3]))
 
     for l1, l2 in state.sites():
         for layer in range(2):
@@ -41,4 +42,9 @@ def hopping_hamiltonians(state):
                 hamiltonians[(l1 - 1, l2, layer), (l1, l2, layer)] = CSCS_double_side[layer]
             if l2 != 0:
                 hamiltonians[(l1, l2 - 1, layer), (l1, l2, layer)] = CSCS_double_side[layer]
+        # Sometimes maybe two particles in each layer hopping in the same time.
+        if l1 != 0:
+            hamiltonians[(l1 - 1, l2, 0), (l1, l2, 0), (l1 - 1, l2, 1), (l1, l2, 1)] = CSCSCSCS
+        if l2 != 0:
+            hamiltonians[(l1, l2 - 1, 0), (l1, l2, 0), (l1, l2 - 1, 1), (l1, l2, 1)] = CSCSCSCS
     return hamiltonians

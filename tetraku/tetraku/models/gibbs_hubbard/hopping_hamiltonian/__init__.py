@@ -25,7 +25,7 @@ from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product,
 
 def hopping_hamiltonians(state):
     # This hopping hamiltonian restrict nothing but ensure the result is valid density matrix,
-    # Since the only interlayer term is c_u c_u and c_d c_d for spin up or spin down (two operators belong to two layers).
+    # Since the only interlayer term is c+ c+ and c c for spin up or spin down (two operators belong to two layers).
 
     # Two part, normal Hamiltonian and hopping between subspace
     hamiltonians = {}
