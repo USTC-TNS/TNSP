@@ -35,7 +35,7 @@ class Observer():
         "_restrict_subspace", "_classical_energy", "_start", "_result_reweight", "_result_reweight_square",
         "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square", "_total_log_ws",
         "_whole_result_reweight", "_whole_result_reweight_square", "_whole_result_square_reweight_square",
-        "_total_imaginary_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_pool"
+        "_total_imaginary_energy_reweight", "_Delta", "_EDelta", "_Deltas", "_pool", "_total_energy_square"
     ]
 
     def __enter__(self):
@@ -62,6 +62,7 @@ class Observer():
         self._total_weight = 0.0
         self._total_weight_square = 0.0
         self._total_log_ws = 0.0
+        self._total_energy_square = 0.0
         self._whole_result_reweight = {name: 0.0 for name in self._observer}
         self._whole_result_reweight_square = {name: 0.0 for name in self._observer}
         self._whole_result_square_reweight_square = {name: 0.0 for name in self._observer}
@@ -96,6 +97,7 @@ class Observer():
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
         buffer.append(self._total_log_ws)
+        buffer.append(self._total_energy_square)
         for name in self._observer:
             buffer.append(self._whole_result_reweight[name])
             buffer.append(self._whole_result_reweight_square[name])
@@ -111,6 +113,7 @@ class Observer():
             self._whole_result_square_reweight_square[name] = buffer.pop()
             self._whole_result_reweight_square[name] = buffer.pop()
             self._whole_result_reweight[name] = buffer.pop()
+        self._total_energy_square = buffer.pop()
         self._total_log_ws = buffer.pop()
         self._total_weight_square = buffer.pop()
         self._total_weight = buffer.pop()
@@ -185,6 +188,7 @@ class Observer():
         self._total_weight = None  # float
         self._total_weight_square = None
         self._total_log_ws = None
+        self._total_energy_square = None
         self._whole_result_reweight = None
         self._whole_result_reweight_square = None
         self._whole_result_square_reweight_square = None
@@ -396,6 +400,7 @@ class Observer():
             if name == "energy":
                 self._total_imaginary_energy_reweight += whole_name_value.imag * reweight
                 # Es should be complex here when calculating gradient
+                self._total_energy_square += abs(whole_name_value)**2 * reweight
             if name == "energy" and self._enable_gradient:
                 Es = whole_name_value
                 if self.owner.Tensor.is_real:
@@ -537,6 +542,21 @@ class Observer():
         expect, deviation = self.total_energy
         site_number = self.owner.site_number
         return expect / site_number, deviation / site_number
+
+    @property
+    def variance_of_energy(self):
+        """
+        Get the variance of the local energy, aka: var = <H^2> - <H>^2.
+
+        Returns
+        -------
+        float
+            The variance of the local energy.
+        """
+        energy = self._total_energy_with_imaginary_part()
+        return self._total_energy_square - abs(energy) ** 2
+    
+
 
     @property
     def gradient(self):
