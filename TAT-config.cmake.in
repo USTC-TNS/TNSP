@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.8)
 add_library(TAT INTERFACE)
 target_include_directories(TAT INTERFACE @TAT_INCLUDE_PATH@)
 
+# cuda
+find_package(CUDA)
+target_include_directories(TAT INTERFACE ${CUDA_INCLUDE_DIRS})
+target_link_libraries(TAT INTERFACE ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY})
+
 # std=c++17
 target_compile_features(TAT INTERFACE cxx_std_17)
 

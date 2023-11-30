@@ -29,6 +29,7 @@
 #include <vector>
 
 #include "../utility/allocator.hpp"
+#include "../utility/cuda_allocator.hpp"
 #include "../utility/multidimension_span.hpp"
 #include "edge.hpp"
 
@@ -55,13 +56,13 @@ namespace TAT {
         mdspan<std::optional<mdspan<scalar_t>>> m_blocks;
 
         std::vector<std::optional<mdspan<scalar_t>>> m_pool;
-        no_initialize::vector<scalar_t> m_storage;
+        cuda::vector<scalar_t> m_storage;
 
       public:
-        const no_initialize::vector<scalar_t>& storage() const {
+        const cuda::vector<scalar_t>& storage() const {
             return m_storage;
         }
-        no_initialize::vector<scalar_t>& storage() {
+        cuda::vector<scalar_t>& storage() {
             return m_storage;
         }
         const std::vector<edge_t>& edges() const {

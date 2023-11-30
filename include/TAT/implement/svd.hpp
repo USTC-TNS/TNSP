@@ -23,6 +23,8 @@
 
 #include <variant>
 
+#include <cusolverDn.h>
+
 #include "../structure/tensor.hpp"
 #include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
@@ -101,89 +103,54 @@ namespace TAT {
     inline timer svd_kernel_guard("svd_kernel");
 
     namespace detail {
+
+        inline auto svd_handle() {
+            static cusolverDnHandle_t* handle = nullptr;
+            if (!handle) {
+                handle = new cusolverDnHandle_t();
+                cusolverDnCreate(handle);
+            }
+            return handle;
+        }
+
+        template<typename ScalarType>
+        constexpr auto cuda_gesvd_buffersize = nullptr;
+        template<>
+        inline constexpr auto cuda_gesvd_buffersize<float> = cusolverDnSgesvd_bufferSize;
+        template<>
+        inline constexpr auto cuda_gesvd_buffersize<double> = cusolverDnDgesvd_bufferSize;
+        template<>
+        inline constexpr auto cuda_gesvd_buffersize<std::complex<float>> = cusolverDnCgesvd_bufferSize;
+        template<>
+        inline constexpr auto cuda_gesvd_buffersize<std::complex<double>> = cusolverDnZgesvd_bufferSize;
+
+        template<typename ScalarType>
+        constexpr auto cuda_gesvd = nullptr;
+        template<>
+        inline constexpr auto cuda_gesvd<float> = cusolverDnSgesvd;
+        template<>
+        inline constexpr auto cuda_gesvd<double> = cusolverDnDgesvd;
+        template<>
+        inline constexpr auto cuda_gesvd<std::complex<float>> = cusolverDnCgesvd;
+        template<>
+        inline constexpr auto cuda_gesvd<std::complex<double>> = cusolverDnZgesvd;
+
         template<typename ScalarType>
         void
-        calculate_svd_kernel(const int& m, const int& n, const int& min, ScalarType* a, ScalarType* u, real_scalar<ScalarType>* s, ScalarType* vt);
-
-        template<>
-        inline void calculate_svd_kernel<float>(const int& m, const int& n, const int& min, float* a, float* u, float* s, float* vt) {
-            int result;
-            const int lwork_query = -1;
-            float float_lwork;
-            sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, &result);
+        calculate_svd_kernel(const int& m, const int& n, const int& min, ScalarType* a, ScalarType* u, real_scalar<ScalarType>* s, ScalarType* vt) {
+            int lwork;
+            cuda_gesvd_buffersize<ScalarType>(*svd_handle(), n, m, &lwork);
+            cudaDeviceSynchronize();
+            ScalarType* work;
+            cudaMalloc(&work, sizeof(ScalarType) * lwork);
+            cudaDeviceSynchronize();
+            int result = 0;
+            cuda_gesvd<ScalarType>(*svd_handle(), 'S', 'S', n, m, a, n, s, vt, n, u, min, work, lwork, 0, &result);
+            cudaDeviceSynchronize();
+            cudaFree(work);
             if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-            const int lwork = int(float_lwork);
-            auto work = no_initialize::pmr::vector<float>(lwork);
-            sgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
-            if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-        }
-        template<>
-        inline void calculate_svd_kernel<double>(const int& m, const int& n, const int& min, double* a, double* u, double* s, double* vt) {
-            int result;
-            const int lwork_query = -1;
-            double float_lwork;
-            dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, &result);
-            if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-            const int lwork = int(float_lwork);
-            auto work = no_initialize::pmr::vector<double>(lwork);
-            dgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, &result);
-            if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-        }
-        template<>
-        inline void calculate_svd_kernel<std::complex<float>>(
-            const int& m,
-            const int& n,
-            const int& min,
-            std::complex<float>* a,
-            std::complex<float>* u,
-            float* s,
-            std::complex<float>* vt
-        ) {
-            int result;
-            auto rwork = no_initialize::pmr::vector<float>(5 * min);
-            const int lwork_query = -1;
-            std::complex<float> float_lwork;
-            cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
-            if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-            const int lwork = int(float_lwork.real());
-            auto work = no_initialize::pmr::vector<std::complex<float>>(lwork);
-            cgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
-            if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-        }
-        template<>
-        inline void calculate_svd_kernel<std::complex<double>>(
-            const int& m,
-            const int& n,
-            const int& min,
-            std::complex<double>* a,
-            std::complex<double>* u,
-            double* s,
-            std::complex<double>* vt
-        ) {
-            int result;
-            auto rwork = no_initialize::pmr::vector<double>(5 * min);
-            const int lwork_query = -1;
-            std::complex<double> float_lwork;
-            zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, &float_lwork, &lwork_query, rwork.data(), &result);
-            if (result != 0) {
-                detail::what_if_lapack_error("Error in GESVD");
-            }
-            const int lwork = int(float_lwork.real());
-            auto work = no_initialize::pmr::vector<std::complex<double>>(lwork);
-            zgesvd_("S", "S", &n, &m, a, &n, s, vt, &n, u, &min, work.data(), &lwork, rwork.data(), &result);
-            if (result != 0) {
+                std::cerr << result << " " << lwork << "\n";
+                std::cerr << n << " " << m << "\n";
                 detail::what_if_lapack_error("Error in GESVD");
             }
         }
@@ -193,9 +160,9 @@ namespace TAT {
             auto kernel_guard = svd_kernel_guard();
             // after testing: m>n is better than m<n and false, true is obviously worse
             if (m > n) {
-                auto new_a = no_initialize::pmr::vector<ScalarType>(n * m);
-                auto old_u = no_initialize::pmr::vector<ScalarType>(n * min);
-                auto old_vt = no_initialize::pmr::vector<ScalarType>(min * m);
+                auto new_a = cuda::vector<ScalarType>(n * m);
+                auto old_u = cuda::vector<ScalarType>(n * min);
+                auto old_vt = cuda::vector<ScalarType>(min * m);
                 // new_a = a^T
                 // u s vt = a
                 // vt^T s u^T = a^T
@@ -397,7 +364,7 @@ namespace TAT {
         auto tensor_2 = Tensor<ScalarType, Symmetry, Name>{
             put_v_right ? std::vector<Name>{common_name_v, InternalName<Name>::SVD_V} : std::vector<Name>{common_name_u, InternalName<Name>::SVD_U},
             {std::move(common_edge_segments_2), tensor_merged.edges(1)}};
-        auto result_s = pmr::list<std::pair<Symmetry, pmr::vector<real_scalar<ScalarType>>>>(); // use list for easy delete
+        auto result_s = pmr::list<std::pair<Symmetry, cuda::vector<real_scalar<ScalarType>>>>(); // use list for easy delete
         // const auto& edge_common_1 = tensor_1.edges(1);
         const auto& edge_common_2 = tensor_2.edges(0);
 
@@ -417,7 +384,7 @@ namespace TAT {
             auto* data_2 = tensor_2.blocks(pmr::vector<Size>{position_common, position_1_input}).data();
             auto* data = tensor_merged.blocks(pmr::vector<Size>{position_0_input, position_1_input}).data();
 
-            auto s = pmr::vector<real_scalar<ScalarType>>(k);
+            auto s = cuda::vector<real_scalar<ScalarType>>(k);
             auto* data_s = s.data();
 
             if (m * n != 0) {

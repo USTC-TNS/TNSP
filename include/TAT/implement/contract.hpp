@@ -21,6 +21,8 @@
 #ifndef TAT_CONTRACT_HPP
 #define TAT_CONTRACT_HPP
 
+#include <cublas_v2.h>
+
 #include "../structure/tensor.hpp"
 #include "../utility/allocator.hpp"
 #include "../utility/timer.hpp"
@@ -90,17 +92,86 @@ extern "C" {
 
 namespace TAT {
     namespace detail {
+        // template<typename ScalarType>
+        // constexpr auto gemm = nullptr;
+
+        // template<>
+        // inline constexpr auto gemm<float> = sgemm_;
+        // template<>
+        // inline constexpr auto gemm<double> = dgemm_;
+        // template<>
+        // inline constexpr auto gemm<std::complex<float>> = cgemm_;
+        // template<>
+        // inline constexpr auto gemm<std::complex<double>> = zgemm_;
+
         template<typename ScalarType>
-        constexpr auto gemm = nullptr;
+        constexpr auto cuda_gemm = nullptr;
 
         template<>
-        inline constexpr auto gemm<float> = sgemm_;
+        inline constexpr auto cuda_gemm<float> = cublasSgemm;
         template<>
-        inline constexpr auto gemm<double> = dgemm_;
+        inline constexpr auto cuda_gemm<double> = cublasDgemm;
         template<>
-        inline constexpr auto gemm<std::complex<float>> = cgemm_;
+        inline constexpr auto cuda_gemm<std::complex<float>> = cublasCgemm;
         template<>
-        inline constexpr auto gemm<std::complex<double>> = zgemm_;
+        inline constexpr auto cuda_gemm<std::complex<double>> = cublasZgemm;
+
+        inline auto gemm_handle() {
+            static cublasHandle_t* handle = nullptr;
+            if (!handle) {
+                handle = new cublasHandle_t();
+                cublasCreate(handle);
+            }
+            return handle;
+        }
+
+        template<typename T>
+        using cuda_complex =
+            std::conditional_t<is_complex<T>, std::conditional_t<std::is_same_v<T, std::complex<double>>, cuDoubleComplex, cuFloatComplex>, T>;
+
+        template<typename T>
+        auto cuda_complex_value(T* value) {
+            if constexpr (std::is_const_v<T>) {
+                return reinterpret_cast<const cuda_complex<std::remove_const_t<T>>*>(value);
+            } else {
+                return reinterpret_cast<cuda_complex<T>*>(value);
+            }
+        }
+
+        template<typename ScalarType>
+        int gemm(
+            const char* transpose_a,
+            const char* transpose_b,
+            const int* m,
+            const int* n,
+            const int* k,
+            const ScalarType* alpha,
+            const ScalarType* a,
+            const int* lda,
+            const ScalarType* b,
+            const int* ldb,
+            const ScalarType* beta,
+            ScalarType* c,
+            const int* ldc
+        ) {
+            cuda_gemm<ScalarType>(
+                *gemm_handle(),
+                'N' == *transpose_a ? CUBLAS_OP_N : CUBLAS_OP_T,
+                'N' == *transpose_b ? CUBLAS_OP_N : CUBLAS_OP_T,
+                *m,
+                *n,
+                *k,
+                cuda_complex_value(alpha),
+                cuda_complex_value(a),
+                *lda,
+                cuda_complex_value(b),
+                *ldb,
+                cuda_complex_value(beta),
+                cuda_complex_value(c),
+                *ldc
+            );
+            return 0;
+        }
     } // namespace detail
 
     inline timer contract_kernel_guard("contract_kernel");
@@ -151,6 +222,7 @@ namespace TAT {
                     }
                 }
             }
+            cudaDeviceSynchronize();
         }
 
         template<typename Name, typename SetNameName>
