@@ -86,77 +86,6 @@ extern "C" {
         std::complex<double>* c,
         const int* ldc
     );
-
-#ifdef TAT_USE_MKL_GEMM_BATCH
-    int sgemm_batch_(
-        const char* transpose_a,
-        const char* transpose_b,
-        const int* m,
-        const int* n,
-        const int* k,
-        const float* alpha,
-        const float** a,
-        const int* lda,
-        const float** b,
-        const int* ldb,
-        const float* beta,
-        float** c,
-        const int* ldc,
-        const int* group_count,
-        const int* group_size
-    );
-    int dgemm_batch_(
-        const char* transpose_a,
-        const char* transpose_b,
-        const int* m,
-        const int* n,
-        const int* k,
-        const double* alpha,
-        const double** a,
-        const int* lda,
-        const double** b,
-        const int* ldb,
-        const double* beta,
-        double** c,
-        const int* ldc,
-        const int* group_count,
-        const int* group_size
-    );
-    int cgemm_batch_(
-        const char* transpose_a,
-        const char* transpose_b,
-        const int* m,
-        const int* n,
-        const int* k,
-        const std::complex<float>* alpha,
-        const std::complex<float>** a,
-        const int* lda,
-        const std::complex<float>** b,
-        const int* ldb,
-        const std::complex<float>* beta,
-        std::complex<float>** c,
-        const int* ldc,
-        const int* group_count,
-        const int* group_size
-    );
-    int zgemm_batch_(
-        const char* transpose_a,
-        const char* transpose_b,
-        const int* m,
-        const int* n,
-        const int* k,
-        const std::complex<double>* alpha,
-        const std::complex<double>** a,
-        const int* lda,
-        const std::complex<double>** b,
-        const int* ldb,
-        const std::complex<double>* beta,
-        std::complex<double>** c,
-        const int* ldc,
-        const int* group_count,
-        const int* group_size
-    );
-#endif
 }
 
 namespace TAT {
@@ -172,20 +101,6 @@ namespace TAT {
         inline constexpr auto gemm<std::complex<float>> = cgemm_;
         template<>
         inline constexpr auto gemm<std::complex<double>> = zgemm_;
-
-        template<typename ScalarType>
-        constexpr auto mkl_gemm_batch = nullptr;
-
-#ifdef TAT_USE_MKL_GEMM_BATCH
-        template<>
-        inline constexpr auto mkl_gemm_batch<float> = sgemm_batch_;
-        template<>
-        inline constexpr auto mkl_gemm_batch<double> = dgemm_batch_;
-        template<>
-        inline constexpr auto mkl_gemm_batch<std::complex<float>> = cgemm_batch_;
-        template<>
-        inline constexpr auto mkl_gemm_batch<std::complex<double>> = zgemm_batch_;
-#endif
     } // namespace detail
 
     inline timer contract_kernel_guard("contract_kernel");
@@ -212,16 +127,6 @@ namespace TAT {
             if (batch_size == 1) {
                 gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[0], lda, b[0], ldb, beta, c[0], ldc);
             } else {
-#ifdef TAT_USE_MKL_GEMM_BATCH
-                if constexpr (same_shape) {
-                    int group_count = 1;
-                    mkl_gemm_batch<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &group_count, &batch_size);
-                } else {
-                    pmr::vector<int> group_size(batch_size, 1);
-                    mkl_gemm_batch<
-                        ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc, &batch_size, group_size.data());
-                }
-#else
                 if constexpr (same_shape) {
                     for (auto i = 0; i < batch_size; i++) {
                         gemm<ScalarType>(transpose_a, transpose_b, m, n, k, alpha, a[i], lda, b[i], ldb, beta, c[i], ldc);
@@ -245,7 +150,6 @@ namespace TAT {
                         );
                     }
                 }
-#endif
             }
         }
 
