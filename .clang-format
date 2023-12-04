@@ -20,7 +20,7 @@ AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: Yes
-AttributeMacros: ["__restrict"]
+AttributeMacros: ["__restrict", "TAT_CUDA_HOST", "TAT_CUDA_DEVICE"]
 BinPackArguments: false
 BinPackParameters: false
 BitFieldColonSpacing: Both

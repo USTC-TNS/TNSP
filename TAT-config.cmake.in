@@ -14,6 +14,16 @@ target_compile_definitions(TAT INTERFACE TAT_COMPILER_INFORMATION="${CMAKE_CXX_C
 target_compile_options(TAT INTERFACE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 target_compile_options(TAT INTERFACE "$<$<CXX_COMPILER_ID:MSVC>:/Zc:__cplusplus>")
 
+# try to enable cuda
+option(TAT_USE_CUDA "Use cuda for TAT" OFF)
+if(TAT_USE_CUDA)
+  enable_language(CUDA)
+  find_package(CUDA)
+  target_compile_definitions(TAT INTERFACE TAT_USE_CUDA)
+  target_include_directories(TAT INTERFACE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(TAT INTERFACE ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_cusolver_LIBRARY})
+endif()
+
 # try to enable mpi
 option(TAT_USE_MPI "Use mpi for TAT" ON)
 get_filename_component(CXX_COMPILER_NAME ${CMAKE_CXX_COMPILER} NAME)

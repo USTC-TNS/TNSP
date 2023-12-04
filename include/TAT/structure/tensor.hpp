@@ -167,6 +167,21 @@ namespace TAT {
             return m_core->storage();
         }
 
+#ifdef TAT_USE_CUDA
+        [[nodiscard]] auto storage_begin() const {
+            return cuda::thrust_complex_wrap(storage().data());
+        }
+        [[nodiscard]] auto storage_begin() {
+            return cuda::thrust_complex_wrap(storage().data());
+        }
+        [[nodiscard]] auto storage_end() const {
+            return cuda::thrust_complex_wrap(storage().data() + storage().size());
+        }
+        [[nodiscard]] auto storage_end() {
+            return cuda::thrust_complex_wrap(storage().data() + storage().size());
+        }
+#endif
+
         [[nodiscard]] const std::vector<edge_t>& edges() const {
             return m_core->edges();
         }
@@ -358,7 +373,11 @@ namespace TAT {
             if constexpr (debug_mode) {
                 check_valid_name();
             }
+#ifdef TAT_USE_CUDA
+            range_(number);
+#else
             at() = number;
+#endif
         }
 
       private:
@@ -396,7 +415,7 @@ namespace TAT {
                 // sometimes it is useful
                 return 0;
             } else {
-                return at();
+                return ensure_cpu(at());
             }
         }
 
@@ -429,7 +448,11 @@ namespace TAT {
         template<typename Function>
         Tensor<ScalarType, Symmetry, Name>& transform_(Function&& function) & {
             acquire_data_ownership("Set tensor shared in transform, copy happened here");
+#ifdef TAT_USE_CUDA
+            thrust::transform(thrust::device, storage_begin(), storage_end(), storage_begin(), std::forward<Function>(function));
+#else
             std::transform(storage().begin(), storage().end(), storage().begin(), std::forward<Function>(function));
+#endif
             return *this;
         }
         template<typename Function>
@@ -456,7 +479,18 @@ namespace TAT {
                     detail::error("Try to do zip_transform on two tensors which edges not compatible");
                 }
             }
+#ifdef TAT_USE_CUDA
+            thrust::transform(
+                thrust::device,
+                storage_begin(),
+                storage_end(),
+                real_other.storage_begin(),
+                storage_begin(),
+                std::forward<Function>(function)
+            );
+#else
             std::transform(storage().begin(), storage().end(), real_other.storage().begin(), storage().begin(), std::forward<Function>(function));
+#endif
             return *this;
         }
         template<typename OtherScalarType, typename Function>
@@ -486,7 +520,11 @@ namespace TAT {
             using DefaultNewScalarType = std::invoke_result_t<Function, ScalarType>;
             using NewScalarType = std::conditional_t<std::is_same_v<void, ForceScalarType>, DefaultNewScalarType, ForceScalarType>;
             auto result = same_shape<NewScalarType>();
+#ifdef TAT_USE_CUDA
+            thrust::transform(thrust::device, storage_begin(), storage_end(), result.storage_begin(), std::forward<Function>(function));
+#else
             std::transform(storage().begin(), storage().end(), result.storage().begin(), std::forward<Function>(function));
+#endif
             return result;
         }
 
@@ -512,6 +550,16 @@ namespace TAT {
                 }
             }
             auto result = same_shape<NewScalarType>();
+#ifdef TAT_USE_CUDA
+            thrust::transform(
+                thrust::device,
+                storage_begin(),
+                storage_end(),
+                real_other.storage_begin(),
+                result.storage_begin(),
+                std::forward<Function>(function)
+            );
+#else
             std::transform(
                 storage().begin(),
                 storage().end(),
@@ -519,6 +567,7 @@ namespace TAT {
                 result.storage().begin(),
                 std::forward<Function>(function)
             );
+#endif
             return result;
         }
 
@@ -527,7 +576,11 @@ namespace TAT {
          * \see map
          */
         [[nodiscard]] Tensor<ScalarType, Symmetry, Name> copy() const {
+#ifdef TAT_USE_CUDA
+            return map(cuda::identity_op<ScalarType>());
+#else
             return map([](const ScalarType& x) -> ScalarType { return x; });
+#endif
         }
 
         template<typename Generator>
@@ -545,7 +598,11 @@ namespace TAT {
         template<typename Generator>
         Tensor<ScalarType, Symmetry, Name>& set_(Generator&& generator) & {
             acquire_data_ownership("Set tensor shared, copy happened here");
+#ifdef TAT_USE_CUDA
+            thrust::generate(thrust::device, storage_begin(), storage_end(), std::forward<Generator>(generator));
+#else
             std::generate(storage().begin(), storage().end(), std::forward<Generator>(generator));
+#endif
             return *this;
         }
         template<typename Generator>
@@ -564,7 +621,11 @@ namespace TAT {
          * \see set
          */
         Tensor<ScalarType, Symmetry, Name>& zero_() & {
+#ifdef TAT_USE_CUDA
+            return set_(cuda::zero_op<ScalarType>());
+#else
             return set_([]() -> ScalarType { return 0; });
+#endif
         }
         [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& zero_() && {
             return std::move(zero_());
@@ -582,11 +643,22 @@ namespace TAT {
          * \see set
          */
         Tensor<ScalarType, Symmetry, Name>& range_(ScalarType first = 0, ScalarType step = 1) & {
+#ifdef TAT_USE_CUDA
+            thrust::transform(
+                thrust::device,
+                thrust::make_counting_iterator<Size>(0),
+                thrust::make_counting_iterator<Size>(storage().size()),
+                storage_begin(),
+                cuda::range_op<ScalarType>(first, step)
+            );
+            return *this;
+#else
             return set_([&first, step]() -> ScalarType {
                 auto result = first;
                 first += step;
                 return result;
             });
+#endif
         }
         [[nodiscard]] Tensor<ScalarType, Symmetry, Name>&& range_(ScalarType first = 0, ScalarType step = 1) && {
             return std::move(range_(first, step));
@@ -613,6 +685,9 @@ namespace TAT {
             if constexpr (std::is_same_v<ScalarType, OtherScalarType>) {
                 return *this; // shallow copy
             } else {
+#ifdef TAT_USE_CUDA
+                return map<OtherScalarType>(cuda::convertion_op<ScalarType, OtherScalarType>());
+#else
                 return map([](ScalarType input) -> OtherScalarType {
                     if constexpr (is_complex<ScalarType> && is_real<OtherScalarType>) {
                         return OtherScalarType(input.real());
@@ -620,6 +695,7 @@ namespace TAT {
                         return OtherScalarType(input);
                     }
                 });
+#endif
             }
         }
 
@@ -633,14 +709,35 @@ namespace TAT {
             real_scalar<ScalarType> result = 0;
             if constexpr (p == -1) {
                 // max abs
+#ifdef TAT_USE_CUDA
+                result = thrust::transform_reduce(
+                    thrust::device,
+                    storage_begin(),
+                    storage_end(),
+                    cuda::abs_op<ScalarType>(),
+                    result,
+                    thrust::maximum<real_scalar<ScalarType>>()
+                );
+#else
                 for (const auto& number : storage()) {
                     if (auto absolute_value = std::abs(number); absolute_value > result) {
                         result = absolute_value;
                     }
                 }
+#endif
             } else if constexpr (p == 0) {
                 result += real_scalar<ScalarType>(storage().size());
             } else {
+#ifdef TAT_USE_CUDA
+                result = thrust::transform_reduce(
+                    thrust::device,
+                    storage_begin(),
+                    storage_end(),
+                    cuda::pow_op<ScalarType, p>(),
+                    result,
+                    thrust::plus<real_scalar<ScalarType>>()
+                );
+#else
                 for (const auto& number : storage()) {
                     if constexpr (p == 1) {
                         result += std::abs(number);
@@ -654,6 +751,7 @@ namespace TAT {
                         }
                     }
                 }
+#endif
                 result = std::pow(result, 1. / p);
             }
             return result;
