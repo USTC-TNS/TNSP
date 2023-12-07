@@ -26,10 +26,10 @@
 #include "../utility/multidimension_span.hpp"
 
 namespace TAT {
-    template<typename ScalarType, typename Symmetry, typename Name>
-    Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_bose_symmetry() const {
+    template<typename ScalarType, typename SymmetryT, typename Name>
+    Tensor<ScalarType, NoSymmetry, Name> Tensor<ScalarType, SymmetryT, Name>::clear_bose_symmetry() const {
         auto pmr_guard = scope_resource(default_buffer_size);
-        if constexpr (Symmetry::is_fermi_symmetry) {
+        if constexpr (SymmetryT::is_fermi_symmetry) {
             detail::warning("Clearing a fermi tensor's symmetry, it is dangerous if you do not take care of edge order");
         }
         std::vector<Edge<NoSymmetry>> result_edges;
@@ -66,10 +66,10 @@ namespace TAT {
         return result;
     }
 
-    template<typename ScalarType, typename Symmetry, typename Name>
-    Tensor<ScalarType, ParitySymmetry, Name> Tensor<ScalarType, Symmetry, Name>::clear_fermi_symmetry() const {
+    template<typename ScalarType, typename SymmetryT, typename Name>
+    Tensor<ScalarType, ParitySymmetry, Name> Tensor<ScalarType, SymmetryT, Name>::clear_fermi_symmetry() const {
         auto pmr_guard = scope_resource(default_buffer_size);
-        if constexpr (!Symmetry::is_fermi_symmetry) {
+        if constexpr (!SymmetryT::is_fermi_symmetry) {
             detail::error("It is invalid to call clear fermi symmetry on a bose symmetry tensor");
         }
         std::vector<Edge<ParitySymmetry>> result_edges;
