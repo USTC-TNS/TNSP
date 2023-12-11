@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools >= 62.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "PyScalapack"
+dynamic = ["version", "readme"]
+dependencies = [
+  "numpy",
+]
+requires-python = ">=3.7"
+authors = [
+  {email = "zh970205@mail.ustc.edu.cn", name = "Hao Zhang"},
+]
+description = "python wrapper for scalapack"
+license = {text = "GPLv3"}
+keywords = ["scalapack", "lapack", "blas", "linear algebra", "scientific computing", "parallel computing", "MPI"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/USTC-TNS/TAT/tree/main/PyScalapack"
+Repository = "https://github.com/USTC-TNS/TAT.git"
+Issues = "https://github.com/USTC-TNS/TAT/issues"
+Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+# coverage for mpi enabled pytest can only be test by: mpirun -n 6 coverage run -m pytest && coverage combine && coverage report
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = "--with-mpi"
+
+[tool.coverage.run]
+parallel = true
+omit = ["tests/*"]
+
+[tool.coverage.report]
+fail_under = 100

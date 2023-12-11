@@ -17,7 +17,7 @@
 #
 
 import email
-from setuptools import setup, find_packages
+from setuptools import setup
 from subprocess import check_output, CalledProcessError
 
 try:
@@ -34,18 +34,10 @@ except FileNotFoundError:
     long_description = "empty description"
 
 setup(
-    name="tetraku",
     version=version,
-    description="data library used by tetragono",
-    author="Hao Zhang",
-    author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/USTC-TNS/TAT/tree/TAT/tetraku",
-    packages=find_packages(),
     install_requires=[
         f"tetragono=={version}",
     ],
-    license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    python_requires=">=3.7",
 )

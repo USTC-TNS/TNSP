@@ -17,7 +17,7 @@
 #
 
 import email
-from setuptools import setup, find_packages
+from setuptools import setup
 from subprocess import check_output, CalledProcessError
 
 try:
@@ -34,18 +34,7 @@ except FileNotFoundError:
     long_description = "empty description"
 
 setup(
-    name="PyScalapack",
     version=version,
-    description="python wrapper for scalapack",
-    author="Hao Zhang",
-    author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/USTC-TNS/TAT/tree/TAT/PyScalapack",
-    packages=find_packages(),
-    install_requires=[
-        "numpy",
-    ],
-    license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    python_requires=">=3.7",
 )
