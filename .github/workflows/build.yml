@@ -40,7 +40,7 @@ jobs:
         run: pip install pytest pytest-cov
       - name: run test
         working-directory: ${{github.workspace}}/lazy_graph
-        run: python -m pytest --cov=lazy --cov-fail-under=100
+        run: python -m pytest
 
   test_scalapack_py:
     name: test scalapack.py
@@ -62,7 +62,7 @@ jobs:
         run: ln -s /usr/lib/x86_64-linux-gnu/libscalapack-openmpi.so libscalapack.so 
       - name: run test
         working-directory: ${{github.workspace}}/PyScalapack
-        run: mpirun --oversubscribe -n 6 coverage run -m pytest --capture=no --with-mpi && coverage combine && coverage report
+        run: mpirun --oversubscribe -n 6 coverage run -m pytest && coverage combine && coverage report
         env:
           LD_LIBRARY_PATH: .
 

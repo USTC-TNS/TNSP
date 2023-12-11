@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools >= 62.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tetraku"
+dynamic = ["version", "dependencies", "readme"]
+requires-python = ">=3.8"
+authors = [
+  {email = "zh970205@mail.ustc.edu.cn", name = "Hao Zhang"},
+]
+description = "data library used by tetragono"
+license = {text = "GPLv3"}
+keywords = ["tensor", "tensor network", "tensor network state", "PEPS", "MPS", "quantum many body system"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/USTC-TNS/TAT/tree/main/tetraku"
+Repository = "https://github.com/USTC-TNS/TAT.git"
+Issues = "https://github.com/USTC-TNS/TAT/issues"
+Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]

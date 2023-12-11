@@ -17,7 +17,7 @@
 #
 
 import email
-from setuptools import setup, find_packages
+from setuptools import setup
 from subprocess import check_output, CalledProcessError
 
 try:
@@ -34,13 +34,7 @@ except FileNotFoundError:
     long_description = "empty description"
 
 setup(
-    name="tetragono",
     version=version,
-    description="OBC square tensor network state(PEPS) library",
-    author="Hao Zhang",
-    author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/USTC-TNS/TAT/tree/TAT/tetragono",
-    packages=find_packages(),
     install_requires=[
         f"PyTAT=={version}",
         f"lazy_graph=={version}",
@@ -48,8 +42,6 @@ setup(
         "mpi4py",
         "numpy",
     ],
-    license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    python_requires=">=3.8",
 )

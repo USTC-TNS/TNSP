@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools >= 62.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lazy_graph"
+dynamic = ["version", "readme"]
+requires-python = ">=3.7"
+authors = [
+  {email = "zh970205@mail.ustc.edu.cn", name = "Hao Zhang"},
+]
+description = "lazy graph framework"
+license = {text = "GPLv3"}
+keywords = ["framework", "lazy evaluation", "computational graph"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/USTC-TNS/TAT/tree/main/lazy_graph"
+Repository = "https://github.com/USTC-TNS/TAT.git"
+Issues = "https://github.com/USTC-TNS/TAT/issues"
+Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
+
+[tool.setuptools.packages.find]
+exclude = ["tests"]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = "--cov=lazy"
+
+[tool.coverage.report]
+fail_under = 100

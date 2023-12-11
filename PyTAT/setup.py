@@ -80,20 +80,11 @@ except FileNotFoundError:
     long_description = "empty description"
 
 setup(
-    name="PyTAT",
     version=version,
-    description="python binding for TAT(TAT is A Tensor library)",
-    author="Hao Zhang",
-    author_email="zh970205@mail.ustc.edu.cn",
-    url="https://github.com/USTC-TNS/TAT/tree/TAT/PyTAT",
     ext_modules=[CMakeExtension("PyTAT")],
     cmdclass={
         'build_ext': build_ext,
     },
-    install_requires=[
-        "numpy",
-    ],
-    license="GPLv3",
     long_description=long_description,
     long_description_content_type="text/markdown",
 )
