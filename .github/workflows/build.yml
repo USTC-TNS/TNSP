@@ -3,10 +3,19 @@ name: build
 on: [push, pull_request]
 
 jobs:
+  test_trigger:
+    name: trigger for run test
+    runs-on: ubuntu-latest
+    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+
+    steps:
+      - name: nothing
+        run: echo this is an empty job
+
   test_TAT_hpp:
     name: test TAT.hpp
     runs-on: ubuntu-latest
-    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+    needs: [test_trigger]
 
     steps:
       - name: checkout
@@ -28,7 +37,7 @@ jobs:
   test_lazy_py:
     name: test lazy.py
     runs-on: ubuntu-latest
-    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+    needs: [test_trigger]
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -45,7 +54,7 @@ jobs:
   test_scalapack_py:
     name: test scalapack.py
     runs-on: ubuntu-latest
-    if: "! contains(toJSON(github.event.commits.*.message), '[skip ci]')"
+    needs: [test_trigger]
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -271,11 +280,20 @@ jobs:
         with:
           path: ${{github.workspace}}/${{matrix.package}}/dist/*.whl
 
+  release_trigger:
+    name: trigger for release
+    runs-on: ubuntu-latest
+    needs: [build_pytat_wheels, build_pure_python_wheels]
+    if: startsWith(github.ref, 'refs/tags')
+
+    steps:
+      - name: nothing
+        run: echo this is an empty job
+
   upload_pypi:
     name: upload wheels to pypi
     runs-on: ubuntu-latest
-    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
-    if: startsWith(github.ref, 'refs/tags')
+    needs: [release_trigger]
 
     environment: release
     permissions:
@@ -296,8 +314,7 @@ jobs:
   create_release:
     name: create github release
     runs-on: ubuntu-latest
-    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
-    if: startsWith(github.ref, 'refs/tags')
+    needs: [release_trigger]
 
     steps:
       - name: checkout
@@ -322,11 +339,10 @@ jobs:
       - name: push to main branch
         run: git remote set-url origin https://x-access-token:${{secrets.GITHUB_TOKEN}}@github.com/${{github.repository}} && git push origin HEAD:main
 
-  doxygen:
+  build_doxygen:
     name: build doxygen github pages
     runs-on: ubuntu-latest
-    needs: [build_wheels_trigger, build_pytat_wheels, build_pure_python_wheels]
-    if: startsWith(github.ref, 'refs/tags')
+    needs: [release_trigger]
 
     steps:
       - name: checkout
