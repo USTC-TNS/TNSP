@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <map>
 #include <memory>
 #include <set>
@@ -55,9 +56,9 @@ namespace TAT {
 
         Cut(Size i, double f) : remain_cut(i), relative_cut(f) { }
         Cut(double f, Size i) : remain_cut(i), relative_cut(f) { }
-        Cut() : remain_cut(-1), relative_cut(0) { }
+        Cut() : remain_cut(std::numeric_limits<Size>::max()), relative_cut(0) { }
         Cut(Size i) : remain_cut(i), relative_cut(0) { }
-        Cut(double f) : remain_cut(-1), relative_cut(f) { }
+        Cut(double f) : remain_cut(std::numeric_limits<Size>::max()), relative_cut(f) { }
 
         [[deprecated("NoCut is deprecated, use Cut directly")]] Cut(NoCut) : Cut() { }
         [[deprecated("RelativeCut is deprecated, use Cut directly")]] Cut(RelativeCut c) : Cut(c.value) { }
