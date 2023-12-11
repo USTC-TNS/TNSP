@@ -29,5 +29,5 @@ Repository = "https://github.com/USTC-TNS/TAT.git"
 Issues = "https://github.com/USTC-TNS/TAT/issues"
 Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
 
-[tool.setuptools.packages.find]
-exclude = ["tests"]
+[tool.setuptools]
+packages = []
