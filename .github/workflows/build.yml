@@ -122,73 +122,72 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Always support linux x86_64 platform
+          # Always support manylinux x86_64 platform
           - os: ubuntu-latest
             python: 38
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cpu_number: 2
           - os: ubuntu-latest
             python: 39
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cpu_number: 2
           - os: ubuntu-latest
             python: 310
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cpu_number: 2
           - os: ubuntu-latest
             python: 311
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cpu_number: 2
           - os: ubuntu-latest
             python: 312
             platform_id: manylinux_x86_64
-            manylinux_image: manylinux2014
-            cpu_number: 2
+
+          # Always support musllinux x86_64 platform
+          - os: ubuntu-latest
+            python: 38
+            platform_id: musllinux_x86_64
+          - os: ubuntu-latest
+            python: 39
+            platform_id: musllinux_x86_64
+          - os: ubuntu-latest
+            python: 310
+            platform_id: musllinux_x86_64
+          - os: ubuntu-latest
+            python: 311
+            platform_id: musllinux_x86_64
+          - os: ubuntu-latest
+            python: 312
+            platform_id: musllinux_x86_64
 
           # Only support the latest two version for macos platform
           - os: macos-latest
             python: 311
             platform_id: macosx_x86_64
             mac_arch: x86_64
-            cpu_number: 3
           - os: macos-latest
             python: 312
             platform_id: macosx_x86_64
             mac_arch: x86_64
-            cpu_number: 3
 
           - os: macos-latest
             python: 311
             platform_id: macosx_arm64
             mac_arch: arm64
-            cpu_number: 3
           - os: macos-latest
             python: 312
             platform_id: macosx_arm64
             mac_arch: arm64
-            cpu_number: 3
 
-          # Only support latest four version for windows amd64 platform
+          # Only support latest four version for windows platform
           - os: windows-latest
             python: 39
             platform_id: win_amd64
-            cpu_number: 2
           - os: windows-latest
             python: 310
             platform_id: win_amd64
-            cpu_number: 2
           - os: windows-latest
             python: 311
             platform_id: win_amd64
-            cpu_number: 2
           - os: windows-latest
             python: 312
             platform_id: win_amd64
-            cpu_number: 2
 
     steps:
       - name: checkout
@@ -221,15 +220,14 @@ jobs:
 
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
           CIBW_ARCHS: all
-          CIBW_MANYLINUX_X86_64_IMAGE: ${{ matrix.manylinux_image }}
 
-          CIBW_BEFORE_ALL_LINUX: yum install -y openblas-devel
+          CIBW_BEFORE_ALL_LINUX: yum install -y openblas-devel || apk add openblas-dev
           CIBW_BEFORE_ALL_WINDOWS: cmd /c python .github\scripts\get_openblas_for_windows.py && choco install -y ninja
           CIBW_BEFORE_ALL_MACOS: ""
 
-          CIBW_ENVIRONMENT_LINUX: MAKEFLAGS=--parallel=${{ matrix.cpu_number }}
-          CIBW_ENVIRONMENT_WINDOWS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-GNinja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../../lib/libopenblas"
-          CIBW_ENVIRONMENT_MACOS: MAKEFLAGS=--parallel=${{ matrix.cpu_number }} CMAKEFLAGS="-DCMAKE_OSX_ARCHITECTURES=${{ matrix.mac_arch }}"
+          CIBW_ENVIRONMENT_LINUX: MAKEFLAGS=--parallel=2
+          CIBW_ENVIRONMENT_WINDOWS: MAKEFLAGS=--parallel=2 CMAKEFLAGS="-GNinja|-DCMAKE_CXX_COMPILER=clang++|-DTAT_MATH_LIBRARIES=../../../../lib/libopenblas"
+          CIBW_ENVIRONMENT_MACOS: MAKEFLAGS=--parallel=3 CMAKEFLAGS="-DCMAKE_OSX_ARCHITECTURES=${{ matrix.mac_arch }}"
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
           CIBW_BUILD_VERBOSITY: 1
