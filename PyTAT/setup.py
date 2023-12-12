@@ -20,6 +20,7 @@ import email
 import os
 import sys
 import pathlib
+from pybind11 import get_cmake_dir
 from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_original
 from subprocess import check_output, CalledProcessError
@@ -57,6 +58,7 @@ class build_ext(build_ext_original):
             "-DTAT_USE_MPI=" + "OFF",
             "-DCMAKE_CXX_FLAGS=" + "-DTAT_VERSION=" + "\\\"" + version + "\\\"",
             "-DPYTHON_EXECUTABLE=" + sys.executable,
+            "-Dpybind11_DIR=" + get_cmake_dir(),
             "-DTAT_BUILD_TEST=" + "OFF",
         ]
         if "CMAKEFLAGS" in os.environ:
