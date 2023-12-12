@@ -196,11 +196,6 @@ jobs:
           fetch-depth: 0
       - name: recovery tag information
         run: git fetch --tags --force
-      - name: get pybind11
-        uses: actions/checkout@v3
-        with:
-          repository: pybind/pybind11
-          path: pybind11
       - name: setup python
         uses: actions/setup-python@v4
         with:
