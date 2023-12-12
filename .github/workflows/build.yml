@@ -122,7 +122,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Always support manylinux x86_64 platform
+          # Always support manylinux platform
           - os: ubuntu-latest
             python: 38
             platform_id: manylinux_x86_64
@@ -139,7 +139,23 @@ jobs:
             python: 312
             platform_id: manylinux_x86_64
 
-          # Always support musllinux x86_64 platform
+          - os: ubuntu-latest
+            python: 38
+            platform_id: manylinux_aarch64
+          - os: ubuntu-latest
+            python: 39
+            platform_id: manylinux_aarch64
+          - os: ubuntu-latest
+            python: 310
+            platform_id: manylinux_aarch64
+          - os: ubuntu-latest
+            python: 311
+            platform_id: manylinux_aarch64
+          - os: ubuntu-latest
+            python: 312
+            platform_id: manylinux_aarch64
+
+          # Always support musllinux platform
           - os: ubuntu-latest
             python: 38
             platform_id: musllinux_x86_64
@@ -155,6 +171,22 @@ jobs:
           - os: ubuntu-latest
             python: 312
             platform_id: musllinux_x86_64
+
+          - os: ubuntu-latest
+            python: 38
+            platform_id: musllinux_aarch64
+          - os: ubuntu-latest
+            python: 39
+            platform_id: musllinux_aarch64
+          - os: ubuntu-latest
+            python: 310
+            platform_id: musllinux_aarch64
+          - os: ubuntu-latest
+            python: 311
+            platform_id: musllinux_aarch64
+          - os: ubuntu-latest
+            python: 312
+            platform_id: musllinux_aarch64
 
           # Only support the latest two version for macos platform
           - os: macos-latest
@@ -207,6 +239,11 @@ jobs:
         with:
           name: README-of-PyTAT
           path: PyTAT
+      - name: set up qemu for linux arm64
+        if: "contains(matrix.platform_id, 'aarch64')"
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
       - name: build wheel for PyTAT
         env:
           CIBW_TEST_REQUIRES: pytest
@@ -216,7 +253,7 @@ jobs:
           CIBW_BUILD: cp${{ matrix.python }}-${{ matrix.platform_id }}
           CIBW_ARCHS: all
 
-          CIBW_BEFORE_ALL_LINUX: yum install -y openblas-devel || apk add openblas-dev
+          CIBW_BEFORE_ALL_LINUX: yum install -y epel-release && yum install -y openblas-devel || apk add openblas-dev
           CIBW_BEFORE_ALL_WINDOWS: cmd /c python .github\scripts\get_openblas_for_windows.py && choco install -y ninja
           CIBW_BEFORE_ALL_MACOS: ""
 
