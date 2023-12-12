@@ -557,9 +557,19 @@ class Observer():
             The variance of the local energy.
         """
         energy = self._total_energy_with_imaginary_part()
-        return self._total_energy_square - abs(energy) ** 2
+        return self.total_energy_square - abs(energy) ** 2
     
+    @property
+    def total_energy_square(self):
+        """
+        Get the <H^2>.
 
+        Returns
+        -------
+        float
+            <H^2>.
+        """
+        return self._total_energy_square/self._total_weight
 
     @property
     def gradient(self):
