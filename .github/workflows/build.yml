@@ -366,8 +366,6 @@ jobs:
         with:
           files: artifact/*.whl
           body_path: release_description.md
-      - name: push to main branch
-        run: git remote set-url origin https://x-access-token:${{secrets.GITHUB_TOKEN}}@github.com/${{github.repository}} && git push origin HEAD:main
 
   build_doxygen:
     name: build doxygen github pages
