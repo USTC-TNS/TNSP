@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from lazy import Root, Node, Copy
 
 calculate_count = 0

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import TAT
 
 arrange_pairs_indices = [

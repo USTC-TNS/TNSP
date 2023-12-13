@@ -1,0 +1,66 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.5.0
+  hooks:
+  - id: check-added-large-files
+  - id: check-ast
+  - id: check-byte-order-marker
+  - id: check-builtin-literals
+  - id: check-case-conflict
+  - id: check-docstring-first
+  - id: check-executables-have-shebangs
+  - id: check-json
+  - id: check-shebang-scripts-are-executable
+    exclude: \.py$
+  - id: pretty-format-json
+    exclude: \.json$
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: check-toml
+  - id: check-vcs-permalinks
+  - id: check-xml
+  - id: check-yaml
+  - id: debug-statements
+  - id: destroyed-symlinks
+  # - id: detect-aws-credentials
+  - id: detect-private-key
+  # - id: double-quote-string-fixer
+  - id: end-of-file-fixer
+  - id: file-contents-sorter
+  - id: fix-byte-order-marker
+  - id: fix-encoding-pragma
+  - id: forbid-new-submodules
+  - id: forbid-submodules
+  - id: mixed-line-ending
+  - id: name-tests-test
+    args: [--pytest-test-first]
+  # - id: no-commit-to-branch
+  - id: requirements-txt-fixer
+  - id: sort-simple-yaml
+  - id: trailing-whitespace
+    exclude: (\.patch|\.org|\.rst)$
+
+- repo: https://github.com/pre-commit/mirrors-clang-format
+  rev: v16.0.0
+  hooks:
+  - id: clang-format
+    types_or: [c++, c, cuda]
+
+- repo: https://github.com/pre-commit/mirrors-jshint
+  rev: v2.13.6
+  hooks:
+  - id: jshint
+
+- repo: https://github.com/google/yapf
+  rev: v0.40.2
+  hooks:
+  - id: yapf
+
+- repo: https://github.com/Lucas-C/pre-commit-hooks
+  rev: v1.5.4
+  hooks:
+  - id: remove-crlf
+  - id: remove-tabs
+    exclude: (\.patch|\.org|\.rst|Makefile)$

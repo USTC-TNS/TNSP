@@ -1,3 +1,4 @@
+/* jshint esversion:6, globalstrict:true, browser:true */
 "use strict";
 
 import * as THREE from "three";
@@ -6,7 +7,10 @@ import {
 } from "three/addons/controls/OrbitControls.js";
 import loadWASM from "./kernel.js";
 
+/* jshint ignore:start */
 var kernel = await loadWASM();
+/* jshint ignore:end */
+/* globals kernel */
 
 var renderer = new THREE.WebGLRenderer();
 var width = window.innerWidth;
@@ -35,7 +39,7 @@ var do_render = () => {
     controls.update();
     renderer.render(scene, camera);
 };
-setInterval(do_render, 50);
+window.setInterval(do_render, 50);
 
 var z = new THREE.Vector3(0, 0, 1);
 
@@ -55,8 +59,8 @@ document.getElementById("create_lattice").onclick = () => {
     if (L1 * L2 >= 18) {
         L1 = 0;
         L2 = 0;
-        alert("too big system size");
-        return
+        window.alert("too big system size");
+        return;
     }
     kernel._create_lattice(L1, L2);
     var offset_L1 = (L1 - 1) / 2;
@@ -73,12 +77,12 @@ document.getElementById("create_lattice").onclick = () => {
             scene.add(arrow);
         }
     }
-}
+};
 document.getElementById("update_lattice").onclick = () => {
     if (L1 == 0 || L2 == 0) {
         return;
     }
-    var start = performance.now();
+    var start = window.performance.now();
     kernel._update_lattice(parseInt(document.getElementById("step").value));
     var energy = kernel._get_energy();
     document.getElementById("energy").value = energy;
@@ -94,6 +98,6 @@ document.getElementById("update_lattice").onclick = () => {
             scene.getObjectByName("A" + i + "." + j).setLength(len / den);
         }
     }
-    var end = performance.now();
-    console.log((end - start) / 1000);
+    var end = window.performance.now();
+    window.console.log((end - start) / 1000);
 };

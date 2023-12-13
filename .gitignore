@@ -15,6 +15,7 @@
 !/vcpkg
 !/.clang-format
 !/.gitignore
+!/.pre-commit-config.yaml
 !/.style.yapf
 !/CHANGELOG.org
 !/CMakeLists.txt

@@ -68,7 +68,7 @@ jobs:
         run: pip install pytest pytest-cov pytest-mpi mpi4py numpy
       - name: link scalapack library
         working-directory: ${{github.workspace}}/PyScalapack
-        run: ln -s /usr/lib/x86_64-linux-gnu/libscalapack-openmpi.so libscalapack.so 
+        run: ln -s /usr/lib/x86_64-linux-gnu/libscalapack-openmpi.so libscalapack.so
       - name: run test
         working-directory: ${{github.workspace}}/PyScalapack
         run: mpirun --oversubscribe -n 6 coverage run -m pytest && coverage combine && coverage report
