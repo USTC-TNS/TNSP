@@ -6,17 +6,17 @@
 using DTensor = TAT::Tensor<double>;
 using ZTensor = TAT::Tensor<std::complex<double>>;
 
-auto Sz = ZTensor({"I", "O"}, {2, 2}).set([]() {
+auto Sz = ZTensor({"I", "O"}, {2, 2}).set_([]() {
     static int i = 0;
     static std::complex<double> data[4] = {1, 0, 0, -1};
     return data[i++] / 2.;
 });
-auto Sx = ZTensor({"I", "O"}, {2, 2}).set([]() {
+auto Sx = ZTensor({"I", "O"}, {2, 2}).set_([]() {
     static int i = 0;
     static std::complex<double> data[4] = {0, 1, 1, 0};
     return data[i++] / 2.;
 });
-auto Sy = ZTensor({"I", "O"}, {2, 2}).set([]() {
+auto Sy = ZTensor({"I", "O"}, {2, 2}).set_([]() {
     static int i = 0;
     static std::complex<double> data[4] = {0, {0, 1}, {0, -1}, 0};
     return data[i++] / 2.;
@@ -40,8 +40,8 @@ using Name = TAT::DefaultName;
 template<typename Scalar>
 auto edge_rename(TAT::Tensor<Scalar> t, std::unordered_map<Name, Name> map) {
     for (auto i = map.begin(); i != map.end();) {
-        auto found = std::find(t.names.begin(), t.names.end(), i->first);
-        if (found == t.names.end()) {
+        auto found = std::find(t.names().begin(), t.names().end(), i->first);
+        if (found == t.names().end()) {
             i = map.erase(i);
         } else {
             ++i;
@@ -53,9 +53,9 @@ auto edge_rename(TAT::Tensor<Scalar> t, std::unordered_map<Name, Name> map) {
 template<typename Scalar>
 auto contract(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b, std::unordered_set<std::pair<Name, Name>> contract_names) {
     for (auto i = contract_names.begin(); i != contract_names.end();) {
-        auto found_a = std::find(a.names.begin(), a.names.end(), i->first);
-        auto found_b = std::find(b.names.begin(), b.names.end(), i->second);
-        if (found_a == a.names.end() || found_b == b.names.end()) {
+        auto found_a = std::find(a.names().begin(), a.names().end(), i->first);
+        auto found_b = std::find(b.names().begin(), b.names().end(), i->second);
+        if (found_a == a.names().end() || found_b == b.names().end()) {
             // Not exist this pair
             i = contract_names.erase(i);
         } else {
@@ -68,7 +68,7 @@ auto contract(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b, std::unordered_set<s
 template<typename Scalar>
 auto contract_all_edge(TAT::Tensor<Scalar> a, TAT::Tensor<Scalar> b) {
     auto contract_names = std::unordered_set<std::pair<Name, Name>>();
-    for (const auto& i : a.names) {
+    for (const auto& i : a.names()) {
         contract_names.insert({i, i});
     }
     return contract(a, b, std::move(contract_names));
@@ -88,7 +88,7 @@ struct SpinLattice {
         auto edge = std::vector<TAT::Edge<TAT::NoSymmetry>>();
         std::transform(edge_to_initial.begin(), edge_to_initial.end(), std::back_inserter(edge), [](auto a) { return a; });
 
-        state_vector = DTensor({node_names.begin(), node_names.end()}, std::move(edge)).set([&]() { return dist(random_engine); });
+        state_vector = DTensor({node_names.begin(), node_names.end()}, std::move(edge)).set_([&]() { return dist(random_engine); });
     }
 
     void set_bond(const std::string& n1, const std::string& n2, const DTensor& matrix) {
@@ -99,9 +99,9 @@ struct SpinLattice {
         auto norm_max = double(state_vector.norm<-1>());
         energy = approximate_energy - norm_max;
         state_vector /= norm_max;
-        auto state_vector_temporary = state_vector.same_shape().zero();
+        auto state_vector_temporary = state_vector.same_shape().zero_();
         for (const auto& bond : bonds) {
-            const auto& name = bond.names;
+            const auto& name = bond.names();
             auto this_term = contract_all_edge(state_vector, bond).edge_rename({{name[2], name[0]}, {name[3], name[1]}});
             state_vector_temporary += this_term;
         }
@@ -112,7 +112,7 @@ struct SpinLattice {
     template<typename Scalar>
     auto observe(const TAT::Tensor<Scalar>& op) const {
         std::unordered_map<Name, Name> map;
-        for (const auto& n : op.names) {
+        for (const auto& n : op.names()) {
             auto str = std::string(n);
             map["_" + str] = str;
         }
