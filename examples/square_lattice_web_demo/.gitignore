@@ -1,3 +1,5 @@
 /kernel.js
 /kernel.wasm
 /kernel.wasm.map
+/libopenblas.a
+*.bz2

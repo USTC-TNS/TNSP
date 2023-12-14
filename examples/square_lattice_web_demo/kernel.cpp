@@ -169,8 +169,10 @@ struct SquareSpinLattice : SpinLattice {
 
 std::unique_ptr<SquareSpinLattice> lattice;
 
-extern "C" {
+#include <emscripten.h>
 
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE
     int create_lattice(int n1, int n2) {
         lattice = std::make_unique<SquareSpinLattice>(n1, n2, n1 * n2 * 0.5);
         for (auto i = 0; i < n1 - 1; i++) {
@@ -186,6 +188,7 @@ extern "C" {
         return 0;
     }
 
+    EMSCRIPTEN_KEEPALIVE
     int update_lattice(int step) {
         for (auto t = 0; t < step; t++) {
             lattice->update();
@@ -193,10 +196,12 @@ extern "C" {
         return 0;
     }
 
+    EMSCRIPTEN_KEEPALIVE
     double get_energy() {
         return lattice->energy / (lattice->n1 * lattice->n2);
     }
 
+    EMSCRIPTEN_KEEPALIVE
     double get_spin(int x, int y, int kind) {
         if (kind == 0) {
             return lattice->observe_single_site({x, y}, Sx);
@@ -206,6 +211,8 @@ extern "C" {
             return lattice->observe_single_site({x, y}, Sz);
         }
     }
+
+    EMSCRIPTEN_KEEPALIVE
     double get_den() {
         return lattice->get_observe_denominator();
     }
