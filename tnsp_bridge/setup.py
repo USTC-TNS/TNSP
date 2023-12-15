@@ -16,16 +16,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import email
 from setuptools import setup
-from subprocess import check_output, CalledProcessError
+from setuptools_scm import get_version
 
-try:
-    version = check_output(["git", "describe"]).decode("utf-8")
-    version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
-except CalledProcessError:
-    with open("PKG-INFO", "rt", encoding="utf-8") as file:
-        version = email.parser.Parser().parse(file)["Version"]
+version = get_version(root="..")
 
 try:
     with open("README.md", "rt", encoding="utf-8") as file:
@@ -36,7 +30,7 @@ except FileNotFoundError:
 setup(
     version=version,
     install_requires=[
-        f"PyTAT=={version}",
+        f"pytat=={version}",
     ],
     long_description=long_description,
     long_description_content_type="text/markdown",

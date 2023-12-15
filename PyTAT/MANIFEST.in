@@ -1,3 +1,0 @@
-graft parent/include
-include parent/PyTAT/dealing_tensor.cpp.in parent/PyTAT/PyTAT.hpp parent/PyTAT/PyTAT.cpp
-include parent/CMakeLists.txt parent/TAT-config.cmake.in parent/TAT.pc.in

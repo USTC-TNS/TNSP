@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools >= 62.0.0", "wheel", "pybind11 >= 2.11.0"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core", "ninja", "pybind11", "setuptools_scm"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "PyTAT"
@@ -29,5 +29,33 @@ Repository = "https://github.com/USTC-TNS/TAT.git"
 Issues = "https://github.com/USTC-TNS/TAT/issues"
 Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
 
-[tool.setuptools]
-packages = []
+[tool.scikit-build]
+experimental = true
+cmake.verbose = true
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
+metadata.readme.provider = "maybe_readme"
+metadata.readme.provider-path = "."
+sdist.exclude = ["*"]
+sdist.include = [
+  "/parent/include",
+  "/parent/CMakeLists.txt",
+  "/parent/TAT-config.cmake.in",
+  "/parent/TAT.pc.in",
+  "/parent/PyTAT/dealing_tensor.cpp.in",
+  "/parent/PyTAT/PyTAT.hpp",
+  "/parent/PyTAT/PyTAT.cpp",
+  "/CMakeLists.txt",
+  "/maybe_readme.py",
+  "/pyproject.toml",
+  "/README.org",
+  "/test_wasm.js",
+  "/tests"
+]
+
+[tool.scikit-build.cmake.define]
+CMAKE_BUILD_TYPE = "Release"
+TAT_USE_MPI = "OFF"
+TAT_BUILD_TEST = "OFF"
+
+[tool.setuptools_scm]
+root = ".."

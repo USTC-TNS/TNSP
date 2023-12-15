@@ -16,13 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from subprocess import check_output
-
-
-def get_version():
-    version = check_output(["git", "describe"]).decode("utf-8")
-    version = version.replace("\n", "").replace("v", "").replace("-", ".post", 1).replace("-", "+")
-    return version
+from setuptools_scm import get_version
 
 
 def main():

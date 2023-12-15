@@ -4,6 +4,8 @@
 
 *** Added
 *** Changed
++ *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
+  environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
 *** Deprecated
 *** Removed
 *** Fixed

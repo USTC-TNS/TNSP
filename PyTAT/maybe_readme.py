@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2021-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,26 +16,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from setuptools import setup
-from setuptools_scm import get_version
 
-version = get_version(root="..")
+def dynamic_metadata(field, settings=None):
 
-try:
-    with open("README.md", "rt", encoding="utf-8") as file:
-        long_description = file.read()
-except FileNotFoundError:
-    long_description = "empty description"
+    if field != "readme":
+        msg = "Only the 'readme' field is supported"
+        raise ValueError(msg)
 
-setup(
-    version=version,
-    install_requires=[
-        f"pytat=={version}",
-        f"lazy_graph=={version}",
-        f"PyScalapack=={version}",
-        "mpi4py",
-        "numpy",
-    ],
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-)
+    if settings:
+        msg = "No inline configuration is supported"
+        raise ValueError(msg)
+
+    try:
+        with open("README.md", "rt", encoding="utf-8") as file:
+            result = file.read()
+    except FileNotFoundError:
+        result = "empty description"
+
+    return {"content-type": "text/markdown", "text": result}
