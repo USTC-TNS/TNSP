@@ -1,16 +1,27 @@
+#+TITLE: lazy-graph
 #+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usemintedstyle{emacs}
 
-* lazy-graph
+The lazy-graph is a Python library designed to facilitate lazy evaluation,
+offering additional functionality for updating upstream values
+and allowing easy duplication of the entire lazy graph structure.
 
-The lazy-graph is a Python package that enables lazy evaluation and provides additional features for updating upstream values and copying the entire lazy graph.
+* Install
 
-** Install
+Please either copy or create a soft link for the directory in the =site-packages= directory.
+Alternatively, you can utilize pip to install the lazy-graph package by running the command =pip install lazy_graph=.
 
-Please copy or link this folder directly. Alternatively, you can use =pip= to install the lazy-graph distribution with the command =pip install lazy_graph=.
-
-** Documents
+* Documents
 
 #+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
   (defun ek/babel-ansi ()
     (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
       (save-excursion
@@ -21,9 +32,24 @@ Please copy or link this folder directly. Alternatively, you can use =pip= to in
             (ansi-color-apply-on-region beg end))))))
   (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
   (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
 #+end_src
 
-*** Simple example
+** A simple example
+
+We can create a root node =a= with the value =1= and another root node =b= with the value =2=,
+followed by creating a new node called =c=, where its value is equal to the sum of the values of nodes =a= and =b=.
+The function for adding these nodes will be triggered whenever we attempt to retrieve the value of node =c=.
 
 #+begin_src python :results output :exports both :session
   from lazy import Root, Node
@@ -50,9 +76,38 @@ calculating 1 + 2
 c is 3
 #+end_example
 
-The value of node =c= is calculated when it is needed.
+As demonstrated earlier, to create a root node containing the value of =x=, we use the expression =Root(x)=.
+On the other hand, to obtain a node with its value determined by the function =func= along with any additional arguments or keyword arguments (if provided),
+you would call =Node(func, *args, **kwargs)=.
+This will generate a node whose value is computed as =func(*args, **kwargs)=.
 
-*** Update upstream
+To obtain the value of a given node =n=, simply use the function =n()=.
+This calculates the value for the initial run and then utilizes caching for subsequent calls, ensuring efficiency in your code.
+
+** Check if a node has already been computed
+
+To determine if the value of a specified node =n= has already been computed and stored in cache,
+you can utilize =bool(n)=.
+This function returns =True= if the node's value exists in the cache, and =False= otherwise.
+
+#+begin_src python :results output :exports both :session
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print(bool(c))
+  print("c is", c())
+  print(bool(c))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+False
+calculating 1 + 2
+c is 3
+True
+#+end_example
+
+** An example of updating an upstream node
 
 #+begin_src python :results output :exports both :session
   print("create nodes")
@@ -83,9 +138,18 @@ calculating 4 + 2
 c is 6
 #+end_example
 
-The value of node =c= will only be recalculated if its upstream is updated, and retrieving its value multiple times will not result in duplicate calculations.
+In the provided code snippet, prior to resetting the upstream node =a=,
+the value of node =c= is computed only once during its initial execution and subsequently utilizes a cache mechanism for subsequent calls.
+Then, by calling =a.reset(v)=, where =v= equals =4= here, the value of node =a= can be reset to this new value.
+After this operation, invoking =c()= will cause the function to be executed once more in order to obtain the updated value of node =c=.
 
-*** Normal argument or keyword argument are also available
+** Both positional and keyword arguments are accepted, as well as regular values and lazy nodes
+
+Both positional and keyword arguments are supported, allowing for a flexible approach when creating nodes.
+You can mix these arguments with regular values as needed.
+In the example provided, we utilize various types of arguments,
+such as positional regular values, positional lazy nodes, keyword regular values, and keyword lazy nodes,
+to construct node =z=.
 
 #+begin_src python :results output :exports both :session
   def add4(a, b, c, d):
@@ -109,9 +173,7 @@ calculating 1 + 2 + 3 + 4
 c is 10
 #+end_example
 
-Both position arguments and keyword arguments are supported, and they can also be mixed with normal arguments.
-
-*** Copy the lazy graph
+** Copy the graph of lazy nodes
 
 #+begin_src python :results output :exports both :session
   from lazy import Copy
@@ -131,12 +193,6 @@ Both position arguments and keyword arguments are supported, and they can also b
 
   print("get the new value")
   print(f"new c is {new_c()}")
-
-  print("reset value")
-  a.reset(4)
-  new_a.reset(8)
-  print("get the old value and new value")
-  print(f"c is {c()}, new c is {new_c()}")
 #+end_src
 
 #+RESULTS:
@@ -148,6 +204,27 @@ c is 3
 copy lazy graph
 get the new value
 new c is 3
+#+end_example
+
+In addition to the previously simple example, we duplicate the graph,
+copying =a= to =new_a=, =b= to =new_b=, and =c= to =new_c=.
+This is done using a copy handle acquired through the `Copy()` function.
+Once you have obtained the handle with =copy = Copy()=,
+you can then utilize =copy(old_node)= to obtain the corresponding =new_node=.
+
+After copying the graph, the cache is also reused whenever possible.
+For instance, the =add= function isn't called when retrieving the value of node =new_c=.
+
+#+begin_src python :results output :exports both :session
+  print("reset value")
+  a.reset(4)
+  new_a.reset(8)
+  print("get the old value and new value")
+  print(f"c is {c()}, new c is {new_c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
 reset value
 get the old value and new value
 calculating 4 + 2
@@ -155,12 +232,14 @@ calculating 8 + 2
 c is 6, new c is 10
 #+end_example
 
-Copy the same relation between node =a=, =b=, and =c= to a new lazy graph.
-The new graph shares the initial value from the original nodes but does not have any other effects on each other.
+In the copied graph, the relationships between nodes are identical to those in the original graph,
+along with the cache when feasible.
+However, resetting the value of a node in one graph does not impact any other graphs.
 
-Please note that you can copy a part of the lazy graph.
-For example, copy =b= and =c= here while sharing the same =a=.
-This means that updating =a= will result in both =c= and =new_c= being updated, while =b= or =new_b= will only affect either =c= or =new_c=.
+In some cases, users might wish to duplicate just a portion of an entire graph.
+In such instances, both graphs will share the same upstream nodes for those that haven't been replicated.
+For instance, consider the example below where node =a= is shared between the two graphs.
+However, the second graph contains unique nodes =new_b= and =new_c=, which correspond to =a= and =b= respectively in the initial graph.
 
 #+begin_src python :results output :exports both :session
   copy = Copy()
@@ -192,7 +271,7 @@ calculating 6 + 10
 c is 14, new c is 16
 #+end_example
 
-If you copy the same node using the same copy object twice, you will get the same copied node.
+In order to prevent misuse, if a user attempts to duplicate the same node multiple times, the copy handler will provide the same new node each time.
 
 #+begin_src python :results output :exports both :session
   new_c = copy(c)
@@ -205,23 +284,6 @@ If you copy the same node using the same copy object twice, you will get the sam
 True
 #+end_example
 
-When copying a lazy graph, it is always necessary to copy the upstream nodes before the downstream nodes are copied, so that this package can maintain the dependencies.
-
-*** Check whether a node has been calculated
-
-#+begin_src python :results output :exports both :session
-  a = Root(1)
-  b = Root(2)
-  c = Node(add, a, b)
-  print(bool(c))
-  print("c is", c())
-  print(bool(c))
-#+end_src
-
-#+RESULTS:
-#+begin_example
-False
-calculating 1 + 2
-c is 3
-True
-#+end_example
+When duplicating a lazy graph,
+it is essential to replicate the upstream nodes prior to proceeding with the downstream nodes.
+This guarantees that the package can effectively handle the dependencies among the various nodes of the graph.

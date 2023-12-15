@@ -2,10 +2,10 @@
 
 ** How to contribute to TAT project
 
-If you have/implement an idea or find/fix a bug, use GitHub issues or pull requests.
+If you have/implemented an idea or find/fixed a bug, use GitHub issues or pull requests.
 Providing a minimum working example for bugs would be helpful.
 Any questions about using TAT can be put in GitHub discussion.
-And feel free to submit a pull request for adding documentation.
+And feel free to submit a pull request for completing documentation.
 
 ** Code structure
 

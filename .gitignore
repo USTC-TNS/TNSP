@@ -25,7 +25,7 @@
 !/TAT.pc.in
 !/Tensor.org
 
-/PyTAT/.*.cpp
+_minted-*
 build
 dist
 .DS_Store
@@ -51,6 +51,7 @@ auto
 *.md
 *.tex
 *.pdf
+*.bbl
 *.html
 *.egg-info
 *.pyc
