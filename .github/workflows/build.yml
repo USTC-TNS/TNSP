@@ -448,7 +448,7 @@ jobs:
       - name: create docs
         run: doxygen
       - name: publish
-        uses: crazy-max/ghaction-github-pages@v1
+        uses: crazy-max/ghaction-github-pages@v4
         with:
           build_dir: html
         env:
