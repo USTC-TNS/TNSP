@@ -416,3 +416,64 @@ def read_configurations(file_name):
     file.Read_at(offset, config)
     file.Close()
     return config
+
+
+def trace_repeated(tensor, points, trace_repeated_pool={}):
+    result = tensor
+
+    uniques = []
+    # points[i] == uniques[points_to_uniques[i]]
+    points_to_uniques = []
+    # uniques[i] == points[uniques_to_points[i]], the minimum of all possible value
+    uniques_to_points = []
+    for index_in_points, point in enumerate(points):
+        if point in uniques:
+            # Point Apprear before
+            index_in_uniques = uniques.index(point)
+            points_to_uniques.append(index_in_uniques)
+        else:
+            # First time for point
+            points_to_uniques.append(len(uniques))
+            uniques_to_points.append(index_in_points)
+            uniques.append(point)
+
+    key = (id(tensor), tuple(points_to_uniques))
+    if key not in trace_repeated_pool:
+        # 1. trace all same points
+        # 2. rename to same points
+        # 3. rename to lower index
+        trace_set = set()
+        rename_map = {}
+        for index_in_uniques, _ in enumerate(uniques):
+            # Find all point
+            index_of_group = [
+                index_in_points for index_in_points, another_index_in_uniques in enumerate(points_to_uniques)
+                if another_index_in_uniques == index_in_uniques
+            ]
+            for former, latter in zip(index_of_group[:-1], index_of_group[1:]):
+                trace_set.add((f"I{former}", f"O{latter}"))
+            rename_map[f"I{index_of_group[-1]}"] = f"I{index_of_group[0]}"
+        result = result.trace(trace_set)
+        result = result.edge_rename(rename_map)
+        result = result.edge_rename({
+            f"{direction}{index_in_points}": f"{direction}{index_in_uniques}"
+            for index_in_uniques, index_in_points in enumerate(uniques_to_points) for direction in ["I", "O"]
+        })
+        # tensor must be refered here, otherwise, id(tensor) may be invalid if tensor destructed.
+        trace_repeated_pool[key] = (tensor, result)
+
+    return trace_repeated_pool[key][1], tuple(uniques)
+
+
+def sort_points(tensor, points, sort_points_pool={}):
+    sorted_points = tuple(sorted(points))
+    order = tuple(sorted_points.index(point) for point in points)
+    key = (id(tensor), order)
+    if key not in sort_points_pool:
+        sorted_tensor = tensor.edge_rename({
+            f"{direction}{index_before}": f"{direction}{index_after}" for index_before, index_after in enumerate(order)
+            for direction in ["I", "O"]
+        })
+        # tensor must be refered here, otherwise, id(tensor) may be invalid if tensor destructed.
+        sort_points_pool[key] = (tensor, sorted_tensor)
+    return sort_points_pool[key][1], sorted_points
