@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+from .utility import trace_repeated, sort_points
+
 
 class AbstractStatePhysicsEdge:
     """
@@ -194,6 +196,46 @@ class AbstractStateHamiltonian:
         else:
             points = tuple(point if len(point) == 3 else (point[0], point[1], 0) for point in arg)
             self.owner._set_hamiltonian(points, tensor)
+
+    def trace_repeated(self):
+        """
+        Trace all hamiltonians term on repeated points.
+        """
+        result = {}
+        for key, value in self:
+            value, key = trace_repeated(value, key)
+            if key in result:
+                result[key] = result[key] + value
+            else:
+                result[key] = value
+        self.owner._hamiltonians = result
+        return self
+
+    def sort_points(self):
+        """
+        Sort the points of all hamiltonian terms and sum over terms on the same group of points.
+        """
+        result = {}
+        for key, value in self:
+            value, key = sort_points(value, key)
+            if key in result:
+                result[key] = result[key] + value
+            else:
+                result[key] = value
+        self.owner._hamiltonians = result
+        return self
+
+    def check_hermite(self, threshold):
+        """
+        Check if the hamiltonians is hermitian.
+        """
+        for key, value in self:
+            body = value.rank // 2
+            error = (value - value.conjugate().edge_rename({f"I{i}": f"O{i}" for i in range(body)} |
+                                                           {f"O{i}": f"I{i}" for i in range(body)}))
+            if error.norm_max() > threshold:
+                raise ValueError("The Hamiltonian is not Hermitian")
+        return self
 
 
 class AbstractState:
