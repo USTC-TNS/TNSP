@@ -196,7 +196,8 @@ namespace TAT {
                 },
                 [](const py::bytes& bytes) {
                     Symmetry symmetry;
-                    auto in = detail::basic_instringstream<char>(std::string(bytes));
+                    auto string = std::string(bytes);
+                    auto in = detail::basic_instringstream<char>(string);
                     in > symmetry;
                     return symmetry;
                 }
@@ -311,7 +312,8 @@ namespace TAT {
                 },
                 [](const py::bytes& bytes) {
                     E edge;
-                    auto in = detail::basic_instringstream<char>(std::string(bytes));
+                    auto string = std::string(bytes);
+                    auto in = detail::basic_instringstream<char>(string);
                     in > edge;
                     return edge;
                 }
