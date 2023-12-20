@@ -17,6 +17,7 @@
 #
 
 from copyreg import _slotnames
+from scipy.linalg import eigh_tridiagonal
 from .utility import show, showln
 from .abstract_state import AbstractState
 
@@ -93,63 +94,62 @@ class ExactState(AbstractState):
         vector /= vector.norm_2()
         return vector
 
-    def update(self, total_step, approximate_energy):
+    def update(self, total_step):
         """
-        Exact update the state by power iteration.
+        Exact update the state by Lanczos algorithm.
 
         Parameters
         ----------
         total_step : int
             The step of power iteration.
-        approximate_energy : float
-            The approximate energy of this system, the matrix used by power iteration is $a I - H$, so the lowest energy
-            become the largest, to avoid high energy also gets large absolute value, $a$ should be bigger than
-            $(Eh + El)/2$, where $Eh$ and $El$ is the largest and lowest eigenenergy of $H$.
 
         Returns
         -------
         float
-            The result energy per site calculated by power iteration.
+            The result energy per site calculated by Lanczos algorithm.
         """
-        if total_step <= 0:
-            raise ValueError("Total iteration step should be a positive integer")
+        if total_step <= 1:
+            raise ValueError("Total iteration step should larger than 1")
 
-        # Apprixmate the total energy
-        total_approximate_energy = abs(approximate_energy) * self.site_number
-        energy = 0
+        v = []
+        alpha = []
+        beta = []
+
+        v.append(self.vector)
 
         for step in range(total_step):
-            # let a be total_approximate_energy
-            # v <- a v - H v = (a - H) v => E = a - |v'|/|v|
-            # temporary_vector: H v
-            temporary_vector = self.vector.same_shape().zero_()
+            w = v[step].same_shape().zero_()
             for positions, value in self.hamiltonians:
-                # H v = sum_i H_i v
-                temporary_vector += (
+                w += (
                     value  #
                     .edge_rename({
                         f"O{t}": f"P_{i}_{j}_{orbit}" for t, [i, j, orbit] in enumerate(positions)
                     })  #
                     .contract(
-                        self.vector,
+                        v[step],
                         {(f"I{t}", f"P_{i}_{j}_{orbit}") for t, [i, j, orbit] in enumerate(positions)},
                     ))
-            # To calculate a v - H v => v *= a; v -= H v
-            self.vector *= total_approximate_energy
-            self.vector -= temporary_vector
+            alpha.append(complex(v[step].contract(w.conjugate(), {(name, name) for name in w.names})).real)
+            if step == 0:
+                w = w - alpha[step] * v[step]
+            else:
+                w = w - alpha[step] * v[step] - beta[step - 1] * v[step - 1]
 
-            # Get the new norm, original norm should be set as 1.
-            # If it is initialize by exact state, it is 1,
-            # If not, after first step, it is also 1.
-            # So the norm is a - |v'|/|v|, when converging, |v'|/|v| -> H
-            # Then getting energy by a - norm
-            norm = float(self.vector.norm_2())
-            energy = total_approximate_energy - norm
+                vals, vecs = eigh_tridiagonal(alpha, beta, lapack_driver="stemr", select="i", select_range=[0, 0])
+                # Both stemr and stebz works, based on some test, it seems stemr is faster
 
-            # Normalize state to ensure norm is 1 in the next iteration.
-            self.vector /= norm
+                energy = vals[0]
+                self.vector = (vecs.T @ v)[0]
 
-            show(f"Exact update, {total_step=}, {step=}, energy={energy / self.site_number}")
+                show(f"Exact update, {total_step=}, {step=}, energy={energy / self.site_number}")
+
+            beta.append(w.norm_2())
+            if beta[step] != 0:
+                v.append(w / beta[step])
+            else:
+                showln("Exact update break since converged")
+                total_step = step + 1
+                break
 
         showln(f"Exact update done, {total_step=}, energy={energy / self.site_number}")
         return energy / self.site_number

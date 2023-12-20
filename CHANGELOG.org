@@ -7,6 +7,9 @@
 *** Changed
 + *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
   environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
++ *tetragono*: Use Lanczos algorithm instead of previous power iteration to optimize exact state. =update= function for
+  exact state does not have the second parameter =approximate_energy= any more, and =ex_update= in tetragono shell does
+  not have the second parameter either.
 *** Deprecated
 *** Removed
 *** Fixed
