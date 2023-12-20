@@ -240,7 +240,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex = read_from_file(name)
 
     @AutoCmd.decorator
-    def ex_update(self, total_step, approximate_energy):
+    def ex_update(self, total_step):
         """
         Do exact update.
 
@@ -248,10 +248,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         ----------
         total_step : int
             The update total step to do.
-        approximate_energy : float
-            The approximate energy per site, it should ensure the ground state energy is the largest after shifting.
         """
-        self.ex.update(total_step, approximate_energy)
+        self.ex.update(total_step)
 
     @AutoCmd.decorator
     def ex_energy(self):

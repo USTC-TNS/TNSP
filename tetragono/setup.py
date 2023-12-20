@@ -35,6 +35,7 @@ setup(
         f"PyScalapack=={version}",
         "mpi4py",
         "numpy",
+        "scipy",
     ],
     long_description=long_description,
     long_description_content_type="text/markdown",
