@@ -147,6 +147,12 @@ class AbstractStateHamiltonian:
         """
         return iter(sorted(self.owner._hamiltonians.items()))
 
+    def __contains__(self, key):
+        """
+        Check the existence of hamiltonian term on specified points.
+        """
+        return key in self.owner._hamiltonians
+
     def __setitem__(self, arg, tensor):
         """
         Set a hamiltonian for several points.

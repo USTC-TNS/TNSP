@@ -3,6 +3,7 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.12...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add =__contains__= for hamiltonians handle of abstract state.
 *** Changed
 + *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
   environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
