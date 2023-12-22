@@ -246,7 +246,16 @@ namespace TAT {
 
             for (const auto& [key, value] : symmetries_to_offsets) {
                 const auto& [old_offset, new_offset, size] = value;
+#ifdef TAT_USE_CUDA
+                thrust::copy(
+                    thrust::device,
+                    cuda::thrust_complex_wrap(m_storage.data() + old_offset),
+                    cuda::thrust_complex_wrap(m_storage.data() + old_offset + size),
+                    cuda::thrust_complex_wrap(new_storage.data() + new_offset)
+                );
+#else
                 std::copy(&m_storage[old_offset], &m_storage[old_offset + size], &new_storage[new_offset]);
+#endif
             }
 
             m_storage = std::move(new_storage);

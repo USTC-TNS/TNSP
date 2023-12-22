@@ -118,7 +118,7 @@ namespace TAT {
         template<typename T>
         struct abs_op {
             TAT_CUDA_HOST TAT_CUDA_DEVICE auto operator()(const thrust_complex<T>& x) const {
-                return abs(x);
+                return abs<T>(x);
             }
         };
 

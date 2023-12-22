@@ -700,7 +700,7 @@ namespace TAT {
         out < version;
         out < tensor.names();
         out < tensor.edges();
-        out < tensor.storage();
+        out < ensure_cpu(tensor.storage());
         return out;
     }
 
@@ -747,7 +747,15 @@ namespace TAT {
             std::vector<Edge<Symmetry>> edges;
             in > edges;
             tensor = Tensor<ScalarType, Symmetry, Name>(std::move(names), std::move(edges));
-            in > tensor.storage();
+#ifdef TAT_USE_CUDA
+            auto storage = no_initialize::vector<ScalarType>(tensor.storage().size());
+#else
+            auto& storage = tensor.storage();
+#endif
+            in > storage;
+#ifdef TAT_USE_CUDA
+            ensure_cpu(tensor.storage(), storage);
+#endif
             tensor._block_order_v0_to_v1();
         } else if (version == 1) {
             std::vector<Name> names;
@@ -755,7 +763,15 @@ namespace TAT {
             std::vector<Edge<Symmetry>> edges;
             in > edges;
             tensor = Tensor<ScalarType, Symmetry, Name>(std::move(names), std::move(edges));
-            in > tensor.storage();
+#ifdef TAT_USE_CUDA
+            auto storage = no_initialize::vector<ScalarType>(tensor.storage().size());
+#else
+            auto& storage = tensor.storage();
+#endif
+            in > storage;
+#ifdef TAT_USE_CUDA
+            ensure_cpu(tensor.storage(), storage);
+#endif
         }
         return in;
     }
