@@ -387,8 +387,16 @@ namespace TAT {
 #ifdef TAT_USE_CUDA
     template<typename T, typename G>
     void ensure_cpu(T& r, const G& v) {
-        const T t = v;
-        cuda::check_cuda(cudaMemcpy(&r, &t, sizeof(T), cudaMemcpyHostToDevice));
+        if constexpr (std::is_trivially_destructible_v<remove_cvref_t<T>>) {
+            // only one value
+            const T t = v;
+            cuda::check_cuda(cudaMemcpy(&r, &t, sizeof(T), cudaMemcpyHostToDevice));
+        } else {
+            // a vector
+            using Vector = remove_cvref_t<T>;
+            using Value = typename Vector::value_type;
+            cuda::check_cuda(cudaMemcpy(r.data(), v.data(), v.size() * sizeof(Value), cudaMemcpyHostToDevice));
+        }
     }
 #else
     template<typename T, typename G>

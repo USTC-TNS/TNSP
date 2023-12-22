@@ -555,11 +555,12 @@ namespace TAT {
         out << tensor.edges() << ',';
         out << console_green << "blocks" << console_origin << ':';
         if constexpr (Symmetry::length == 0) {
-            out << tensor.storage();
+            out << ensure_cpu(tensor.storage());
         } else {
+            const auto& storage = ensure_cpu(tensor.storage());
             detail::print_list(
                 out,
-                [&tensor, it = tensor.blocks().begin()](std::ostream& out) mutable {
+                [&tensor, &storage, it = tensor.blocks().begin()](std::ostream& out) mutable {
                     if (it.offset == 0) {
                         while (true) {
                             if (!it.valid) {
@@ -579,7 +580,9 @@ namespace TAT {
                     out << console_yellow << symmetries << console_origin << ':';
                     detail::print_list(
                         out,
-                        [offset = 0, l = it->value().data(), count = it->value().size()](std::ostream& out) mutable {
+                        [offset = 0,
+                         l = it->value().data() + (storage.data() - tensor.storage().data()),
+                         count = it->value().size()](std::ostream& out) mutable {
                             if (offset == count) {
                                 return true;
                             }
@@ -626,11 +629,15 @@ namespace TAT {
         in >> edges;
         tensor = Tensor<ScalarType, Symmetry, Name>(std::move(names), std::move(edges));
         detail::ignore_until(in, ':');
+#ifdef TAT_USE_CUDA
+        auto storage = no_initialize::vector<ScalarType>(tensor.storage().size());
+#else
+        auto& storage = tensor.storage();
+#endif
         if constexpr (Symmetry::length == 0) {
-            auto storage = tensor.storage().data();
             detail::scan_list(
                 in,
-                [offset = 0, l = storage](std::istream& in) mutable {
+                [offset = 0, l = storage.data()](std::istream& in) mutable {
                     if constexpr (is_complex<ScalarType>) {
                         detail::scan_complex(in, l[offset++]);
                     } else {
@@ -643,14 +650,13 @@ namespace TAT {
         } else {
             detail::scan_list(
                 in,
-                [&tensor](std::istream& in) {
+                [&tensor, &storage](std::istream& in) {
                     std::vector<Symmetry> symmetries;
                     in >> symmetries;
                     detail::ignore_until(in, ':');
-                    auto block = tensor.blocks(symmetries).data();
                     detail::scan_list(
                         in,
-                        [offset = 0, l = block](std::istream& in) mutable {
+                        [offset = 0, l = tensor.blocks(symmetries).data() + (storage.data() - tensor.storage().data())](std::istream& in) mutable {
                             if constexpr (is_complex<ScalarType>) {
                                 detail::scan_complex(in, l[offset++]);
                             } else {
@@ -665,6 +671,9 @@ namespace TAT {
                 '}'
             );
         }
+#ifdef TAT_USE_CUDA
+        ensure_cpu(tensor.storage(), storage);
+#endif
         detail::ignore_until(in, '}');
         return in;
     }
