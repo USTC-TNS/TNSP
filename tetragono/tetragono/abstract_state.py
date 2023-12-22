@@ -153,6 +153,12 @@ class AbstractStateHamiltonian:
         """
         return key in self.owner._hamiltonians
 
+    def __len__(self):
+        """
+        Get the number of hamiltonian terms.
+        """
+        return len(self.owner._hamiltonians)
+
     def __setitem__(self, arg, tensor):
         """
         Set a hamiltonian for several points.
