@@ -26,7 +26,7 @@ TEST(test_create_fermi_tensor, basic_usage) {
     ASSERT_EQ(a.rank_by_name("Left"), 0);
     ASSERT_EQ(a.rank_by_name("Right"), 1);
     ASSERT_EQ(a.rank_by_name("Up"), 2);
-    ASSERT_EQ(a.storage().size(), 1 * 2 * 3 + 1 * 1 * 2 + 3 * 2 * 2 + 3 * 1 * 3);
+    ASSERT_EQ(TAT::ensure_cpu(a.storage()).size(), 1 * 2 * 3 + 1 * 1 * 2 + 3 * 2 * 2 + 3 * 1 * 3);
     ASSERT_EQ(&a.edges("Left"), &a.edges(0));
     ASSERT_EQ(&a.edges("Right"), &a.edges(1));
     ASSERT_EQ(&a.edges("Up"), &a.edges(2));
@@ -49,14 +49,21 @@ TEST(test_create_fermi_tensor, basic_usage) {
         ElementsAre(1, 1, 2)
     );
 
-    ASSERT_FLOAT_EQ(a.at(std::vector<std::pair<TAT::ParitySymmetry, TAT::Size>>{{1, 1}, {1, 0}, {0, 2}}), 5);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.at(std::vector<std::pair<TAT::ParitySymmetry, TAT::Size>>{{1, 1}, {1, 0}, {0, 2}})), 5);
     ASSERT_FLOAT_EQ(
-        a.at(std::unordered_map<std::string, std::pair<TAT::ParitySymmetry, TAT::Size>>{{"Left", {1, 2}}, {"Right", {0, 0}}, {"Up", {1, 1}}}),
+        TAT::ensure_cpu(
+            a.at(std::unordered_map<std::string, std::pair<TAT::ParitySymmetry, TAT::Size>>{{"Left", {1, 2}}, {"Right", {0, 0}}, {"Up", {1, 1}}})
+        ),
         3 * 1 * 3 + 9
     );
-    ASSERT_FLOAT_EQ(a.const_at(std::vector<std::pair<TAT::ParitySymmetry, TAT::Size>>{{0, 0}, {1, 0}, {1, 1}}), 3 * 1 * 3 + 3 * 2 * 2 + 1);
     ASSERT_FLOAT_EQ(
-        a.const_at(std::unordered_map<std::string, std::pair<TAT::ParitySymmetry, TAT::Size>>{{"Left", {0, 0}}, {"Right", {0, 1}}, {"Up", {0, 2}}}),
+        TAT::ensure_cpu(a.const_at(std::vector<std::pair<TAT::ParitySymmetry, TAT::Size>>{{0, 0}, {1, 0}, {1, 1}})),
+        3 * 1 * 3 + 3 * 2 * 2 + 1
+    );
+    ASSERT_FLOAT_EQ(
+        TAT::ensure_cpu(a.const_at(
+            std::unordered_map<std::string, std::pair<TAT::ParitySymmetry, TAT::Size>>{{"Left", {0, 0}}, {"Right", {0, 1}}, {"Up", {0, 2}}}
+        )),
         3 * 1 * 3 + 3 * 2 * 2 + 1 * 1 * 2 + 5
     );
 }
@@ -64,7 +71,7 @@ TEST(test_create_fermi_tensor, basic_usage) {
 TEST(test_create_fermi_tensor, when_0rank) {
     auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{}, {}}.range_(2333);
     ASSERT_THAT(a.names(), ElementsAre());
-    ASSERT_THAT(a.storage(), ElementsAre(2333));
+    ASSERT_THAT(TAT::ensure_cpu(a.storage()), ElementsAre(2333));
 
     ASSERT_THAT(a.blocks(std::vector<int>{}).dimensions(), ElementsAre());
     ASSERT_THAT(a.const_blocks(std::vector<int>{}).dimensions(), ElementsAre());
@@ -75,10 +82,10 @@ TEST(test_create_fermi_tensor, when_0rank) {
     ASSERT_THAT(a.blocks(std::unordered_map<std::string, TAT::FermiSymmetry>{}).dimensions(), ElementsAre());
     ASSERT_THAT(a.const_blocks(std::unordered_map<std::string, TAT::FermiSymmetry>{}).dimensions(), ElementsAre());
 
-    ASSERT_FLOAT_EQ(a.at(std::vector<TAT::Size>{}), 2333);
-    ASSERT_FLOAT_EQ(a.at(std::unordered_map<std::string, TAT::Size>{}), 2333);
-    ASSERT_FLOAT_EQ(a.const_at(std::vector<TAT::Size>{}), 2333);
-    ASSERT_FLOAT_EQ(a.const_at(std::unordered_map<std::string, TAT::Size>{}), 2333);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.at(std::vector<TAT::Size>{})), 2333);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.at(std::unordered_map<std::string, TAT::Size>{})), 2333);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.const_at(std::vector<TAT::Size>{})), 2333);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.const_at(std::unordered_map<std::string, TAT::Size>{})), 2333);
 }
 
 TEST(test_create_fermi_tensor, when_0size) {
@@ -92,7 +99,7 @@ TEST(test_create_fermi_tensor, when_0size) {
     ASSERT_EQ(a.rank_by_name("Left"), 0);
     ASSERT_EQ(a.rank_by_name("Right"), 1);
     ASSERT_EQ(a.rank_by_name("Up"), 2);
-    ASSERT_THAT(a.storage(), ElementsAre());
+    ASSERT_THAT(TAT::ensure_cpu(a.storage()), ElementsAre());
     ASSERT_EQ(&a.edges("Left"), &a.edges(0));
     ASSERT_EQ(&a.edges("Right"), &a.edges(1));
     ASSERT_EQ(&a.edges("Up"), &a.edges(2));
@@ -124,7 +131,7 @@ TEST(test_create_fermi_tensor, when_0block) {
     ASSERT_EQ(a.rank_by_name("Left"), 0);
     ASSERT_EQ(a.rank_by_name("Right"), 1);
     ASSERT_EQ(a.rank_by_name("Up"), 2);
-    ASSERT_THAT(a.storage(), ElementsAre());
+    ASSERT_THAT(TAT::ensure_cpu(a.storage()), ElementsAre());
     ASSERT_EQ(&a.edges("Left"), &a.edges(0));
     ASSERT_EQ(&a.edges("Right"), &a.edges(1));
     ASSERT_EQ(&a.edges("Up"), &a.edges(2));
@@ -140,7 +147,7 @@ TEST(test_create_fermi_tensor, conversion_scalar) {
     ASSERT_THAT(a.names(), ElementsAre("i", "j"));
     ASSERT_EQ(a.rank_by_name("i"), 0);
     ASSERT_EQ(a.rank_by_name("j"), 1);
-    ASSERT_THAT(a.storage(), ElementsAre(2333));
+    ASSERT_THAT(TAT::ensure_cpu(a.storage()), ElementsAre(2333));
     ASSERT_EQ(&a.edges("i"), &a.edges(0));
     ASSERT_EQ(&a.edges("j"), &a.edges(1));
     ASSERT_EQ(a.edges(0).arrow(), true);
@@ -155,8 +162,8 @@ TEST(test_create_fermi_tensor, conversion_scalar) {
     ASSERT_THAT(a.blocks(std::unordered_map<std::string, TAT::FermiSymmetry>{{"i", -2}, {"j", +2}}).dimensions(), ElementsAre(1, 1));
     ASSERT_THAT(a.const_blocks(std::unordered_map<std::string, TAT::FermiSymmetry>{{"i", -2}, {"j", +2}}).dimensions(), ElementsAre(1, 1));
 
-    ASSERT_FLOAT_EQ(a.at(), 2333);
-    ASSERT_FLOAT_EQ(a.const_at(), 2333);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.at()), 2333);
+    ASSERT_FLOAT_EQ(TAT::ensure_cpu(a.const_at()), 2333);
     ASSERT_FLOAT_EQ(double(a), 2333);
 }
 
