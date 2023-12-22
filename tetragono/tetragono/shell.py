@@ -212,6 +212,54 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         if state is not None:
             self.ex = state
 
+    @AutoCmd.decorator
+    def ex_dump(self, name):
+        """
+        Dump the exact update lattice into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        if self.ex is None:
+            showln("ex is None")
+        else:
+            write_to_file(self.ex, name)
+
+    @AutoCmd.decorator
+    def ex_load(self, name):
+        """
+        Load the exact update lattice from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        self.ex = read_from_file(name)
+
+    @AutoCmd.decorator
+    def ex_update(self, total_step, approximate_energy):
+        """
+        Do exact update.
+
+        Parameters
+        ----------
+        total_step : int
+            The update total step to do.
+        approximate_energy : float
+            The approximate energy per site, it should ensure the ground state energy is the largest after shifting.
+        """
+        self.ex.update(total_step, approximate_energy)
+
+    @AutoCmd.decorator
+    def ex_energy(self):
+        """
+        Calculate exact energy.
+        """
+        showln("Exact state energy is", self.ex.observe_energy())
+
     @staticmethod
     def su_gm_create(lattice_type, model_name, *args, **kwargs):
         abstract_lattice = get_imported_function(model_name, "abstract_lattice")
@@ -313,54 +361,6 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm = conversion.simple_update_lattice_to_sampling_lattice(self.su)
 
     @AutoCmd.decorator
-    def ex_update(self, total_step, approximate_energy):
-        """
-        Do exact update.
-
-        Parameters
-        ----------
-        total_step : int
-            The update total step to do.
-        approximate_energy : float
-            The approximate energy per site, it should ensure the ground state energy is the largest after shifting.
-        """
-        self.ex.update(total_step, approximate_energy)
-
-    @AutoCmd.decorator
-    def ex_energy(self):
-        """
-        Calculate exact energy.
-        """
-        showln("Exact state energy is", self.ex.observe_energy())
-
-    @AutoCmd.decorator
-    def ex_dump(self, name):
-        """
-        Dump the exact update lattice into file.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        if self.ex is None:
-            showln("ex is None")
-        else:
-            write_to_file(self.ex, name)
-
-    @AutoCmd.decorator
-    def ex_load(self, name):
-        """
-        Load the exact update lattice from file.
-
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        self.ex = read_from_file(name)
-
-    @AutoCmd.decorator
     def gm_create(self, *args, **kwargs):
         """
         Create a lattice used for gradient method.
@@ -377,23 +377,23 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             self.gm = state
 
     @AutoCmd.decorator
-    def gm_run(self, *args, **kwargs):
-        for result in self.gm_run_g(*args, **kwargs):
-            pass
-        return result
+    def gm_conf_create(self, module_name, *args, **kwargs):
+        """
+        Create configuration of sampling lattice.
 
-    def gm_run_g(self, *args, **kwargs):
-        yield from gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
-
-    gm_run.__doc__ = gm_run_g.__doc__ = gm_gradient_descent.__doc__
-
-    def bin_estimate(self, values):
-        value = [v for v, d in values]
-        length = len(value)
-        expect = sum(value) / length
-        expect_of_square = sum(v**2 for v in value) / length
-        deviation = (expect_of_square - expect**2)**(1 / 2)
-        return expect, deviation / ((length - 1)**(1 / 2))
+        Parameters
+        ----------
+        module_name : str
+            The module name to create initial configuration of sampling lattice.
+        args, kwargs
+            Arguments passed to module configuration creater function.
+        """
+        with seed_differ:
+            # This configuration should never be used, so cut dimension is -1
+            configuration = gm_Configuration(self.gm, -1)
+            initial_configuration = get_imported_function(module_name, "initial_configuration")
+            configuration = initial_configuration(configuration, *args, **kwargs)
+            self.gm_conf = configuration.export_configuration()
 
     @AutoCmd.decorator
     def gm_dump(self, name):
@@ -435,6 +435,18 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm = read_from_file(name)
 
     @AutoCmd.decorator
+    def gm_conf_load(self, name):
+        """
+        Load the sampling lattice configuration from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        self.gm_conf = read_configurations(name)
+
+    @AutoCmd.decorator
     def gm_conf_load_compat(self, name):
         """
         Load the sampling lattice configuration from file.
@@ -454,78 +466,15 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.gm_conf = config[choose]
 
     @AutoCmd.decorator
-    def gm_conf_load(self, name):
-        """
-        Load the sampling lattice configuration from file.
+    def gm_run(self, *args, **kwargs):
+        for result in self.gm_run_g(*args, **kwargs):
+            pass
+        return result
 
-        Parameters
-        ----------
-        name : str
-            The file name.
-        """
-        self.gm_conf = read_configurations(name)
+    def gm_run_g(self, *args, **kwargs):
+        yield from gm_gradient_descent(self.gm, *args, **kwargs, sampling_configurations=self.gm_conf)
 
-    @AutoCmd.decorator
-    def gm_conf_create(self, module_name, *args, **kwargs):
-        """
-        Create configuration of sampling lattice.
-
-        Parameters
-        ----------
-        module_name : str
-            The module name to create initial configuration of sampling lattice.
-        args, kwargs
-            Arguments passed to module configuration creater function.
-        """
-        with seed_differ:
-            # This configuration should never be used, so cut dimension is -1
-            configuration = gm_Configuration(self.gm, -1)
-            initial_configuration = get_imported_function(module_name, "initial_configuration")
-            configuration = initial_configuration(configuration, *args, **kwargs)
-            self.gm_conf = configuration.export_configuration()
-
-    @AutoCmd.decorator
-    def gm_clear_symmetry(self):
-        """
-        Clear the symmetry of sampling lattice.
-        """
-        self.gm = self.gm.clear_symmetry()
-
-    @AutoCmd.decorator
-    def gm_hamiltonian(self, model, *args, **kwargs):
-        """
-        Replace the hamiltonian of the sampling lattice with another one.
-
-        Parameters
-        ----------
-        model : str
-            The model names.
-        args, kwargs
-            Arguments passed to model creater function.
-        """
-        new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
-        self.gm._hamiltonians = new_state._hamiltonians
-
-    @AutoCmd.decorator
-    def gm_expand(self, new_dimension, epsilon):
-        """
-        Expand dimension of sampling lattice.
-
-        Parameters
-        ----------
-        new_dimension : int | float
-            The new dimension, or the amplitude of dimension expandance.
-        epsilon : float
-            The relative error added into tensor.
-        """
-        self.gm.expand_dimension(new_dimension, epsilon)
-
-    @AutoCmd.decorator
-    def gm_to_ex(self):
-        """
-        Convert sampling lattice to exact lattice.
-        """
-        self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
+    gm_run.__doc__ = gm_run_g.__doc__ = gm_gradient_descent.__doc__
 
     @AutoCmd.decorator
     def gm_conf_eq(self, step, configuration_cut_dimension, sweep_hopping_hamiltonians=None, restrict_subspace=None):
@@ -569,6 +518,49 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             sampling_configurations.resize(new_configurations.shape, refcheck=False)
             np.copyto(sampling_configurations, new_configurations)
             showln(f"equilibium done, total_step={step}")
+
+    @AutoCmd.decorator
+    def gm_clear_symmetry(self):
+        """
+        Clear the symmetry of sampling lattice.
+        """
+        self.gm = self.gm.clear_symmetry()
+
+    @AutoCmd.decorator
+    def gm_hamiltonian(self, model, *args, **kwargs):
+        """
+        Replace the hamiltonian of the sampling lattice with another one.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        new_state = self.ex_ap_create(lambda x: x, model, *args, **kwargs)
+        self.gm._hamiltonians = new_state._hamiltonians
+
+    @AutoCmd.decorator
+    def gm_expand(self, new_dimension, epsilon):
+        """
+        Expand dimension of sampling lattice.
+
+        Parameters
+        ----------
+        new_dimension : int | float
+            The new dimension, or the amplitude of dimension expandance.
+        epsilon : float
+            The relative error added into tensor.
+        """
+        self.gm.expand_dimension(new_dimension, epsilon)
+
+    @AutoCmd.decorator
+    def gm_to_ex(self):
+        """
+        Convert sampling lattice to exact lattice.
+        """
+        self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
 
 
 class TetragonoScriptApp(TetragonoCommandApp):
@@ -618,9 +610,15 @@ if __name__ == "__main__":
 else:
     app = TetragonoCommandApp()
 
-    seed = app.seed
     shell = app.do_shell
+    seed = app.seed
     numpy_hamiltonian = app.numpy_hamiltonian
+
+    ex_create = app.ex_create
+    ex_dump = app.ex_dump
+    ex_load = app.ex_load
+    ex_update = app.ex_update
+    ex_energy = app.ex_energy
 
     su_create = app.su_create
     su_dump = app.su_dump
@@ -630,24 +628,17 @@ else:
     su_to_ex = app.su_to_ex
     su_to_gm = app.su_to_gm
 
-    ex_create = app.ex_create
-    ex_update = app.ex_update
-    ex_energy = app.ex_energy
-    ex_dump = app.ex_dump
-    ex_load = app.ex_load
-
     gm_create = app.gm_create
-    gm_run = app.gm_run
+    gm_conf_create = app.gm_conf_create
     gm_dump = app.gm_dump
-    gm_load = app.gm_load
-    gm_expand = app.gm_expand
-    gm_to_ex = app.gm_to_ex
     gm_conf_dump = app.gm_conf_dump
+    gm_load = app.gm_load
     gm_conf_load = app.gm_conf_load
     gm_conf_load_compat = app.gm_conf_load_compat
-    gm_conf_create = app.gm_conf_create
-    gm_conf_eq = app.gm_conf_eq
-    gm_hamiltonian = app.gm_hamiltonian
-    gm_clear_symmetry = app.gm_clear_symmetry
-
+    gm_run = app.gm_run
     gm_run_g = app.gm_run_g
+    gm_conf_eq = app.gm_conf_eq
+    gm_clear_symmetry = app.gm_clear_symmetry
+    gm_hamiltonian = app.gm_hamiltonian
+    gm_expand = app.gm_expand
+    gm_to_ex = app.gm_to_ex
