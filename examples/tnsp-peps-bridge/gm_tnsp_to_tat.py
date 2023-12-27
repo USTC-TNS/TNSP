@@ -29,7 +29,7 @@ for l1 in range(state.L1):
     for l2 in range(state.L2):
         print(f" reading site {l1},{l2}")
         site_name = f"A{l1+1}_{l2+1}"
-        new_tensor = state[l1, l2].copy().zero()
+        new_tensor = state[l1, l2].copy().zero_()
         if (l1, l2) == (0, 0):
             physics_dimension = 4
             new_tensor_merged = new_tensor.merge_edge({"P": ["P1"]})
@@ -39,10 +39,10 @@ for l1 in range(state.L1):
         else:
             physics_dimension = 16
             new_tensor_merged = new_tensor.merge_edge({"P": ["P1", "P0"]})
-        physics_edge = new_tensor_merged.edges("P")
+        physics_edge = new_tensor_merged.edge_by_name("P")
 
         for d in range(physics_dimension):
-            site = bridge(data.pop)
+            site = bridge(data.pop, compat=True)
             if site is not None:
                 site = site.edge_rename({
                     f"{site_name}.L": "L",
@@ -52,20 +52,21 @@ for l1 in range(state.L1):
                     f"{site_name}.n": "P",
                     f"TotalN.n": "T"
                 })
-                symmetry = site.edges("P").segment[0][0]
-                shrinker = state.Tensor(["P", "Q"], [[(symmetry, 1)], physics_edge.conjugated()]).zero()
+                symmetry = site.edge_by_name("P").segments[0][0]
+                shrinker = state.Tensor(["P", "Q"], [[(symmetry, 1)], physics_edge.conjugate()]).zero_()
                 shrinker[{"Q": d, "P": 0}] = 1
                 new_tensor_merged += site.contract(shrinker.conjugate(), {("P", "P")}).edge_rename({"Q": "P"})
         if (l1, l2) == (0, 0):
-            state[l1, l2] = new_tensor_merged.split_edge({"P": [("P1", new_tensor.edges("P1").segment)]})
+            state[l1, l2] = new_tensor_merged.split_edge({"P": [("P1", new_tensor.edge_by_name("P1").segments)]})
         elif (l1, l2) == (state.L1 - 1, state.L2 - 1):
-            state[l1, l2] = new_tensor_merged.split_edge({"P": [("P0", new_tensor.edges("P0").segment)]})
+            state[l1, l2] = new_tensor_merged.split_edge({"P": [("P0", new_tensor.edge_by_name("P0").segments)]})
         else:
-            state[l1, l2] = new_tensor_merged.split_edge(
-                {"P": [
-                    ("P1", new_tensor.edges("P1").segment),
-                    ("P0", new_tensor.edges("P0").segment),
-                ]})
+            state[l1, l2] = new_tensor_merged.split_edge({
+                "P": [
+                    ("P1", new_tensor.edge_by_name("P1").segments),
+                    ("P0", new_tensor.edge_by_name("P0").segments),
+                ]
+            })
         state[l1, l2] = state[l1, l2].reverse_edge({"L", "R", "U", "D"})
 
 with open("gm.dat", "wb") as file:

@@ -42,7 +42,7 @@ for l1 in range(L1):
         print(f" reading site {l1},{l2}")
         print(f"  reading site tensor")
         site_name = f"A{l1+1}_{l2+1}"
-        site = bridge(data.pop).edge_rename({
+        site = bridge(data.pop, compat=True).edge_rename({
             f"{site_name}.L": "L",
             f"{site_name}.R": "R",
             f"{site_name}.U": "U",
@@ -53,13 +53,13 @@ for l1 in range(L1):
         })
         pool[l1, l2, "s"] = site
         print(f"  reading env tensor u")
-        pool[l1, l2, "u"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "u"] = try_rename_env(bridge(data.pop, compat=True))
         print(f"  reading env tensor d")
-        pool[l1, l2, "d"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "d"] = try_rename_env(bridge(data.pop, compat=True))
         print(f"  reading env tensor r")
-        pool[l1, l2, "r"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "r"] = try_rename_env(bridge(data.pop, compat=True))
         print(f"  reading env tensor l")
-        pool[l1, l2, "l"] = try_rename_env(bridge(data.pop))
+        pool[l1, l2, "l"] = try_rename_env(bridge(data.pop, compat=True))
 
 for l1 in range(L1):
     for l2 in range(L2):
@@ -77,12 +77,12 @@ state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
 for l1 in range(L1):
     for l2 in range(L2):
         if (l1, l2) != (0, 0):
-            state.physics_edges[l1, l2, 0] = pool[l1, l2, "s"].edges("P0")
+            state.physics_edges[l1, l2, 0] = pool[l1, l2, "s"].edge_by_name("P0")
             state.hamiltonians[
                 (l1, l2, 0),
             ] = U * NN
         if (l1, l2) != (L1 - 1, L2 - 1):
-            state.physics_edges[l1, l2, 1] = pool[l1, l2, "s"].edges("P1")
+            state.physics_edges[l1, l2, 1] = pool[l1, l2, "s"].edge_by_name("P1")
             state.hamiltonians[
                 (l1, l2, 1),
             ] = U * NN
@@ -97,9 +97,9 @@ state = tet.AbstractLattice(state)
 for l1 in range(L1):
     for l2 in range(L2):
         if l1 != 0:
-            state.virtual_bond[l1, l2, "U"] = pool[l1, l2, "s"].edges("U")
+            state.virtual_bond[l1, l2, "U"] = pool[l1, l2, "s"].edge_by_name("U")
         if l2 != 0:
-            state.virtual_bond[l1, l2, "L"] = pool[l1, l2, "s"].edges("L")
+            state.virtual_bond[l1, l2, "L"] = pool[l1, l2, "s"].edge_by_name("L")
 
 state = tet.SimpleUpdateLattice(state)
 for l1 in range(L1):
