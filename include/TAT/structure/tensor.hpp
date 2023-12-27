@@ -911,7 +911,7 @@ namespace TAT {
          * \param pairs pair set describing how to treat the tensor as matrix
          * \param step iteration step
          */
-        [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::unordered_set<std::pair<Name, Name>>& pairs, int step = 2) const;
+        [[nodiscard]] Tensor<ScalarType, Symmetry, Name> exponential(const std::unordered_set<std::pair<Name, Name>>& pairs, int step = 8) const;
 
         /**
          * Get trace of tensor

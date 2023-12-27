@@ -447,8 +447,9 @@ class SimpleUpdateLattice(AbstractLattice):
                 index_and_orbit.append((index, orbit))
 
             site_number = len(positions)
-            evolution_operator = (-delta_tau * hamiltonian_term).exponential(
-                {(f"I{i}", f"O{i}") for i in range(site_number)}, step=8)
+            evolution_operator = (-delta_tau * hamiltonian_term).exponential({
+                (f"I{i}", f"O{i}") for i in range(site_number)
+            })
 
             updaters.append((coordinates, index_and_orbit, evolution_operator))
 

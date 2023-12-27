@@ -10,6 +10,8 @@
 + *tetragono*: Use Lanczos algorithm instead of previous power iteration to optimize exact state. =update= function for
   exact state does not have the second parameter =approximate_energy= any more, and =ex_update= in tetragono shell does
   not have the second parameter either.
++ *TAT.hpp*: Change the default exponential iteration step to =8= from =2=, since in practice, it is difficult for
+  =step=2= to convege to a usable result.
 *** Deprecated
 *** Removed
 *** Fixed
