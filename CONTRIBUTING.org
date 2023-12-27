@@ -62,10 +62,10 @@ TAT.py serves as a wrapper for TAT.hpp, utilizing pybind11. It comprises three f
 Within the directory [[/include/TAT/structure][structure]], the organization of files is as follows:
 
 - [[/include/TAT/structure/name.hpp][name.hpp]] is responsible for defining names used to label tensor edges, referred to as edge names.
-- [[/include/TAT/structure/symmetry.hpp][symmetry.hpp]] outlines the generic symmetry type =Symmetry=. This can be instantiated as various symmetries such as NoSymmetry, U1Symmetry, Z2Symmetry, ParitySymmetry, FermiSymmetry, among others.
+- [[/include/TAT/structure/symmetry.hpp][symmetry.hpp]] outlines the generic symmetry type =Symmetry=. This can be instantiated as various symmetries such as =NoSymmetry=, =U1Symmetry=, =Z2Symmetry=, =ParitySymmetry=, =FermiSymmetry=, among others.
 - [[/include/TAT/structure/edge.hpp][edge.hpp]] details the structure of a tensor edge, which includes segments and a fermi-arrow. Here, segments are represented as a vector comprising pairs of Symmetry and dimension.
 - [[/include/TAT/structure/core.hpp][core.hpp]] is designed to define everything in a tensor except for the edge names.
-- [[/include/TAT/structure/tensor.hpp][tensor.hpp]] describes the tensor structure, encompassing a =shared_ptr<Core>= and a =vector<Name>=. Additionally, this file declares numerous tensor-related functions, the implementations of which are found in the corresponding files within the [[include/TAT/implements][implements]] directory.
+- [[/include/TAT/structure/tensor.hpp][tensor.hpp]] describes the tensor structure, encompassing a =shared_ptr<Core>= and a =vector<Name>=. Additionally, this file declares numerous tensor-related functions, the implementations of which are found in the corresponding files within the [[include/TAT/implement][implement]] directory.
 
 Furthermore, several utilities are defined in the [[/include/TAT/utility][utility]] directory.
 The file [[/include/TAT/miscellaneous/io.hpp][io.hpp]] is dedicated to defining I/O functions for tensors,
