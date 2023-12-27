@@ -57,6 +57,22 @@ TAT.py serves as a wrapper for TAT.hpp, utilizing pybind11. It comprises three f
 + [[/PyTAT/dealing_tensor.cpp.in][dealing_tensor.cpp.in]], is employed to generate files that instantiate function in [[/PyTAT/PyTAT.hpp][PyTAT.hpp]] for different tensor types, orchestrated by [[/CMakeLists.txt][CMakeLists.txt]]. 
 + [[/PyTAT/PyTAT.cpp][PyTAT.cpp]] is responsible for defining all remaining components within the Python module.
 
+*** TAT.hpp
+
+Within the directory [[/include/TAT/structure][structure]], the organization of files is as follows:
+
+- [[/include/TAT/structure/name.hpp][name.hpp]] is responsible for defining names used to label tensor edges, referred to as edge names.
+- [[/include/TAT/structure/symmetry.hpp][symmetry.hpp]] outlines the generic symmetry type =Symmetry=. This can be instantiated as various symmetries such as NoSymmetry, U1Symmetry, Z2Symmetry, ParitySymmetry, FermiSymmetry, among others.
+- [[/include/TAT/structure/edge.hpp][edge.hpp]] details the structure of a tensor edge, which includes segments and a fermi-arrow. Here, segments are represented as a vector comprising pairs of Symmetry and dimension.
+- [[/include/TAT/structure/core.hpp][core.hpp]] is designed to define everything in a tensor except for the edge names.
+- [[/include/TAT/structure/tensor.hpp][tensor.hpp]] describes the tensor structure, encompassing a =shared_ptr<Core>= and a =vector<Name>=. Additionally, this file declares numerous tensor-related functions, the implementations of which are found in the corresponding files within the [[include/TAT/implements][implements]] directory.
+
+Furthermore, several utilities are defined in the [[/include/TAT/utility][utility]] directory.
+The file [[/include/TAT/miscellaneous/io.hpp][io.hpp]] is dedicated to defining I/O functions for tensors,
+[[/include/TAT/miscellaneous/scalar.hpp][scalar.hpp]] handles scalar arithmetic for tensors, and [[/include/TAT/miscellaneous/mpi.hpp][mpi.hpp]] focuses on various MPI functions for tensors. It is important to note that in TAT.py, functions from mpi.hpp are not utilized.
+
+---
+
 Thanks! :heart: :heart: :heart:
 
 USTC-TNS Group
