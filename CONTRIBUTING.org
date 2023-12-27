@@ -71,7 +71,7 @@ Furthermore, several utilities are defined in the [[/include/TAT/utility][utilit
 The file [[/include/TAT/miscellaneous/io.hpp][io.hpp]] is dedicated to defining I/O functions for tensors,
 [[/include/TAT/miscellaneous/scalar.hpp][scalar.hpp]] handles scalar arithmetic for tensors, and [[/include/TAT/miscellaneous/mpi.hpp][mpi.hpp]] focuses on various MPI functions for tensors. It is important to note that in TAT.py, functions from mpi.hpp are not utilized.
 
----
+-----
 
 Thanks! :heart: :heart: :heart:
 
