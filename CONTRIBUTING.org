@@ -44,11 +44,18 @@ The [[/tetragono/tetragono/sampling_lattice/observer.py][observer.py]] is design
 Finally, all these functionalities are integrated and executed through the driver functions outlined in [[/tetragono/tetragono/sampling_lattice/gradient.py][gradient.py]].
 
 The [[/tetragono/tetragono/utility.py][utility.py]] file comprises various utility functions.
-The [[/tetragono/tetragono/auxiliary][auxiliary]] directory, utilizing lazy.py, used in the configuration type, contains several auxiliary systems designed to minimize redundant calculations in tensor network contractions,
+The [[/tetragono/tetragono/auxiliaries][auxiliaries]] directory, utilizing lazy.py, used in the configuration type, contains several auxiliary systems designed to minimize redundant calculations in tensor network contractions,
 particularly when several sites are removed or replaced.
 The [[/tetragono/tetragono/tensor_element.py][tensor_element.py]] script is dedicated to sparsifying the Hamiltonian, a critical component in sampling methods.
 In [[/tetragono/tetragono/conversion.py][conversion.py]], functions are defined for converting between ExactState, SimpleUpdateLattice, and SamplingLattice.
 Finally, [[/tetragono/tetragono/shell.py][shell.py]] offers a high-level, user-friendly interface for accessing all functions within tetragono.py.
+
+*** TAT.py
+
+TAT.py serves as a wrapper for TAT.hpp, utilizing pybind11. It comprises three files:
++ [[/PyTAT/PyTAT.hpp][PyTAT.hpp]] defines template functions that wrap tensors and edges.
++ [[/PyTAT/dealing_tensor.cpp.in][dealing_tensor.cpp.in]], is employed to generate files that instantiate function in [[/PyTAT/PyTAT.hpp][PyTAT.hpp]] for different tensor types, orchestrated by [[/CMakeLists.txt][CMakeLists.txt]]. 
++ [[/PyTAT/PyTAT.cpp][PyTAT.cpp]] is responsible for defining all remaining components within the Python module.
 
 Thanks! :heart: :heart: :heart:
 
