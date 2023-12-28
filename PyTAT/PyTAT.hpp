@@ -102,11 +102,11 @@ namespace TAT {
     // About random
     inline auto random_engine = std::mt19937_64(std::random_device()());
     inline void set_random(py::module_& tat_m) {
-        auto random_m = tat_m.def_submodule("random", "random for TAT");
+        auto random_m = tat_m.def_submodule("random", "A submodule for random number generating and seed setting for TAT");
         random_m.def(
             "seed",
             [](unsigned int seed) { random_engine.seed(seed); },
-            "Set Random Seed",
+            "Set the internal random seed",
             py::arg("seed")
         );
         random_m.def(
@@ -116,7 +116,7 @@ namespace TAT {
             },
             py::arg("min") = 0,
             py::arg("max") = 1,
-            "Get random uniform integer"
+            "Get uniformly distributed random integer"
         );
         random_m.def(
             "uniform_real",
@@ -127,7 +127,7 @@ namespace TAT {
             },
             py::arg("min") = 0,
             py::arg("max") = 1,
-            "Get random uniform real"
+            "Get uniformly distributed random real number"
         );
         random_m.def(
             "normal",
@@ -137,7 +137,7 @@ namespace TAT {
             },
             py::arg("mean") = 0,
             py::arg("stddev") = 1,
-            "Get random normal real"
+            "Get normally distributed random number"
         );
     }
 
@@ -148,17 +148,17 @@ namespace TAT {
         // define TAT.Fermi.Symmetry as FermiSymmetry in this function
         // it does not define constructor, it is needed to define constructor later
         return py::class_<Symmetry>(symmetry_m, "Symmetry", (std::string(name) + "Symmetry").c_str())
-            .def(py::init<Symmetry>())
-            .def(py::self < py::self)
-            .def(py::self > py::self)
-            .def(py::self <= py::self)
-            .def(py::self >= py::self)
-            .def(py::self == py::self)
-            .def(py::self != py::self)
-            .def(py::self += py::self)
-            .def(py::self -= py::self)
-            .def(py::self + py::self)
-            .def(py::self - py::self)
+            .def(py::init<Symmetry>(), py::arg("other"))
+            .def(py::self < py::self, py::arg("other"))
+            .def(py::self > py::self, py::arg("other"))
+            .def(py::self <= py::self, py::arg("other"))
+            .def(py::self >= py::self, py::arg("other"))
+            .def(py::self == py::self, py::arg("other"))
+            .def(py::self != py::self, py::arg("other"))
+            .def(py::self += py::self, py::arg("other"))
+            .def(py::self -= py::self, py::arg("other"))
+            .def(py::self + py::self, py::arg("other"))
+            .def(py::self - py::self, py::arg("other"))
             .def(-py::self)
             .def_property_readonly("parity", &Symmetry::parity)
             .def(
@@ -272,18 +272,22 @@ namespace TAT {
 
         auto result =
             py::class_<E>(symmetry_m, real_edge ? "Edge" : "EdgeSegment", ("Edge with symmetry type as " + std::string(name) + "Symmetry").c_str())
-                .def(py::init<E>())
-                .def(implicit_init<E, Size>(), py::arg("dimension"), "Edge with only one trivial segment")
-                .def_property_readonly("segments", static_cast<const typename E::segments_t& (E::*)() const>(&E::segments))
-                .def_property_readonly("segments_size", &E::segments_size)
-                .def("coord_by_point", &E::coord_by_point)
-                .def("point_by_coord", &E::point_by_coord)
-                .def("coord_by_index", &E::coord_by_index)
-                .def("index_by_coord", &E::index_by_coord)
-                .def("point_by_index", &E::point_by_index)
-                .def("index_by_point", &E::index_by_point)
-                .def("position_by_symmetry", &E::position_by_symmetry)
-                .def("dimension_by_symmetry", &E::dimension_by_symmetry)
+                .def(py::init<E>(), "Copy an edge")
+                .def(implicit_init<E, Size>(), py::arg("dimension"), "Create an edge with only one trivial segment")
+                .def_property_readonly(
+                    "segments",
+                    static_cast<const typename E::segments_t& (E::*)() const>(&E::segments),
+                    "Segments sequence of the edge"
+                )
+                .def_property_readonly("segments_size", &E::segments_size, "Segments sequence size of the edge")
+                .def("coord_by_point", &E::coord_by_point, py::arg("point"))
+                .def("point_by_coord", &E::point_by_coord, py::arg("coord"))
+                .def("coord_by_index", &E::coord_by_index, py::arg("index"))
+                .def("index_by_coord", &E::index_by_coord, py::arg("coord"))
+                .def("point_by_index", &E::point_by_index, py::arg("index"))
+                .def("index_by_point", &E::index_by_point, py::arg("point"))
+                .def("position_by_symmetry", &E::position_by_symmetry, py::arg("symmetry"))
+                .def("dimension_by_symmetry", &E::dimension_by_symmetry, py::arg("symmetry"))
                 .def(
                     "conjugated",
                     [](const E& edge) {
@@ -292,14 +296,14 @@ namespace TAT {
                     }
                 )
                 .def("conjugate", static_cast<E (E::*)() const>(&E::conjugate), "Get conjugated edge of this edge")
-                .def_property_readonly("dimension", &E::total_dimension)
-                .def(py::self == py::self)
-                .def(py::self != py::self);
+                .def_property_readonly("dimension", &E::total_dimension, "Total dimension of the edge")
+                .def(py::self == py::self, py::arg("other"))
+                .def(py::self != py::self, py::arg("other"));
 
         // Real edge specific
         if constexpr (real_edge) {
             if constexpr (need_arrow) {
-                result.def_property_readonly("arrow", &E::arrow, "Fermi Arrow of the edge");
+                result.def_property_readonly("arrow", &E::arrow, "Fermi-arrow of the edge");
             } else {
                 result.attr("arrow") = E::arrow();
             }
@@ -363,7 +367,7 @@ namespace TAT {
         result.def(
             implicit_init<E, std::vector<std::pair<Symmetry, Size>>>(),
             py::arg("segments"),
-            "Create Edge with list of pair of symmetry and dimension"
+            "Edge created from a list of pair of symmetry and dimension"
         );
         if constexpr (need_element) {
             result.def(
@@ -371,7 +375,7 @@ namespace TAT {
                     return E(convert_to_symmetries<Symmetry, true>(element_segments));
                 }),
                 py::arg("segments"),
-                "Create Edge with list of pair of symmetry and dimension"
+                "Edge created from a list of pair of symmetry and dimension"
             );
         }
         if constexpr (real_edge) {
@@ -417,7 +421,7 @@ namespace TAT {
         result.def(
             implicit_init<E, std::vector<Symmetry>>(),
             py::arg("symmetries"),
-            "Create Edge with list of symmetries which construct several one dimension segments"
+            "Edge created from symmetry list constructing one dimension segments"
         );
         if constexpr (need_element) {
             result.def(
@@ -425,7 +429,7 @@ namespace TAT {
                     return E(convert_to_symmetries<Symmetry, false>(element_symmetries));
                 }),
                 py::arg("symmetries"),
-                "Create Edge with list of symmetries which construct several one dimension segments"
+                "Edge created from symmetry list constructing one dimension segments"
             );
         }
         if constexpr (real_edge) {
@@ -434,7 +438,7 @@ namespace TAT {
                 py::init<std::vector<Symmetry>, Arrow>(),
                 py::arg("symmetries"),
                 py::arg("arrow"),
-                "Edge created from segments and arrow, for boson edge, arrow will not be used"
+                "Edge created from symmetry list constructing one dimension segments and fermi-arrow which will not be used for boson edge"
             );
             if constexpr (need_element) {
                 result.def(
@@ -443,7 +447,7 @@ namespace TAT {
                     }),
                     py::arg("symmetries"),
                     py::arg("arrow"),
-                    "Edge created from segments and arrow, for boson edge, arrow will not be used"
+                    "Edge created from symmetry list constructing one dimension segments and fermi-arrow which will not be used for boson edge"
                 );
             }
             // [Sym] * ([], Arrow)
@@ -452,7 +456,7 @@ namespace TAT {
                     return std::make_from_tuple<E>(std::move(p));
                 }),
                 py::arg("pair_of_symmetries_and_arrow"),
-                "Edge created from segments and arrow, for boson edge, arrow will not be used"
+                "Edge created from symmetry list constructing one dimension segments and fermi-arrow which will not be used for boson edge"
             );
             if constexpr (need_element) {
                 result.def(
@@ -460,8 +464,8 @@ namespace TAT {
                         const auto& [element_symmetries, arrow] = p;
                         return E(convert_to_symmetries<Symmetry, false>(element_symmetries), arrow);
                     }),
-
-                    "Edge created from segments and arrow, for boson edge, arrow will not be used"
+                    py::arg("pair_of_symmetries_and_arrow"),
+                    "Edge created from symmetry list constructing one dimension segments and fermi-arrow which will not be used for boson edge"
                 );
             }
         }
@@ -630,13 +634,27 @@ namespace TAT {
 
         // Define tensor function after all tensor has been declared.
         return [=]() mutable {
-            tensor_t.def(py::init<T>())
-                .def_property_readonly("names", [](const T& tensor) { return tensor.names(); })
-                .def_property_readonly("edges", [](py::object& tensor) { return edges_of_tensor<ScalarType, Symmetry>(tensor); })
-                .def_property_readonly("rank", [](const T& tensor) { return tensor.rank(); })
+            tensor_t.def(py::init<T>(), py::arg("other"), "Copy a tensor")
+                .def_property_readonly(
+                    "names",
+                    [](const T& tensor) { return tensor.names(); },
+                    "The read-only names list of the tensor"
+                )
+                .def_property_readonly(
+                    "edges",
+                    [](py::object& tensor) { return edges_of_tensor<ScalarType, Symmetry>(tensor); },
+                    "The read-only edges list of the tensor"
+                )
+                .def_property_readonly(
+                    "rank",
+                    [](const T& tensor) { return tensor.rank(); },
+                    "The rank of the tensor"
+                )
                 .def(
                     "edge_by_name",
                     [](const T& tensor, DefaultName r) -> const E& { return tensor.edges(r); },
+                    py::arg("name"),
+                    "Get the corresponding edge by the given name",
                     py::return_value_policy::reference_internal
                 )
                 .def_property(
@@ -648,9 +666,14 @@ namespace TAT {
                     [](py::object& tensor, py::object& value) {
                         auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
                         py_storage(t, tensor).attr("__setitem__")(py::ellipsis(), value);
-                    }
+                    },
+                    "The storage for all contents of the tensor"
                 )
-                .def_property_readonly("blocks", [](py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>(tensor); })
+                .def_property_readonly(
+                    "blocks",
+                    [](py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>(tensor); },
+                    "The handle for getting a block of the tensor"
+                )
                 .def(
                     "__getitem__",
                     [](const T& tensor, const std::unordered_map<DefaultName, std::pair<Symmetry, Size>>& position) { return tensor.at(position); },
@@ -676,33 +699,33 @@ namespace TAT {
                     py::arg("value")
                 );
 
-            tensor_t.def(ScalarType() + py::self)
-                .def(py::self + ScalarType())
-                .def(py::self += ScalarType())
-                .def(ScalarType() - py::self)
-                .def(py::self - ScalarType())
-                .def(py::self -= ScalarType())
-                .def(ScalarType() * py::self)
-                .def(py::self * ScalarType())
-                .def(py::self *= ScalarType())
-                .def(ScalarType() / py::self)
-                .def(py::self / ScalarType())
-                .def(py::self /= ScalarType());
+            tensor_t.def(ScalarType() + py::self, py::arg("other"))
+                .def(py::self + ScalarType(), py::arg("other"))
+                .def(py::self += ScalarType(), py::arg("other"))
+                .def(ScalarType() - py::self, py::arg("other"))
+                .def(py::self - ScalarType(), py::arg("other"))
+                .def(py::self -= ScalarType(), py::arg("other"))
+                .def(ScalarType() * py::self, py::arg("other"))
+                .def(py::self * ScalarType(), py::arg("other"))
+                .def(py::self *= ScalarType(), py::arg("other"))
+                .def(ScalarType() / py::self, py::arg("other"))
+                .def(py::self / ScalarType(), py::arg("other"))
+                .def(py::self /= ScalarType(), py::arg("other"));
 #define TAT_LOOP_OPERATOR(ANOTHERSCALAR) \
-    def(py::self + Tensor<ANOTHERSCALAR, Symmetry>()) \
-        .def(py::self - Tensor<ANOTHERSCALAR, Symmetry>()) \
-        .def(py::self* Tensor<ANOTHERSCALAR, Symmetry>()) \
-        .def(py::self / Tensor<ANOTHERSCALAR, Symmetry>())
+    def(py::self + Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other")) \
+        .def(py::self - Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other")) \
+        .def(py::self* Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other")) \
+        .def(py::self / Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other"))
             tensor_t.TAT_LOOP_OPERATOR(float)
                 .TAT_LOOP_OPERATOR(double)
                 .TAT_LOOP_OPERATOR(std::complex<float>)
                 .TAT_LOOP_OPERATOR(std::complex<double>);
 #undef TAT_LOOP_OPERATOR
 #define TAT_LOOP_OPERATOR(ANOTHERSCALAR) \
-    def(py::self += Tensor<ANOTHERSCALAR, Symmetry>()) \
-        .def(py::self -= Tensor<ANOTHERSCALAR, Symmetry>()) \
-        .def(py::self *= Tensor<ANOTHERSCALAR, Symmetry>()) \
-        .def(py::self /= Tensor<ANOTHERSCALAR, Symmetry>())
+    def(py::self += Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other")) \
+        .def(py::self -= Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other")) \
+        .def(py::self *= Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other")) \
+        .def(py::self /= Tensor<ANOTHERSCALAR, Symmetry>(), py::arg("other"))
             tensor_t.TAT_LOOP_OPERATOR(float).TAT_LOOP_OPERATOR(double);
             if constexpr (is_complex<ScalarType>) {
                 tensor_t.TAT_LOOP_OPERATOR(std::complex<float>).TAT_LOOP_OPERATOR(std::complex<double>);
@@ -728,12 +751,13 @@ namespace TAT {
                 .def(
                     "dump",
                     [](const T& tensor) { return py::bytes(tensor.dump()); },
-                    "dump Tensor to bytes"
+                    "dump the tensor to bytes"
                 )
                 .def(
                     "load",
                     [](T& tensor, const py::bytes& bytes) -> T& { return tensor.load(std::string(bytes)); },
-                    "Load Tensor from bytes",
+                    py::arg("bytes"),
+                    "Load a tensor from bytes",
                     py::return_value_policy::reference_internal
                 )
                 .def(py::pickle(
@@ -763,18 +787,23 @@ namespace TAT {
                         in >> result;
                         return result;
                     }),
+                    py::arg("string"),
                     "Read tensor from text string"
                 );
 
             tensor_t.def("copy", &T::copy, "Deep copy a tensor")
                 .def("__copy__", &T::copy)
-                .def("__deepcopy__", [](const T& tensor, const py::object&) { return tensor.copy(); })
+                .def(
+                    "__deepcopy__",
+                    [](const T& tensor, const py::object&) { return tensor.copy(); },
+                    py::arg("memo")
+                )
                 .def("same_shape", &T::template same_shape<ScalarType>, "Create a tensor with same shape")
                 .def(
                     "map",
                     [](const T& tensor, std::function<ScalarType(ScalarType)>& function) { return tensor.map(function); },
                     py::arg("function"),
-                    "Out-place map every element of a tensor"
+                    "Out-place map all the elements of a tensor"
                 )
                 .def(
                     "transform",
@@ -791,7 +820,7 @@ namespace TAT {
                     // write function explicitly to avoid const T&/T& ambigiuous
                     // if use py::overload_cast, I need to write argument type twice
                     py::arg("function"),
-                    "In-place map every element of a tensor",
+                    "In-place map all the elements of a tensor",
                     py::return_value_policy::reference_internal
                 )
                 .def(
@@ -837,7 +866,7 @@ namespace TAT {
                 .def(
                     "zero_",
                     [](T& tensor) -> T& { return tensor.zero_(); },
-                    "Set all element zero",
+                    "Set all the elements of the tensor to zero",
                     py::return_value_policy::reference_internal
                 )
                 .def(
@@ -855,7 +884,7 @@ namespace TAT {
                     [](T& tensor, ScalarType first, ScalarType step) -> T& { return tensor.range_(first, step); },
                     py::arg("first") = 0,
                     py::arg("step") = 1,
-                    "Useful function generate simple data in tensor element for test",
+                    "Generate range data into the tensor",
                     py::return_value_policy::reference_internal
                 )
                 .def(
@@ -895,6 +924,7 @@ namespace TAT {
                         }
                         throw std::runtime_error("Invalid scalar type in type conversion");
                     },
+                    py::arg("new_type"),
                     "Convert to other scalar type tensor"
                 )
                 .def("norm_max", &T::template norm<-1>, "Get -1 norm, namely max absolute value")
@@ -910,14 +940,14 @@ namespace TAT {
                     py::arg("dictionary"),
                     "Rename names of edges, which will not copy data"
                 )
-                .def("transpose", &T::transpose, py::arg("target_names"), "Transpose the tensor to the order of new names")
+                .def("transpose", &T::transpose, py::arg("target_names"), "Transpose the tensor with the order of new names list")
                 .def(
                     "reverse_edge",
                     &T::reverse_edge,
                     py::arg("reversed_names"),
                     py::arg("apply_parity") = false,
                     py::arg("parity_exclude_names") = py::set(),
-                    "Reverse fermi arrow of several edge"
+                    "Reverse fermi-arrow of several edge"
                 )
                 .def(
                     "merge_edge",
@@ -948,7 +978,7 @@ namespace TAT {
                     py::arg("parity_exclude_names_reverse_before_transpose") = py::set(),
                     py::arg("parity_exclude_names_reverse_after_transpose") = py::set(),
                     py::arg("parity_exclude_names_merge") = py::set(),
-                    "Tensor Edge Operator"
+                    "Tensor edge operator"
                 );
 #define TAT_LOOP_CONTRACT(ANOTHERSCALAR) \
     def( \
@@ -981,11 +1011,17 @@ namespace TAT {
                     "identity_",
                     [](T& tensor, std::unordered_set<std::pair<DefaultName, DefaultName>>& pairs) -> T& { return tensor.identity_(pairs); },
                     py::arg("pairs"),
-                    "Get a identity tensor with same shape",
+                    "Set the current tensor to an identity tensor",
                     py::return_value_policy::reference_internal
                 )
-                .def("exponential", &T::exponential, py::arg("pairs"), py::arg("step") = 8, "Calculate exponential like matrix")
-                .def("conjugate", &T::conjugate, py::arg("trivial_metric") = false, "Get the conjugate Tensor")
+                .def(
+                    "exponential",
+                    &T::exponential,
+                    py::arg("pairs"),
+                    py::arg("step") = 8,
+                    "Calculate the tensor exponential like matrix exponential"
+                )
+                .def("conjugate", &T::conjugate, py::arg("trivial_metric") = false, "Get the conjugation of the tensor")
                 .def("trace", &T::trace, py::arg("trace_pairs"), py::arg("fuse_names") = py::dict(), "Calculate trace or partial trace of a tensor")
                 .def(
                     "svd",
@@ -1034,7 +1070,7 @@ namespace TAT {
                 .def(
                     "shrink",
                     &T::shrink,
-                    "Shrink Edge of tensor",
+                    "Shrink edges of tensor",
                     py::arg("configure"),
                     py::arg("new_name") = InternalName<DefaultName>::No_New_Name,
                     py::arg("arrow") = false
@@ -1042,7 +1078,7 @@ namespace TAT {
                 .def(
                     "expand",
                     &T::expand,
-                    "Expand Edge of tensor",
+                    "Expand edges of tensor",
                     py::arg("configure"),
                     py::arg("old_name") = InternalName<DefaultName>::No_Old_Name
                 )
@@ -1071,7 +1107,7 @@ namespace TAT {
                     },
                     py::arg("min") = 0,
                     py::arg("max") = one,
-                    "Set Uniform Random Number into Tensor",
+                    "Generate uniformly distributed random number into the current tensor",
                     py::return_value_policy::reference_internal
                 )
                 .def(
@@ -1099,7 +1135,7 @@ namespace TAT {
                     },
                     py::arg("mean") = 0,
                     py::arg("stddev") = one,
-                    "Set Normal Distribution Random Number into Tensor",
+                    "Generate normally distributed random number into the current tensor",
                     py::return_value_policy::reference_internal
                 );
         };

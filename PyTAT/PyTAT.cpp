@@ -41,6 +41,7 @@ namespace TAT {
 
     PYBIND11_MODULE(TAT, tat_m) {
         tat_m.doc() = "TAT is A Tensor library!";
+        tat_m.attr("__version__") = version;
         tat_m.attr("version") = version;
         tat_m.attr("information") = information;
         // callable
@@ -49,12 +50,12 @@ namespace TAT {
         set_random(tat_m);
 
         // symmetry and edge and edge segment
-        auto No_m = tat_m.def_submodule("No");
+        auto No_m = tat_m.def_submodule("No", "A submodule contains non-symmetry tensors");
         dealing_symmetry<NoSymmetry>(No_m, "No").def(py::init<>()).def(implicit_from_tuple<NoSymmetry, std::tuple<>>(), py::arg("empty_tuple"));
         dealing_edge<NoSymmetry, false>(No_m, "No");
         dealing_edge<NoSymmetry, true>(No_m, "No");
 
-        auto Z2_m = tat_m.def_submodule("Z2");
+        auto Z2_m = tat_m.def_submodule("Z2", "A submodule contains Z2 symmetry tensors");
         dealing_symmetry<Z2Symmetry>(Z2_m, "Z2")
             .def(py::init<>())
             .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
@@ -63,7 +64,7 @@ namespace TAT {
         dealing_edge<Z2Symmetry, false>(Z2_m, "Z2");
         dealing_edge<Z2Symmetry, true>(Z2_m, "Z2");
 
-        auto U1_m = tat_m.def_submodule("U1");
+        auto U1_m = tat_m.def_submodule("U1", "A submodule contains U1 symmetry tensors");
         dealing_symmetry<U1Symmetry>(U1_m, "U1")
             .def(py::init<>())
             .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
@@ -72,7 +73,7 @@ namespace TAT {
         dealing_edge<U1Symmetry, false>(U1_m, "U1");
         dealing_edge<U1Symmetry, true>(U1_m, "U1");
 
-        auto Fermi_m = tat_m.def_submodule("Fermi");
+        auto Fermi_m = tat_m.def_submodule("Fermi", "A submodule contains fermion U1 symmetry tensors");
         dealing_symmetry<FermiSymmetry>(Fermi_m, "Fermi")
             .def(py::init<>())
             .def(implicit_init<FermiSymmetry, U1>(), py::arg("fermi"))
@@ -81,7 +82,7 @@ namespace TAT {
         dealing_edge<FermiSymmetry, false>(Fermi_m, "Fermi");
         dealing_edge<FermiSymmetry, true>(Fermi_m, "Fermi");
 
-        auto FermiZ2_m = tat_m.def_submodule("FermiZ2");
+        auto FermiZ2_m = tat_m.def_submodule("FermiZ2", "A submodule contains fermion U1 cross Z2 symmetry tensors");
         dealing_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
             .def(py::init<>())
             .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
@@ -91,7 +92,7 @@ namespace TAT {
         dealing_edge<FermiZ2Symmetry, false>(FermiZ2_m, "FermiZ2");
         dealing_edge<FermiZ2Symmetry, true>(FermiZ2_m, "FermiZ2");
 
-        auto FermiU1_m = tat_m.def_submodule("FermiU1");
+        auto FermiU1_m = tat_m.def_submodule("FermiU1", "A submodule contains fermion U1 cross U1 symmetry tensors");
         dealing_symmetry<FermiU1Symmetry>(FermiU1_m, "FermiU1")
             .def(py::init<>())
             .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
@@ -101,7 +102,7 @@ namespace TAT {
         dealing_edge<FermiU1Symmetry, false>(FermiU1_m, "FermiU1");
         dealing_edge<FermiU1Symmetry, true>(FermiU1_m, "FermiU1");
 
-        auto Parity_m = tat_m.def_submodule("Parity");
+        auto Parity_m = tat_m.def_submodule("Parity", "A submodule contains fermion Z2 symmetry tensors");
         dealing_symmetry<ParitySymmetry>(Parity_m, "Parity")
             .def(py::init<>())
             .def(implicit_init<ParitySymmetry, Z2>(), py::arg("parity"))
@@ -110,7 +111,7 @@ namespace TAT {
         dealing_edge<ParitySymmetry, false>(Parity_m, "Parity");
         dealing_edge<ParitySymmetry, true>(Parity_m, "Parity");
 
-        auto FermiFermi_m = tat_m.def_submodule("FermiFermi");
+        auto FermiFermi_m = tat_m.def_submodule("FermiFermi", "A submodule contains fermion U1 cross fermion U1 symmetry tensors");
         dealing_symmetry<FermiFermiSymmetry>(FermiFermi_m, "FermiFermi")
             .def(py::init<>())
             .def(py::init<U1, U1>(), py::arg("fermi_0"), py::arg("fermi_1"))
@@ -140,8 +141,8 @@ namespace TAT {
         }
 
         // Shaojun Dong wants to use +1 and -1 to identify parity instead of False and True, make him happy.
-        tat_m.def("parity", parity_and_arrow);
-        tat_m.def("arrow", parity_and_arrow);
+        tat_m.def("parity", parity_and_arrow, "A compatibility function for converting Z2 symmetry from sjdong's convention to TAT's convention");
+        tat_m.def("arrow", parity_and_arrow, "A compatibility function for converting fermi-arrow from sjdong's convention to TAT's convention");
 
         at_exit.release();
     }
