@@ -768,7 +768,7 @@ namespace TAT {
 
             tensor_t.def("copy", &T::copy, "Deep copy a tensor")
                 .def("__copy__", &T::copy)
-                .def("__deepcopy__", &T::copy)
+                .def("__deepcopy__", [](const T& tensor, const py::object&) { return tensor.copy(); })
                 .def("same_shape", &T::template same_shape<ScalarType>, "Create a tensor with same shape")
                 .def(
                     "map",
