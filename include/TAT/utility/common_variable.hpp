@@ -1,7 +1,7 @@
 /**
  * \file common_variable.hpp
  *
- * Copyright (C) 2019-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>
+ * Copyright (C) 2019-2024 Hao Zhang<zh970205@mail.ustc.edu.cn>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,7 +67,7 @@ namespace TAT {
                                      ", " TAT_COMPILER_INFORMATION
 #endif
                                      ")\n"
-                                     "Copyright (C) 2019-2023 Hao Zhang<zh970205@mail.ustc.edu.cn>\n"
+                                     "Copyright (C) 2019-2024 USTC-TNS Group\n"
                                      "This is free software; see the source for copying conditions.  There is NO\n"
                                      "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.";
 

@@ -54,7 +54,7 @@ Finally, [[/tetragono/tetragono/shell.py][shell.py]] offers a high-level, user-f
 
 TAT.py serves as a wrapper for TAT.hpp, utilizing pybind11. It comprises three files:
 + [[/PyTAT/PyTAT.hpp][PyTAT.hpp]] defines template functions that wrap tensors and edges.
-+ [[/PyTAT/dealing_tensor.cpp.in][dealing_tensor.cpp.in]], is employed to generate files that instantiate function in [[/PyTAT/PyTAT.hpp][PyTAT.hpp]] for different tensor types, orchestrated by [[/CMakeLists.txt][CMakeLists.txt]]. 
++ [[/PyTAT/dealing_tensor.cpp.in][dealing_tensor.cpp.in]], is employed to generate files that instantiate function in [[/PyTAT/PyTAT.hpp][PyTAT.hpp]] for different tensor types, orchestrated by [[/CMakeLists.txt][CMakeLists.txt]].
 + [[/PyTAT/PyTAT.cpp][PyTAT.cpp]] is responsible for defining all remaining components within the Python module.
 
 *** TAT.hpp
