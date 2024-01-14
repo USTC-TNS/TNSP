@@ -507,7 +507,7 @@ class AbstractState:
                 {
                     "O": [f"O{i}" for i in range(self.site_number)],
                     "I": [f"I{i}" for i in range(self.site_number)]
-                }, True, {"O"}).blocks[[("I", -self.total_symmetry), ("O", self.total_symmetry)]]
+                }, True, {"O"}).const_blocks[[("I", -self.total_symmetry), ("O", self.total_symmetry)]]
             if result is None:
                 result = this_array
             else:

@@ -323,7 +323,7 @@ class DirectSampling(Sampling):
                     rho = []
                     for seg in hole_edge.segments:
                         symmetry, _ = seg
-                        block_rho = hole.blocks[[("I", -symmetry), ("O", symmetry)]]
+                        block_rho = hole.const_blocks[[("I", -symmetry), ("O", symmetry)]]
                         diag_rho = np.diagonal(block_rho)
                         rho = [*rho, *diag_rho]
                     rho = np.array(rho).real

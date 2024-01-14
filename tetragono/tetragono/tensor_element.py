@@ -69,7 +69,7 @@ def loop_nonzero_tensor(tensor, names, rank):
     while True:
         symmetries = [edges[i][symmetry_indices[i]][0] for i in range(rank)]
         if sum(symmetries, start=zero_symmetry) == zero_symmetry:
-            block = tensor.blocks[[(names[i], symmetries[i]) for i in range(rank)]]
+            block = tensor.const_blocks[[(names[i], symmetries[i]) for i in range(rank)]]
             template_edges = [Edge([symmetries[i]], arrow[i]) for i in range(rank)]
             template = type(tensor)(names, template_edges)
             yield from loop_nonzero_block(block, symmetries, rank, names, template)
