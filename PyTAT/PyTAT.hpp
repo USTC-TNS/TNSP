@@ -491,7 +491,13 @@ namespace TAT {
     }
 
     template<typename T>
-    auto py_mdspan(mdspan<T>& mdspan, const std::vector<DefaultName>& tensor_names, const std::vector<DefaultName>& names, py::object& base) {
+    auto py_mdspan(
+        const mdspan<T>& mdspan,
+        const std::vector<DefaultName>& tensor_names,
+        const std::vector<DefaultName>& names,
+        py::object& base,
+        bool readonly
+    ) {
         using ScalarType = T;
         std::vector<Size> dimensions;
         std::vector<Size> strides;
@@ -504,12 +510,13 @@ namespace TAT {
         }
         return py::array_t<ScalarType>(
             py::buffer_info{
-                mdspan.data(),
+                const_cast<T*>(mdspan.data()), // The mutability will be maintained by python later, passed by the flag `readonly`.
                 sizeof(ScalarType),
                 py::format_descriptor<ScalarType>::format(),
                 mdspan.rank(),
                 std::move(dimensions),
-                std::move(strides)},
+                std::move(strides),
+                readonly},
             base
         );
     }
@@ -539,10 +546,11 @@ namespace TAT {
     template<typename ScalarType, typename Symmetry>
     struct blocks_of_tensor {
         py::object tensor;
+        bool readonly;
 
-        blocks_of_tensor(py::object& t) : tensor(t) { }
+        blocks_of_tensor(py::object& t, bool r) : tensor(t), readonly(r) { }
 
-        auto blocks(const std::vector<std::pair<DefaultName, Symmetry>>& position) {
+        auto get_block(const std::vector<std::pair<DefaultName, Symmetry>>& position) {
             auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
             std::unordered_map<DefaultName, Symmetry> map;
             std::vector<DefaultName> names;
@@ -551,10 +559,14 @@ namespace TAT {
                 names.push_back(name);
             }
 
-            return py_mdspan(t.blocks(map), t.names(), names, tensor);
+            if (readonly) {
+                return py_mdspan(t.const_blocks(map), t.names(), names, tensor, readonly);
+            } else {
+                return py_mdspan(t.blocks(map), t.names(), names, tensor, readonly);
+            }
         }
 
-        auto blocks(const std::vector<DefaultName>& position) {
+        auto get_block(const std::vector<DefaultName>& position) {
             auto& t = py::cast<Tensor<ScalarType, Symmetry, DefaultName>&>(tensor);
             std::unordered_map<DefaultName, Symmetry> map;
             for (const auto& name : position) {
@@ -562,7 +574,11 @@ namespace TAT {
             }
             const auto& names = position;
 
-            return py_mdspan(t.blocks(map), t.names(), names, tensor);
+            if (readonly) {
+                return py_mdspan(t.const_blocks(map), t.names(), names, tensor, readonly);
+            } else {
+                return py_mdspan(t.blocks(map), t.names(), names, tensor, readonly);
+            }
         }
     };
 
@@ -590,16 +606,16 @@ namespace TAT {
             "_Blocks",
             ("Blocks of a tensor with scalar type as " + scalar_name + " and symmetry type " + symmetry_short_name + "Symmetry").c_str()
         )
-            .def("__getitem__", [](B& b, const std::vector<std::pair<DefaultName, Symmetry>>& position) { return b.blocks(position); })
-            .def("__getitem__", [](B& b, const std::vector<DefaultName>& position) { return b.blocks(position); })
+            .def("__getitem__", [](B& b, const std::vector<std::pair<DefaultName, Symmetry>>& position) { return b.get_block(position); })
+            .def("__getitem__", [](B& b, const std::vector<DefaultName>& position) { return b.get_block(position); })
             .def(
                 "__setitem__",
                 [](B& b, const std::vector<std::pair<DefaultName, Symmetry>>& position, py::object& value) {
-                    b.blocks(position).attr("__setitem__")(py::ellipsis(), value);
+                    b.get_block(position).attr("__setitem__")(py::ellipsis(), value);
                 }
             )
             .def("__setitem__", [](B& b, const std::vector<DefaultName>& position, py::object& value) {
-                b.blocks(position).attr("__setitem__")(py::ellipsis(), value);
+                b.get_block(position).attr("__setitem__")(py::ellipsis(), value);
             });
 
         // one is used in default random distribution
@@ -671,7 +687,12 @@ namespace TAT {
                 )
                 .def_property_readonly(
                     "blocks",
-                    [](py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>(tensor); },
+                    [](py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>(tensor, false); },
+                    "The handle for getting a block of the tensor"
+                )
+                .def_property_readonly(
+                    "const_blocks",
+                    [](py::object& tensor) { return blocks_of_tensor<ScalarType, Symmetry>(tensor, true); },
                     "The handle for getting a block of the tensor"
                 )
                 .def(

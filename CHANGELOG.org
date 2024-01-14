@@ -3,6 +3,7 @@
 ** [[https://github.com/USTC-TNS/TAT/compare/v0.3.12...dev][Unreleased]]
 
 *** Added
++ *TAT.py*: Add =const_blocks= for tensor to get the const block which will not check the ownership.
 + *tetragono*: Add =__contains__= and =__len__= for hamiltonians handle of abstract state.
 + *bridge*: Add support for bridging from TNSP new format.
 *** Changed
