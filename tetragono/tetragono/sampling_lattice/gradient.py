@@ -360,7 +360,7 @@ def gradient_descent(
                             configuration_pool.append((possibility, configuration))
                         show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
                 # Save configuration
-                if mpi_rank < sampling_total_step:
+                if mpi_rank < sampling_total_step and sampling_method != "ergodic":
                     new_configurations = configuration.export_configuration()
                     sampling_configurations.resize(new_configurations.shape, refcheck=False)
                     np.copyto(sampling_configurations, new_configurations)

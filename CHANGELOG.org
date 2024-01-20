@@ -6,6 +6,7 @@
 + *TAT.py*: Add =const_blocks= for tensor to get the const block which will not check the ownership.
 + *tetragono*: Add =__contains__= and =__len__= for hamiltonians handle of abstract state.
 + *bridge*: Add support for bridging from TNSP new format.
++ *tetragono*: Stop saving configuration for ergodic sampling method during gradient descent.
 *** Changed
 + *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
   environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
