@@ -371,6 +371,8 @@ def gradient_descent(
             # Measure log
             measurement_result = observer.result
             measurement_whole_result = observer.whole_result
+            measurement_whole_result["varance_of_energy"] = observer.variance_of_energy
+            measurement_whole_result["E_loc_square"] = observer.total_energy_square
             if measurement is not None and mpi_rank == 0:
                 for measure_term in measurement:
                     # If measure_term is not a module name but a function directly,

@@ -388,12 +388,46 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     gm_run.__doc__ = gm_run_g.__doc__ = gm_gradient_descent.__doc__
 
     def bin_estimate(self, values):
-        value = [v for v, d in values]
+        if isinstance(values[0],tuple):
+            value = [v for v, d in values]
+        else:
+            value = values
         length = len(value)
         expect = sum(value) / length
         expect_of_square = sum(v**2 for v in value) / length
         deviation = (expect_of_square - expect**2)**(1 / 2)
         return expect, deviation / ((length - 1)**(1 / 2))
+
+    @AutoCmd.decorator
+    def gm_bin_run(self, bin_number, sampling_per_bin, D_cut, hami, **kwargs):
+        """
+        estimate std with bin methond.
+        Parameters
+        ----------
+        bin_number : int
+            the number of bins
+        sampling_per_bin : int
+            the samplings per bin
+        D_cut : int
+            cutoff of D
+        hami : str
+            hopping hamiltonians for sweep sample
+        """
+        if not isinstance(sampling_per_bin, int):
+            raise Exception("sampling_per_bin is not an int number")
+        if mpi_size > sampling_per_bin:
+            raise Exception("mpi size larger than sampling_per_bin")
+        results = []
+        for _ in range(bin_number):
+            tmp = self.gm_run(sampling_per_bin, 0, 0, configuration_cut_dimension=D_cut,sampling_method="sweep",
+               sweep_hopping_hamiltonians=hami, **kwargs)
+            results.append(tmp)
+            gm_run(sampling_per_bin*5, 0, 0, configuration_cut_dimension=D_cut ,sampling_method="sweep",
+               sweep_hopping_hamiltonians=hami)
+        example_whole, _ = results[0]
+        result_whole = {name: self.bin_estimate([r[0][name] for r in results]) for name in example_whole} 
+
+        return result_whole
 
     @AutoCmd.decorator
     def gm_dump(self, name):
@@ -651,3 +685,4 @@ else:
     gm_clear_symmetry = app.gm_clear_symmetry
 
     gm_run_g = app.gm_run_g
+    gm_bin_run = app.gm_bin_run
