@@ -16,11 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-# this will never be pickled
-element_pool = {}
 
-
-def tensor_element(tensor):
+def tensor_element(tensor, element_pool={}):
     tensor_id = id(tensor)
     if tensor_id not in element_pool:
         element_pool[tensor_id] = calculate_element(tensor)

@@ -7,6 +7,17 @@
 + *tetragono*: Add =__contains__= and =__len__= for hamiltonians handle of abstract state.
 + *bridge*: Add support for bridging from TNSP new format.
 + *tetragono*: Stop saving configuration for ergodic sampling method during gradient descent.
++ *tetragono*: Add support for tracing repeated points when setting hamiltonian term. To use this feature, call
+  =state.hamiltonians.trace_repeated= after all the hamiltonian term has been set. For those term which will not be
+  traced, user could exchange the edge indices and points at the same time. For example a tensor with edges name as
+  =[O0, I0, O1, I1]= on points =(0,0,0)= and =(0,0,1)=, we can rename the tensor edge to =[O1, I1, O0, I0]= (it is
+  rename, not transpose!), and apply it to points =(0,0,1)= and =(0,0,0)=, and the system does not change. But for terms
+  which may be traced, we cannot exchange them. The order of edge indices hint the rule how to trace if points
+  duplicated.
++ *tetragono*: Add support to combine hamiltonian terms on the same group of points with different orders by
+  =sort_points=, which make the program faster for simple update and exact update.
++ *tetragono*: Add support to check whether the hamiltonians is hermitian by =check_hermite(threshold)=, which requires
+  =sort_points= invoked first.
 *** Changed
 + *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
   environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
