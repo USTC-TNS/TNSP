@@ -55,13 +55,13 @@ namespace TAT {
         mdspan<std::optional<mdspan<scalar_t>>> m_blocks;
 
         std::vector<std::optional<mdspan<scalar_t>>> m_pool;
-        no_initialize::vector<scalar_t> m_storage;
+        storage_vector<scalar_t> m_storage;
 
       public:
-        const no_initialize::vector<scalar_t>& storage() const {
+        const storage_vector<scalar_t>& storage() const {
             return m_storage;
         }
-        no_initialize::vector<scalar_t>& storage() {
+        storage_vector<scalar_t>& storage() {
             return m_storage;
         }
         const std::vector<edge_t>& edges() const {
@@ -191,7 +191,19 @@ namespace TAT {
         }
 
         Core() = delete;
-        Core(const Core& other) : m_edges(other.m_edges), m_blocks(other.m_blocks), m_pool(other.m_pool), m_storage(other.m_storage) {
+        Core(const Core& other) : m_edges(other.m_edges), m_blocks(other.m_blocks), m_pool(other.m_pool) /*m_storage(other.m_storage)*/ {
+            // m_storage not copied directly, check if using cuda first
+#ifdef TAT_USE_CUDA
+            m_storage.resize(other.m_storage.size());
+            thrust::copy(
+                thrust::device,
+                cuda::thrust_complex_wrap(other.m_storage.data()),
+                cuda::thrust_complex_wrap(other.m_storage.data() + other.m_storage.size()),
+                cuda::thrust_complex_wrap(m_storage.data())
+            );
+#else
+            m_storage = other.m_storage;
+#endif
             m_blocks.set_data(m_pool.data());
             refresh_storage_pointer_in_pool();
         }
@@ -200,7 +212,7 @@ namespace TAT {
         Core& operator=(Core&&) = delete;
 
         void _block_order_v0_to_v1() {
-            auto new_storage = no_initialize::vector<scalar_t>(m_storage.size());
+            auto new_storage = storage_vector<scalar_t>(m_storage.size());
 
             std::vector<std::vector<symmetry_t>> old_order;
             for (auto it = blocks().begin(); it.valid; ++it) {
@@ -234,7 +246,16 @@ namespace TAT {
 
             for (const auto& [key, value] : symmetries_to_offsets) {
                 const auto& [old_offset, new_offset, size] = value;
+#ifdef TAT_USE_CUDA
+                thrust::copy(
+                    thrust::device,
+                    cuda::thrust_complex_wrap(m_storage.data() + old_offset),
+                    cuda::thrust_complex_wrap(m_storage.data() + old_offset + size),
+                    cuda::thrust_complex_wrap(new_storage.data() + new_offset)
+                );
+#else
                 std::copy(&m_storage[old_offset], &m_storage[old_offset + size], &new_storage[new_offset]);
+#endif
             }
 
             m_storage = std::move(new_storage);

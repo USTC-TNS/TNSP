@@ -22,6 +22,7 @@ TEST(test_binary_io, u1_symmetry) {
     ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);
 }
 
+#ifndef TAT_USE_CUDA
 TEST(test_binary_io, no_symmetry_complex_number) {
     std::stringstream ss;
     auto a = TAT::Tensor<std::complex<int>, TAT::NoSymmetry>{{"Up", "Left", "Right"}, {1, 2, 3}}.set_([]() {
@@ -34,6 +35,7 @@ TEST(test_binary_io, no_symmetry_complex_number) {
     ss > b;
     ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);
 }
+#endif
 
 TEST(test_binary_io, u1_symmetry_complex_number) {
     std::stringstream ss;

@@ -45,7 +45,7 @@ TEST(test_tensor_core, copy_core) {
     auto a = TAT::Core<float, TAT::NoSymmetry>({3, 4});
     for (TAT::Size i = 0; i < 3; i++) {
         for (TAT::Size j = 0; j < 3; j++) {
-            a.at(std::vector<TAT::Size>{i, j}) = i * 10 + j;
+            TAT::ensure_cpu(a.at(std::vector<TAT::Size>{i, j}), i * 10 + j);
         }
     }
     auto b = a;
@@ -53,7 +53,7 @@ TEST(test_tensor_core, copy_core) {
         for (TAT::Size j = 0; j < 3; j++) {
             auto& element_a = a.at(std::vector<TAT::Size>{i, j});
             auto& element_b = b.at(std::vector<TAT::Size>{i, j});
-            ASSERT_EQ(element_a, element_b);
+            ASSERT_EQ(TAT::ensure_cpu(element_a), TAT::ensure_cpu(element_b));
             ASSERT_NE(&element_a, &element_b);
         }
     }

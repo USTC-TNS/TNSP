@@ -27,6 +27,8 @@
 #include <forward_list>
 #include <memory>
 
+#include "cuda.hpp"
+
 namespace TAT {
     namespace detail {
         struct memory_resource {
@@ -349,5 +351,59 @@ namespace TAT {
         template<class Key, class Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key>>
         using unordered_set = std::unordered_set<Key, Hash, KeyEqual, detail::polymorphic_allocator<Key>>;
     } // namespace pmr
+
+#ifdef TAT_USE_CUDA
+    template<typename T>
+    using storage_vector = cuda::vector<T>;
+#else
+    template<typename T>
+    using storage_vector = no_initialize::vector<T>;
+#endif
+
+#ifdef TAT_USE_CUDA
+    template<typename T>
+    auto ensure_cpu(T&& v) {
+        if constexpr (std::is_trivially_destructible_v<remove_cvref_t<T>>) {
+            // only one value
+            remove_cvref_t<T> result;
+            cuda::check_cuda(cudaMemcpy(&result, &v, sizeof(remove_cvref_t<T>), cudaMemcpyDeviceToHost));
+            return result;
+        } else {
+            // a vector
+            using Vector = remove_cvref_t<T>;
+            using Value = typename Vector::value_type;
+            auto result = no_initialize::vector<Value>(v.size());
+            cuda::check_cuda(cudaMemcpy(result.data(), v.data(), v.size() * sizeof(Value), cudaMemcpyDeviceToHost));
+            return result;
+        }
+    }
+#else
+    template<typename T>
+    auto&& ensure_cpu(T&& v) {
+        return std::forward<T>(v);
+    }
+#endif
+
+#ifdef TAT_USE_CUDA
+    template<typename T, typename G>
+    void ensure_cpu(T& r, const G& v) {
+        if constexpr (std::is_trivially_destructible_v<remove_cvref_t<T>>) {
+            // only one value
+            const T t = v;
+            cuda::check_cuda(cudaMemcpy(&r, &t, sizeof(T), cudaMemcpyHostToDevice));
+        } else {
+            // a vector
+            using Vector = remove_cvref_t<T>;
+            using Value = typename Vector::value_type;
+            cuda::check_cuda(cudaMemcpy(r.data(), v.data(), v.size() * sizeof(Value), cudaMemcpyHostToDevice));
+        }
+    }
+#else
+    template<typename T, typename G>
+    void ensure_cpu(T& r, const G& v) {
+        r = v;
+    }
+#endif
+
 } // namespace TAT
 #endif
