@@ -23,7 +23,7 @@ from .sampling_lattice import SamplingLattice
 
 def simple_update_lattice_to_sampling_lattice(state):
     """
-    Convert SimpleUpdateLattice to ExactState
+    Convert SimpleUpdateLattice to SamplingLattice
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ def simple_update_lattice_to_sampling_lattice(state):
 
     Returns
     -------
-    ExactState
+    SamplingLattice
     """
     if not isinstance(state, SimpleUpdateLattice):
         raise ValueError("Conversion input type mismatch")
@@ -42,6 +42,27 @@ def simple_update_lattice_to_sampling_lattice(state):
         this = state._try_multiple(this, l1, l2, "U", division=True, square_root=True)
         this = state._try_multiple(this, l1, l2, "R", division=True, square_root=True)
         this = state._try_multiple(this, l1, l2, "D", division=True, square_root=True)
+        result[l1, l2] = this
+    return result
+
+
+def sampling_lattice_to_simple_update_lattice(state):
+    """
+    Convert SamplingLattice to SimpleUpdateLattice
+
+    Parameters
+    ----------
+    state : SamplingLattice
+
+    Returns
+    -------
+    SimpleUpdateLattice
+    """
+    if not isinstance(state, SamplingLattice):
+        raise ValueError("Conversion input type mismatch")
+    result = SimpleUpdateLattice(state)
+    for l1, l2 in state.sites():
+        this = state[l1, l2]
         result[l1, l2] = this
     return result
 

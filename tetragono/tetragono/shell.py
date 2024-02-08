@@ -347,7 +347,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @AutoCmd.decorator
     def su_to_ex(self):
         """
-        Convert simple update lattice to exact lattice.
+        Convert simple update lattice to exact state.
         """
         self.ex = conversion.simple_update_lattice_to_exact_state(self.su)
 
@@ -556,9 +556,16 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
     @AutoCmd.decorator
     def gm_to_ex(self):
         """
-        Convert sampling lattice to exact lattice.
+        Convert sampling lattice to exact state.
         """
         self.ex = conversion.sampling_lattice_to_exact_state(self.gm)
+
+    @AutoCmd.decorator
+    def gm_to_su(self):
+        """
+        Convert sampling lattice to simple update lattice.
+        """
+        self.su = conversion.sampling_lattice_to_simple_update_lattice(self.gm)
 
 
 class TetragonoScriptApp(TetragonoCommandApp):
@@ -640,3 +647,4 @@ else:
     gm_hamiltonian = app.gm_hamiltonian
     gm_expand = app.gm_expand
     gm_to_ex = app.gm_to_ex
+    gm_to_su = app.gm_to_su
