@@ -8,6 +8,7 @@
 + *bridge*: Add support for bridging from TNSP new format.
 + *tetragono*: Stop saving configuration for ergodic sampling method during gradient descent.
 + *tetragono*: Add function to convert sampling lattice back to simple update lattice.
++ *tetragono*: Add support for simple update for long range two body interaction.
 *** Changed
 + *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
   environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
@@ -18,6 +19,7 @@
   =step=2= to convege to a usable result.
 *** Deprecated
 *** Removed
++ *tetragono*: Remove merging Hamiltonians before simple update automatically.
 *** Fixed
 + *TAT.py*: Fix a bug in loading Symmetry or Edge.
 + *bridge*: Fix several bugs in tnsp bridge, because of the TAT interface changes a lot since the first release of tnsp

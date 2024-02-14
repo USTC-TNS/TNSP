@@ -249,171 +249,6 @@ class SimpleUpdateLattice(AbstractLattice):
         """
         return SimpleUpdateLatticeEnvironment(self)
 
-    def _get_merge_hamiltonian_plan(self):
-        """
-        Get the hamiltonian merging plan for simple update.
-
-        Returns
-        -------
-        list[set[tuple[tuple[int, int, int], ...]]]
-            The hamiltonian positions list to be merged.
-        """
-        # The unmerged positions, set[tuple[tuple[int, int, int], ...]].
-        # When this term is merged, it will be deleted from this set.
-        # every site should be merged, if not, that means it is unsupported hamiltonian style.
-        unmerged_positions = set(self._hamiltonians.keys())
-        # Merge single site, since maybe it will be merged into two site terms, put it into an individual map here.
-        single_site = {}
-        for l1, l2 in self.sites():
-            # only (l1, l2)
-            merge_list = {
-                positions for positions in unmerged_positions
-                if all(position[0:2] in [(l1, l2)] for position in positions)
-            }
-            unmerged_positions -= merge_list
-            if merge_list:
-                single_site[l1, l2] = merge_list
-        # The result, list of set of hamiltonian term
-        result = []
-        for l1, l2 in self.sites():
-            if l2 == self.L2 - 1:
-                continue
-            # (l1, l2) and (l1, l2 + 1)
-            merge_list = {
-                positions for positions in unmerged_positions
-                if all(position[0:2] in [(l1, l2), (l1, l2 + 1)] for position in positions)
-            }
-            unmerged_positions -= merge_list
-            if merge_list:
-                merge_list |= single_site.pop((l1, l2), set())
-                merge_list |= single_site.pop((l1, l2 + 1), set())
-                result.append(merge_list)
-        for l1, l2 in self.sites():
-            if l1 == self.L1 - 1:
-                continue
-            # (l1, l2) and (l1 + 1, l2)
-            merge_list = {
-                positions for positions in unmerged_positions
-                if all(position[0:2] in [(l1, l2), (l1 + 1, l2)] for position in positions)
-            }
-            unmerged_positions -= merge_list
-            if merge_list:
-                merge_list |= single_site.pop((l1, l2), set())
-                merge_list |= single_site.pop((l1 + 1, l2), set())
-                result.append(merge_list)
-        # Maybe single site list was not merged into double site list, add then directly into result.
-        result += sorted(single_site.values())
-        if unmerged_positions:
-            raise NotImplementedError("Unsupported simple update style")
-        return result
-
-    def _check_large_physical_dimension(self, input_plan, threshold):
-        """
-        Check to avoid merging physical edges to a single edge with very large dimension.
-
-        Parameters
-        ----------
-        input_plan : set[tuple[tuple[int, int, int], ...]]
-            The hamiltonian positions set to be merged.
-        threshold : int
-            The dimension of the merged edge must be less equal threshold.
-
-        Yields
-        ------
-        set[tuple[tuple[int, int, int], ...]]
-            The hamiltonian positions set to be merged, which will not merge edges to a large dimension edge.
-        """
-        # Yield proper positions set until remained set is empty
-        while input_plan:
-            used_orbits = set()  # set[tuple[int, int, int]]
-            merged_dimensions = {}  # map[tuple[int, int], int]
-            result = set()  # set[tuple[tuple[int, int, int], ...]]
-            # Try to add every positions in the set
-            not_first = False
-            for positions in sorted(input_plan):
-                # Create a copy for auxiliary variables
-                used_orbits_tmp = used_orbits.copy()
-                merged_dimensions_tmp = merged_dimensions.copy()
-                # Try to add positions to result
-                for position in positions:
-                    # Check position one by one
-                    if position not in used_orbits_tmp:
-                        # Not used, so add it now
-                        used_orbits_tmp.add(position)
-                        site = position[0], position[1]
-                        if site not in merged_dimensions_tmp:
-                            merged_dimensions_tmp[site] = 1
-                        merged_dimensions_tmp[site] *= self.physics_edges[position].dimension
-                        if not_first and merged_dimensions_tmp[site] > threshold:
-                            # Check failed, break the loop, and it will try to add next positions to result
-                            break
-                else:
-                    # All check passed, add it to result
-                    result.add(positions)
-                    used_orbits = used_orbits_tmp
-                    merged_dimensions = merged_dimensions_tmp
-                not_first = True
-            input_plan -= result
-            yield result
-
-    def _get_merge_hamiltonian_plan_with_check_large_physical_dimension(self, threshold=6):
-        """
-        Get the hamiltonian merging plan for simple update.
-
-        Parameters
-        ----------
-        threshold : int, default=6
-            The dimension of the merged edge must be less equal threshold.
-
-        Yields
-        ------
-        set[tuple[tuple[int, int, int], ...]]
-            The hamiltonian positions set to be merged, which will not merge edges to a large dimension edge.
-        """
-        for plan in self._get_merge_hamiltonian_plan():
-            yield from self._check_large_physical_dimension(plan, threshold=threshold)
-
-    def _get_merge_hamiltonian(self, positions_list):
-        """
-        Merge several hamiltonian term into one term.
-
-        Parameters
-        ----------
-        positions_list : set[tuple[tuple[int, int, int], ...]]
-            The hamiltonian positions list to be merged.
-
-        Returns
-        -------
-        tuple[tuple[int, int, int], ...], Tensor
-            The merged result positions and tensor.
-        """
-        result_positions = tuple(sorted(set.union(*(set(positions) for positions in positions_list))))
-        result_tensor = None
-        for positions in positions_list:
-            rename = {index: result_positions.index(position) for index, position in enumerate(positions)}
-            tensor = self._hamiltonians[positions].edge_rename({
-                f"I{i}": f"I{j}" for i, j in rename.items()
-            } | {
-                f"O{i}": f"O{j}" for i, j in rename.items()
-            })
-
-            empty = [(index, position) for index, position in enumerate(result_positions) if position not in positions]
-            if len(empty) != 0:
-                empty_out_name = [f"O{index}" for index, position in empty]
-                empty_in_name = [f"I{index}" for index, position in empty]
-                empty_out_edge = [self.physics_edges[position] for index, position in empty]
-                empty_in_edge = [self.physics_edges[position].conjugate() for index, position in empty]
-                identity = self.Tensor(empty_out_name + empty_in_name, empty_out_edge + empty_in_edge).identity_({
-                    (o, i) for o, i in zip(empty_out_name, empty_in_name)
-                })
-                tensor = tensor.contract(identity, set())
-
-            if result_tensor is None:
-                result_tensor = tensor
-            else:
-                result_tensor = result_tensor + tensor
-        return result_positions, result_tensor
-
     def update(self, total_step, delta_tau, new_dimension):
         """
         Do simple update on the lattice.
@@ -432,8 +267,7 @@ class SimpleUpdateLattice(AbstractLattice):
         # updater U_i = exp(- delta_tau H_i)
         # At this step, get the coordinates of every hamiltonian term instead of original knowning specific orbit only.
         updaters = []
-        for positions, hamiltonian_term in map(self._get_merge_hamiltonian,
-                                               self._get_merge_hamiltonian_plan_with_check_large_physical_dimension()):
+        for positions, hamiltonian_term in self.hamiltonians:
             # coordinates is the site list of what this hamiltonian term effects on.
             # it may be less than hamiltonian rank
             coordinates = []
@@ -578,6 +412,12 @@ class SimpleUpdateLattice(AbstractLattice):
                     evolution_operator,
                     new_dimension,
                 )
+            return self._single_term_simple_update_double_site_long_range(
+                coordinates,
+                index_and_orbit,
+                evolution_operator,
+                new_dimension,
+            )
         raise NotImplementedError("Unsupported simple update style")
 
     def _single_term_simple_update_single_site(self, coordinates, index_and_orbit, evolution_operator, new_dimension):
@@ -630,7 +470,6 @@ class SimpleUpdateLattice(AbstractLattice):
         left = self[i, j]
         right = self[i, j + 1]
         right = self._try_multiple(right, i, j + 1, "L", division=True)
-        original_dimension = left.edge_by_name("R").dimension
         left_q, left_r = left.qr("r", {*(f"P{orbit}" for body_index, orbit in left_index_and_orbit), "R"}, "R", "L")
         right_q, right_r = right.qr("r", {*(f"P{orbit}" for body_index, orbit in right_index_and_orbit), "L"}, "L", "R")
         u, s, v = (
@@ -698,7 +537,6 @@ class SimpleUpdateLattice(AbstractLattice):
         up = self[i, j]
         down = self[i + 1, j]
         down = self._try_multiple(down, i + 1, j, "U", division=True)
-        original_dimension = up.edge_by_name("D").dimension
         up_q, up_r = up.qr("r", {*(f"P{orbit}" for body_index, orbit in up_index_and_orbit), "D"}, "D", "U")
         down_q, down_r = down.qr("r", {*(f"P{orbit}" for body_index, orbit in down_index_and_orbit), "U"}, "U", "D")
         u, s, v = (
@@ -730,6 +568,105 @@ class SimpleUpdateLattice(AbstractLattice):
                 f"O{body_index}": f"P{orbit}" for body_index, orbit in down_index_and_orbit
             }))
         self[i + 1, j] = v
+
+    def _single_term_simple_update_double_site_long_range(self, coordinates, index_and_orbit, evolution_operator,
+                                                          new_dimension):
+        """
+        See Also
+        --------
+        _single_term_simple_update
+        """
+        if mpi_size != 1:
+            raise RuntimeError("Long range simple update does not support MPI currently")
+        coordinate_1, coordinate_2 = coordinates
+        # QR on coordinate 2
+        Q_coordinate_2, R_coordinate_2 = self[coordinate_2].qr(
+            'r', {f"P{orbit}" for index, orbit in index_and_orbit if index == 1}, "V", "V")
+        R_coordinate_2_renamed = R_coordinate_2.edge_rename({
+            f"P{orbit}": f"VP{orbit}" for index, orbit in index_and_orbit if index == 1
+        })
+
+        target = coordinate_2
+        here = coordinate_1
+        self[here] = (
+            self[here]  #
+            .contract(
+                evolution_operator,
+                {(f"P{orbit}", f"I{rank}") for rank, [index, orbit] in enumerate(index_and_orbit) if index == 0})  #
+            .edge_rename({
+                f"O{rank}": f"P{orbit}" for rank, [index, orbit] in enumerate(index_and_orbit) if index == 0
+            })  #
+            .contract(
+                R_coordinate_2_renamed,
+                {(f"I{rank}", f"VP{orbit}") for rank, [index, orbit] in enumerate(index_and_orbit) if index == 1})  #
+            .edge_rename({
+                f"O{rank}": f"VP{orbit}" for rank, [index, orbit] in enumerate(index_and_orbit) if index == 1
+            })  #
+        )
+        self[target] = Q_coordinate_2
+
+        while here != target:
+            if here[0] < target[0]:
+                next_here = here[0] + 1, here[1]
+                direction = "D"
+                inverse_direction = "U"
+            elif here[0] > target[0]:
+                next_here = here[0] - 1, here[1]
+                direction = "U"
+                inverse_direction = "D"
+            elif here[1] < target[1]:
+                next_here = here[0], here[1] + 1
+                direction = "R"
+                inverse_direction = "L"
+            elif here[1] > target[1]:
+                next_here = here[0], here[1] - 1
+                direction = "L"
+                inverse_direction = "R"
+            else:
+                raise RuntimeError("Program should never come here")
+
+            if next_here == target:
+                # [here site] --- [inverse of previous environment] --- [next site]
+                here_q, here_r = self[here].qr(
+                    'r', {"V", direction} | {f"VP{orbit}" for index, orbit in index_and_orbit if index == 1}, direction,
+                    inverse_direction)
+                next_q, next_r = self[next_here].qr('r', {inverse_direction, "V"}, inverse_direction, direction)
+                big = here_r
+                big = self._try_multiple(big, *here, direction)
+                big = big.contract(next_r, {(direction, inverse_direction), ("V", "V")})
+                u, s, v = big.svd({inverse_direction}, direction, inverse_direction, inverse_direction, direction,
+                                  new_dimension)
+                # [here q] --- [u s v] --- [next q]
+                s /= s.norm_2()
+                self.environment[*here, direction] = s
+                u = self._try_multiple(u, *here, direction)
+                v = self._try_multiple(v, *next_here, inverse_direction)
+                # [here q][u] --- [inverse of s] --- [v][next r]
+                self[here] = here_q.contract(u, {(direction, inverse_direction)})
+                self[next_here] = next_q.contract(v, {(inverse_direction, direction)})
+                # [here site] --- [inverse of s] --- [next site]
+            else:
+                # [here site] --- [inverse of previous environment] --- [next site]
+                u, s, v = self[here].svd({"V", direction} |
+                                         {f"VP{orbit}" for index, orbit in index_and_orbit if index == 1},
+                                         inverse_direction, direction, direction, inverse_direction, new_dimension)
+                # [v s u] --- [inverse of previous environment] --- [next site]
+                u = self._try_multiple(u, *here, direction, division=True)
+                # [v] --- [s] --- [u] --- [next site]
+                s /= s.norm_2()
+                self.environment[*here, direction] = s
+                u = self._try_multiple(u, *next_here, inverse_direction)
+                v = self._try_multiple(v, *here, direction)
+                # [v] --- [inverse of s] --- [u] --- [next site]
+                self[here] = v
+                self[next_here] = self[next_here].contract(u, {(inverse_direction, direction)})
+                # [here site] --- [inverse of s] --- [next site]
+
+            here = next_here
+
+        self[target] = self[target].edge_rename({
+            f"VP{orbit}": f"P{orbit}" for index, orbit in index_and_orbit if index == 1
+        })
 
     def _try_multiple(self, tensor, i, j, direction, *, division=False, square_root=False):
         """
