@@ -131,6 +131,10 @@ namespace TAT {
         }
       public:
         template<typename Vector = vector_t>
+        const T& const_at(const Vector& indices) const {
+            return data()[get_offset(indices)];
+        }
+        template<typename Vector = vector_t>
         const T& at(const Vector& indices) const {
             return data()[get_offset(indices)];
         }

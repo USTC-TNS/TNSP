@@ -1,5 +1,462 @@
+#+TITLE: tetragono
 #+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
-* tetragono
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
 
-tetragono is an OBC square tensor network state(PEPS) library.
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+
+The tetragono is a versatile package that offers a unified interface for a variety of tensor network state (TNS) methods, suitable for different physics models and tensor types.
+It encompasses multiple TNS methods, including the simple update and sampling-based techniques.
+For sampling-based methods, it facilitates the calculation of physical observables and incorporates optimization strategies such as gradient descent and stochastic reconfiguration.
+Additionally, the tetragono provides an exact diagonalization method, which can serve as a benchmark for verifying TNS results in small systems.
+It is built on top of [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT][PyTAT]], a Python interface of a tensor package [[https://github.com/USTC-TNS/TNSP/tree/main/TAT][TAT]], that supports symmetry tensors and fermion tensors.
+Users could extend its capabilities by writing plugins to modify existing algorithms or to introduce custom physical models.
+Moreover, a set of predefined physical models and corresponding algorithm modifications is available in a collection named [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku][tetraku]].
+
+The tetragono primarily supports square lattice systems represented by projected entangled pair states (PEPS).
+However, other lattice geometries can be accommodated by incorporating multiple physical edges within a single tensor of the PEPS framework.
+
+The tetragono offers multiple interfaces, including a command line interface (CLI) application named tetragono shell, for ease of use.
+Its components can be utilized individually, empowering users to construct more complex algorithms.
+
+* Install
+
+Please either copy or create a soft link for the directory in the =site-packages= directory.
+Alternatively, you can utilize pip to install the tetragono package by running the command =pip install tetragono=.
+
+* Usage of tetragono shell
+
+** The interface of tetragono shell
+
+After tetragono installed, user could use =python -m tetragono.shell= to enter tetragono shell. And users will see the interface like the following:
+After installing tetragono, users can enter the tetragono shell by executing =python -m tetragono.shell= in the command line.
+Upon doing so, they will be greeted with the following interface:
+#+begin_example
+Welcome to the Tetragono shell. Type help or ? to list commands.
+Copyright (C) 2019-2024 USTC-TNS Group
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Random seed is set as 233
+TET>
+#+end_example
+Typing =help= or =?= will display the available commands. For detailed usage information on a specific command, users can type =help <command>=.
+
+Users can execute commands line by line or list multiple commands within a script file and run them using =python -m tetragono.shell <script_file>=.
+In this way, MPI (Message Passing Interface) can be automatically utilized, meaning that if users execute the script file with =mpirun python -m tetragono.shell <script_file>=,
+every algorithm implemented inside Tetragono will run in parallel using MPI if possible.
+This can significantly speed up the program execution.
+
+** Commands in tetragono shell
+
+*** Exact update
+
+The =ex_create= command is utilized to create a state for performing exact diagonalization.
+It requires a module name indicating the physics model, with subsequent parameters passed to the script describing the physics model.
+For example, the command below creates a state for a spin-less free fermion model on a $3 \times 3$ lattice, with the total number of particles fixed at $4$:
+#+begin_example
+TET> ex_create free_fermion L1=3 L2=3 T=4
+TET>
+#+end_example
+And the description of the arguments for a specific physics model can be displayed by using =ex_create <physics_model> help=
+#+begin_example
+TET> ex_create free_fermion help
+
+        Create free fermion(no spin) state.
+
+        Parameters
+        ----------
+        L1, L2 : int
+            The lattice size.
+        T : int
+            The total particle number.
+
+TET>
+#+end_example
+
+The module defining the physics model is a standard Python module.
+In this case of =free_fermion=, the module is defined within the tetraku.
+Users can define their own physics models and place them in either the =$PYTHONPATH= or =$TETPATH= directories, enabling tetragono to locate and load them.
+
+After preparing the exact state, exact diagonalization can be performed using the =ex_update <step>= command, which requires an argument specifying the number of Lanczos iteration steps.
+Subsequently, the exact energy per site can be calculated with the =ex_energy= command.
+#+begin_example
+TET> ex_update 1000
+ Exact update done, total_step=1000, energy=-0.6285393610547229
+TET> ex_energy
+ Exact state energy is -0.628539361054709
+TET>
+#+end_example
+
+Indeed, for managing the results of exact diagonalization, the tetragono shell provides the =ex_load= and =ex_dump= commands.
+These commands are used to load results from or dump results to a file, respectively.
+
+The random seed can be reset using the command =seed <seed>=, which is useful for reliably reproducing previous computational results.
+It's important to note that, when using MPI, the number of processes should remain unchanged to ensure the same results as before.
+
+*** Simple update
+
+The =su_create= command is used to prepare the state for performing a simple update.
+Similar to =ex_create=, it accepts a physics model name, and subsequent arguments are passed to the physics model description function.
+Typically, it requires one additional argument compared to =ex_create=, which is the dimension of the virtual edge in the PEPS.
+#+begin_example
+TET> su_create free_fermion L1=3 L2=3 T=4 D=4
+TET>
+#+end_example
+After the initial state has been prepared, the =su_update= command is used to perform the simple update process.
+#+begin_example
+TET> su_update 1000 0.05 4
+ Simple update max parallel size is 4
+ Simple update done, total_step=1000, delta_tau=0.05, new_dimension=4
+TET>
+#+end_example
+During the simple update process, MPI can be utilized to expedite execution since the update of each term of the Hamiltonian can be performed on different processors.
+The maximum number of processes that can be used efficiently will be displayed when the lattice undergoes its first simple update.
+And the parameter of =su_update= is shown below:
+#+begin_example
+TET> help su_update
+
+        Do simple update.
+
+        Parameters
+        ----------
+        total_step : int
+            The simple update total step to do.
+        delta_tau : float
+            The imaginary time, delta tau.
+        new_dimension : int | float
+            The new cut dimension used in simple update, or the amplitude of dimension expandance.
+
+TET>
+#+end_example
+
+After completing the simple update, the energy can be measured by contracting the double layer network using the command =su_energy <Dc>=.
+Within the tetragono, the boundary matrix product operator(boundary-MPO) method is employed to contract the entire network.
+The boundary-MPO method requires a dimension cut during the recovery of the contraction of MPS and MPO back to finite dimensional MPS.
+This dimension cut, =Dc=, is the parameter passed to =su_energy=, which dictates the maximum bond dimension allowed during the contraction process,
+thereby controlling the accuracy and computational requirements of the energy calculation.
+#+begin_example
+TET> su_energy 16
+ Simple update lattice energy is -0.6209065956664327
+TET>
+#+end_example
+
+The =su_to_ex= command is employed to contract the PEPS, as configured for a simple update, into a single wave function tensor.
+This tensor is identical in form to the state used for exact diagonalization.
+Consequently, users can utilize this command to convert their simple update PEPS state into a format suitable for exact diagonalization.
+This allows for the measurement of the energy through exact methods after obtaining the simple update results via the boundary-MPO method,
+serving as a benchmark for comparison and validation of the results.
+
+Similar to managing states for exact diagonalization,
+the =su_load= and =su_dump= commands are used for loading from or dumping to a file for the lattice state used with simple update, respectively.
+
+*** Sampling-based methods
+
+**** A brief example
+
+The sampling methods calculate the double layer network by contracting a single layer network with physics configurations that have been sampled.
+There are various sampling strategies implemented, including sweep sampling (based on the Metropolis algorithm) and direct sampling,
+with ergodic sampling also available for benchmarking in small systems.
+To utilize sampling methods, a corresponding lattice must first be created. This can be done in several ways:
++ =gm_create= :: Similar to =su_create=, this command is used to create a lattice state directly for sampling methods, requiring specification of the physics model and relevant parameters.
++ =su_to_gm= :: This command converts a state prepared for simple updating into a state suitable for sampling methods. This allows for a seamless transition from one method of state preparation to another.
+After preparing the lattice state for sampling, the =gm_run= command is invoked to calculate the energy of the state using the chosen sampling strategy.
+#+begin_example
+TET> su_to_gm
+TET> gm_run 1000 0 0 sampling_method=direct configuration_cut_dimension=16
+ gradient total step=1
+ sampling done, total_step=1000, energy=(-0.6257918132796995, 0.001365532183031408)
+ direct sampling instability is 0.08685509609649737
+TET>
+#+end_example
+
+Within the context of executing sampling methods using the =gm_run= command in tetragono shell,
+the =sampling_method= parameter specifies the type of sampling strategy to employ. The options include:
++ =direct= :: for direct sampling,
++ =sweep= :: for sweep sampling, based on the Metropolis algorithm,
++ =ergodic= :: for ergodic sampling, useful for benchmarking in small systems.
+
+The =configuration_cut_dimension= is a critical parameter that indicates the dimension cut-off when calculating the single layer tensor network using boundary-MPO methods,
+which helps in managing the computation's accuracy and efficiency.
+The first of the three parameters mentioned specifies the number of sampling iterations, which in the provided example is =1000=.
+The significance of the latter two parameters will be introduced later.
+
+The outcome of the computation delivering an energy measurement of $-0.625\cdots$,
+with an estimated error bar of $0.001\cdots$ illustrates the ability to achieve precise results through sampling methods.
+In the context of direct sampling, a reweighting technique is employed, wherein configurations are sampled from an approximate distribution,
+and then the weights of these configurations are adjusted (reweighted) to obtain accurate results.
+However, the accuracy of the reweighting technique heavily relies on how closely the approximate distribution matches the desired distribution.
+If the approximation deviates significantly from the target distribution, the results will exhibit larger errors.
+The discrepancy, or distance, between the two distributions is gauged by the sampling instability.
+To decrease the sampling instability and thus improve the accuracy of results obtained through direct sampling,
+increasing the parameter =direct_sampling_cut_dimension= can be beneficial.
+This parameter determines the dimension cut-off when calculating approximate distribution during the direct sampling process.
+By default, this parameter is set to 4, which is normally sufficient for a wide range of applications.
+
+*** Gradient descent and stochastic reconfiguration
+
+Sampling methods can also be used to perform gradient descent,
+which is controlled by two out of the first three parameters: total gradient steps and gradient step size.
+#+begin_example
+TET> gm_run 1000 4 0.001 sampling_method=direct configuration_cut_dimension=16
+ gradient total step=4
+ sampling done, total_step=1000, energy=(-0.6257918132796995, 0.001365532183031408)
+ direct sampling instability is 0.08685509609649737
+ grad 0/4, step_size=0.001
+ sampling done, total_step=1000, energy=(-0.6225526013871534, 0.0012962886011511588)
+ direct sampling instability is 0.07429461284695354
+ grad 1/4, step_size=0.001
+ sampling done, total_step=1000, energy=(-0.6223814365145698, 0.0013008765678379666)
+ direct sampling instability is 0.08049558849801
+ grad 2/4, step_size=0.001
+ sampling done, total_step=1000, energy=(-0.6243932451431334, 0.0013174132249484853)
+ direct sampling instability is 0.07427514182038164
+ grad 3/4, step_size=0.001
+TET> EOF
+#+end_example
+
+There are several parameters for controlling gradient descent:
++ =use_fix_relative_step_size= :: Can be set to =False= (default) or =True=.
+  By default, the passed-in step size is the absolute step size. Set this parameter to =True= to use relative step size instead.
++ =use_line_search= :: Can be set to =False= (default) or =True=. Set this parameter to =True= to perform line search during gradient descent.
+  If line search is enabled, the provided step size will serve as the initial relative step size.
++ =use_random_gradient= :: Can be set to =False= (default) or =True=.
+  If set to =True=, the amplitude of each gradient element is ignored and substituted with a random number; only the sign of the gradient element is utilized.
++ =momentum_parameter= :: Enables momentum within gradient descent. If left at the default value of =0=, no momentum is applied.
+  Setting it to =1= will result in the state continuously changing in the initial direction, completely neglecting the gradient.
+
+The tetragono also implements stochastic reconfiguration, enabled by setting the pamameter =use_natural_gradient= to =True=.
+If stochastic reconfiguration is enabled, the conjugate gradient (CG) method is used internally to perform the inverse of the metric.
+The step of the conjugate gradient is controlled by =conjugate_gradient_method_step=, which defaults to =20=.
+Another parameter, =conjugate_gradient_method_error=, is used to terminate the process if a specified error is reached during CG.
+When using this parameter, users typically need to set =conjugate_gradient_method_step= to =-1= to disable the step number check.
+
+During the gradient descent of stochastic reconfiguration, users may wish to save the state at every step to guard against unexpected program interruptions.
+This is facilitated by the parameter =save_state_file= and =save_configuration_file=, which save the current state and currently sampled configuration, respectively.
+The saved configuration is particularly useful for sweep sampling, as sweep sampling requires an initial configuration at startup.
+
+*** The sweep sampling
+
+The sweep sampling methods start with an initial configuration and run a Markov chain from that point.
+The initial configuration could be set manually or determined through direct sampling for convenience.
+If a user wishes to manually initialize the configuration, the command =gm_conf_create= is utilized.
+Typically, =gm_conf_eq=, whose parameters are similar to those of =gm_run=, is employed to equilibrate the recently initialized configuration.
+#+begin_example
+TET> su_create heisenberg 3 3 D=4 J=-1
+TET> su_update 100 0.01 4
+ Simple update max parallel size is 4
+ Simple update done, total_step=100, delta_tau=0.01, new_dimension=4
+TET> su_to_gm
+TET> gm_conf_create heisenberg.neel
+TET> gm_conf_eq 10 configuration_cut_dimension=16
+ equilibium done, total_step=10
+TET> gm_run 100 0 0 configuration_cut_dimension=16 sampling_method=sweep
+ gradient total step=1
+ sampling done, total_step=100, energy=(-0.5211663949797498, 0.00283191661212987)
+TET>
+#+end_example
+In the example above, we create a lattice for the Heisenberg model, perform a simple update, and convert it to a lattice suitable for the sampling method.
+Then, we create a Neel state as the configuration, followed by equilibrating the configuration.
+Subsequently, we employ sweep sampling to calculate the energy.
+In this context, both the Heisenberg model and the Neel state are defined within tetraku.
+Lastly, =gm_conf_dump= and =gm_conf_load= are used to dump to or load from a file for the configuration, respectively.
+
+** Plugins for tetragono
+
+*** Definition of physics models
+
+The definition of physics models in tetraku is achieved by defining plugins.
+A Python module intended to define a physics model needs to contain two functions: =abstract_state= and =abstract_lattice=.
+To introduce more comprehensive functionality, here we provide an example of defining a free fermion model with a fixed particle number on a honeycomb lattice.
+
+The function =abstract_state= declares the basic tensor type and the lattice shape, the total symmetry representation(the total quantum numbers), physics edges, and the Hamiltonian of a system.
+#+begin_src python :eval never
+  import TAT
+  import tetragono as tet
+
+
+  def abstract_state(L1, L2, T):
+      state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
+      for l1 in range(L1):
+          for l2 in range(L2):
+              if (l1, l2) != (0, 0):
+                  state.physics_edges[l1, l2, 0] = [(0, 1), (1, 1)]
+              if (l1, l2) != (L1 - 1, L2 - 1):
+                  state.physics_edges[l1, l2, 1] = [(0, 1), (1, 1)]
+      state.total_symmetry = T
+      CC = tet.common_tensor.Parity.CC.to(float)
+      for l1 in range(L1):
+          for l2 in range(L2):
+              if l1 != 0:
+                  state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = CC
+              if l2 != 0:
+                  state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = CC
+              if (l1, l2) != (0, 0) and (l1, l2) != (L1 - 1, L2 - 1):
+                  state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = CC
+      return state
+#+end_src
+In the code snippet above, we declare a lattice of size =L1 * L2= with the tensor type specified as a fermion $U(1)$ tensor.
+Then, we specify edges for every tensor, where each tensor has two physics edges except for the upper left corner and lower right corner tensors,
+which each have only a single physical edge.
+Within tetragono, physics edges are distinguished by orbit indices.
+For a honeycomb geometry, each site has physics edges with indices $0$ and $1$, except for the site at $(0,0)$, which only has an index $1$,
+and the site at $(L1-1,L2-1)$, which only has an index $0$.
+All physics edges in this model are identical, characterized by a list of pairs of quantum numbers and their respective degeneracy.
+
+Subsequently, we declare the total symmetry representation as =T=, representing the total particle number of the system.
+We then retrieve the tensor predefined in tetragono and apply it to all nearest neighbor sites on the honeycomb lattice.
+For every row except the first, the index $0$ of the current site has a =CC= interaction with index $1$ of the corresponding site in the previous row.
+Similarly, for every column except the first, the index $0$ of the current site has a =CC= interaction with index $1$ of the corresponding site in the previous column.
+Moreover, for all sites except for the upper left and lower right corners, there is a =CC= interaction between the two orbit indices within the same site.
+
+The function =abstract_lattice= is utilized to declare all virtual edges inside a projected entangled pair state (PEPS). Here's an example:
+#+begin_src python :eval never
+  def abstract_lattice(L1, L2, D, T):
+      state = tet.AbstractLattice(abstract_state(L1, L2, T))
+      tt = T / state.L1
+      for l1 in range(state.L1 - 1):
+          Q = int(T * (state.L1 - l1 - 1) / state.L1)
+          state.virtual_bond[l1, 0, "D"] = [
+              (Q - 1, D),
+              (Q, D),
+              (Q + 1, D),
+          ]
+      for l1 in range(state.L1):
+          for l2 in range(state.L2 - 1):
+              Q = int(tt * (state.L2 - l2 - 1) / state.L2)
+              state.virtual_bond[l1, l2, "R"] = [
+                  (Q - 1, D),
+                  (Q, D),
+                  (Q + 1, D),
+              ]
+      for l1 in range(state.L1 - 1):
+          for l2 in range(1, state.L2):
+              state.virtual_bond[l1, l2, "D"] = [
+                  (0, D),
+              ]
+
+      return state
+#+end_src
+By default, the total symmetry representation is presented as an extra edge at site $(0, 0)$,
+so we need to distribute this particle number(total symmetry representation) throughout the entire PEPS.
+To achieve this, we first propagate along sites $(0,0)$, $(1,0)$, ..., moving downwards, leaving approximately =tt = T / state.L1= particles at each row.
+Subsequently, we propagate within each row, similar to the previous step, with each column retaining roughly =tt / state.L2= particles.
+Lastly, we define trivial edges for the remaining edges inside the PEPS.
+
+Once these two functions are defined in a Python module, we can utilize tetragono to execute any algorithm implemented inside for this physics model.
+Users only need to place the module describing the physics model in a path that Python can import or in a path included in the environment variable =$TETPATH=,
+so tetragono knows where to load it.
+
+*** Measurement of observables
+
+To measure observables during sampling methods, a plugin describing the observables is used.
+This plugin is a Python module containing functions =measurement= and =save_result=.
+For instance, the code below demonstrates how to measure $S_z^i S_z^j$ on the Heisenberg model.
+#+begin_src python :eval never
+  import tetragono as tet
+  from tetragono.common_tensor.tensor_toolkit import (
+      rename_io,
+      kronecker_product,
+  )
+
+
+  def measurement(state):
+      Sz = tet.common_tensor.No.pauli_z.to(float) / 2
+      SzSz = kronecker_product(rename_io(Sz, [0]), rename_io(Sz, [1]))
+      return { \
+          ((i1, i2, 0), (j1, j2, 0)): SzSz \
+          for [i1, i2] in state.sites() \
+          for [j1, j2] in state.sites() \
+          if (i1, i2) != (j1, j2) \
+      }
+
+
+  def save_result(state, result, whole_result):
+      with open("SzSz.log", "a", encoding="utf-8") as file:
+          print(result, file=file)
+#+end_src
+To describe observables, a dictionary mapping the sequence of coordinates of the physics edges to the tensor should be returned by the =measurement= function.
+The =save_result= function serves as a handler to save the measurement results.s
+Here, the coordinates of the physics edges are specified in a tuple containing the coordinate of the tensor and the orbit index.
+
+Once the observables description file is created, passing it to the argument =measurement= of the command =gm_run= will perform the sampling method with these observables measured.
+
+*** Hopping rules inside sweep sampling
+
+Sweep sampling is a modified Metropolis sampling method that reuses the intermediate results of the configuration calculation to speed up the intervals of Metropolis sampling.
+By default, the hopping rules of the Markov chain use the model's Hamiltonian directly.
+However, users might want to alter this for various reasons, such as excluding next-nearest hopping to speed up configuration calculation,
+or adding another hopping term to ensure the ergodicity of the Markov chain.
+To accommodate custom hopping rules, one can define a plugin with the function =hopping_hamiltonians=, which returns a "fake" Hamiltonian description dictionary.
+#+begin_src python :eval never
+  import TAT
+  import tetragono as tet
+
+
+  def hopping_resultltonians(state):
+      pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(float)
+      pauli_y_pauli_y = tet.common_tensor.No.pauli_y_pauli_y.to(float)
+      hopping = pauli_x_pauli_x + pauli_y_pauli_y
+      result = {}
+      for [l1, l2] in state.sites()
+              if l1 != 0:
+                  result[(l1 - 1, l2, 0), (l1, l2, 0)] = hopping
+              if l2 != 0:
+                  result[(l1, l2 - 1, 0), (l1, l2, 0)] = hopping
+
+      return result
+#+end_src
+This example creates a fake Hamiltonian for hopping only to the nearest neighbor sites.
+Please note that in this context, the amplitude of the elements in the tensor is not important.
+The tetragono will attempt to hop across all non-zero terms inside the tensor, ignoring the absolute values.

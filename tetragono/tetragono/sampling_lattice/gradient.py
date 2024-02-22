@@ -366,7 +366,7 @@ def gradient_descent(
                     np.copyto(sampling_configurations, new_configurations)
             showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
             if sampling_method == "direct":
-                showln(f"direct sampling stability is {observer.stability}")
+                showln(f"direct sampling instability is {observer.instability}")
 
             # Measure log
             measurement_result = observer.result

@@ -1,7 +1,125 @@
-#+TITLE: tnsp-bridge
+#+TITLE: TNSP-bridge
 #+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
-TNSP-Bridge is a tool designed to facilitate the conversion of tensor data from [[https://www.sciencedirect.com/science/article/pii/S001046551830078X][TNSP]] format to [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT][TAT]] format.
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+TNSP-bridge is a tool used to facilitate the conversion of tensor data from the format of [[https://www.sciencedirect.com/science/article/pii/S001046551830078X][the old TNSP]] to [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT][TAT]] format.
 It's important to note that different versions of TNSP may have variations in their data structures,
 but this specific subproject focuses on compatibility with TNSP version 4.
-However, due to its infrequent usage, there is currently no official documentation available for this subproject.
+And we support the conversion of non-symmetry tensors and boson/fermion $Z(2)$ / $U(1)$ symmetry tensors of various scalar types.
+
+* Install
+
+Please either copy or create a soft link for the directory in the =site-packages= directory.
+Alternatively, users can utilize pip to install the TNSP-bridge package by running the command =pip install tnsp_bridge=.
+
+* Documents
+
+The only function is =bridge=, which accepts a function that extracts the old version tensor data line by line and returns the tensor in the new version.
+For example, here is the old version of the data:
+
+#+NAME: example-data
+#+begin_example
+   T T T T
+   readable_data T
+             2           8           3           0
+             1           4           8
+             3           7           8
+     1.00000000       2.00000000       3.00000000      -1.00000000      -2.00000000      -3.00000000      -4.00000000       0.00000000
+   End_data
+   readable_data T
+             1           8           3           0
+             1           4           8
+             3           7           8
+             3           2           1           1           2           2           1           1
+   End_data
+   readable_data T
+             1           6           2           0
+             1           4
+             3           6
+             3           4           1          -1          -1           1
+   End_data
+   A1_1.D  A1_1.R  A1_1.n
+   readable_data T
+             3           9          12           0
+             1       22049           0           0           4   538976288   538976288   538976288           8   538976288   538976288   538976288
+             3           0           0           0           7           0           0           0           9           0           0           0
+   0.23446911431164341       0.13002435022579403       -3.1842370052190448E-002  0.45356268067516309       -1.4087785231172337E-002  -9.0396315774136524E-002  -2.0732171027595565E-002 -0.35235299284206140       -1.2456779139446277E-002
+   End_data
+  EOF
+#+end_example
+
+The code below converts the aforementioned data
+(stored in the string variable =example_data=) to the new version format:
+
+#+begin_src python :results output :exports both :cache yes :var example_data=example-data
+  from bridge import bridge
+
+  data_line_by_line = example_data.split("\n")
+  data_line_by_line.reverse()
+  print(bridge(data_line_by_line.pop, compat=True, parity=False))
+#+end_src
+
+#+RESULTS[c30c225ca4ab1df1646c7c096e177c41051f4627]:
+#+begin_example
+{names:[A1_1.n,A1_1.R,A1_1.D],edges:[{arrow:0,segment:{0:1}},{arrow:1,segment:{-1:1,-2:2,-3:2,-4:1}},{arrow:1,segment:{1:3,2:2,3:1}}],blocks:{[0,-1,1]:[0.234469,0.130024,-0.0318424],[0,-2,2]:[0.453563,-0.0140878,-0.0903963,-0.0207322],[0,-3,3]:[-0.352353,-0.0124568]}}
+#+end_example
+
+The function =bridge= has two optional arguments.
+The first one is =parity=, used to distinguish the symmetry group of a symmetry tensor.
+When =parity= is set to =False= (default), it should be a fermion or boson $U(1)$ symmetry tensor.
+If set to =True=, a fermion or boson $Z(1)$ symmetry tensor is considered.
+The second argument is =compat=, which distinguishes the version in the old TNSP.
+Within old TNSP, there are two data formats: the older one is processed when =compat= is set to =True=, and the newer one if set to =False= (default).

@@ -1,20 +1,11 @@
 #+TITLE: lazy-graph
 #+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
 #+LATEX_HEADER: \usepackage{indentfirst}
 #+LATEX_HEADER: \usepackage{minted}
 #+LATEX_HEADER: \usemintedstyle{emacs}
-
-The lazy-graph is a Python library designed to facilitate lazy evaluation,
-offering additional functionality for updating upstream values
-and allowing easy duplication of the entire lazy graph structure.
-
-* Install
-
-Please either copy or create a soft link for the directory in the =site-packages= directory.
-Alternatively, you can utilize pip to install the lazy-graph package by running the command =pip install lazy_graph=.
-
-* Documents
-
 #+begin_src emacs-lisp :exports none :results silent
   (setq org-latex-pdf-process
         '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
@@ -43,7 +34,37 @@ Alternatively, you can utilize pip to install the lazy-graph package by running 
         (replace-string "\\end{verbatim}" "\\end{minted}")
         (buffer-substring-no-properties (point-min) (point-max)))))
   (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
 #+end_src
+
+The lazy-graph is a Python library designed to facilitate lazy evaluation,
+offering additional functionality for updating upstream values
+and allowing easy duplication of the entire lazy graph structure.
+
+* Install
+
+Please either copy or create a soft link for the directory in the =site-packages= directory.
+Alternatively, you can utilize pip to install the lazy-graph package by running the command =pip install lazy_graph=.
+
+* Documents
 
 ** A simple example
 

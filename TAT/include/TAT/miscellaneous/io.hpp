@@ -157,7 +157,14 @@ namespace TAT {
         }
 
         inline void ignore_until(std::istream& in, char end) {
-            in.ignore(std::numeric_limits<std::streamsize>::max(), end);
+            for (auto i = in.get(); i != end; i = in.get()) {
+                if (i == '\x1B') {
+                    // Skip ANSI control char
+                    in.get();
+                    in.get();
+                    in.get();
+                }
+            }
         }
 
         template<typename Func>

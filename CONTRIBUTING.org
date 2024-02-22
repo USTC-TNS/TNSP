@@ -10,13 +10,13 @@ And feel free to submit a pull request for completing documentation or adding de
 ** Code structure
 
 TAT project contains several subproject, including
-+ [[/include/TAT][=TAT.hpp=]] is the core tensor library written in C++17.
-+ [[/PyTAT][=TAT.py=]] is a wrapper over TAT.hpp using pybind11.
-+ [[/lazy_graph][=lazy.py=]] is a utility library for lazy evaluation, utilized in tetragono.py
-+ [[/PyScalapack][=scalapack.py=]] is a utility library for directly calling ScaLAPACK in python, utilized in tetragono.py
-+ [[/tetragono][=tetragono.py=]] provides high-level tensor network state operations, including exact diagonalization, simple update and sampling methods on PEPS.
-+ [[/tetraku][=tetraku.py=]] provides specific physics models that can be used with tetragono.py
-+ [[/tnsp_bridge][=bridge.py=]] is used to migrate tensors in the old TNSP format to the TAT.py format.
++ [[./TAT/][=TAT.hpp=]] is the core tensor library written in C++17.
++ [[./PyTAT/][=TAT.py=]] is a wrapper over TAT.hpp using pybind11.
++ [[./lazy_graph/][=lazy.py=]] is a utility library for lazy evaluation, utilized in tetragono.py
++ [[./PyScalapack/][=scalapack.py=]] is a utility library for directly calling ScaLAPACK in python, utilized in tetragono.py
++ [[./tetragono/][=tetragono.py=]] provides high-level tensor network state operations, including exact diagonalization, simple update and sampling methods on PEPS.
++ [[./tetraku/][=tetraku.py=]] provides specific physics models that can be used with tetragono.py
++ [[./tnsp_bridge/][=bridge.py=]] is used to migrate tensors in the old TNSP format to the TAT.py format.
 
 lazy.py, scalapack.py, and bridge.py are all small, single-file, pure Python packages.
 
@@ -27,49 +27,49 @@ Every model contains a function =abstract_state= to define its physics edge and 
 When adding a new physics model to tetraku.py, please include a short README, even a single line containing its Hamiltonian is acceptable.
 Please note that for models you want to optimize within a subspace of the Hamiltonian, typically a Hamiltonian hopping script, configuration initializer script, or even a subspace restrictor is needed.
 And most of the time, you may also want to add some measurements for the model.
-The scripts for these models can be referenced if you want to add new models: [[/tetraku/tetraku/models/J1J2][=J1J2=]], [[/tetraku/tetraku/models/rydberg][=rydberg=]] and [[/tetraku/tetraku/models/free_fermion][=free_fermion=]].
+The scripts for these models can be referenced if you want to add new models: [[./tetraku/tetraku/models/J1J2/][=J1J2=]], [[./tetraku/tetraku/models/rydberg/][=rydberg=]] and [[./tetraku/tetraku/models/free_fermion/][=free_fermion=]].
 
 *** tetragono.py
 
-tetragono.py first defines AbstractState in [[/tetragono/tetragono/abstract_state.py][=abstract_state.py=]], which includes customized Hamiltonian and physical edges on a virtual square lattice, accommodating multiple orbits on a single site.
-Subsequently, AbstractLattice is defined in [[/tetragono/tetragono/abstract_lattice.py][=abstract_lattice.py=]].
+tetragono.py first defines AbstractState in [[./tetragono/tetragono/abstract_state.py][=abstract_state.py=]], which includes customized Hamiltonian and physical edges on a virtual square lattice, accommodating multiple orbits on a single site.
+Subsequently, AbstractLattice is defined in [[./tetragono/tetragono/abstract_lattice.py][=abstract_lattice.py=]].
 This component details the virtual edges within the tensor network on the square lattice, known as the projected entangled pair states (PEPS).
 For non-symmetry tensors, users only need to provide the dimension as edge information, while non-fermion symmetric tensors need complete segment information, and fermion symmetry tensors require an additional fermi-arrow.
-Following these definitions, exact diagonalization is realized in [[/tetragono/tetragono/exact_state.py][=exact_state.py=]] ,and a simple update algorithm is implemented in [[/tetragono/tetragono/simple_update_lattice.py][=simple_update_lattice.py=]].
+Following these definitions, exact diagonalization is realized in [[./tetragono/tetragono/exact_state.py][=exact_state.py=]] ,and a simple update algorithm is implemented in [[./tetragono/tetragono/simple_update_lattice.py][=simple_update_lattice.py=]].
 
-Since there are various sampling methods, the related functions are categorized under the [[/tetragono/tetragono/sampling_lattice][=sampling_lattice=]] subdirectory.
-Within this directory, [[/tetragono/tetragono/sampling_lattice/lattice.py][=lattice.py=]] specifies the lattice type for containing data and configuration type for individual sampling results,
-while [[/tetragono/tetragono/sampling_lattice/sampling.py][=sampling.py=]] encompasses several methods such as ergodic, sweep, and direct sampling.
-The [[/tetragono/tetragono/sampling_lattice/observer.py][=observer.py=]] is designed to facilitate measurements and calculate gradients from sampling results.
-Finally, all these functionalities are integrated and executed through the driver functions outlined in [[/tetragono/tetragono/sampling_lattice/gradient.py][=gradient.py=]].
+Since there are various sampling methods, the related functions are categorized under the [[./tetragono/tetragono/sampling_lattice/][=sampling_lattice=]] subdirectory.
+Within this directory, [[./tetragono/tetragono/sampling_lattice/lattice.py][=lattice.py=]] specifies the lattice type for containing data and configuration type for individual sampling results,
+while [[./tetragono/tetragono/sampling_lattice/sampling.py][=sampling.py=]] encompasses several methods such as ergodic, sweep, and direct sampling.
+The [[./tetragono/tetragono/sampling_lattice/observer.py][=observer.py=]] is designed to facilitate measurements and calculate gradients from sampling results.
+Finally, all these functionalities are integrated and executed through the driver functions outlined in [[./tetragono/tetragono/sampling_lattice/gradient.py][=gradient.py=]].
 
-The [[/tetragono/tetragono/utility.py][=utility.py=]] file comprises various utility functions.
-The [[/tetragono/tetragono/auxiliaries][=auxiliaries=]] directory, utilizing lazy.py, used in the configuration type, contains several auxiliary systems designed to minimize redundant calculations in tensor network contractions,
+The [[./tetragono/tetragono/utility.py][=utility.py=]] file comprises various utility functions.
+The [[./tetragono/tetragono/auxiliaries][=auxiliaries=]] directory, utilizing lazy.py, used in the configuration type, contains several auxiliary systems designed to minimize redundant calculations in tensor network contractions,
 particularly when several sites are removed or replaced.
-The [[/tetragono/tetragono/tensor_element.py][=tensor_element.py=]] script is dedicated to sparsifying the Hamiltonian, a critical component in sampling methods.
-In [[/tetragono/tetragono/conversion.py][=conversion.py=]], functions are defined for converting between ExactState, SimpleUpdateLattice, and SamplingLattice.
-Finally, [[/tetragono/tetragono/shell.py][=shell.py=]] offers a high-level, user-friendly interface for accessing all functions within tetragono.py.
+The [[./tetragono/tetragono/tensor_element.py][=tensor_element.py=]] script is dedicated to sparsifying the Hamiltonian, a critical component in sampling methods.
+In [[./tetragono/tetragono/conversion.py][=conversion.py=]], functions are defined for converting between ExactState, SimpleUpdateLattice, and SamplingLattice.
+Finally, [[./tetragono/tetragono/shell.py][=shell.py=]] offers a high-level, user-friendly interface for accessing all functions within tetragono.py.
 
 *** TAT.py
 
 TAT.py serves as a wrapper for TAT.hpp, utilizing pybind11. It comprises three files:
-+ [[/PyTAT/PyTAT.hpp][=PyTAT.hpp=]] defines template functions that wrap tensors and edges.
-+ [[/PyTAT/dealing_tensor.cpp.in][=dealing_tensor.cpp.in=]], is employed to generate files that instantiate function in [[/PyTAT/PyTAT.hpp][=PyTAT.hpp=]] for different tensor types, orchestrated by [[/CMakeLists.txt][=CMakeLists.txt=]].
-+ [[/PyTAT/PyTAT.cpp][=PyTAT.cpp=]] is responsible for defining all remaining components within the Python module.
++ [[./PyTAT/PyTAT.hpp][=PyTAT.hpp=]] defines template functions that wrap tensors and edges.
++ [[./PyTAT/dealing_tensor.cpp.in][=dealing_tensor.cpp.in=]], is employed to generate files that instantiate function in [[./PyTAT/PyTAT.hpp][=PyTAT.hpp=]] for different tensor types, orchestrated by [[./PyTAT/CMakeLists.txt][=CMakeLists.txt=]].
++ [[./PyTAT/PyTAT.cpp][=PyTAT.cpp=]] is responsible for defining all remaining components within the Python module.
 
 *** TAT.hpp
 
-Within the directory [[/include/TAT/structure][=structure=]], the organization of files is as follows:
+Within the directory [[./TAT/include/TAT/structure/][=structure=]], the organization of files is as follows:
 
-- [[/include/TAT/structure/name.hpp][=name.hpp=]] is responsible for defining names used to label tensor edges, referred to as edge names.
-- [[/include/TAT/structure/symmetry.hpp][=symmetry.hpp=]] outlines the generic symmetry type =Symmetry=. This can be instantiated as various symmetries such as =NoSymmetry=, =BoseU1Symmetry=, =BoseZ2Symmetry=, =FermiZ2Symmetry=, =FermiU1Symmetry=, among others.
-- [[/include/TAT/structure/edge.hpp][=edge.hpp=]] details the structure of a tensor edge, which includes segments and a fermi-arrow. Here, segments are represented as a vector comprising pairs of Symmetry and dimension.
-- [[/include/TAT/structure/core.hpp][=core.hpp=]] is designed to define everything in a tensor except for the edge names.
-- [[/include/TAT/structure/tensor.hpp][=tensor.hpp=]] describes the tensor structure, encompassing a =shared_ptr<Core>= and a =vector<Name>=. Additionally, this file declares numerous tensor-related functions, the implementations of which are found in the corresponding files within the [[/include/TAT/implement][=implement=]] directory.
+- [[./TAT/include/TAT/structure/name.hpp][=name.hpp=]] is responsible for defining names used to label tensor edges, referred to as edge names.
+- [[./TAT/include/TAT/structure/symmetry.hpp][=symmetry.hpp=]] outlines the generic symmetry type =Symmetry=. This can be instantiated as various symmetries such as =NoSymmetry=, =BoseU1Symmetry=, =BoseZ2Symmetry=, =FermiZ2Symmetry=, =FermiU1Symmetry=, among others.
+- [[./TAT/include/TAT/structure/edge.hpp][=edge.hpp=]] details the structure of a tensor edge, which includes segments and a fermi-arrow. Here, segments are represented as a vector comprising pairs of Symmetry and dimension.
+- [[./TAT/include/TAT/structure/core.hpp][=core.hpp=]] is designed to define everything in a tensor except for the edge names.
+- [[./TAT/include/TAT/structure/tensor.hpp][=tensor.hpp=]] describes the tensor structure, encompassing a =shared_ptr<Core>= and a =vector<Name>=. Additionally, this file declares numerous tensor-related functions, the implementations of which are found in the corresponding files within the [[./TAT/include/TAT/implement/][=implement=]] directory.
 
-Furthermore, several utilities are defined in the [[/include/TAT/utility][=utility=]] directory.
-The file [[/include/TAT/miscellaneous/io.hpp][=io.hpp=]] is dedicated to defining I/O functions for tensors,
-[[/include/TAT/miscellaneous/scalar.hpp][=scalar.hpp=]] handles scalar arithmetic for tensors, and [[/include/TAT/miscellaneous/mpi.hpp][=mpi.hpp=]] focuses on various MPI functions for tensors. It is important to note that in TAT.py, functions from mpi.hpp are not utilized.
+Furthermore, several utilities are defined in the [[./TAT/include/TAT/utility/][=utility=]] directory.
+The file [[./TAT/include/TAT/miscellaneous/io.hpp][=io.hpp=]] is dedicated to defining I/O functions for tensors,
+[[./TAT/include/TAT/miscellaneous/scalar.hpp][=scalar.hpp=]] handles scalar arithmetic for tensors, and [[./TAT/include/TAT/miscellaneous/mpi.hpp][=mpi.hpp=]] focuses on various MPI functions for tensors. It is important to note that in TAT.py, functions from mpi.hpp are not utilized.
 
 -----
 

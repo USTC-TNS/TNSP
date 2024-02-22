@@ -37,6 +37,7 @@
 + *bridge*: Fix several bugs in tnsp bridge, because of the TAT interface changes a lot since the first release of tnsp
   bridge.
 + *TAT.py* Fix wrong arguments number for function =__deepcopy__= of tensor.
++ *TAT.hpp*: Fix a bug when reading tensors from text data with ANSI control char mixed.
 
 ** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.11...v0.3.12][v0.3.12]] - 2023-11-29
 

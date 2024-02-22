@@ -1,25 +1,11 @@
 #+TITLE: PyTAT
 #+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
 #+LATEX_HEADER: \usepackage{fancyvrb}
 #+LATEX_HEADER: \usepackage{fvextra}
 #+LATEX_HEADER: \usepackage{indentfirst}
 #+LATEX_HEADER: \usepackage{minted}
 #+LATEX_HEADER: \usemintedstyle{emacs}
-
-PyTAT is a Python wrapper for the C++ tensor library called [[https://github.com/USTC-TNS/TNSP/tree/main/TAT][TAT]], offering support for both symmetry and fermion tensors.
-
-* Install
-
-Users can create a Python wheel package using any modern build system, like [[https://build.pypa.io/en/stable/][=wheel=]] (with command =python -m pip wheel .=) or [[https://pip.pypa.io/en/stable/reference/build-system/][=build=]] (with command =python -m build .=).
-Alternatively, users can simply use =pip install pytat= to install a pre-built distribution on widely-used operating systems
-
-To build PyTAT in the pyodide environment, refer to [[https://pyodide.org/en/stable/development/building-and-testing-packages.html][this link]].
-Remember to add =--exports pyinit= to the =pyodide build= arguments.
-We can't upload our pre-built emscripten platform distribution to [[https://pypi.org][pypi.org]] as they don't allow it.
-Instead, users can download a pre-built emscripten platform wheel from the [[https://github.com/USTC-TNS/TNSP/releases][release page]].
-
-* Documents
-
 #+begin_src emacs-lisp :exports none :results silent
   (setq org-latex-pdf-process
         '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
@@ -53,44 +39,67 @@ Instead, users can download a pre-built emscripten platform wheel from the [[htt
     (when (org-export-derived-backend-p backend 'latex)
       (with-temp-buffer
         (insert text)
-        ;; replace verbatim env by minted
+        ;; replace verbatim env by Verbatim
         (goto-char (point-min))
         (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
         (replace-string "\\end{verbatim}" "\\end{Verbatim}")
         (buffer-substring-no-properties (point-min) (point-max)))))
   (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
 #+end_src
+
+PyTAT is a Python wrapper for the C++ tensor library called [[https://github.com/USTC-TNS/TNSP/tree/main/TAT][TAT]], offering support for both symmetry and fermion tensors.
+The most of the interface of PyTAT keep consistent with TAT.
+
+* Install
+
+Users can create a Python wheel package using any modern build system, like [[https://build.pypa.io/en/stable/][=wheel=]] (with command =python -m pip wheel .=) or [[https://pip.pypa.io/en/stable/reference/build-system/][=build=]] (with command =python -m build .=).
+Alternatively, users can simply use =pip install pytat= to install a pre-built distribution on widely-used operating systems.
+
+To build PyTAT in the pyodide environment, refer to [[https://pyodide.org/en/stable/development/building-and-testing-packages.html][this link]].
+Remember to add =--exports pyinit= to the =pyodide build= arguments.
+We can't upload our pre-built emscripten platform distribution to [[https://pypi.org][pypi.org]] as they don't allow it.
+Instead, users can download a pre-built emscripten platform wheel from the [[https://github.com/USTC-TNS/TNSP/releases][release page]].
+
+* Documents
 
 ** The construction of tensors
 
 As PyTAT simply wraps around a C++ header-only library, it does not support polymorphism for scalar types or symmetry types.
 Consequently, each distinct tensor in Python has its own specific type.
-The naming convention for tensor types is as follows: =TAT.{symmetry}.{scalartype}.Tensor=.
-Here, ={symmetry}= denotes the symmetry property maintained by the tensor, while ={scalartype}= represents the scalar data type utilized within the tensors.
-The available values for ={scalartype}= are summarized in the table below.
+The naming convention for tensor types is as follows: =TAT.<SymmetryType>.<ScalarType>.Tensor=.
+Here, =<SymmetryType>= denotes the symmetry property maintained by the tensor, while =<ScalarType>= represents the scalar data type utilized within the tensors.
+The available values for =<ScalarType>= are summarized in the table below.
 #+ATTR_LATEX: :font \scriptsize
 |------------------------------+------------------------+-----------------------|
-| ={scalartype}=               | scalar type in C++     | equivalent in Fortran |
+| =<ScalarType>=               | scalar type in C++     | equivalent in Fortran |
 |------------------------------+------------------------+-----------------------|
 | =S=, =float32=               | =float=                | =real(kind=4)=        |
 | =D=, =float64=, =float=      | =double=               | =real(kind=8)=        |
 | =C=, =complex64=             | =std::complex<float>=  | =complex(kind=4)=     |
 | =Z=, =complex128=, =complex= | =std::complex<double>= | =complex(kind=8)=     |
 |------------------------------+------------------------+-----------------------|
-The available values for ={symmetry}= are summarized in the table below.
+The available values for =<SymmetryType>= are summarized in the table below.
 #+ATTR_LATEX: :font \scriptsize
-|------------------+----------------------------------+------------------------------------|
-| ={symmetry}=     | symmetry type in C++             | conservation example               |
-|------------------+----------------------------------+------------------------------------|
-| =No=, =Normal=   | =Symmetry<>=                     | nothing                            |
-| =BoseZ2=         | =Symmetry<bose<Z2>>=             | parity of spin z                   |
-| =BoseU1=         | =Symmetry<bose<U1>>=             | spin z                             |
-| =FermiU1=        | =Symmetry<fermi<U1>>=            | electron number                    |
-| =FermiU1BoseZ2=  | =Symmetry<fermi<U1>, bose<Z2>>=  | electron number & parity of spin z |
-| =FermiU1BoseU1=  | =Symmetry<fermi<U1>, bose<U1>>=  | electron number & spin z           |
-| =FermiZ2=        | =Symmetry<fermi<Z2>>=            | parity of electron number          |
-| =FermiU1FermiU1= | =Symmetry<fermi<U1>, fermi<U1>>= | two kinds of electron number       |
-|------------------+----------------------------------+------------------------------------|
+|------------------+----------------------------------+-----------------------------------|
+| =<SymmetryType>= | symmetry type in C++             | conservation example              |
+|------------------+----------------------------------+-----------------------------------|
+| =No=, =Normal=   | =Symmetry<>=                     | nothing                           |
+| =BoseZ2=, =Z2=   | =Symmetry<bose<Z2>>=             | parity of spin z                  |
+| =BoseU1=, =U1=   | =Symmetry<bose<U1>>=             | spin z                            |
+| =FermiU1=        | =Symmetry<fermi<U1>>=            | fermion number                    |
+| =FermiU1BoseZ2=  | =Symmetry<fermi<U1>, bose<Z2>>=  | fermion number & parity of spin z |
+| =FermiU1BoseU1=  | =Symmetry<fermi<U1>, bose<U1>>=  | fermion number & spin z           |
+| =FermiZ2=        | =Symmetry<fermi<Z2>>=            | parity of fermion number          |
+| =FermiU1FermiU1= | =Symmetry<fermi<U1>, fermi<U1>>= | numbers of two kinds of fermions  |
+|------------------+----------------------------------+-----------------------------------|
 
 Users can create tensors of various types by using the same interface =Tensor(name_list, edge_list)=,
 in which =name_list= is simply a list of strings,
@@ -116,11 +125,11 @@ The code above creates a rank-2 tensor called =A= with two edges =i= and =j=,
 where the dimensions of these edges are 3 and 4 respectively.
 Then, it prints the tensor A.
 
-Non-fermion symmetry tensors define edges using "segments", which are a list of pairs of quantum numbers and their degeneracy,
-or pairs of irreducible representations and their multiplicity in the terminology of group theory,
-or pairs of the so-called "symmetry" and the corresponding dimension in the context of this package.
-The following code generates a Z2 symmetry tensor and a U1 symmetry tensor.
-In this case, the irreducible representation of Z2 Symmetry is represented as a boolean value, while for U1 Symmetry it's an integer.
+Non-fermion symmetry tensors define edges using "segments", which are a list of pairs of quantum numbers and their respective degeneracy.
+The quantum numbers and their degeneracy are also referred to as irreducible representations and their multiplicity in the terminology of group theory,
+or so-called "symmetry" and the corresponding dimension in the context of this package.
+The following code generates a $Z(2)$ symmetry tensor and a $U(1)$ symmetry tensor.
+In this case, the irreducible representation of $Z(2)$ symmetry is represented as a boolean value, while for $U(1)$ symmetry it's an integer.
 
 #+begin_src python :results output :exports both :cache yes
   import TAT
@@ -138,7 +147,7 @@ In this case, the irreducible representation of Z2 Symmetry is represented as a 
   print(B)
 #+end_src
 
-#+RESULTS[18ed60ec572047ee55ef77ee5d1b5d32d204c89a]:
+#+RESULTS[ea4bb91236d826be39b61137c3cbe2670526024d]:
 #+begin_example
 {names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
 {names:[i,j],edges:[{-1:2,0:4,1:1},{-1:3,0:2,1:1}],blocks:{[-1,1]:[0,1],[0,0]:[2,3,4,5,6,7,8,9],[1,-1]:[10,11,12]}}
@@ -152,7 +161,7 @@ In the given code, the =range_()= function generates range data into the tensor.
 
 The situation regarding fermion tensors can be quite complicated.
 The edge is determined by pairs of segments along with the so-called "fermi-arrow", which is a boolean value.
-The example below creates a Fermi tensor, with fermionic properties carried by the U1 symmetry,
+The example below creates a fermion $U(1)$ symmetry tensor, with fermionic properties carried by the $U(1)$ symmetry,
 where the fermi-arrow of its two edges are =False= and =True=, respectively.
 
 #+begin_src python :results output :exports both :cache yes
@@ -165,7 +174,7 @@ where the fermi-arrow of its two edges are =False= and =True=, respectively.
   print(A)
 #+end_src
 
-#+RESULTS[96c673b1452b597fa36ccca7099c4461505289b2]:
+#+RESULTS[5e79a1e8ef40b2a94023c0ae181cb23f8d6fb427]:
 #+begin_example
 {names:[i,j],edges:[{arrow:0,segment:{-1:2,0:4,1:1}},{arrow:1,segment:{-1:3,0:2,1:1}}],blocks:{[-1,1]:[0,1],[0,0]:[2,3,4,5,6,7,8,9],[1,-1]:[10,11,12]}}
 #+end_example
@@ -203,7 +212,7 @@ For symmetry tensors of non-simple groups, their irreducible representations can
   print(A)
 #+end_src
 
-#+RESULTS[b45fd194e153d95f6f4b4402d8f6742dcd2625fb]:
+#+RESULTS[5d0fa65e700fb727988b75d90b272a3ed9d1c48b]:
 #+begin_example
 {names:[i,j],edges:[{arrow:0,segment:{(-1,0):1,(0,0):1,(1,0):1,(-1,1):1,(0,1):1,(1,1):1}},{arrow:1,segment:{(-1,0):1,(0,0):1,(1,0):1,(-1,1):1,(0,1):1,(1,1):1}}],blocks:{[(-1,0),(1,0)]:[0],[(0,0),(0,0)]:[1],[(1,0),(-1,0)]:[2],[(-1,1),(1,1)]:[3],[(0,1),(0,1)]:[4],[(1,1),(-1,1)]:[5]}}
 #+end_example
@@ -233,7 +242,7 @@ This functionality is achieved through the use of the =clear_symmetry= function,
   print(D)
 #+end_src
 
-#+RESULTS[24266b7172ed325d2f5643ca119eb8eadb9af965]:
+#+RESULTS[bac47d1b2342e5ea2016374b2acc543e757f4e11]:
 #+begin_example
 {names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
 {names:[i,j],edges:[6,4],blocks:[0,1,2,0,3,4,5,0,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9]}
@@ -242,7 +251,7 @@ This functionality is achieved through the use of the =clear_symmetry= function,
 #+end_example
 
 For a fermion symmetry tensor, direct removal of fermion anti-commutation relation is not feasible.
-Instead, only a portion of the symmetry can be cleared, resulting in a parity symmetry tensor rather than a non-symmetry tensor, as illustrated below:
+Instead, only a portion of the symmetry can be cleared, resulting in a fermion $Z(2)$ symmetry tensor rather than a non-symmetry tensor, as illustrated below:
 
 #+begin_src python :results output :exports both :cache yes
   import TAT
@@ -256,7 +265,7 @@ Instead, only a portion of the symmetry can be cleared, resulting in a parity sy
   print(D)
 #+end_src
 
-#+RESULTS[158f9b8e378d8e05d47c155cf13bf3663ec64c48]:
+#+RESULTS[f3859610d68266707a1c3f8075d6cab4fdb97958]:
 #+begin_example
 {names:[i,j],edges:[{arrow:0,segment:{0:2,2:4,1:1}},{arrow:1,segment:{0:3,-2:1,-1:3}}],blocks:{[0,0]:[0,1,2,3,4,5],[2,-2]:[6,7,8,9],[1,-1]:[10,11,12]}}
 {names:[i,j],edges:[{arrow:0,segment:{0:6,1:1}},{arrow:1,segment:{0:4,1:3}}],blocks:{[0,0]:[0,1,2,0,3,4,5,0,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9],[1,1]:[10,11,12]}}
@@ -282,7 +291,7 @@ Moreover, the rank of a tensor can be obtained using =A.rank=.
   print(A.rank)
 #+end_src
 
-#+RESULTS[beb175e7ae68f0cb6318d7b359c9fc8184f6801e]:
+#+RESULTS[20afecbaed5c7002fb9e661858a2d384753c1768]:
 #+begin_example
 ['i', 'j']
 {-1:1,0:1,2:1} {-2:2,1:1,0:2}
@@ -307,7 +316,7 @@ To access the content of the tensor, there are three available methods:
   print(A.storage.flags.owndata)
 #+end_src
 
-#+RESULTS[35ca379e74b8da256b882bbb6754f5ccf183b1be]:
+#+RESULTS[fd9743e41749dd65f245fbf0ae0be05d09a96144]:
 #+begin_example
 [0. 1. 2. 3. 4.]
 <class 'numpy.ndarray'>
@@ -333,7 +342,7 @@ False
   print(B.blocks["j", "i"])
 #+end_src
 
-#+RESULTS[e596cc168d596c5115ac059d19809d02362385db]:
+#+RESULTS[936506c5467c14a27abf83be29f9e550064d0a4c]:
 #+begin_example
 [[ 8. 10.]
  [ 9. 11.]]
@@ -357,7 +366,7 @@ False
   print(A[{"j": (-2, 0), "i": (+2, 1)}])
 #+end_src
 
-#+RESULTS[45235f4b3c6889ad58d3dee6a3287013677e5b67]:
+#+RESULTS[6f78ac2b184a643d7ee95ad61b6f653a18b6cffb]:
 #+begin_example
 10.0
 #+end_example
@@ -372,7 +381,7 @@ Tensor types include several static attributes, such as:
 + =dtypes=: The scalar type represented by the NumPy convention.
 + =is_complex=: A boolean indicating whether the tensor is complex.
 + =is_real=: A boolean indicating whether the tensor is real.
-+ =model=: An alias for the symmetry model of the tensor. For example, =TAT.FermiU1.D.Tensor.model= is actually an alias for =TAT.FermiU1=.
++ =model=: An alias for the symmetry model of the tensor. For example, getting the attribute =model= of =TAT.FermiU1.D.Tensor= results in =TAT.FermiU1=.
 
 ** Conversion between single-element tensor and number
 
@@ -406,13 +415,13 @@ For fermion symmetry tensors, users should provide additional fermi-arrow inform
   print(D)
   print(d)
 
-  E = TAT.BoseU1.D.Tensor(233, ["i", "j"], [-1, +1], [False, True])
+  E = TAT.FermiU1.D.Tensor(233, ["i", "j"], [-1, +1], [False, True])
   e = float(E)
   print(E)
   print(e)
 #+end_src
 
-#+RESULTS[085695678502f94c949cc8af150597b7a18e08ef]:
+#+RESULTS[2f609aec5299e13c3cf5382915c11bf014233890]:
 #+begin_example
 {names:[],edges:[],blocks:[233]}
 (233+0j)
@@ -422,7 +431,7 @@ For fermion symmetry tensors, users should provide additional fermi-arrow inform
 233.0
 {names:[i,j],edges:[{-1:1},{1:1}],blocks:{[-1,1]:[233]}}
 233.0
-{names:[i,j],edges:[{-1:1},{1:1}],blocks:{[-1,1]:[233]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:1}},{arrow:1,segment:{1:1}}],blocks:{[-1,1]:[233]}}
 233.0
 #+end_example
 
@@ -446,7 +455,7 @@ To convert the type of the content of a tensor, users can use the =to= function.
   print(type(A.to("float64")))
 #+end_src
 
-#+RESULTS[b754d9032da208a7e264508b5e63fe767fc3634b]:
+#+RESULTS[f97c986c1dd8614ee32a06fe58bd2cf21c174724]:
 #+begin_example
 <class 'TAT.FermiU1.D.Tensor'>
 <class 'TAT.FermiU1.Z.Tensor'>
@@ -608,7 +617,7 @@ Both of these functions utilize the =std::mt19937_64= random engine, and users c
   print(B)
 #+end_src
 
-#+RESULTS:
+#+RESULTS[579417655b3da02a340d439364342ded1f8d1905]:
 #+begin_example
 {names:[i],edges:[10],blocks:[0.766553,1.42783,-0.802786,0.231369,-0.144274,0.75302,-0.930606,-0.90363,1.58645,-1.66505]}
 {names:[i],edges:[10],blocks:[0.93897-2.03094i,-1.04394+0.724667i,0.0607228+0.802331i,-0.0634779+0.261524i,-0.0182935-0.00331999i,-0.809166+0.358002i,0.108272+0.293261i,-0.685203-0.874357i,-1.02724+0.898064i,-1.16878-0.312219i]}
@@ -659,7 +668,7 @@ and is primarily employed for generating examples to illustrate other functions 
   print(A)
 #+end_src
 
-#+RESULTS[baad7cd747f01562b1c571aa8b6eeb411fad6e27]:
+#+RESULTS[864d29b52e18fe127deaa5dfc02c39d78af2e0d6]:
 #+begin_example
 {names:[i,j,k],edges:[{arrow:1,segment:{-1:2,0:2,-2:2}},{arrow:0,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[-1,0,1]:[0,1+1i,2+2i,3+3i,4+4i,5+5i,6+6i,7+7i],[-1,1,0]:[8+8i,9+9i,10+10i,11+11i,12+12i,13+13i,14+14i,15+15i],[0,0,0]:[16+16i,17+17i,18+18i,19+19i,20+20i,21+21i,22+22i,23+23i],[-2,1,1]:[24+24i,25+25i,26+26i,27+27i,28+28i,29+29i,30+30i,31+31i]}}
 #+end_example
@@ -678,7 +687,7 @@ The content of a tensor is not initialized by default in the TAT package. To man
   print(A)
 #+end_src
 
-#+RESULTS[f289c797feb9dc86ed6dd3cc79170538d4b79f3b]:
+#+RESULTS[112f699d068db830974e37d50d6fb11029a21924]:
 #+begin_example
 {names:[i,j],edges:[{arrow:0,segment:{0:2,-1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[-1,1]:[0,0,0,0]}}
 #+end_example
@@ -706,7 +715,7 @@ their shapes should be the same except for the order of edges, as TAT can automa
   print(b)
 #+end_src
 
-#+RESULTS:
+#+RESULTS[a1a1728b07465366ea105afd090e9acf7dfabb64]:
 #+begin_example
 {names:[i],edges:[4],blocks:[0,1,2,3]}
 {names:[i],edges:[4],blocks:[0,10,20,30]}
@@ -734,13 +743,13 @@ Conjugating a tensor induces a reversal of symmetry in all segments across every
   print(B)
 #+end_src
 
-#+RESULTS[331f9a1a52f10a33d691e137e51c794dfeefb4b6]:
+#+RESULTS[694cdfa556d80554691ae5423d1b9db560240551]:
 #+begin_example
 {names:[i,j],edges:[{0:2,2:4,1:1},{0:3,-2:1,-1:3}],blocks:{[0,0]:[0,1+1i,2+2i,3+3i,4+4i,5+5i],[2,-2]:[6+6i,7+7i,8+8i,9+9i],[1,-1]:[10+10i,11+11i,12+12i]}}
 {names:[i,j],edges:[{0:2,-2:4,-1:1},{0:3,2:1,1:3}],blocks:{[0,0]:[0,1-1i,2-2i,3-3i,4-4i,5-5i],[-2,2]:[6-6i,7-7i,8-8i,9-9i],[-1,1]:[10-10i,11-11i,12-12i]}}
 #+end_example
 
-Please note that, in the case of U1 symmetry, the reversal of the irreducible representation results in its negation, whereas for Z2 symmetry, the reversal remains unchanged.
+Please note that, in the case of $U(1)$ symmetry, the reversal of the irreducible representation results in its negation, whereas for $Z(2)$ symmetry, the reversal remains unchanged.
 
 In the case of a fermion tensor, the conjugation of the tensor, when contracted with the original one, may result in a non-positive number.
 This peculiar phenomenon indicates that the metric of the fermion tensor is not positive-semidefinite.
@@ -764,7 +773,7 @@ However, it's important to note that this metric fixing will lead to a situation
   print(A.contract(C, {("i", "i"), ("j", "j")}))
 #+end_src
 
-#+RESULTS[0f33135701fe8ba03d6bb838c5ccdf419b0382c9]:
+#+RESULTS[753110aa2189cd5468248634097b8737381a7d35]:
 #+begin_example
 {names:[i,j],edges:[{arrow:0,segment:{0:2,1:4}},{arrow:1,segment:{0:3,1:1}}],blocks:{[0,0]:[0,1+1i,2+2i,3+3i,4+4i,5+5i],[1,1]:[6+6i,7+7i,8+8i,9+9i]}}
 {names:[i,j],edges:[{arrow:1,segment:{0:2,1:4}},{arrow:0,segment:{0:3,1:1}}],blocks:{[0,0]:[0,1-1i,2-2i,3-3i,4-4i,5-5i],[1,1]:[-6+6i,-7+7i,-8+8i,-9+9i]}}
@@ -819,7 +828,7 @@ the symmetry-cleared tensor resulting from the contraction is equal to the contr
   print((c.clear_symmetry() - C).norm_2())
 #+end_src
 
-#+RESULTS[7461d85e9e11692ef79322ec08cd543f23c1c93a]:
+#+RESULTS[e8581d27945af12bb1b17e5e8ca873fd15c502e6]:
 #+begin_example
 0.0
 #+end_example
@@ -849,7 +858,7 @@ The same principle applies to fermion symmetry tensors.
   print((c.clear_symmetry() - C).norm_2())
 #+end_src
 
-#+RESULTS:
+#+RESULTS[7dd6e61bb31a7f1da6923d35b69f966267903ff2]:
 #+begin_example
 0.0
 #+end_example
@@ -913,9 +922,9 @@ These pairs identify the corresponding relations, and the two edges in each pair
   print(B)
 #+end_src
 
-#+RESULTS:
+#+RESULTS[7026e94d62663414cc386bef7b4f9104c74e0649]:
 #+begin_example
-{names:[j,i,k,l],edges:[3,2,3,2],blocks:[1.34498e+45,1.43072e+45,1.51645e+45,1.60219e+45,1.68793e+45,1.77367e+45,8.94066e+45,9.51059e+45,1.00805e+46,1.06504e+46,1.12204e+46,1.17903e+46,3.87687e+45,4.12401e+45,4.37114e+45,4.61828e+45,4.86541e+45,5.11255e+45,1.14726e+46,1.22039e+46,1.29352e+46,1.36665e+46,1.43979e+46,1.51292e+46,6.40877e+45,6.8173e+45,7.22583e+45,7.63436e+45,8.04289e+45,8.45143e+45,1.40044e+46,1.48972e+46,1.57899e+46,1.66826e+46,1.75753e+46,1.84681e+46]}
+{names:[j,i,k,l],edges:[3,2,3,2],blocks:[5.98438e+45,6.36586e+45,6.74734e+45,7.12882e+45,7.5103e+45,7.89178e+45,3.97807e+46,4.23166e+46,4.48524e+46,4.73883e+46,4.99242e+46,5.246e+46,1.72498e+46,1.83494e+46,1.9449e+46,2.05486e+46,2.16483e+46,2.27479e+46,5.10462e+46,5.43002e+46,5.75542e+46,6.08081e+46,6.40621e+46,6.73161e+46,2.85153e+46,3.0333e+46,3.21507e+46,3.39685e+46,3.57862e+46,3.76039e+46,6.23116e+46,6.62837e+46,7.02559e+46,7.4228e+46,7.82001e+46,8.21722e+46]}
 #+end_example
 
 ** Setting an identity tensor
@@ -937,7 +946,7 @@ The example provided below sets the tensor A to an identity tensor in place. Aft
   print(A)
 #+end_src
 
-#+RESULTS[965369ff51984fa0d5d2ebe0c3b1e39eb3e03307]:
+#+RESULTS[c9f3c1ced37d918c800f58b36fab6820556170cf]:
 #+begin_example
 {names:[i,j,k,l],edges:[{-1:1,0:1,2:1},{-2:2,1:2,0:2},{2:2,-1:2,0:2},{1:1,0:1,-2:1}],blocks:{[-1,-2,2,1]:[1,0,0,1],[-1,1,2,-2]:[0,0,0,0],[-1,1,-1,1]:[1,0,0,1],[-1,1,0,0]:[0,0,0,0],[-1,0,0,1]:[1,0,0,1],[0,-2,2,0]:[1,0,0,1],[0,1,-1,0]:[1,0,0,1],[0,0,2,-2]:[0,0,0,0],[0,0,-1,1]:[0,0,0,0],[0,0,0,0]:[1,0,0,1],[2,-2,2,-2]:[1,0,0,1],[2,-2,-1,1]:[0,0,0,0],[2,-2,0,0]:[0,0,0,0],[2,1,-1,-2]:[1,0,0,1],[2,0,0,-2]:[1,0,0,1]}}
 #+end_example
@@ -983,7 +992,7 @@ Users are free to merge zero edges into one edge or split one edge into zero edg
   print((A - C).norm_2())
 #+end_src
 
-#+RESULTS[ae67d66c0d3be25e971edba23d2f877f1bf2da8b]:
+#+RESULTS[f457b854d678cc0bad25300e66d073c907549f83]:
 #+begin_example
 {names:[i,j,k,l],edges:[{arrow:0,segment:{-1:1,0:1,2:1}},{arrow:1,segment:{-2:2,1:2,0:2}},{arrow:0,segment:{2:2,-1:2,0:2}},{arrow:1,segment:{1:1,0:1,-2:1}}],blocks:{[-1,-2,2,1]:[0,1,2,3],[-1,1,2,-2]:[4,5,6,7],[-1,1,-1,1]:[8,9,10,11],[-1,1,0,0]:[12,13,14,15],[-1,0,0,1]:[16,17,18,19],[0,-2,2,0]:[20,21,22,23],[0,1,-1,0]:[24,25,26,27],[0,0,2,-2]:[28,29,30,31],[0,0,-1,1]:[32,33,34,35],[0,0,0,0]:[36,37,38,39],[2,-2,2,-2]:[40,41,42,43],[2,-2,-1,1]:[44,45,46,47],[2,-2,0,0]:[48,49,50,51],[2,1,-1,-2]:[52,53,54,55],[2,0,0,-2]:[56,57,58,59]}}
 {names:[b,c,a],edges:[{arrow:0,segment:{0:1}},{arrow:1,segment:{-1:4,2:2,1:4,-2:4,0:2,-4:2}},{arrow:0,segment:{1:4,-2:2,-1:4,2:4,0:2,4:2}}],blocks:{[0,-1,1]:[-0,-1,-44,-45,-2,-3,-46,-47,-4,-5,52,53,-6,-7,54,55],[0,2,-2]:[8,9,10,11],[0,1,-1]:[-16,-17,-32,-33,-18,-19,-34,-35,-12,-13,24,25,-14,-15,26,27],[0,-2,2]:[20,21,48,49,22,23,50,51,28,29,56,57,30,31,58,59],[0,0,0]:[36,37,38,39],[0,-4,4]:[40,41,42,43]}}
@@ -991,10 +1000,9 @@ Users are free to merge zero edges into one edge or split one edge into zero edg
 0.0
 #+end_example
 
-It's crucial to note that when two tensors with connected edges, which will be contracted,
+It's crucial to note that when two fermion symmetry tensors with connected edges, which will be contracted,
 undergo merging or splitting of common edges, it results in the generation of a single sign.
-This behavior should be taken into account if a user intends to interchange the contraction and edge merging/splitting operations.
-Instead, the user needs to specify which of the two tensors should contain the generated sign using the additional two arguments provided by the corresponding functions.
+So, users needs to specify which of the two tensors should contain the generated sign using the additional two arguments provided by the corresponding functions.
 In the examples below, we initially contract the common edges "i" and "j" from connected tensors A1 and B1 to obtain tensor C1.
 Subsequently, we merge the two common edges "i" and "j" into a single common edge "k" for both tensors, resulting in tensors A2 and B2.
 Afterward, tensor C2 is obtained by contracting A2 and B2, demonstrating that C1 equals C2.
@@ -1027,42 +1035,9 @@ In the case of splitting functions, the third argument should consist of a set o
   print(C1 - C2)
 #+end_src
 
-#+RESULTS[6841a8dea5dade656102f2b3b8342bf98beace68]:
+#+RESULTS[44a4538c16208ef7dde1c79cf5315a57bbda4298]:
 #+begin_example
 {names:[a,b],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[1,1]:[0,0,0,0]}}
-#+end_example
-
-** QR decomposition on a tensor
-
-The =qr= function can be used to perform QR decomposition on a tensor.
-To use this function, users should provide the set of free edges of the tensor after decomposition,
-as well as the two edge names created as a result of the decomposition.
-In the provided example, the fermion tensor A has three edges: "i", "j" and "k".
-During the QR decomposition, we configure that the edges of the Q tensor should include "k" only,
-while the remaining edges, namely "i" and "j", should be included in the R tensor.
-The first argument of the qr function can be either 'q' or 'r', specifying whether the second argument represents the set of free edges of the Q tensor or the R tensor.
-After the QR decomposition, the Q tensor will have two edges: the original "k" edge from the input tensor and the edge created during the decomposition, which is named "Q".
-For the R tensor, it should contain three edges, with two of them coming from the original tensor ("i" and "j") and the newly created edge, named "R".
-
-#+begin_src python :results output :exports both :cache yes
-  import TAT
-
-  A = TAT.FermiU1.D.Tensor(["i", "j", "k"], [
-      ([(-1, 2), (0, 2), (-2, 2)], True),
-      ([(0, 2), (1, 2)], False),
-      ([(0, 2), (1, 2)], False),
-  ]).range_()
-
-  Q, R = A.qr('q', {"k"}, "Q", "R")
-  Q_dagger = Q.conjugate().edge_rename({"Q": "Q'"})
-  print(Q_dagger.contract(Q, {("k", "k")}))
-  print((Q.contract(R, {("Q", "R")}) - A).norm_max())
-#+end_src
-
-#+RESULTS[25fe9bc50639dee5f854d3ced9ad7b3e7d14fbca]:
-#+begin_example
-{names:[Q',Q],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,5.55112e-17,5.55112e-17,1]}}
-3.552713678800501e-15
 #+end_example
 
 ** Reversing fermi-arrow of edges
@@ -1101,9 +1076,42 @@ and these specific edges are expected to exhibit behavior opposite to what is de
   print(C1 - C2)
 #+end_src
 
-#+RESULTS[526bfd365d79155150013b0f3e1e2f6ea9a69cd0]:
+#+RESULTS[27813a778a496f4846f817b35b72272df9fa01fc]:
 #+begin_example
 {names:[j,i],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[1,1]:[0,0,0,0]}}
+#+end_example
+
+** QR decomposition on a tensor
+
+The =qr= function can be used to perform QR decomposition on a tensor.
+To use this function, users should provide the set of free edges of the tensor after decomposition,
+as well as the two edge names created as a result of the decomposition.
+In the provided example, the fermion tensor A has three edges: "i", "j" and "k".
+During the QR decomposition, we configure that the edges of the Q tensor should include "k" only,
+while the remaining edges, namely "i" and "j", should be included in the R tensor.
+The first argument of the qr function can be either 'q' or 'r', specifying whether the second argument represents the set of free edges of the Q tensor or the R tensor.
+After the QR decomposition, the Q tensor will have two edges: the original "k" edge from the input tensor and the edge created during the decomposition, which is named "Q".
+For the R tensor, it should contain three edges, with two of them coming from the original tensor ("i" and "j") and the newly created edge, named "R".
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j", "k"], [
+      ([(-1, 2), (0, 2), (-2, 2)], True),
+      ([(0, 2), (1, 2)], False),
+      ([(0, 2), (1, 2)], False),
+  ]).range_()
+
+  Q, R = A.qr('q', {"k"}, "Q", "R")
+  Q_dagger = Q.conjugate().edge_rename({"Q": "Q'"})
+  print(Q_dagger.contract(Q, {("k", "k")}))
+  print((Q.contract(R, {("Q", "R")}) - A).norm_max())
+#+end_src
+
+#+RESULTS[6db35996521ed40543c29716d1a1e682b5ad55e1]:
+#+begin_example
+{names:[Q',Q],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,5.55112e-17,5.55112e-17,1]}}
+3.552713678800501e-15
 #+end_example
 
 ** Singular value decomposition (SVD) on a tensor
@@ -1136,7 +1144,7 @@ a positive integer for absolute dimension cutting, or a real number between 0 an
   print((USV - A).norm_max())
 #+end_src
 
-#+RESULTS[b66ccede56e32cad8d4c473bed0b2e2aacdbef39]:
+#+RESULTS[4307613da39e925dad23b4d6149d810442b1fcfd]:
 #+begin_example
 {names:[U',U],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,0,0,1]}}
 1.0658141036401503e-14
@@ -1163,7 +1171,7 @@ Consequently, the outcome of this operation will yield a tensor with a solitary 
   print(B)
 #+end_src
 
-#+RESULTS[19fec057fccd1bdaf14b9cc37059ce07412ff6fd]:
+#+RESULTS[57d4f6be85fa70ca4ef82afc74f955e443ae0d1e]:
 #+begin_example
 {names:[i,j,k],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,1,2,3,4,5,6,7],[0,1,1]:[8,9,10,11,12,13,14,15],[1,0,1]:[16,17,18,19,20,21,22,23],[1,1,0]:[24,25,26,27,28,29,30,31]}}
 {names:[i],edges:[{arrow:1,segment:{0:2,1:2}}],blocks:{[0]:[-16,-16]}}
@@ -1182,17 +1190,17 @@ On the other hand, "l" and "m" are connected but not aggregated, leading to thei
 
   A = TAT.No.Z.Tensor(
       ["i", "j", "k", "l", "m"],
-      [2, 3, 3, 4, 4],
+      [4, 3, 3, 2, 2],
   ).range_()
   print(A)
   B = A.trace({("j", "k")}, {"n": ("l", "m")})
   print(B)
 #+end_src
 
-#+RESULTS[f727e83b595f05ff7ed3235c9b7d4ed5fe991b6b]:
+#+RESULTS[2535053390d7dac03f3eb3b8ca82a2782d218397]:
 #+begin_example
-{names:[i,j,k,l,m],edges:[2,3,3,4,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,256,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,285,286,287]}
-{names:[n,i],edges:[4,2],blocks:[192,624,207,639,222,654,237,669]}
+{names:[i,j,k,l,m],edges:[4,3,3,2,2],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143]}
+{names:[n,i],edges:[2,4],blocks:[48,156,264,372,57,165,273,381]}
 #+end_example
 
 ** The tensor transposition
@@ -1214,7 +1222,7 @@ The =transpose= function accommodates this need by accepting a list of edge name
   print(B)
 #+end_src
 
-#+RESULTS[c4784d75e19718e633b4023abf01af48ea4d3d35]:
+#+RESULTS[2c5d20fe7a7d4e5686266ddd29c68fd1fcbb765a]:
 #+begin_example
 {names:[i,j,k],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,1,2,3,4,5,6,7],[0,1,1]:[8,9,10,11,12,13,14,15],[1,0,1]:[16,17,18,19,20,21,22,23],[1,1,0]:[24,25,26,27,28,29,30,31]}}
 {names:[k,j,i],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,4,2,6,1,5,3,7],[0,1,1]:[-24,-28,-26,-30,-25,-29,-27,-31],[1,0,1]:[-16,-20,-18,-22,-17,-21,-19,-23],[1,1,0]:[-8,-12,-10,-14,-9,-13,-11,-15]}}
@@ -1261,7 +1269,7 @@ and retrieving the parity of the symmetry.
   print(t1.parity, t2.parity)
 #+end_src
 
-#+RESULTS[56f29e2731f55eb69d6b89bcfd9fe65011a98773]:
+#+RESULTS[4a35c8b818a9eab1742b85d7ec17c51366b88aa8]:
 #+begin_example
 0 1
 1 1
@@ -1293,7 +1301,7 @@ Edge types encompass several functions and attributes, including:
 + =edge.conjugate()=: Computes the conjugated edge.
 + =edge.dimension_by_symmetry(symmetry)=: Retrieves the local dimension based on the given symmetry.
 + =edge.position_by_symmetry(symmetry)=: Retrieves the position in the segments list using the specified symmetry.
-+ =edge.{x}_by_{y}(...)=: Facilitates conversion between three indexing methods, where ={x}= and ={y}= can be either =index=, =coord=, or =point=.
++ =edge.<x>_by_<y>(...)=: Facilitates conversion between three indexing methods, where =<x>= and =<y>= can be either =index=, =coord=, or =point=.
   In the context of =index=, it represents the total index across the entire edge.
   In the case of =coord=, it consists of a pair denoting the position of the local segment within the segments list and the local index within that segment.
   Lastly, for =point=, it comprises a pair consisting of the symmetry of the current segment and the local index within that segment.

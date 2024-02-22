@@ -45,6 +45,7 @@ TEST(test_multidimension_span, get_item_const) {
     const auto span = TAT::mdspan<int>(data.data(), {2, 3, 4});
     data[13] = 666;
     ASSERT_EQ(span.at({1, 0, 1}), 666);
+    ASSERT_EQ(span.const_at({1, 0, 1}), 666);
 }
 
 TEST(test_multidimension_span, iterate) {

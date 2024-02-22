@@ -1,5 +1,5 @@
 #+TITLE: tetraku
 #+OPTIONS: toc:nil
 
-Tetraku is a collection of common models and ansatzes used by [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono][tetragono]].
+Tetraku is a collection of commonly-used models and ansatzes used by [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono][tetragono]].
 More information is available in the readme files within each directory.

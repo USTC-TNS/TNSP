@@ -172,8 +172,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         if len(args) == 1 and args[0] == "help":
             showln(abstract_state.__doc__.replace("\n", "\n    "))
             return None
-        else:
-            state = lattice_type(abstract_state(*args, **kwargs))
+        state = lattice_type(abstract_state(*args, **kwargs))
         return state
 
     @AutoCmd.decorator
@@ -264,8 +263,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         if len(args) == 1 and args[0] == "help":
             showln(abstract_lattice.__doc__.replace("\n", "\n    "))
             return None
-        else:
-            state = lattice_type(abstract_lattice(*args, **kwargs))
+        state = lattice_type(abstract_lattice(*args, **kwargs))
 
         # pre normalize the tensor
         for l1, l2 in state.sites():
@@ -326,7 +324,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
             The simple update total step to do.
         delta_tau : float
             The imaginary time, delta tau.
-        new_dimension : int
+        new_dimension : int | float
             The new cut dimension used in simple update, or the amplitude of dimension expandance.
         """
         self.su.update(total_step, delta_tau, new_dimension)
@@ -386,12 +384,15 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         args, kwargs
             Arguments passed to module configuration creater function.
         """
+        initial_configuration = get_imported_function(module_name, "initial_configuration")
+        if len(args) == 1 and args[0] == "help":
+            showln(initial_configuration.__doc__.replace("\n", "\n    "))
+            return
+        configuration = gm_Configuration(self.gm, -1)
         with seed_differ:
             # This configuration should never be used, so cut dimension is -1
-            configuration = gm_Configuration(self.gm, -1)
-            initial_configuration = get_imported_function(module_name, "initial_configuration")
             configuration = initial_configuration(configuration, *args, **kwargs)
-            self.gm_conf = configuration.export_configuration()
+        self.gm_conf = configuration.export_configuration()
 
     @AutoCmd.decorator
     def gm_dump(self, name):
@@ -591,7 +592,7 @@ if __name__ == "__main__":
     help_message = """usage:
     shell.py
     shell.py [-h | -help | --help]
-    shell.py script_file
+    shell.py <script_file>
     shell.py -- script"""
     if len(sys.argv) == 1:
         TetragonoCommandApp().cmdloop()

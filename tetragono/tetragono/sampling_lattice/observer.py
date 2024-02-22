@@ -414,9 +414,9 @@ class Observer():
                         self._Deltas.append((reweight, Es, holes))
 
     @property
-    def stability(self):
+    def instability(self):
         """
-        The stability of the sampling method.
+        The instability of the sampling method.
         """
         N = self._count
         expect = self._total_weight / N
