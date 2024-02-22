@@ -12,20 +12,20 @@ if(DEFINED SKBUILD_PROJECT_VERSION)
   target_compile_definitions(TAT INTERFACE TAT_VERSION=\"${SKBUILD_PROJECT_VERSION}\")
 endif()
 
-# Pybind11
-if(EXISTS ${CMAKE_SOURCE_DIR}/pybind11)
-  # Try to find in the top level directory
-  add_subdirectory(${CMAKE_SOURCE_DIR}/pybind11 pybind11)
-  message(STATUS "Enable python(local)")
-else()
-  # Find in the system path
-  find_package(pybind11 REQUIRED)
-  message(STATUS "Enable python(system)")
-endif()
-
-# Define PyTAT
 option(TAT_BUILD_PYTAT "Build PyTAT" ON)
 if(TAT_BUILD_PYTAT)
+  # load Pybind11
+  if(EXISTS ${CMAKE_SOURCE_DIR}/pybind11)
+    # Try to find in the top level directory
+    add_subdirectory(${CMAKE_SOURCE_DIR}/pybind11 pybind11)
+    message(STATUS "Enable python(local)")
+  else()
+    # Find in the system path
+    find_package(pybind11 REQUIRED)
+    message(STATUS "Enable python(system)")
+  endif()
+
+  # Define PyTAT
   file(GLOB PYTAT_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
   set(Symmetries No Z2 U1 Fermi FermiZ2 FermiU1 Parity FermiFermi)
   set(Shorts S D C Z)
@@ -46,5 +46,7 @@ if(TAT_BUILD_PYTAT)
   target_link_libraries(PyTAT PRIVATE TAT)
   target_include_directories(PyTAT PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   set_target_properties(PyTAT PROPERTIES OUTPUT_NAME TAT)
+
+  # Install PyTAT
   install(TARGETS PyTAT LIBRARY DESTINATION .)
 endif()

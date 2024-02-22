@@ -17,7 +17,7 @@ jobs:
         run: mkdir ${{runner.workspace}}/build
       - name: configure
         working-directory: ${{runner.workspace}}/build
-        run: cmake ${{github.workspace}}
+        run: cmake ${{github.workspace}} -DTAT_BUILD_PYTAT=OFF
       - name: build
         working-directory: ${{runner.workspace}}/build
         run: make test_executables -j 2
@@ -302,7 +302,7 @@ jobs:
           CIBW_BEFORE_ALL_MACOS: ""
 
           CIBW_ENVIRONMENT_LINUX: CMAKE_BUILD_PARALLEL_LEVEL=4
-          CIBW_ENVIRONMENT_WINDOWS: CMAKE_BUILD_PARALLEL_LEVEL=4 SKBUILD_CMAKE_ARGS=-GNinja SKBUILD_CMAKE_DEFINE="CMAKE_C_COMPILER=clang;CMAKE_CXX_COMPILER=clang++;TAT_MATH_LIBRARIES=D:/a/TAT/TAT/lib/libopenblas.lib"
+          CIBW_ENVIRONMENT_WINDOWS: CMAKE_BUILD_PARALLEL_LEVEL=4 SKBUILD_CMAKE_ARGS=-GNinja SKBUILD_CMAKE_DEFINE="CMAKE_C_COMPILER=clang;CMAKE_CXX_COMPILER=clang++;TAT_MATH_LIBRARIES=D:/a/TNSP/TNSP/lib/libopenblas.lib"
           CIBW_ENVIRONMENT_MACOS: CMAKE_BUILD_PARALLEL_LEVEL=6 SKBUILD_CMAKE_DEFINE="CMAKE_OSX_ARCHITECTURES=${{ matrix.mac_arch }}"
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
