@@ -22,10 +22,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/USTC-TNS/TAT/tree/main/tetragono"
-Repository = "https://github.com/USTC-TNS/TAT.git"
-Issues = "https://github.com/USTC-TNS/TAT/issues"
-Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
+Homepage = "https://github.com/USTC-TNS/TNSP/tree/main/tetragono"
+Repository = "https://github.com/USTC-TNS/TNSP.git"
+Issues = "https://github.com/USTC-TNS/TNSP/issues"
+Changelog = "https://github.com/USTC-TNS/TNSP/blob/main/CHANGELOG.org"
 
 [tool.setuptools.packages.find]
 exclude = ["tests"]

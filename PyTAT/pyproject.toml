@@ -24,10 +24,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/USTC-TNS/TAT/tree/main/PyTAT"
-Repository = "https://github.com/USTC-TNS/TAT.git"
-Issues = "https://github.com/USTC-TNS/TAT/issues"
-Changelog = "https://github.com/USTC-TNS/TAT/blob/main/CHANGELOG.org"
+Homepage = "https://github.com/USTC-TNS/TNSP/tree/main/PyTAT"
+Repository = "https://github.com/USTC-TNS/TNSP.git"
+Issues = "https://github.com/USTC-TNS/TNSP/issues"
+Changelog = "https://github.com/USTC-TNS/TNSP/blob/main/CHANGELOG.org"
 
 [tool.scikit-build]
 experimental = true
@@ -37,25 +37,20 @@ metadata.readme.provider = "maybe_readme"
 metadata.readme.provider-path = "."
 sdist.exclude = ["*"]
 sdist.include = [
-  "/parent/include",
-  "/parent/CMakeLists.txt",
-  "/parent/TAT-config.cmake.in",
-  "/parent/TAT.pc.in",
-  "/parent/PyTAT/dealing_tensor.cpp.in",
-  "/parent/PyTAT/PyTAT.hpp",
-  "/parent/PyTAT/PyTAT.cpp",
   "/CMakeLists.txt",
+  "/dealing_tensor.cpp.in",
   "/maybe_readme.py",
   "/pyproject.toml",
+  "/PyTAT.cpp",
+  "/PyTAT.hpp",
   "/README.org",
+  "/TAT",
   "/test_wasm.js",
   "/tests"
 ]
 
 [tool.scikit-build.cmake.define]
 CMAKE_BUILD_TYPE = "Release"
-TAT_USE_MPI = "OFF"
-TAT_BUILD_TEST = "OFF"
 
 [tool.setuptools_scm]
 root = ".."

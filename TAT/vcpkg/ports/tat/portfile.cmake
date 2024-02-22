@@ -1,12 +1,11 @@
 vcpkg_from_github(
   OUT_SOURCE_PATH SOURCE_PATH
-  REPO USTC-TNS/TAT
-  HEAD_REF dev
+  REPO USTC-TNS/TNSP
+  HEAD_REF main
 )
 
 vcpkg_cmake_configure(
-  SOURCE_PATH "${SOURCE_PATH}"
-  OPTIONS -DTAT_BUILD_PYTAT=OFF -DTAT_BUILD_TEST=OFF
+  SOURCE_PATH "${SOURCE_PATH}/TAT"
 )
 
 vcpkg_cmake_install()

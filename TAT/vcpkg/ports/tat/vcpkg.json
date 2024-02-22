@@ -1,8 +1,8 @@
 {
   "name": "tat",
   "version": "0.0.0",
-  "description": "TAT is a header-only c++ tensor library with support for Abelian symmetry tensor and fermi tensor.",
-  "homepage": "https://github.com/USTC-TNS/TAT",
+  "description": "TAT is a header-only c++ tensor library with support for Abelian symmetry tensors and fermion tensors.",
+  "homepage": "https://github.com/USTC-TNS/TNSP",
   "license": "GPL-3.0-or-later",
   "dependencies": [
     {

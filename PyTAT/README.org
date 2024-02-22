@@ -6,7 +6,7 @@
 #+LATEX_HEADER: \usepackage{minted}
 #+LATEX_HEADER: \usemintedstyle{emacs}
 
-PyTAT is a Python wrapper for the C++ tensor library called [[https://github.com/USTC-TNS/TAT][TAT]], offering support for both symmetry and fermion tensors.
+PyTAT is a Python wrapper for the C++ tensor library called [[https://github.com/USTC-TNS/TNSP/tree/main/TAT][TAT]], offering support for both symmetry and fermion tensors.
 
 * Install
 
@@ -16,7 +16,7 @@ Alternatively, users can simply use =pip install pytat= to install a pre-built d
 To build PyTAT in the pyodide environment, refer to [[https://pyodide.org/en/stable/development/building-and-testing-packages.html][this link]].
 Remember to add =--exports pyinit= to the =pyodide build= arguments.
 We can't upload our pre-built emscripten platform distribution to [[https://pypi.org][pypi.org]] as they don't allow it.
-Instead, users can download a pre-built emscripten platform wheel from the [[https://github.com/USTC-TNS/TAT/releases][release page]].
+Instead, users can download a pre-built emscripten platform wheel from the [[https://github.com/USTC-TNS/TNSP/releases][release page]].
 
 * Documents
 
