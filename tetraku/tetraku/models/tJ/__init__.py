@@ -33,7 +33,7 @@ def abstract_state(L1, L2, T, t, J):
     t, J : float
         tJ model parameters.
     """
-    state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiU1BoseU1.D.Tensor, L1, L2)
     state.physics_edges[...] = tet.common_tensor.FermiU1_tJ.EF
     CC = tet.common_tensor.FermiU1_tJ.CC.to(float)
     SS = tet.common_tensor.FermiU1_tJ.SS.to(float)

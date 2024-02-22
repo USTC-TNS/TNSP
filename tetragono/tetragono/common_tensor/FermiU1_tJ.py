@@ -19,7 +19,7 @@
 import TAT
 from .tensor_toolkit import Fedge, Tedge, rename_io
 
-Tensor = TAT.FermiU1.Z.Tensor
+Tensor = TAT.FermiU1BoseU1.Z.Tensor
 
 # Empty, Down, Up
 EF = Fedge[(0, 0), (+1, -1), (+1, +1)]

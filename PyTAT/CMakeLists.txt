@@ -27,7 +27,7 @@ if(TAT_BUILD_PYTAT)
 
   # Define PyTAT
   file(GLOB PYTAT_SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
-  set(Symmetries No Z2 U1 Fermi FermiZ2 FermiU1 Parity FermiFermi)
+  set(Symmetries No BoseZ2 BoseU1 FermiU1 FermiU1BoseZ2 FermiU1BoseU1 FermiZ2 FermiU1FermiU1)
   set(Shorts S D C Z)
   set(Scalars float double std::complex<float> std::complex<double>)
   foreach(Sym IN LISTS Symmetries)

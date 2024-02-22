@@ -114,7 +114,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     To create a Z2 symmetry tensor, you need to describe the detail of each edge
 
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-      auto A = TAT::Tensor<double, TAT::Z2Symmetry>({"i", "j"}, {{{0, 2}, {1, 4}}, {{0, 3}, {1, 1}}}).range_();
+      auto A = TAT::Tensor<double, TAT::BoseZ2Symmetry>({"i", "j"}, {{{0, 2}, {1, 4}}, {{0, 3}, {1, 1}}}).range_();
       std::cout << A << "\n";
     #+end_src
 
@@ -127,7 +127,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     =range= is a function to initialize the value of tensor for test.
 
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-      auto A = TAT::Tensor<double, TAT::Z2Symmetry>({"i", "j"}, {{{0, 2}, {1, 4}}, {{0, 3}, {1, 1}}}).range_();
+      auto A = TAT::Tensor<double, TAT::BoseZ2Symmetry>({"i", "j"}, {{{0, 2}, {1, 4}}, {{0, 3}, {1, 1}}}).range_();
       auto B = A.clear_symmetry();
       std::cout << B << "\n";
     #+end_src
@@ -142,7 +142,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     the U1 symmety edge can be more complex
 
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-      auto A = TAT::Tensor<double, TAT::U1Symmetry>({"i", "j"}, {{{0, 2}, {2, 4}, {1, 1}}, {{0, 3}, {-2, 1}, {-1, 3}}}).range_();
+      auto A = TAT::Tensor<double, TAT::BoseU1Symmetry>({"i", "j"}, {{{0, 2}, {2, 4}, {1, 1}}, {{0, 3}, {-2, 1}, {-1, 3}}}).range_();
       auto B = A.clear_symmetry();
       std::cout << A << "\n";
       std::cout << B << "\n";
@@ -180,7 +180,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     For symmetric tensor, you can specify the pair of symmetry and sub-index or the total index.
 
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-      auto A = TAT::Tensor<double, TAT::U1Symmetry, std::string>({"i", "j"}, {{{0, 2}, {2, 4}, {1, 1}}, {{0, 3}, {-2, 1}, {-1, 3}}}).zero_();
+      auto A = TAT::Tensor<double, TAT::BoseU1Symmetry, std::string>({"i", "j"}, {{{0, 2}, {2, 4}, {1, 1}}, {{0, 3}, {-2, 1}, {-1, 3}}}).zero_();
       A.at({{"i", 1}, {"j", 2}}) = 233;
       A.at({{"i", {2, 2}}, {"j", {-2, 0}}}) = 42;
       // print tensor A
@@ -233,8 +233,8 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     It always requires two tensor share the same shape, but edge order is not important
 
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
-      auto A = TAT::Tensor<double, TAT::U1Symmetry, std::string>({"i", "j"}, {{{0, 2}, {2, 4}, {1, 1}}, {{0, 3}, {-2, 1}, {-1, 3}}}).range_();
-      auto B = TAT::Tensor<double, TAT::U1Symmetry, std::string>({"j", "i"}, {{{0, 3}, {-2, 1}, {-1, 3}}, {{0, 2}, {2, 4}, {1, 1}}}).range_();
+      auto A = TAT::Tensor<double, TAT::BoseU1Symmetry, std::string>({"i", "j"}, {{{0, 2}, {2, 4}, {1, 1}}, {{0, 3}, {-2, 1}, {-1, 3}}}).range_();
+      auto B = TAT::Tensor<double, TAT::BoseU1Symmetry, std::string>({"j", "i"}, {{{0, 3}, {-2, 1}, {-1, 3}}, {{0, 2}, {2, 4}, {1, 1}}}).range_();
       std::cout << A + B << "\n";
     #+end_src
 
@@ -257,12 +257,12 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
       double a = double(A);
       std::cout << a << "\n";
 
-      auto B = TAT::Tensor<double, TAT::U1Symmetry>(233);
+      auto B = TAT::Tensor<double, TAT::BoseU1Symmetry>(233);
       std::cout << B << "\n";
       double b = double(B);
       std::cout << b << "\n";
 
-      auto C = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>({233, 666}, {"i", "j"}, {2, -2});
+      auto C = TAT::Tensor<std::complex<double>, TAT::BoseU1Symmetry>({233, 666}, {"i", "j"}, {2, -2});
       std::cout << C << "\n";
       std::complex<double> c = std::complex<double>(C);
       std::cout << c << "\n";
@@ -403,7 +403,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
       #define edge(...) \
          { __VA_ARGS__ }
-      using Tensor = TAT::Tensor<double, TAT::U1Symmetry>;
+      using Tensor = TAT::Tensor<double, TAT::BoseU1Symmetry>;
       auto a = Tensor{{"A", "B", "C", "D"}, {edge({-1, 1}, {0, 1}, {-2, 1}), edge({0, 1}, {1, 2}), edge({0, 2}, {1, 2}), edge({-2, 2}, {-1, 1}, {0, 2})}}
                      .range_();
       auto b = Tensor{{"E", "F", "G", "H"}, {edge({0, 2}, {1, 1}), edge({-2, 1}, {-1, 1}, {0, 2}), edge({0, 1}, {-1, 2}), edge({2, 2}, {1, 1}, {0, 2})}}
@@ -411,7 +411,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
       std::cout << a << "\n";
       std::cout << b << "\n";
       std::cout << TAT::contract(a, b, {{"B", "G"}, {"D", "H"}}) << "\n";
-      std::cout << TAT::Tensor<double, TAT::U1Symmetry>::contract(
+      std::cout << TAT::Tensor<double, TAT::BoseU1Symmetry>::contract(
                          a.transpose({"A", "C", "B", "D"}),
                          b.transpose({"G", "H", "E", "F"}),
                          {{"B", "G"}, {"D", "H"}})
@@ -490,7 +490,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
           { {__VA_ARGS__}, false }
        #define t_edge(...) \
           { {__VA_ARGS__}, true }
-       using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
+       using Tensor = TAT::Tensor<double, TAT::FermiU1Symmetry>;
        auto A = Tensor({"i", "j", "k"}, {t_edge({-1, 2}, {0, 2}, {-2, 2}), f_edge({0, 2}, {1, 2}), f_edge({0, 2}, {1, 2})}).range_();
        // Do QR decomposition, specify Q matrix edge is edge k
        // You can also write is as =Q, R = A.qr('r', {"i", "j"}, "Q", "R")=
@@ -516,7 +516,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
           { {__VA_ARGS__}, false }
        #define t_edge(...) \
           { {__VA_ARGS__}, true }
-       using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
+       using Tensor = TAT::Tensor<double, TAT::FermiU1Symmetry>;
        auto A = Tensor{{"i", "j", "k"}, {t_edge({-1, 2}, {0, 2}, {-2, 2}), f_edge({0, 2}, {1, 2}), f_edge({0, 2}, {1, 2})}}.range_();
        // Do SVD decomposition with cut=3, if cut not specified,
        // svd will not cut the edge.
@@ -568,7 +568,7 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!", and it sho
     #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
       #define edge(...) \
          { __VA_ARGS__ }
-      using Tensor = TAT::Tensor<double, TAT::U1Symmetry>;
+      using Tensor = TAT::Tensor<double, TAT::BoseU1Symmetry>;
       auto A = Tensor(
                      {"i", "j", "k", "l", "m"},
                      {edge({-1, 2}, {0, 2}, {+1, 2}), edge({0, 2}, {1, 2}), edge({0, 2}, {-1, 2}), edge({0, 2}, {2, 3}), edge({0, 2}, {-2, 3})})

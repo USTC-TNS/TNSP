@@ -267,13 +267,13 @@ namespace TAT {
     using U1 = std::int32_t;
 
     using NoSymmetry = Symmetry<>;
-    using Z2Symmetry = Symmetry<bose<Z2>>;
-    using U1Symmetry = Symmetry<bose<U1>>;
-    using FermiSymmetry = Symmetry<fermi<U1>>;
-    using FermiZ2Symmetry = Symmetry<fermi<U1>, bose<Z2>>;
-    using FermiU1Symmetry = Symmetry<fermi<U1>, bose<U1>>;
-    using ParitySymmetry = Symmetry<fermi<Z2>>;
-    using FermiFermiSymmetry = Symmetry<fermi<U1>, fermi<U1>>;
+    using BoseZ2Symmetry = Symmetry<bose<Z2>>;
+    using BoseU1Symmetry = Symmetry<bose<U1>>;
+    using FermiU1Symmetry = Symmetry<fermi<U1>>;
+    using FermiU1BoseZ2Symmetry = Symmetry<fermi<U1>, bose<Z2>>;
+    using FermiU1BoseU1Symmetry = Symmetry<fermi<U1>, bose<U1>>;
+    using FermiZ2Symmetry = Symmetry<fermi<Z2>>;
+    using FermiU1FermiU1Symmetry = Symmetry<fermi<U1>, fermi<U1>>;
 } // namespace TAT
 
 namespace std {

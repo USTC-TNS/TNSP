@@ -73,7 +73,7 @@ for l1 in range(L1):
 CSCS = tet.common_tensor.Fermi_Hubbard.CSCS.to(float)
 NN = tet.common_tensor.Fermi_Hubbard.NN.to(float)
 
-state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
+state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
 for l1 in range(L1):
     for l2 in range(L2):
         if (l1, l2) != (0, 0):

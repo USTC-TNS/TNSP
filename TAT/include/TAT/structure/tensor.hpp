@@ -672,7 +672,7 @@ namespace TAT {
          *
          * \note it is invalid for bose tensor
          */
-        [[nodiscard]] Tensor<ScalarType, ParitySymmetry, Name> clear_fermi_symmetry() const;
+        [[nodiscard]] Tensor<ScalarType, FermiZ2Symmetry, Name> clear_fermi_symmetry() const;
 
         [[nodiscard]] auto clear_symmetry() const {
             if constexpr (symmetry_t::is_fermi_symmetry) {

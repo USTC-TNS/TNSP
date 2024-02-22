@@ -33,7 +33,7 @@ def abstract_state(L1, L2, T, t, U):
     t, U : float
         Hubbard model parameters.
     """
-    state = tet.AbstractState(TAT.Fermi.Z.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiU1.Z.Tensor, L1, L2)
     state.total_symmetry = T
     for l1 in range(L1):
         for l2 in range(L2):

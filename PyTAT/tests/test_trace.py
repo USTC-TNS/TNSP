@@ -46,7 +46,7 @@ def test_no_symmetry():
 
 
 def test_u1_symmetry():
-    a = TAT.U1.D.Tensor(
+    a = TAT.BoseU1.D.Tensor(
         ["A", "B", "C", "D"],
         [
             ([(-1, 1), (0, 1), (-2, 1)], True),
@@ -55,7 +55,7 @@ def test_u1_symmetry():
             ([(0, 2), (-1, 1), (-2, 2)], True),
         ],
     ).range_()
-    b = TAT.U1.D.Tensor(
+    b = TAT.BoseU1.D.Tensor(
         ["E", "F", "G", "H"],
         [
             ([(0, 2), (1, 1)], False),
@@ -72,7 +72,7 @@ def test_u1_symmetry():
 
 
 def test_fermi_symmetry():
-    a = TAT.Fermi.D.Tensor(
+    a = TAT.FermiU1.D.Tensor(
         ["A", "B", "C", "D"],
         [
             ([(-1, 1), (0, 1), (-2, 1)], True),
@@ -81,7 +81,7 @@ def test_fermi_symmetry():
             ([(-2, 2), (-1, 1), (0, 2)], True),
         ],
     ).range_()
-    b = TAT.Fermi.D.Tensor(
+    b = TAT.FermiU1.D.Tensor(
         ["E", "F", "G", "H"],
         [
             ([(0, 2), (1, 1)], False),

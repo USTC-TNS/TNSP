@@ -3,7 +3,7 @@ import TAT
 
 
 def test_bose_mode():
-    a = TAT.U1.S.Tensor(["i", "j"], [
+    a = TAT.BoseU1.S.Tensor(["i", "j"], [
         [(0, 2), (1, 3), (2, 5)],
         [(0, 5), (-1, 4), (-2, 2)],
     ]).range_()
@@ -19,7 +19,7 @@ def test_bose_mode():
 
 
 def test_fermi_mode():
-    a = TAT.Fermi.S.Tensor(["i", "j"], [
+    a = TAT.FermiU1.S.Tensor(["i", "j"], [
         [(0, 2), (1, 3), (2, 5)],
         [(0, 5), (-1, 4), (-2, 2)],
     ]).range_()

@@ -33,7 +33,7 @@ def abstract_state(L1, L2, T, t, U):
     t, U : float
         Hubbard model parameters.
     """
-    state = tet.AbstractState(TAT.FermiFermi.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiU1FermiU1.D.Tensor, L1, L2)
     half_T = T // 2
     if half_T * 2 != T:
         raise RuntimeError("T must be even number")

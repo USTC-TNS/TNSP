@@ -6,9 +6,8 @@
 using namespace testing;
 
 TEST(test_scalar, tensor_and_number) {
-    auto a =
-        TAT::Tensor<std::complex<double>, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}.range_(
-        ); // 0..31
+    auto a = TAT::Tensor<std::complex<double>, TAT::BoseZ2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}
+                 .range_(); // 0..31
     std::valarray<std::complex<double>> s_a = std::valarray<std::complex<double>>(32);
     for (auto i = 0; i < 32; i++) {
         s_a[i] = i;
@@ -67,9 +66,8 @@ TEST(test_scalar, tensor_and_tensor) {
 }
 
 TEST(test_scalar, tensor_and_number_inplace) {
-    auto a =
-        TAT::Tensor<std::complex<double>, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}.range_(
-        ); // 0..31
+    auto a = TAT::Tensor<std::complex<double>, TAT::BoseZ2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}, {{0, 2}, {1, 2}}}}
+                 .range_(); // 0..31
     std::valarray<std::complex<double>> s_a = std::valarray<std::complex<double>>(32);
     for (auto i = 0; i < 32; i++) {
         s_a[i] = i;

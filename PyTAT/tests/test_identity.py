@@ -60,7 +60,7 @@ def test_z2_symmetry_0():
     half_rank = 3
     edge = [(False, 2), (True, 2)]
     for pairs_index in arrange_pairs_indices:
-        a = TAT.Z2.S.Tensor(["1", "2", "3", "4", "5", "6"], [edge, edge, edge, edge, edge, edge]).range_()
+        a = TAT.BoseZ2.S.Tensor(["1", "2", "3", "4", "5", "6"], [edge, edge, edge, edge, edge, edge]).range_()
         pairs = set()
         for i in range(half_rank):
             p0 = pairs_index[i * 2 + 0]
@@ -84,7 +84,7 @@ def test_u1_symmetry_0():
             pairs.add((names[p0], names[p1]))
             edges[p0] = edge0
             edges[p1] = edge1
-        a = TAT.U1.S.Tensor(names, edges).range_()
+        a = TAT.BoseU1.S.Tensor(names, edges).range_()
         a.identity_(pairs)
         assert (a - a.contract(a, pairs)).norm_max() == 0
 
@@ -108,6 +108,6 @@ def test_fermi_symmetry_0():
                 else:
                     edges[p0] = edge1
                     edges[p1] = edge0
-            a = TAT.Fermi.S.Tensor(names, edges).range_()
+            a = TAT.FermiU1.S.Tensor(names, edges).range_()
             a.identity_(pairs)
             assert (a - a.contract(a, pairs)).norm_max() == 0

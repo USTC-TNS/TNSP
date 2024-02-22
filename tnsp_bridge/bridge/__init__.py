@@ -195,14 +195,14 @@ def _bridge_symmetry(getline, *, named, fermi, parity, compat):
     content_type, content = _read_block(getline)
     if fermi:
         if parity:
-            model = TAT.Parity
+            model = TAT.FermiZ2
         else:
-            model = TAT.Fermi
+            model = TAT.FermiU1
     else:
         if parity:
-            model = TAT.Z2
+            model = TAT.BoseZ2
         else:
-            model = TAT.U1
+            model = TAT.BoseU1
     if content_type is float:
         tensor_type = model.float.Tensor
     elif content_type is complex:

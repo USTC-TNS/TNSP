@@ -29,8 +29,8 @@ def test_no_symmetry_high_dimension():
 
 
 def test_u1_symmetry_basic():
-    a = TAT.U1.D.Tensor(["i", "j"], [[-1, 0, +1], [-1, 0, +1]]).range_()
-    d = TAT.U1.D.Tensor(["m"], [[(-2, 1), (-1, 2), (0, 3), (+1, 2), (+2, 1)]]).range_()
+    a = TAT.BoseU1.D.Tensor(["i", "j"], [[-1, 0, +1], [-1, 0, +1]]).range_()
+    d = TAT.BoseU1.D.Tensor(["m"], [[(-2, 1), (-1, 2), (0, 3), (+1, 2), (+2, 1)]]).range_()
 
     b = a.merge_edge({"m": ["i", "j"]})
     assert (d - b).norm_max() == 0
@@ -40,7 +40,7 @@ def test_u1_symmetry_basic():
 
 def test_u1_symmetry_high_dimension():
     edge = [(-1, 2), (0, 2), (+1, 2)]
-    a = TAT.U1.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
+    a = TAT.BoseU1.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
     for i in range(5):
         for j in range(i, 5):
             names = a.names[i:j]
@@ -52,7 +52,7 @@ def test_u1_symmetry_high_dimension():
 
 def test_fermi_symmetry_high_dimension():
     edge = [(-1, 2), (0, 2), (+1, 2)]
-    a = TAT.Fermi.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
+    a = TAT.FermiU1.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
     for i in range(5):
         for j in range(i, 5):
             for p in [False, True]:
@@ -65,8 +65,8 @@ def test_fermi_symmetry_high_dimension():
 
 def test_fermi_symmetry_high_dimension_compare_u1():
     edge = [(-1, 1), (0, 1), (+1, 1)]
-    a_u1 = TAT.U1.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
-    a_f = TAT.Fermi.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
+    a_u1 = TAT.BoseU1.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
+    a_f = TAT.FermiU1.D.Tensor(["1", "2", "3", "4", "5"], [edge, edge, edge, edge, edge]).range_()
     for i in range(5):
         for j in range(i, 5):
             for p in [False, True]:

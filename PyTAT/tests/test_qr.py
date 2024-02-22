@@ -45,7 +45,7 @@ def test_no_symmetry_1():
 
 
 def test_fermi_symmetry_0():
-    a = TAT.Fermi.D.Tensor(
+    a = TAT.FermiU1.D.Tensor(
         ["A", "B"],
         [
             ([(-1, 2), (0, 1), (+1, 2)], False),
@@ -65,7 +65,7 @@ def test_fermi_symmetry_0():
 
 
 def test_fermi_symmetry_1():
-    a = TAT.Fermi.Z.Tensor(
+    a = TAT.FermiU1.Z.Tensor(
         ["A", "B"],
         [
             ([(-1, 2), (0, 1), (+1, 2)], True),
@@ -85,7 +85,7 @@ def test_fermi_symmetry_1():
 
 
 def test_fermi_symmetry_edge_mismatch():
-    a = TAT.Fermi.Z.Tensor(
+    a = TAT.FermiU1.Z.Tensor(
         ["A", "B"],
         [
             ([(-1, 2), (0, 2), (+2, 2)], True),

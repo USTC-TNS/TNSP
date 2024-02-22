@@ -33,7 +33,7 @@ def abstract_state(L1, L2, T, t, U):
     t, U : float
         Hubbard model parameters.
     """
-    state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiU1BoseU1.D.Tensor, L1, L2)
     state.total_symmetry = (T, 0)
     state.physics_edges[...] = [((0, 0), 1), ((1, 1), 1), ((1, -1), 1), ((2, 0), 1)]
     NN = tet.common_tensor.FermiU1_Hubbard.NN.to(float)

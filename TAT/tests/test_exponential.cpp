@@ -29,7 +29,7 @@ TEST(test_exponential, no_symmetry) {
 }
 
 TEST(test_exponential, u1_symmetry) {
-    auto A = (TAT::Tensor<double, TAT::U1Symmetry>(
+    auto A = (TAT::Tensor<double, TAT::BoseU1Symmetry>(
                   {"i", "j", "k", "l"},
                   {{{-1, 2}, {0, 2}, {+1, 2}}, {{+1, 2}, {0, 2}, {-1, 2}}, {{+1, 2}, {0, 2}, {-1, 2}}, {{-1, 2}, {0, 2}, {+1, 2}}}
     ).range_());
@@ -41,7 +41,7 @@ TEST(test_exponential, u1_symmetry) {
 }
 
 TEST(test_exponential, fermi_symmetry) {
-    auto A = (TAT::Tensor<double, TAT::FermiSymmetry>(
+    auto A = (TAT::Tensor<double, TAT::FermiU1Symmetry>(
                   {"i", "j", "k", "l"},
                   {
                       {{{-1, 2}, {0, 2}, {+1, 2}}, true},

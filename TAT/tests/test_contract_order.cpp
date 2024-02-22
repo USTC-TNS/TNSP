@@ -69,49 +69,49 @@ TEST(test_contract_order, no_symmetry_vector_matrix) {
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_matrix_better_left_by_left) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 3}, {true, 3}}, {{false, 2}, {true, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"B", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 3}, {true, 3}}, {{false, 2}, {true, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"B", "C"}});
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_matrix_better_left_by_right) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"B", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"B", "C"}});
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_matrix_better_right_by_left) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"A", "D"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"A", "D"}});
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_matrix_better_right_by_right) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 3}, {true, 3}}, {{false, 2}, {true, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"A", "D"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 3}, {true, 3}}, {{false, 2}, {true, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"A", "D"}});
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_matrix_both_bad_by_left) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"A", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"A", "C"}});
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_matrix_both_bad_by_right) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"A", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 3}, {true, 3}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"A", "C"}});
 }
 
 TEST(test_contract_order, z2_symmetry_matrix_vector) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C"}, {{{false, 2}, {true, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"A", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C"}, {{{false, 2}, {true, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"A", "C"}});
 }
 
 TEST(test_contract_order, z2_symmetry_vector_matrix) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A"}, {{{false, 2}, {true, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"A", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A"}, {{{false, 2}, {true, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{false, 2}, {true, 2}}, {{false, 2}, {true, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"A", "C"}});
 }

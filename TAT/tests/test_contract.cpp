@@ -42,9 +42,9 @@ TEST(test_contract, no_symmetry_example_1) {
 }
 
 TEST(test_contract, u1_symmetry_example_0) {
-    using Tensor = TAT::Tensor<double, TAT::U1Symmetry>;
-    auto edge1 = TAT::Edge<TAT::U1Symmetry>{{-1, 2}, {0, 2}, {+1, 2}};
-    auto edge2 = TAT::Edge<TAT::U1Symmetry>{{+1, 2}, {0, 2}, {-1, 2}};
+    using Tensor = TAT::Tensor<double, TAT::BoseU1Symmetry>;
+    auto edge1 = TAT::Edge<TAT::BoseU1Symmetry>{{-1, 2}, {0, 2}, {+1, 2}};
+    auto edge2 = TAT::Edge<TAT::BoseU1Symmetry>{{+1, 2}, {0, 2}, {-1, 2}};
     auto a = Tensor({"a", "b", "c", "d"}, {edge1, edge2, edge1, edge2}).range_();
     auto b = Tensor({"e", "f", "g", "h"}, {edge1, edge2, edge1, edge2}).range_();
     for (auto plan : std::vector<std::unordered_set<std::pair<std::string, std::string>>>{
@@ -60,18 +60,18 @@ TEST(test_contract, u1_symmetry_example_0) {
 }
 
 TEST(test_contract, fermi_symmetry_example_0) {
-    using FermiTensor = TAT::Tensor<double, TAT::FermiSymmetry>;
-    auto fermi_edge1 = TAT::edge_segments_t<TAT::FermiSymmetry>({{-1, 2}, {0, 2}, {+1, 2}});
-    auto fermi_edge2 = TAT::edge_segments_t<TAT::FermiSymmetry>({{+1, 2}, {0, 2}, {-1, 2}});
+    using FermiTensor = TAT::Tensor<double, TAT::FermiU1Symmetry>;
+    auto fermi_edge1 = TAT::edge_segments_t<TAT::FermiU1Symmetry>({{-1, 2}, {0, 2}, {+1, 2}});
+    auto fermi_edge2 = TAT::edge_segments_t<TAT::FermiU1Symmetry>({{+1, 2}, {0, 2}, {-1, 2}});
     auto fermi_a = FermiTensor({"a", "b", "c", "d"}, {{fermi_edge1, true}, fermi_edge2, {fermi_edge1, true}, {fermi_edge2, true}}).range_();
     auto fermi_b = FermiTensor({"e", "f", "g", "h"}, {fermi_edge1, fermi_edge2, {fermi_edge1, true}, fermi_edge2}).range_();
     auto fermi_c = fermi_a.contract(fermi_b, {{"d", "e"}, {"c", "f"}});
     auto fermi_d = fermi_b.contract(fermi_a, {{"e", "d"}, {"f", "c"}});
     ASSERT_FLOAT_EQ((fermi_c - fermi_d).norm<-1>(), 0);
 
-    using U1Tensor = TAT::Tensor<double, TAT::U1Symmetry>;
-    auto u1_edge1 = TAT::edge_segments_t<TAT::U1Symmetry>({{-1, 2}, {0, 2}, {+1, 2}});
-    auto u1_edge2 = TAT::edge_segments_t<TAT::U1Symmetry>({{+1, 2}, {0, 2}, {-1, 2}});
+    using U1Tensor = TAT::Tensor<double, TAT::BoseU1Symmetry>;
+    auto u1_edge1 = TAT::edge_segments_t<TAT::BoseU1Symmetry>({{-1, 2}, {0, 2}, {+1, 2}});
+    auto u1_edge2 = TAT::edge_segments_t<TAT::BoseU1Symmetry>({{+1, 2}, {0, 2}, {-1, 2}});
     auto u1_a = U1Tensor({"a", "b", "c", "d"}, {u1_edge1, u1_edge2, u1_edge1, u1_edge2}).range_();
     auto u1_b = U1Tensor({"e", "f", "g", "h"}, {u1_edge1, u1_edge2, u1_edge1, u1_edge2}).range_();
     auto u1_c = u1_a.contract(u1_b, {{"d", "e"}, {"c", "f"}});
@@ -82,9 +82,9 @@ TEST(test_contract, fermi_symmetry_example_0) {
 }
 
 TEST(test_contract, contract_with_split_and_merge) {
-    using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
-    auto edge1 = TAT::Edge<TAT::FermiSymmetry>({{-1, 2}, {0, 2}, {+1, 2}}, false);
-    auto edge2 = TAT::Edge<TAT::FermiSymmetry>({{+1, 2}, {0, 2}, {-1, 2}}, true);
+    using Tensor = TAT::Tensor<double, TAT::FermiU1Symmetry>;
+    auto edge1 = TAT::Edge<TAT::FermiU1Symmetry>({{-1, 2}, {0, 2}, {+1, 2}}, false);
+    auto edge2 = TAT::Edge<TAT::FermiU1Symmetry>({{+1, 2}, {0, 2}, {-1, 2}}, true);
     auto a = Tensor({"a", "b", "c", "d"}, {edge1, edge2, edge1, edge2}).range_();
     auto b = Tensor({"e", "f", "g", "h"}, {edge1, edge2, edge1, edge2}).range_();
     auto c = a.contract(b, {{"a", "f"}, {"b", "g"}, {"c", "h"}});
@@ -97,8 +97,8 @@ TEST(test_contract, contract_with_split_and_merge) {
 }
 
 TEST(test_contract, contract_with_reverse_0) {
-    auto a = TAT::Tensor<double, TAT::ParitySymmetry>({"i", "j"}, {{{{false, 2}, {true, 2}}, false}, {{{false, 2}, {true, 2}}, true}}).range_();
-    auto b = TAT::Tensor<double, TAT::ParitySymmetry>({"i", "j"}, {{{{false, 2}, {true, 2}}, false}, {{{false, 2}, {true, 2}}, true}})
+    auto a = TAT::Tensor<double, TAT::FermiZ2Symmetry>({"i", "j"}, {{{{false, 2}, {true, 2}}, false}, {{{false, 2}, {true, 2}}, true}}).range_();
+    auto b = TAT::Tensor<double, TAT::FermiZ2Symmetry>({"i", "j"}, {{{{false, 2}, {true, 2}}, false}, {{{false, 2}, {true, 2}}, true}})
                  .range_()
                  .transpose({"j", "i"});
     auto c = a.contract(b, {{"j", "i"}});
@@ -111,9 +111,9 @@ TEST(test_contract, contract_with_reverse_0) {
 }
 
 TEST(test_contract, contract_with_reverse_1) {
-    using Tensor = TAT::Tensor<double, TAT::FermiSymmetry>;
-    auto edge1 = TAT::Edge<TAT::FermiSymmetry>({{-1, 2}, {0, 2}, {+1, 2}}, false);
-    auto edge2 = TAT::Edge<TAT::FermiSymmetry>({{+1, 2}, {0, 2}, {-1, 2}}, true);
+    using Tensor = TAT::Tensor<double, TAT::FermiU1Symmetry>;
+    auto edge1 = TAT::Edge<TAT::FermiU1Symmetry>({{-1, 2}, {0, 2}, {+1, 2}}, false);
+    auto edge2 = TAT::Edge<TAT::FermiU1Symmetry>({{+1, 2}, {0, 2}, {-1, 2}}, true);
     auto a = Tensor({"a", "b", "c", "d"}, {edge1, edge2, edge1, edge2}).range_();
     auto b = Tensor({"e", "f", "g", "h"}, {edge1, edge2, edge1, edge2}).range_();
     auto c = a.contract(b, {{"a", "f"}, {"b", "g"}, {"c", "h"}});
@@ -150,31 +150,31 @@ TEST(test_contract, corner_no_symmetry_0k) {
 }
 
 TEST(test_contract, corner_z2_symmetry_0k) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{0, 2}}, {{0, 0}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{0, 0}}, {{0, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"B", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{0, 2}}, {{0, 0}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{0, 0}}, {{0, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"B", "C"}});
     ASSERT_NE(c.storage().size(), 0);
     ASSERT_FLOAT_EQ(c.norm<-1>(), 0);
 }
 
 TEST(test_contract, corner_z2_symmetry_not_match_missing_left) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{1, 2}}, {{0, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{0, 2}}, {{0, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"B", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{1, 2}}, {{0, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{0, 2}}, {{0, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"B", "C"}});
     ASSERT_FLOAT_EQ(c.norm<0>(), 0);
 }
 
 TEST(test_contract, corner_z2_symmetry_not_match_missing_right) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{0, 2}}, {{0, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{0, 2}}, {{1, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"B", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{0, 2}}, {{0, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{0, 2}}, {{1, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"B", "C"}});
     ASSERT_FLOAT_EQ(c.norm<0>(), 0);
 }
 
 TEST(test_contract, corner_z2_symmetry_not_match_missing_middle) {
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"A", "B"}, {{{0, 2}}, {{1, 2}}}}.range_();
-    auto b = TAT::Tensor<double, TAT::Z2Symmetry>{{"C", "D"}, {{{1, 2}}, {{0, 2}}}}.range_();
-    auto c = TAT::Tensor<double, TAT::Z2Symmetry>::contract(a, b, {{"B", "C"}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"A", "B"}, {{{0, 2}}, {{1, 2}}}}.range_();
+    auto b = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"C", "D"}, {{{1, 2}}, {{0, 2}}}}.range_();
+    auto c = TAT::Tensor<double, TAT::BoseZ2Symmetry>::contract(a, b, {{"B", "C"}});
     ASSERT_NE(c.storage().size(), 0);
     ASSERT_FLOAT_EQ(c.norm<-1>(), 0);
 }

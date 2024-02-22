@@ -37,7 +37,7 @@ def test_no_symmetry_example_1():
 
 
 def test_u1_symmetry_example_0():
-    Tensor = TAT.U1.D.Tensor
+    Tensor = TAT.BoseU1.D.Tensor
     edge1 = [(-1, 2), (0, 2), (+1, 2)]
     edge2 = [(+1, 2), (0, 2), (-1, 2)]
     a = Tensor(["a", "b", "c", "d"], [edge1, edge2, edge1, edge2]).range_()
@@ -70,7 +70,7 @@ def test_u1_symmetry_example_0():
 
 
 def test_fermi_symmetry_example_0():
-    FermiTensor = TAT.Fermi.D.Tensor
+    FermiTensor = TAT.FermiU1.D.Tensor
     fermi_edge1 = [(-1, 2), (0, 2), (+1, 2)]
     fermi_edge2 = [(+1, 2), (0, 2), (-1, 2)]
     fermi_a = FermiTensor(["a", "b", "c", "d"], [
@@ -89,7 +89,7 @@ def test_fermi_symmetry_example_0():
     fermi_d = fermi_b.contract(fermi_a, {("e", "d"), ("f", "c")})
     assert (fermi_c - fermi_d).norm_max() == 0
 
-    U1Tensor = TAT.U1.D.Tensor
+    U1Tensor = TAT.BoseU1.D.Tensor
     u1_edge1 = [(-1, 2), (0, 2), (+1, 2)]
     u1_edge2 = [(+1, 2), (0, 2), (-1, 2)]
     u1_a = U1Tensor(["a", "b", "c", "d"], [
@@ -114,7 +114,7 @@ def test_fermi_symmetry_example_0():
 
 
 def test_contract_with_split_and_merge():
-    Tensor = TAT.Fermi.D.Tensor
+    Tensor = TAT.FermiU1.D.Tensor
     edge1 = ([(-1, 2), (0, 2), (+1, 2)], False)
     edge2 = ([(+1, 2), (0, 2), (-1, 2)], True)
     a = Tensor(["a", "b", "c", "d"], [edge1, edge2, edge1, edge2]).range_()
@@ -129,11 +129,11 @@ def test_contract_with_split_and_merge():
 
 
 def test_contract_with_reverse_0():
-    a = TAT.Parity.D.Tensor(
+    a = TAT.FermiZ2.D.Tensor(
         ["i", "j"],
         [([(False, 2), (True, 2)], False), ([(False, 2), (True, 2)], True)],
     ).range_()
-    b = TAT.Parity.D.Tensor(
+    b = TAT.FermiZ2.D.Tensor(
         ["i", "j"],
         [([(False, 2), (True, 2)], False), ([(False, 2), (True, 2)], True)],
     ).range_().transpose(["j", "i"])
@@ -147,7 +147,7 @@ def test_contract_with_reverse_0():
 
 
 def test_contract_with_reverse_1():
-    Tensor = TAT.Fermi.D.Tensor
+    Tensor = TAT.FermiU1.D.Tensor
     edge1 = ([(-1, 2), (0, 2), (+1, 2)], False)
     edge2 = ([(+1, 2), (0, 2), (-1, 2)], True)
     a = Tensor(["a", "b", "c", "d"], [edge1, edge2, edge1, edge2]).range_()
@@ -185,30 +185,30 @@ def test_corner_no_symmetry_0k():
 
 
 def test_corner_z2_symmetry_0k():
-    a = TAT.Z2.D.Tensor(["A", "B"], [[(False, 2)], [(False, 0)]]).range_()
-    b = TAT.Z2.D.Tensor(["C", "D"], [[(False, 0)], [(False, 2)]]).range_()
+    a = TAT.BoseZ2.D.Tensor(["A", "B"], [[(False, 2)], [(False, 0)]]).range_()
+    b = TAT.BoseZ2.D.Tensor(["C", "D"], [[(False, 0)], [(False, 2)]]).range_()
     c = a.contract(b, {("B", "C")})
     assert c.storage.size == 4
     assert c.norm_max() == 0
 
 
 def test_corner_z2_symmetry_not_match_missing_left():
-    a = TAT.Z2.D.Tensor(["A", "B"], [[(True, 2)], [(False, 0)]]).range_()
-    b = TAT.Z2.D.Tensor(["C", "D"], [[(False, 0)], [(False, 2)]]).range_()
+    a = TAT.BoseZ2.D.Tensor(["A", "B"], [[(True, 2)], [(False, 0)]]).range_()
+    b = TAT.BoseZ2.D.Tensor(["C", "D"], [[(False, 0)], [(False, 2)]]).range_()
     c = a.contract(b, {("B", "C")})
     assert c.storage.size == 0
 
 
 def test_corner_z2_symmetry_not_match_missing_right():
-    a = TAT.Z2.D.Tensor(["A", "B"], [[(False, 2)], [(False, 0)]]).range_()
-    b = TAT.Z2.D.Tensor(["C", "D"], [[(False, 0)], [(True, 2)]]).range_()
+    a = TAT.BoseZ2.D.Tensor(["A", "B"], [[(False, 2)], [(False, 0)]]).range_()
+    b = TAT.BoseZ2.D.Tensor(["C", "D"], [[(False, 0)], [(True, 2)]]).range_()
     c = a.contract(b, {("B", "C")})
     assert c.storage.size == 0
 
 
 def test_corner_z2_symmetry_not_match_missing_middle():
-    a = TAT.Z2.D.Tensor(["A", "B"], [[(False, 2)], [(True, 0)]]).range_()
-    b = TAT.Z2.D.Tensor(["C", "D"], [[(True, 0)], [(False, 2)]]).range_()
+    a = TAT.BoseZ2.D.Tensor(["A", "B"], [[(False, 2)], [(True, 0)]]).range_()
+    b = TAT.BoseZ2.D.Tensor(["C", "D"], [[(True, 0)], [(False, 2)]]).range_()
     c = a.contract(b, {("B", "C")})
     assert c.storage.size == 4
     assert c.norm_max() == 0

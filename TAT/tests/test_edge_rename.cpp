@@ -5,7 +5,7 @@
 using namespace testing;
 
 TEST(test_edge_rename, basic_rename) {
-    auto t1 = TAT::Tensor<double, TAT::Z2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}}.range_();
+    auto t1 = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"Left", "Right", "Phy"}, {{{0, 1}, {1, 2}}, {{0, 3}, {1, 4}}, {{0, 5}, {1, 6}}}}.range_();
     auto t2 = t1.edge_rename({{"Left", "Up"}});
     ASSERT_THAT(t1.names(), ElementsAre("Left", "Right", "Phy"));
     ASSERT_THAT(t2.names(), ElementsAre("Up", "Right", "Phy"));

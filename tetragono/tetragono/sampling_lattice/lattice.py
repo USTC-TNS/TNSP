@@ -960,7 +960,7 @@ class SamplingLattice(AbstractLattice):
         Returns
         -------
         SamplingLattice
-            The result lattice with NoSymmetry tensor(for bosonic system) or ParitySymmetry tensor(for fermionic system).
+            The result lattice with NoSymmetry tensor(for bosonic system) or FermiZ2Symmetry tensor(for fermionic system).
         """
         lattice = [[self[l1, l2].clear_symmetry() for l2 in range(self.L2)] for l1 in range(self.L1)]
         hamiltonians = {key: value.clear_symmetry() for key, value in self._hamiltonians.items()}

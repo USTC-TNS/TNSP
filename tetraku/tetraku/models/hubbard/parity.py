@@ -33,7 +33,7 @@ def abstract_state(L1, L2, t, U, mu):
     mu: float
         The chemical potential.
     """
-    state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiZ2.D.Tensor, L1, L2)
     state.total_symmetry = 0
     state.physics_edges[...] = [(False, 2), (True, 2)]
     NN = tet.common_tensor.Parity_Hubbard.NN.to(float)

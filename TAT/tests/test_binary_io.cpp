@@ -12,12 +12,12 @@ TEST(test_binary_io, no_symmetry) {
 
 TEST(test_binary_io, u1_symmetry) {
     std::stringstream ss;
-    auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto a = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"Left", "Right", "Up"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                   .range_(2));
     ss < a;
-    auto b = TAT::Tensor<double, TAT::U1Symmetry>();
+    auto b = TAT::Tensor<double, TAT::BoseU1Symmetry>();
     ss > b;
     ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);
 }
@@ -38,12 +38,12 @@ TEST(test_binary_io, no_symmetry_complex_number) {
 TEST(test_binary_io, u1_symmetry_complex_number) {
     std::stringstream ss;
     auto a =
-        TAT::Tensor<std::complex<double>, TAT::U1Symmetry>{
+        TAT::Tensor<std::complex<double>, TAT::BoseU1Symmetry>{
             {"Left", "Right", "Up"},
             {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
             .range_(2);
     ss < a;
-    auto b = TAT::Tensor<std::complex<double>, TAT::U1Symmetry>();
+    auto b = TAT::Tensor<std::complex<double>, TAT::BoseU1Symmetry>();
     ss > b;
     ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);
 }
@@ -54,12 +54,12 @@ TEST(test_binary_io, fermi_symmetry) {
     { {__VA_ARGS__}, false }
 #define t_edge(...) \
     { {__VA_ARGS__}, true }
-    auto a = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>{
+    auto a = (TAT::Tensor<std::complex<double>, TAT::FermiU1Symmetry>{
         {"Left", "Right", "Up"},
         {t_edge({-2, 3}, {0, 1}, {-1, 2}), f_edge({0, 2}, {1, 3}), f_edge({0, 3}, {1, 1})}}
                   .range_(2));
     ss < a;
-    auto b = TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>();
+    auto b = TAT::Tensor<std::complex<double>, TAT::FermiU1Symmetry>();
     ss > b;
     ASSERT_FLOAT_EQ((a - b).norm<-1>(), 0);
 }

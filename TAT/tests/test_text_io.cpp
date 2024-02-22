@@ -16,7 +16,7 @@ TEST(test_text_io, basic_usage_nosymmetry) {
 
 TEST(test_text_io, basic_usage_u1symmetry) {
     using namespace TAT;
-    Tensor<double, U1Symmetry> a;
+    Tensor<double, BoseU1Symmetry> a;
     char b;
     auto input = "{names:[A,B,C,D],edges:[{-2:1,-1:1,0:1},{0:1,1:2},{0:2,1:2},{-2:2,-1:1,0:2}],blocks:{[-2,1,1,0]:[0,1,2,3,4,5,6,7],[-1,0,1,0]:[8,9,1"
                  "0,11],[-1,1,0,0]:[12,13,14,15,16,17,18,19],[-1,1,1,-1]:[20,21,22,23],[0,0,0,0]:[24,25,26,27],[0,0,1,-1]:[28,29],[0,1,0,-1]:[30,31,3"
@@ -71,7 +71,7 @@ TEST(test_text_io, basic_usage_nosymmetry_complex) {
 
 TEST(test_text_io, basic_usage_u1symmetry_complex) {
     using namespace TAT;
-    Tensor<std::complex<double>, U1Symmetry> a;
+    Tensor<std::complex<double>, BoseU1Symmetry> a;
     char b;
     auto input = "{names:[A,B,C,D],edges:[{-2:1,-1:1,0:1},{0:1,1:2},{0:2,1:2},{-2:2,-1:1,0:2}],blocks:{[-2,1,1,0]:[0,1,2,3,4,5,6,7],[-1,0,1,0]:[8,9,1"
                  "0,11],[-1,1,0,0]:[12,13,14,15,16,17,18,19],[-1,1,1,-1]:[20,21,22,23],[0,0,0,0]:[24,25,26,27],[0,0,1,-1]:[28,29],[0,1,0,-1]:[30,31,3"
@@ -89,7 +89,7 @@ TEST(test_text_io, basic_usage_u1symmetry_complex) {
 
 TEST(test_text_io, basic_usage_u1symmetry_empty_block) {
     using namespace TAT;
-    Tensor<std::complex<double>, U1Symmetry> a;
+    Tensor<std::complex<double>, BoseU1Symmetry> a;
     char b;
     auto input = "{names:[i,j],edges:[{0:0,1:1},{0:2,-1:3}],blocks:{[0,0]:[],[1,-1]:[0,1,2]}}?";
     std::stringstream(input) >> a >> b;
@@ -103,7 +103,7 @@ TEST(test_text_io, basic_usage_u1symmetry_empty_block) {
 
 TEST(test_text_io, basic_usage_u1symmetry_no_block) {
     using namespace TAT;
-    Tensor<std::complex<double>, U1Symmetry> a;
+    Tensor<std::complex<double>, BoseU1Symmetry> a;
     char b;
     auto input = "{names:[i,j],edges:[{0:2},{-1:3}],blocks:{}}?";
     std::stringstream(input) >> a >> b;

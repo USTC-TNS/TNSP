@@ -25,9 +25,25 @@ namespace TAT {
         } else if (p == -1) {
             return true;
         } else {
-            throw std::runtime_error("Parity should be either +1 or -1.");
+            throw std::runtime_error("The parity should be either +1 or -1.");
         }
     }
+
+#define TAT_SINGLE_SYMMETRY_ALL_SCALAR(SYM) \
+    TAT_SINGLE_SCALAR_SYMMETRY(S, float, SYM) \
+    TAT_SINGLE_SCALAR_SYMMETRY(D, double, SYM) \
+    TAT_SINGLE_SCALAR_SYMMETRY(C, std::complex<float>, SYM) \
+    TAT_SINGLE_SCALAR_SYMMETRY(Z, std::complex<double>, SYM)
+
+#define TAT_LOOP_ALL_SCALAR_SYMMETRY \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(No) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(BoseZ2) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(BoseU1) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1BoseZ2) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1BoseU1) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2) \
+    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1FermiU1)
 
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) \
     std::function<void()> dealing_Tensor_##SYM##_##SCALARSHORT( \
@@ -55,71 +71,71 @@ namespace TAT {
         dealing_edge<NoSymmetry, false>(No_m, "No");
         dealing_edge<NoSymmetry, true>(No_m, "No");
 
-        auto Z2_m = tat_m.def_submodule("Z2", "A submodule contains Z2 symmetry tensors");
-        dealing_symmetry<Z2Symmetry>(Z2_m, "Z2")
+        auto BoseZ2_m = tat_m.def_submodule("BoseZ2", "A submodule contains boson Z2 symmetry tensors");
+        dealing_symmetry<BoseZ2Symmetry>(BoseZ2_m, "BoseZ2")
             .def(py::init<>())
-            .def(implicit_init<Z2Symmetry, Z2>(), py::arg("z2"))
-            .def(implicit_from_tuple<Z2Symmetry, std::tuple<Z2>>(), py::arg("tuple_of_z2"))
-            .def_property_readonly("z2", [](const Z2Symmetry& symmetry) { return std::get<0>(symmetry); });
-        dealing_edge<Z2Symmetry, false>(Z2_m, "Z2");
-        dealing_edge<Z2Symmetry, true>(Z2_m, "Z2");
+            .def(implicit_init<BoseZ2Symmetry, Z2>(), py::arg("z2"))
+            .def(implicit_from_tuple<BoseZ2Symmetry, std::tuple<Z2>>(), py::arg("tuple_of_z2"))
+            .def_property_readonly("z2", [](const BoseZ2Symmetry& symmetry) { return std::get<0>(symmetry); });
+        dealing_edge<BoseZ2Symmetry, false>(BoseZ2_m, "BoseZ2");
+        dealing_edge<BoseZ2Symmetry, true>(BoseZ2_m, "BoseZ2");
 
-        auto U1_m = tat_m.def_submodule("U1", "A submodule contains U1 symmetry tensors");
-        dealing_symmetry<U1Symmetry>(U1_m, "U1")
+        auto BoseU1_m = tat_m.def_submodule("BoseU1", "A submodule contains boson U1 symmetry tensors");
+        dealing_symmetry<BoseU1Symmetry>(BoseU1_m, "BoseU1")
             .def(py::init<>())
-            .def(implicit_init<U1Symmetry, U1>(), py::arg("u1"))
-            .def(implicit_from_tuple<U1Symmetry, std::tuple<U1>>(), py::arg("tuple_of_u1"))
-            .def_property_readonly("u1", [](const U1Symmetry& symmetry) { return std::get<0>(symmetry); });
-        dealing_edge<U1Symmetry, false>(U1_m, "U1");
-        dealing_edge<U1Symmetry, true>(U1_m, "U1");
+            .def(implicit_init<BoseU1Symmetry, U1>(), py::arg("u1"))
+            .def(implicit_from_tuple<BoseU1Symmetry, std::tuple<U1>>(), py::arg("tuple_of_u1"))
+            .def_property_readonly("u1", [](const BoseU1Symmetry& symmetry) { return std::get<0>(symmetry); });
+        dealing_edge<BoseU1Symmetry, false>(BoseU1_m, "BoseU1");
+        dealing_edge<BoseU1Symmetry, true>(BoseU1_m, "BoseU1");
 
-        auto Fermi_m = tat_m.def_submodule("Fermi", "A submodule contains fermion U1 symmetry tensors");
-        dealing_symmetry<FermiSymmetry>(Fermi_m, "Fermi")
-            .def(py::init<>())
-            .def(implicit_init<FermiSymmetry, U1>(), py::arg("fermi"))
-            .def(implicit_from_tuple<FermiSymmetry, std::tuple<U1>>(), py::arg("tuple_of_fermi"))
-            .def_property_readonly("fermi", [](const FermiSymmetry& symmetry) { return std::get<0>(symmetry); });
-        dealing_edge<FermiSymmetry, false>(Fermi_m, "Fermi");
-        dealing_edge<FermiSymmetry, true>(Fermi_m, "Fermi");
-
-        auto FermiZ2_m = tat_m.def_submodule("FermiZ2", "A submodule contains fermion U1 cross Z2 symmetry tensors");
-        dealing_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
-            .def(py::init<>())
-            .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
-            .def(implicit_from_tuple<FermiZ2Symmetry, std::tuple<U1, Z2>>(), py::arg("tuple_of_fermi_z2"))
-            .def_property_readonly("fermi", [](const FermiZ2Symmetry& symmetry) { return std::get<0>(symmetry); })
-            .def_property_readonly("z2", [](const FermiZ2Symmetry& symmetry) { return std::get<1>(symmetry); });
-        dealing_edge<FermiZ2Symmetry, false>(FermiZ2_m, "FermiZ2");
-        dealing_edge<FermiZ2Symmetry, true>(FermiZ2_m, "FermiZ2");
-
-        auto FermiU1_m = tat_m.def_submodule("FermiU1", "A submodule contains fermion U1 cross U1 symmetry tensors");
+        auto FermiU1_m = tat_m.def_submodule("FermiU1", "A submodule contains fermion U1 symmetry tensors");
         dealing_symmetry<FermiU1Symmetry>(FermiU1_m, "FermiU1")
             .def(py::init<>())
-            .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
-            .def(implicit_from_tuple<FermiU1Symmetry, std::tuple<U1, U1>>(), py::arg("tuple_of_fermi_u1"))
-            .def_property_readonly("fermi", [](const FermiU1Symmetry& symmetry) { return std::get<0>(symmetry); })
-            .def_property_readonly("u1", [](const FermiU1Symmetry& symmetry) { return std::get<1>(symmetry); });
+            .def(implicit_init<FermiU1Symmetry, U1>(), py::arg("fermi"))
+            .def(implicit_from_tuple<FermiU1Symmetry, std::tuple<U1>>(), py::arg("tuple_of_fermi"))
+            .def_property_readonly("fermi", [](const FermiU1Symmetry& symmetry) { return std::get<0>(symmetry); });
         dealing_edge<FermiU1Symmetry, false>(FermiU1_m, "FermiU1");
         dealing_edge<FermiU1Symmetry, true>(FermiU1_m, "FermiU1");
 
-        auto Parity_m = tat_m.def_submodule("Parity", "A submodule contains fermion Z2 symmetry tensors");
-        dealing_symmetry<ParitySymmetry>(Parity_m, "Parity")
+        auto FermiU1BoseZ2_m = tat_m.def_submodule("FermiU1BoseZ2", "A submodule contains fermion U1 cross boson Z2 symmetry tensors");
+        dealing_symmetry<FermiU1BoseZ2Symmetry>(FermiU1BoseZ2_m, "FermiU1BoseZ2")
             .def(py::init<>())
-            .def(implicit_init<ParitySymmetry, Z2>(), py::arg("parity"))
-            .def(implicit_from_tuple<ParitySymmetry, std::tuple<Z2>>(), py::arg("tuple_of_z2"))
-            .def_property_readonly("parity", [](const ParitySymmetry& symmetry) { return std::get<0>(symmetry); });
-        dealing_edge<ParitySymmetry, false>(Parity_m, "Parity");
-        dealing_edge<ParitySymmetry, true>(Parity_m, "Parity");
+            .def(py::init<U1, Z2>(), py::arg("fermi"), py::arg("z2"))
+            .def(implicit_from_tuple<FermiU1BoseZ2Symmetry, std::tuple<U1, Z2>>(), py::arg("tuple_of_fermi_z2"))
+            .def_property_readonly("fermi", [](const FermiU1BoseZ2Symmetry& symmetry) { return std::get<0>(symmetry); })
+            .def_property_readonly("z2", [](const FermiU1BoseZ2Symmetry& symmetry) { return std::get<1>(symmetry); });
+        dealing_edge<FermiU1BoseZ2Symmetry, false>(FermiU1BoseZ2_m, "FermiU1BoseZ2");
+        dealing_edge<FermiU1BoseZ2Symmetry, true>(FermiU1BoseZ2_m, "FermiU1BoseZ2");
 
-        auto FermiFermi_m = tat_m.def_submodule("FermiFermi", "A submodule contains fermion U1 cross fermion U1 symmetry tensors");
-        dealing_symmetry<FermiFermiSymmetry>(FermiFermi_m, "FermiFermi")
+        auto FermiU1BoseU1_m = tat_m.def_submodule("FermiU1BoseU1", "A submodule contains fermion U1 cross boson U1 symmetry tensors");
+        dealing_symmetry<FermiU1BoseU1Symmetry>(FermiU1BoseU1_m, "FermiU1BoseU1")
+            .def(py::init<>())
+            .def(py::init<U1, U1>(), py::arg("fermi"), py::arg("u1"))
+            .def(implicit_from_tuple<FermiU1BoseU1Symmetry, std::tuple<U1, U1>>(), py::arg("tuple_of_fermi_u1"))
+            .def_property_readonly("fermi", [](const FermiU1BoseU1Symmetry& symmetry) { return std::get<0>(symmetry); })
+            .def_property_readonly("u1", [](const FermiU1BoseU1Symmetry& symmetry) { return std::get<1>(symmetry); });
+        dealing_edge<FermiU1BoseU1Symmetry, false>(FermiU1BoseU1_m, "FermiU1BoseU1");
+        dealing_edge<FermiU1BoseU1Symmetry, true>(FermiU1BoseU1_m, "FermiU1BoseU1");
+
+        auto FermiZ2_m = tat_m.def_submodule("FermiZ2", "A submodule contains fermion Z2 symmetry tensors");
+        dealing_symmetry<FermiZ2Symmetry>(FermiZ2_m, "FermiZ2")
+            .def(py::init<>())
+            .def(implicit_init<FermiZ2Symmetry, Z2>(), py::arg("parity"))
+            .def(implicit_from_tuple<FermiZ2Symmetry, std::tuple<Z2>>(), py::arg("tuple_of_z2"))
+            .def_property_readonly("parity", [](const FermiZ2Symmetry& symmetry) { return std::get<0>(symmetry); });
+        dealing_edge<FermiZ2Symmetry, false>(FermiZ2_m, "FermiZ2");
+        dealing_edge<FermiZ2Symmetry, true>(FermiZ2_m, "FermiZ2");
+
+        auto FermiU1FermiU1_m = tat_m.def_submodule("FermiU1FermiU1", "A submodule contains fermion U1 cross fermion U1 symmetry tensors");
+        dealing_symmetry<FermiU1FermiU1Symmetry>(FermiU1FermiU1_m, "FermiU1FermiU1")
             .def(py::init<>())
             .def(py::init<U1, U1>(), py::arg("fermi_0"), py::arg("fermi_1"))
-            .def(implicit_from_tuple<FermiFermiSymmetry, std::tuple<U1, U1>>(), py::arg("tuple_of_fermi_0_fermi_1"))
-            .def_property_readonly("fermi_0", [](const FermiFermiSymmetry& symmetry) { return std::get<0>(symmetry); })
-            .def_property_readonly("fermi_1", [](const FermiFermiSymmetry& symmetry) { return std::get<1>(symmetry); });
-        dealing_edge<FermiFermiSymmetry, false>(FermiFermi_m, "FermiFermi");
-        dealing_edge<FermiFermiSymmetry, true>(FermiFermi_m, "FermiFermi");
+            .def(implicit_from_tuple<FermiU1FermiU1Symmetry, std::tuple<U1, U1>>(), py::arg("tuple_of_fermi_0_fermi_1"))
+            .def_property_readonly("fermi_0", [](const FermiU1FermiU1Symmetry& symmetry) { return std::get<0>(symmetry); })
+            .def_property_readonly("fermi_1", [](const FermiU1FermiU1Symmetry& symmetry) { return std::get<1>(symmetry); });
+        dealing_edge<FermiU1FermiU1Symmetry, false>(FermiU1FermiU1_m, "FermiU1FermiU1");
+        dealing_edge<FermiU1FermiU1Symmetry, true>(FermiU1FermiU1_m, "FermiU1FermiU1");
 
         // tensor
 #define TAT_SINGLE_SCALAR_SYMMETRY(SCALARSHORT, SCALAR, SYM) at_exit(dealing_Tensor_##SYM##_##SCALARSHORT(SYM##_m, #SCALARSHORT, #SCALAR, #SYM));
@@ -128,7 +144,9 @@ namespace TAT {
 
         // Set alias
         tat_m.attr("Normal") = tat_m.attr("No");
-        for (auto sym_m_name : std::vector{"No", "Z2", "U1", "Fermi", "FermiZ2", "FermiU1", "Parity", "FermiFermi"}) {
+        tat_m.attr("Z2") = tat_m.attr("BoseZ2");
+        tat_m.attr("U1") = tat_m.attr("BoseU1");
+        for (auto sym_m_name : std::vector{"No", "BoseZ2", "BoseU1", "FermiU1", "FermiU1BoseZ2", "FermiU1BoseU1", "FermiZ2", "FermiU1FermiU1"}) {
             auto&& sym_m = tat_m.attr(sym_m_name);
 
             sym_m.attr("float") = sym_m.attr("D");

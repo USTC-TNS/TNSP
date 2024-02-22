@@ -44,7 +44,7 @@ TEST(test_svd, no_symmetry_cut) {
 }
 
 TEST(test_svd, u1_symmetry) {
-    auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto a = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range_());
@@ -56,7 +56,7 @@ TEST(test_svd, u1_symmetry) {
 }
 
 TEST(test_svd, u1_symmetry_cut) {
-    auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto a = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range_());
@@ -68,7 +68,7 @@ TEST(test_svd, u1_symmetry_cut) {
 }
 
 TEST(test_svd, fermi_symmetry) {
-    auto a = (TAT::Tensor<double, TAT::FermiSymmetry>{
+    auto a = (TAT::Tensor<double, TAT::FermiU1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range_());
@@ -80,7 +80,7 @@ TEST(test_svd, fermi_symmetry) {
 }
 
 TEST(test_svd, fermi_symmetry_cut) {
-    auto a = (TAT::Tensor<double, TAT::FermiSymmetry>{
+    auto a = (TAT::Tensor<double, TAT::FermiU1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range_());
@@ -103,7 +103,7 @@ TEST(test_svd, no_symmetry_cut_too_small) {
 }
 
 TEST(test_svd, fermi_symmetry_cut_too_small) {
-    auto a = TAT::Tensor<double, TAT::FermiSymmetry>{{"A", "B"}, {{{0, 1}, {+1, 1}}, {{-1, 1}, {0, 1}}}}.range_(0, 1);
+    auto a = TAT::Tensor<double, TAT::FermiU1Symmetry>{{"A", "B"}, {{{0, 1}, {+1, 1}}, {{-1, 1}, {0, 1}}}}.range_(0, 1);
     auto [u, s, v] = a.svd({"B"}, "E", "F", "U", "V", 8ul);
     ASSERT_NEAR(check_unitary(u, "E", "E'"), 0, 1e-8);
     ASSERT_NEAR(check_unitary(v, "F", "F'"), 0, 1e-8);

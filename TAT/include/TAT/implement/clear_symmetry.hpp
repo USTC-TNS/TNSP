@@ -67,19 +67,19 @@ namespace TAT {
     }
 
     template<typename ScalarType, typename SymmetryT, typename Name>
-    Tensor<ScalarType, ParitySymmetry, Name> Tensor<ScalarType, SymmetryT, Name>::clear_fermi_symmetry() const {
+    Tensor<ScalarType, FermiZ2Symmetry, Name> Tensor<ScalarType, SymmetryT, Name>::clear_fermi_symmetry() const {
         auto pmr_guard = scope_resource(default_buffer_size);
         if constexpr (!SymmetryT::is_fermi_symmetry) {
             detail::error("It is invalid to call clear fermi symmetry on a bose symmetry tensor");
         }
-        std::vector<Edge<ParitySymmetry>> result_edges;
+        std::vector<Edge<FermiZ2Symmetry>> result_edges;
         result_edges.reserve(rank());
         for (auto i = 0; i < rank(); i++) {
             std::array<Size, 2> dimensions = {0, 0};
             for (const auto& [symmetry, dimension] : edges(i).segments()) {
                 dimensions[symmetry.parity()] += dimension;
             }
-            std::vector<std::pair<ParitySymmetry, Size>> segments;
+            std::vector<std::pair<FermiZ2Symmetry, Size>> segments;
             segments.reserve(2);
             if (const auto dimension = dimensions[false]; dimension) {
                 segments.push_back({false, dimension});
@@ -89,7 +89,7 @@ namespace TAT {
             }
             result_edges.emplace_back(std::move(segments), edges(i).arrow());
         }
-        auto result = Tensor<ScalarType, ParitySymmetry, Name>(names(), std::move(result_edges)).zero_();
+        auto result = Tensor<ScalarType, FermiZ2Symmetry, Name>(names(), std::move(result_edges)).zero_();
 
         // copy every block into parity symmetry tensor
         // find the dimension of the block, the result leading is same to total dimension
@@ -98,7 +98,7 @@ namespace TAT {
         for (auto it = blocks().begin(); it.valid; ++it) {
             if (it->has_value()) {
                 // Find the result block and generate the temporary_span
-                pmr::vector<ParitySymmetry> block_indices;
+                pmr::vector<FermiZ2Symmetry> block_indices;
                 block_indices.reserve(rank());
                 pmr::vector<Size> result_dimensions;
                 result_dimensions.reserve(rank());

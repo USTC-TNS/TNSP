@@ -31,7 +31,7 @@ def abstract_state(L1, L2, t, U):
     t, U : float
         Hubbard model parameters.
     """
-    state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiZ2.D.Tensor, L1, L2)
     for l1 in range(L1):
         for l2 in range(L2):
             if (l1, l2) != (0, 0):

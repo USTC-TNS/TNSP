@@ -13,7 +13,7 @@ TEST(test_edge_operator, no_symmetry_example_0) {
 }
 
 TEST(test_edge_operator, u1_symmetry_example_0) {
-    auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto a = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"Left", "Right", "Up", "Down"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 4}, {1, 2}}, {{-1, 2}, {0, 3}, {1, 1}}, {{-1, 1}, {0, 3}, {1, 2}}}}
                   .range_());
@@ -31,7 +31,7 @@ TEST(test_edge_operator, u1_symmetry_example_0) {
 }
 
 TEST(test_edge_operator, fermi_symmetry_example_0) {
-    auto a = (TAT::Tensor<double, TAT::FermiSymmetry>{
+    auto a = (TAT::Tensor<double, TAT::FermiU1Symmetry>{
         {"Left", "Right", "Up", "Down"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 4}, {1, 2}}, {{-1, 2}, {0, 3}, {1, 1}}, {{-1, 1}, {0, 3}, {1, 2}}}}
                   .range_());

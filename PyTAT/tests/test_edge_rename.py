@@ -4,7 +4,7 @@ import TAT
 
 def test_basic_rename():
     import numpy as np
-    t1 = TAT.Z2.D.Tensor(["Left", "Right", "Phy"], [
+    t1 = TAT.BoseZ2.D.Tensor(["Left", "Right", "Phy"], [
         [(False, 1), (True, 2)],
         [(False, 3), (True, 4)],
         [(False, 5), (True, 6)],

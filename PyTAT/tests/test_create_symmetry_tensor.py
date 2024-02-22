@@ -7,7 +7,7 @@ def test_basic_usage():
     # 1 0 1 : 3*2*2
     # 0 1 1 : 1*1*2
     # 0 0 0 : 1*2*3
-    a = TAT.Z2.D.Tensor(
+    a = TAT.BoseZ2.D.Tensor(
         ["Left", "Right", "Up"],
         [[(True, 3), (False, 1)], [(True, 1), (False, 2)], [(True, 2), (False, 3)]],
     ).range_()
@@ -28,7 +28,7 @@ def test_basic_usage():
 
 
 def test_when_0rank():
-    a = TAT.U1.D.Tensor([], []).range_(2333)
+    a = TAT.BoseU1.D.Tensor([], []).range_(2333)
     assert a.names == []
     assert a.rank == 0
     assert (a.storage == [2333]).all()
@@ -39,7 +39,7 @@ def test_when_0rank():
 
 
 def test_when_0size():
-    a = TAT.U1.D.Tensor(
+    a = TAT.BoseU1.D.Tensor(
         ["Left", "Right", "Up"],
         [[
             (0, 0),
@@ -56,7 +56,7 @@ def test_when_0size():
 
 
 def test_when_0block():
-    a = TAT.U1.D.Tensor(
+    a = TAT.BoseU1.D.Tensor(
         ["Left", "Right", "Up"],
         [[], [(-1, 1), (0, 2), (1, 3)], [(-1, 2), (0, 3), (1, 1)]],
     ).zero_()
@@ -69,7 +69,7 @@ def test_when_0block():
 
 
 def test_conversion_scalar():
-    a = TAT.U1.D.Tensor(2333, ["i", "j"], [-2, +2])
+    a = TAT.BoseU1.D.Tensor(2333, ["i", "j"], [-2, +2])
     assert a.names == ["i", "j"]
     assert a.rank == 2
     assert (a.storage == [2333]).all()
@@ -78,7 +78,7 @@ def test_conversion_scalar():
 
     assert a.blocks[("i", -2), ("j", +2)].shape == (1, 1)
     assert a.blocks[("i", (-2,)), ("j", (+2,))].shape == (1, 1)
-    assert a.blocks[("j", TAT.U1.Symmetry(+2)), ("i", TAT.U1.Symmetry(-2))].shape == (1, 1)
+    assert a.blocks[("j", TAT.BoseU1.Symmetry(+2)), ("i", TAT.BoseU1.Symmetry(-2))].shape == (1, 1)
 
     assert a[{"i": (-2, 0), "j": (+2, 0)}] == 2333
     assert a[{"i": ((-2,), 0), "j": ((+2,), 0)}] == 2333
@@ -86,7 +86,7 @@ def test_conversion_scalar():
 
 
 def test_conversion_scalar_empty():
-    a = TAT.U1.D.Tensor(["i"], [[
+    a = TAT.BoseU1.D.Tensor(["i"], [[
         (+2, 333),
     ]]).range_(2333)
     assert a.rank == 1

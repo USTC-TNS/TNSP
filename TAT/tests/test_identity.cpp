@@ -66,8 +66,8 @@ TEST(test_identity, z2_symmetry_0) {
     int half_rank = 3;
     std::vector<std::string> names;
     for (auto pairs_index : arrange_pairs_indices) {
-        auto edge = TAT::Edge<TAT::Z2Symmetry>({{false, 2}, {true, 2}});
-        auto a = TAT::Tensor<float, TAT::Z2Symmetry>({"1", "2", "3", "4", "5", "6"}, {edge, edge, edge, edge, edge, edge});
+        auto edge = TAT::Edge<TAT::BoseZ2Symmetry>({{false, 2}, {true, 2}});
+        auto a = TAT::Tensor<float, TAT::BoseZ2Symmetry>({"1", "2", "3", "4", "5", "6"}, {edge, edge, edge, edge, edge, edge});
         auto pairs = std::unordered_set<std::pair<std::string, std::string>>();
         for (auto i = 0; i < half_rank; i++) {
             auto p0 = pairs_index[i * 2];
@@ -83,10 +83,10 @@ TEST(test_identity, u1_symmetry_0) {
     int half_rank = 3;
     std::vector<std::string> names;
     for (auto pairs_index : arrange_pairs_indices) {
-        auto edge0 = TAT::Edge<TAT::U1Symmetry>({{-1, 1}, {0, 1}, {+1, 1}});
-        auto edge1 = TAT::Edge<TAT::U1Symmetry>({{+1, 1}, {0, 1}, {-1, 1}});
+        auto edge0 = TAT::Edge<TAT::BoseU1Symmetry>({{-1, 1}, {0, 1}, {+1, 1}});
+        auto edge1 = TAT::Edge<TAT::BoseU1Symmetry>({{+1, 1}, {0, 1}, {-1, 1}});
         auto names = std::vector<std::string>{"1", "2", "3", "4", "5", "6"};
-        auto edges = std::vector<TAT::Edge<TAT::U1Symmetry>>(6);
+        auto edges = std::vector<TAT::Edge<TAT::BoseU1Symmetry>>(6);
         auto pairs = std::unordered_set<std::pair<std::string, std::string>>();
         for (auto i = 0; i < half_rank; i++) {
             auto p0 = pairs_index[i * 2];
@@ -95,7 +95,7 @@ TEST(test_identity, u1_symmetry_0) {
             edges[p0] = edge0;
             edges[p1] = edge1;
         }
-        auto a = TAT::Tensor<float, TAT::U1Symmetry>(names, edges);
+        auto a = TAT::Tensor<float, TAT::BoseU1Symmetry>(names, edges);
         a.identity_(pairs);
         ASSERT_FLOAT_EQ((a - a.contract(a, pairs)).norm<-1>(), 0);
     }
@@ -106,10 +106,10 @@ TEST(test_identity, fermi_symmetry_0) {
     std::vector<std::string> names;
     for (auto order : order_lists) {
         for (auto pairs_index : arrange_pairs_indices) {
-            auto edge0 = TAT::Edge<TAT::FermiSymmetry>({{-1, 1}, {0, 1}, {+1, 1}}, false);
-            auto edge1 = TAT::Edge<TAT::FermiSymmetry>({{+1, 1}, {0, 1}, {-1, 1}}, true);
+            auto edge0 = TAT::Edge<TAT::FermiU1Symmetry>({{-1, 1}, {0, 1}, {+1, 1}}, false);
+            auto edge1 = TAT::Edge<TAT::FermiU1Symmetry>({{+1, 1}, {0, 1}, {-1, 1}}, true);
             auto names = std::vector<std::string>{"1", "2", "3", "4", "5", "6"};
-            auto edges = std::vector<TAT::Edge<TAT::FermiSymmetry>>(6);
+            auto edges = std::vector<TAT::Edge<TAT::FermiU1Symmetry>>(6);
             auto pairs = std::unordered_set<std::pair<std::string, std::string>>();
             for (auto i = 0; i < half_rank; i++) {
                 auto p0 = pairs_index[i * 2];
@@ -123,7 +123,7 @@ TEST(test_identity, fermi_symmetry_0) {
                     edges[p1] = edge0;
                 }
             }
-            auto a = TAT::Tensor<float, TAT::FermiSymmetry>(names, edges);
+            auto a = TAT::Tensor<float, TAT::FermiU1Symmetry>(names, edges);
             a.identity_(pairs);
             ASSERT_FLOAT_EQ((a - a.contract(a, pairs)).norm<-1>(), 0);
         }

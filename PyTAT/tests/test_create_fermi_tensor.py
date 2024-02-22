@@ -21,7 +21,7 @@ def test_basic_usage():
     # 1 0 1 : 3*2*2
     # 0 1 1 : 1*1*2
     # 0 0 0 : 1*2*3
-    a = TAT.Parity.D.Tensor(["Left", "Right", "Up"], [
+    a = TAT.FermiZ2.D.Tensor(["Left", "Right", "Up"], [
         Tedge[(True, 3), (False, 1)],
         Fedge[(True, 1), (False, 2)],
         Tedge[(True, 2), (False, 3)],
@@ -42,7 +42,7 @@ def test_basic_usage():
 
 
 def test_when_0rank():
-    a = TAT.Parity.D.Tensor([], []).range_(2333)
+    a = TAT.FermiZ2.D.Tensor([], []).range_(2333)
     assert a.names == []
     assert all(a.storage == [2333])
 
@@ -53,7 +53,7 @@ def test_when_0rank():
 
 
 def test_when_0size():
-    a = TAT.Fermi.D.Tensor(["Left", "Right", "Up"], [
+    a = TAT.FermiU1.D.Tensor(["Left", "Right", "Up"], [
         Fedge[((0, 0),)],
         Tedge[(-1, 1), (0, 2), (1, 3)],
         Tedge[(-1, 2), (0, 3), (1, 1)],
@@ -72,7 +72,7 @@ def test_when_0size():
 
 
 def test_when_0block():
-    a = TAT.Fermi.D.Tensor(["Left", "Right", "Up"], [
+    a = TAT.FermiU1.D.Tensor(["Left", "Right", "Up"], [
         Fedge[()],
         Fedge[(-1, 1), (0, 2), (1, 3)],
         Tedge[(-1, 2), (0, 3), (1, 1)],
@@ -88,7 +88,7 @@ def test_when_0block():
 
 
 def test_conversion_scalar():
-    a = TAT.Fermi.D.Tensor(2333, ["i", "j"], [-2, +2], [True, False])
+    a = TAT.FermiU1.D.Tensor(2333, ["i", "j"], [-2, +2], [True, False])
     assert a.names == ["i", "j"]
     assert (a.storage == [2333]).all()
     assert a.edge_by_name("i") == a.edges[0]
@@ -104,7 +104,7 @@ def test_conversion_scalar():
 
 
 def test_conversion_scalar_empty():
-    a = TAT.Fermi.Z.Tensor(["i"], [[
+    a = TAT.FermiU1.Z.Tensor(["i"], [[
         (-2, 333),
     ]]).range_(2333)
     assert complex(a) == 0

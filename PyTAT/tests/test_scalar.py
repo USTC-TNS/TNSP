@@ -4,7 +4,7 @@ import TAT
 
 def test_tensor_and_number():
     import numpy as np
-    a = TAT.Z2.Z.Tensor(["Left", "Right", "Phy"], [
+    a = TAT.BoseZ2.Z.Tensor(["Left", "Right", "Phy"], [
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
@@ -68,7 +68,7 @@ def test_tensor_and_tensor():
 
 def test_tensor_and_number_inplace():
     import numpy as np
-    a = TAT.Z2.Z.Tensor(["Left", "Right", "Phy"], [
+    a = TAT.BoseZ2.Z.Tensor(["Left", "Right", "Phy"], [
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],
         [(False, 2), (True, 2)],

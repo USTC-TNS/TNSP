@@ -10,6 +10,18 @@
 + *tetragono*: Add function to convert sampling lattice back to simple update lattice.
 + *tetragono*: Add support for simple update for long range two body interaction.
 *** Changed
++ *TAT.hpp*: Rename the aliases of the symmetry types, the details are shown in the next item.
++ *TAT.py*: Rename the names of the symmetry types, since the previous naming is not consistent:
+  | old name   | new name       |
+  |------------+----------------|
+  | No         | No             |
+  | Z2         | BoseZ2         |
+  | U1         | BoseU1         |
+  | Fermi      | FermiU1        |
+  | FemriZ2    | FermiU1BoseZ2  |
+  | FermiU1    | FermiU1BoseU1  |
+  | Parity     | FermiZ2        |
+  | FermiFermi | FermiU1FermiU1 |
 + *TAT.py*: Use =scikit-build-core= as build backend. =MAKEFLAGS= and =CMAKEFLAGS= are droped. Use =scikit-build-core=
   environment variable =SKBUILD_CMAKE_ARGS= to pass arguments to cmake command line when building =PyTAT= wheel.
 + *tetragono*: Use Lanczos algorithm instead of previous power iteration to optimize exact state. =update= function for

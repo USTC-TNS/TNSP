@@ -7,7 +7,7 @@ def test_normal_tensor():
 
 
 def test_scalar():
-    assert TAT.Fermi.S == TAT.Fermi.float32
-    assert TAT.Z2.D == TAT.Z2.float == TAT.Z2.float64
-    assert TAT.Parity.C == TAT.Parity.complex64
-    assert TAT.FermiU1.Z == TAT.FermiU1.complex == TAT.FermiU1.complex128
+    assert TAT.FermiU1.S == TAT.FermiU1.float32
+    assert TAT.BoseZ2.D == TAT.BoseZ2.float == TAT.BoseZ2.float64
+    assert TAT.FermiZ2.C == TAT.FermiZ2.complex64
+    assert TAT.FermiU1BoseU1.Z == TAT.FermiU1BoseU1.complex == TAT.FermiU1BoseU1.complex128

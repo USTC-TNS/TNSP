@@ -58,11 +58,11 @@ TEST(test_trace, no_symmetry) {
 }
 
 TEST(test_trace, u1_symmetry) {
-    auto a = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto a = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({0, 2}, {-1, 1}, {-2, 2})}}
                   .range_());
-    auto b = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto b = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"E", "F", "G", "H"},
         {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2}), f_edge({0, 2}, {1, 1}, {2, 2})}}
                   .range_());
@@ -77,11 +77,11 @@ TEST(test_trace, u1_symmetry) {
 }
 
 TEST(test_trace, fermi_symmetry) {
-    auto a = (TAT::Tensor<double, TAT::FermiSymmetry>{
+    auto a = (TAT::Tensor<double, TAT::FermiU1Symmetry>{
         {"A", "B", "C", "D"},
         {t_edge({-1, 1}, {0, 1}, {-2, 1}), f_edge({0, 1}, {1, 2}), f_edge({0, 2}, {1, 2}), t_edge({-2, 2}, {-1, 1}, {0, 2})}}
                   .range_());
-    auto b = (TAT::Tensor<double, TAT::FermiSymmetry>{
+    auto b = (TAT::Tensor<double, TAT::FermiU1Symmetry>{
         {"E", "F", "G", "H"},
         {f_edge({0, 2}, {1, 1}), t_edge({-2, 1}, {-1, 1}, {0, 2}), t_edge({0, 1}, {-1, 2}), f_edge({2, 2}, {1, 1}, {0, 2})}}
                   .range_());

@@ -3,7 +3,7 @@ import TAT
 
 
 def test_basic_usage():
-    t = TAT.U1.D.Tensor(["Left", "Right", "Up"], [
+    t = TAT.BoseU1.D.Tensor(["Left", "Right", "Up"], [
         [(-1, 3), (0, 1), (1, 2)],
         [(-1, 1), (0, 2), (1, 3)],
         [(-1, 2), (0, 3), (1, 1)],

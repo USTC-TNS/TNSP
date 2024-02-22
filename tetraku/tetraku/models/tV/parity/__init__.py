@@ -32,7 +32,7 @@ def abstract_state(L1, L2, t, V):
     t, V : float
         tV model parameters.
     """
-    state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiZ2.D.Tensor, L1, L2)
     state.total_symmetry = False
     state.physics_edges[...] = [(False, 1), (True, 1)]
     CC = tet.common_tensor.Parity.CC.to(float)

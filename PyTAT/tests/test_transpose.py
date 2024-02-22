@@ -53,8 +53,8 @@ def test_no_symmetry_high_dimension():
 
 
 def test_z2_symmetry_high_dimension():
-    edge = TAT.Z2.Edge([(False, 2), (True, 2)])
-    a = TAT.Z2.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range_()
+    edge = TAT.BoseZ2.Edge([(False, 2), (True, 2)])
+    a = TAT.BoseZ2.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range_()
     b = a.transpose(["l", "j", "i", "n", "k", "m"])
     for i in range(2):
         for j in range(2):
@@ -88,8 +88,8 @@ def test_z2_symmetry_high_dimension():
 
 
 def test_parity_symmetry_high_dimension():
-    edge = TAT.Parity.Edge([(False, 2), (True, 2)])
-    a = TAT.Parity.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range_()
+    edge = TAT.FermiZ2.Edge([(False, 2), (True, 2)])
+    a = TAT.FermiZ2.D.Tensor(["i", "j", "k", "l", "m", "n"], [edge, edge, edge, edge, edge, edge]).range_()
     b = a.transpose(["l", "j", "i", "n", "k", "m"])
     for i in range(2):
         for j in range(2):

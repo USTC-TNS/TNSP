@@ -29,7 +29,7 @@ def abstract_state(L1, L2):
     L1, L2 : int
         The lattice size.
     """
-    state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiZ2.D.Tensor, L1, L2)
     state.physics_edges[...] = tet.common_tensor.Fermi.EF
     CC = tet.common_tensor.Parity.CC.to(float)
     state.hamiltonians["vertical_bond"] = CC

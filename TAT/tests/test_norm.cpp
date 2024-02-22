@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 TEST(test_norm, basic_usage) {
-    auto t = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto t = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"Left", "Right", "Up"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                   .range_(7)
@@ -24,7 +24,7 @@ TEST(test_norm, basic_usage) {
 }
 
 TEST(test_norm, rank3) {
-    auto t = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto t = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"Left", "Right", "Up"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                   .range_(7)
@@ -39,7 +39,7 @@ TEST(test_norm, rank3) {
 }
 
 TEST(test_norm, rank4) {
-    auto t = (TAT::Tensor<double, TAT::U1Symmetry>{
+    auto t = (TAT::Tensor<double, TAT::BoseU1Symmetry>{
         {"Left", "Right", "Up"},
         {{{-1, 3}, {0, 1}, {1, 2}}, {{-1, 1}, {0, 2}, {1, 3}}, {{-1, 2}, {0, 3}, {1, 1}}}}
                   .range_(7));

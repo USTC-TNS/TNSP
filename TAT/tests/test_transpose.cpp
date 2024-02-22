@@ -48,8 +48,8 @@ TEST(test_transpose, no_symmetry_high_dimension) {
 }
 
 TEST(test_transpose, z2_symmetry_high_dimension) {
-    auto edge = TAT::Edge<TAT::Z2Symmetry>({{false, 2}, {true, 2}});
-    auto a = TAT::Tensor<double, TAT::Z2Symmetry>{{"i", "j", "k", "l", "m", "n"}, {edge, edge, edge, edge, edge, edge}}.range_();
+    auto edge = TAT::Edge<TAT::BoseZ2Symmetry>({{false, 2}, {true, 2}});
+    auto a = TAT::Tensor<double, TAT::BoseZ2Symmetry>{{"i", "j", "k", "l", "m", "n"}, {edge, edge, edge, edge, edge, edge}}.range_();
     auto b = a.transpose({"l", "j", "i", "n", "k", "m"});
     for (auto i = 0; i < 4; i++) {
         for (auto j = 0; j < 4; j++) {
@@ -79,8 +79,8 @@ TEST(test_transpose, z2_symmetry_high_dimension) {
 }
 
 TEST(test_transpose, parity_symmetry_high_dimension) {
-    auto edge = TAT::Edge<TAT::ParitySymmetry>({{false, 2}, {true, 2}});
-    auto a = TAT::Tensor<double, TAT::ParitySymmetry>{{"i", "j", "k", "l", "m", "n"}, {edge, edge, edge, edge, edge, edge}}.range_();
+    auto edge = TAT::Edge<TAT::FermiZ2Symmetry>({{false, 2}, {true, 2}});
+    auto a = TAT::Tensor<double, TAT::FermiZ2Symmetry>{{"i", "j", "k", "l", "m", "n"}, {edge, edge, edge, edge, edge, edge}}.range_();
     auto b = a.transpose({"l", "j", "i", "n", "k", "m"});
     for (auto i = 0; i < 4; i++) {
         for (auto j = 0; j < 4; j++) {

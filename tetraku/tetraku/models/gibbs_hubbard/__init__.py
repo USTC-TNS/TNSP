@@ -38,7 +38,7 @@ def abstract_state(L1, L2, t, U, mu, side=1):
     """
     if side not in [1, 2]:
         raise RuntimeError("side should be either 1 or 2")
-    state = tet.AbstractState(TAT.Parity.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiZ2.D.Tensor, L1, L2)
     state.total_symmetry = 0
     for l1 in range(L1):
         for l2 in range(L2):

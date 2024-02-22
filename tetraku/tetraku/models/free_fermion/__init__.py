@@ -31,7 +31,7 @@ def abstract_state(L1, L2, T):
     T : int
         The total particle number.
     """
-    state = tet.AbstractState(TAT.Fermi.D.Tensor, L1, L2)
+    state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
     state.physics_edges[...] = tet.common_tensor.Fermi.EF
     CC = tet.common_tensor.Fermi.CC.to(float)
     state.hamiltonians["vertical_bond"] = CC

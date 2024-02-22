@@ -37,22 +37,6 @@ namespace py = pybind11;
 #define TAT_ERROR_BITS 1
 #include <TAT/TAT.hpp>
 
-#define TAT_SINGLE_SYMMETRY_ALL_SCALAR(SYM) \
-    TAT_SINGLE_SCALAR_SYMMETRY(S, float, SYM) \
-    TAT_SINGLE_SCALAR_SYMMETRY(D, double, SYM) \
-    TAT_SINGLE_SCALAR_SYMMETRY(C, std::complex<float>, SYM) \
-    TAT_SINGLE_SCALAR_SYMMETRY(Z, std::complex<double>, SYM)
-
-#define TAT_LOOP_ALL_SCALAR_SYMMETRY \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(No) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(Z2) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(U1) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(Fermi) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiZ2) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiU1) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(Parity) \
-    TAT_SINGLE_SYMMETRY_ALL_SCALAR(FermiFermi)
-
 #define deprecated(message) PyErr_WarnEx(PyExc_DeprecationWarning, message, 1)
 
 namespace TAT {
@@ -144,8 +128,8 @@ namespace TAT {
     // About symmetry
     template<typename Symmetry>
     auto dealing_symmetry(py::module_& symmetry_m, const char* name) {
-        // symmetry_m: TAT.Z2/TAT.No/TAT.Fermi/...
-        // define TAT.Fermi.Symmetry as FermiSymmetry in this function
+        // symmetry_m: TAT.BoseZ2/TAT.No/TAT.FermiU1/...
+        // define TAT.FermiU1.Symmetry as FermiU1Symmetry in this function
         // it does not define constructor, it is needed to define constructor later
         return py::class_<Symmetry>(symmetry_m, "Symmetry", (std::string(name) + "Symmetry").c_str())
             .def(py::init<Symmetry>(), py::arg("other"))

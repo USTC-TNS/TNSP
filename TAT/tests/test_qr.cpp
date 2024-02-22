@@ -57,7 +57,8 @@ TEST(test_qr, no_symmetry_1) {
 }
 
 TEST(test_qr, fermi_symmetry_0) {
-    auto a = TAT::Tensor<double, TAT::FermiSymmetry>({"A", "B"}, {{{{-1, 2}, {0, 1}, {+1, 2}}, false}, {{{-1, 4}, {0, 3}, {+1, 3}}, true}}).range_();
+    auto a =
+        TAT::Tensor<double, TAT::FermiU1Symmetry>({"A", "B"}, {{{{-1, 2}, {0, 1}, {+1, 2}}, false}, {{{-1, 4}, {0, 3}, {+1, 3}}, true}}).range_();
     auto [q, r] = a.qr('r', {"A"}, "newQ", "newR");
     auto [q_2, r_2] = a.qr('q', {"B"}, "newQ", "newR");
     ASSERT_FLOAT_EQ((q - q_2).norm<-1>(), 0);
@@ -71,7 +72,7 @@ TEST(test_qr, fermi_symmetry_0) {
 }
 
 TEST(test_qr, fermi_symmetry_1) {
-    auto a = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>(
+    auto a = (TAT::Tensor<std::complex<double>, TAT::FermiU1Symmetry>(
                   {"A", "B"},
                   {
                       {{{-1, 2}, {0, 1}, {+1, 2}}, true},
@@ -92,7 +93,7 @@ TEST(test_qr, fermi_symmetry_1) {
 }
 
 TEST(test_qr, fermi_symmetry_edge_mismatch) {
-    auto a = (TAT::Tensor<std::complex<double>, TAT::FermiSymmetry>(
+    auto a = (TAT::Tensor<std::complex<double>, TAT::FermiU1Symmetry>(
                   {"A", "B"},
                   {
                       {{{-1, 2}, {0, 2}, {+2, 2}}, false},

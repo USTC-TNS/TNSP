@@ -15,7 +15,7 @@ def test_no_symmetry_complex():
 
 
 def test_u1_symmetry_float():
-    A = TAT.U1.D.Tensor(
+    A = TAT.BoseU1.D.Tensor(
         ["i", "j"],
         [
             [(-1, 2), (0, 2), (+1, 2)],
@@ -29,7 +29,7 @@ def test_u1_symmetry_float():
 
 
 def test_u1_symmetry_complex():
-    A = TAT.U1.Z.Tensor(
+    A = TAT.BoseU1.Z.Tensor(
         ["i", "j"],
         [
             [(-1, 2), (0, 2), (+1, 2)],
@@ -44,7 +44,7 @@ def test_u1_symmetry_complex():
 
 
 def test_Fermi_symmetry_float():
-    A = TAT.Fermi.D.Tensor(
+    A = TAT.FermiU1.D.Tensor(
         ["i", "j"],
         [
             [(-1, 2), (0, 2), (+1, 2)],
@@ -58,7 +58,7 @@ def test_Fermi_symmetry_float():
 
 
 def test_Fermi_symmetry_float_bidirection_arrow():
-    A = TAT.Fermi.D.Tensor(
+    A = TAT.FermiU1.D.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
@@ -72,7 +72,7 @@ def test_Fermi_symmetry_float_bidirection_arrow():
 
 
 def test_Fermi_symmetry_float_bidirection_arrow_fixed():
-    A = TAT.Fermi.D.Tensor(
+    A = TAT.FermiU1.D.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
@@ -86,7 +86,7 @@ def test_Fermi_symmetry_float_bidirection_arrow_fixed():
 
 
 def test_fermi_symmetry_complex():
-    A = TAT.Fermi.Z.Tensor(
+    A = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             [(-1, 2), (0, 2), (+1, 2)],
@@ -101,7 +101,7 @@ def test_fermi_symmetry_complex():
 
 
 def test_fermi_symmetry_complex_bidirection_arrow():
-    A = TAT.Fermi.Z.Tensor(
+    A = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
@@ -116,7 +116,7 @@ def test_fermi_symmetry_complex_bidirection_arrow():
 
 
 def test_fermi_symmetry_complex_bidirection_arrow_fixed():
-    A = TAT.Fermi.Z.Tensor(
+    A = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
@@ -131,14 +131,14 @@ def test_fermi_symmetry_complex_bidirection_arrow_fixed():
 
 
 def test_fermi_symmetry_contract_with_conjugate():
-    A = TAT.Fermi.Z.Tensor(
+    A = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(+1, 2), (0, 2), (-1, 2)], True),
         ],
     ).range_(-8 - 20j, +1 + 7j)
-    B = TAT.Fermi.Z.Tensor(
+    B = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
@@ -153,14 +153,14 @@ def test_fermi_symmetry_contract_with_conjugate():
 
 
 def test_fermi_symmetry_contract_with_conjugate_arrow_fix_wrong():
-    A = TAT.Fermi.Z.Tensor(
+    A = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),
             ([(+1, 2), (0, 2), (-1, 2)], True),
         ],
     ).range_(-8 - 20j, +1 + 7j)
-    B = TAT.Fermi.Z.Tensor(
+    B = TAT.FermiU1.Z.Tensor(
         ["i", "j"],
         [
             ([(-1, 2), (0, 2), (+1, 2)], False),

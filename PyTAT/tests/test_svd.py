@@ -35,7 +35,7 @@ def test_no_symmetry_cut():
 
 
 def test_u1_symmetry():
-    a = TAT.U1.D.Tensor(
+    a = TAT.BoseU1.D.Tensor(
         ["A", "B", "C", "D"],
         [
             ([(-1, 1), (0, 1), (-2, 1)], True),
@@ -52,7 +52,7 @@ def test_u1_symmetry():
 
 
 def test_u1_symmetry_cut():
-    a = TAT.U1.D.Tensor(
+    a = TAT.BoseU1.D.Tensor(
         ["A", "B", "C", "D"],
         [
             ([(-1, 1), (0, 1), (-2, 1)], True),
@@ -69,7 +69,7 @@ def test_u1_symmetry_cut():
 
 
 def test_fermi_symmetry():
-    a = TAT.Fermi.D.Tensor(
+    a = TAT.FermiU1.D.Tensor(
         ["A", "B", "C", "D"],
         [
             ([(-1, 1), (0, 1), (-2, 1)], True),
@@ -86,7 +86,7 @@ def test_fermi_symmetry():
 
 
 def test_fermi_symmetry_cut():
-    a = TAT.Fermi.D.Tensor(
+    a = TAT.FermiU1.D.Tensor(
         ["A", "B", "C", "D"],
         [
             ([(-1, 1), (0, 1), (-2, 1)], True),
@@ -114,7 +114,7 @@ def test_no_symmetry_cut_too_small():
 
 
 def test_fermi_symmetry_cut_too_small():
-    a = TAT.Fermi.D.Tensor(
+    a = TAT.FermiU1.D.Tensor(
         ["A", "B"],
         [
             [(0, 1), (+1, 1)],
