@@ -1,6 +1,76 @@
 #+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+#+begin_export latex
+\iffalse
+#+end_export
 
 * [[https://github.com/USTC-TNS/TNSP][TNSP]] · [[https://github.com/USTC-TNS/TNSP/releases/latest][https://img.shields.io/github/v/release/USTC-TNS/TNSP.svg?style=flat-square]] [[./LICENSE.rst][https://img.shields.io/github/license/USTC-TNS/TNSP.svg?style=flat-square]] [[https://github.com/USTC-TNS/TNSP/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TNSP/build.yml.svg?style=flat-square]]
+
+#+begin_export latex
+\fi
+\title{TNSP}
+\maketitle
+\tableofcontents
+\chapter*{}
+#+end_export
 
 The [[https://github.com/USTC-TNS/TNSP][TNSP(tensor network state packages) framework]] streamlines the development of tensor network state methods. It comprises various packages:
 - [[./TAT/][=TAT=]] :: the core tensor package to provide a unified interface for various types of tensor such as Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensors]] and [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermion tensors]], written in C++, and providing a [[./PyTAT/][Python interface]].
@@ -11,3 +81,23 @@ The [[https://github.com/USTC-TNS/TNSP][TNSP(tensor network state packages) fram
 - [[./tnsp_bridge/][=tnsp_bridge=]] :: an auxiliary package to enable format conversion with [[https://doi.org/10.1016/j.cpc.2018.03.006][older TNSP versions]].
 For detailed package information, please refer to the respective subdirectories or chapters.
 If you are reading this manual in PDF version, some links to directories or files may be broken. For a better experience, refer to this manual in the GitHub repository.
+
+#+begin_export latex
+\chapter{PyTAT}
+\input{PyTAT.tex}
+
+\chapter{tetragono}
+\input{tetragono.tex}
+
+\chapter{tetraku}
+\input{tetraku.tex}
+
+\chapter{lazy\_graph}
+\input{lazy_graph.tex}
+
+\chapter{PyScalapack}
+\input{PyScalapack.tex}
+
+\chapter{tnsp\_bridge}
+\input{tnsp_bridge.tex}
+#+end_export
