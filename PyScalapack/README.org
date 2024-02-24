@@ -5,6 +5,10 @@
 #+LATEX_HEADER: \usepackage{fvextra}
 #+LATEX_HEADER: \usepackage{indentfirst}
 #+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
 #+LATEX_HEADER: \usemintedstyle{emacs}
 #+begin_src emacs-lisp :exports none :results silent
   (setq org-latex-pdf-process
@@ -79,7 +83,7 @@ The ScaLAPACK dynamic shared library should be loaded prior to engaging in any f
 
 If the ScaLAPACK dynamic shared library reside outside the default path, users must supply their absolute paths.
 In case ScaLAPACK functions are distributed across multiple cdecl convention dynamic shared libraries,
-include them all when invoking =PySCALAPACK=. For instance, use =PySCALAPACK("libmkl_core.so", "libmkl_scalapack_lp64.so", ...)=.
+include them all when invoking =PySCALAPACK=. For instance, use =PySCALAPACK("libmkl_core.so", ...)=.
 To override the default loader =ctypes.CDLL=, add a keyword-only argument called =loader= to =PySCALAPACK=,
 which is particularly helpful when working with non-cdecl convention shared libraries.
 

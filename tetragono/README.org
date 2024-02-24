@@ -5,6 +5,10 @@
 #+LATEX_HEADER: \usepackage{fvextra}
 #+LATEX_HEADER: \usepackage{indentfirst}
 #+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
 #+LATEX_HEADER: \usemintedstyle{emacs}
 #+begin_src emacs-lisp :exports none :results silent
   (setq org-latex-pdf-process
@@ -335,7 +339,7 @@ The function =abstract_state= declares the basic tensor type and the lattice sha
               if (l1, l2) != (L1 - 1, L2 - 1):
                   state.physics_edges[l1, l2, 1] = [(0, 1), (1, 1)]
       state.total_symmetry = T
-      CC = tet.common_tensor.Parity.CC.to(float)
+      CC = tet.common_tensor.Fermi.CC.to(float)
       for l1 in range(L1):
           for l2 in range(L2):
               if l1 != 0:
@@ -444,12 +448,12 @@ To accommodate custom hopping rules, one can define a plugin with the function =
   import tetragono as tet
 
 
-  def hopping_resultltonians(state):
+  def hopping_hamiltonians(state):
       pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(float)
       pauli_y_pauli_y = tet.common_tensor.No.pauli_y_pauli_y.to(float)
       hopping = pauli_x_pauli_x + pauli_y_pauli_y
       result = {}
-      for [l1, l2] in state.sites()
+      for [l1, l2] in state.sites():
               if l1 != 0:
                   result[(l1 - 1, l2, 0), (l1, l2, 0)] = hopping
               if l2 != 0:
@@ -460,3 +464,6 @@ To accommodate custom hopping rules, one can define a plugin with the function =
 This example creates a fake Hamiltonian for hopping only to the nearest neighbor sites.
 Please note that in this context, the amplitude of the elements in the tensor is not important.
 The tetragono will attempt to hop across all non-zero terms inside the tensor, ignoring the absolute values.
+
+Once the fake hopping Hamiltonian is prepared in a Python module, pass it to the argument =sweep_hopping_hamiltonians= of =gm_run= with the =sampling_method= set to =sweep=,
+to utilize this hopping Hamiltonian.

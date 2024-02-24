@@ -5,6 +5,10 @@
 #+LATEX_HEADER: \usepackage{fvextra}
 #+LATEX_HEADER: \usepackage{indentfirst}
 #+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
 #+LATEX_HEADER: \usemintedstyle{emacs}
 #+begin_src emacs-lisp :exports none :results silent
   (setq org-latex-pdf-process

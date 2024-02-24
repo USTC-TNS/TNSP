@@ -423,22 +423,3 @@ jobs:
             artifact/*.whl
             emscripten/*.whl
           body_path: release_description.md
-
-  build_doxygen:
-    name: build doxygen github pages
-    runs-on: ubuntu-latest
-    needs: [release_trigger]
-
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-      - name: install doxygen
-        run: sudo apt-get install doxygen -y
-      - name: create docs
-        run: doxygen
-      - name: publish
-        uses: crazy-max/ghaction-github-pages@v4
-        with:
-          build_dir: html
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}

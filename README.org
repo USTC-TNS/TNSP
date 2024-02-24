@@ -3,10 +3,11 @@
 * [[https://github.com/USTC-TNS/TNSP][TNSP]] · [[https://github.com/USTC-TNS/TNSP/releases/latest][https://img.shields.io/github/v/release/USTC-TNS/TNSP.svg?style=flat-square]] [[./LICENSE.rst][https://img.shields.io/github/license/USTC-TNS/TNSP.svg?style=flat-square]] [[https://github.com/USTC-TNS/TNSP/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TNSP/build.yml.svg?style=flat-square]]
 
 The [[https://github.com/USTC-TNS/TNSP][TNSP(tensor network state packages) framework]] streamlines the development of tensor network state methods. It comprises various packages:
-- [[./TAT/][TAT]] :: the core tensor package to provide a unified interface for various types of tensor such as Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensors]] and [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermion tensors]], written in C++, and providing a [[./PyTAT/][Python interface]].
-- [[./tetragono/][tetragono]] :: a tensor network state package offering a user-friendly unified interface for various TNS methods across different physics models and tensor types.
-- [[./tetraku/][tetraku]] :: a collection including physical models and algorithm customization for tetragono.
-- [[./lazy_graph/][lazy_graph]] :: an auxiliary package to facilitate lazy evaluation mechanisms in tetragono.
-- [[./PyScalapack/][PyScalapack]] :: an auxiliary package to offer a Python interface for ScaLAPACK within tetragono.
-- [[./tnsp_bridge/][tnsp_bridge]] :: an auxiliary package to enable format conversion with [[https://doi.org/10.1016/j.cpc.2018.03.006][older TNSP versions]].
-For detailed package information, please refer to the respective subdirectories or sections.
+- [[./TAT/][=TAT=]] :: the core tensor package to provide a unified interface for various types of tensor such as Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensors]] and [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermion tensors]], written in C++, and providing a [[./PyTAT/][Python interface]].
+- [[./tetragono/][=tetragono=]] :: a tensor network state package offering a user-friendly unified interface for various TNS methods across different physics models and tensor types.
+- [[./tetraku/][=tetraku=]] :: a collection including physical models and algorithm customization for tetragono.
+- [[./lazy_graph/][=lazy_graph=]] :: an auxiliary package to facilitate lazy evaluation mechanisms in tetragono.
+- [[./PyScalapack/][=PyScalapack=]] :: an auxiliary package to offer a Python interface for ScaLAPACK within tetragono.
+- [[./tnsp_bridge/][=tnsp_bridge=]] :: an auxiliary package to enable format conversion with [[https://doi.org/10.1016/j.cpc.2018.03.006][older TNSP versions]].
+For detailed package information, please refer to the respective subdirectories or chapters.
+If you are reading this manual in PDF version, some links to directories or files may be broken. For a better experience, refer to this manual in the GitHub repository.

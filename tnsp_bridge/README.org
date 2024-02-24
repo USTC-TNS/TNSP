@@ -5,6 +5,10 @@
 #+LATEX_HEADER: \usepackage{fvextra}
 #+LATEX_HEADER: \usepackage{indentfirst}
 #+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
 #+LATEX_HEADER: \usemintedstyle{emacs}
 #+begin_src emacs-lisp :exports none :results silent
   (setq org-latex-pdf-process
@@ -101,8 +105,8 @@ For example, here is the old version of the data:
   EOF
 #+end_example
 
-The code below converts the aforementioned data
-(stored in the string variable =example_data=) to the new version format:
+The code below converts the aforementioned data,
+stored in the string variable named =example_data=, to the new version format:
 
 #+begin_src python :results output :exports both :cache yes :var example_data=example-data
   from bridge import bridge
