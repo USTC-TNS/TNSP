@@ -1,6 +1,9 @@
 name: documents
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   documents_in_latex:
