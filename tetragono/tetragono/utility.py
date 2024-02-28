@@ -168,9 +168,52 @@ class SeedDiffer:
 seed_differ = SeedDiffer()
 
 
+class RenamingUnpickler(pickle.Unpickler):
+    """
+    TAT 0.3.15 renames symmetry type names.
+    This class helps to convert old name to new name.
+    """
+
+    def find_class(self, module, name, first=[True, True]):
+        rename_dict = {
+            "Z2": "BoseZ2",
+            "U1": "BoseU1",
+            "Fermi": "FermiU1",
+            "Parity": "FermiZ2",
+            "FermiFermi": "FermiU1FermiU1"
+        }
+        for old, new in rename_dict.items():
+            if module.startswith(f"TAT.{old}.") or module == f"TAT.{old}":
+                module = module.replace(old, new)
+                if first[0]:
+                    first[0] = False
+                    showln("###################### Warning begin ####################")
+                    showln("Data format before TAT 0.3.15 detected.")
+                    showln("Please update the data format as soon as possible.")
+                    showln("Load data and dump again would update the format.")
+                    showln("####################### Warning end #####################")
+        ambiguous_rename_dict = {
+            "FermiZ2": "FermiU1BoseZ2",
+            "FermiU1": "FermiU1BoseU1",
+        }
+        for old, new in rename_dict.items():
+            if "PYTAT_OLD_SYMMETRY_NAME" in os.environ:
+                if module.startswith(f"TAT.{old}.") or module == f"TAT.{old}":
+                    module = module.replace(old, new)
+            else:
+                if first[1]:
+                    first[1] = False
+                    showln("###################### Warning begin ####################")
+                    showln("Reading data with the ambiguous names for symmetry type when update over TAT 0.3.15.")
+                    showln("The default behavior is reading in the new format.")
+                    showln("For reading old version data, define environment PYTAT_OLD_SYMMETRY_NAME")
+                    showln("####################### Warning end #####################")
+        return super().find_class(module, name)
+
+
 def read_from_file(file_name):
     with open(file_name, "rb") as file:
-        return pickle.load(file)
+        return RenamingUnpickler(file).load()
 
 
 def write_to_file(obj, file_name):
