@@ -61,3 +61,8 @@
 
 Tetraku is a collection of commonly-used models and ansatzes used by [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono][tetragono]].
 More information is available in the readme files within each directory.
+
+There are some popular models such as [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/J1J2/][the J1 -J2 model on a square lattice]],
+[[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/honeycomb_hubbard/][the Hubbard model on a honeycomb lattice]],
+and [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/rydberg/][the Rydberg model on a square lattice]],
+which can be referenced if users want to add new model.

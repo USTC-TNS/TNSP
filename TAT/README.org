@@ -62,6 +62,23 @@
 TAT is a header-only C++ tensor library that supports Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensors]] and [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermion tensors]].
 The name "TAT" is a recursive acronym for "TAT is A Tensor library!".
 
+The TAT, implemented as a C++17 header-only library, leverages generic programming for a unified implementation across various tensor types,
+distinguishing different tensor types by employing a symmetry type.
+This symmetry type, which contains quantum numbers, with markers indicating whether they are fermionic or bosonic,
+allows TAT to categorize tensors as symmetry tensors, fermion tensors, or conventional tensors, each associated with specific quantum groups.
+In the non-symmetry case, there are no quantum numbers, whereas the $U(1)$ symmetry entails an integer quantum number,
+and the $Z(2)$ symmetry uses a boolean.
+More complex scenarios involve product symmetry groups with a tuple of quantum numbers of varying types and lengths,
+also indicating the fermionic nature of each through static definition, enhancing code readability and reusability.
+
+Based on the symmetry type, TAT defines an edge type to represent properties of a tensor's edges, encapsulating values characterized by the symmetry type and their degeneracies.
+This edge comprises segments and, if applicable, a boolean indicating a fermi-arrow for the fermion case, where a segment pairs a value of symmetry type with its degeneracy.
+A block multidimensional array, or core type, is constructed from a sequence of these edges, storing block data as a one-dimensional array for performance efficiency.
+The tensor type is then formed from a pointer to this core type and a sequence of edge names,
+allowing for lightweight outplace edge renaming to manipulate tensor metadata without altering the original tensor directly.
+TAT provides interfaces for tensor operations like singular value decomposition, contraction, or edge splitting/merging,
+maintaining consistency across different tensor types and symmetry groups once a tensor is constructed with attributes unique to a specific symmetry group.
+
 * Prerequisites
 
 + C++ compiler with C++17 support(such as GCC 7.3+, Clang 6.0+)
@@ -73,14 +90,14 @@ The name "TAT" is a recursive acronym for "TAT is A Tensor library!".
 
 Given that TAT is a header-only C++ library,
 users can utilize it by directly including the header file
-[[./include/TAT/TAT.hpp][=include/TAT/TAT.hpp=]]
+[[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/TAT.hpp][=include/TAT/TAT.hpp=]]
 and manually linking LAPACK/BLAS or MKL during the linking process.
 For best practices, pass the argument =-I= for include path to the compiler and use =#include <TAT/TAT.hpp>= in the source file.
 
 Users can integrate TAT with [[https://cmake.org/][CMake]] by utilizing =add_subdirectory= to load the configuration of TAT and later employing =target_link_libraries= to link it with the program.
 Installation of TAT can be achieved directly using =cmake .= with the argument =-DTAT_BUILD_TEST=OFF= to disable building tests and =make install=.
 Once TAT is installed, users can access it via [[https://www.freedesktop.org/wiki/Software/pkg-config/][pkg-config]] or by utilizing CMake's =find_package= functionalities.
-A [[https://github.com/microsoft/vcpkg][vcpkg]] portfile is also included in [[./vcpkg/ports/][vcpkg/ports]]
+A [[https://github.com/microsoft/vcpkg][vcpkg]] portfile is also included in [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/vcpkg/ports/][vcpkg/ports]].
 
 For MPI support, users must define the macro =TAT_USE_MPI= or enable =TAT_USE_MPI= in CMake.
 The macro =TAT_USE_MKL_GEMM_BATCH= is utilized to enable the use of MKL's GEMM batch, which can be automatically configured by CMake.
@@ -91,7 +108,7 @@ To achieve this, users need to compile the program using =em++= with the argumen
 and link the Emscripten version of BLAS/LAPACK.
 The [[https://pyodide.org/][Pyodide]] project offers prebuilt Emscripten versions of CLAPACK and OpenBLAS, so users could download it directly.
 
-There is a Python binding for TAT located [[../PyTAT/][here]].
+There is a Python binding for TAT located [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/][here]].
 
 * Documents
 

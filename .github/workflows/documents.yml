@@ -1,9 +1,7 @@
 name: documents
 
 on:
-  push:
-    branches:
-      - main
+  [push, pull_request]
 
 jobs:
   documents_in_latex:
@@ -14,13 +12,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - package: TAT
-          - package: PyTAT
-          - package: tnsp_bridge
-          - package: lazy_graph
-          - package: tetragono
-          - package: tetraku
-          - package: PyScalapack
+          - file: TAT/README
+            name: TAT
+          - file: PyTAT/README
+            name: PyTAT
+          - file: tnsp_bridge/README
+            name: tnsp_bridge
+          - file: lazy_graph/README
+            name: lazy_graph
+          - file: tetragono/README
+            name: tetragono
+          - file: tetraku/README
+            name: tetraku
+          - file: PyScalapack/README
+            name: PyScalapack
+          - file: CONTRIBUTING
+            name: contributing
 
     steps:
       - name: checkout
@@ -29,14 +36,14 @@ jobs:
         run: sudo apt-get install -y emacs
       - name: export to latex
         run: |
-          emacs ${{matrix.package}}/README.org --batch --eval "(progn (require 'ox-latex) (setq org-confirm-babel-evaluate nil) (beginning-of-buffer) (org-babel-next-src-block) (org-babel-execute-src-block) (org-latex-export-to-latex))"
+          emacs ${{matrix.file}}.org --batch --eval "(progn (require 'ox-latex) (setq org-confirm-babel-evaluate nil) (beginning-of-buffer) (org-babel-next-src-block) (org-babel-execute-src-block) (org-latex-export-to-latex))"
       - name: cut and rename the latex file
         run: |
-          awk '/\\maketitle/{flag=1; next}/\\end\{document\}/{flag=0} flag' ${{matrix.package}}/README.tex > ${{matrix.package}}.tex
+          awk '/\\maketitle/{flag=1; next}/\\end\{document\}/{flag=0} flag' ${{matrix.file}}.tex > ${{matrix.name}}.tex
       - name: upload to artifact
         uses: actions/upload-artifact@v3
         with:
-          path: ${{matrix.package}}.tex
+          path: ${{matrix.name}}.tex
 
   process_latex:
     name: generate pdf from latex
