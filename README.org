@@ -67,13 +67,32 @@
 #+begin_export latex
 \fi
 \title{The manual of the TNSP framework}
+\author{
+  \normalsize
+  Hao Zhang
+  \and
+  \normalsize
+  Shaojun Dong\footnote{E-mail address: sj.dong@iai.ustc.edu.cn}
+  \and
+  \normalsize
+  Chao Wang
+  \and
+  \normalsize
+  Meng Zhang
+  \and
+  \normalsize
+  Lixin He\footnote{E-mail address: helx@ustc.edu.cn}
+}
 \maketitle
 \tableofcontents
 \chapter{Overview}
 \section{About the project}
 #+end_export
 
-The [[https://github.com/USTC-TNS/TNSP][TNSP(tensor network state packages) framework]] streamlines the development of tensor network state(TNS) methods,
+The [[https://github.com/USTC-TNS/TNSP][TNSP(tensor network state packages) framework]] is developed by
+CAS Key Laboratory of Quantum Information, University of Science and Technology of China,
+and Institute of Artificial Intelligence, Hefei Comprehensive National Science Center,
+to streamline the development of tensor network state(TNS) methods,
 by abstracting the details of tensor types, whether they are [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][symmetry tensors]], [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][fermion tensors]], or conventional tensors.
 It offers a user-centric interface that facilitates the application of popular TNS approaches,
 particularly for the projected entangled pair states(PEPS),
