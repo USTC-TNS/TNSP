@@ -614,38 +614,10 @@ if __name__ == "__main__":
         sys.exit(1)
     mpi_comm.Barrier()
 else:
-    app = TetragonoCommandApp()
+    App = TetragonoCommandApp
+    app = App()
 
-    shell = app.do_shell
-    seed = app.seed
-    numpy_hamiltonian = app.numpy_hamiltonian
-
-    ex_create = app.ex_create
-    ex_dump = app.ex_dump
-    ex_load = app.ex_load
-    ex_update = app.ex_update
-    ex_energy = app.ex_energy
-
-    su_create = app.su_create
-    su_dump = app.su_dump
-    su_load = app.su_load
-    su_update = app.su_update
-    su_energy = app.su_energy
-    su_to_ex = app.su_to_ex
-    su_to_gm = app.su_to_gm
-
-    gm_create = app.gm_create
-    gm_conf_create = app.gm_conf_create
-    gm_dump = app.gm_dump
-    gm_conf_dump = app.gm_conf_dump
-    gm_load = app.gm_load
-    gm_conf_load = app.gm_conf_load
-    gm_conf_load_compat = app.gm_conf_load_compat
-    gm_run = app.gm_run
-    gm_run_g = app.gm_run_g
-    gm_conf_eq = app.gm_conf_eq
-    gm_clear_symmetry = app.gm_clear_symmetry
-    gm_hamiltonian = app.gm_hamiltonian
-    gm_expand = app.gm_expand
-    gm_to_ex = app.gm_to_ex
-    gm_to_su = app.gm_to_su
+    _current_module = sys.modules[__name__]
+    for name in dir(app):
+        if callable(getattr(app, name)) and not name.startswith("_"):
+            setattr(_current_module, name, getattr(app, name))
