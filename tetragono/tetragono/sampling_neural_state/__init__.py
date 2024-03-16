@@ -16,11 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import tetragono as tet
-
-
-def ansatz(state):
-    """
-    Create Marshall sign rule as an ansatz.
-    """
-    return tet.ansatz_product_state.ansatzes.Marshall(state)
+from .state import Configuration, SamplingNeuralState
+from .sampling import SweepSampling, ErgodicSampling
+from .observer import Observer
