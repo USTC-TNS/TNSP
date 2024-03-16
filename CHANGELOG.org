@@ -3,6 +3,7 @@
 ** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.16...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add neural network state based on sampling methods.
 + *tetraku*: Add quantum chemistry model which reads Hamiltonian in openfermion format.
 + *tetragono*: Add support for tracing repeated points when setting hamiltonian term. To use this feature, call
   =state.hamiltonians.trace_repeated= after all the hamiltonian term has been set. For those term which will not be

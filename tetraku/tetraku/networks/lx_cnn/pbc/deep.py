@@ -17,8 +17,7 @@
 #
 
 import torch
-import TAT
-import tetragono as tet
+from ..utility import LxMapping, LastProd
 
 
 class Reshape(torch.nn.Module):
@@ -47,22 +46,24 @@ def single_layer(k, m0, m1, m2, L1, L2):
     ).double()
 
 
-def ansatz(state):
+def network(state):
     """
     Create pbc version lx style deep cnn ansatz.
 
     The code here was designed by Xiao Liang.
     See https://link.aps.org/doi/10.1103/PhysRevB.98.104426 for more information.
     """
-    torch.manual_seed(tet.seed_differ.random_int())
     L1 = state.L1
     L2 = state.L2
     network = torch.nn.Sequential(
+        LxMapping(),
         single_layer(5, 1, 64, 64, L1, L2),
         single_layer(5, 64, 32, 32, L1, L2),
         single_layer(3, 32, 32, 32, L1, L2),
         single_layer(3, 32, 32, 32, L1, L2),
         single_layer(3, 32, 32, 32, L1, L2),
         single_layer(3, 32, 32, 1, L1, L2),
+        torch.nn.Flatten(start_dim=-3),
+        LastProd(),
     ).double()
-    return tet.ansatz_product_state.ansatzes.ConvolutionalNeural(state, network)
+    return network

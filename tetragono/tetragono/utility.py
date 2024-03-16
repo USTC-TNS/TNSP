@@ -315,10 +315,10 @@ def get_imported_function(module_name_or_function, function_name):
         if not f"No module named 'tetraku.models.{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     try:
-        module = importlib.import_module("." + module_name_or_function, "tetraku.ansatzes")
+        module = importlib.import_module("." + module_name_or_function, "tetraku.networks")
         return getattr(module, function_name)
     except ModuleNotFoundError as e:
-        if not f"No module named 'tetraku.ansatzes.{module_name_or_function}'".startswith(str(e)[:-1]):
+        if not f"No module named 'tetraku.networks.{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     # 4. normal import
     try:
