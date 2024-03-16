@@ -37,6 +37,7 @@ setup(
         "numpy",
         "scipy",
     ],
+    extras_require={"neural_network": ["torch"]},
     long_description=long_description,
     long_description_content_type="text/markdown",
 )

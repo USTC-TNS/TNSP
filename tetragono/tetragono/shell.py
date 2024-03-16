@@ -30,6 +30,17 @@ from .exact_state import ExactState
 from .simple_update_lattice import SimpleUpdateLattice
 from .sampling_lattice import SamplingLattice, Configuration as gm_Configuration, SweepSampling
 from .sampling_lattice.gradient import gradient_descent as gm_gradient_descent
+from .sampling_neural_state import torch_installed
+if torch_installed:
+    import torch
+    from .sampling_neural_state import SamplingNeuralState, Configuration as nn_Configuration
+    from .sampling_neural_state.gradient import gradient_descent as nn_gradient_descent
+else:
+
+    def nn_gradient_descent(*args, **kwargs):
+        """
+        torch not installed, this is an empty function as a placeholder.
+        """
 
 
 class Config():
@@ -110,6 +121,8 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         self.ex = None
         self.gm = None
         self.gm_conf = np.zeros(0, dtype=np.int64)
+        self.nn = None
+        self.nn_conf = np.zeros(0, dtype=np.int64)
 
     def precmd(self, line):
         line = line.split("#")[0].strip()
@@ -567,6 +580,158 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
         Convert sampling lattice to simple update lattice.
         """
         self.su = conversion.sampling_lattice_to_simple_update_lattice(self.gm)
+
+    @AutoCmd.decorator
+    def nn_create(self, *args, **kwargs):
+        """
+        Create a sampling neural state.
+
+        Parameters
+        ----------
+        model : str
+            The model names.
+        args, kwargs
+            Arguments passed to model creater function.
+        """
+        state = self.ex_ap_create(SamplingNeuralState, *args, **kwargs)
+        if state is not None:
+            self.nn = state
+
+    @AutoCmd.decorator
+    def nn_conf_create(self, batch_size, module_name, *args, **kwargs):
+        """
+        Create configuration of sampling neural state.
+
+        Parameters
+        ----------
+        batch_size : int
+            The batch size.
+        module_name : str
+            The module name to create initial configuration of sampling neural state.
+        args, kwargs
+            Arguments passed to module configuration creater function.
+        """
+        initial_configuration = get_imported_function(module_name, "initial_configuration")
+        if len(args) == 1 and args[0] == "help":
+            showln(initial_configuration.__doc__.replace("\n", "\n    "))
+            return
+        with seed_differ:
+            configurations = [
+                initial_configuration(nn_Configuration(self.nn), *args, **kwargs) for _ in range(batch_size)
+            ]
+        self.nn_conf = np.array([configuration.export_configuration() for configuration in configurations])
+
+    @AutoCmd.decorator
+    def nn_network_create(self, network, *args, **kwargs):
+        """
+        Create the network for sampling neural state.
+
+        Parameters
+        ----------
+        network : str
+            The network name.
+        args, kwargs
+            Arguments passed to network creater function.
+        """
+        create_network = get_imported_function(network, "network")
+        if len(args) == 1 and args[0] == "help":
+            showln(create_network.__doc__.replace("\n", "\n    "))
+        else:
+            self.nn.network = create_network(self.nn, *args, **kwargs)
+
+    @AutoCmd.decorator
+    def nn_seed_torch(self):
+        """
+        Pass the random seed to pytorch.
+        """
+        torch.manual_seed(seed_differ.random_int())
+
+    @AutoCmd.decorator
+    def nn_dump(self, name):
+        """
+        Dump the sampling neural state into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        if self.nn is None:
+            showln("nn is None")
+        else:
+            write_to_file(self.nn, name)
+
+    @AutoCmd.decorator
+    def nn_conf_dump(self, name):
+        """
+        Dump the sampling neural state configuration into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        write_configurations(self.nn_conf, name)
+
+    @AutoCmd.decorator
+    def nn_network_dump(self, name):
+        """
+        Dump the network weight of the sampling neural state into file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        if mpi_rank == 0:
+            torch.save(self.nn.network.state_dict(), name)
+
+    @AutoCmd.decorator
+    def nn_load(self, name):
+        """
+        Load the sampling neural state from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        self.nn = read_from_file(name)
+
+    @AutoCmd.decorator
+    def nn_conf_load(self, name):
+        """
+        Load the sampling neural state configuration from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        self.nn_conf = read_configurations(name)
+
+    @AutoCmd.decorator
+    def nn_network_load(self, name):
+        """
+        Load the network weight of the sampling neural state from file.
+
+        Parameters
+        ----------
+        name : str
+            The file name.
+        """
+        self.nn.network.load_state_dict(torch.load(name))
+
+    @AutoCmd.decorator
+    def nn_run(self, *args, **kwargs):
+        for result in self.nn_run_g(*args, **kwargs):
+            pass
+        return result
+
+    def nn_run_g(self, *args, **kwargs):
+        yield from nn_gradient_descent(self.nn, *args, **kwargs, sampling_configurations=self.nn_conf)
+
+    nn_run.__doc__ = nn_run_g.__doc__ = nn_gradient_descent.__doc__
 
 
 class TetragonoScriptApp(TetragonoCommandApp):

@@ -17,13 +17,12 @@
 #
 
 import torch
-import TAT
-import tetragono as tet
+from .utility import LxMapping, LastProd
 
 
-def ansatz(state, m, k):
+def network(state, m, k):
     """
-    Create pbc version lx style cnn ansatz.
+    Create lx style cnn ansatz.
 
     The code here was designed by Xiao Liang.
     See https://link.aps.org/doi/10.1103/PhysRevB.98.104426 for more information.
@@ -35,18 +34,20 @@ def ansatz(state, m, k):
     k : int
         The convolution kernel size.
     """
-    torch.manual_seed(tet.seed_differ.random_int())
     if k % 2 != 1:
         raise ValueError("kernel size of lx style CNN must be an odd number.")
     padding = (k - 1) // 2
     network = torch.nn.Sequential(
+        LxMapping(),
         torch.nn.Conv2d(in_channels=1,
                         out_channels=m,
                         kernel_size=(k, k),
                         stride=(1, 1),
                         padding=(padding, padding),
-                        padding_mode="circular"),
+                        padding_mode="zeros"),
         torch.nn.MaxPool2d(kernel_size=(2, 2)),
         torch.nn.ConvTranspose2d(in_channels=m, out_channels=1, kernel_size=(2, 2), stride=(2, 2), padding=(0, 0)),
+        torch.nn.Flatten(start_dim=-3),
+        LastProd(),
     ).double()
-    return tet.ansatz_product_state.ansatzes.ConvolutionalNeural(state, network)
+    return network

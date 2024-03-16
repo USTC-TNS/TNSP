@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2021-2024 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2022-2024 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,26 +16,4 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from setuptools import setup
-from setuptools_scm import get_version
-
-version = get_version(root="..")
-
-try:
-    with open("README.md", "rt", encoding="utf-8") as file:
-        long_description = file.read()
-except FileNotFoundError:
-    long_description = "empty description"
-
-setup(
-    version=version,
-    install_requires=[
-        f"tetragono=={version}",
-    ],
-    extras_require={
-        "quantum_chemistry": ["openfermion"],
-        "neural_network": ["torch"]
-    },
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-)
+from .learned_embedding import *
