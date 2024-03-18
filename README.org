@@ -64,25 +64,20 @@
 
 * [[https://github.com/USTC-TNS/TNSP][TNSP]] · [[https://github.com/USTC-TNS/TNSP/releases/latest][https://img.shields.io/github/v/release/USTC-TNS/TNSP.svg?style=flat-square]] [[https://github.com/USTC-TNS/TNSP/tree/main/LICENSE.rst][https://img.shields.io/github/license/USTC-TNS/TNSP.svg?style=flat-square]] [[https://github.com/USTC-TNS/TNSP/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TNSP/build.yml.svg?style=flat-square]]
 
+#+LATEX_HEADER: \usepackage{authblk}
 #+begin_export latex
 \fi
 \title{The manual of the TNSP framework}
-\author{
-  \normalsize
-  Hao Zhang
-  \and
-  \normalsize
-  Shaojun Dong\footnote{E-mail address: sj.dong@iai.ustc.edu.cn}
-  \and
-  \normalsize
-  Chao Wang
-  \and
-  \normalsize
-  Meng Zhang
-  \and
-  \normalsize
-  Lixin He\footnote{E-mail address: helx@ustc.edu.cn}
-}
+\author[1]{Hao Zhang}
+\author[2]{Shaojun Dong\footnote{\textit{E-mail address:} sj.dong@iai.ustc.edu.cn}}
+\author[2]{Chao Wang}
+\author[2]{Meng Zhang}
+\author[1,2,3]{Lixin He\footnote{\textit{E-mail address:} helx@ustc.edu.cn}}
+\affil[1]{CAS Key Laboratory of Quantum Information, University of Science and Technology of China, Hefei 230026, People's Republic of China}
+\affil[2]{Institute of Artificial Intelligence, Hefei Comprehensive National Science Center, Hefei, 230088, People's Republic of China}
+\affil[3]{Hefei National Laboratory, University of Science and Technology of China, Hefei, 230088, People's Republic of China}
+\renewcommand\Authfont{\small}
+\renewcommand\Affilfont{\itshape\small}
 \maketitle
 \tableofcontents
 \chapter{Overview}
