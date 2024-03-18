@@ -638,7 +638,7 @@ class SimpleUpdateLattice(AbstractLattice):
                                   new_dimension)
                 # [here q] --- [u s v] --- [next q]
                 s /= s.norm_2()
-                self.environment[*here, direction] = s
+                self.environment[(*here, direction)] = s
                 u = self._try_multiple(u, *here, direction)
                 v = self._try_multiple(v, *next_here, inverse_direction)
                 # [here q][u] --- [inverse of s] --- [v][next r]
@@ -654,7 +654,7 @@ class SimpleUpdateLattice(AbstractLattice):
                 u = self._try_multiple(u, *here, direction, division=True)
                 # [v] --- [s] --- [u] --- [next site]
                 s /= s.norm_2()
-                self.environment[*here, direction] = s
+                self.environment[(*here, direction)] = s
                 u = self._try_multiple(u, *next_here, inverse_direction)
                 v = self._try_multiple(v, *here, direction)
                 # [v] --- [inverse of s] --- [u] --- [next site]
