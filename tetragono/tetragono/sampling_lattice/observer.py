@@ -598,6 +598,8 @@ class Observer():
             param = (reweight_s / self._total_weight)**(1 / 2)
             Delta.append((self._delta_to_array(delta_s) - delta) * param)
             Energy.append((energy_s - energy) * param)
+        self._Deltas = None
+        # The previous memory is not needed any more, delete it here
         Delta = np.asarray(Delta)
         Energy = np.asarray(Energy).conjugate()
 
@@ -721,6 +723,8 @@ class Observer():
         for _, energy_s, delta_s in self._weights_and_deltas():
             Delta.append(self._delta_to_array(delta_s) - delta)
             Energy.append(energy_s.conjugate() - energy.conjugate())
+        self._Deltas = None
+        # The previous memory is not needed any more, delete it here
         Delta = np.asfortranarray(Delta, dtype=dtype)
         Energy = np.asfortranarray(Energy, dtype=dtype)
 
