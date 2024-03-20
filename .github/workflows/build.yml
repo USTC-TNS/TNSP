@@ -18,7 +18,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: install mpi, openblas and gtest/gmock
-        run: sudo apt-get install -y mpi-default-dev libopenblas-serial-dev libgtest-dev libgmock-dev
+        run: sudo apt-get update && sudo apt-get install -y mpi-default-dev libopenblas-serial-dev libgtest-dev libgmock-dev
       - name: make build directory
         run: mkdir ${{runner.workspace}}/build
       - name: configure
@@ -54,7 +54,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: install mpi, scalapack
-        run: sudo apt-get install -y mpi-default-dev libscalapack-mpi-dev
+        run: sudo apt-get update && sudo apt-get install -y mpi-default-dev libscalapack-mpi-dev
       - name: setup python
         uses: actions/setup-python@v4
         with:
@@ -99,7 +99,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: install emacs
-        run: sudo apt-get install -y emacs
+        run: sudo apt-get update && sudo apt-get install -y emacs
       - name: export to markdown
         run: emacs ${{matrix.package}}/README.org --batch -f org-md-export-to-markdown --kill
       - name: upload to artifact
@@ -406,7 +406,7 @@ jobs:
         run: git fetch --tags --force
         # See: https://github.com/actions/checkout/issues/290
       - name: install emacs
-        run: sudo apt-get install -y emacs
+        run: sudo apt-get update && sudo apt-get install -y emacs
       - name: export to markdown
         run: emacs CHANGELOG.org --batch -f org-md-export-to-markdown --kill
       - name: install setuptools_scm

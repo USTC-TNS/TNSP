@@ -33,7 +33,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: install emacs
-        run: sudo apt-get install -y emacs
+        run: sudo apt-get update && sudo apt-get install -y emacs
       - name: export to latex
         run: |
           emacs ${{matrix.file}}.org --batch --eval "(progn (require 'ox-latex) (setq org-confirm-babel-evaluate nil) (beginning-of-buffer) (org-babel-next-src-block) (org-babel-execute-src-block) (org-latex-export-to-latex))"
@@ -54,7 +54,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
       - name: install emacs, pygments and texlive
-        run: sudo apt-get install -y emacs python3-pygments texlive-full
+        run: sudo apt-get update && sudo apt-get install -y emacs python3-pygments texlive-full
       - name: download artifact
         uses: actions/download-artifact@v3
         with:
