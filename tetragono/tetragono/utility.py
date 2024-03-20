@@ -266,7 +266,7 @@ def import_from_tetpath(full_name):
         name = ".".join(names[:i + 1])
         spec = importlib.machinery.PathFinder.find_spec(name, path)
         if spec is None:
-            raise ModuleNotFoundError(f"No module named '{full_name}'")
+            raise ModuleNotFoundError(f"No module named '{name}'")
         path = spec.submodule_search_locations
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
@@ -282,7 +282,7 @@ def import_from_current_dir(full_name):
         name = ".".join(names[:i + 1])
         spec = importlib.machinery.PathFinder.find_spec(name, path)
         if spec is None:
-            raise ModuleNotFoundError(f"No module named '{full_name}'")
+            raise ModuleNotFoundError(f"No module named '{name}'")
         path = spec.submodule_search_locations
         module = importlib.util.module_from_spec(spec)
         sys.modules[spec.name] = module
@@ -298,34 +298,34 @@ def get_imported_function(module_name_or_function, function_name):
         module = import_from_current_dir(module_name_or_function)
         return getattr(module, function_name)
     except ModuleNotFoundError as e:
-        if not f"No module named '{module_name_or_function}'" == str(e):
+        if not f"No module named '{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     # 2. TETPATH
     try:
         module = import_from_tetpath(module_name_or_function)
         return getattr(module, function_name)
     except ModuleNotFoundError as e:
-        if not f"No module named '{module_name_or_function}'" == str(e):
+        if not f"No module named '{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     # 3. tetraku
     try:
         module = importlib.import_module("." + module_name_or_function, "tetraku.models")
         return getattr(module, function_name)
     except ModuleNotFoundError as e:
-        if not f"No module named 'tetraku.models.{module_name_or_function}'" == str(e):
+        if not f"No module named 'tetraku.models.{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     try:
         module = importlib.import_module("." + module_name_or_function, "tetraku.ansatzes")
         return getattr(module, function_name)
     except ModuleNotFoundError as e:
-        if not f"No module named 'tetraku.ansatzes.{module_name_or_function}'" == str(e):
+        if not f"No module named 'tetraku.ansatzes.{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     # 4. normal import
     try:
         module = importlib.import_module(module_name_or_function)
         return getattr(module, function_name)
     except ModuleNotFoundError as e:
-        if not f"No module named '{module_name_or_function}'" == str(e):
+        if not f"No module named '{module_name_or_function}'".startswith(str(e)[:-1]):
             raise
     raise ValueError("Invalid module name")
 
