@@ -16,12 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-import signal
 from datetime import datetime
 import numpy as np
 import TAT
 from ..sampling_lattice import SamplingLattice, Observer, SweepSampling, ErgodicSampling, DirectSampling
-from ..utility import (show, showln, mpi_rank, mpi_size, SignalHandler, seed_differ, lattice_randomize, write_to_file,
+from ..utility import (show, showln, mpi_rank, mpi_size, seed_differ, lattice_randomize, write_to_file,
                        get_imported_function, restrict_wrapper, bcast_number, write_configurations)
 
 
@@ -325,127 +324,122 @@ def gradient_descent(
         )
 
     # Main loop
-    with SignalHandler(signal.SIGINT) as sigint_handler:
-        for grad_step in range(grad_total_step):
-            if need_energy_observer:
-                configuration_pool = []
-            # Sampling and observe
-            with seed_differ, observer:
-                # Sampling method
-                if sampling_method == "sweep":
-                    if sweep_hopping_hamiltonians is not None:
-                        hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians,
-                                                                     "hopping_hamiltonians")(state)
-                    else:
-                        hopping_hamiltonians = None
-                    sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
-                    sampling_total_step = sampling_total_step
-                    # Initial sweep configuration
-                    sampling.configuration.import_configuration(sampling_configurations)
-                elif sampling_method == "ergodic":
-                    sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
-                    sampling_total_step = sampling.total_step
-                elif sampling_method == "direct":
-                    sampling = DirectSampling(state, configuration_cut_dimension, restrict,
-                                              direct_sampling_cut_dimension)
-                    sampling_total_step = sampling_total_step
+    for grad_step in range(grad_total_step):
+        if need_energy_observer:
+            configuration_pool = []
+        # Sampling and observe
+        with seed_differ, observer:
+            # Sampling method
+            if sampling_method == "sweep":
+                if sweep_hopping_hamiltonians is not None:
+                    hopping_hamiltonians = get_imported_function(sweep_hopping_hamiltonians,
+                                                                 "hopping_hamiltonians")(state)
                 else:
-                    raise ValueError("Invalid sampling method")
-                # Sampling run
-                for sampling_step in range(sampling_total_step):
-                    if sampling_step % mpi_size == mpi_rank:
-                        possibility, configuration = sampling()
-                        observer(possibility, configuration)
-                        if need_energy_observer:
-                            configuration_pool.append((possibility, configuration))
-                        show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
-                # Save configuration
-                if mpi_rank < sampling_total_step and sampling_method != "ergodic":
-                    new_configurations = configuration.export_configuration()
-                    sampling_configurations.resize(new_configurations.shape, refcheck=False)
-                    np.copyto(sampling_configurations, new_configurations)
-            showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
-            if sampling_method == "direct":
-                showln(f"direct sampling instability is {observer.instability}")
+                    hopping_hamiltonians = None
+                sampling = SweepSampling(state, configuration_cut_dimension, restrict, hopping_hamiltonians)
+                sampling_total_step = sampling_total_step
+                # Initial sweep configuration
+                sampling.configuration.import_configuration(sampling_configurations)
+            elif sampling_method == "ergodic":
+                sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
+                sampling_total_step = sampling.total_step
+            elif sampling_method == "direct":
+                sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
+                sampling_total_step = sampling_total_step
+            else:
+                raise ValueError("Invalid sampling method")
+            # Sampling run
+            for sampling_step in range(sampling_total_step):
+                if sampling_step % mpi_size == mpi_rank:
+                    possibility, configuration = sampling()
+                    observer(possibility, configuration)
+                    if need_energy_observer:
+                        configuration_pool.append((possibility, configuration))
+                    show(f"sampling {sampling_step}/{sampling_total_step}, energy={observer.energy}")
+            # Save configuration
+            if mpi_rank < sampling_total_step and sampling_method != "ergodic":
+                new_configurations = configuration.export_configuration()
+                sampling_configurations.resize(new_configurations.shape, refcheck=False)
+                np.copyto(sampling_configurations, new_configurations)
+        showln(f"sampling done, total_step={sampling_total_step}, energy={observer.energy}")
+        if sampling_method == "direct":
+            showln(f"direct sampling instability is {observer.instability}")
 
-            # Measure log
-            measurement_result = observer.result
-            measurement_whole_result = observer.whole_result
-            if measurement is not None and mpi_rank == 0:
-                for measure_term in measurement:
-                    # If measure_term is not a module name but a function directly,
-                    # it is only used when setting the measurement.
-                    if isinstance(measure_term, str):
-                        save_result = get_imported_function(measure_term, "save_result")
-                        save_result(
-                            state,
-                            measurement_result[measure_term],
-                            measurement_whole_result[measure_term],
-                        )
-            # Energy log
-            if log_file and mpi_rank == 0:
-                with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
-                    print(*observer.energy, file=file)
+        # Measure log
+        measurement_result = observer.result
+        measurement_whole_result = observer.whole_result
+        if measurement is not None and mpi_rank == 0:
+            for measure_term in measurement:
+                # If measure_term is not a module name but a function directly,
+                # it is only used when setting the measurement.
+                if isinstance(measure_term, str):
+                    save_result = get_imported_function(measure_term, "save_result")
+                    save_result(
+                        state,
+                        measurement_result[measure_term],
+                        measurement_whole_result[measure_term],
+                    )
+        # Energy log
+        if log_file and mpi_rank == 0:
+            with open(log_file.replace("%t", time_str), "a", encoding="utf-8") as file:
+                print(*observer.energy, file=file)
 
-            if use_gradient:
+        if use_gradient:
 
-                # Get gradient
-                if use_natural_gradient:
-                    if use_natural_gradient_by_direct_pseudo_inverse:
-                        grad = observer.natural_gradient_by_direct_pseudo_inverse(natural_gradient_r_pinv,
-                                                                                  natural_gradient_a_pinv,
-                                                                                  scalapack_libraries.split(","))
-                    else:
-                        grad = observer.natural_gradient_by_conjugate_gradient(conjugate_gradient_method_step,
-                                                                               conjugate_gradient_method_error)
+            # Get gradient
+            if use_natural_gradient:
+                if use_natural_gradient_by_direct_pseudo_inverse:
+                    grad = observer.natural_gradient_by_direct_pseudo_inverse(natural_gradient_r_pinv,
+                                                                              natural_gradient_a_pinv,
+                                                                              scalapack_libraries.split(","))
                 else:
-                    grad = observer.gradient
+                    grad = observer.natural_gradient_by_conjugate_gradient(conjugate_gradient_method_step,
+                                                                           conjugate_gradient_method_error)
+            else:
+                grad = observer.gradient
 
-                # Change state
-                if use_check_difference:
-                    showln("checking difference")
-                    check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta)
+            # Change state
+            if use_check_difference:
+                showln("checking difference")
+                check_difference(state, observer, grad, energy_observer, configuration_pool, check_difference_delta)
 
-                elif use_line_search:
-                    showln("line searching")
-                    grad *= (state.lattice_dot() / state.lattice_dot(grad, grad))**0.5
-                    grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool,
-                                                 grad_step_size, line_search_amplitude)
-                    state.apply_gradient(grad, grad_step_size * line_search_parameter)
+            elif use_line_search:
+                showln("line searching")
+                grad *= (state.lattice_dot() / state.lattice_dot(grad, grad))**0.5
+                grad_step_size = line_search(state, observer, grad, energy_observer, configuration_pool, grad_step_size,
+                                             line_search_amplitude)
+                state.apply_gradient(grad, grad_step_size * line_search_parameter)
+            else:
+                if grad_step == 0 or momentum_parameter == 0.0:
+                    total_grad = grad
                 else:
-                    if grad_step == 0 or momentum_parameter == 0.0:
-                        total_grad = grad
-                    else:
-                        if orthogonalize_momentum:
-                            param = state.lattice_dot(total_grad) / state.lattice_dot()
-                            total_grad -= state._lattice * param
-                        total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
-                    if use_random_gradient:
-                        this_grad = lattice_randomize(total_grad)
-                    else:
-                        this_grad = total_grad
-                    if use_fix_relative_step_size:
-                        this_grad *= (state.lattice_dot() / state.lattice_dot(this_grad, this_grad))**0.5
-                    state.apply_gradient(this_grad, grad_step_size)
-                showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
+                    if orthogonalize_momentum:
+                        param = state.lattice_dot(total_grad) / state.lattice_dot()
+                        total_grad -= state._lattice * param
+                    total_grad = total_grad * momentum_parameter + grad * (1 - momentum_parameter)
+                if use_random_gradient:
+                    this_grad = lattice_randomize(total_grad)
+                else:
+                    this_grad = total_grad
+                if use_fix_relative_step_size:
+                    this_grad *= (state.lattice_dot() / state.lattice_dot(this_grad, this_grad))**0.5
+                state.apply_gradient(this_grad, grad_step_size)
+            showln(f"grad {grad_step}/{grad_total_step}, step_size={grad_step_size}")
 
-                # Fix gauge
-                if fix_gauge:
-                    state.expand_dimension(1.0, 0)
-                # Normalize state
-                observer.normalize_lattice()
-                # Bcast state
-                state.bcast_lattice()
+            # Fix gauge
+            if fix_gauge:
+                state.expand_dimension(1.0, 0)
+            # Normalize state
+            observer.normalize_lattice()
+            # Bcast state
+            state.bcast_lattice()
 
-            # Yield the measurement result
-            yield (measurement_whole_result, measurement_result)
+        # Yield the measurement result
+        yield (measurement_whole_result, measurement_result)
 
-            # Save state
-            if save_state_file:
-                write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
-            if save_configuration_file:
-                write_configurations(sampling_configurations,
-                                     save_configuration_file.replace("%s", str(grad_step)).replace("%t", time_str))
-
-            if sigint_handler():
-                break
+        # Save state
+        if save_state_file:
+            write_to_file(state, save_state_file.replace("%s", str(grad_step)).replace("%t", time_str))
+        if save_configuration_file:
+            write_configurations(sampling_configurations,
+                                 save_configuration_file.replace("%s", str(grad_step)).replace("%t", time_str))
