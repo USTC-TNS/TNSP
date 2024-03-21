@@ -18,7 +18,7 @@
 
 import torch
 import TAT
-from ..utility import mpi_size, mpi_rank
+from ..utility import mpi_size, mpi_rank, seed_differ
 from .state import SamplingNeuralState, Configuration, index_tensor_element
 
 
@@ -89,6 +89,30 @@ class SweepSampling:
                 weights = torch.where(go, weights_s, weights)
 
             yield configurations, amplitudes, weights
+
+
+class UniformSampling:
+    """
+    UniformSampling
+    """
+
+    __slots__ = ["owner", "batch_size", "configuration"]
+
+    def __init__(self, owner, batch_size):
+        self.owner = owner
+        self.batch_size = batch_size
+
+        self.configuration = Configuration(self.owner).export_configuration()
+
+    def __call__(self):
+        generator = torch.Generator(device=self.owner.device)
+        generator.manual_seed(seed_differ.random_int())
+        results = self.configuration.repeat(self.batch_size, 1, 1, 1)
+        for [l1, l2, orbit], edge in self.owner.physics_edges:
+            results[:, l1, l2, orbit] = torch.randint(edge.dimension, [self.batch_size], generator=generator)
+
+        amplitudes = self.owner(results, enable_grad=False)
+        return results, amplitudes, torch.ones_like(amplitudes)
 
 
 class ErgodicSampling:

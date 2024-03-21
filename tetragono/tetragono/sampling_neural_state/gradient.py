@@ -19,7 +19,7 @@
 from datetime import datetime
 import torch
 import TAT
-from ..sampling_neural_state import SamplingNeuralState, Observer, SweepSampling, ErgodicSampling
+from ..sampling_neural_state import SamplingNeuralState, Observer, SweepSampling, UniformSampling, ErgodicSampling
 from ..utility import (show, showln, mpi_rank, mpi_size, seed_differ, write_to_file, get_imported_function,
                        bcast_number, bcast_buffer, write_configurations)
 
@@ -137,8 +137,8 @@ def gradient_descent(
         `use_fix_relative_step_size` is set to True, and is the relative step size if that is set to False.
 
     # About sampling
-    sampling_method : "sweep" | "ergodic", default="sweep"
-        The sampling method, which could be one of sweep and ergodic.
+    sampling_method : "sweep" | "uniform" | "ergodic", default="sweep"
+        The sampling method, which could be one of sweep, uniform and ergodic.
     sampling_configurations : object, default=zero_configuration
         The initial configuration used in sweep sampling methods. All sampling methods will save the last configuration
         into this sampling_configurations variable. If the function is invoked from gm_run(_g) interface, this parameter
@@ -273,6 +273,10 @@ def gradient_descent(
                 else:
                     hopping_hamiltonians = None
                 sampling = SweepSampling(state, sampling_configurations, sweep_alpha, hopping_hamiltonians)
+                sampling_total_step = sampling_total_step
+                sampling_batch_size = len(sampling_configurations)
+            elif sampling_method == "uniform":
+                sampling = UniformSampling(state, len(sampling_configurations))
                 sampling_total_step = sampling_total_step
                 sampling_batch_size = len(sampling_configurations)
             elif sampling_method == "ergodic":

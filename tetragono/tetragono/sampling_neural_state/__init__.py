@@ -17,5 +17,5 @@
 #
 
 from .state import Configuration, SamplingNeuralState
-from .sampling import SweepSampling, ErgodicSampling
+from .sampling import SweepSampling, UniformSampling, ErgodicSampling
 from .observer import Observer
