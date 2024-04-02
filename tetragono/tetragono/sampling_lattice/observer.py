@@ -637,8 +637,12 @@ class Observer():
         gpu_Ns_total = sum(gpu_Ns_list)  # 控制gpu的进程需要知道自己一共要处理多少采样
         gpu_Energy = np.zeros([gpu_Ns_total], dtype=dtype)  # 控制gpu的进程需要收集所有的Energy
         mpi_gpu_comm.Gatherv(Energy, (gpu_Energy, gpu_Ns_list))  # 收集
-        gpu_Delta = np.zeros([gpu_Ns_total, Np], dtype=dtype)  # 控制gpu的进程需要手机所有的Delta
+        if mpi_gpu_comm.rank == 0:
+            gpu_Delta = np.zeros([gpu_Ns_total, Np], dtype=dtype)  # 控制gpu的进程需要手机所有的Delta
+        else:
+            gpu_Delta = np.zeros([1], dtype=dtype)
         mpi_gpu_comm.Gatherv(Delta, (gpu_Delta, gpu_Ns_list * Np))  # 收集
+        Delta = None
 
         if exec_color == 1:
             # 重新分发矩阵
@@ -670,6 +674,7 @@ class Observer():
                     gpu_Delta[:, begin:end],
                 )
                 begin = end
+            gpu_Delta = None
             send_info = Ns_list[exec_rank] * Np_list
             # 准备buff接受重新分发后的矩阵
             Delta_redistributed = np.zeros([Ns_total, Np_list[exec_rank]], dtype=dtype)
@@ -677,10 +682,12 @@ class Observer():
             # 接收
             mpi_exec_comm.Barrier()  # 不加的话mpi会出错，似乎是mpi的一个bug
             mpi_exec_comm.Alltoallv((Delta_pre, send_info), (Delta_redistributed, recv_info))
+            Delta_pre = None
 
             x_i, reason, result_step, result_error = tetraux.cg(Ns_total, Np_list[exec_rank], all_Energy,
                                                                 Delta_redistributed, step, error, gpu_color,
                                                                 mpi_exec_comm)
+            Delta_redistributed = None
             x = np.zeros([Np], dtype=dtype)
             mpi_exec_comm.Allgatherv(x_i, (x, Np_list))
         else:
