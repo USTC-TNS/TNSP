@@ -406,6 +406,7 @@ class Observer():
                     self._Delta[l1][l2] += hole
                     self._EDelta[l1][l2] += Es * hole
                 if self._enable_natural:
+                    holes = self._delta_to_array(holes)
                     if self._cache_natural_delta:
                         with open(os.path.join(self._cache_natural_delta, str(mpi_rank)), "ab") as file:
                             pickle.dump(holes, file)
@@ -596,7 +597,7 @@ class Observer():
         Energy = []
         for reweight_s, energy_s, delta_s in self._weights_and_deltas():
             param = (reweight_s / self._total_weight)**(1 / 2)
-            Delta.append((self._delta_to_array(delta_s) - delta) * param)
+            Delta.append((delta_s - delta) * param)
             Energy.append((energy_s - energy) * param)
         self._Deltas = None
         # The previous memory is not needed any more, delete it here
@@ -721,7 +722,7 @@ class Observer():
         Delta = []
         Energy = []
         for _, energy_s, delta_s in self._weights_and_deltas():
-            Delta.append(self._delta_to_array(delta_s) - delta)
+            Delta.append(delta_s - delta)
             Energy.append(energy_s.conjugate() - energy.conjugate())
         self._Deltas = None
         # The previous memory is not needed any more, delete it here
