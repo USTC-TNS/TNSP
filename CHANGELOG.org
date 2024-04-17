@@ -9,6 +9,7 @@
 + *tetragono*: Remove SIGINT handle in gradient descent.
 *** Fixed
 + *tetragono*: Fix the import issue in tetragono.
++ *tetragono*: Fix missing signal SIGUSR1 in windows platform.
 
 ** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.15...v0.3.16][v0.3.16]] - 2024-03-20
 

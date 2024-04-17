@@ -364,7 +364,8 @@ def sigusr1_handler(signum, frame):
                     "".join(format_stack()[:-1]) + "\n"))
 
 
-signal.signal(signal.SIGUSR1, sigusr1_handler)
+if hasattr(signal, "SIGUSR1"):
+    signal.signal(signal.SIGUSR1, sigusr1_handler)
 
 
 def restrict_wrapper(origin_restrict):
