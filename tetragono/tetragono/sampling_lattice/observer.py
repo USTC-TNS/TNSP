@@ -597,11 +597,13 @@ class Observer():
         Energy = []
         for reweight_s, energy_s, delta_s in self._weights_and_deltas():
             param = (reweight_s / self._total_weight)**(1 / 2)
-            Delta.append((delta_s - delta) * param)
+            if not self._cache_natural_delta:
+                Delta.append((delta_s - delta) * param)
             Energy.append((energy_s - energy) * param)
-        self._Deltas = None
-        # The previous memory is not needed any more, delete it here
-        Delta = np.asarray(Delta)
+        if not self._cache_natural_delta:
+            self._Deltas = None
+            # The previous memory is not needed any more, delete it here
+            Delta = np.asarray(Delta)
         Energy = np.asarray(Energy).conjugate()
 
         # A x = b
@@ -611,14 +613,27 @@ class Observer():
         def D(v):
             # Ns Np * Np => Ns
             if Energy.size != 0:
-                return Delta @ v
+                if self._cache_natural_delta:
+                    result = []
+                    for reweight_s, energy_s, delta_s in self._weights_and_deltas():
+                        param = (reweight_s / self._total_weight)**(1 / 2)
+                        result.append((delta_s - delta) @ v * param)
+                    return np.array(result)
+                else:
+                    return Delta @ v
             else:
                 return np.zeros_like(Energy)
 
         def DT(v):
             # Np Ns * Ns => Np
             if Energy.size != 0:
-                result = np.conj(Delta.T) @ v
+                if self._cache_natural_delta:
+                    result = np.zeros_like(delta)
+                    for [reweight_s, energy_s, delta_s], v_s in zip(self._weights_and_deltas(), v):
+                        param = (reweight_s / self._total_weight)**(1 / 2)
+                        result += (delta_s - delta) * param * v_s
+                else:
+                    result = np.conj(Delta.T) @ v
             else:
                 result = np.zeros_like(delta)
             allreduce_buffer(result)
