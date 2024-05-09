@@ -34,7 +34,7 @@
         (insert text)
         ;; replace verbatim env by minted
         (goto-char (point-min))
-        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{cpp}")
         (replace-string "\\end{verbatim}" "\\end{minted}")
         (buffer-substring-no-properties (point-min) (point-max)))))
   (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
