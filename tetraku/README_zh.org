@@ -1,0 +1,68 @@
+#+TITLE: tetraku
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+Tetraku 是 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono][tetragono]] 中常用模型和 ansatz 的集合.
+更多信息可在每个目录内的 README 文件中找到.
+
+存在一些流行的模型, 例如 [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/J1J2/][方格子上的 J1-J2 模型]],
+[[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/honeycomb_hubbard/][蜂窝状格子上的 Hubbard 模型]],
+以及 [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/rydberg/][方格子上的 Rydberg 模型]],
+如果用户想要添加新模型, 可以参考这些模型.

@@ -1,0 +1,431 @@
+#+TITLE: PyScalapack
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+PyScalapack是ScaLAPACK的Python封装.
+要使用PySCALAPACK, 用户必须提供ScaLAPACK动态共享库的路径, 该库默认由 =ctypes.CDLL= 加载.
+
+* 安装
+
+请在 =site-packages= 目录中复制或创建该目录的软链接.
+或者, 用户可以通过运行命令 =pip install PyScalapack= 来使用pip安装PyScalapack包.
+
+* 文档
+
+** 加载ScaLAPACK
+
+在进行任何进一步操作之前, 应先加载ScaLAPACK动态共享库.
+
+#+begin_src python :results output :exports both :cache yes
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+#+end_src
+
+#+RESULTS[e5706c0d5191fcdeeee7a83797af5123b6bb4e12]:
+
+如果ScaLAPACK动态共享库位于默认路径之外, 用户必须提供它们的绝对路径.
+如果ScaLAPACK函数分布在多个cdecl约定的动态共享库中,
+在调用 =PySCALAPACK= 时, 应包含所有这些库. 例如, 使用 =PySCALAPACK("libmkl_core.so", ...)= .
+要覆盖默认加载器 =ctypes.CDLL= , 可以向 =PySCALAPACK= 添加一个名为 =loader= 的关键字参数,
+这在处理非cdecl约定的共享库时特别有用.
+
+** 创建上下文
+
+创建一个BLACS上下文以用于后续的BLACS或ScaLAPACK操作.
+上下文告知ScaLAPACK如何在各个进程之间定位分布式矩阵.
+建立上下文对于创建BLACS矩阵是强制性的.
+它只需要三个参数:布局(列优先或行优先), 进程网格中的行数, 以及进程网格中的列数.
+将布局设置为b'C'表示列优先, 或b'R'表示行优先.
+
+为确保资源的有效利用并防止空闲进程, 请确保 =nprow= 和 =npcol= 的乘积等于进程数.
+如果 =nprow= 和 =npcol= 的乘积超过了进程数, 将引发致命错误.
+当 =nprow= 和 =npcol= 的乘积小于进程数时, 某些进程可能会被排除在上下文之外.
+这些被排除的进程在上下文中被标记为无效.
+要检查当前进程是否有效, 用户可以检查 =context.valid= 属性.
+或者, 他们也可以使用诸如 =bool(context)= 之类的布尔操作.
+
+PyScalapack中的上下文具有多个属性, 包括:
++ =layout=:进程网格的布局, 可以是'R'表示行优先, 或'C'表示列优先;
++ =nprow=:进程网格的行数;
++ =npcol=:进程网格的列数;
++ =rank=:当前进程的等级;
++ =size=:进程网格的大小;
++ =ictx=:来自BLACS的原始上下文句柄;
++ =myrow=:当前进程的行索引;
++ =mycol=:当前进程的列索引;
++ =valid=:当前进程是否有效, 等于 =rank < nprol * npcol= .
+这些属性中的大多数都是ctypes bool或ctypes int类型.
+要获取它们的Python值, 用户可以使用 =value= 属性访问它们, 例如 =context.nprow.value= .
+
+#+begin_src python :results output :exports both :cache yes
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  with scalapack(layout=b'C', nprow=1, npcol=1) as context:
+      for key, value in context.__dict__.items():
+          print(f"{key} = {value}")
+#+end_src
+
+#+RESULTS[137567c363a5cfb4935646df81e5b831d55df7fc]:
+#+begin_example
+scalapack = <PyScalapack.Scalapack object at 0x7f6242fa0210>
+layout = c_char(b'C')
+nprow = c_int(1)
+npcol = c_int(1)
+rank = c_int(0)
+size = c_int(1)
+ictxt = c_int(0)
+myrow = c_int(0)
+mycol = c_int(0)
+valid = True
+#+end_example
+
+用户可以使用函数 =context.barrier(scope=b'A')= 来同步进程网格内的所有进程.
+此外, 使用 =scope=b'R'= 调用将同步进程网格中同一行的所有进程,
+而使用 =scope=b'C'= 调用 =context.barrier= 将同步进程网格中同一列的所有进程.
+
+** 创建数组
+
+使用 =context.array= 来生成一个块循环分布的数组.
+矩阵的形状依赖于参数 =m= 和 =n= , 而块大小在进程间分布则由 =mb= 和 =nb= 设定.
+一旦数组被创建, 每个进程将拥有自己的局部矩阵维度, 这些维度可以通过 =local_m= 和 =local_n= 访问.
+
+#+begin_src python :results output :exports both :cache yes :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 4 -s all python
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack(
+      "libmpi.so",
+      "libmkl_core.so",
+      "libmkl_sequential.so",
+      "libmkl_intel_lp64.so",
+      "libmkl_blacs_intelmpi_lp64.so",
+      "libmkl_scalapack_lp64.so",
+  )
+
+  with scalapack(b'C', 2, 2) as context:
+      array = context.array(
+          m=23,
+          n=47,
+          mb=5,
+          nb=5,
+          dtype=np.float64,
+      )
+      if context.rank.value == 0:
+          print(f"Matrix dimension is ({array.m}, {array.n})")
+      print(f"Matrix local dimension at process " +  #
+            f"({context.myrow.value}, {context.mycol.value})" +  #
+            f" is ({array.local_m}, {array.local_n})")
+#+end_src
+
+#+RESULTS[73ac6379303a40dbcb1fa732926d6abff84dfc8a]:
+#+begin_example
+Matrix dimension is (23, 47)
+Matrix local dimension at process (0, 0) is (13, 25)
+Matrix local dimension at process (1, 0) is (10, 25)
+Matrix local dimension at process (0, 1) is (13, 22)
+Matrix local dimension at process (1, 1) is (10, 22)
+#+end_example
+
+用户可以通过指定 =dtype= 来创建一个具有所需标量类型的新空矩阵.
+或者, 他们可以通过将局部矩阵传递给 =data= 参数来提供一个现有的分布式矩阵,
+确保矩阵的局部维度在所有进程中保持准确.
+无论数组是如何生成的,
+用户都可以通过使用 =array.data= 访问局部矩阵数据, 并通过 =array.dtype= 检索标量类型.
+
+#+begin_src python :results output :exports both :cache yes
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  with scalapack(b'C', 1, 1) as context:
+      array = context.array(
+          m=128,
+          n=512,
+          mb=1,
+          nb=1,
+          data=np.zeros([128, 512], order='F'),
+      )
+      print(f"Matrix dimension is ({array.m}, {array.n})")
+      print(f"Matrix local dimension is " +  #
+            f"({array.local_m}, {array.local_n})")
+
+  with scalapack(b'R', 1, 1) as context:
+      array = context.array(
+          m=128,
+          n=512,
+          mb=1,
+          nb=1,
+          data=np.zeros([128, 512], order='C'),
+      )
+      print(f"Matrix dimension is ({array.m}, {array.n})")
+      print(f"Matrix local dimension is " +  #
+            f"({array.local_m}, {array.local_n})")
+#+end_src
+
+#+RESULTS[eef235c36ff90e5ddfc1544816c1dce9a5c50e3c]:
+#+begin_example
+Matrix dimension is (128, 512)
+Matrix local dimension is (128, 512)
+Matrix dimension is (128, 512)
+Matrix local dimension is (128, 512)
+#+end_example
+
+当传递给定的局部矩阵时, 请确保NumPy数组顺序与上下文布局相匹配.
+使用 =F= 表示列优先布局, 使用 =C= 表示行优先布局.
+
+** 重新分发矩阵
+
+在ScaLAPACK中, =p?gemr2d= 子程序作为重新分发矩阵的工具.
+要在ScaLAPACK中使用 =p?gemr2d= 将矩阵从一个上下文重新分发到另一个上下文,
+用户应该提供矩阵的维度, 关于两个矩阵的详细信息(可以通过 =scalapack_params()= 获得),
+以及一个原始的BLACS上下文句柄给子程序.
+
+#+begin_src python :results output :exports both :cache yes :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 2 -s all python
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack(
+      "libmpi.so",
+      "libmkl_core.so",
+      "libmkl_sequential.so",
+      "libmkl_intel_lp64.so",
+      "libmkl_blacs_intelmpi_lp64.so",
+      "libmkl_scalapack_lp64.so",
+  )
+
+  with (
+          scalapack(b'C', 1, 2) as context1,
+          scalapack(b'C', 2, 1) as context2,
+  ):
+      m = 2
+      n = 2
+      array1 = context1.array(m, n, 1, 1, dtype=np.float64)
+      array1.data[...] = np.random.randn(*array1.data.shape)
+      print(f"rank={context1.rank.value} before " +  #
+            f"redistribute {array1.data.reshape([-1])}")
+      array2 = context2.array(m, n, 1, 1, dtype=np.float64)
+      scalapack.pgemr2d["D"](
+          ,*(m, n),
+          ,*array1.scalapack_params(),
+          ,*array2.scalapack_params(),
+          context1.ictxt,
+      )
+      print(f"rank={context2.rank.value} after " +  #
+            f"redistribute {array2.data.reshape([-1])}")
+#+end_src
+
+#+RESULTS[890fb2dad369104eaa640775a2ecea79b4ea87f6]:
+#+begin_example
+rank=0 before redistribute [0.90707631 1.18754568]
+rank=0 after redistribute [0.90707631 0.75556488]
+rank=1 before redistribute [ 0.75556488 -0.4480556 ]
+rank=1 after redistribute [ 1.18754568 -0.4480556 ]
+#+end_example
+
+** 调用ScaLAPACK函数
+
+以下是一个示例, 展示了如何调用pdgemm函数, 并将其结果与使用NumPy进行的类似计算进行比较.
+我们创建了两个上下文,  =context= 作为主上下文, 而 =context0= 作为仅包含用于数据重新分发的0号进程的辅助上下文.
+最初, 我们在 =context0= 中生成一个随机矩阵, 并将其重新分发到 =context= 中.
+重新分发后, 我们调用 =pdgemm= 在 =context= 中执行矩阵乘法.
+在此操作之后, 我们将得到的产品重新分发回 =context0= , 并与使用NumPy得出的计算结果进行对比.
+
+#+begin_src python :results output :exports both :cache yes :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 4 -s all python
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack(
+      "libmpi.so",
+      "libmkl_core.so",
+      "libmkl_sequential.so",
+      "libmkl_intel_lp64.so",
+      "libmkl_blacs_intelmpi_lp64.so",
+      "libmkl_scalapack_lp64.so",
+  )
+
+  L1 = 128
+  L2 = 512
+  with (
+          scalapack(b'C', 2, 2) as context,
+          scalapack(b'C', 1, 1) as context0,
+  ):
+      array0 = context0.array(L1, L2, 1, 1, dtype=np.float64)
+      if context0:
+          array0.data[...] = np.random.randn(*array0.data.shape)
+
+      array = context.array(L1, L2, 1, 1, dtype=np.float64)
+      scalapack.pgemr2d["D"](
+          ,*(L1, L2),
+          ,*array0.scalapack_params(),
+          ,*array.scalapack_params(),
+          context.ictxt,
+      )
+
+      result = context.array(L1, L1, 1, 1, dtype=np.float64)
+      scalapack.pdgemm(
+          b'N',
+          b'T',
+          ,*(L1, L1, L2),
+          scalapack.d_one,
+          ,*array.scalapack_params(),
+          ,*array.scalapack_params(),
+          scalapack.d_zero,
+          ,*result.scalapack_params(),
+      )
+
+      result0 = context0.array(L1, L1, 1, 1, dtype=np.float64)
+      scalapack.pgemr2d["D"](
+          ,*(L1, L1),
+          ,*result.scalapack_params(),
+          ,*result0.scalapack_params(),
+          context.ictxt,
+      )
+
+      if context0:
+          error = result0.data - array0.data @ array0.data.T
+          print(np.linalg.norm(error))
+#+end_src
+
+#+RESULTS[45df6f015efc092f39c782d6edd6d7388431e23f]:
+#+begin_example
+2.931808596345247e-12
+#+end_example
+
+** 调用LAPACK函数
+
+该软件包还提供了一个便捷的接口, 用于轻松调用LAPACK/BLAS函数.
+接下来的代码展示了一个调用 =dgemm= 的实例.
+用户在调用LAPACK/BLAS函数之前, 必须创建一个简单的上下文, 并创建单进程的ScaLAPACK数组 .
+
+#+begin_src python :results output :exports both :cache yes
+  import numpy as np
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  L1 = 128
+  L2 = 512
+  with scalapack(b'C', 1, 1) as context:
+      array = context.array(L1, L2, 1, 1, dtype=np.float64)
+      array.data[...] = np.random.randn(*array.data.shape)
+
+      result = context.array(L1, L1, 1, 1, dtype=np.float64)
+      scalapack.dgemm(
+          b'N',
+          b'T',
+          ,*(L1, L1, L2),
+          scalapack.d_one,
+          ,*array.lapack_params(),
+          ,*array.lapack_params(),
+          scalapack.d_zero,
+          ,*result.lapack_params(),
+      )
+
+      diff = result.data - array.data @ array.data.T
+      print(np.linalg.norm(diff))
+#+end_src
+
+#+RESULTS[e0699278e470d55c14466cc1127e4477dac37884]:
+#+begin_example
+0.0
+#+end_example
+
+** 通用变量和函数
+
+由于ScaLAPACK函数需要原始C类型的标量参数, 例如 =c_int= 或 =c_float= ,
+我们定义了几个常量变量, 包括 =zero = ctypes.c_int(0)= , =one = ctypes.c_int(1)=, 以及 =neg_one = ctypes.c_int(-1)=.
+浮点数1和0也分别命名为 =?_one= 和 =?_zero= , 其中 =?= 代表 =c=, =d=, =c= 或 =z=.
+=f_one= 和 =f_zero= 允许您根据所选标量类型获取浮点常量变量.
+
+#+begin_src python :results output :exports both :cache yes
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  print(scalapack.f_one["D"] == scalapack.d_one)
+  print(scalapack.f_zero["Z"] == scalapack.z_zero)
+#+end_src
+
+#+RESULTS[4e77ceabfac907082ddacb9139d48450d04fc922]:
+#+begin_example
+True
+True
+#+end_example
+
+一些函数, 如 =p?gemm= , 可以选择 =pgemm[char]= , 其中char代表 =S=, =D=, =C= 或 =Z=.
+但并非所有函数都有这种映射, 因为它是根据我们当前的需求手动映射的.
+用户可以自行映射额外的ScaLAPACK函数, 报告问题, 或提交拉取请求.
+
+#+begin_src python :results output :exports both :cache yes
+  import PyScalapack
+
+  scalapack = PyScalapack("libscalapack.so")
+
+  print(scalapack.pgemm["D"] == scalapack.pdgemm)
+#+end_src
+
+#+RESULTS[e3f81ad1f4a567680e85c21a0490db3858af8ccd]:
+#+begin_example
+True
+#+end_example

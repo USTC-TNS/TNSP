@@ -1,0 +1,301 @@
+#+TITLE: lazy-graph
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+lazy-graph 是一个Python库, 用于惰性求值, 并提供更新上游值的附加功能, 且允许轻松复制整个惰性图结构.
+
+* 安装
+
+请在 =site-packages= 目录中复制或创建该目录的软链接. 或者, 您可以通过运行命令 =pip install lazy_graph= 使用pip安装lazy-graph包.
+
+* 文档
+
+** 一个简单的例子
+
+我们可以创建一个值为 =1= 的根节点 =a= 和一个值为 =2= 的根节点 =b= , 然后创建一个名为 =c= 的新节点, 其值等于节点 =a= 和 =b= 的值之和.
+当我们尝试获取节点 =c= 的值时, 将调用计算 =c= 节点的求和函数.
+
+#+begin_src python :results output :exports both :session
+  from lazy import Root, Node
+
+
+  def add(a, b):
+      print(f"calculating {a} + {b}")
+      return a + b
+
+
+  print("create nodes")
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print("get the value")
+  print(f"c is {c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2
+c is 3
+#+end_example
+
+如前所述, 为了创建一个包含值 =x= 的根节点, 我们使用表达式 =Root(x)= .
+另一方面, 为了获得一个其值由函数 =func= 决定, 并带有任何额外的位置参数或关键字参数(如果提供)的节点,
+你应调用 =Node(func, *args, **kwargs)= .
+这将生成一个其值计算为 =func(*args, **kwargs)= 的节点.
+
+为了获取给定节点 =n= 的值, 只需使用函数 =n()= .
+这会在首次运行时计算值, 并在后续调用中使用缓存, 确保你的代码效率.
+
+** 检查节点是否已被计算
+
+为了确定指定节点 =n= 的值是否已被计算并存储在缓存中, 你可以使用 =bool(n)= .
+这个函数在节点的值存在于缓存中时返回 =True= , 否则返回 =False= .
+
+#+begin_src python :results output :exports both :session
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print(bool(c))
+  print("c is", c())
+  print(bool(c))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+False
+calculating 1 + 2
+c is 3
+True
+#+end_example
+
+** 更新上游节点的一个示例
+
+#+begin_src python :results output :exports both :session
+  print("create nodes")
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print("get the value")
+  print(f"c is {c()}")
+  print("get the value again")
+  print(f"c is {c()}")
+  print("update upstream")
+  a.reset(4)
+  print("get the new value")
+  print(f"c is {c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2
+c is 3
+get the value again
+c is 3
+update upstream
+get the new value
+calculating 4 + 2
+c is 6
+#+end_example
+
+在提供的代码片段中, 在重置上游节点 =a= 之前, 节点 =c= 的值仅在其初始执行时计算一次, 并在后续调用中利用缓存机制.
+然后, 通过调用 =a.reset(v)= , 其中 =v= 在这里等于 =4= , 可以将节点 =a= 的值重置为这个新值.
+在此操作之后, 调用 =c()= 将导致函数再次执行, 以获取节点 =c= 的更新值.
+
+** 位置和关键字参数可以混用, 常规值和惰性节点可以混用
+
+支持位置和关键字参数, 允许在创建节点时采用灵活的方法.
+您可以根据需要将这些参数与常规值混合使用.
+在提供的示例中, 我们使用各种类型的参数, 例如位置常规值, 位置惰性节点, 关键字常规值和关键字惰性 节点, 来构造节点 =z= .
+
+#+begin_src python :results output :exports both :session
+  def add4(a, b, c, d):
+      print(f"calculating {a} + {b} + {c} + {d}")
+      return a + b + c + d
+
+
+  print("create nodes")
+  a = Root(1)
+  c = Root(3)
+  z = Node(add4, a, 2, c=c, d=4)
+  print("get the value")
+  print(f"c is {z()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2 + 3 + 4
+c is 10
+#+end_example
+
+** 复制惰性节点的图
+
+#+begin_src python :results output :exports both :session
+  from lazy import Copy
+
+  print("create nodes")
+  a = Root(1)
+  b = Root(2)
+  c = Node(add, a, b)
+  print("get the value")
+  print(f"c is {c()}")
+
+  print("copy lazy graph")
+  copy = Copy()
+  new_a = copy(a)
+  new_b = copy(b)
+  new_c = copy(c)
+
+  print("get the new value")
+  print(f"new c is {new_c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+create nodes
+get the value
+calculating 1 + 2
+c is 3
+copy lazy graph
+get the new value
+new c is 3
+#+end_example
+
+前面的简单的例子中, 我们复制了图, 将 =a= 复制到 =new_a= , =b= 复制到 =new_b=, 以及 =c= 复制到 =new_c=.
+这是通过使用通过 =Copy()= 函数获得的复制句柄来完成的.
+一旦你通过 =copy = Copy()= 获得了句柄, 你就可以使用 =copy(old_node)= 来获得相应的 =new_node=.
+
+复制图之后, 缓存也会尽可能地被重用. 例如, 在获取节点 =new_c= 的值时, 不会调用 =add= 函数.
+
+#+begin_src python :results output :exports both :session
+  print("reset value")
+  a.reset(4)
+  new_a.reset(8)
+  print("get the old value and new value")
+  print(f"c is {c()}, new c is {new_c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+reset value
+get the old value and new value
+calculating 4 + 2
+calculating 8 + 2
+c is 6, new c is 10
+#+end_example
+
+在复制的图中, 节点之间的关系与原始图中的关系完全相同, 并且在可行的情况下还包括缓存. 然而, 重置一个图中的节点值不会影响另一个图.
+
+在某些情况下, 用户可能希望仅复制整个图的一部分.
+在这种情况下, 两个图将共享那些未被复制的相同上游节点.
+例如, 考虑下面的例子, 其中节点 =a= 在两个图之间共享.
+然而, 第二个图包含独有的节点 =new_b= 和 =new_c= , 它们分别对应于初始图中的 =a= 和 =b= .
+
+#+begin_src python :results output :exports both :session
+  copy = Copy()
+  new_b = copy(b)
+  new_c = copy(c)
+
+  print(f"a is {a()}")
+  print(f"b is {b()}, new b is {new_b()}")
+  print(f"c is {c()}, new c is {new_c()}")
+  b.reset(8)
+  print(f"c is {c()}, new c is {new_c()}")
+  new_b.reset(10)
+  print(f"c is {c()}, new c is {new_c()}")
+  a.reset(6)
+  print(f"c is {c()}, new c is {new_c()}")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+a is 4
+b is 2, new b is 2
+c is 6, new c is 6
+calculating 4 + 8
+c is 12, new c is 6
+calculating 4 + 10
+c is 12, new c is 14
+calculating 6 + 8
+calculating 6 + 10
+c is 14, new c is 16
+#+end_example
+
+为了防止误用, 如果用户试图多次复制同一节点, 复制处理程序将每次提供相同的新节点.
+
+#+begin_src python :results output :exports both :session
+  new_c = copy(c)
+  new_c_2 = copy(c)
+  print(id(new_c) == id(new_c_2))
+#+end_src
+
+#+RESULTS:
+#+begin_example
+True
+#+end_example
+
+当复制一个惰性图时,
+在处理下游节点之前, 复制上游节点是至关重要的.
+这确保了该包能够有效地处理图中各个节点之间的依赖关系.

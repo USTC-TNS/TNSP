@@ -1,0 +1,458 @@
+#+TITLE: tetragono
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+
+tetragono是一个多功能的软件包, 为各种张量网络态(TNS)方法提供了一个统一的接口, 适用于不同的物理模型和张量类型.
+它包含了多种TNS方法, 包括简单更新和基于采样的技术.
+对于基于采样的方法, 它方便了物理观测量的计算, 并纳入了优化策略, 如梯度下降和随机重构型.
+此外, tetragono提供了一种精确对角化方法, 可以作为在小系统中验证TNS结果的基准.
+它建立在[[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT][PyTAT]]之上的, 这是一个张量包[[https://github.com/USTC-TNS/TNSP/tree/main/TAT][TAT]]的Python接口, 支持对称性张量和费米子张量.
+用户可以通过编写插件来扩展其功能, 修改现有算法或引入自定义物理模型.
+此外, 一组预定义的物理模型和相应的算法修改可以在一个名为[[https://github.com/USTC-TNS/TNSP/tree/main/tetraku][tetraku]]的合集中找到.
+
+tetragono主要支持由投影纠缠对态(PEPS)表示的方形格子系统.
+然而, 通过在PEPS框架的单个张量中包含多个物理边, 可以适应其他格子几何形状.
+
+tetragono提供了多种接口, 包括一个名为tetragono shell的命令行界面(CLI)应用程序, 以方便使用.
+其组件可以单独使用, 赋予用户构建更复杂算法的能力.
+
+* 安装
+
+请在 =site-packages= 目录中复制或创建该目录的软链接. 或者, 您可以通过运行命令 =pip install tetragono= 使用 pip 安装 tetragono 包.
+
+* tetragono shell 的使用
+
+** tetragono shell 的界面
+
+安装 tetragono 后, 用户可以在命令行中执行 =python -m tetragono.shell= 进入 tetragono shell. 执行此操作后, 他们将看到以下界面:
+#+begin_example
+Welcome to the Tetragono shell. Type help or ? to list commands.
+Copyright (C) 2019-2024 USTC-TNS Group
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+Random seed is set as 233
+TET>
+#+end_example
+输入 =help= 或 =?= 将显示可用命令. 要获取特定命令的详细使用信息, 用户可以输入 =help <command>=.
+
+用户可以逐行执行命令, 或者在脚本文件中列出多个命令, 并使用 =python -m tetragono.shell <script_file>= 运行它们.
+通过这种方式, 可以自动利用 MPI(消息传递接口), 这意味着如果用户使用 =mpirun python -m tetragono.shell <script_file>= 执行脚本文件,
+Tetragono 内部实现的每个算法都将在可能的情况下使用 MPI 并行运行.
+这可以显著加快程序执行速度.
+
+** 在tetragono shell中的命令
+
+*** 精确更新
+
+=ex_create= 命令用于创建一个用于执行精确对角化的态.
+它需要一个模块名来指示物理模型, 随后传递给脚本的参数用于描述物理模型.
+例如, 下面的命令创建了一个状态, 用于一个在 $3 \times 3$ 格点上的无自旋自由费米子模型, 总粒子数固定为 $4$:
+#+begin_example
+TET> ex_create free_fermion L1=3 L2=3 T=4
+TET>
+#+end_example
+对于特定物理模型的参数描述, 可以通过使用 =ex_create <physics_model> help= 来展示.
+#+begin_example
+TET> ex_create free_fermion help
+
+        Create free fermion(no spin) state.
+
+        Parameters
+        ----------
+        L1, L2 : int
+            The lattice size.
+        T : int
+            The total particle number.
+
+TET>
+#+end_example
+
+定义物理模型的模块是一个标准的Python模块.
+在这个 =free_fermion= 的情况下, 模块是在tetraku内部定义的.
+用户可以定义自己的物理模型, 并将它们放置在 =$PYTHONPATH= 或 =$TETPATH= 目录中, 这样tetragono就能够定位并加载它们.
+
+在准备用于精确对角化的态之后, 可以使用 =ex_update <step>= 命令进行精确对角化, 这需要一个参数来指定Lanczos迭代步骤的数量.
+随后, 可以使用 =ex_energy= 命令计算每个格点的精确平均能量.
+#+begin_example
+TET> ex_update 1000
+ Exact update done, total_step=1000, energy=-0.6285393610547229
+TET> ex_energy
+ Exact state energy is -0.628539361054709
+TET>
+#+end_example
+
+实际上, 为了管理精确对角化的结果, tetragono shell提供了 =ex_load= 和 =ex_dump= 命令.
+这些命令分别用于从文件加载结果或将结果转储到文件中.
+
+随机种子可以通过命令 =seed <seed>= 重置, 这对于可靠地重现以前的计算结果非常有用.
+需要注意的是, 在使用MPI时, 进程的数量应保持不变, 以确保得到与之前相同的结果.
+
+*** 简单更新
+
+=su_create= 命令用于准备进行简单更新的态.
+与 =ex_create= 类似, 它接受一个物理模型名称, 后续参数传递给物理模型描述函数.
+通常, 它比 =ex_create= 多一个参数, 即PEPS中虚拟边的维度.
+#+begin_example
+TET> su_create free_fermion L1=3 L2=3 T=4 D=4
+TET>
+#+end_example
+初始态准备完成后, 使用 =su_update= 命令执行简单更新过程.
+#+begin_example
+TET> su_update 1000 0.05 4
+ Simple update max parallel size is 4
+ Simple update done, total_step=1000, delta_tau=0.05, new_dimension=4
+TET>
+#+end_example
+在简单的更新过程中, 可以利用MPI来加速执行, 因为哈密顿量的每个项的更新可以在不同的处理器上进行.
+当晶格经历其第一次简单更新时, 将显示可以有效使用的最大进程数.
+而下面显示了 =su_update= 参数:
+#+begin_example
+TET> help su_update
+
+        Do simple update.
+
+        Parameters
+        ----------
+        total_step : int
+            The simple update total step to do.
+        delta_tau : float
+            The imaginary time, delta tau.
+        new_dimension : int | float
+            The new cut dimension used in simple update, or the amplitude of dimension expandance.
+
+TET>
+#+end_example
+
+完成简单更新后, 可以通过使用命令 =su_energy <Dc>= 来测量能量, 该命令通过收缩双层网络来实现.
+在 tetragono 中, 采用边界矩阵乘积算符(boundary-MPO)方法来收缩整个网络.
+bounary-MPO 方法在恢复 MPS 和 MPO 的收缩回有限维 MPS 时需要进行维度截断.
+这个维度截断, 即 =Dc= , 是传递给 =su_energy= 的参数, 它规定了收缩过程中边所允许的最大维数,
+从而控制能量计算的准确性和计算需求.
+#+begin_example
+TET> su_energy 16
+ Simple update lattice energy is -0.6209065956664327
+TET>
+#+end_example
+
+使用 =su_to_ex= 命令将会把用于简单更新的 PEPS 收缩成一个单一的波函数张量.
+这个张量在形式上与用于精确对角化的状态相同.
+因此, 用户可以使用这个命令将他们的简单更新后的 PEPS 转换成适合精确对角化的格式.
+这允许在通过boundary-MPO 方法获得简单更新结果之后, 使用精确方法检查能量,
+作为比较和验证结果的基准.
+
+与管理精确对角化的态类似,
+=su_load= 和 =su_dump= 命令分别用于从文件加载或转储用于简单更新的晶格状态.
+
+*** 基于采样的方法
+
+**** 一个简短的例子
+
+采样方法通过将单层网络与已经采样的物理构型相结合来计算双层网络.
+在tetragono中, 实现了多种采样策略, 包括基于 Metropolis 算法的扫描采样和直接采样,
+对于小型系统, 还提供了用于基准测试的遍历.
+要使用采样方法, 必须首先创建相应的晶格. 这可以通过几种方式完成:
++ =gm_create= :: 类似于 =su_create= , 这个命令用于直接为采样方法创建晶格状态, 需要指定物理模型和相关参数.
++ =su_to_gm= :: 这个命令将准备用于简单更新的态转换成适合采样方法的态. 这允许从一种方法无缝过渡到另一种方法.
+在准备好用于采样的态之后, 调用 =gm_run= 命令使用所选的采样策略计算态的能量.
+#+begin_example
+TET> su_to_gm
+TET> gm_run 1000 0 0 sampling_method=direct configuration_cut_dimension=16
+ gradient total step=1
+ sampling done, total_step=1000, energy=(-0.6257918132796995, 0.001365532183031408)
+ direct sampling instability is 0.08685509609649737
+TET>
+#+end_example
+
+在tetragono shell中使用 =gm_run= 命令执行采样方法的时候,
+=sampling_method= 参数指定要采用的采样策略类型, 选项包括:
++ =direct= :: 用于直接采样,
++ =sweep= :: 用于基于Metropolis算法的扫描采样,
++ =ergodic= :: 用于在小系统中进行基准测试的有用遍历采样.
+
+=configuration_cut_dimension= 是一个关键参数, 它表示在计算boundary-MPO方法的单层张量网络时, 用于计算的维度截止,
+这有助于管理计算的准确性和效率.
+最前面的三个参数中的第一个指定了采样迭代的数量, 在提供的示例中为 =1000=.
+后两个参数的重要性将在后面介绍.
+
+计算结果提供了一个能量测量值 $-0.625\cdots$ ,
+估计误差范围为 $0.001\cdots$ , 说明了通过采样方法实现精确结果的能力.
+在直接采样中, tetragono采用了一种重加权技术, 其中从近似分布中采样构型,
+然后调整这些构型的权重(重加权)以获得准确的结果.
+然而, 重加权技术的准确性很大程度上取决于近似分布与所需分布的匹配程度.
+如果近似与目标分布有显著偏差, 结果将显示更大的误差.
+两个分布之间的差异或距离由采样不稳定性来衡量.
+为了减少采样不稳定性, 从而提高通过直接采样获得的结果的准确性,
+增加参数 =direct_sampling_cut_dimension= 可能是有益的.
+该参数确定在直接采样过程中计算近似分布时的维度截止.
+默认情况下, 此参数设置为4, 通常对于广泛的应用范围是足够的.
+
+*** 梯度下降与随机重构型
+
+采样方法也可用于执行梯度下降, 这由前三个参数中的另外两个控制:总梯度步数和梯度步长.
+#+begin_example
+TET> gm_run 1000 4 0.001 sampling_method=direct configuration_cut_dimension=16
+ gradient total step=4
+ sampling done, total_step=1000, energy=(-0.6257918132796995, 0.001365532183031408)
+ direct sampling instability is 0.08685509609649737
+ grad 0/4, step_size=0.001
+ sampling done, total_step=1000, energy=(-0.6225526013871534, 0.0012962886011511588)
+ direct sampling instability is 0.07429461284695354
+ grad 1/4, step_size=0.001
+ sampling done, total_step=1000, energy=(-0.6223814365145698, 0.0013008765678379666)
+ direct sampling instability is 0.08049558849801
+ grad 2/4, step_size=0.001
+ sampling done, total_step=1000, energy=(-0.6243932451431334, 0.0013174132249484853)
+ direct sampling instability is 0.07427514182038164
+ grad 3/4, step_size=0.001
+TET> EOF
+#+end_example
+
+控制梯度下降的参数有多个:
++ =use_fix_relative_step_size= :: 可设置为 =False= (默认)或 =True= . 默认情况下, 传入的步长是绝对步长. 将此参数设置为 =True= 以使用相对步长.
++ =use_line_search= :: 可设置为 =False= (默认)或 =True= . 将此参数设置为 =True= 以在梯度下降期间执行线搜索. 如果启用线搜索, 提供的步长将作为初始相对步长.
++ =use_random_gradient= :: 可设置为 =False= (默认)或 =True= . 如果设置为 =True= , 则忽略每个梯度元素的幅度, 并替换为一个随机数;仅使用梯度元素的符号.
++ =momentum_parameter= :: 在梯度下降中启用动量. 如果保持在默认值 =0= , 则不应用动量. 设置为 =1= 将导致状态持续沿初始方向变化, 完全忽略梯度.
+
+tetragono 还实现了随机重构型, 通过将参数 =use_natural_gradient= 设置为 =True= 来启用.
+如果启用了随机重构型, 则内部使用共轭梯度(CG)方法来计算度规的逆.
+共轭梯度的步数由 =conjugate_gradient_method_step= 控制, 默认为 =20= .
+另一个参数 =conjugate_gradient_method_error= 用于在 CG 过程中达到指定误差时终止进程.
+使用此参数时, 用户通常需要将 =conjugate_gradient_method_step= 设置为 =-1= 以禁用步数检查.
+
+在随机重构型或梯度下降过程中, 用户可能希望在每一步保存状态以防止意外的程序中断.
+这通过参数 =save_state_file= 和 =save_configuration_file= 实现, 它们分别保存当前状态和当前采样的构型.
+保存的构型对于扫描采样特别有用, 因为扫描采样需要启动时的初始构型.
+
+*** 扫描采样
+
+扫描采样方法从初始构型开始, 从该点运行马尔可夫链.
+初始构型可以手动设置, 或者为了方便起见通过直接采样确定.
+如果用户希望手动初始化构型, 则使用命令 =gm_conf_create= .
+通常, 使用 =gm_conf_eq= 来平衡最近初始化的构型, 其参数与 =gm_run= 类似.
+#+begin_example
+TET> su_create heisenberg 3 3 D=4 J=-1
+TET> su_update 100 0.01 4
+ Simple update max parallel size is 4
+ Simple update done, total_step=100, delta_tau=0.01, new_dimension=4
+TET> su_to_gm
+TET> gm_conf_create heisenberg.neel
+TET> gm_conf_eq 10 configuration_cut_dimension=16
+ equilibium done, total_step=10
+TET> gm_run 100 0 0 configuration_cut_dimension=16 sampling_method=sweep
+ gradient total step=1
+ sampling done, total_step=100, energy=(-0.5211663949797498, 0.00283191661212987)
+TET>
+#+end_example
+在上面的示例中, 我们为Heisenberg模型创建了一个格子, 执行了一会简单更新, 并将其转换为适合采样方法的态.
+然后, 我们创建了一个Neel态作为构型, 随后平衡预热了该构型.
+接着, 我们使用扫描采样来计算能量.
+在这里, Heisenberg模型和Neel态都在tetraku中定义.
+最后, 用户可以使用 =gm_conf_dump= 和 =gm_conf_load= 分别将构型转储到文件或从文件加载.
+
+** tetragono的插件
+
+*** 物理模型的定义
+
+在tetragono中, 物理模型的定义是通过定义插件来实现的.
+一个旨在定义物理模型的Python模块需要包含两个函数: =abstract_state= 和 =abstract_lattice= .
+为了介绍更全面的功能, 这里我们提供了一个在蜂窝晶格上定义具有固定粒子数的自由费米子模型的示例.
+
+函数 =abstract_state= 声明了基本张量类型和晶格形状, 总对称性表示(总量子数), 物理边, 以及系统的哈密顿量.
+#+begin_src python :eval never
+  import TAT
+  import tetragono as tet
+
+
+  def abstract_state(L1, L2, T):
+      state = tet.AbstractState(TAT.FermiU1.D.Tensor, L1, L2)
+      for l1 in range(L1):
+          for l2 in range(L2):
+              if (l1, l2) != (0, 0):
+                  state.physics_edges[l1, l2, 0] = [(0, 1), (1, 1)]
+              if (l1, l2) != (L1 - 1, L2 - 1):
+                  state.physics_edges[l1, l2, 1] = [(0, 1), (1, 1)]
+      state.total_symmetry = T
+      CC = tet.common_tensor.Fermi.CC.to(float)
+      for l1 in range(L1):
+          for l2 in range(L2):
+              if l1 != 0:
+                  state.hamiltonians[(l1 - 1, l2, 1), (l1, l2, 0)] = CC
+              if l2 != 0:
+                  state.hamiltonians[(l1, l2 - 1, 1), (l1, l2, 0)] = CC
+              if (l1, l2) != (0, 0) and (l1, l2) != (L1 - 1, L2 - 1):
+                  state.hamiltonians[(l1, l2, 0), (l1, l2, 1)] = CC
+      return state
+#+end_src
+在上面的代码片段中, 我们声明了一个大小为 =L1 * L2= 的格点, 其张量类型被指定为费米子 $U(1)$ 张量.
+然后, 我们为每个张量指定边, 其中每个张量都有两个物理边, 除了左上角和右下角的张量, 它们各自只有一个物理边.
+在tetragono中, 物理边通过轨道指数来区分.
+对于一个蜂窝状几何结构, 每个位置都有带有指数 $0$ 和 $1$ 的物理边, 除了位于 $(0,0)$ 的位置, 它只有一个指数 $1$,
+以及位于 $(L1-1,L2-1)$ 的位置, 它只有一个指数 $0$.
+在这个模型中, 所有的物理边都是相同的, 由一组量子数及其相应的多重数对来表征.
+
+随后, 我们声明了总对称性值为 =T=, 代表系统的总粒子数.
+然后我们从tetragono中获取预定义的张量, 并将其应用于蜂窝状格点上的所有最近邻位置.
+对于除第一行之外的每一行, 当前位置的指数 $0$ 与上一行相应位置的指数 $1$ 之间存在一个 =CC= 相互作用.
+类似地, 对于除第一列之外的每一列, 当前位置的指数 $0$ 与上一列相应位置的指数 $1$ 之间存在一个 =CC= 相互作用.
+此外, 对于除左上角和右下角之外的所有位置, 同一位置内的两个轨道指数之间存在一个 =CC= 相互作用.
+
+函数 =abstract_lattice= 用于声明投影纠缠对态(PEPS)内部的所有虚拟边. 这里有一个例子:
+#+begin_src python :eval never
+  def abstract_lattice(L1, L2, D, T):
+      state = tet.AbstractLattice(abstract_state(L1, L2, T))
+      tt = T / state.L1
+      for l1 in range(state.L1 - 1):
+          Q = int(T * (state.L1 - l1 - 1) / state.L1)
+          state.virtual_bond[l1, 0, "D"] = [
+              (Q - 1, D),
+              (Q, D),
+              (Q + 1, D),
+          ]
+      for l1 in range(state.L1):
+          for l2 in range(state.L2 - 1):
+              Q = int(tt * (state.L2 - l2 - 1) / state.L2)
+              state.virtual_bond[l1, l2, "R"] = [
+                  (Q - 1, D),
+                  (Q, D),
+                  (Q + 1, D),
+              ]
+      for l1 in range(state.L1 - 1):
+          for l2 in range(1, state.L2):
+              state.virtual_bond[l1, l2, "D"] = [
+                  (0, D),
+              ]
+
+      return state
+#+end_src
+默认情况下, 总对称性表示被呈现为位于站点 $(0, 0)$ 的一个额外边上,
+因此我们需要将这个粒子数(总对称性表示)分布到整个 PEPS 中.
+为了实现这一点, 我们首先沿着站点 $(0,0)$, $(1,0)$, ..., 向下移动,
+在每一行留下大约 =tt = T / state.L1= 个粒子.
+随后, 我们在每一行内传播, 类似于前一步骤, 每一列保留大约 =tt / state.L2= 个粒子.
+最后, 我们为 PEPS 内剩余的边定义平凡边.
+
+一旦在 Python 模块中定义了这两个函数, 我们就可以利用 tetragono 来执行这个物理模型内部实现的任何算法.
+用户只需要将描述物理模型的模块放置在 Python 可以导入的路径中, 或者放置在环境变量 =$TETPATH= 包含的路径中, 这样 tetragono 就知道从哪里加载它.
+
+*** 可观测量的测量
+
+在采样方法中测量可观测量时, 使用了一个描述可观测量的插件. 这个插件是一个包含函数 =measurement= 和 =save_result= 的 Python 模块.
+例如, 下面的代码展示了如何在海森堡模型上测量 $S_z^i S_z^j$ .
+#+begin_src python :eval never
+  import tetragono as tet
+  from tetragono.common_tensor.tensor_toolkit import (
+      rename_io,
+      kronecker_product,
+  )
+
+
+  def measurement(state):
+      Sz = tet.common_tensor.No.pauli_z.to(float) / 2
+      SzSz = kronecker_product(rename_io(Sz, [0]), rename_io(Sz, [1]))
+      return { \
+          ((i1, i2, 0), (j1, j2, 0)): SzSz \
+          for [i1, i2] in state.sites() \
+          for [j1, j2] in state.sites() \
+          if (i1, i2) != (j1, j2) \
+      }
+
+
+  def save_result(state, result, whole_result):
+      with open("SzSz.log", "a", encoding="utf-8") as file:
+          print(result, file=file)
+#+end_src
+为了描述可观测量, =measurement= 函数应该返回一个字典, 该字典将物理边的坐标序列映射到张量.
+=save_result= 函数充当保存测量结果的处理程序.
+在这里, 物理边的坐标在一个元组中指定, 该元组包含张量的坐标和轨道索引.
+
+一旦创建了可观测量的描述文件, 将其传递给命令 =gm_run= 的参数 =measurement= 将执行这些可观测量的测量.
+
+*** 在扫描采样中的跳跃规则
+
+扫描采样是一种改进的Metropolis采样方法, 它重用了构型计算的中间结果来加快Metropolis采样的间隔.
+默认情况下, 马尔可夫链的跳跃规则直接使用模型的哈密顿量.
+然而, 用户可能出于各种原因想要改变这一点, 例如排除最近邻跳跃以加快构型计算,
+或者添加另一个跳跃项以确保马尔可夫链的遍历性.
+为了适应自定义跳跃规则, 可以定义一个插件, 其中包含函数 =hopping_hamiltonians= , 该函数返回一个"伪造"的哈密顿量描述字典.
+#+begin_src python :eval never
+  import TAT
+  import tetragono as tet
+
+
+  def hopping_hamiltonians(state):
+      pauli_x_pauli_x = tet.common_tensor.No.pauli_x_pauli_x.to(float)
+      pauli_y_pauli_y = tet.common_tensor.No.pauli_y_pauli_y.to(float)
+      hopping = pauli_x_pauli_x + pauli_y_pauli_y
+      result = {}
+      for [l1, l2] in state.sites():
+              if l1 != 0:
+                  result[(l1 - 1, l2, 0), (l1, l2, 0)] = hopping
+              if l2 != 0:
+                  result[(l1, l2 - 1, 0), (l1, l2, 0)] = hopping
+
+      return result
+#+end_src
+这个示例创建了一个仅在最近邻位点之间跳跃的假哈密顿量.
+请注意, 在这里, 张量元素的振幅并不重要.
+Tetragono将尝试通过张量内部的所有非零项进行跳跃, 忽略绝对值.
+
+一旦在Python模块中准备好了假跳跃哈密顿量, 将其传递给 =gm_run= 的参数 =sweep_hopping_hamiltonian= , 并将 =sampling_method= 设置为 =sweep= , 以利用这个跳跃哈密顿量.

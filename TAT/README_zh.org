@@ -1,0 +1,1310 @@
+#+TITLE: TAT
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{cpp}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+TAT是一个的仅头文件的C++张量库, 支持 Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][对称性张量]] 和 [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][费米子张量]].
+"TAT"这个名字是一个递归的缩写, 意为 "TAT Is A Tensor library!"(TAT 是一个张量库!).
+
+TAT, 作为一个C++17头文件库, 利用泛型编程实现了各种张量类型的统一实现, 通过使用对称性类型来区分不同的张量类型.
+这种对称性类型包含量子数, 并标记它们是费米的还是玻色的, 使TAT能够区分不同的张量类型: 对称性张量, 费米子张量或常规张量, 每种都与特定的量子群相关联.
+在非对称情况下, 没有量子数, 而 $U(1)$ 对称性涉及整数量子数, $Z(2)$ 对称性使用布尔值.
+更复杂的场景涉及具有不同类型和任意长度的量子数元组的乘积来表示对称群.
+TAT通过静态处理指示每个量子数的费米波色性质, 提高了代码的可读性和可重用性.
+
+根据对称性类型, TAT定义了一种边类型, 用于表示张量边的属性, 封装了由对称性类型表征的值及其简并性.
+这种边由若干段组成, 并且在适用的情况下, 包含一个布尔值, 指示费米子情况下的费米箭头.
+其中若干段中的每一段是对称性类型的值与其简并性构成的对.
+一个分块多维数组, 或者说Core类型, 是由这些边的序列创建而成的, 为了性能效率, 将分块数据存储为一维数组.
+然后, 张量类型由指向这个Core类型的指针和一个边名称的序列组成, 这允许在不直接改变原始张量的情况下, 通过轻量级的非就地边重命名来操纵张量元数据.
+TAT提供了张量操作的各种接口, 如奇异值分解, 收缩, 或边的分割/合并.
+一旦使用每个对称性所需要的独特属性构建完成了张量, 其他所有的张量操作接口就能在不同的张量类型和对称性组之间保持一致.
+
+* 准备条件
+
++ 支持C++17的C++编译器(例如GCC 7.3+, Clang 6.0+)
++ LAPACK/BLAS或MKL
++ MPI(可选, 用于并行计算)
++ [[https://github.com/google/googletest][gtest]](可选, 用于测试)
+
+* 使用方法
+
+鉴于TAT是一个仅含头文件的C++库, 用户可以直接包含头文件 [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/TAT.hpp][=include/TAT/TAT.hpp=]]
+并在链接过程中手动链接LAPACK/BLAS或MKL.
+为了最佳实践, 向编译器传递 =-I= 参数以指定包含路径, 并在源文件中使用 =#include <TAT/TAT.hpp>= .
+
+用户可以通过使用 =add_subdirectory= 来加载TAT的配置, 并通过 =target_link_libraries= 将其与程序链接, 从而将TAT与 [[https://cmake.org/][CMake]] 集成.
+TAT的安装可以直接通过使用 =cmake .= 并带有参数 =-DTAT_BUILD_TEST=OFF= 来禁用构建测试, 以及 =make install= 来实现.
+一旦TAT安装完成, 用户可以通过[[https://www.freedesktop.org/wiki/Software/pkg-config/][pkg-config]]或利用CMake的 =find_package= 功能来访问它.
+用于 [[https://github.com/microsoft/vcpkg][vcpkg]] 的portfile也包含在[[https://github.com/USTC-TNS/TNSP/tree/main/TAT/vcpkg/ports/][vcpkg/ports]]中.
+
+对于MPI支持, 用户必须定义宏 =TAT_USE_MPI= 或在CMake中启用 =TAT_USE_MPI= .
+宏 =TAT_USE_MKL_GEMM_BATCH= 用于启用使用MKL的GEMM批处理, 这些可以通过CMake自动配置.
+不要忘记包含优化选项以提高性能.
+
+可以使用[[https://emscripten.org/][Emscripten]]来编译TAT, 来让程序在浏览器中执行.
+为了实现这一点, 用户需要使用 =em++= 编译程序, 并带有参数 =-s EMULATE_FUNCTION_POINTER_CASTS=1= , 这是TAT所必需的,
+并链接Emscripten版本的BLAS/LAPACK.
+[[https://pyodide.org/][Pyodide]]项目提供了预构建的Emscripten版本的CLAPACK和OpenBLAS, 因此用户可以直接下载.
+
+TAT有一个Python封装, 位于[[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/][这里]].
+
+* 文档
+
+** 对称性类型
+
+TAT通过使用特定的描述符, 称为 =SymmetryType= , 来区分属于不同对称性群的张量, 该描述符通常是模板类 =Symmetry<Args...>= 的实例化.
+在这里,  =Args...= 表示包含指示对称性单群们的可变模板参数.
+由模板类表示的对称性群是这些单群的乘积.
+值得注意的是,  $U(1)$ 对称性由整数类型表示, 使用 =U1= 作为别名, 而 $Z(2)$ 对称性由布尔类型表示, 使用 =Z2= 作为别名.
+例如,  =Symmetry<U1, Z2>= 表示群 $U(1) \otimes Z(2)$ .
+
+为了描述费米子对称性, 表明体现这种对称性的粒子是费米子,
+TAT使用类型包装器 =fermi= 来封装单群的标记.
+例如, =Symmetry<fermi<U1>>= 表示费米子 $U(1)$ 对称性.
+为了增强表示的美观性, 用户还可以使用身份包装器 =bose= 为非费米子对称性群标记.
+例如,  =Symmetry<fermi<Z2>, bose<U1>>= 表示费米子 $Z(2)$ $\otimes$ 玻色子 $U(1)$ 群.
+
+至于非对称性情况, TAT使用 =Symmetry<>=.
+
+** 张量的构建
+
+TAT将张量类型定义为 =Tensor<ScalarType, SymmetryType, NameType>= , 这是一个模板类,
+其中 =ScalarType= (默认为 =double= )表示张量的内部标量类型,  =SymmetryType= (默认为 =Symmetry<>= )指定了张量所保持的对称群,
+而 =NameType= (默认为 =string= )表示用于标记张量边的名字的类型.
+
+用户可以通过使用统一的接口 =Tensor(name_list, edge_list)= 轻松生成不同类型的张量.
+这里, =name_list= 指的是包含边名字的C++向量, 每个边名字都是 =NameType= 的一个值, 而 =edge_list= 表示由边组成的C++向量.
+
+不同对称类型的边表现出不同的形式.
+在非对称张量的情况下, 每个边可以直接由一个整数表示.
+例如, 下面的代码创建了一个没有任何对称性的张量, 最初填充为零.
+需要注意的是, 张量的数据不会自动初始化为零; 必须使用 =zero_()= 函数显式地将其设置为零.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<>>({"i", "j"}, {3, 4}).zero_();
+  std::cout << A << "\n";
+#+end_src
+
+#+RESULTS[e462233a4dd96d4fa829798cf255b7b363ecc897]:
+#+begin_example
+{names:[i,j],edges:[3,4],blocks:[0,0,0,0,0,0,0,0,0,0,0,0]}
+#+end_example
+
+上述代码创建了一个名为 =A= 的2阶张量, 它有两个边, =i= 和 =j=, 这两个边的维度分别为 =3= 和 =4= .
+然后, 它将张量 =A= 打印到了 =std::cout= .
+
+非费米子对称性张量使用"段"来定义边, 这些段是一系列量子数及其相应简并度的对构成的列表.
+量子数及其简并度在群论术语中也被称为不可约表示及其多重数,
+或者在这个包的上下文中也被称为"对称性"及其相应的维度.
+下面的代码生成了一个 $Z(2)$ 对称性张量和一个 $U(1)$ 对称性张量.
+在这里, $Z(2)$ 对称群的不可约表示为一个布尔值, 而对于 $U(1)$ 对称群, 它由一个整数表示.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::bose<TAT::U1>>>(
+               {"i", "j"},
+               {
+                   {{false, 2}, {true, 4}},
+                   {{false, 3}, {true, 1}},
+               }
+  )
+               .range_();
+  std::cout << A << "\n";
+  auto B = TAT::Tensor<double, TAT::Symmetry<TAT::bose<TAT::Z2>>>(
+               {"i", "j"},
+               {
+                   {{-1, 2}, {0, 4}, {+1, 1}},
+                   {{-1, 3}, {0, 2}, {+1, 1}},
+               }
+  )
+               .range_();
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[92027858afc2abf5ecb411d1a8edd9c0433b5326]:
+#+begin_example
+{names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5]}}
+{names:[i,j],edges:[{1:2,0:4,1:1},{1:3,0:2,1:1}],blocks:{[1,1]:[0,1,2,3,4,5],[1,1]:[6,7],[0,0]:[8,9,10,11,12,13,14,15],[1,1]:[16,17,18],[1,1]:[19]}}
+#+end_example
+
+对于张量 =A=, 它有两个分块.
+第一个分块具有不可约表示 ={false, false}= , 维度为 $2 \times 4$ .
+第二个块具有不可约表示 ={true, true}= , 维度为 $4 \times 1$ .
+对于张量 =B=, 它由三个分块组成.
+不可约表示分别为 ={-1, +1}= , ={0, 0}= , 和 ={+1, -1}= .
+每个块根据这些多重数具有不同的维度.
+在给出的代码中, =range_()= 函数将使用等差序列数据生成到张量中.
+
+费米子张量的情况更加复杂.
+边由一系列段以及所谓的"费米箭头"决定,
+费米箭头是一个布尔值.
+下面的例子创建了一个费米子 $U(1)$ 对称性张量,
+其费米子性质由 $U(1)$ 对称性携带, 其两个边的费米箭头分别为 =false= 和 =true= .
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<TAT::U1>>>(
+               {"i", "j"},
+               {
+                   {{{-1, 2}, {0, 4}, {+1, 1}}, false},
+                   {{{-1, 3}, {0, 2}, {+1, 1}}, true},
+               }
+  )
+               .range_();
+  std::cout << A << "\n";
+#+end_src
+
+#+RESULTS[5811bc97a57eb2b31cbad7815556193b2c48f3ed]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:4,1:1}},{arrow:1,segment:{-1:3,0:2,1:1}}],blocks:{[-1,1]:[0,1],[0,0]:[2,3,4,5,6,7,8,9],[1,-1]:[10,11,12]}}
+#+end_example
+
+在费米子张量网络的语境下, 我们需要引入了费米箭头, 这是因为在网络的每条边后面存在一个费米子EPR对.
+通过一条边连接的两个张量包含EPR对的两个湮灭算符, 而对于费米子EPR对, 两个算符的顺序是重要的.
+因此, 在TAT中, 使用费米箭头来表示哪一侧的算符在另一侧之前.
+具体来说, TAT假设费米箭头为 =false= 的算符在费米箭头为 =true= 的算符之前.
+
+对于非单群的对称性张量, 它们的不可约表示实际上可以用一个元组而不是单个布尔值或整数来表示, 如下例所示.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  using Symmetry = TAT::Symmetry<TAT::fermi<TAT::U1>, TAT::bose<TAT::Z2>>;
+  auto A = TAT::Tensor<double, Symmetry>(
+               {"i", "j"},
+               {{{
+                     {{-1, false}, 2},
+                     {{0, false}, 4},
+                     {{+1, false}, 1},
+                     {{-1, true}, 4},
+                     {{0, true}, 2},
+                     {{+1, true}, 1},
+                 },
+                 false},
+                {{
+                     {{-1, false}, 3},
+                     {{0, false}, 2},
+                     {{+1, false}, 1},
+                     {{-1, true}, 1},
+                     {{0, true}, 2},
+                     {{+1, true}, 3},
+                 },
+                 true}}
+  ).range_();
+  std::cout << A << "\n";
+#+end_src
+
+#+RESULTS[49cf11e1d41a5244cd6017f7afd701a44ba4c463]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{(-1,0):2,(0,0):4,(1,0):1,(-1,1):4,(0,1):2,(1,1):1}},{arrow:1,segment:{(-1,0):3,(0,0):2,(1,0):1,(-1,1):1,(0,1):2,(1,1):3}}],blocks:{[(-1,0),(1,0)]:[0,1],[(0,0),(0,0)]:[2,3,4,5,6,7,8,9],[(1,0),(-1,0)]:[10,11,12],[(-1,1),(1,1)]:[13,14,15,16,17,18,19,20,21,22,23,24],[(0,1),(0,1)]:[25,26,27,28],[(1,1),(-1,1)]:[29]}}
+#+end_example
+
+** 张量内的属性
+
+一个张量, 记作 =A= , 主要由三个元素组成:边名, 边和内容.
+用户通过函数 =A.names= 访问边名列表, 通过 =A.edges= 访问边列表.
+
+函数 =A.names()= 返回内部名称列表的常量引用, 该列表表示为向量,
+而 =A.names(int index)= 提供第 =index= 个边的名称.
+类似地, =A.edges()= 返回内部边列表的常量引用, 该列表表示为向量,
+而 =A.edges(int index)= 提供第 =index= 个边的常量引用.
+在大多数情况下, 用户不关心边的顺序, 因此使用 =A.edges(NameType name)= 直接检索指定 =name= 标记的边.
+此外, =A.rank_by_name(NameType name)= 用于确定标记为 =name= 的边的索引.
+最后, =A.rank()= 用于获取张量的秩.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::bose<TAT::Z2>>>(
+               {"i", "j"},
+               {
+                   {{false, 2}, {true, 4}},
+                   {{false, 3}, {true, 1}},
+               }
+  )
+               .range_();
+  std::cout << A << "\n";
+  std::cout << A.names(0) << " " << A.names(1) << "\n";
+  std::cout << A.names()[0] << " " << A.names()[1] << "\n";
+  std::cout << A.rank_by_name("j") << " " << A.rank_by_name("i") << "\n";
+  std::cout << A.edges(0) << " " << A.edges(1) << "\n";
+  std::cout << A.edges()[0] << " " << A.edges()[1] << "\n";
+  std::cout << A.edges("j") << " " << A.edges("i") << "\n";
+  std::cout << A.rank() << "\n";
+#+end_src
+
+#+RESULTS[d96d3d956946d585f7542c340591bbf0573b6d72]:
+#+begin_example
+{names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+i j
+i j
+1 0
+{0:2,1:4} {0:3,1:1}
+{0:2,1:4} {0:3,1:1}
+{0:3,1:1} {0:2,1:4}
+2
+#+end_example
+
+要访问张量的内容, 有三种可用的方法:
+
++ 使用 =A.storage()= 检索所有内容作为一个一维数组, 这是一个指向内部数据数组的引用, 表示为向量.
+  这对于各种外部操作(如MPI broadcast 或 allreduce)非常有用.
+
+  #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+    auto A = TAT::Tensor<double, TAT::Symmetry<TAT::bose<TAT::Z2>>>(
+                 {"i", "j"},
+                 {
+                     {{false, 2}, {true, 4}},
+                     {{false, 3}, {true, 1}},
+                 }
+    )
+                 .range_();
+    std::cout << A << "\n";
+    std::cout << "[";
+    for (const auto& i : A.storage()) {
+        std::cout << i << " ";
+    }
+    std::cout << "]\n";
+  #+end_src
+
+  #+RESULTS[589820e1a8617b74bb5d5b8b678c6e22de26cbf6]:
+  #+begin_example
+  {names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+  [0 1 2 3 4 5 6 7 8 9 ]
+  #+end_example
+
++ 由于对称性张量是一个分块张量,
+  用户可以使用 =A.blocks(positions)= 或 =A.const_blocks(positions)= (始终返回常量引用)根据边的对称性检索张量 =A= 的一个分块.
+  该函数的结果是一个具有指定边对称性的分块, 该分块位于TAT包内的辅助多维数组类型中, 遵循内部边顺序.
+  参数 =positions= 可以是一群对称性组成的向量(这里的对称性指的是群论领域中的不可约表示),
+  或者是一个从边名到对称性的映射, 指定给定名字的边的对称性.
+
+ 对于表示为多维数组的分块 =B=, 以下函数可用:
+  - =B.rank()= :: 返回数组的秩
+  - =B.size()= :: 提供数组的总大小
+  - =B.dimensions()=, =B.dimensions(int index)= :: 提供表示数组形状或第 =index= 个索引维度的向量的常量引用
+  - =B.leadings()=, =B.leadings(int index)= :: 给出数组每个索引的跨度或第 =index= 个索引的跨度
+  - =B.data()= :: 提供指向数组第一个元素的指针
+  - =B.at(vector<int> indices)=, =B.const_at(vector<int> indices)= :: 返回由 =indices= 指定的元素的引用或常量引用
+
+  #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+    auto A = TAT::Tensor<double, TAT::Symmetry<TAT::bose<TAT::Z2>>>(
+                 {"i", "j"},
+                 {
+                     {{false, 2}, {true, 4}},
+                     {{false, 3}, {true, 1}},
+                 }
+    )
+                 .range_();
+    std::cout << A << "\n";
+    const auto& b0 = A.const_blocks(std::vector<TAT::Z2>{false, false});
+    std::cout << b0.dimensions()[0] << " " << b0.dimensions()[1] << "\n";
+    std::cout << b0.leadings(0) << " " << b0.leadings(1) << "\n";
+    const auto& b1 = A.const_blocks({{"i", true}, {"j", true}});
+    std::cout << b1.rank() << " " << b1.size() << "\n";
+    std::cout << b1.at({0, 0}) << " " << b1.const_at({3, 0}) << "\n";
+  #+end_src
+
+  #+RESULTS[5286fc7d67110f8a703c32b8c1670388bb396b2e]:
+  #+begin_example
+  {names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+  2 3
+  3 1
+  2 4
+  6 9
+  #+end_example
+
+  这里, 分块 =b0= 表示一个具有对称性 =false= 和 =false= 的 $2 \times 3$ 张量分块, 而 =b1= 是一个具有对称性 =true= 和 =true= 的分块, 形状为 $4 \times 1$ .
+  显然, =b1= 中位置 $(0, 0)$ 的元素是 $6$ , 而位置 $(3, 0)$ 的元素是 $9$ .
+
++ 张量元素可以直接使用 =at= 和 =const_at= 函数访问,
+  接受参数作为每个边的索引向量或从边名到该边索引的映射
+  边的索引可以是表示该对称性以及局部索引的对,
+  也可以是一个简单的整数, 表示整个边的索引.
+
+  #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+    auto A = TAT::Tensor<double, TAT::Symmetry<TAT::bose<TAT::Z2>>>(
+                 {"i", "j"},
+                 {
+                     {{false, 2}, {true, 4}},
+                     {{false, 3}, {true, 1}},
+                 }
+    )
+                 .range_();
+    std::cout << A << "\n";
+    std::cout << A.const_at({{true, 2}, {true, 0}}) << "\n";
+    std::cout << A.at({{"i", 4}, {"j", 3}}) << "\n";
+  #+end_src
+
+  #+RESULTS[8bd78402d0e710b2aac2c503bb58f42e7408ca34]:
+  #+begin_example
+  {names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+  8
+  8
+  #+end_example
+
+  元素 $8$ 位于具有对称性 =true= 和 =true= 的分块中, 并且在该分块中, 索引是 $(2, 0)$ .
+  此外, 在边 =i= 的整个范围内, ={true, 2}= 的索引是 =4= , 因为在段 =false= 中有 =2= 个额外的维度.
+  类似地, 在边 =j= 中, ={true, 0}= 对应于整体索引 =3= , 因为在段 =false= 中它前面有 =3= 个额外的维度.
+
+** 边的属性
+
+张量的边被表示为一个名为 =Edge= 的类型, 其模板参数为 =SymmetryType= .
+用户可以通过函数 =e.segments()= 获取边的片段, 并通过 =e.arrow()= 获取费米箭头, 对于非费米子对称边缘, 该箭头始终为 =false= .
+=conjugate()= 和 =conjugate_()= 分别用于获取边的共轭和对边进行就地共轭.
+函数 =total_dimension()= 提供边的总维度.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  const auto e1 = TAT::Edge<TAT::Symmetry<TAT::fermi<TAT::U1>>>(
+      {
+          {1, 2},
+          {2, 2},
+          {3, 2},
+      },
+      true
+  );
+  const auto e2 = TAT::Edge<TAT::Symmetry<TAT::bose<TAT::U1>>>({
+      {1, 2},
+      {2, 2},
+      {3, 2},
+  });
+  const auto& [symmetry, dimension] = e1.segments()[0];
+  std::cout << symmetry << " " << dimension << "\n";
+  std::cout << e1.arrow() << " " << e2.arrow() << "\n";
+  std::cout << e1 << " " << e1.conjugate() << "\n";
+  std::cout << e2.total_dimension() << "\n";
+#+end_src
+
+#+RESULTS[fbcedc8368f453caa50acf9cbf039718ebef6756]:
+#+begin_example
+1 2
+1 0
+{arrow:1,segment:{1:2,2:2,3:2}} {arrow:0,segment:{-1:2,-2:2,-3:2}}
+6
+#+end_example
+
+对于边, 存在三种索引方法.
+边的类型提供了一个索引转换函数 =<x>_by_<y>= , 其中 =<x>= 和 =<y>= 可以指代 =index= , =coord= 或 =point= .
+=index= 表示整个边的总索引.
+而 =coord= 涉及一个对, 指示局部段在段列表中的位置以及该段内的局部索引.
+最后, 对于 =point= , 它包含一个对, 包括当前段的对称性和该段内的局部索引.
+
+** 对称性中的属性
+
+对称性类型用于表示对称群的不可约表示.
+它由来自该群分解的单个群的不可约表示的元组构成.
+在TAT中, 用户可以将多个对称性对象相加或获取逆对称性对象.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  using namespace TAT;
+  std::cout << Symmetry<U1, Z2>(2, false) << "\n";
+  std::cout << Symmetry<U1>(3) + Symmetry<U1>(-2) << "\n";
+  std::cout << -Symmetry<U1>(4) << "\n";
+  std::cout << Symmetry<U1, Z2>(2, true) + Symmetry<U1, Z2>(3, true) << "\n";
+  std::cout << -Symmetry<U1, Z2>(3, true) << "\n";
+#+end_src
+
+#+RESULTS[6146a846306279c1326a2f05d79c843e159db24c]:
+#+begin_example
+(2,0)
+1
+-4
+(5,0)
+(-3,1)
+#+end_example
+
+对于费米子对称性, 函数 =parity()= 用于获得该对称性对象的费米子宇称.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  using namespace TAT;
+  std::cout << Symmetry<fermi<U1>, fermi<Z2>>(1, false).parity() << "\n";
+  std::cout << Symmetry<bose<U1>, fermi<Z2>>(1, false).parity() << "\n";
+  std::cout << Symmetry<fermi<U1>, fermi<U1>>(1, 3).parity() << "\n";
+#+end_src
+
+#+RESULTS[7ef333ca25cacff521656eb3cb1466a42ef043e1]:
+#+begin_example
+1
+0
+0
+#+end_example
+
+** 对称性信息的清除
+
+由于对称性张量是分块张量, 因此总是可以从中去除对称性信息, 从而得到一个非对称性张量.
+这一功能是通过使用 =clear_symmetry= 函数实现的, 如下面的代码片段所示:
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<bool>>(
+               {"i", "j"},
+               {
+                   {{false, 2}, {true, 4}},
+                   {{false, 3}, {true, 1}},
+               }
+  )
+               .range_();
+  auto B = A.clear_symmetry();
+  std::cout << A << "\n";
+  std::cout << B << "\n";
+
+  auto C = TAT::Tensor<double, TAT::Symmetry<int>>(
+               {"i", "j"},
+               {
+                   {{-1, 2}, {0, 2}, {+1, 2}},
+                   {{-1, 2}, {0, 2}, {+1, 2}},
+               }
+  )
+               .range_();
+  auto D = C.clear_symmetry();
+  std::cout << C << "\n";
+  std::cout << D << "\n";
+#+end_src
+
+#+RESULTS[3e5df46dfc59e7867f33bb9d5e017edd76e0ff70]:
+#+begin_example
+{names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+{names:[i,j],edges:[6,4],blocks:[0,1,2,0,3,4,5,0,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9]}
+{names:[i,j],edges:[{-1:2,0:2,1:2},{-1:2,0:2,1:2}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[6,6],blocks:[0,0,0,0,0,1,0,0,0,0,2,3,0,0,4,5,0,0,0,0,6,7,0,0,8,9,0,0,0,0,10,11,0,0,0,0]}
+#+end_example
+
+对于费米子对称性张量, 直接移除费米子反对易关系是不可能的.
+相对的, 它只能清除部分对称性, 结果得到的是一个费米子 $Z(2)$ 对称性张量, 而不是非对称性张量, 如下所示:
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto C = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>(
+               {"i", "j"},
+               {
+                   {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+                   {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+               }
+  )
+               .range_();
+  auto D = C.clear_symmetry();
+  std::cout << C << "\n";
+  std::cout << D << "\n";
+#+end_src
+
+#+RESULTS[e0d40b3bdc122848d9f1daf6c8f554901bd687f8]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[{arrow:0,segment:{0:2,1:4}},{arrow:1,segment:{0:2,1:4}}],blocks:{[0,0]:[4,5,6,7],[1,1]:[0,0,0,1,0,0,2,3,8,9,0,0,10,11,0,0]}}
+#+end_example
+
+** 单元素张量与数之间的转换
+
+用户可以直接在秩为0的张量和数之间进行转换.
+对于只包含一个元素的非秩为0的张量, 用户也可以直接将它们转换为数字.
+反过来, 用户可以直接作为逆操作创建一个具有若干1维边的单元素张量.
+在这种情况下, 对于非对称性张量, 用户在创建非秩为0的单元素张量时, 应该只传递名称列表.
+对于非费米子对称性张量, 用户应该为每个边提供额外的对称性信息作为第三个参数.
+对于费米子对称性张量, 用户应该为每个边提供额外的费米子箭头信息作为第四个参数.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<std::complex<double>, TAT::Symmetry<>>(2333);
+  std::cout << std::complex<double>(A) << " " << A << "\n";
+
+  auto B = TAT::Tensor<double, TAT::Symmetry<int>>(2333);
+  std::cout << double(B) << " " << B << "\n";
+
+  auto C = TAT::Tensor<double, TAT::Symmetry<>>(2333, {"i", "j"});
+  std::cout << double(C) << " " << C << "\n";
+
+  auto D = TAT::Tensor<double, TAT::Symmetry<int>>{
+      2333,
+      {"i", "j"},
+      {-2, +2},
+  };
+  std::cout << double(D) << " " << D << "\n";
+
+  auto E = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      2333,
+      {"i", "j"},
+      {-2, +2},
+      {false, true},
+  };
+  std::cout << double(E) << " " << E << "\n";
+#+end_src
+
+#+RESULTS[bfbbb3753150c1901a11584a636c74dbd70bb0f9]:
+#+begin_example
+(2333,0) {names:[],edges:[],blocks:[2333]}
+2333 {names:[],edges:[],blocks:{[]:[2333]}}
+2333 {names:[i,j],edges:[1,1],blocks:[2333]}
+2333 {names:[i,j],edges:[{-2:1},{2:1}],blocks:{[-2,2]:[2333]}}
+2333 {names:[i,j],edges:[{arrow:0,segment:{-2:1}},{arrow:1,segment:{2:1}}],blocks:{[-2,2]:[2333]}}
+#+end_example
+
+** 张量的输入与输出
+
+张量可以直接从流中读取或写入流中.
+对于二进制序列化和反序列化, 使用函数 =dump= 和 =load= , 这些函数在张量和存储在 =std::string= 中的二进制数据之间进行转换.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+      }}.range_();
+  std::cout << A << "\n";
+  std::stringstream s;
+  s << A;
+  decltype(A) B;
+  s >> B;
+  std::cout << B << "\n";
+  decltype(A) C;
+  C.load(A.dump());
+  std::cout << C << "\n";
+#+end_src
+
+#+RESULTS[9c96580682bfece730354cf4be712d88bf6563e0]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+#+end_example
+
+** 逐元素操作
+
+用户可以使用 =map= 函数对张量的元素逐个应用自定义函数, 进行非原地操作, 或者使用 =transform_= 函数进行原地操作.
+此外, 还有一个名为 =set_= 的函数, 它类似于 =transform_= , 但它不接受输入值.
+换句话说, =A.set_(f)= 等价于 =A.transform_([&f](auto) {return f();})= .
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+      }}.range_();
+  std::cout << A << "\n";
+  A.transform_([](auto x) { return x * x; });
+  std::cout << A << "\n";
+  auto B = A.map([](auto x) { return x + 1; });
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[1b0a34e405f7b376047bb934cc772147af1da832]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,4,9],[0,0]:[16,25,36,49],[1,-1]:[64,81,100,121]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[1,2,5,10],[0,0]:[17,26,37,50],[1,-1]:[65,82,101,122]}}
+#+end_example
+
+用户可以使用 =A.range_(first, step)= 将等差序列数据设置到一个张量中, 该方法会按照 $first, first + step, first + step \times 2$ 的顺序填充张量.
+默认情况下, first 被设置为 $0$, step 被设置为 $1$.
+在实际的量子张量网络态编程中, 这个函数并不经常被使用, 它主要用于生成示例来阐释本文档中讨论的其他函数.
+=range_= 的一个可能的实现是 ~A.set_([x=first-step]() mutable {return x += step;})~ .
+此外, =zero_()= 函数的作用是 ~A.set_([]() {return 0;})~ .
+
+请注意, =map= 函数可以将元素映射到另一个标量类型, 从而实现类型转换操作.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+      }}.range_();
+  std::cout << A << "\n";
+  auto B = A.map([](double x) { return std::complex<double>{x, 0}; });
+  std::cout << B << "\n";
+  B.transform_([](auto x) { return x + std::complex<double>{0, 1}; });
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[7efff5eefd5439ee26caa7144eef0919ffff2d0e]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1,2,3],[0,0]:[4,5,6,7],[1,-1]:[8,9,10,11]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[1i,1+1i,2+1i,3+1i],[0,0]:[4+1i,5+1i,6+1i,7+1i],[1,-1]:[8+1i,9+1i,10+1i,11+1i]}}
+#+end_example
+
+这种类型转换已经被封装在一个名为 =to= 的函数中, 这允许用户直接使用 =A.to<std::complex<double>>()= 将张量 =A= 转换为复数张量.
+还有一个函数 =A.same_shape()= , 它可以生成一个形状相同但数据未初始化的张量.
+
+** 张量的范数
+
+用户可以使用 =A.norm<int p>()= 计算张量 =A= 的 $p$-范数. 将 $p$ 设置为 -1 将返回 $\infty$-范数.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+      }}.range_(1, 2);
+  std::cout << A << "\n";
+  std::cout << A.norm<0>() << "\n";
+  std::cout << A.norm<1>() << "\n";
+  std::cout << A.norm<2>() << "\n";
+  std::cout << A.norm<-1>() << "\n";
+#+end_src
+
+#+RESULTS[e5d82596c446b2f850f12e9f3fbba59dd465c617]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[1,3,5,7],[0,0]:[9,11,13,15],[1,-1]:[17,19,21,23]}}
+12
+144
+47.9583
+23
+#+end_example
+
+** 算术标量运算
+
+用户可以直接对张量执行算术标量运算.
+在对两个张量执行算术运算时, 它们的形状应该相同, 边的顺序可以不同, 因为TAT可以自动根据需要转置它们.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+      }}.range_(100, 100);
+  auto B = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"j", "i"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+      }}.range_(1, 1);
+  std::cout << A << "\n";
+  std::cout << B << "\n";
+  std::cout << A + B << "\n";
+  std::cout << A * B << "\n";
+  std::cout << A - B << "\n";
+  std::cout << A / B << "\n";
+  std::cout << A - 1 << "\n";
+  std::cout << 1 / B << "\n";
+  A *= 2;
+  std::cout << A << "\n";
+#+end_src
+
+#+RESULTS[9ca1a3897e6a7db07490d4bc36ced61ce8efb46d]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[100,200,300,400],[0,0]:[500,600,700,800],[1,-1]:[900,1000,1100,1200]}}
+{names:[j,i],edges:[{arrow:1,segment:{-1:2,0:2,1:2}},{arrow:0,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[1,2,3,4],[0,0]:[5,6,7,8],[1,-1]:[9,10,11,12]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[91,189,290,388],[0,0]:[505,607,706,808],[1,-1]:[899,997,1098,1196]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[-900,-2200,-3000,-4800],[0,0]:[2500,4200,4200,6400],[1,-1]:[-900,-3000,-2200,-4800]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[109,211,310,412],[0,0]:[495,593,694,792],[1,-1]:[901,1003,1102,1204]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[-11.1111,-18.1818,-30,-33.3333],[0,0]:[100,85.7143,116.667,100],[1,-1]:[-900,-333.333,-550,-300]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[99,199,299,399],[0,0]:[499,599,699,799],[1,-1]:[899,999,1099,1199]}}
+{names:[j,i],edges:[{arrow:1,segment:{-1:2,0:2,1:2}},{arrow:0,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[1,0.5,0.333333,0.25],[0,0]:[0.2,0.166667,0.142857,0.125],[1,-1]:[0.111111,0.1,0.0909091,0.0833333]}}
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[200,400,600,800],[0,0]:[1000,1200,1400,1600],[1,-1]:[1800,2000,2200,2400]}}
+#+end_example
+
+** 张量共轭
+
+对张量进行共轭操作会导致每条边上所有段的对称性反转, 同时改变张量内所有元素的值, 如下所示.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<std::complex<double>, TAT::Symmetry<TAT::bose<int>>>{
+      {"i", "j"},
+      {
+          {{-1, 2}, {0, 2}, {+1, 2}},
+          {{-1, 2}, {0, 2}, {+1, 2}},
+      }}.range_(0, {1, 1});
+  std::cout << A << "\n";
+  std::cout << A.conjugate() << "\n";
+#+end_src
+
+#+RESULTS[ec85c86bff936fc27504a5015f1f2804b9b92937]:
+#+begin_example
+{names:[i,j],edges:[{-1:2,0:2,1:2},{-1:2,0:2,1:2}],blocks:{[-1,1]:[0,1+1i,2+2i,3+3i],[0,0]:[4+4i,5+5i,6+6i,7+7i],[1,-1]:[8+8i,9+9i,10+10i,11+11i]}}
+{names:[i,j],edges:[{1:2,0:2,-1:2},{1:2,0:2,-1:2}],blocks:{[1,-1]:[0,1-1i,2-2i,3-3i],[0,0]:[4-4i,5-5i,6-6i,7-7i],[-1,1]:[8-8i,9-9i,10-10i,11-11i]}}
+#+end_example
+
+请注意, 在 $U(1)$ 对称性的情况下, 不可约表示的反转会导致取反, 而对于$Z(2)$对称性, 反转则保持不变.
+
+在费米子张量的情况下, 当张量的共轭与原始张量缩并时, 可能会产生非正数.
+这一特殊现象表明, 费米子张量的度规不是半正定的.
+这种不寻常的情况可能会干扰上层编程中的朴素梯度方法.
+为了使用固定度规计算共轭, 用户可以在调用 =conjugate= 函数时, 使用名为 =trivial_metric= 的额外可选参数, 并将其设置为 =true= , 如下所示.
+然而, 重要的是要注意, 这种度规固定将导致$(AB)^\dagger \neq A^\dagger B^\dagger$的情况.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<std::complex<double>, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+      }}.range_(0, {1, 1});
+  auto B = A.conjugate();
+  auto C = A.conjugate(true);
+  std::cout << A << "\n";
+  std::cout << B << "\n";
+  std::cout << C << "\n";
+  std::cout << A.contract(B, {{"i", "i"}, {"j", "j"}}) << "\n";
+  std::cout << A.contract(C, {{"i", "i"}, {"j", "j"}}) << "\n";
+#+end_src
+
+#+RESULTS[97b9a81a569c912af3eae7c46f03910a47a72f91]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:2,1:2}},{arrow:1,segment:{-1:2,0:2,1:2}}],blocks:{[-1,1]:[0,1+1i,2+2i,3+3i],[0,0]:[4+4i,5+5i,6+6i,7+7i],[1,-1]:[8+8i,9+9i,10+10i,11+11i]}}
+{names:[i,j],edges:[{arrow:1,segment:{1:2,0:2,-1:2}},{arrow:0,segment:{1:2,0:2,-1:2}}],blocks:{[1,-1]:[0,-1+1i,-2+2i,-3+3i],[0,0]:[4-4i,5-5i,6-6i,7-7i],[-1,1]:[-8+8i,-9+9i,-10+10i,-11+11i]}}
+{names:[i,j],edges:[{arrow:1,segment:{1:2,0:2,-1:2}},{arrow:0,segment:{1:2,0:2,-1:2}}],blocks:{[1,-1]:[0,1-1i,2-2i,3-3i],[0,0]:[4-4i,5-5i,6-6i,7-7i],[-1,1]:[8-8i,9-9i,10-10i,11-11i]}}
+{names:[],edges:[],blocks:{[]:[-508]}}
+{names:[],edges:[],blocks:{[]:[1012]}}
+#+end_example
+
+** 张量收缩
+
+为了执行两个张量的收缩, 用户可以向 =contract= 函数提供一组边的对作为参数.
+每对边由第一个要收缩的张量的边的名字和第二个张量的相应边的名字组成.
+在下面的例子中, 张量 =A= 的边 =i= 与张量 =B= 的边 =a= 进行收缩, 张量 =A= 的边 =j= 与张量 =B= 的边 =c= 进行收缩.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A =
+      TAT::Tensor<double, TAT::Symmetry<>>{
+          {"i", "j", "k"},
+          {2, 3, 4},
+      }
+          .range_();
+  auto B =
+      TAT::Tensor<double, TAT::Symmetry<>>{
+          {"a", "b", "c", "d"},
+          {2, 5, 3, 6},
+      }
+          .range_();
+  auto C = A.contract(B, {{"i", "a"}, {"j", "c"}});
+  std::cout << C << "\n";
+#+end_src
+
+#+RESULTS[cc46884cc977cd234759046b2fa3f0610a1af08b]:
+#+begin_example
+{names:[k,b,d],edges:[4,5,6],blocks:[4776,4836,4896,4956,5016,5076,5856,5916,5976,6036,6096,6156,6936,6996,7056,7116,7176,7236,8016,8076,8136,8196,8256,8316,9096,9156,9216,9276,9336,9396,5082,5148,5214,5280,5346,5412,6270,6336,6402,6468,6534,6600,7458,7524,7590,7656,7722,7788,8646,8712,8778,8844,8910,8976,9834,9900,9966,10032,10098,10164,5388,5460,5532,5604,5676,5748,6684,6756,6828,6900,6972,7044,7980,8052,8124,8196,8268,8340,9276,9348,9420,9492,9564,9636,10572,10644,10716,10788,10860,10932,5694,5772,5850,5928,6006,6084,7098,7176,7254,7332,7410,7488,8502,8580,8658,8736,8814,8892,9906,9984,10062,10140,10218,10296,11310,11388,11466,11544,11622,11700]}
+#+end_example
+
+由于函数 =clear_symmetry= 仅移除对称性信息而不进行其他修改,
+由收缩得到的对称性清除的张量等于分别清除对称性的张量的收缩.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto a = TAT::Tensor<double, TAT::Symmetry<TAT::bose<int>>>{
+      {"i", "j", "k"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}},
+          {{{-1, 2}, {0, 2}, {+1, 2}}},
+          {{{-1, 2}, {0, 2}, {+1, 2}}},
+      }}.range_();
+  auto b = TAT::Tensor<double, TAT::Symmetry<TAT::bose<int>>>{
+      {"l", "m", "n"},
+      {
+          {{{+1, 2}, {0, 2}, {-1, 2}}},
+          {{{+1, 2}, {0, 2}, {-1, 2}}},
+          {{{+1, 2}, {0, 2}, {-1, 2}}},
+      }}.range_();
+  auto c = a.contract(b, {{"i", "n"}, {"k", "m"}});
+  auto A = a.clear_symmetry();
+  auto B = b.clear_symmetry();
+  auto C = A.contract(B, {{"i", "n"}, {"k", "m"}});
+  std::cout << (c.clear_symmetry() - C).norm<2>() << "\n";
+#+end_src
+
+#+RESULTS[8975c5857b2eccf7952e6a3c1868c3d5ae95604c]:
+#+begin_example
+0
+#+end_example
+
+同样的原则适用于费米子对称性张量.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto a = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j", "k"},
+      {
+          {{{-1, 2}, {0, 2}, {+1, 2}}, true},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+          {{{-1, 2}, {0, 2}, {+1, 2}}, false},
+      }}.range_();
+  auto b = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"l", "m", "n"},
+      {
+          {{{+1, 2}, {0, 2}, {-1, 2}}, false},
+          {{{+1, 2}, {0, 2}, {-1, 2}}, true},
+          {{{+1, 2}, {0, 2}, {-1, 2}}, false},
+      }}.range_();
+  auto c = a.contract(b, {{"i", "n"}, {"k", "m"}});
+  auto A = a.clear_symmetry();
+  auto B = b.clear_symmetry();
+  auto C = A.contract(B, {{"i", "n"}, {"k", "m"}});
+  std::cout << (c.clear_symmetry() - C).norm<2>() << "\n";
+#+end_src
+
+#+RESULTS[8a303b00038f7b9c2f8d5e13bd9f2f8e34f63fbb]:
+#+begin_example
+0
+#+end_example
+
+有时, 用户可能希望构建一个超图, 将多个边(多于两个)连接在一起.
+此功能通过在 =contract= 函数中使用一个额外的参数来实现.
+该参数是一组边名字, 指定在保持它们为自由边而不求和的情况下, 哪些边应该被融合在一起.
+需要注意的是, 这种融合操作对于对称性张量没有明确定义, 只能应用于非对称性张量.
+以下代码片段提供了此功能的一个示例:
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double>({"i", "j", "x"}, {2, 3, 5}).range_();
+  auto B = TAT::Tensor<double>({"a", "x", "c", "d"}, {2, 5, 3, 6}).range_();
+  auto C = A.contract(B, {{"i", "a"}, {"j", "c"}}, {"x"});
+  std::cout << C << "\n";
+#+end_src
+
+#+RESULTS[6b66b8b61c2d4307b11b657136ec9f32c41a2519]:
+#+begin_example
+{names:[x,d],edges:[5,6],blocks:[5970,6045,6120,6195,6270,6345,7734,7815,7896,7977,8058,8139,9714,9801,9888,9975,10062,10149,11910,12003,12096,12189,12282,12375,14322,14421,14520,14619,14718,14817]}
+#+end_example
+
+** 边名重命名
+
+为了重命名张量的边名, 用户可以使用 =edge_rename= 函数, 其参数为一个字典,
+其中键代表旧名, 值代表新名.
+在提供的示例中, =i= 被重命名为 =j= , 而 =j= 被重命名为 =i= .
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double>({"i", "j"}, {2, 3}).range_();
+  auto B = A.edge_rename({{"i", "j"}, {"j", "i"}});
+  std::cout << A << "\n";
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[ca978fe9a6d01045aa3b13bf9fb1114a99bd05e1]:
+#+begin_example
+{names:[i,j],edges:[2,3],blocks:[0,1,2,3,4,5]}
+{names:[j,i],edges:[2,3],blocks:[0,1,2,3,4,5]}
+#+end_example
+
+在TAT内部, 我们将张量数据存储在共享指针中, 因此当用户重命名边时, 张量数据实际上并未被复制.
+并且所有原地操作符都会验证数据是否与其他张量共享, 并在必要时复制它.
+
+在TAT中, 张量接受任何全序散列类型作为边名类型.
+例如, 下面的代码将一个由字符串标记边的张量重命名为一个由整数标记边的张量.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  namespace TAT {
+      template<>
+      const int InternalName<int>::Default_0 = -1;
+      template<>
+      const int InternalName<int>::Default_1 = -2;
+      template<>
+      const int InternalName<int>::Default_2 = -3;
+      template<>
+      const int InternalName<int>::Default_3 = -4;
+      template<>
+      const int InternalName<int>::Default_4 = -5;
+
+      std::ostream& print_int(std::ostream& out, const int& i) {
+          return out << i;
+      }
+
+      template<>
+      struct NameTraits<int> {
+          static constexpr out_operator_t<int> print = print_int;
+      };
+  } // namespace TAT
+
+  int main() {
+      auto A = TAT::Tensor<double>({"i", "j"}, {2, 3}).range_();
+      auto B = A.edge_rename(std::unordered_map<std::string, int>{
+          {"i", 1},
+          {"j", 2},
+      });
+      std::cout << A << "\n";
+      std::cout << B << "\n";
+  }
+#+end_src
+
+#+RESULTS[eafdb886a04dec57a15da80cd0145a22fd1e41f8]:
+#+begin_example
+{names:[i,j],edges:[2,3],blocks:[0,1,2,3,4,5]}
+{names:[1,2],edges:[2,3],blocks:[0,1,2,3,4,5]}
+#+end_example
+
+为了将一个类型指定为边名类型, 必须定义哈希和比较函数.
+在这种情况下, 我们使用的是整数, 因此不需要定义它们.
+此外, 必须在 =NameTraits= 结构中定义诸如 =print= , =scan= , =write= 和 =read= 等函数, 以指导TAT如何处理它们的输入输出操作.
+五个内部名称应保留用于某些函数实现, 并使用 =InternalName= 定义.
+一旦准备好上述所有方面, 用户就可以将此类型用作边名类型.
+在这里, =edge_rename= 函数允许边重命名在不同边名类型的张量之间转换.
+
+** 张量指数
+
+类似于矩阵指数, 张量指数是通过求和张量收缩的幂级数得到的.
+为了指定收缩张量的方式, 用户应该使用一组两个边名称的成对集合来定义边之间的关系.
+这些成对集合标识了相应的关系, 并且在张量收缩计算期间, 每对中的两个边将被收缩.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j", "k", "l"},
+      {
+          {{{-1, 1}, {0, 1}, {+1, 1}}, true},
+          {{{-1, 1}, {0, 1}, {+1, 1}}, false},
+          {{{+1, 1}, {0, 1}, {-1, 1}}, true},
+          {{{+1, 1}, {0, 1}, {-1, 1}}, false},
+      }}.range_();
+  auto B = A.exponential({{"i", "l"}, {"j", "k"}});
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[12395078a45c6d4a245d8d13bdd3894767361c28]:
+#+begin_example
+{names:[j,i,k,l],edges:[{arrow:0,segment:{-1:1,0:1,1:1}},{arrow:1,segment:{-1:1,0:1,1:1}},{arrow:1,segment:{1:1,0:1,-1:1}},{arrow:0,segment:{1:1,0:1,-1:1}}],blocks:{[-1,-1,1,1]:[1],[-1,0,1,0]:[173.087],[-1,0,0,1]:[172.719],[-1,1,1,-1]:[-0.560932],[-1,1,0,0]:[-1.2676],[-1,1,-1,1]:[-0.974265],[0,-1,1,0]:[24.6742],[0,-1,0,1]:[24.3063],[0,0,1,-1]:[1.01225],[0,0,0,0]:[2.05481],[0,0,-1,1]:[1.09737],[0,1,0,-1]:[4.96443],[0,1,-1,0]:[7.68271],[1,-1,1,-1]:[-0.463566],[1,-1,0,0]:[-0.842016],[1,-1,-1,1]:[-0.220466],[1,0,0,-1]:[4.97116],[1,0,-1,0]:[7.68945],[1,1,-1,-1]:[1.523e-08]}}
+#+end_example
+
+** 设置一个单位张量
+
+在某些情况下, 用户可能希望获得一个等同于单位矩阵的张量.
+这可以通过使用 =identity_= 函数将张量设置为单位张量来实现.
+该函数接受与指数函数相同的参数, 以识别边之间的相应关系.
+下面提供的示例将张量 =A= 设置为单位张量.
+设置后, 我们有 $A_{ijkl}=\delta_{il}\delta_{jk}$.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j", "k", "l"},
+      {
+          {{{-1, 1}, {0, 1}, {+1, 1}}, true},
+          {{{-1, 1}, {0, 1}, {+1, 1}}, false},
+          {{{+1, 1}, {0, 1}, {-1, 1}}, true},
+          {{{+1, 1}, {0, 1}, {-1, 1}}, false},
+      }}.identity_({{"i", "l"}, {"j", "k"}});
+  std::cout << A << "\n";
+#+end_src
+
+#+RESULTS[8ba638daf215ecaa0818f2b10a46a96e9f60252b]:
+#+begin_example
+{names:[i,j,k,l],edges:[{arrow:1,segment:{-1:1,0:1,1:1}},{arrow:0,segment:{-1:1,0:1,1:1}},{arrow:1,segment:{1:1,0:1,-1:1}},{arrow:0,segment:{1:1,0:1,-1:1}}],blocks:{[-1,-1,1,1]:[-1],[-1,0,1,0]:[0],[-1,0,0,1]:[-1],[-1,1,1,-1]:[0],[-1,1,0,0]:[0],[-1,1,-1,1]:[-1],[0,-1,1,0]:[1],[0,-1,0,1]:[0],[0,0,1,-1]:[0],[0,0,0,0]:[1],[0,0,-1,1]:[0],[0,1,0,-1]:[0],[0,1,-1,0]:[1],[1,-1,1,-1]:[-1],[1,-1,0,0]:[0],[1,-1,-1,1]:[0],[1,0,0,-1]:[-1],[1,0,-1,0]:[0],[1,1,-1,-1]:[-1]}}
+#+end_example
+
+** 边合并与分割
+
+用户可以使用 =merge_edge= 和 =split_edge= 函数在张量中合并或分割边.
+在合并边时, 用户需要提供一个字典, 该字典将新边的名字映射到旧边名字的列表,
+指定哪些边应该合并成一个边以及合并前边的顺序.
+分割边的接口类似, 但由于在边合并过程中存在信息丢失,
+用户还需要在这一阶段指定边的段落信息.
+边由两部分组成:段信息和一个可能的费米箭头.
+在这个上下文中, 费米箭头是不需要的, 因为TAT会自动推导它.
+对于非对称性张量, 段信息可以直接被边维度的信息所取代.
+用户可以自由地将零个边合并成一个边或将一个边分割成零个边, 这简化了处理高级代码中的边界情况.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>{
+      {"i", "j", "k", "l"},
+      {
+          {{{-1, 1}, {0, 1}, {+1, 1}}, true},
+          {{{-1, 1}, {0, 1}, {+1, 1}}, false},
+          {{{+1, 1}, {0, 1}, {-1, 1}}, true},
+          {{{+1, 1}, {0, 1}, {-1, 1}}, false},
+      }}.range_();
+  std::cout << A << "\n";
+
+  auto B = A.merge_edge({{"a", {"i", "k"}}, {"b", {}}, {"c", {"l", "j"}}});
+  std::cout << B << "\n";
+
+  auto C = B.split_edge(
+      {{"a",
+        {
+            {"i", {{{-1, 1}, {0, 1}, {+1, 1}}}},
+            {"k", {{{+1, 1}, {0, 1}, {-1, 1}}}},
+        }},
+       {"b", {}},
+       {"c",
+        {
+            {"l", {{{+1, 1}, {0, 1}, {-1, 1}}}},
+            {"j", {{{-1, 1}, {0, 1}, {+1, 1}}}},
+        }}}
+  );
+  std::cout << C << "\n";
+
+  std::cout << (A - C).norm<2>() << "\n";
+#+end_src
+
+#+RESULTS[f1e14aef9acc799f3b6e3dff20de6aad30ae24d1]:
+#+begin_example
+{names:[i,j,k,l],edges:[{arrow:1,segment:{-1:1,0:1,1:1}},{arrow:0,segment:{-1:1,0:1,1:1}},{arrow:1,segment:{1:1,0:1,-1:1}},{arrow:0,segment:{1:1,0:1,-1:1}}],blocks:{[-1,-1,1,1]:[0],[-1,0,1,0]:[1],[-1,0,0,1]:[2],[-1,1,1,-1]:[3],[-1,1,0,0]:[4],[-1,1,-1,1]:[5],[0,-1,1,0]:[6],[0,-1,0,1]:[7],[0,0,1,-1]:[8],[0,0,0,0]:[9],[0,0,-1,1]:[10],[0,1,0,-1]:[11],[0,1,-1,0]:[12],[1,-1,1,-1]:[13],[1,-1,0,0]:[14],[1,-1,-1,1]:[15],[1,0,0,-1]:[16],[1,0,-1,0]:[17],[1,1,-1,-1]:[18]}}
+{names:[b,c,a],edges:[{arrow:0,segment:{0:1}},{arrow:0,segment:{0:3,1:2,2:1,-1:2,-2:1}},{arrow:1,segment:{0:3,-1:2,-2:1,1:2,2:1}}],blocks:{[0,0,0]:[0,-7,15,1,9,17,3,-11,18],[0,1,-1]:[-2,-10,-4,12],[0,2,-2]:[5],[0,-1,1]:[6,-14,-8,-16],[0,-2,2]:[13]}}
+{names:[l,j,i,k],edges:[{arrow:0,segment:{1:1,0:1,-1:1}},{arrow:0,segment:{-1:1,0:1,1:1}},{arrow:1,segment:{-1:1,0:1,1:1}},{arrow:1,segment:{1:1,0:1,-1:1}}],blocks:{[1,-1,-1,1]:[0],[1,-1,0,0]:[-7],[1,-1,1,-1]:[15],[1,0,-1,0]:[-2],[1,0,0,-1]:[-10],[1,1,-1,-1]:[5],[0,-1,0,1]:[6],[0,-1,1,0]:[-14],[0,0,-1,1]:[1],[0,0,0,0]:[9],[0,0,1,-1]:[17],[0,1,-1,0]:[-4],[0,1,0,-1]:[12],[-1,-1,1,1]:[13],[-1,0,0,1]:[-8],[-1,0,1,0]:[-16],[-1,1,-1,1]:[3],[-1,1,0,0]:[-11],[-1,1,1,-1]:[18]}}
+0
+#+end_example
+
+重要的是要注意, 当两个连接边缘的费米子对称性张量(即将被收缩)经历公共边缘的合并或分裂时, 会产生一个单独的符号.
+因此, 用户需要使用相应函数提供的额外两个参数来指定两个张量中的哪一个应该包含生成的符号.
+在下面的例子中, 我们首先从连接的张量A1和B1中收缩公共边缘"i"和"j", 得到张量C1.
+随后对于两个张量A1和B1, 我们将两个公共边缘"i"和"j"合并为一个单一的公共边缘"k", 得到张量A2和B2.
+然后, 通过收缩A2和B2得到张量C2, 证明了C1等于C2.
+在这个例子中, 我们将符号应用于B1而不是A1, 因为我们只应该应用它一次.
+此外, 函数中还有第三个参数, 它是一组从合并边中选择的边名字组成的集合, 这些特定的边会表现出与第二个参数确定的行为相反的行为.
+在边的分割函数中, 第三个参数应该由一组名字组成, 这些名字代表在它们被分割时会表现出相反行为的边.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A1 = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<bool>>>{
+      {"i", "j", "a"},
+      {
+          {{{false, 2}, {true, 2}}, false},
+          {{{false, 2}, {true, 2}}, false},
+          {{{false, 2}, {true, 2}}, true},
+      }}.range_();
+  auto B1 = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<bool>>>{
+      {"i", "j", "b"},
+      {
+          {{{false, 2}, {true, 2}}, true},
+          {{{false, 2}, {true, 2}}, true},
+          {{{false, 2}, {true, 2}}, false},
+      }}.range_();
+  auto C1 = A1.contract(B1, {{"i", "i"}, {"j", "j"}});
+
+  auto A2 = A1.merge_edge({{"k", {"i", "j"}}}, false);
+  auto B2 = B1.merge_edge({{"k", {"i", "j"}}}, true);
+  auto C2 = A2.contract(B2, {{"k", "k"}});
+
+  std::cout << C1 - C2 << "\n";
+#+end_src
+
+#+RESULTS[4db0aa2a725aa65d664228d58434c36fd1e89b11]:
+#+begin_example
+{names:[a,b],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[1,1]:[0,0,0,0]}}
+#+end_example
+
+** 反转边上的费米箭头
+
+通过使用 =reversed_edge= 函数, 可以一起反转相互连接的两个边的费米箭头.
+需要注意的是, 当反转一对边时, 会生成一个单一的符号.
+因此, 用户需要指定生成的符号应该应用于哪个张量.
+这是通过函数的最后两个参数处理的.
+在下面的例子中, 我们首先将张量A1和B1收缩以获得C1.
+然后, 我们反转A1和B1中将要收缩的边, 以创建新的张量A2和B2.
+反转后, 我们将A2和B2收缩以获得C2. 代码演示了C1和C2是相等的.
+在反转时, 第二个参数指示是否将符号应用于当前张量.
+在这个例子中, 我们将符号应用于B1而不是A1, 因为我们只应该应用一次.
+此外, 函数中还有一个第三个参数, 它由一组从经过反转的边中选择的名字组成,
+这些特定的边预计会表现出与第二个参数所确定的相反的行为.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A1 = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<bool>>>{
+      {"i", "j"},
+      {
+          {{{false, 2}, {true, 2}}, false},
+          {{{false, 2}, {true, 2}}, true},
+      }}.range_();
+  auto B1 = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<bool>>>{
+      {"i", "j"},
+      {
+          {{{false, 2}, {true, 2}}, false},
+          {{{false, 2}, {true, 2}}, true},
+      }}.range_();
+  auto C1 = A1.contract(B1, {{"i", "j"}});
+
+  auto A2 = A1.reverse_edge({"i"}, false);
+  auto B2 = B1.reverse_edge({"j"}, true);
+  auto C2 = A2.contract(B2, {{"i", "j"}});
+
+  std::cout << C1 - C2 << "\n";
+#+end_src
+
+#+RESULTS[cf319340fc0254bf53abb6cec2ab55a31e2628f0]:
+#+begin_example
+{names:[j,i],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[1,1]:[0,0,0,0]}}
+#+end_example
+
+** 张量的QR分解
+
+可以使用 =qr= 函数对张量进行QR分解.
+要使用此函数, 用户应提供分解后张量的自由边集合,
+以及分解过程中创建的两个边的名字.
+在提供的示例中, 费米子张量A具有三个边:"i", "j"和"k".
+在QR分解过程中, 我们配置Q张量的边应仅包括"k",
+而剩余的边, 即"i"和"j", 应包含在R张量中.
+qr函数的第一参数可以是'q'或'r', 指定第二参数代表Q张量或R张量的自由边集合.
+QR分解后, Q张量将具有两个边:来自输入张量的原始"k"边和分解过程中创建的边, 命名为"Q".
+对于R张量, 它应包含三个边, 其中两个来自原始张量("i"和"j")和新建的边, 命名为"R".
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>(
+               {"i", "j", "k"},
+               {
+                   {{{-1, 2}, {0, 2}, {-2, 2}}, true},
+                   {{{0, 2}, {1, 2}}, false},
+                   {{{0, 2}, {1, 2}}, false},
+               }
+  )
+               .range_();
+
+  auto [Q, R] = A.qr('q', {"k"}, "Q", "R");
+  auto Q_dagger = Q.conjugate().edge_rename({{"Q", "Q'"}});
+  std::cout << Q_dagger.contract(Q, {{"k", "k"}}) << "\n";
+  std::cout << (Q.contract(R, {{"Q", "R"}}) - A).norm<2>() << "\n";
+#+end_src
+
+#+RESULTS[a96b4e3023f8cb34d4a370e8ef35f73b3c496cd3]:
+#+begin_example
+{names:[Q',Q],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,5.55112e-17,5.55112e-17,1]}}
+1.08052e-14
+#+end_example
+
+** 张量的奇异值分解(SVD)
+
+可以使用 =svd= 函数对张量执行SVD.
+要使用此函数, 用户需要提供分解后张量的自由边集合,
+以及分解过程中创建的四个边的名字.
+在提供的示例中, 费米子张量A有三个边:"i", "j", 和 "k".
+在进行SVD时, 我们将U张量的边配置为仅包含 "k" 边, 而剩余的边, 即 "i" 和 "j", 应该包含在V张量中.
+svd函数的第一参数是U张量的自由边集合.
+SVD之后, U张量将有两个边:来自输入张量的原始 "k" 边和分解过程中创建的边, 命名为 "U".
+对于V张量, 它应该包含三个边, 其中两个来自原始张量("i" 和 "j")和新建的边, 命名为 "V".
+至于S张量, 它确实是一个对角矩阵, 具有两个边, 命名为 "SU" 和 "SV", 如后两个参数所指定.
+最后一个参数, 表示SVD维度切割, 可以设置为 =Cut()= 表示不切割(默认行为),
+一个正整数表示绝对维度切割, 例如 =Cut(8)= , 或者一个介于0和1之间的实数表示相对维度切割, 例如 =Cut(0.8)=.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<int>>>(
+               {"i", "j", "k"},
+               {
+                   {{{-1, 2}, {0, 2}, {-2, 2}}, true},
+                   {{{0, 2}, {1, 2}}, false},
+                   {{{0, 2}, {1, 2}}, false},
+               }
+  )
+               .range_();
+  auto [U, S, V] = A.svd({"k"}, "U", "V", "SU", "SV", TAT::Cut());
+  auto U_dagger = U.conjugate().edge_rename({{"U", "U'"}});
+  std::cout << U_dagger.contract(U, {{"k", "k"}}) << "\n";
+  auto USV = U.contract(S, {{"U", "SU"}}).contract(V, {{"SV", "V"}});
+  std::cout << (USV - A).norm<2>() << "\n";
+#+end_src
+
+#+RESULTS[dd0a2f7f77da583f805c0421686ea058ade938b4]:
+#+begin_example
+{names:[U',U],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,0,0,1]}}
+2.56692e-14
+#+end_example
+
+** 张量迹运算
+
+要在张量内对一部分边进行迹运算, 用户可以使用 =trace= 函数.
+这需要提供一组由两个边名字组成的对, 这些边是迹运算的目标.
+在给出的示例中, 我们对张量 A 执行迹运算, 特别针对标记为 "j" 和 "k" 的边.
+该张量包含三条边:"i", "j" 和 "k". 因此, 这个操作的结果将产生一个只有一个标记为 "i" 的边的张量.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<bool>>>(
+               {"i", "j", "k"},
+               {
+                   {{{false, 2}, {true, 2}}, true},
+                   {{{false, 2}, {true, 2}}, false},
+                   {{{false, 2}, {true, 2}}, true},
+               }
+  )
+               .range_();
+  std::cout << A << "\n";
+  auto B = A.trace({{"j", "k"}});
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[59955e5d9b73f74ed983a166785f945aa1a821e6]:
+#+begin_example
+{names:[i,j,k],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,1,2,3,4,5,6,7],[0,1,1]:[8,9,10,11,12,13,14,15],[1,0,1]:[16,17,18,19,20,21,22,23],[1,1,0]:[24,25,26,27,28,29,30,31]}}
+{names:[i],edges:[{arrow:1,segment:{0:2,1:2}}],blocks:{[0]:[-16,-16]}}
+#+end_example
+
+特别为非对称张量定制, 类似于是张量的收缩操作,
+这个接口允许用户在同一张量内建立两个边之间的连接, 同时保持它们未被求和.
+这一功能通过利用第二个参数来实现,
+该参数的形式是一个字典, 将新的边名映射到两个现有边名的一对.
+在提供的示例中, 创建了一个非对称张量, 具有五个边:"i", "j", "k", "l", 和 "m".
+在求迹过程中, "j" 和 "k" 被连接并合并, 导致这两个边在生成的张量中被省略.
+另一方面, "l" 和 "m" 被连接但没有被求和, 导致它们在结果张量中合并为一个标有 "n" 的单一边.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A =
+      TAT::Tensor<>{
+          {"i", "j", "k", "l", "m"},
+          {4, 3, 3, 2, 2},
+      }
+          .range_();
+  std::cout << A << "\n";
+  auto B = A.trace({{"j", "k"}}, {{"n", {"l", "m"}}});
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[0265531c7b9ffba80db0a5b09d3ef3b27d4c0c11]:
+#+begin_example
+{names:[i,j,k,l,m],edges:[4,3,3,2,2],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143]}
+{names:[n,i],edges:[2,4],blocks:[48,156,264,372,57,165,273,381]}
+#+end_example
+
+** 张量转置
+
+在实际的张量运算中, 通常不需要手动进行张量转置.
+然而, 在准备张量以进行外部操作时, 例如在张量存储上的MPI操作, 转置变得有价值.
+=transpose= 函数通过接受一个边名字的列表来满足这一需求, 该列表指定了结果张量的期望边顺序.
+
+#+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both
+  auto A = TAT::Tensor<double, TAT::Symmetry<TAT::fermi<bool>>>(
+               {"i", "j", "k"},
+               {
+                   {{{false, 2}, {true, 2}}, true},
+                   {{{false, 2}, {true, 2}}, false},
+                   {{{false, 2}, {true, 2}}, true},
+               }
+  )
+               .range_();
+  std::cout << A << "\n";
+  auto B = A.transpose({"k", "j", "i"});
+  std::cout << B << "\n";
+#+end_src
+
+#+RESULTS[990aadac759db10a4793ee529fdd83a71aa13cdc]:
+#+begin_example
+{names:[i,j,k],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,1,2,3,4,5,6,7],[0,1,1]:[8,9,10,11,12,13,14,15],[1,0,1]:[16,17,18,19,20,21,22,23],[1,1,0]:[24,25,26,27,28,29,30,31]}}
+{names:[k,j,i],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,4,2,6,1,5,3,7],[0,1,1]:[-24,-28,-26,-30,-25,-29,-27,-31],[1,0,1]:[-16,-20,-18,-22,-17,-21,-19,-23],[1,1,0]:[-8,-12,-10,-14,-9,-13,-11,-15]}}
+#+end_example

@@ -1,0 +1,141 @@
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage[utf8]{ctex}
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("xelatex -8bit -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "xelatex -8bit -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "xelatex -8bit -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+#+begin_export latex
+\iffalse
+#+end_export
+
+* [[https://github.com/USTC-TNS/TNSP][TNSP]] · [[https://github.com/USTC-TNS/TNSP/releases/latest][https://img.shields.io/github/v/release/USTC-TNS/TNSP.svg?style=flat-square]] [[https://github.com/USTC-TNS/TNSP/tree/main/LICENSE.rst][https://img.shields.io/github/license/USTC-TNS/TNSP.svg?style=flat-square]] [[https://github.com/USTC-TNS/TNSP/actions/workflows/build.yml][https://img.shields.io/github/actions/workflow/status/USTC-TNS/TNSP/build.yml.svg?style=flat-square]]
+
+#+LATEX_HEADER: \usepackage{authblk}
+#+begin_export latex
+\fi
+\title{TNSP用户手册}
+\author[1]{张浩}
+\author[2]{董少钧\footnote{\textit{电子邮箱地址:} sj.dong@iai.ustc.edu.cn}}
+\author[2]{王超}
+\author[2]{张盟}
+\author[1,2,3]{何力新\footnote{\textit{电子邮箱地址:} helx@ustc.edu.cn}}
+\affil[1]{CAS Key Laboratory of Quantum Information, University of Science and Technology of China, Hefei 230026, People's Republic of China}
+\affil[2]{Institute of Artificial Intelligence, Hefei Comprehensive National Science Center, Hefei, 230088, People's Republic of China}
+\affil[3]{Hefei National Laboratory, University of Science and Technology of China, Hefei, 230088, People's Republic of China}
+\renewcommand\Authfont{\small}
+\renewcommand\Affilfont{\itshape\small}
+\maketitle
+\tableofcontents
+\chapter{概述}
+\section{关于项目}
+#+end_export
+
+[[https://github.com/USTC-TNS/TNSP][TNSP(tensor network state packages, 张量网络态包)]] 框架由中国科学技术大学量子信息重点实验室和合肥综合性国家科学中心人工智能研究院开发,
+旨在通过抽象化张量类型的细节(无论它们是 [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][对称性张量]], [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][费米子张量]], 还是常规的张量, 来简化张量网络态(TNS)算法的开发.
+它提供了一个以用户为中心的界面, 便于使用流行的TNS方法, 特别是针对投影纠缠对态(PEPS)的各种算法, 包括简单更新, 梯度优化和各种采样技术.
+该框架的设计上非常灵活, 允许用户通过Python3插件集成自定义的物理模型和优化策略.
+
+该框架包含多个子包:
++ [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/][=TAT=]] : 核心张量包, 为不同类型的张量(如Abelian [[https://journals.aps.org/pra/abstract/10.1103/PhysRevA.82.050301][对称性张量]], [[https://journals.aps.org/prb/abstract/10.1103/PhysRevB.99.195153][费米子张量]])提供统一的接口, 使用C++编写, 并提供了一个 [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/][Python的接口]].
++ [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/][=tetragono=]] : 一个张量网络态包, 为不同物理模型和不同张量类型提供用户友好的统一接口.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/][=tetraku=]] : 一个合集, 收录用于tetragono的物理模型和算法定制.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/lazy_graph/][=lazy_graph=]] : 一个辅助包, 用于在tetragono中使用惰性求值机制.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/PyScalapack/][=PyScalapack=]] : 一个辅助包, 为tetragono中使用ScaLAPACK提供Python接口.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/tnsp_bridge/][=tnsp_bridge=]] : 一个辅助包, 用于与 [[https://doi.org/10.1016/j.cpc.2018.03.006][旧版TNSP]] 进行格式转换.
+如需详细的软件包安装和使用说明, 请参考相应的子目录或章节.
+如果你正在阅读PDF版本的这份手册, 可能部分链接是无效的. 为获得更好的体验, 请查看GitHub仓库中的手册.
+
+* 贡献
+
+#+begin_export latex
+\iffalse
+#+end_export
+
+欢迎为TNSP项目做出贡献, 请查阅 [[https://github.com/USTC-TNS/TNSP/tree/main/CONTRIBUTING_zh.org][=CONTRIBUTING_zh.org=]] 文件了解详情.
+
+#+begin_export latex
+\fi
+\input{contributing_zh.tex}
+#+end_export
+
+* 许可证
+
+本项目遵循GPLv3许可证进行分发. 更多信息请参阅 [[https://github.com/USTC-TNS/TNSP/tree/main/LICENSE.rst][=LICENSE.rst=]] 文件.
+
+#+begin_export latex
+\chapter{TAT}\label{chap:TAT}
+\input{TAT_zh.tex}
+
+\chapter{PyTAT}\label{chap:PyTAT}
+\input{PyTAT_zh.tex}
+
+\chapter{tetragono}\label{chap:tetragono}
+\input{tetragono_zh.tex}
+
+\chapter{tetraku}\label{chap:tetraku}
+\input{tetraku_zh.tex}
+
+\chapter{lazy\_graph}\label{chap:lazy_graph}
+\input{lazy_graph_zh.tex}
+
+\chapter{PyScalapack}\label{chap:PyScalapack}
+\input{PyScalapack_zh.tex}
+
+\chapter{tnsp\_bridge}\label{chap:tnsp_bridge}
+\input{tnsp_bridge_zh.tex}
+#+end_export

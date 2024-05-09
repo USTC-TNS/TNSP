@@ -16,8 +16,10 @@
 !/CHANGELOG.org
 !/CMakeLists.txt
 !/CONTRIBUTING.org
+!/CONTRIBUTING_zh.org
 !/LICENSE.rst
 !/README.org
+!/README_zh.org
 
 _minted-*
 build

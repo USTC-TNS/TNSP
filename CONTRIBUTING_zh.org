@@ -1,0 +1,144 @@
+#+TITLE: CONTRIBUTING
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+** 如何为TNSP项目做出贡献
+
+如果你有某个想法或已经实现了某个功能, 或者发现了某个bug或已经修复了它, 请使用GitHub的"问题"(issues)或"拉取请求"(pull requests).
+对于bug, 提供一个最小工作示例(minimum working example)将非常有帮助.
+关于如何使用TNSP的任何问题, 都可以在GitHub的讨论区(discussion)中提出.
+此外, 请随时提交拉取请求, 以完善文档或向 =tetraku= 中添加新模型的描述.
+
+** 代码结构
+
+TNSP 的代码结构被组织成子项目, 每个子项目都放在其各自的目录中. TNSP 框架包括:
++ [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/][=TAT=]] 包含用 C++17 编写的核心张量库, 称为 =TAT=.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/][=PyTAT=]] 包含使用 pybind11 的 =TAT= 封装, 称为 =PyTAT= 或 =TAT= 的 Python 接口.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/lazy_graph/][=lazy_graph=]] 包含用于惰性求值的辅助库, 称为 =lazy_graph= , 它在 =tetragono= 中被使用.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/PyScalapack/][=PyScalapack=]] 包含用于在 Python 中直接调用 ScaLAPACK 的辅助库, 称为 =PyScalapack= ,它在 =tetragono= 中被使用.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/][=tetragono=]] 包含库 =tetragono= , 提供高级张量网络态操作, 包括精确对角化, PEPS 上简单更新和采样方法.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/][=tetraku=]] 包含库 =tetraku= , 提供可与 =tetragono= 一起使用的一些物理模型.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/tnsp_bridge/][=tnsp_bridge=]] 包含库 =tnsp_bridge= , 用于将旧版 TNSP 格式的张量迁移到 =PyTAT= 格式.
+其中, =lazy_graph= , =PyScalapack= 和 =tnsp_bridge= 都是单文件的纯 Python 包.
+以下是其他子项目的目录结构.
+
+*** =tetraku=
+
+=tetraku= 在其各自的目录中包含了物理模型的描述信息.
+每个模型都包含函数 =abstract_state= , 用于定义其物理边和哈密顿量, 以及 =abstract_lattice= , 用于定义其虚拟边.
+当向 =tetraku= 中添加新的物理模型时, 请包括一个简短的README, 即使只包含一行描述其哈密顿量也是可以接受的.
+请注意, 对于您想要在哈密顿量的子空间中进行优化的模型, 通常还需要哈密顿量跳跃脚本, 构型初始化脚本, 甚至是子空间限制脚本.
+而大多数时候, 您可能还想为模型添加一些测量.
+如果您想添加新模型, 可以参考这些模型的脚本: [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/J1J2/][=J1J2=]], [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/rydberg/][=rydberg=]] 与 [[https://github.com/USTC-TNS/TNSP/tree/main/tetraku/tetraku/models/free_fermion/][=free_fermion=]].
+
+*** =tetragono=
+
+=tetragono= 首先在 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/abstract_state.py][=abstract_state.py=]] 中定义了 AbstractState, 其中包含了在方形晶格上的模型哈密顿量和物理边, 并能够在单个格点上容纳多个轨道.
+随后, 它在 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/abstract_lattice.py][=abstract_lattice.py=]] 定义了 AbstractLattice.
+该组件详细描述了方形晶格上张量网络内的虚拟边, 这种方形晶格上的张量网络就是所谓的投影纠缠对态(PEPS).
+对于非对称张量, 用户仅需要提供边的维度, 而非费米子的对称性张量需要完整的段信息, 费米子对称性张量则还需要额外的费米箭头.
+在这些定义之后, [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/exact_state.py][=exact_state.py=]] 实现了精确对角化, [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/simple_update_lattice.py][=simple_update_lattice.py=]] 则实现了简单更新算法.
+
+由于存在多种采样方法, 相关的函数被归类在 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/sampling_lattice/][=sampling_lattice=]] 子目录下.
+在这个目录中, [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/sampling_lattice/lattice.py][=lattice.py=]] 定义晶格类型和单个采样结果的构型类型,
+而 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/sampling_lattice/sampling.py][=sampling.py=]] 包含了多种方法, 如遍历(ergodic), 扫描(sweep)和直接采样等.
+[[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/sampling_lattice/observer.py][=observer.py=]] 被设计用于从采样结果中便于进行测量和计算梯度.
+最后, 所有这些功能都通过 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/sampling_lattice/gradient.py][=gradient.py=]] 中的驱动函数进行集成和执行.
+
+[[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/utility.py][=utility.py=]] 文件包含各种实用函数.
+[[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/auxiliaries][=auxiliaries=]] 目录使用 =lazy_graph=, 定义了多个辅助系统用于构型类型, 旨在最小化张量网络收缩中的冗余计算, 特别是在删除或替换若干格点张量时.
+[[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/tensor_element.py][=tensor_element.py=]] 脚本专门用于稀疏化哈密顿量, 这是采样方法中的关键组件.
+在 [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/conversion.py][=conversion.py=]] 中, 定义了用于在ExactState, SimpleUpdateLattice和SamplingLattice之间进行转换的函数.
+最后, [[https://github.com/USTC-TNS/TNSP/tree/main/tetragono/tetragono/shell.py][=shell.py=]] 为访问 =tetragono= 内的所有函数提供了高级且用户友好的界面.
+
+*** =PyTAT=
+
+=PyTAT= 是使用了 pybind11 的 =TAT= 封装. 它主要由三个文件组成:
++ [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/PyTAT.hpp][=PyTAT.hpp=]] 定义了模板函数, 这些函数用于封装张量和边.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/dealing_tensor.cpp.in][=dealing_tensor.cpp.in=]] 用于生成文件, 这些文件实例化 [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/PyTAT.hpp][=PyTAT.hpp=]] 中针对不同张量类型的函数. 文件的生成过程由 [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/CMakeLists.txt][=CMakeLists.txt=]] 协调.
++ [[https://github.com/USTC-TNS/TNSP/tree/main/PyTAT/PyTAT.cpp][=PyTAT.cpp=]] 负责定义 Python 模块中的所有其他组件.
+
+*** =TAT=
+
+目录 [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/structure/][=structure=]] 中, 文件的组织如下:
+
+- [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/structure/name.hpp][=name.hpp=]] 负责定义用于标记张量边的名字.
+- [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/structure/symmetry.hpp][=symmetry.hpp=]] 描述了泛型的对称性类型 =Symmetry=. 它可以被实例化为各种对称性类型, 如 =NoSymmetry=, =BoseU1Symmetry=, =BoseZ2Symmetry=, =FermiZ2Symmetry=, =FermiU1Symmetry=, 等.
+- [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/structure/edge.hpp][=edge.hpp=]] 详述了张量边的结构, 包括段(segments)和费米箭头(fermi-arrow). 在这里, 段被表示为一个C++的向量, 该向量由对称性(Symmetry)和维度(dimension)的对所组成.
+- [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/structure/core.hpp][=core.hpp=]] 定义张量中除了边名称以外的所有内容.
+- [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/structure/tensor.hpp][=tensor.hpp=]] 定义了张量类型, 它包含一个 =shared_ptr<Core>= 和一个 =vector<Name>= . 此外, 该文件还声明了众多与张量相关的函数, 这些函数的实现在 [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/implement/][=implement=]] 目录下的相应文件中可以找到.
+
+此外, 多个实用的辅助组件在 [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/utility/][=utility=]] 目录中进行了定义.
+文件 [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/miscellaneous/io.hpp][=io.hpp=]] 专门用于定义张量的I/O函数,
+[[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/miscellaneous/scalar.hpp][=scalar.hpp=]] 处理张量的标量算术, 而 [[https://github.com/USTC-TNS/TNSP/tree/main/TAT/include/TAT/miscellaneous/mpi.hpp][=mpi.hpp=]] 则专注于张量的各种MPI操作.
+要注意, 在PyTAT中, 并未使用mpi.hpp中的函数.
+
+#+begin_export latex
+\iffalse
+#+end_export
+
+-----
+
+谢谢! :heart: :heart: :heart:
+
+USTC-TNS 组
+
+#+begin_export latex
+\fi
+#+end_export

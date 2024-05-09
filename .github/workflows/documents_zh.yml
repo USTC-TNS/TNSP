@@ -1,0 +1,70 @@
+name: documents_zh
+
+on:
+  [push, pull_request]
+
+jobs:
+  documents_in_latex:
+    name: generate documents in latex
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - file: TAT/README
+            name: TAT
+          - file: PyTAT/README
+            name: PyTAT
+          - file: tnsp_bridge/README
+            name: tnsp_bridge
+          - file: lazy_graph/README
+            name: lazy_graph
+          - file: tetragono/README
+            name: tetragono
+          - file: tetraku/README
+            name: tetraku
+          - file: PyScalapack/README
+            name: PyScalapack
+          - file: CONTRIBUTING
+            name: contributing
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install emacs
+        run: sudo apt-get update && sudo apt-get install -y emacs
+      - name: export to latex
+        run: |
+          emacs ${{matrix.file}}_zh.org --batch --eval "(progn (require 'ox-latex) (setq org-confirm-babel-evaluate nil) (beginning-of-buffer) (org-babel-next-src-block) (org-babel-execute-src-block) (org-latex-export-to-latex))"
+      - name: cut and rename the latex file
+        run: |
+          awk '/\\maketitle/{flag=1; next}/\\end\{document\}/{flag=0} flag' ${{matrix.file}}_zh.tex > ${{matrix.name}}_zh.tex
+      - name: upload to artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{matrix.name}}_zh.tex
+
+  process_latex:
+    name: generate pdf from latex
+    runs-on: ubuntu-latest
+    needs: documents_in_latex
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: install emacs, pygments and texlive
+        run: sudo apt-get update && sudo apt-get install -y emacs python3-pygments texlive-full
+      - name: download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: artifact
+      - name: export to pdf
+        run: |
+          emacs README_zh.org --batch --eval "(progn (require 'ox-latex) (setq org-confirm-babel-evaluate nil) (beginning-of-buffer) (org-babel-next-src-block) (org-babel-execute-src-block) (org-latex-export-to-pdf))"
+      - name: upload to artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: |
+            README_zh.tex
+            README_zh.pdf

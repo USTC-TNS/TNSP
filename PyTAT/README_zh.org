@@ -1,0 +1,1327 @@
+#+TITLE: PyTAT
+#+OPTIONS: toc:nil
+#+LATEX_CLASS: koma-book
+#+LATEX_HEADER: \usepackage{fancyvrb}
+#+LATEX_HEADER: \usepackage{fvextra}
+#+LATEX_HEADER: \usepackage{indentfirst}
+#+LATEX_HEADER: \usepackage{minted}
+#+LATEX_HEADER: \usepackage[most]{tcolorbox}
+#+LATEX_HEADER: \usepackage{etoolbox}
+#+LATEX_HEADER: \BeforeBeginEnvironment{Verbatim}{\begin{tcolorbox}[breakable,enhanced]}
+#+LATEX_HEADER: \AfterEndEnvironment{Verbatim}{\end{tcolorbox}}
+#+LATEX_HEADER: \usemintedstyle{emacs}
+#+begin_src emacs-lisp :exports none :results silent
+  (setq org-latex-pdf-process
+        '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "bibtex %b"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+          "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
+
+  (defun ek/babel-ansi ()
+    (when-let ((beg (org-babel-where-is-src-block-result nil nil)))
+      (save-excursion
+        (goto-char beg)
+        (when (looking-at org-babel-result-regexp)
+          (let ((end (org-babel-result-end))
+                (ansi-color-context-region nil))
+            (ansi-color-apply-on-region beg end))))))
+  (add-hook 'org-babel-after-execute-hook 'ek/babel-ansi)
+  (setq org-babel-min-lines-for-block-output 1)
+
+  (defun my-latex-export-src-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by minted
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{minted}{python}")
+        (replace-string "\\end{verbatim}" "\\end{minted}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-src-block-functions '(my-latex-export-src-blocks))
+
+  (defun my-latex-export-example-blocks (text backend info)
+    (when (org-export-derived-backend-p backend 'latex)
+      (with-temp-buffer
+        (insert text)
+        ;; replace verbatim env by Verbatim
+        (goto-char (point-min))
+        (replace-string "\\begin{verbatim}" "\\begin{Verbatim}[breaklines=true, breakanywhere=true]")
+        (replace-string "\\end{verbatim}" "\\end{Verbatim}")
+        (buffer-substring-no-properties (point-min) (point-max)))))
+  (setq org-export-filter-example-block-functions '(my-latex-export-example-blocks))
+
+  (add-to-list 'org-latex-classes
+               '("koma-book" "\\documentclass{scrbook}"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+#+end_src
+
+PyTAT是名为[[https://github.com/ustc-tns/tnsp/tree/main/tat][TAT]]的C++张量库的python封装, 提供对对称性和费米子张量的支持.
+PyTAT的大部分接口与TAT保持一致.
+
+* 安装
+
+用户可以使用任何现代构建系统创建Python轮包, 例如[[https://build.pypa.io/en/stable/][=wheel=]](使用命令 =python -m pip wheel .= )或[[https://pip.pypa.io/en/stable/reference/build-system/][=build=]](使用命令 =python -m build .= ).
+或者, 用户可以简单地使用 =pip install PyTAT= 在广泛使用的操作系统上安装预构建的发行版.
+
+要在pyodide环境中构建PyTAT, 请参考[[https://pyodide.org/en/stable/development/building-and-testing-packages.html][此链接]].
+请记得在 =pyodide build= 参数中添加 =--exports pyinit= .
+我们不能将预构建的emscripten平台发行版上传到[[https://pypi.org][pypi.org]], 因为他们不允许这样做.
+不过, 用户可以从[[https://github.com/ustc-tns/tnsp/releases][发布页面]]下载预构建的emscripten平台轮子.
+
+* 文档
+
+** 张量的构建
+
+由于PyTAT仅仅围绕一个C++头文件库进行封装, 它不支持标量类型或对称性类型的多态性.
+因此, Python中的每个不同张量都有其特定的类型.
+张量类型的命名约定如下: =TAT.<SymmetryType>.<ScalarType>.Tensor= .
+这里, =<SymmetryType>= 表示张量保持的对称性属性, 而 =<ScalarType>= 代表张量内部使用的标量数据类型.
+=<ScalarType>= 的可用值在下表中总结.
+#+ATTR_LATEX: :font \scriptsize
+|------------------------------+------------------------+---------------------|
+| =<ScalarType>=               | C++的标量类型          | Fortran中的等价类型 |
+|------------------------------+------------------------+---------------------|
+| =S=, =float32=               | =float=                | =real(kind=4)=      |
+| =D=, =float64=, =float=      | =double=               | =real(kind=8)=      |
+| =C=, =complex64=             | =std::complex<float>=  | =complex(kind=4)=   |
+| =Z=, =complex128=, =complex= | =std::complex<double>= | =complex(kind=8)=   |
+|------------------------------+------------------------+---------------------|
+下表总结了 =<SymmetryType>= 的可选值.
+#+ATTR_LATEX: :font \scriptsize
+|------------------+----------------------------------+---------------------------|
+| =<SymmetryType>= | C++中的对称性类型                | 守恒量的例子              |
+|------------------+----------------------------------+---------------------------|
+| =No=, =Normal=   | =Symmetry<>=                     | 没有任何守恒              |
+| =BoseZ2=, =Z2=   | =Symmetry<bose<Z2>>=             | z方向自旋宇称             |
+| =BoseU1=, =U1=   | =Symmetry<bose<U1>>=             | z方向自旋                 |
+| =FermiU1=        | =Symmetry<fermi<U1>>=            | 费米子数目                |
+| =FermiU1BoseZ2=  | =Symmetry<fermi<U1>, bose<Z2>>=  | 费米子数目和z方向自选宇称 |
+| =FermiU1BoseU1=  | =Symmetry<fermi<U1>, bose<U1>>=  | 费米子数目和z方向自选     |
+| =FermiZ2=        | =Symmetry<fermi<Z2>>=            | 费米子数目宇称            |
+| =FermiU1FermiU1= | =Symmetry<fermi<U1>, fermi<U1>>= | 两个不同的费米子数目      |
+|------------------+----------------------------------+---------------------------|
+
+用户可以通过使用相同的接口 =Tensor(name_list, edge_list)= 来创建各种类型的张量, 其中 =name_list= 只是一个字符串列表, 而 =edge_list= 可能会根据所考虑的具体对称性类型而有很大差异.
+
+对于没有任何对称性的张量, 用户可以使用整数列表来定义其边. 以下是一个创建填充了零的张量的示例. 请注意, 除非使用 =zero_()= 函数显式设置为零, 否则张量中的数据不会自动初始化为零.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(["i", "j"], [3, 4]).zero_()
+  print(A)
+#+end_src
+
+#+RESULTS[6f5773c5dbbc2b5f627132431ff84688cbf0e05e]:
+#+begin_example
+{names:[i,j],edges:[3,4],blocks:[0,0,0,0,0,0,0,0,0,0,0,0]}
+#+end_example
+
+上述代码创建了一个名为 =A= 的二阶张量, 它有两个边 =i= 和 =j= , 这两个边的维度分别为3和4. 然后, 它打印了张量A.
+
+非费米子对称性张量使用"段"来定义边, 这些段是一系列量子数对及其相应简并度组成.
+量子数及其多重数也被称为群论术语中的不可约表示及其多重数,
+或者在这个包的上下文中被称为"对称性"及其相应的维.
+以下代码生成了一个 $Z(2)$ 对称性张量和一个 $U(1)$ 对称性张量. 在这种情况下, $Z(2)$ 对称群的不可约表示用布尔值表示, 而 $U(1)$ 对称群则用整数表示.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseZ2.D.Tensor(["i", "j"], [
+      [(False, 2), (True, 4)],
+      [(False, 3), (True, 1)],
+  ]).range_()
+  print(A)
+
+  B = TAT.BoseU1.D.Tensor(["i", "j"], [
+      [(-1, 2), (0, 4), (+1, 1)],
+      [(-1, 3), (0, 2), (+1, 1)],
+  ]).range_()
+  print(B)
+#+end_src
+
+#+RESULTS[ea4bb91236d826be39b61137c3cbe2670526024d]:
+#+begin_example
+{names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+{names:[i,j],edges:[{-1:2,0:4,1:1},{-1:3,0:2,1:1}],blocks:{[-1,1]:[0,1],[0,0]:[2,3,4,5,6,7,8,9],[1,-1]:[10,11,12]}}
+#+end_example
+
+对于张量 =A=, 它包含两个分块.
+第一个分块具有不可约表示 =[False, False]= , 维度为 =2 * 4= .
+第二个分块具有不可约表示 =[True, True]= , 维度为 =4 * 1= .
+对于张量 B, 它由三个分块组成. 不可约表示分别为 =[-1, +1]= ,  =[0, 0]= , 和 =[+1, -1]= .
+每个分块根据这些多重数具有不同的维度.
+在给定的代码中, =range_()= 函数生成等差序列数据到张量中.
+
+费米子张量的情况可能相当复杂.
+边由沿着所谓的"费米箭头"的成对段确定, 费米箭头是一个布尔值.
+下面的例子创建了一个费米子 $U(1)$ 对称性张量, 其中费米子性质由 $U(1)$ 对称性携带,
+其两个边的费米箭头分别为 =False= 和 =True= .
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j"], [
+      ([(-1, 2), (0, 4), (+1, 1)], False),
+      ([(-1, 3), (0, 2), (+1, 1)], True),
+  ]).range_()
+  print(A)
+#+end_src
+
+#+RESULTS[5e79a1e8ef40b2a94023c0ae181cb23f8d6fb427]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{-1:2,0:4,1:1}},{arrow:1,segment:{-1:3,0:2,1:1}}],blocks:{[-1,1]:[0,1],[0,0]:[2,3,4,5,6,7,8,9],[1,-1]:[10,11,12]}}
+#+end_example
+
+费米子张量网络的背景下需要引入费米箭头,
+它假设在网络的每条边后面都存在一个费米子EPR对.
+连接在一条边上的两个张量包含EPR对的两个湮灭算符,
+而对于费米子EPR对, 两个算符的顺序是重要的.
+因此, 在TAT中, 使用费米箭头来表示哪一侧的算符在另一侧之前.
+具体来说, TAT假设费米箭头为False的算符在费米箭头为True的算符之前.
+
+对于非简单群的对称性张量,
+它们的不可约表示实际上需要用一个元组而不是单个布尔值或整数来表示, 如下例所示.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1BoseZ2.D.Tensor(["i", "j"], [
+      ([
+          ((-1, False), 1),
+          ((0, False), 1),
+          ((+1, False), 1),
+          ((-1, True), 1),
+          ((0, True), 1),
+          ((+1, True), 1),
+      ], False),
+      ([
+          ((-1, False), 1),
+          ((0, False), 1),
+          ((+1, False), 1),
+          ((-1, True), 1),
+          ((0, True), 1),
+          ((+1, True), 1),
+      ], True),
+  ]).range_()
+  print(A)
+#+end_src
+
+#+RESULTS[5d0fa65e700fb727988b75d90b272a3ed9d1c48b]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{(-1,0):1,(0,0):1,(1,0):1,(-1,1):1,(0,1):1,(1,1):1}},{arrow:1,segment:{(-1,0):1,(0,0):1,(1,0):1,(-1,1):1,(0,1):1,(1,1):1}}],blocks:{[(-1,0),(1,0)]:[0],[(0,0),(0,0)]:[1],[(1,0),(-1,0)]:[2],[(-1,1),(1,1)]:[3],[(0,1),(0,1)]:[4],[(1,1),(-1,1)]:[5]}}
+#+end_example
+
+** 对称性信息的清除
+
+由于对称性张量是分块张量, 因此总是可以从这样的张量中移除对称性信息, 从而得到一个非对称性张量.
+这一功能是通过使用 =clear_symmetry= 函数实现的, 如下面的代码片段所示:
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseZ2.D.Tensor(["i", "j"], [
+      [(False, 2), (True, 4)],
+      [(False, 3), (True, 1)],
+  ]).range_()
+  B = A.clear_symmetry()
+  print(A)
+  print(B)
+
+  C = TAT.BoseU1.D.Tensor(["i", "j"], [
+      [(0, 2), (2, 4), (1, 1)],
+      [(0, 3), (-2, 1), (-1, 3)],
+  ]).range_()
+  D = C.clear_symmetry()
+  print(C)
+  print(D)
+#+end_src
+
+#+RESULTS[bac47d1b2342e5ea2016374b2acc543e757f4e11]:
+#+begin_example
+{names:[i,j],edges:[{0:2,1:4},{0:3,1:1}],blocks:{[0,0]:[0,1,2,3,4,5],[1,1]:[6,7,8,9]}}
+{names:[i,j],edges:[6,4],blocks:[0,1,2,0,3,4,5,0,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9]}
+{names:[i,j],edges:[{0:2,2:4,1:1},{0:3,-2:1,-1:3}],blocks:{[0,0]:[0,1,2,3,4,5],[2,-2]:[6,7,8,9],[1,-1]:[10,11,12]}}
+{names:[i,j],edges:[7,7],blocks:[0,1,2,0,0,0,0,3,4,5,0,0,0,0,0,0,0,6,0,0,0,0,0,0,7,0,0,0,0,0,0,8,0,0,0,0,0,0,9,0,0,0,0,0,0,0,10,11,12]}
+#+end_example
+
+对于费米子对称性张量, 直接移除费米子反对易关系是不可行的.
+不过, 我们能清除部分对称性, 结果得到的是一个费米子 $Z(2)$ 对称性张量,
+而不是一个非对称性张量, 如下所示:
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  C = TAT.FermiU1.D.Tensor(["i", "j"], [
+      ([(0, 2), (2, 4), (1, 1)], False),
+      ([(0, 3), (-2, 1), (-1, 3)], True),
+  ]).range_()
+  D = C.clear_symmetry()
+  print(C)
+  print(D)
+#+end_src
+
+#+RESULTS[f3859610d68266707a1c3f8075d6cab4fdb97958]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{0:2,2:4,1:1}},{arrow:1,segment:{0:3,-2:1,-1:3}}],blocks:{[0,0]:[0,1,2,3,4,5],[2,-2]:[6,7,8,9],[1,-1]:[10,11,12]}}
+{names:[i,j],edges:[{arrow:0,segment:{0:6,1:1}},{arrow:1,segment:{0:4,1:3}}],blocks:{[0,0]:[0,1,2,0,3,4,5,0,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9],[1,1]:[10,11,12]}}
+#+end_example
+
+** 张量内的属性
+
+一个张量主要由三个部分组成:名字, 边和内容.
+用户可以通过只读属性 =A.names= 访问名字列表, 并通过只读属性 =A.edges= 访问边列表.
+在实际应用中, =A.edge_by_name(name)= 是一个有用的方法,
+可以直接根据给定的边名字获取相应的边.
+此外, 可以使用 =A.rank= 来获取张量的秩.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseU1.D.Tensor(["i", "j"], [
+      [(-1, 1), (0, 1), (+2, 1)],
+      [(-2, 2), (+1, 1), (0, 2)],
+  ])
+  print(A.names)
+  print(A.edges[0], A.edges[1])
+  print(A.edge_by_name("i"), A.edge_by_name("j"))
+  print(A.rank)
+#+end_src
+
+#+RESULTS[20afecbaed5c7002fb9e661858a2d384753c1768]:
+#+begin_example
+['i', 'j']
+{-1:1,0:1,2:1} {-2:2,1:1,0:2}
+{-1:1,0:1,2:1} {-2:2,1:1,0:2}
+2
+#+end_example
+
+要访问张量的内容, 有三种可用的方法:
+
++ 使用 =A.storage= 获取所有内容作为一维数组, 这是一个与TAT张量共享数据的NumPy数组.
+  在对MPI程序中的数据执行allreduce或broadcast操作时, 建议使用此存储数组进行操作.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseU1.D.Tensor(["i", "j"], [
+      [(-1, 1), (0, 1), (+2, 1)],
+      [(-2, 2), (+1, 1), (0, 2)],
+  ]).range_()
+  print(A.storage)
+  print(type(A.storage))
+  print(A.storage.flags.owndata)
+#+end_src
+
+#+RESULTS[fd9743e41749dd65f245fbf0ae0be05d09a96144]:
+#+begin_example
+[0. 1. 2. 3. 4.]
+<class 'numpy.ndarray'>
+False
+#+end_example
+
++ 根据指定的边名顺序和对称性获取张量的分块.
+  对于非对称性张量, 无需为每个边指定对称性.
+  一般情况下, 此接口接受边名列表以传递非对称性张量的边名顺序.
+  此分块也是一个与共享数据的NumPy数组.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseU1.D.Tensor(["i", "j"], [
+      [(-1, 2), (0, 2), (+2, 2)],
+      [(-2, 2), (+1, 2), (0, 2)],
+  ]).range_()
+  block = A.blocks[("j", -2), ("i", +2)]
+  print(block)
+
+  B = TAT.No.D.Tensor(["i", "j"], [3, 4]).range_()
+  print(B.blocks["j", "i"])
+#+end_src
+
+#+RESULTS[936506c5467c14a27abf83be29f9e550064d0a4c]:
+#+begin_example
+[[ 8. 10.]
+ [ 9. 11.]]
+[[ 0.  4.  8.]
+ [ 1.  5.  9.]
+ [ 2.  6. 10.]
+ [ 3.  7. 11.]]
+#+end_example
+
++ 使用描述其在张量中确切位置的字典检索张量的特定元素.
+  可以使用字典映射从边名到该边的总索引,
+  或者映射到由对称性(指示边内的段)和局部索引(指示该段内的特定索引)组成的对来指定张量内的确切位置.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseU1.D.Tensor(["i", "j"], [
+      [(-1, 2), (0, 2), (+2, 2)],
+      [(-2, 2), (+1, 2), (0, 2)],
+  ]).range_()
+  print(A[{"j": (-2, 0), "i": (+2, 1)}])
+#+end_src
+
+#+RESULTS[6f78ac2b184a643d7ee95ad61b6f653a18b6cffb]:
+#+begin_example
+10.0
+#+end_example
+
+所有这三种方法也支持使用相同的接口设置元素.
+
+** 张量类型的属性
+
+张量类型包含几个静态属性, 例如:
+
++ =btypes=: 由BLAS惯例表示的标量类型.
++ =dtypes=: 由NumPy惯例表示的标量类型.
++ =is_complex=: 一个布尔值, 指示张量是否为复数.
++ =is_real=: 一个布尔值, 指示张量是否为实数.
++ =model=: 张量对称性模型的别名. 例如, 获取 =TAT.FermiU1.D.Tensor= 的属性 =model= , 结果为 =TAT.FermiU1= .
+
+** 单元素张量与数之间的转换
+
+用户可以直接在秩为0的张量和数之间进行转换.
+对于只包含一个元素的非秩为0的张量, 用户也可以直接将其转换为数字.
+相反地, 用户可以直接执行逆操作, 创建一个具有多个1维边的单元素张量.
+在这种情况下, 对于非对称性张量, 用户在创建非秩为0的单元素张量时, 应该只传递名字列表.
+对于非费米子对称性张量, 用户应该为每个边提供额外的对称性信息作为第三个参数.
+对于费米子对称性张量, 用户应该为每个边提供额外的费米箭头信息作为第四个参数.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.Z.Tensor(233)
+  a = complex(A)
+  print(A)
+  print(a)
+
+  B = TAT.BoseU1.D.Tensor(233)
+  b = float(B)
+  print(B)
+  print(b)
+
+  C = TAT.No.D.Tensor(233, ["i", "j"])
+  c = float(C)
+  print(C)
+  print(c)
+
+  D = TAT.BoseU1.D.Tensor(233, ["i", "j"], [-1, +1])
+  d = float(D)
+  print(D)
+  print(d)
+
+  E = TAT.FermiU1.D.Tensor(233, ["i", "j"], [-1, +1], [False, True])
+  e = float(E)
+  print(E)
+  print(e)
+#+end_src
+
+#+RESULTS[2f609aec5299e13c3cf5382915c11bf014233890]:
+#+begin_example
+{names:[],edges:[],blocks:[233]}
+(233+0j)
+{names:[],edges:[],blocks:{[]:[233]}}
+233.0
+{names:[i,j],edges:[1,1],blocks:[233]}
+233.0
+{names:[i,j],edges:[{-1:1},{1:1}],blocks:{[-1,1]:[233]}}
+233.0
+{names:[i,j],edges:[{arrow:0,segment:{-1:1}},{arrow:1,segment:{1:1}}],blocks:{[-1,1]:[233]}}
+233.0
+#+end_example
+
+** 类型转换
+
+要将张量的内容类型转换, 用户可以使用 =to= 函数.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j"], [
+      ([(0, 2), (-1, 2)], False),
+      ([(0, 2), (1, 2)], False),
+  ]).range_()
+  print(type(A))
+  print(type(A.to("complex")))
+  print(type(A.to("complex64")))
+  print(type(A.to("complex128")))
+  print(type(A.to("float")))
+  print(type(A.to("float32")))
+  print(type(A.to("float64")))
+#+end_src
+
+#+RESULTS[f97c986c1dd8614ee32a06fe58bd2cf21c174724]:
+#+begin_example
+<class 'TAT.FermiU1.D.Tensor'>
+<class 'TAT.FermiU1.Z.Tensor'>
+<class 'TAT.FermiU1.C.Tensor'>
+<class 'TAT.FermiU1.Z.Tensor'>
+<class 'TAT.FermiU1.D.Tensor'>
+<class 'TAT.FermiU1.S.Tensor'>
+<class 'TAT.FermiU1.D.Tensor'>
+#+end_example
+
+** 序列化与反序列化
+
+用户可以使用 =pickle.dump(s)= 函数对张量进行二进制序列化,
+并使用 =pickle.load(s)= 函数对张量进行二进制反序列化.
+对于文本序列化, 可以使用 =str= 函数,
+并且可以使用张量构造器从文本格式实现张量的反序列化.
+
+#+begin_src python :results output :exports both :cache yes
+  import pickle
+  import TAT
+
+  A = TAT.No.D.Tensor(
+      ["i", "j", "k", "l"],
+      [2, 3, 3, 2],
+  ).range_()
+  B = pickle.loads(pickle.dumps(A))
+  C = TAT.No.D.Tensor(str(B))
+  print(A)
+  print(B)
+  print(C)
+#+end_src
+
+#+RESULTS[aec8edf98381a8587b51e46033f4ebdd7dff2704]:
+#+begin_example
+{names:[i,j,k,l],edges:[2,3,3,2],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]}
+{names:[i,j,k,l],edges:[2,3,3,2],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]}
+{names:[i,j,k,l],edges:[2,3,3,2],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]}
+#+end_example
+
+** 显式复制
+
+由于Python的行为, 简单的赋值不会创建数据的副本, 而是共享相同的数据.
+在下面的例子中, 当B被赋值给A时, 修改A中的数据也会导致张量B的变化.
+要执行张量的深拷贝, 用户可以使用张量的成员函数 =copy= , 或者他们可以直接使用 =copy.copy= .
+要复制张量的形状而不复制其内容, 用户可以利用 =same_shape= 函数,
+该函数创建一个具有相同形状但数据未初始化的张量.
+
+#+begin_src python :results output :exports both :cache yes
+  import copy
+  import TAT
+
+  A = TAT.No.D.Tensor(233)
+  B = A
+  A[{}] = 1
+  print(B)
+
+  C = TAT.No.D.Tensor(233)
+  D = C.copy()
+  C[{}] = 1
+  print(D)
+
+  E = TAT.No.D.Tensor(233)
+  F = copy.copy(E)
+  E[{}] = 1
+  print(F)
+#+end_src
+
+#+RESULTS[129095820ce8c76bc530c39929ce5ce7c7c3f845]:
+#+begin_example
+{names:[],edges:[],blocks:[1]}
+{names:[],edges:[],blocks:[233]}
+{names:[],edges:[],blocks:[233]}
+#+end_example
+
+** 逐元素操作
+
+用户可以使用 =map= 函数对张量的元素逐个应用自定义函数, 用于非原地操作,
+或者使用 =transform_= 函数进行原地操作.
+此外, 还有一个名为 =set_= 的函数,
+它类似于 =transform_= , 但它不接受输入值.
+换句话说,  =A.set_(f)= 等价于 =A.transform_(lambda _: f())= .
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(["i", "j"], [2, 2]).range_()
+  A.transform_(lambda x: x * x)
+  print(A)
+
+  B = A.map(lambda x: x + 1)
+  print(B)
+  print(A)
+
+  A.set_(iter([1, 6, 2, 5]).__next__)
+  print(A)
+#+end_src
+
+#+RESULTS[9acc2dd883dfba287760143ea488dbb6439e711e]:
+#+begin_example
+{names:[i,j],edges:[2,2],blocks:[0,1,4,9]}
+{names:[i,j],edges:[2,2],blocks:[1,2,5,10]}
+{names:[i,j],edges:[2,2],blocks:[0,1,4,9]}
+{names:[i,j],edges:[2,2],blocks:[1,6,2,5]}
+#+end_example
+
+在实践中, 有几种逐元素操作是常用的,
+因此TAT Python接口提供了单独的函数来方便地封装它们.
+这些包括:
+
++ ~A.reciprocal()~: 类似于 ~A.map(lambda x: 0 if x == 0 else 1 / x)~ .
++ ~A.sqrt()~: 类似于 ~A.map(lambda x: x**(1 / 2))~ .
+
+** 张量的范数
+
+用户可以使用以下函数计算张量的范数:
+
++ =norm_2= 用于2-范数.
++ =norm_max= 用于无穷范数.
++ =norm_num= 用于0-范数.
++ =norm_sum= 用于1-范数.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(["i"], [6]).range_(1, 2)
+  print(A)
+  print(A.norm_2())
+  print(A.norm_max())
+  print(A.norm_num())
+  print(A.norm_sum())
+#+end_src
+
+#+RESULTS[f1281eaa0b6ce1a2f57bd56854f641ef08ddc122]:
+#+begin_example
+{names:[i],edges:[6],blocks:[1,3,5,7,9,11]}
+16.911534525287763
+11.0
+6.0
+36.0
+#+end_example
+
+** 将随机数填充到张量中
+
+将随机数填充到张量中可以通过 =set_= 函数实现,
+但是Python函数调用可能相对较慢, 而随机填充操作可能会频繁使用.
+为了解决这个问题, TAT Python接口提供了两个函数: =randn_= 和 =rand_= .
+
++ =randn_= :该函数将张量填充为正态分布的随机数.
+  它接受可选参数, 用于指定均值(默认为0)和标准差(默认为1).
++ =rand_= :该函数将张量填充为均匀分布的随机数.
+  它也接受可选参数, 用于指定最小值(默认为0)和最大值(默认为1).
+
+这两个函数都使用了 =std::mt19937_64= 随机引擎, 用户可以使用 =TAT.random.seed= 设置随机数引擎的种子.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+  TAT.random.seed(2333)
+  A = TAT.No.D.Tensor(["i"], [10]).randn_()
+  print(A)
+  B = TAT.No.Z.Tensor(["i"], [10]).randn_()
+  print(B)
+#+end_src
+
+#+RESULTS[579417655b3da02a340d439364342ded1f8d1905]:
+#+begin_example
+{names:[i],edges:[10],blocks:[0.766553,1.42783,-0.802786,0.231369,-0.144274,0.75302,-0.930606,-0.90363,1.58645,-1.66505]}
+{names:[i],edges:[10],blocks:[0.93897-2.03094i,-1.04394+0.724667i,0.0607228+0.802331i,-0.0634779+0.261524i,-0.0182935-0.00331999i,-0.809166+0.358002i,0.108272+0.293261i,-0.685203-0.874357i,-1.02724+0.898064i,-1.16878-0.312219i]}
+#+end_example
+
+当然, 有些情况下用户可能希望使用TAT随机数生成器来生成张量之外的随机数.
+这可以通过 =TAT.random= 子模块中的函数来实现, 其中包括:
+
++ =uniform_int= :生成均匀分布的随机整数.
++ =uniform_real= :生成均匀分布的随机实数.
++ =normal= :生成正态分布的随机数.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  TAT.random.seed(2333)
+  a = TAT.random.uniform_int(0, 1)
+  print([a() for _ in range(10)])
+  b = TAT.random.uniform_real(0, 1)
+  print([b() for _ in range(10)])
+  c = TAT.random.normal(0, 1)
+  print([c() for _ in range(10)])
+#+end_src
+
+#+RESULTS[7002a8fc3bf31dd6c471c0f288054b011a935fac]:
+#+begin_example
+[1, 1, 1, 0, 1, 1, 1, 0, 0, 0]
+[0.40352081782045557, 0.5919243832286168, 0.27290914845486797, 0.7042572953540996, 0.5525455768177127, 0.3527365854756287, 0.13938916269629487, 0.844959553591226, 0.6296832832042462, 0.8978555690178844]
+[-0.018293519693094607, -0.8091660392771898, -0.0033199925772919928, 0.35800177574398406, 0.1082722439575567, -0.6852033252925772, 0.29326095246544526, -0.8743569677337741, -1.0272406882246077, -1.1687800551936816]
+#+end_example
+
+** 将等差序列数据设置到张量中
+
+用户可以使用 =A.range_(first, step)= 将一系列数据设置到张量中,
+该方法会按照 $first$, $first+step$, $first+step \times 2$ 的顺序填充张量.
+默认情况下,  =first= 被设置为 0,  =step= 被设置为 1.
+在实际的张量网络态编程中, 这个函数并不经常被使用, 主要用于生成示例来阐释本文档中讨论的其他函数.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.C.Tensor(["i", "j", "k"], [
+      ([(-1, 2), (0, 2), (-2, 2)], True),
+      ([(0, 2), (1, 2)], False),
+      ([(0, 2), (1, 2)], False),
+  ]).range_(0, 1 + 1j)
+  print(A)
+#+end_src
+
+#+RESULTS[864d29b52e18fe127deaa5dfc02c39d78af2e0d6]:
+#+begin_example
+{names:[i,j,k],edges:[{arrow:1,segment:{-1:2,0:2,-2:2}},{arrow:0,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[-1,0,1]:[0,1+1i,2+2i,3+3i,4+4i,5+5i,6+6i,7+7i],[-1,1,0]:[8+8i,9+9i,10+10i,11+11i,12+12i,13+13i,14+14i,15+15i],[0,0,0]:[16+16i,17+17i,18+18i,19+19i,20+20i,21+21i,22+22i,23+23i],[-2,1,1]:[24+24i,25+25i,26+26i,27+27i,28+28i,29+29i,30+30i,31+31i]}}
+#+end_example
+
+** 填充张量中的零
+
+在TAT包中, 张量的内容默认不会被初始化. 为了手动将其初始化为零, 用户可以调用 =zero_= 函数.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j"], [
+      ([(0, 2), (-1, 2)], False),
+      ([(0, 2), (1, 2)], False),
+  ]).zero_()
+  print(A)
+#+end_src
+
+#+RESULTS[112f699d068db830974e37d50d6fb11029a21924]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{0:2,-1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[-1,1]:[0,0,0,0]}}
+#+end_example
+
+** 算术标量运算
+
+用户可以直接对张量执行算术标量运算. 在进行两个张量之间的算术运算时, 它们的形状应该相同, 边的顺序可以不同, 因为TAT可以自动根据需要对它们进行转置.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  a = TAT.No.D.Tensor(["i"], [4]).range_(0, 1)
+  b = TAT.No.D.Tensor(["i"], [4]).range_(0, 10)
+  print(a)
+  print(b)
+  print(a + b)
+  print(a * b)
+  print(1 / a)
+  print(b - 1)
+  a *= 2
+  print(a)
+  b /= 2
+  print(b)
+#+end_src
+
+#+RESULTS[a1a1728b07465366ea105afd090e9acf7dfabb64]:
+#+begin_example
+{names:[i],edges:[4],blocks:[0,1,2,3]}
+{names:[i],edges:[4],blocks:[0,10,20,30]}
+{names:[i],edges:[4],blocks:[0,11,22,33]}
+{names:[i],edges:[4],blocks:[0,10,40,90]}
+{names:[i],edges:[4],blocks:[inf,1,0.5,0.333333]}
+{names:[i],edges:[4],blocks:[-1,9,19,29]}
+{names:[i],edges:[4],blocks:[0,2,4,6]}
+{names:[i],edges:[4],blocks:[0,5,10,15]}
+#+end_example
+
+** 张量共轭
+
+对一个张量进行共轭操作会导致通过每条边的所有段的对称性反转, 同时改变张量内所有元素的值, 如下所示.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseU1.Z.Tensor(["i", "j"], [
+      [(0, 2), (2, 4), (1, 1)],
+      [(0, 3), (-2, 1), (-1, 3)],
+  ]).range_(0, 1 + 1j)
+  B = A.conjugate()
+  print(A)
+  print(B)
+#+end_src
+
+#+RESULTS[694cdfa556d80554691ae5423d1b9db560240551]:
+#+begin_example
+{names:[i,j],edges:[{0:2,2:4,1:1},{0:3,-2:1,-1:3}],blocks:{[0,0]:[0,1+1i,2+2i,3+3i,4+4i,5+5i],[2,-2]:[6+6i,7+7i,8+8i,9+9i],[1,-1]:[10+10i,11+11i,12+12i]}}
+{names:[i,j],edges:[{0:2,-2:4,-1:1},{0:3,2:1,1:3}],blocks:{[0,0]:[0,1-1i,2-2i,3-3i,4-4i,5-5i],[-2,2]:[6-6i,7-7i,8-8i,9-9i],[-1,1]:[10-10i,11-11i,12-12i]}}
+#+end_example
+
+请注意, 在$U(1)$对称性的情况下, 不可约表示的反转会导致其取反, 而在$Z(2)$对称性的情况下, 反转保持不变.
+
+在费米子张量的情况下, 张量的共轭, 当与原始张量缩并时, 可能导致非正数.
+这一奇特现象表明费米子张量的度规不是半正定的.
+这种不寻常的情况可能会干扰上层编程中的朴素梯度方法.
+为了使用固定度规计算共轭, 用户可以在调用共轭函数时使用名为 =trivial_metric=True= 的参数, 如下所示.
+然而, 重要的是要注意, 这种度规固定将导致 $(AB)^\dagger \neq A^\dagger B^\dagger$ 的情况.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiZ2.Z.Tensor(["i", "j"], [
+      ([(False, 2), (True, 4)], False),
+      ([(False, 3), (True, 1)], True),
+  ]).range_(0, 1 + 1j)
+  B = A.conjugate()
+  C = A.conjugate(trivial_metric=True)
+  print(A)
+  print(B)
+  print(C)
+  print(A.contract(B, {("i", "i"), ("j", "j")}))
+  print(A.contract(C, {("i", "i"), ("j", "j")}))
+#+end_src
+
+#+RESULTS[753110aa2189cd5468248634097b8737381a7d35]:
+#+begin_example
+{names:[i,j],edges:[{arrow:0,segment:{0:2,1:4}},{arrow:1,segment:{0:3,1:1}}],blocks:{[0,0]:[0,1+1i,2+2i,3+3i,4+4i,5+5i],[1,1]:[6+6i,7+7i,8+8i,9+9i]}}
+{names:[i,j],edges:[{arrow:1,segment:{0:2,1:4}},{arrow:0,segment:{0:3,1:1}}],blocks:{[0,0]:[0,1-1i,2-2i,3-3i,4-4i,5-5i],[1,1]:[-6+6i,-7+7i,-8+8i,-9+9i]}}
+{names:[i,j],edges:[{arrow:1,segment:{0:2,1:4}},{arrow:0,segment:{0:3,1:1}}],blocks:{[0,0]:[0,1-1i,2-2i,3-3i,4-4i,5-5i],[1,1]:[6-6i,7-7i,8-8i,9-9i]}}
+{names:[],edges:[],blocks:{[]:[-350]}}
+{names:[],edges:[],blocks:{[]:[570]}}
+#+end_example
+
+* 张量收缩
+
+为了执行两个张量的收缩, 用户可以向 =contract= 函数提供一组边对作为参数.
+每对边由第一个要收缩的张量的边和第二个张量的相应边组成.
+在下面的例子中, 张量A的边'i'与张量B的边'a'进行收缩, 张量A的边'j'与张量B的边'c'进行收缩.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(["i", "j", "k"], [2, 3, 4]).range_()
+  B = TAT.No.D.Tensor(["a", "b", "c", "d"], [2, 5, 3, 6]).range_()
+  C = A.contract(B, {("i", "a"), ("j", "c")})
+  print(C)
+#+end_src
+
+#+RESULTS[4aad677568abdccd37badff1c6dd06efa89c02e7]:
+#+begin_example
+{names:[k,b,d],edges:[4,5,6],blocks:[4776,4836,4896,4956,5016,5076,5856,5916,5976,6036,6096,6156,6936,6996,7056,7116,7176,7236,8016,8076,8136,8196,8256,8316,9096,9156,9216,9276,9336,9396,5082,5148,5214,5280,5346,5412,6270,6336,6402,6468,6534,6600,7458,7524,7590,7656,7722,7788,8646,8712,8778,8844,8910,8976,9834,9900,9966,10032,10098,10164,5388,5460,5532,5604,5676,5748,6684,6756,6828,6900,6972,7044,7980,8052,8124,8196,8268,8340,9276,9348,9420,9492,9564,9636,10572,10644,10716,10788,10860,10932,5694,5772,5850,5928,6006,6084,7098,7176,7254,7332,7410,7488,8502,8580,8658,8736,8814,8892,9906,9984,10062,10140,10218,10296,11310,11388,11466,11544,11622,11700]}
+#+end_example
+
+由于函数 =clear_symmetry= 仅移除对称性信息而不进行任何其他修改,
+因此, 从收缩中得到的对称性清除的张量等于单独的对称性清除的张量的收缩.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  a = TAT.BoseU1.D.Tensor(["A", "B", "C", "D"], [
+      [(-1, 1), (0, 1), (-2, 1)],
+      [(0, 1), (1, 2)],
+      [(0, 2), (1, 2)],
+      [(-2, 2), (-1, 1), (0, 2)],
+  ]).range_()
+  b = TAT.BoseU1.D.Tensor(["E", "F", "G", "H"], [
+      [(0, 2), (1, 1)],
+      [(-2, 1), (-1, 1), (0, 2)],
+      [(0, 1), (-1, 2)],
+      [(2, 2), (1, 1), (0, 2)],
+  ]).range_()
+  c = a.contract(b, {("B", "G"), ("D", "H")})
+
+  A = a.clear_symmetry()
+  B = b.clear_symmetry()
+  C = A.contract(B, {("B", "G"), ("D", "H")})
+  print((c.clear_symmetry() - C).norm_2())
+#+end_src
+
+#+RESULTS[e8581d27945af12bb1b17e5e8ca873fd15c502e6]:
+#+begin_example
+0.0
+#+end_example
+
+相同的原则适用于费米子对称性张量.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  a = TAT.FermiU1.D.Tensor(["A", "B", "C", "D"], [
+      ([(-1, 1), (0, 1), (-2, 1)], False),
+      ([(0, 1), (1, 2)], True),
+      ([(0, 2), (1, 2)], False),
+      ([(-2, 2), (-1, 1), (0, 2)], True),
+  ]).range_()
+  b = TAT.FermiU1.D.Tensor(["E", "F", "G", "H"], [
+      ([(0, 2), (1, 1)], False),
+      ([(-2, 1), (-1, 1), (0, 2)], True),
+      ([(0, 1), (-1, 2)], False),
+      ([(2, 2), (1, 1), (0, 2)], False),
+  ]).range_()
+  c = a.contract(b, {("B", "G"), ("D", "H")})
+
+  A = a.clear_symmetry()
+  B = b.clear_symmetry()
+  C = A.contract(B, {("B", "G"), ("D", "H")})
+  print((c.clear_symmetry() - C).norm_2())
+#+end_src
+
+#+RESULTS[7dd6e61bb31a7f1da6923d35b69f966267903ff2]:
+#+begin_example
+0.0
+#+end_example
+
+有时候, 用户可能希望构建一个超图, 将多个边(超过两个)连接在一起.
+这种功能是通过在 =contract= 函数中使用一个额外的参数来实现的.
+这个参数是一组边名, 指定哪些边应该在保持它们作为自由边而不进行求和的情况下融合在一起.
+需要注意的是, 这种融合操作对于对称性张量没有明确定义, 只能应用于非对称性张量.
+下面的代码片段提供了这种功能的一个示例:
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(["i", "j", "x"], [2, 3, 5]).range_()
+  B = TAT.No.D.Tensor(["a", "x", "c", "d"], [2, 5, 3, 6]).range_()
+  C = A.contract(B, {("i", "a"), ("j", "c")}, {"x"})
+  print(C)
+#+end_src
+
+#+RESULTS[8dbed7742a805432ce5128527206f01fe903f2bb]:
+#+begin_example
+{names:[x,d],edges:[5,6],blocks:[5970,6045,6120,6195,6270,6345,7734,7815,7896,7977,8058,8139,9714,9801,9888,9975,10062,10149,11910,12003,12096,12189,12282,12375,14322,14421,14520,14619,14718,14817]}
+#+end_example
+
+** 边重命名
+
+要重命名张量的边名, 用户可以使用带有字典作为参数的 =edge_rename= 函数,
+其中键表示旧名, 值表示新名.
+在提供的示例中, "i"被重命名为"j", 而"j"被重命名为"i".
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(["i", "j", "k"], [2, 3, 4]).range_()
+  B = A.edge_rename({"i": "j", "j": "i"})
+  print(A)
+  print(B)
+#+end_src
+
+#+RESULTS[6b0f3a3cf15d0be50716e90e7425b67963fcfa65]:
+#+begin_example
+{names:[i,j,k],edges:[2,3,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}
+{names:[j,i,k],edges:[2,3,4],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}
+#+end_example
+
+** 张量指数
+
+类似于矩阵指数, 张量指数是通过求和张量收缩的幂级数得到的.
+为了指定收缩张量的方式, 用户应该使用一组两个边名字的配对来定义边之间的关系.
+这些配对确定了相应的关联, 并且在张量收缩计算过程中, 每对中的两个边将被收缩.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.D.Tensor(
+      ["i", "j", "k", "l"],
+      [2, 3, 3, 2],
+  ).range_()
+
+  B = A.exponential({("i", "l"), ("j", "k")})
+  print(B)
+#+end_src
+
+#+RESULTS[7026e94d62663414cc386bef7b4f9104c74e0649]:
+#+begin_example
+{names:[j,i,k,l],edges:[3,2,3,2],blocks:[5.98438e+45,6.36586e+45,6.74734e+45,7.12882e+45,7.5103e+45,7.89178e+45,3.97807e+46,4.23166e+46,4.48524e+46,4.73883e+46,4.99242e+46,5.246e+46,1.72498e+46,1.83494e+46,1.9449e+46,2.05486e+46,2.16483e+46,2.27479e+46,5.10462e+46,5.43002e+46,5.75542e+46,6.08081e+46,6.40621e+46,6.73161e+46,2.85153e+46,3.0333e+46,3.21507e+46,3.39685e+46,3.57862e+46,3.76039e+46,6.23116e+46,6.62837e+46,7.02559e+46,7.4228e+46,7.82001e+46,8.21722e+46]}
+#+end_example
+
+** 设置一个单位张量
+
+在某些情况下, 用户可能希望获得一个等同于单位矩阵的张量.
+这可以通过使用 =identity_= 函数将一个张量设置为单位张量来实现.
+该函数接受与指数函数相同的参数, 以识别边之间的相应关系.
+下面提供的示例将张量A设置为单位张量. 设置后, 我们有 $A = \delta_{il}\delta_{jk}$.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.BoseU1.D.Tensor(["i", "j", "k", "l"], [
+      [(-1, 1), (0, 1), (+2, 1)],
+      [(-2, 2), (+1, 2), (0, 2)],
+      [(+2, 2), (-1, 2), (0, 2)],
+      [(+1, 1), (0, 1), (-2, 1)],
+  ]).identity_({("i", "l"), ("j", "k")})
+  print(A)
+#+end_src
+
+#+RESULTS[c9f3c1ced37d918c800f58b36fab6820556170cf]:
+#+begin_example
+{names:[i,j,k,l],edges:[{-1:1,0:1,2:1},{-2:2,1:2,0:2},{2:2,-1:2,0:2},{1:1,0:1,-2:1}],blocks:{[-1,-2,2,1]:[1,0,0,1],[-1,1,2,-2]:[0,0,0,0],[-1,1,-1,1]:[1,0,0,1],[-1,1,0,0]:[0,0,0,0],[-1,0,0,1]:[1,0,0,1],[0,-2,2,0]:[1,0,0,1],[0,1,-1,0]:[1,0,0,1],[0,0,2,-2]:[0,0,0,0],[0,0,-1,1]:[0,0,0,0],[0,0,0,0]:[1,0,0,1],[2,-2,2,-2]:[1,0,0,1],[2,-2,-1,1]:[0,0,0,0],[2,-2,0,0]:[0,0,0,0],[2,1,-1,-2]:[1,0,0,1],[2,0,0,-2]:[1,0,0,1]}}
+#+end_example
+
+** 合并和分割边
+
+用户可以使用 =merge_edge= 和 =split_edge= 函数在张量中合并或分割边.
+在合并边时, 用户需要提供一个字典, 该字典将新边的名字映射到旧边名字的列表,
+指定哪些边应该合并成一个边以及合并前边的顺序.
+分割边的接口类似, 但由于在边合并过程中存在信息丢失,
+用户还需要在这一阶段指定边段信息.
+一条边由两部分组成:段信息和一个可能的费米箭头.
+在这个上下文中, 费米箭头是不需要的, 因为TAT会自动推导它.
+对于非对称性张量, 段信息可以直接用边的维度替换.
+用户可以自由地将零条边合并成一条边或将一条边分割成零条边, 这简化了处理高层代码中的边界情况.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j", "k", "l"], [
+      ([(-1, 1), (0, 1), (+2, 1)], False),
+      ([(-2, 2), (+1, 2), (0, 2)], True),
+      ([(+2, 2), (-1, 2), (0, 2)], False),
+      ([(+1, 1), (0, 1), (-2, 1)], True),
+  ]).range_()
+  print(A)
+
+  B = A.merge_edge({"a": ["i", "k"], "b": [], "c": ["l", "j"]})
+  print(B)
+
+  C = B.split_edge({
+      "a": [
+          ("i", [(-1, 1), (0, 1), (+2, 1)]),
+          ("k", [(+2, 2), (-1, 2), (0, 2)]),
+      ],
+      "b": [],
+      "c": [
+          ("l", [(+1, 1), (0, 1), (-2, 1)]),
+          ("j", [(-2, 2), (+1, 2), (0, 2)]),
+      ]
+  })
+  print(C)
+  print((A - C).norm_2())
+#+end_src
+
+#+RESULTS[f457b854d678cc0bad25300e66d073c907549f83]:
+#+begin_example
+{names:[i,j,k,l],edges:[{arrow:0,segment:{-1:1,0:1,2:1}},{arrow:1,segment:{-2:2,1:2,0:2}},{arrow:0,segment:{2:2,-1:2,0:2}},{arrow:1,segment:{1:1,0:1,-2:1}}],blocks:{[-1,-2,2,1]:[0,1,2,3],[-1,1,2,-2]:[4,5,6,7],[-1,1,-1,1]:[8,9,10,11],[-1,1,0,0]:[12,13,14,15],[-1,0,0,1]:[16,17,18,19],[0,-2,2,0]:[20,21,22,23],[0,1,-1,0]:[24,25,26,27],[0,0,2,-2]:[28,29,30,31],[0,0,-1,1]:[32,33,34,35],[0,0,0,0]:[36,37,38,39],[2,-2,2,-2]:[40,41,42,43],[2,-2,-1,1]:[44,45,46,47],[2,-2,0,0]:[48,49,50,51],[2,1,-1,-2]:[52,53,54,55],[2,0,0,-2]:[56,57,58,59]}}
+{names:[b,c,a],edges:[{arrow:0,segment:{0:1}},{arrow:1,segment:{-1:4,2:2,1:4,-2:4,0:2,-4:2}},{arrow:0,segment:{1:4,-2:2,-1:4,2:4,0:2,4:2}}],blocks:{[0,-1,1]:[-0,-1,-44,-45,-2,-3,-46,-47,-4,-5,52,53,-6,-7,54,55],[0,2,-2]:[8,9,10,11],[0,1,-1]:[-16,-17,-32,-33,-18,-19,-34,-35,-12,-13,24,25,-14,-15,26,27],[0,-2,2]:[20,21,48,49,22,23,50,51,28,29,56,57,30,31,58,59],[0,0,0]:[36,37,38,39],[0,-4,4]:[40,41,42,43]}}
+{names:[l,j,i,k],edges:[{arrow:1,segment:{1:1,0:1,-2:1}},{arrow:1,segment:{-2:2,1:2,0:2}},{arrow:0,segment:{-1:1,0:1,2:1}},{arrow:0,segment:{2:2,-1:2,0:2}}],blocks:{[1,-2,-1,2]:[-0,-1,-2,-3],[1,-2,2,-1]:[-44,-45,-46,-47],[1,1,-1,-1]:[8,9,10,11],[1,0,-1,0]:[-16,-17,-18,-19],[1,0,0,-1]:[-32,-33,-34,-35],[0,-2,0,2]:[20,21,22,23],[0,-2,2,0]:[48,49,50,51],[0,1,-1,0]:[-12,-13,-14,-15],[0,1,0,-1]:[24,25,26,27],[0,0,0,0]:[36,37,38,39],[-2,-2,2,2]:[40,41,42,43],[-2,1,-1,2]:[-4,-5,-6,-7],[-2,1,2,-1]:[52,53,54,55],[-2,0,0,2]:[28,29,30,31],[-2,0,2,0]:[56,57,58,59]}}
+0.0
+#+end_example
+
+需要注意的是, 当两个具有连接边的费米子对称性张量(即将被缩并)经历公共边的合并或分裂时, 会产生一个单一的符号.
+因此, 用户需要使用相应函数提供的两个额外参数来指定哪个张量应该包含生成的符号.
+在下面的例子中, 我们首先将连接的张量A1和B1的公共边"i"和"j"缩并, 得到张量C1.
+随后, 我们将两个张量A1和B1的公共边"i"和"j"各自合并为一个公共边"k", 得到张量A2和B2.
+接着, 通过缩并A2和B2得到张量C2, 证明C1等于C2.
+在这个例子中, 我们将符号应用于B1而不是A1, 因为我们只应该应用一次.
+此外, 函数中还有第三个参数, 它由一组从合并边中选出的边名字组成, 这些特定的边预计会表现出与第二个参数决定的相反的行为.
+在分裂函数的情况下, 第三个参数应该由一组代表将要分裂的边的名字组成, 这些边在分裂时会表现出相反的行为.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  TAT.random.seed(7)
+
+  A1 = TAT.FermiZ2.D.Tensor(["i", "j", "a"], [
+      ([(False, 2), (True, 2)], False),
+      ([(False, 2), (True, 2)], False),
+      ([(False, 2), (True, 2)], True),
+  ]).randn_()
+  B1 = TAT.FermiZ2.D.Tensor(["i", "j", "b"], [
+      ([(False, 2), (True, 2)], True),
+      ([(False, 2), (True, 2)], True),
+      ([(False, 2), (True, 2)], False),
+  ]).randn_()
+  C1 = A1.contract(B1, {("i", "i"), ("j", "j")})
+
+  A2 = A1.merge_edge({"k": ["i", "j"]}, False)
+  B2 = B1.merge_edge({"k": ["i", "j"]}, True)
+  C2 = A2.contract(B2, {("k", "k")})
+
+  print(C1 - C2)
+#+end_src
+
+#+RESULTS[44a4538c16208ef7dde1c79cf5315a57bbda4298]:
+#+begin_example
+{names:[a,b],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[1,1]:[0,0,0,0]}}
+#+end_example
+
+** 反转费米子张量的边
+
+通过使用 =reversed_edge= 函数, 可以一起反转相互连接的两个费米子张量的边.
+需要注意的是, 在反转一对边时, 会产生一个单一的符号.
+因此, 用户需要指定生成的符号应该应用于哪个张量.
+这是通过函数的最后两个参数处理的.
+在下面的例子中, 我们首先将张量 A1 和 B1 收缩以得到 C1.
+然后, 我们反转 A1 和 B1 中将要收缩的边, 以创建新的张量 A2 和 B2.
+反转后, 我们将 A2 和 B2 收缩以得到 C2. 代码演示了 C1 和 C2 是相等的.
+在反转时, 第二个参数指示是否将符号应用于当前张量.
+在这个例子中, 我们将符号应用于 B1 而不是 A1, 因为我们只应该应用一次.
+此外, 函数中还有一个第三个参数, 它由一组从经过反转的边中选择的名字组成,
+这些特定的边预计会表现出与第二个参数所确定的行为相反的行为.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  TAT.random.seed(7)
+
+  A1 = TAT.FermiZ2.D.Tensor(["i", "j"], [
+      ([(False, 2), (True, 2)], False),
+      ([(False, 2), (True, 2)], True),
+  ]).randn_()
+  B1 = TAT.FermiZ2.D.Tensor(["i", "j"], [
+      ([(False, 2), (True, 2)], False),
+      ([(False, 2), (True, 2)], True),
+  ]).randn_()
+  C1 = A1.contract(B1, {("i", "j")})
+
+  A2 = A1.reverse_edge({"i"}, False)
+  B2 = B1.reverse_edge({"j"}, True)
+  C2 = A2.contract(B2, {("i", "j")})
+
+  print(C1 - C2)
+#+end_src
+
+#+RESULTS[27813a778a496f4846f817b35b72272df9fa01fc]:
+#+begin_example
+{names:[j,i],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}}],blocks:{[0,0]:[0,0,0,0],[1,1]:[0,0,0,0]}}
+#+end_example
+
+** 张量上的QR分解
+
+=qr= 函数可用于对张量执行QR分解.
+要使用此函数, 用户应提供分解后张量的自由边集合, 以及分解过程中创建的两个边名字.
+在提供的示例中, 费米子张量A具有三个边:"i", "j"和"k".
+在QR分解过程中, 我们配置Q张量的边应仅包括"k", 而剩余的边, 即"i"和"j", 应包含在R张量中.
+qr函数的第一参数可以是'q'或'r', 指定第二参数表示Q张量或R张量的自由边集合.
+QR分解后, Q张量将具有两个边:来自输入张量的原始"k"边和分解过程中创建的边, 命名为"Q".
+对于R张量, 它应包含三个边, 其中两个来自原始张量("i"和"j")和新生成的边, 命名为"R".
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j", "k"], [
+      ([(-1, 2), (0, 2), (-2, 2)], True),
+      ([(0, 2), (1, 2)], False),
+      ([(0, 2), (1, 2)], False),
+  ]).range_()
+
+  Q, R = A.qr('q', {"k"}, "Q", "R")
+  Q_dagger = Q.conjugate().edge_rename({"Q": "Q'"})
+  print(Q_dagger.contract(Q, {("k", "k")}))
+  print((Q.contract(R, {("Q", "R")}) - A).norm_max())
+#+end_src
+
+#+RESULTS[6db35996521ed40543c29716d1a1e682b5ad55e1]:
+#+begin_example
+{names:[Q',Q],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,5.55112e-17,5.55112e-17,1]}}
+3.552713678800501e-15
+#+end_example
+
+** 张量的奇异值分解(SVD)
+
+可以使用 =svd= 函数对张量进行SVD.
+要使用此函数, 用户需要提供分解后张量的自由边集合,
+以及分解过程中创建的四个边的名字.
+在提供的示例中, 费米子张量A有三个边:"i", "j", 和 "k".
+在进行SVD时, 我们将U张量的边配置为仅包含 "k" 边, 而剩余的边, 即 "i" 和 "j", 应包含在V张量中.
+svd函数的第一参数是U张量的自由边集合.
+SVD之后, U张量将有两个边:来自输入张量的原始 "k" 边和分解过程中创建的边, 其名为 "U".
+对于V张量, 它应包含三个边, 其中两个来自原始张量("i" 和 "j"), 以及新创建的边, 名为 "V".
+至于S张量, 它确实是一个对角矩阵, 有两个边, 名为 "SU" 和 "SV", 如后两个参数所指定.
+最后一个参数, 表示SVD维度切割, 可以设置为-1表示不切割(默认行为),
+一个正整数表示绝对维度切割, 或一个介于0和1之间的实数表示相对维度切割.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiU1.D.Tensor(["i", "j", "k"], [
+      ([(-1, 2), (0, 2), (-2, 2)], True),
+      ([(0, 2), (1, 2)], False),
+      ([(0, 2), (1, 2)], False),
+  ]).range_()
+
+  U, S, V = A.svd({"k"}, "U", "V", "SU", "SV", -1)
+  U_dagger = U.conjugate().edge_rename({"U": "U'"})
+  print(U_dagger.contract(U, {("k", "k")}))
+  USV = U.contract(S, {("U", "SU")}).contract(V, {("SV", "V")})
+  print((USV - A).norm_max())
+#+end_src
+
+#+RESULTS[4307613da39e925dad23b4d6149d810442b1fcfd]:
+#+begin_example
+{names:[U',U],edges:[{arrow:0,segment:{1:2,0:2}},{arrow:1,segment:{-1:2,0:2}}],blocks:{[1,-1]:[1,0,0,1],[0,0]:[1,0,0,1]}}
+1.0658141036401503e-14
+#+end_example
+
+** 张量的迹
+
+要在张量中对一部分边求迹, 用户可以使用 =trace= 函数.
+这需要提供一组由两个边名字组成的对, 这些边是打算进行求迹的.
+在给出的例子中, 我们对张量A执行了迹操作, 针对标记为"j"和"k"的边.
+这个张量包含三条边:"i", "j", 和"k". 因此, 这个操作的结果将产生一个只有一个标记为"i"的边的张量.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiZ2.C.Tensor(["i", "j", "k"], [
+      ([(False, 2), (True, 2)], True),
+      ([(False, 2), (True, 2)], False),
+      ([(False, 2), (True, 2)], True),
+  ]).range_()
+  print(A)
+  B = A.trace({("j", "k")})
+  print(B)
+#+end_src
+
+#+RESULTS[57d4f6be85fa70ca4ef82afc74f955e443ae0d1e]:
+#+begin_example
+{names:[i,j,k],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,1,2,3,4,5,6,7],[0,1,1]:[8,9,10,11,12,13,14,15],[1,0,1]:[16,17,18,19,20,21,22,23],[1,1,0]:[24,25,26,27,28,29,30,31]}}
+{names:[i],edges:[{arrow:1,segment:{0:2,1:2}}],blocks:{[0]:[-16,-16]}}
+#+end_example
+
+针对非对称性张量情况, 类似于收缩操作,
+此接口允许用户在同一张量内建立两个边之间的连接, 同时保持它们未被求和.
+这一功能通过使用第二个参数实现,
+该参数采用字典形式, 将新边名字映射到两个现有边名字的对.
+在提供的示例中, 创建了一个非对称张量, 具有五个边:"i", "j", "k", "l"和"m".
+在求迹过程中, "j"和"k"被连接并合并, 导致这两个边在结果张量中被省略.
+另一方面, "l"和"m"被连接但未被求和, 导致它们在结果张量中合并为一个标有"n"的边.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.No.Z.Tensor(
+      ["i", "j", "k", "l", "m"],
+      [4, 3, 3, 2, 2],
+  ).range_()
+  print(A)
+  B = A.trace({("j", "k")}, {"n": ("l", "m")})
+  print(B)
+#+end_src
+
+#+RESULTS[2535053390d7dac03f3eb3b8ca82a2782d218397]:
+#+begin_example
+{names:[i,j,k,l,m],edges:[4,3,3,2,2],blocks:[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143]}
+{names:[n,i],edges:[2,4],blocks:[48,156,264,372,57,165,273,381]}
+#+end_example
+
+** 张量转置
+
+在实际的张量运算中, 通常不需要手动进行张量转置.
+然而, 在为外部操作(如张量存储上的MPI操作)准备张量时, 转置变得有价值.
+=transpose= 函数通过接受一个边名字的列表来满足这一需求, 该列表指定了结果张量的期望边顺序.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  A = TAT.FermiZ2.C.Tensor(["i", "j", "k"], [
+      ([(False, 2), (True, 2)], True),
+      ([(False, 2), (True, 2)], False),
+      ([(False, 2), (True, 2)], True),
+  ]).range_()
+  print(A)
+  B = A.transpose(["k", "j", "i"])
+  print(B)
+#+end_src
+
+#+RESULTS[2c5d20fe7a7d4e5686266ddd29c68fd1fcbb765a]:
+#+begin_example
+{names:[i,j,k],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,1,2,3,4,5,6,7],[0,1,1]:[8,9,10,11,12,13,14,15],[1,0,1]:[16,17,18,19,20,21,22,23],[1,1,0]:[24,25,26,27,28,29,30,31]}}
+{names:[k,j,i],edges:[{arrow:1,segment:{0:2,1:2}},{arrow:0,segment:{0:2,1:2}},{arrow:1,segment:{0:2,1:2}}],blocks:{[0,0,0]:[0,4,2,6,1,5,3,7],[0,1,1]:[-24,-28,-26,-30,-25,-29,-27,-31],[1,0,1]:[-16,-20,-18,-22,-17,-21,-19,-23],[1,1,0]:[-8,-12,-10,-14,-9,-13,-11,-15]}}
+#+end_example
+
+** 对称性类型上的操作
+
+虽然所有接口都接受整数, 布尔值或由整数和布尔值组成的元组来表示对称性, 这些通常被称为不可约表示, 但每种对称性类型都有其特定的类.
+例如, 有 =TAT.FermiZ2.Symmetry= , 它可以用布尔值实例化.
+实际上, 所有接口都在内部对输入进行隐式转换以适应相应的对称性类型.
+对于所有对称性类型, 用户可以灵活地执行各种操作, 包括两个对称性的加法, 两个对称性的减法, 一个对称性的取反, 比较两个对称性以及获取对称性的费米子宇称.
+
+#+begin_src python :results output :exports both :cache yes
+  import TAT
+
+  r1 = TAT.BoseZ2.Symmetry(False)
+  r2 = TAT.BoseZ2.Symmetry(True)
+  print(r1, r2)
+  print(r1 + r2, r1 - r2)
+  print(-r1, -r2)
+  print(r1 > r2, r1 < r2, r1 == r2)
+  print(r1.parity, r2.parity)
+
+  s1 = TAT.FermiZ2.Symmetry(False)
+  s2 = TAT.FermiZ2.Symmetry(True)
+  print(s1, s2)
+  print(s1 + s2, s1 - s2)
+  print(-s1, -s2)
+  print(s1 > s2, s1 < s2, s1 == s2)
+  print(s1.parity, s2.parity)
+
+  t1 = TAT.FermiU1.Symmetry(-2)
+  t2 = TAT.FermiU1.Symmetry(+3)
+  print(t1, t2)
+  print(t1 + t2, t1 - t2)
+  print(-t1, -t2)
+  print(t1 > t2, t1 < t2, t1 == t2)
+  print(t1.parity, t2.parity)
+#+end_src
+
+#+RESULTS[4a35c8b818a9eab1742b85d7ec17c51366b88aa8]:
+#+begin_example
+0 1
+1 1
+0 1
+False True False
+False False
+0 1
+1 1
+0 1
+False True False
+False True
+-2 3
+1 -5
+2 -3
+False True False
+False True
+#+end_example
+
+** 边类型上的操作
+
+与对称性类型类似, 边类型也被明确定义了, 并且接受边的接口将自动为输入边类型执行隐式类型转换.
+例如, =TAT.FermiU1.Edge= 是在子模块 =TAT.FermiU1= 中所有张量中使用的边类型.
+边类型包含多个函数和属性, 包括:
+
++ =edge.arrow=: 获取边的费米箭头. 对于非费米对称性边和非对称性边, 它总是设置为 False.
++ =edge.dimension=: 获取边的总维度.
++ =edge.segments=: 提供一个只读的段对列表, 包含对称性和其对应的局部维度.
++ =edge.segments_size=: 确定段列表的长度.
++ =edge.conjugate()=: 计算共轭边.
++ =edge.dimension_by_symmetry(symmetry)=: 根据给定的对称性获取局部维度.
++ =edge.position_by_symmetry(symmetry)=: 使用指定的对称性在段列表中获取位置.
++ =edge.<x>_by_<y>(...)=: 促进三种索引方法之间的转换, 其中 =<x>= 和 =<y>= 可以是 =index=, =coord= 或 =point=.
+  在 =index= 的情况中, 它表示整个边的总索引.
+  在 =coord= 的情况下, 它由一对组成, 表示段在段列表中的位置和该段内的局部索引.
+  最后, 对于 =point=, 它由一对组成, 包含当前段的对称性和该段内的局部索引.
+
+* 常见问题解答
+
+** 当我执行 =import TAT= 时出现这样的错误信息
+
+
+#+begin_example
+mca_base_component_repository_open: unable to open mca_patcher_overwrite: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_patcher_overwrite.so: undefined symbol: mca_patcher_base_patch_t_class (ignored)
+mca_base_component_repository_open: unable to open mca_shmem_posix: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_shmem_posix.so: undefined symbol: opal_shmem_base_framework (ignored)
+mca_base_component_repository_open: unable to open mca_shmem_mmap: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_shmem_mmap.so: undefined symbol: opal_show_help (ignored)
+mca_base_component_repository_open: unable to open mca_shmem_sysv: /usr/lib/x86_64-linux-gnu/openmpi/lib/openmpi/mca_shmem_sysv.so: undefined symbol: opal_show_help (ignored)
+#+end_example
+
+这个问题可能是由于较旧的MPI版本存在问题, 例如在Ubuntu 18.04 LTS上的OpenMPI 2.1.1.
+如果你已经将MPI支持编译进PyTAT, 你可能需要在导入TAT之前手动加载MPI动态共享库.
+你可以通过使用 =import ctypes= 和 =ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)= 来实现这一点.
+建议在编译PyTAT时不要集成MPI支持, 因为我们没有使用它的意图.
+相反, 我们更倾向于在高层次代码中直接使用mpi4py.
+
+** 当我执行 =import TAT= 时出现这样的错误信息
+
+#+begin_example
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ImportError: /home/hzhangxyz/.local/lib/python3.10/site-packages/TAT.cpython-310-x86_64-linux-gnu.so: undefined symbol: cgesv_
+#+end_example
+
+这个错误是由于在库编译过程中忽略了链接LAPACK和BLAS库.
+要解决这个问题, 你必须使用正确的编译标志重新编译库,
+或者, 你可以在 =LD_PRELOAD= 环境变量中包含LAPACK/BLAS库的路径.
+例如, 你可以在运行Python之前执行命令 =export LD_PRELOAD=/lib64/liblapack.so.3= 来实现这一点.
