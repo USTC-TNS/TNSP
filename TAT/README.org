@@ -788,7 +788,7 @@ Please note that, in the case of $U(1)$ symmetry, the reversal of the irreducibl
 In the case of a fermion tensor, the conjugation of the tensor, when contracted with the original one, may result in a non-positive number.
 This peculiar phenomenon indicates that the metric of the fermion tensor is not positive-semidefinite.
 This unusual occurrence can disrupt the plain gradient method in high-level programming.
-To compute the conjugation with a fixed metric, users can utilize an additional optional argument named =trivial_metric= as =True=
+To compute the conjugation with a fixed metric, users can utilize an additional optional argument named =trivial_metric= as =true=
 when calling the =conjugate= function, as demonstrated below.
 However, it’s important to note that this metric fixing will lead to a situation where $(AB)^\dagger \neq A^\dagger B^\dagger$.
 
@@ -845,7 +845,7 @@ In the following example, edge =i= of tensor =A= is contracted with edge =a= of 
 {names:[k,b,d],edges:[4,5,6],blocks:[4776,4836,4896,4956,5016,5076,5856,5916,5976,6036,6096,6156,6936,6996,7056,7116,7176,7236,8016,8076,8136,8196,8256,8316,9096,9156,9216,9276,9336,9396,5082,5148,5214,5280,5346,5412,6270,6336,6402,6468,6534,6600,7458,7524,7590,7656,7722,7788,8646,8712,8778,8844,8910,8976,9834,9900,9966,10032,10098,10164,5388,5460,5532,5604,5676,5748,6684,6756,6828,6900,6972,7044,7980,8052,8124,8196,8268,8340,9276,9348,9420,9492,9564,9636,10572,10644,10716,10788,10860,10932,5694,5772,5850,5928,6006,6084,7098,7176,7254,7332,7410,7488,8502,8580,8658,8736,8814,8892,9906,9984,10062,10140,10218,10296,11310,11388,11466,11544,11622,11700]}
 #+end_example
 
-Since the function clear_symmetry solely removes symmetry information without making any other modifications,
+Since the function =clear_symmetry= solely removes symmetry information without making any other modifications,
 the symmetry-cleared tensor resulting from the contraction is equal to the contraction of the symmetry-cleared tensors individually.
 
 #+begin_src C++ :cache yes :flags "-std=c++17 -Iinclude" :includes "TAT/TAT.hpp" :libs "-llapack -lblas" :results output :exports both

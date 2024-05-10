@@ -83,7 +83,6 @@ Alternatively, you can utilize pip to install the tetragono package by running t
 
 ** The interface of tetragono shell
 
-After tetragono installed, user could use =python -m tetragono.shell= to enter tetragono shell. And users will see the interface like the following:
 After installing tetragono, users can enter the tetragono shell by executing =python -m tetragono.shell= in the command line.
 Upon doing so, they will be greeted with the following interface:
 #+begin_example
@@ -286,7 +285,7 @@ The step of the conjugate gradient is controlled by =conjugate_gradient_method_s
 Another parameter, =conjugate_gradient_method_error=, is used to terminate the process if a specified error is reached during CG.
 When using this parameter, users typically need to set =conjugate_gradient_method_step= to =-1= to disable the step number check.
 
-During the gradient descent of stochastic reconfiguration, users may wish to save the state at every step to guard against unexpected program interruptions.
+During the gradient descent or stochastic reconfiguration, users may wish to save the state at every step to guard against unexpected program interruptions.
 This is facilitated by the parameter =save_state_file= and =save_configuration_file=, which save the current state and currently sampled configuration, respectively.
 The saved configuration is particularly useful for sweep sampling, as sweep sampling requires an initial configuration at startup.
 
@@ -320,7 +319,7 @@ Lastly, =gm_conf_dump= and =gm_conf_load= are used to dump to or load from a fil
 
 *** Definition of physics models
 
-The definition of physics models in tetraku is achieved by defining plugins.
+The definition of physics models in tetragono is achieved by defining plugins.
 A Python module intended to define a physics model needs to contain two functions: =abstract_state= and =abstract_lattice=.
 To introduce more comprehensive functionality, here we provide an example of defining a free fermion model with a fixed particle number on a honeycomb lattice.
 

@@ -231,7 +231,7 @@ Matrix dimension is (128, 512)
 Matrix local dimension is (128, 512)
 #+end_example
 
-When passing a given local matrix, make sure the numpy array order matches the context layout.
+When passing a given local matrix, make sure the NumPy array order matches the context layout.
 Use ='F'= for column major layout and ='C'= for row major layout.
 
 ** Redistribute matrix
@@ -285,11 +285,11 @@ rank=1 after redistribute [ 1.18754568 -0.4480556 ]
 
 ** Call ScaLAPACK function
 
-Here's an example that demonstrates calling pdgemm and comparing its result to a similar calculation performed by numpy.
+Here's an example that demonstrates calling pdgemm and comparing its result to a similar calculation performed by NumPy.
 We create two contexts, =context= serves as the primary one while =context0= acts as a supplemental context containing solely rank-0 processes tailored for data redistribution.
 Initially, we produce a random matrix within =context0= and redistribute it to =context=.
 Post-redistribution, we invoke =pdgemm= to execute matrix multiplication within =context=.
-Following this operation, we redistribute the resulting product back to =context0= and contrast it with the computation derived using numpy.
+Following this operation, we redistribute the resulting product back to =context0= and contrast it with the computation derived using NumPy.
 
 #+begin_src python :results output :exports both :cache yes :python LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64 /opt/intel/oneapi/mpi/latest/bin/mpirun -n 4 -s all python
   import numpy as np

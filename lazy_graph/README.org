@@ -233,7 +233,7 @@ new c is 3
 
 In addition to the previously simple example, we duplicate the graph,
 copying =a= to =new_a=, =b= to =new_b=, and =c= to =new_c=.
-This is done using a copy handle acquired through the `Copy()` function.
+This is done using a copy handle acquired through the =Copy()= function.
 Once you have obtained the handle with =copy = Copy()=,
 you can then utilize =copy(old_node)= to obtain the corresponding =new_node=.
 
