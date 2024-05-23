@@ -1,0 +1,3 @@
+* Quantum chemistry model
+
+This model reads a file which contains hamiltonian in openfermion format.

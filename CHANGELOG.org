@@ -3,6 +3,7 @@
 ** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.16...dev][Unreleased]]
 
 *** Added
++ *tetraku*: Add quantum chemistry model which reads Hamiltonian in openfermion format.
 + *tetragono*: Add support for tracing repeated points when setting hamiltonian term. To use this feature, call
   =state.hamiltonians.trace_repeated= after all the hamiltonian term has been set. For those term which will not be
   traced, user could exchange the edge indices and points at the same time. For example a tensor with edges name as

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (C) 2021-2024 Hao Zhang<zh970205@mail.ustc.edu.cn>
+# Copyright (C) 2024 Hao Zhang<zh970205@mail.ustc.edu.cn>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,23 +16,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
-from setuptools import setup
-from setuptools_scm import get_version
+import TAT
 
-version = get_version(root="..")
 
-try:
-    with open("README.md", "rt", encoding="utf-8") as file:
-        long_description = file.read()
-except FileNotFoundError:
-    long_description = "empty description"
-
-setup(
-    version=version,
-    install_requires=[
-        f"tetragono=={version}",
-    ],
-    extras_require={"quantum_chemistry": ["openfermion"]},
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-)
+def initial_configuration(configuration, particle_number):
+    state = configuration.owner
+    for l1, l2 in state.sites():
+        configuration[l1, l2, 0] = (False, 0)
+    random = TAT.random.uniform_int(0, state.site_number - 1)
+    pool = set()
+    for _ in range(particle_number):
+        while True:
+            i = random()
+            if i not in pool:
+                break
+        pool.add(i)
+        l1 = i // state.L2
+        l2 = i % state.L2
+        configuration[l1, l2, 0] = (True, 0)
+    return configuration

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tetraku"
-dynamic = ["version", "dependencies", "readme"]
+dynamic = ["version", "dependencies", "readme", "optional-dependencies"]
 requires-python = ">=3.8"
 authors = [
   {email = "zh970205@mail.ustc.edu.cn", name = "Hao Zhang"},
