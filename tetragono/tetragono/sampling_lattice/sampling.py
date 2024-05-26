@@ -254,10 +254,13 @@ class DirectSampling(Sampling):
     Direct sampling.
     """
 
-    __slots__ = ["_double_layer_cut_dimension", "_double_layer_auxiliaries"]
+    __slots__ = ["_double_layer_cut_dimension", "_double_layer_auxiliaries", "_actual_state"]
 
-    def __init__(self, owner, cut_dimension, restrict_subspace, double_layer_cut_dimension):
-        super().__init__(owner, cut_dimension, restrict_subspace)
+    def __init__(self, owner, cut_dimension, restrict_subspace, double_layer_cut_dimension, reference_state):
+        if reference_state is None:
+            reference_state = owner
+        super().__init__(reference_state, cut_dimension, restrict_subspace)
+        self._actual_state = owner
         # This is the cut dimension used in calculating unsampled part of lattice, which is a double layer auxiliaries
         # system.
         self._double_layer_cut_dimension = double_layer_cut_dimension
@@ -356,6 +359,10 @@ class DirectSampling(Sampling):
             if not self._restrict_subspace(configuration):
                 # This configuration should not be selected, redo a sampling.
                 return self()
+        if self.owner is not self._actual_state:
+            config = configuration.export_configuration()
+            configuration = Configuration(self._actual_state, self._cut_dimension)
+            configuration.import_configuration(config)
         return possibility, configuration
 
     @staticmethod

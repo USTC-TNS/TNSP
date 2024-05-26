@@ -105,6 +105,7 @@ def gradient_descent(
         direct_sampling_cut_dimension=4,
         sampling_configurations=np.zeros(0, dtype=np.int64),
         sweep_hopping_hamiltonians=None,
+        direct_reference_state=None,
         # About subspace
         restrict_subspace=None,
         # About gradient method
@@ -344,7 +345,8 @@ def gradient_descent(
                 sampling = ErgodicSampling(state, configuration_cut_dimension, restrict)
                 sampling_total_step = sampling.total_step
             elif sampling_method == "direct":
-                sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension)
+                sampling = DirectSampling(state, configuration_cut_dimension, restrict, direct_sampling_cut_dimension,
+                                          direct_reference_state)
                 sampling_total_step = sampling_total_step
             else:
                 raise ValueError("Invalid sampling method")
