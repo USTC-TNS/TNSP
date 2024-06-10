@@ -92,6 +92,8 @@ class SweepSampling(Sampling):
 
     def _is_diagonal_configuration(self, replacement):
         # This function is a part of experiment feature
+        if replacement is None:
+            replacement = {}
         for l1, l2 in self.owner.sites():
             p0 = (l1, l2, 0)
             p1 = (l1, l2, 1)
@@ -101,17 +103,21 @@ class SweepSampling(Sampling):
                 return False
         return True
 
-    def _process_smalldiag(self, ws, replacement={}):
+    def _process_smalldiag(self, ws, replacement=None):
         # This function is a part of experiment feature
         if "smalldiag" in self.owner.attribute:
-            minimum, maximum, rate = self.owner.attribute["smalldiag"]
+            [last_diag, last_nondiag], [this_diag, this_nondiag, num_diag,
+                                        num_nondiag] = self.owner.attribute["smalldiag"]
             if self._is_diagonal_configuration(replacement):
-                beta = self.owner.attribute["beta"] * rate
-                if beta > maximum:
-                    beta == maximum
-                if beta < minimum:
-                    beta = minimum
-                ws = ws * beta
+                ws = ws * (last_nondiag / last_diag)
+            if replacement is None:
+                if self._is_diagonal_configuration(replacement):
+                    this_diag += abs(complex(ws))
+                    num_diag += 1
+                else:
+                    this_nondiag += abs(complex(ws))
+                    num_nondiag += 1
+                self.owner.attribute["smalldiag"][1] = [this_diag, this_nondiag, num_diag, num_nondiag]
         return ws
 
     def _single_term(self, positions, hamiltonian, ws):
