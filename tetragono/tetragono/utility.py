@@ -64,7 +64,13 @@ def allgather_array(array):
 
 
 def allreduce_buffer(buffer):
-    mpi_comm.Allreduce(MPI.IN_PLACE, buffer)
+    import torch
+    if isinstance(buffer, torch.Tensor) and buffer.device.type == "cuda":
+        cbuffer = buffer.cpu()
+        mpi_comm.Allreduce(MPI.IN_PLACE, cbuffer)
+        buffer.copy_(cbuffer)
+    else:
+        mpi_comm.Allreduce(MPI.IN_PLACE, buffer)
 
 
 def allreduce_iterator_buffer(iterator):
@@ -88,7 +94,13 @@ def bcast_number(number, *, root=0, dtype=np.float64):
 
 
 def bcast_buffer(buffer, root=0):
-    mpi_comm.Bcast(buffer, root=root)
+    import torch
+    if isinstance(buffer, torch.Tensor) and buffer.device.type == "cuda":
+        cbuffer = buffer.cpu()
+        mpi_comm.Bcast(cbuffer, root=root)
+        buffer.copy_(cbuffer)
+    else:
+        mpi_comm.Bcast(buffer, root=root)
 
 
 def bcast_iterator_buffer(iterator, root=0):
