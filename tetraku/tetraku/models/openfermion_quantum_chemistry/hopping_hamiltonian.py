@@ -24,11 +24,11 @@ Tensor = TAT.FermiZ2.D.Tensor
 EF = ([(False, 1), (True, 1)], False)
 ET = ([(False, 1), (True, 1)], True)
 
-CP = Tensor(["O0", "I0", "T"], [EF, ET, ([(True, 1)], False)]).zero()
+CP = Tensor(["O0", "I0", "T"], [EF, ET, ([(True, 1)], False)]).zero_()
 CP[{"O0": (True, 0), "I0": (False, 0), "T": (True, 0)}] = 1
-CM = Tensor(["O0", "I0", "T"], [EF, ET, ([(True, 1)], True)]).zero()
+CM = Tensor(["O0", "I0", "T"], [EF, ET, ([(True, 1)], True)]).zero_()
 CM[{"O0": (False, 0), "I0": (True, 0), "T": (True, 0)}] = 1
-I = Tensor(["O0", "I0"], [EF, ET]).identity({("I0", "O0")})
+I = Tensor(["O0", "I0"], [EF, ET]).identity_({("I0", "O0")})
 C0daggerC1 = rename_io(CP, [0]).contract(rename_io(CM, [1]), {("T", "T")})
 C1daggerC0 = rename_io(CP, [1]).contract(rename_io(CM, [0]), {("T", "T")})
 CC = C0daggerC1 + C1daggerC0

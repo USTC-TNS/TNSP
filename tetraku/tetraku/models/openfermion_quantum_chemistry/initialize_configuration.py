@@ -19,19 +19,34 @@
 import TAT
 
 
-def initial_configuration(configuration, particle_number):
+def sample_without_replace(number):
+    random = TAT.random.uniform_int(0, number - 1)
+    pool = set()
+    while True:
+        i = random()
+        if i not in pool:
+            yield i
+            pool.add(i)
+
+
+def initial_configuration(configuration, particle_number=None, up_number=None, down_number=None):
     state = configuration.owner
     for l1, l2 in state.sites():
         configuration[l1, l2, 0] = (False, 0)
-    random = TAT.random.uniform_int(0, state.site_number - 1)
-    pool = set()
-    for _ in range(particle_number):
-        while True:
-            i = random()
-            if i not in pool:
-                break
-        pool.add(i)
-        l1 = i // state.L2
-        l2 = i % state.L2
-        configuration[l1, l2, 0] = (True, 0)
+    if up_number is None and down_number is None:
+        for _, i in zip(range(particle_number), sample_without_replace(state.site_number)):
+            l1 = i // state.L2
+            l2 = i % state.L2
+            configuration[l1, l2, 0] = (True, 0)
+    elif particle_number is None:
+        for _, i in zip(range(up_number), sample_without_replace(state.site_number // 2)):
+            i = i * 2
+            l1 = i // state.L2
+            l2 = i % state.L2
+            configuration[l1, l2, 0] = (True, 0)
+        for _, i in zip(range(down_number), sample_without_replace(state.site_number // 2)):
+            i = i * 2 + 1
+            l1 = i // state.L2
+            l2 = i % state.L2
+            configuration[l1, l2, 0] = (True, 0)
     return configuration
