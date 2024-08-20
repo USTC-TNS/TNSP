@@ -98,6 +98,35 @@ class SweepSampling:
             yield configurations, amplitudes, weights, torch.ones_like(weights, dtype=torch.int64)
 
 
+def scatter_sampling(state, configurations, amplitudes, weights, multiplicities, root=0):
+    if mpi_rank == root:
+        unique_size = len(multiplicities)
+    else:
+        unique_size = 0
+    unique_size = bcast_number(unique_size, dtype=int)
+    if mpi_rank != root:
+        L1 = state.L1
+        L2 = state.L2
+        orbit = max(orbit for [l1, l2, orbit], edge in state.physics_edges) + 1
+
+        configurations = torch.empty([unique_size, L1, L2, orbit], dtype=torch.int64, device=state.device)
+        amplitudes = torch.empty([unique_size], dtype=state.dtype, device=state.device)
+        weights = torch.ones_like(amplitudes.real)
+        multiplicities = torch.ones_like(amplitudes, dtype=torch.int64)
+
+    bcast_buffer(configurations)
+    bcast_buffer(amplitudes)
+    bcast_buffer(weights)
+    bcast_buffer(multiplicities)
+
+    configurations = configurations[mpi_rank::mpi_size]
+    amplitudes = amplitudes[mpi_rank::mpi_size]
+    weights = weights[mpi_rank::mpi_size]
+    multiplicities = multiplicities[mpi_rank::mpi_size]
+
+    return configurations, amplitudes, weights, multiplicities
+
+
 class DirectSampling:
     """
     Direct sampling.
@@ -116,31 +145,9 @@ class DirectSampling:
                 self.total_size,
                 self.alpha,
             )
-            unique_size = len(multiplicities)
         else:
-            unique_size = 0
-        unique_size = bcast_number(unique_size, dtype=int)
-        if mpi_rank != 0:
-            L1 = self.owner.L1
-            L2 = self.owner.L2
-            orbit = max(orbit for [l1, l2, orbit], edge in self.owner.physics_edges) + 1
-
-            configurations = torch.empty([unique_size, L1, L2, orbit], dtype=torch.int64, device=self.owner.device)
-            amplitudes = torch.empty([unique_size], dtype=self.owner.dtype, device=self.owner.device)
-            weights = torch.ones_like(amplitudes.real)
-            multiplicities = torch.ones_like(amplitudes, dtype=torch.int64)
-
-        bcast_buffer(configurations)
-        bcast_buffer(amplitudes)
-        bcast_buffer(weights)
-        bcast_buffer(multiplicities)
-
-        configurations = configurations[mpi_rank::mpi_size]
-        amplitudes = amplitudes[mpi_rank::mpi_size]
-        weights = weights[mpi_rank::mpi_size]
-        multiplicities = multiplicities[mpi_rank::mpi_size]
-
-        return configurations, amplitudes, weights, multiplicities
+            configurations, amplitudes, weights, multiplicities = None, None, None, None
+        return scatter_sampling(self.owner, configurations, amplitudes, weights, multiplicities)
 
 
 class ErgodicSampling:
@@ -173,21 +180,23 @@ class ErgodicSampling:
                 return configuration
 
     def __call__(self):
-        index = 0
-        configuration = self._zero_configuration()
-        configurations_pool = []
-        while True:
-            if index % mpi_size == mpi_rank:
-                configurations_pool.append(configuration.copy())
-            index += 1
-            if index == self.total_step:
-                break
-            configuration = self._next_configuration(configuration)
-        configurations_pool = torch.tensor(np.array(configurations_pool), device=self.owner.device)
-        amplitudes_pool = self.owner(configurations_pool, enable_grad=False)
-        non_zero = amplitudes_pool != 0
-        configurations_pool = configurations_pool[non_zero]
-        amplitudes_pool = amplitudes_pool[non_zero]
-        weights_pool = torch.ones_like(amplitudes_pool.real)
-        multiplicities_pool = torch.ones_like(amplitudes_pool, dtype=torch.int64)
-        return configurations_pool, amplitudes_pool, weights_pool, multiplicities_pool
+        if mpi_rank == 0:
+            index = 0
+            configuration = self._zero_configuration()
+            configurations = []
+            while True:
+                configurations.append(configuration.copy())
+                index += 1
+                if index == self.total_step:
+                    break
+                configuration = self._next_configuration(configuration)
+            configurations = torch.tensor(np.array(configurations), device=self.owner.device)
+            amplitudes = self.owner(configurations, enable_grad=False)
+            non_zero = amplitudes != 0
+            configurations = configurations[non_zero]
+            amplitudes = amplitudes[non_zero]
+            weights = torch.ones_like(amplitudes.real)
+            multiplicities = torch.ones_like(amplitudes, dtype=torch.int64)
+        else:
+            configurations, amplitudes, weights, multiplicities = None, None, None, None
+        return scatter_sampling(self.owner, configurations, amplitudes, weights, multiplicities)
