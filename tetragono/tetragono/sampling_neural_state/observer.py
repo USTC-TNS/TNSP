@@ -244,7 +244,7 @@ class Observer():
 
         mask = mask_x ^ mask_y
         # The base sign and the indices where the parity should be checked.
-        return (count % 2 != 0, mask.to(dtype=torch.int64).nonzero())
+        return count % 2 != 0, mask
 
     def add_energy(self):
         """
@@ -353,7 +353,7 @@ class Observer():
                         configuration_cpu_s = configuration_cpu.clone()
                         configuration_cpu_s.view([-1])[tensor_indices] = tensor_positions_configuration_s
                         # self.owner(configuration_s) to be multiplied
-                        total_parity = ((parity[fermi_sign].sum() % 2 != 0) ^ base_sign)
+                        total_parity = ((torch.logical_and(parity, fermi_sign).sum() % 2 != 0) ^ base_sign)
                         value = (-1 if total_parity else +1) * (item * inv_amplitude_conj)
                         if torch.equal(configuration_cpu_s, configuration_cpu):
                             result[batch_index][name][positions] += amplitude.conj().item() * complex(value)
