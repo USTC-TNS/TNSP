@@ -285,7 +285,7 @@ jobs:
       - name: install cibuildwheel
         run: python -m pip install cibuildwheel
       - name: download artifacts for PyTAT
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: README-of-PyTAT
           path: PyTAT
@@ -349,7 +349,7 @@ jobs:
       - name: install python build
         run: python -m pip install build
       - name: download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
         with:
           name: README-of-${{matrix.package}}
           path: ${{matrix.package}}
@@ -382,7 +382,7 @@ jobs:
 
     steps:
       - name: download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
       - name: setup python
         uses: actions/setup-python@v4
         with:
@@ -414,7 +414,7 @@ jobs:
       - name: generate release description
         run: python .github/scripts/generate_release_description.py
       - name: download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4.1.7
       - name: release
         uses: softprops/action-gh-release@v1
         with:
