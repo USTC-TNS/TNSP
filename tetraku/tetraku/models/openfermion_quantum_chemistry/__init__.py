@@ -22,7 +22,7 @@ import tetragono as tet
 from tetragono.common_tensor.tensor_toolkit import rename_io, kronecker_product
 
 
-def abstract_state(L1, L2, file_name, T=False, is_complex=False):
+def abstract_state(L1, L2, file_name, T=False, is_complex=False, threshold=0, check_hermite=1e-15):
     """
     Create a quantum chemistry state from Hamiltonian in openfermion format.
     Every orbit will be put into a site in lattice L1 * L2.
@@ -35,6 +35,10 @@ def abstract_state(L1, L2, file_name, T=False, is_complex=False):
         A file containing Hamiltonian in openfermion format.
     T : bool
         Whether the total electron number is odd.
+    threshold : float
+        The threshold for cutting Hamiltonian terms.
+    check_hermite : float
+        The error allowed in checking hermitian.
     """
     if is_complex:
         Tensor = TAT.FermiZ2.C.Tensor
@@ -59,6 +63,8 @@ def abstract_state(L1, L2, file_name, T=False, is_complex=False):
 
     data = np.load(file_name, allow_pickle=True).item()
     for count, [term, coefficient] in enumerate(data.terms.items()):
+        if abs(coefficient) <= threshold:
+            continue
         tet.show(f"reading {count}/{len(data.terms)}: {term}")
         match term:
             case ((site_0, 1), (site_1, 0)):  # c^ c
@@ -71,12 +77,12 @@ def abstract_state(L1, L2, file_name, T=False, is_complex=False):
                 tet.showln(f"unrecognized term: {other}")
                 raise NotImplementedError()
     tet.showln(f"read done, total {len(data.terms)}")
-    state.hamiltonians.trace_repeated().sort_points().check_hermite(1e-15)
+    state.hamiltonians.trace_repeated().sort_points().check_hermite(check_hermite)
     tet.showln(f"clean terms, total {len(state.hamiltonians)}")
     return state
 
 
-def abstract_lattice(L1, L2, D, file_name, T=False, is_complex=False):
+def abstract_lattice(L1, L2, D, file_name, T=False, is_complex=False, threshold=0, check_hermite=1e-15):
     """
     Create a quantum chemistry lattice from Hamiltonian in openfermion format.
     Every orbit will be put into a site in lattice L1 * L2.
@@ -91,8 +97,21 @@ def abstract_lattice(L1, L2, D, file_name, T=False, is_complex=False):
         A file containing Hamiltonian in openfermion format.
     T : bool
         Whether the total electron number is odd.
+    threshold : float
+        The threshold for cutting Hamiltonian terms.
+    check_hermite : float
+        The error allowed in checking hermitian.
     """
-    state = tet.AbstractLattice(abstract_state(L1, L2, file_name, T=T, is_complex=is_complex))
+    state = tet.AbstractLattice(
+        abstract_state(
+            L1,
+            L2,
+            file_name,
+            T=T,
+            is_complex=is_complex,
+            threshold=threshold,
+            check_hermite=check_hermite,
+        ))
     D1 = D // 2
     D2 = D - D1
     state.virtual_bond["R"] = [(False, D1), (True, D2)]
