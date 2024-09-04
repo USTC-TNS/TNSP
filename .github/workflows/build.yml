@@ -118,9 +118,13 @@ jobs:
       matrix:
         include:
           - python: "3.11"
-            pyodide: "0.25.0"
+            pyodide: "0.25.1"
           - python: "3.12"
-            pyodide: "0.26.0a2"
+            pyodide: "0.26.2"
+          - python: "3.12"
+            pyodide: "0.27.3"
+          - python: "3.12"
+            pyodide: "0.28.0"
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -140,6 +144,7 @@ jobs:
           python -m pip install pyodide-build==${{ matrix.pyodide }}
           git clone https://github.com/emscripten-core/emsdk.git
           cd emsdk
+          pyodide config list
           PYODIDE_EMSCRIPTEN_VERSION=$(pyodide config get emscripten_version)
           ./emsdk install ${PYODIDE_EMSCRIPTEN_VERSION}
           ./emsdk activate ${PYODIDE_EMSCRIPTEN_VERSION}
@@ -147,10 +152,9 @@ jobs:
         run: |
           source emsdk/emsdk_env.sh
           cd PyTAT
-          export SKBUILD_CMAKE_DEFINE=TAT_MATH_LIBRARIES=$PWD/.pyodide-xbuildenv/xbuildenv/pyodide-root/packages/.libs/lib/libopenblas.so
+          export SKBUILD_CMAKE_DEFINE="PYBIND11_FINDPYTHON=ON;TAT_MATH_LIBRARIES="
           export CMAKE_BUILD_PARALLEL_LEVEL=4
           pyodide build --exports pyinit
-          # pyodide auditwheel repair dist/*.whl --libdir .pyodide-xbuildenv/xbuildenv/pyodide-root/packages/.libs/lib
       - name: test
         run: |
           cd PyTAT

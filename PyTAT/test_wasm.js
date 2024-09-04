@@ -6,11 +6,6 @@ async function main() {
 
     const pyodide = await require("pyodide").loadPyodide();
     await pyodide.loadPackage("micropip");
-    await pyodide.loadPackage("openblas");
-    // openblas should be loaded manually before loading TAT
-    // see https://github.com/ryanking13/auditwheel-emscripten/issues/24
-    // when this been fixed, removing load openblas manually,
-    // and uncomment pyodide auditwheel in github action.
 
     const mount_dir = "/app";
     pyodide.FS.mkdir(mount_dir);
@@ -21,6 +16,8 @@ async function main() {
     const result = await pyodide.runPython(`
 async def main():
     import micropip
+
+    await micropip.install("openblas")
 
     import os
     files = os.listdir("/app/dist")
@@ -36,6 +33,8 @@ async def main():
 
 main()
 `);
+
     process.exit(result);
 }
+
 main();
