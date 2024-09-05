@@ -20,6 +20,7 @@
 !/LICENSE.rst
 !/README.org
 !/README_zh.org
+!/Dockerfile
 
 _minted-*
 build
