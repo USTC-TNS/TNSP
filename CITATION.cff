@@ -1,0 +1,93 @@
+cff-version: 1.2.0
+abstract: Tensor Network State Packages
+authors:
+  - given-names: Hao
+    family-names: Zhang
+  - given-names: Shaojun
+    family-names: Dong
+  - given-names: Chao
+    family-names: Wang
+  - given-names: Meng
+    family-names: Zhang
+  - given-names: Lixin
+    family-names: He
+date-released: 2024-09-06
+keywords:
+  - peps
+  - tensor
+  - mps
+  - tensor-networks
+  - tensor-network
+  - tensornetwork
+license: GPL-3.0
+message: Please cite the following works when using this software.
+repository: https://github.com/USTC-TNS/TNSP
+title: TNSP
+type: software
+url: https://github.com/USTC-TNS/TNSP
+version: 0.3.17
+preferred-citation:
+  abstract: >-
+    Recent advancements have established tensor network states (TNS) as formidable tools for exploring the
+    complex realm of strongly-correlated many-particle systems in both one and two dimensions. To tackle the
+    challenges presented by strongly-correlated fermion systems, various fermion tensor network states (f-TNS)
+    methodologies have been developed. However, implementing f-TNS methods poses substantial challenges due to
+    their particularly complex nature, making development efforts significantly difficult. This complexity is further
+    exacerbated by the lack of underlying software packages that facilitate the development of f-TNS. Previously,
+    we developed TNSPackage, a software package designed for TNS methods. Initially, this package was only
+    capable of handling spin and boson models. To confront the challenges presented by f-TNS, TNSPackage has
+    undergone significant enhancements in its latest version, incorporating support for both symmetry and fermion
+    tensors. This updated version provides a uniform interface for the consistent management of tensors across boson,
+    fermion, and various symmetry types, maintaining its user-friendly and versatile nature. This greatly facilitates
+    the development of programs based on f-TNS. The new TNSP framework consists of two principal components: a
+    low-level tensor package named TAT, which supports sophisticated tensor operations, and a high-level interface
+    package called tetragono that is built upon TAT. The tetragono package is designed to significantly simplify
+    the development of complex physical models on square lattices. The TNSPackage framework enables users to
+    implement a wide range of physical models with greater ease, without the need to pay close attention to the
+    underlying implementation details.
+  authors:
+    - given-names: Hao
+      family-names: Zhang
+    - given-names: Shaojun
+      family-names: Dong
+    - given-names: Chao
+      family-names: Wang
+    - given-names: Meng
+      family-names: Zhang
+    - given-names: Lixin
+      family-names: He
+  contact:
+    - given-names: Shaojun
+      family-names: Dong
+      email: sj.dong@iai.ustc.edu.cn
+    - given-names: Lixin
+      family-names: He
+      email: helx@ustc.edu.cn
+  date-published: 2024-08-23
+  doi: 10.1016/j.cpc.2024.109355
+  identifiers:
+    - description: The work itself
+      type: doi
+      value: 10.1016/j.cpc.2024.109355
+    - description: CPC Library link to program files
+      type: doi
+      value: 10.17632/xvzvg6ktpc.1
+  issn: 0010-4655
+  journal: Computer Physics Communications
+  keywords:
+    - Tensor network states
+    - Fermion
+    - Symmetry tensors
+  languages:
+    - en
+  publisher: Elsevier BV
+  start: 109355
+  end: 109355
+  title: >-
+    TNSP: A framework supporting symmetry and fermion tensors for tensor network state methods
+  type: article
+  url: https://www.sciencedirect.com/science/article/pii/S0010465524002789
+  version: 0.3.16
+  volume: 305
+  year: 2024
+  month: 08

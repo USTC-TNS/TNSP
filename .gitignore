@@ -21,6 +21,7 @@
 !/README.org
 !/README_zh.org
 !/Dockerfile
+!/CITATION.cff
 
 _minted-*
 build
