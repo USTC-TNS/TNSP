@@ -313,6 +313,8 @@ jobs:
 
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: cmd /c python -m pip install delvewheel && python -m delvewheel repair --wheel-dir {dest_dir} {wheel} --add-path bin
           CIBW_BUILD_VERBOSITY: 1
+
+          MACOSX_DEPLOYMENT_TARGET: 10.14
         run: python -m cibuildwheel PyTAT --output-dir dist
       - name: upload artifact
         uses: actions/upload-artifact@v3
