@@ -1,6 +1,14 @@
 * Changelog
 
-** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.16...dev][Unreleased]]
+** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.17...dev][Unreleased]]
+
+*** Added
+*** Changed
+*** Deprecated
+*** Removed
+*** Fixed
+
+** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.16...v0.3.17][v0.3.17]] - 2024-09-06
 
 *** Added
 + *tetragono*: Add neural network state based on sampling methods.
@@ -16,8 +24,6 @@
   =sort_points=, which make the program faster for simple update and exact update.
 + *tetragono*: Add support to check whether the hamiltonians is hermitian by =check_hermite(threshold)=, which requires
   =sort_points= invoked first.
-*** Changed
-*** Deprecated
 *** Removed
 + *tetragono*: Remove SIGINT handle in gradient descent.
 *** Fixed
