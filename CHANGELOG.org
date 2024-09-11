@@ -3,6 +3,8 @@
 ** [[https://github.com/USTC-TNS/TNSP/compare/v0.3.17...dev][Unreleased]]
 
 *** Added
++ *tetragono*: Add plain direct sampling method for neural network state, which is similar to direct sampling, but only
+  using the configurations themselves, without the weights and multiplicities.
 *** Changed
 + *tetragono*: Do not measure observers by term by default in neural network state, which need to be toggled by function
   =set_term_observer= manually.

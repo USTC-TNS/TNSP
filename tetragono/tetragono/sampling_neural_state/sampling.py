@@ -150,6 +150,31 @@ class DirectSampling:
         return scatter_sampling(self.owner, configurations, amplitudes, weights, multiplicities)
 
 
+class PlainDirectSampling:
+    """
+    Plain Direct sampling.
+    """
+
+    __slots__ = ["owner", "total_size", "alpha"]
+
+    def __init__(self, owner, total_size, alpha):
+        self.owner = owner
+        self.total_size = total_size
+        self.alpha = alpha
+
+    def __call__(self):
+        if mpi_rank == 0:
+            configurations, amplitudes, weights, multiplicities = self.owner.network.generate(
+                self.total_size,
+                self.alpha,
+            )
+            weights = torch.ones_like(weights)
+            multiplicities = torch.ones_like(multiplicities)
+        else:
+            configurations, amplitudes, weights, multiplicities = None, None, None, None
+        return scatter_sampling(self.owner, configurations, amplitudes, weights, multiplicities)
+
+
 class ErgodicSampling:
     """
     Ergodic sampling.

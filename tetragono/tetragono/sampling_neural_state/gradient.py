@@ -20,7 +20,7 @@ from datetime import datetime
 import numpy as np
 import torch
 import TAT
-from ..sampling_neural_state import SamplingNeuralState, Observer, SweepSampling, DirectSampling, ErgodicSampling
+from ..sampling_neural_state import SamplingNeuralState, Observer, SweepSampling, DirectSampling, PlainDirectSampling, ErgodicSampling
 from ..utility import (show, showln, mpi_rank, mpi_size, seed_differ, write_to_file, get_imported_function,
                        bcast_number, bcast_buffer, write_configurations, allreduce_number)
 
@@ -135,8 +135,8 @@ def gradient_descent(
     # About sampling
     expect_unique_sampling_step : int, optional
         The expect unique sampling step count.
-    sampling_method : "sweep" | "direct" | "ergodic", default="sweep"
-        The sampling method, which could be one of sweep, direct and ergodic.
+    sampling_method : "sweep" | "direct" | "plain_direct" | "ergodic", default="sweep"
+        The sampling method, which could be one of sweep, direct, plain_direct and ergodic.
     sampling_configurations : object, default=zero_configuration
         The initial configuration used in sweep sampling methods. All sampling methods will save the last configuration
         into this sampling_configurations variable. If the function is invoked from gm_run(_g) interface, this parameter
@@ -285,6 +285,9 @@ def gradient_descent(
                 configurations_pool, amplitudes_pool, weights_pool, multiplicities_pool = sampling()
             elif sampling_method == "direct":
                 sampling = DirectSampling(state, sampling_total_step, sweep_alpha)
+                configurations_pool, amplitudes_pool, weights_pool, multiplicities_pool = sampling()
+            elif sampling_method == "plain_direct":
+                sampling = PlainDirectSampling(state, sampling_total_step, sweep_alpha)
                 configurations_pool, amplitudes_pool, weights_pool, multiplicities_pool = sampling()
             elif sampling_method == "ergodic":
                 sampling = ErgodicSampling(state)

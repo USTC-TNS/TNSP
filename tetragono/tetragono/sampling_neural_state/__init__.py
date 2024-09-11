@@ -24,5 +24,5 @@ except ModuleNotFoundError:
 
 if torch_installed:
     from .state import Configuration, SamplingNeuralState
-    from .sampling import SweepSampling, ErgodicSampling, DirectSampling
+    from .sampling import SweepSampling, ErgodicSampling, DirectSampling, PlainDirectSampling
     from .observer import Observer
