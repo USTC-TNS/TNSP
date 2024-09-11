@@ -4,6 +4,8 @@
 
 *** Added
 *** Changed
++ *tetragono*: Do not measure observers by term by default in neural network state, which need to be toggled by function
+  =set_term_observer= manually.
 *** Deprecated
 *** Removed
 *** Fixed

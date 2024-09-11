@@ -28,7 +28,7 @@ class Observer():
     """
 
     __slots__ = [
-        "owner", "_observer", "_enable_gradient", "_enable_natural", "_start", "_result_reweight",
+        "owner", "_observer", "_term_observer", "_enable_gradient", "_enable_natural", "_start", "_result_reweight",
         "_result_reweight_square", "_result_square_reweight_square", "_count", "_total_weight", "_total_weight_square",
         "_total_log_ws", "_whole_result_reweight", "_whole_result_reweight_square",
         "_whole_result_square_reweight_square", "_total_imaginary_energy_reweight", "_Delta", "_EDelta", "_Deltas"
@@ -42,17 +42,17 @@ class Observer():
         self._result_reweight = {
             name: {
                 positions: 0.0 for positions, observer in observers.items()
-            } for name, observers in self._observer.items()
+            } for name, observers in self._observer.items() if name in self._term_observer
         }
         self._result_reweight_square = {
             name: {
                 positions: 0.0 for positions, observer in observers.items()
-            } for name, observers in self._observer.items()
+            } for name, observers in self._observer.items() if name in self._term_observer
         }
         self._result_square_reweight_square = {
             name: {
                 positions: 0.0 for positions, observer in observers.items()
-            } for name, observers in self._observer.items()
+            } for name, observers in self._observer.items() if name in self._term_observer
         }
         self._count = 0
         self._total_weight = 0.0
@@ -77,10 +77,11 @@ class Observer():
             return False
         buffer = []
         for name, observers in self._observer.items():
-            for positions in observers:
-                buffer.append(self._result_reweight[name][positions])
-                buffer.append(self._result_reweight_square[name][positions])
-                buffer.append(self._result_square_reweight_square[name][positions])
+            if name in self._term_observer:
+                for positions in observers:
+                    buffer.append(self._result_reweight[name][positions])
+                    buffer.append(self._result_reweight_square[name][positions])
+                    buffer.append(self._result_square_reweight_square[name][positions])
         buffer.append(self._count)
         buffer.append(self._total_weight)
         buffer.append(self._total_weight_square)
@@ -105,10 +106,11 @@ class Observer():
         self._total_weight = buffer.pop()
         self._count = buffer.pop()
         for name, observers in reversed(self._observer.items()):
-            for positions in reversed(observers):
-                self._result_square_reweight_square[name][positions] = buffer.pop()
-                self._result_reweight_square[name][positions] = buffer.pop()
-                self._result_reweight[name][positions] = buffer.pop()
+            if name in self._term_observer:
+                for positions in reversed(observers):
+                    self._result_square_reweight_square[name][positions] = buffer.pop()
+                    self._result_reweight_square[name][positions] = buffer.pop()
+                    self._result_reweight[name][positions] = buffer.pop()
 
         if self._enable_gradient:
             allreduce_buffer(self._Delta)
@@ -143,6 +145,7 @@ class Observer():
         # The observables need to measure.
         # dict[str, dict[tuple[tuple[int, int, int], ...], Tensor]]
         self._observer = {}
+        self._term_observer = set()
         self._enable_gradient = False
         self._enable_natural = False
 
@@ -178,7 +181,24 @@ class Observer():
         if enable_natural_gradient:
             self.enable_natural_gradient()
 
-    def add_observer(self, name, observers):
+    def set_term_observer(self, name, value):
+        """
+        Set to observe specific observer by term or not.
+
+        Parameters
+        ----------
+        name : str
+            The observer set name.
+        value : bool
+            Whether to observe it by term.
+        """
+        assert name in self._observer
+        if value and name not in self._term_observer:
+            self._term_observer.add(name)
+        if not value and name in self._term_observer:
+            self._term_observer.remove(name)
+
+    def add_observer(self, name, observers, term_observer=False):
         """
         Add an observer set into this observer object, cannot add observer once observer started.
 
@@ -188,6 +208,8 @@ class Observer():
             This observer set name.
         observers : dict[tuple[tuple[int, int, int], ...], Tensor]
             The observer map.
+        term_observer : bool, default=False
+            Whether to observe the observers by term.
         """
         if self._start:
             raise RuntimeError("Cannot enable hole after sampling start")
@@ -219,6 +241,8 @@ class Observer():
             )
 
         self._observer[name] = result
+        if term_observer:
+            self._term_observer.add(name)
 
     def _fermi_sign(self, x, y, indices):
         if self.owner.op_pool is None:
@@ -332,7 +356,7 @@ class Observer():
         result = [{
             name: {
                 positions: 0.0 for positions, observer in observers.items()
-            } for name, observers in self._observer.items()
+            } for name, observers in self._observer.items() if name in self._term_observer
         } for _ in range(batch_size)]
         whole_result = [{name: 0.0 for name in self._observer} for _ in range(batch_size)]
 
@@ -342,6 +366,7 @@ class Observer():
             inv_amplitude_conj = 1 / amplitude.conj()
             parity = torch.gather(self.owner.op_pool, 3, configuration_cpu.unsqueeze(-1)).reshape([-1])
             for name, observers in self._observer.items():
+                term_observer = name in self._term_observer
                 for positions, [observer, tensor_indices, element_pool] in observers.items():
                     body = len(positions)
                     positions_configuration = tuple(configuration_cpu.view([-1])[tensor_indices].tolist())
@@ -356,7 +381,8 @@ class Observer():
                         total_parity = ((torch.logical_and(parity, fermi_sign).sum() % 2 != 0) ^ base_sign)
                         value = (-1 if total_parity else +1) * (item * inv_amplitude_conj)
                         if torch.equal(configuration_cpu_s, configuration_cpu):
-                            result[batch_index][name][positions] += amplitude.conj().item() * complex(value)
+                            if term_observer:
+                                result[batch_index][name][positions] += amplitude.conj().item() * complex(value)
                             whole_result[batch_index][name] += amplitude.conj().item() * complex(value)
                         else:
                             params_and_targets.append((complex(value), (batch_index, name, positions)))
@@ -367,7 +393,8 @@ class Observer():
             amplitudes_s = self.owner(configurations_s, enable_grad=False)
             amplitudes_cpu_s = amplitudes_s.cpu()
             for amplitude_s, [param, [batch_index, name, positions]] in zip(amplitudes_cpu_s, params_and_targets):
-                result[batch_index][name][positions] += amplitude_s.conj().item() * param
+                if name in self._term_observer:
+                    result[batch_index][name][positions] += amplitude_s.conj().item() * param
                 whole_result[batch_index][name] += amplitude_s.conj().item() * param
 
         for batch_index in range(batch_size):
@@ -381,11 +408,12 @@ class Observer():
             self._total_log_ws += multiplicity * amplitude.abs().log().item()
 
             for name, observers in self._observer.items():
-                for positions in observers:
-                    to_save = result[batch_index][name][positions].real
-                    self._result_reweight[name][positions] += multiplicity * to_save * reweight
-                    self._result_reweight_square[name][positions] += multiplicity * to_save * reweight**2
-                    self._result_square_reweight_square[name][positions] += multiplicity * to_save**2 * reweight**2
+                if name in self._term_observer:
+                    for positions in observers:
+                        to_save = result[batch_index][name][positions].real
+                        self._result_reweight[name][positions] += multiplicity * to_save * reweight
+                        self._result_reweight_square[name][positions] += multiplicity * to_save * reweight**2
+                        self._result_square_reweight_square[name][positions] += multiplicity * to_save**2 * reweight**2
                 to_save = whole_result[batch_index][name].real
                 self._whole_result_reweight[name] += multiplicity * to_save * reweight
                 self._whole_result_reweight_square[name] += multiplicity * to_save * reweight**2
@@ -492,7 +520,7 @@ class Observer():
                                                self._result_reweight_square[name][positions],
                                                self._result_square_reweight_square[name][positions])
                 for positions in data
-            } for name, data in self._observer.items()
+            } for name, data in self._observer.items() if name in self._term_observer
         }
 
     @property
